@@ -5,7 +5,6 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import java.math.BigInteger;
 
@@ -108,14 +107,12 @@ public class IntNumberBuilder extends NumberBuilder {
                         case "Int8", "UInt8"   -> code.ldc(0xFF).iand();
                         case "Int16", "UInt16" -> code.ldc(0xFFFF).iand();
                     }
-                    code.invokestatic(CD_JavaInteger, "highestOneBit",
-                                MethodTypeDesc.of(CD_int, CD_int));
+                    code.invokestatic(CD_JavaInteger, "highestOneBit", md(CD_int, CD_int));
                     Builder.adjustIntValue(code, thisType);
                     break;
                 case "J":
                     code.lload(slot)
-                        .invokestatic(CD_JavaLong, "highestOneBit",
-                                MethodTypeDesc.of(CD_long, CD_long));
+                        .invokestatic(CD_JavaLong, "highestOneBit", md(CD_long, CD_long));
                     break;
                 default:
                     throw new IllegalStateException();
@@ -136,8 +133,7 @@ public class IntNumberBuilder extends NumberBuilder {
                         .lconst_0()
                         .lcmp()
                         .ifeq(labelLow)
-                        .invokestatic(CD_JavaLong, "highestOneBit",
-                                MethodTypeDesc.of(CD_long, CD_long));
+                        .invokestatic(CD_JavaLong, "highestOneBit", md(CD_long, CD_long));
                     addPrimitiveReturn(code, jmd);
 
                     // high value is zero, check the low value
@@ -147,8 +143,7 @@ public class IntNumberBuilder extends NumberBuilder {
                         .pop2()
                         // get and return the highestOneBit for the low value
                         .lload(slotLow)
-                        .invokestatic(CD_JavaLong, "highestOneBit",
-                            MethodTypeDesc.of(CD_long, CD_long))
+                        .invokestatic(CD_JavaLong, "highestOneBit", md(CD_long, CD_long))
                         .lconst_0();
                     addPrimitiveReturn(code, jmd);
                     break;
@@ -175,14 +170,12 @@ public class IntNumberBuilder extends NumberBuilder {
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
                     code.iload(slot)
-                        .invokestatic(CD_JavaInteger, "lowestOneBit",
-                                MethodTypeDesc.of(CD_int, CD_int));
+                        .invokestatic(CD_JavaInteger, "lowestOneBit", md(CD_int, CD_int));
                     Builder.adjustIntValue(code, thisType);
                     break;
                 case "J":
                     code.lload(slot)
-                        .invokestatic(CD_JavaLong, "lowestOneBit",
-                                MethodTypeDesc.of(CD_long, CD_long));
+                        .invokestatic(CD_JavaLong, "lowestOneBit", md(CD_long, CD_long));
                     break;
                 default:
                     throw new IllegalStateException();
@@ -198,8 +191,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
                     // get the low bits first
                     code.lload(slotLow)
-                        .invokestatic(CD_JavaLong, "lowestOneBit",
-                                MethodTypeDesc.of(CD_long, CD_long))
+                        .invokestatic(CD_JavaLong, "lowestOneBit", md(CD_long, CD_long))
                         .dup2()           // duplicate the low result
                         .lconst_0()       // load zero
                         .lcmp()           // compare result to zero
@@ -211,8 +203,7 @@ public class IntNumberBuilder extends NumberBuilder {
                     // duplicated low result on the stack is zero, check the high value
                     code.labelBinding(labelHigh)
                         .lload(slotHigh)
-                        .invokestatic(CD_JavaLong, "lowestOneBit",
-                                MethodTypeDesc.of(CD_long, CD_long));
+                        .invokestatic(CD_JavaLong, "lowestOneBit", md(CD_long, CD_long));
                     addPrimitiveReturn(code, jmd);
                     break;
                 default:
@@ -242,8 +233,7 @@ public class IntNumberBuilder extends NumberBuilder {
                     Label labelEnd  = code.newLabel();
                     int   adjust    = 32 - bitLength;
                     code.iload(slot)
-                        .invokestatic(CD_JavaInteger, "numberOfLeadingZeros",
-                                MethodTypeDesc.of(CD_int, CD_int))
+                        .invokestatic(CD_JavaInteger, "numberOfLeadingZeros", md(CD_int, CD_int))
                         .dup()
                         .ifeq(labelEnd)
                         .loadConstant(adjust)
@@ -254,8 +244,7 @@ public class IntNumberBuilder extends NumberBuilder {
                     break;
                 case "J":
                     code.lload(slot)
-                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros",
-                                MethodTypeDesc.of(CD_int, CD_long))
+                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros", md(CD_int, CD_long))
                         .i2l()
                         .lreturn();
                     break;
@@ -272,8 +261,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
                     // get the high bits first
                     code.lload(slotHigh)
-                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros",
-                                MethodTypeDesc.of(CD_int, CD_long))
+                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros", md(CD_int, CD_long))
                         .dup()                    // duplicate the hig result
                         .loadConstant(64)         // compare result to 64
                         .if_icmpeq(labelLow)      // if result is 64, do the low value
@@ -282,8 +270,7 @@ public class IntNumberBuilder extends NumberBuilder {
                         // duplicated high result on the stack is 64, calculate the low value
                         .labelBinding(labelLow)
                         .lload(slotLow)
-                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros",
-                                MethodTypeDesc.of(CD_int, CD_long))
+                        .invokestatic(CD_JavaLong, "numberOfLeadingZeros", md(CD_int, CD_long))
                         .iadd()     // high result (64) and low result are on the stack, add them
                         .i2l()      // convert to long and return
                         .lreturn();
@@ -314,8 +301,7 @@ public class IntNumberBuilder extends NumberBuilder {
                 case "I", "S", "B", "Z":
                     Label labelEnd  = code.newLabel();
                     code.iload(slot)
-                        .invokestatic(CD_JavaInteger, "numberOfTrailingZeros",
-                                MethodTypeDesc.of(CD_int, CD_int))
+                        .invokestatic(CD_JavaInteger, "numberOfTrailingZeros", md(CD_int, CD_int))
                         .dup()
                         .loadConstant(32)
                         .if_icmpne(labelEnd)
@@ -327,8 +313,7 @@ public class IntNumberBuilder extends NumberBuilder {
                     break;
                 case "J":
                     code.lload(slot)
-                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros",
-                                MethodTypeDesc.of(CD_int, CD_long))
+                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros", md(CD_int, CD_long))
                         .i2l()
                         .lreturn();
                     break;
@@ -345,8 +330,7 @@ public class IntNumberBuilder extends NumberBuilder {
 
                     // get the low bits first
                     code.lload(slotLow)
-                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros",
-                                MethodTypeDesc.of(CD_int, CD_long))
+                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros", md(CD_int, CD_long))
                         .dup()                    // duplicate the low result
                         .loadConstant(64)   // compare result to 64
                         .if_icmpeq(labelHigh)     // if result is 64, do the high value
@@ -355,8 +339,7 @@ public class IntNumberBuilder extends NumberBuilder {
                         // duplicated low result on the stack is 64, calculate the high value
                         .labelBinding(labelHigh)
                         .lload(slotHigh)
-                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros",
-                                MethodTypeDesc.of(CD_int, CD_long))
+                        .invokestatic(CD_JavaLong, "numberOfTrailingZeros", md(CD_int, CD_long))
                         .iadd()     // low result (64) and high result are on the stack, add them
                         .i2l()      // convert to long and return
                         .lreturn();
@@ -407,17 +390,14 @@ public class IntNumberBuilder extends NumberBuilder {
         if (source.bitLength == 128) {
             code.lload(code.parameterSlot(0))
                 .lload(code.parameterSlot(1))
-                .invokestatic(art.CD(), "$toBigInteger",
-                        MethodTypeDesc.of(CD_BigInteger, CD_long, CD_long))
-                .invokestatic(targetCD, "$box",
-                        MethodTypeDesc.of(targetCD, CD_BigInteger));
+                .invokestatic(art.CD(), "$toBigInteger", md(CD_BigInteger, CD_long, CD_long))
+                .invokestatic(targetCD, "$box", md(targetCD, CD_BigInteger));
         } else if (!source.signed && source.bitLength == 64) {
             generateUnsignedLongAsBigInteger(code);
-            code.invokestatic(targetCD, "$box",
-                    MethodTypeDesc.of(targetCD, CD_BigInteger));
+            code.invokestatic(targetCD, "$box", md(targetCD, CD_BigInteger));
         } else {
             loadConversionLong(code, source, source.signed);
-            code.invokestatic(targetCD, "$box", MethodTypeDesc.of(targetCD, CD_long));
+            code.invokestatic(targetCD, "$box", md(targetCD, CD_long));
         }
         code.areturn();
     }
@@ -432,15 +412,13 @@ public class IntNumberBuilder extends NumberBuilder {
         code.lload(valueSlot)
             .loadConstant(Long.MAX_VALUE)
             .land()
-            .invokestatic(CD_BigInteger, "valueOf",
-                    MethodTypeDesc.of(CD_BigInteger, CD_long))
+            .invokestatic(CD_BigInteger, "valueOf", md(CD_BigInteger, CD_long))
             .lload(valueSlot)
             .lconst_0()
             .lcmp()
             .ifge(nonNegative)
             .loadConstant(63)
-            .invokevirtual(CD_BigInteger, "setBit",
-                    MethodTypeDesc.of(CD_BigInteger, CD_int))
+            .invokevirtual(CD_BigInteger, "setBit", md(CD_BigInteger, CD_int))
             .labelBinding(nonNegative);
     }
 
@@ -511,8 +489,7 @@ public class IntNumberBuilder extends NumberBuilder {
                 loadComparableLong(code, source);
                 code.loadConstant(target.upperLow());
                 if (!source.signed && source.bitLength == 64) {
-                    code.invokestatic(CD_Long, "compareUnsigned",
-                            MethodTypeDesc.of(CD_int, CD_long, CD_long));
+                    code.invokestatic(CD_Long, "compareUnsigned", md(CD_int, CD_long, CD_long));
                 } else {
                     code.lcmp();
                 }
@@ -529,8 +506,7 @@ public class IntNumberBuilder extends NumberBuilder {
             .lload(code.parameterSlot(1))
             .loadConstant(lower ? target.lowerLow()  : target.upperLow())
             .loadConstant(lower ? target.lowerHigh() : target.upperHigh())
-            .invokestatic(art.CD(), "$compare",
-                    MethodTypeDesc.of(CD_int, CD_long, CD_long, CD_long, CD_long));
+            .invokestatic(art.CD(), "$compare", md(CD_int, CD_long, CD_long, CD_long, CD_long));
     }
 
     /**
@@ -541,8 +517,7 @@ public class IntNumberBuilder extends NumberBuilder {
             code.iload(code.parameterSlot(0));
             Builder.adjustIntValue(code, thisType);
             if (!source.signed && source.bitLength == 32) {
-                code.invokestatic(CD_Integer, "toUnsignedLong",
-                        MethodTypeDesc.of(CD_long, CD_int));
+                code.invokestatic(CD_Integer, "toUnsignedLong", md(CD_long, CD_int));
             } else {
                 code.i2l();
             }
@@ -561,8 +536,7 @@ public class IntNumberBuilder extends NumberBuilder {
             if (signExtend) {
                 code.i2l();
             } else if (source.bitLength == 32) {
-                code.invokestatic(CD_Integer, "toUnsignedLong",
-                        MethodTypeDesc.of(CD_long, CD_int));
+                code.invokestatic(CD_Integer, "toUnsignedLong", md(CD_long, CD_int));
             } else {
                 code.loadConstant((1 << source.bitLength) - 1)
                     .iand()

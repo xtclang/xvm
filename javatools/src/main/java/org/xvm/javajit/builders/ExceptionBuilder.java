@@ -51,10 +51,10 @@ public class ExceptionBuilder extends CommonBuilder {
     public void assembleCreateException(ClassBuilder classBuilder) {
         String         className = art.className();
         String         jitName   = "$createJavaException";
-        MethodTypeDesc createMD  = MethodTypeDesc.of(CD_nException, CD_Throwable);
+        MethodTypeDesc createMD  = md(CD_nException, CD_Throwable);
         ClassDesc      javaExCD  = getShapeDesc(className, ClassfileShape.Exception);
         ClassDesc      thisCD    = ClassDesc.of(className);
-        MethodTypeDesc initMD    = MethodTypeDesc.of(CD_void, CD_Throwable, thisCD);
+        MethodTypeDesc initMD    = md(CD_void, CD_Throwable, thisCD);
 
         classBuilder.withMethodBody(jitName, createMD, ClassFile.ACC_PUBLIC, code ->
             code.new_(javaExCD)
@@ -83,10 +83,10 @@ public class ExceptionBuilder extends CommonBuilder {
         classBuilder.withFlags(ClassFile.ACC_PUBLIC)
                     .withSuperclass(superCD);
 
-        classBuilder.withMethodBody(INIT_NAME, MethodTypeDesc.of(CD_void, CD_Throwable, exCD),
+        classBuilder.withMethodBody(INIT_NAME, md(CD_void, CD_Throwable, exCD),
                 ClassFile.ACC_PUBLIC, code -> {
             ClassDesc      superCd = ensureClassDesc(superType);
-            MethodTypeDesc superMD = MethodTypeDesc.of(CD_void, CD_Throwable, superCd);
+            MethodTypeDesc superMD = md(CD_void, CD_Throwable, superCd);
             code.aload(0)
                 .aload(1)
                 .aload(2)

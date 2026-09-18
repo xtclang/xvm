@@ -42,6 +42,7 @@ import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.CD_String;
 import static org.xvm.javajit.Builder.CD_nUtil;
 import static org.xvm.javajit.Builder.MD_StringOf;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * ASSERT_V rvalue, STRING, #vals(rvalue)
@@ -231,10 +232,10 @@ public class AssertV
     protected void buildMessage(BuildContext bctx, CodeBuilder code) {
         String[]       asParts         = splitMessage(bctx.getString(m_nMsgConstId));
         ClassDesc      cdBuilder       = ClassDesc.of(StringBuilder.class.getName());
-        MethodTypeDesc mdBuilderInit   = MethodTypeDesc.of(CD_void);
-        MethodTypeDesc mdAppendText    = MethodTypeDesc.of(CD_void, cdBuilder, CD_JavaString);
-        MethodTypeDesc mdAppendValue   = MethodTypeDesc.of(CD_void, CD_Ctx, cdBuilder, CD_Object);
-        MethodTypeDesc mdJavaToString  = MethodTypeDesc.of(CD_JavaString);
+        MethodTypeDesc mdBuilderInit   = md(CD_void);
+        MethodTypeDesc mdAppendText    = md(CD_void, cdBuilder, CD_JavaString);
+        MethodTypeDesc mdAppendValue   = md(CD_void, CD_Ctx, cdBuilder, CD_Object);
+        MethodTypeDesc mdJavaToString  = md(CD_JavaString);
 
         bctx.loadCtx(code);
         code.new_(cdBuilder)

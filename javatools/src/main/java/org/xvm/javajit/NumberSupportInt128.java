@@ -13,6 +13,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Int128;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.javajit.RegisterInfo.JAVA_STACK;
 
@@ -33,7 +34,7 @@ public interface NumberSupportInt128 {
     /**
      * The {@link MethodTypeDesc} for {@code java.lang.Math.unsignedMultiplyHigh(long, long)}.
      */
-    MethodTypeDesc MD_UnsignedMultiplyHigh = MethodTypeDesc.of(CD_long, CD_long, CD_long);
+    MethodTypeDesc MD_UnsignedMultiplyHigh = md(CD_long, CD_long, CD_long);
 
     /**
      * The name of the {@code $div} method in Int128 wrapper classes.
@@ -43,7 +44,7 @@ public interface NumberSupportInt128 {
     /**
      * The {@link MethodTypeDesc} for Int128 $div method.
      */
-    MethodTypeDesc MD_LongLong_Divide = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
+    MethodTypeDesc MD_LongLong_Divide = md(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
 
     /**
      * The name of the {@code $mod} method in Int128 wrapper classes.
@@ -53,7 +54,7 @@ public interface NumberSupportInt128 {
     /**
      * The {@link MethodTypeDesc} for Int128 $mod method.
      */
-    MethodTypeDesc MD_Int128_Mod = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
+    MethodTypeDesc MD_Int128_Mod = md(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
 
     /**
      * Build the optimized binary operation that will add two XVM primitive types that are each

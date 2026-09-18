@@ -8,7 +8,6 @@ import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -47,6 +46,7 @@ import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -369,7 +369,7 @@ public class FBind
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)
-            .invokespecial(cdFn, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+            .invokespecial(cdFn, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         RegisterInfo regRet = bctx.ensureRegister(m_nRetValue, typeFn, cdFn, "");
@@ -443,7 +443,7 @@ public class FBind
         }
 
         code.invokestatic(ClassDesc.of("java.lang.invoke.MethodHandles"), "insertArguments",
-                MethodTypeDesc.of(CD_MethodHandle, CD_MethodHandle, CD_int, CD_JavaObject.arrayType()))
+                md(CD_MethodHandle, CD_MethodHandle, CD_int, CD_JavaObject.arrayType()))
             .astore(slotMethod);
     }
 
@@ -460,7 +460,7 @@ public class FBind
         if (regArg.type().isJitInterface()) {
             code.checkcast(CD_nObject);
         }
-        code.invokevirtual(CD_nObject, "$isImmut", MethodTypeDesc.of(CD_boolean))
+        code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean))
             .istore(slotImm)
             .labelBinding(labelEnd);
     }

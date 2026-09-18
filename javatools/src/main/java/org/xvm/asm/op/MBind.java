@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
-import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -33,6 +32,7 @@ import static org.xvm.javajit.Builder.CD_JavaObject;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nMethod;
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.md;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -137,7 +137,7 @@ public class MBind
         regMethod = regMethod.load(code);
         code.getfield(CD_nMethod, "stdMethod", CD_MethodHandle);
         regTarget = regTarget.load(code);
-        code.invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject));
+        code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject));
         int slotStd = bctx.storeTempValue(code, CD_MethodHandle);
 
         java.lang.classfile.Label ifNull = code.newLabel();
@@ -146,7 +146,7 @@ public class MBind
             .dup()
             .ifnull(ifNull);
         regTarget = regTarget.load(code);
-        code.invokevirtual(CD_MethodHandle, "bindTo", MethodTypeDesc.of(CD_MethodHandle, CD_JavaObject))
+        code.invokevirtual(CD_MethodHandle, "bindTo", md(CD_MethodHandle, CD_JavaObject))
             .labelBinding(ifNull);
         int slotOpt = bctx.storeTempValue(code, CD_MethodHandle);
 
@@ -154,7 +154,7 @@ public class MBind
         if (regTarget.type().isJitInterface()) {
             code.checkcast(CD_nObject);
         }
-        code.invokevirtual(regTarget.cd(), "$isImmut", MethodTypeDesc.of(CD_boolean));
+        code.invokevirtual(regTarget.cd(), "$isImmut", md(CD_boolean));
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());
@@ -166,7 +166,7 @@ public class MBind
         code.aload(slotStd)
             .aload(slotOpt)
             .iload(slotImm)
-            .invokespecial(cdFn, INIT_NAME, MethodTypeDesc.of(CD_void, CD_Ctx, CD_TypeConstant,
+            .invokespecial(cdFn, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
         bctx.storeValue(code, m_nRetValue, typeFn);

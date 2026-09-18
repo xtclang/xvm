@@ -10,6 +10,7 @@ import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.md;
 
 /**
  * A "mixin" interface to generate bytecodes for operations on Ecstasy Decimal types.
@@ -49,32 +50,32 @@ public interface NumberSupportDec {
     /**
      * The method type descriptor for a method with two Dec32 arguments, returning a Dec32 result.
      */
-    MethodTypeDesc MD_BinaryOp_Dec32 = MethodTypeDesc.of(CD_int, CD_Ctx, CD_int, CD_int);
+    MethodTypeDesc MD_BinaryOp_Dec32 = md(CD_int, CD_Ctx, CD_int, CD_int);
 
     /**
      * The method type descriptor for a method with a Dec32 argument, returning a Dec32 result.
      */
-    MethodTypeDesc MD_UnaryOp_Dec32 = MethodTypeDesc.of(CD_int, CD_Ctx, CD_int);
+    MethodTypeDesc MD_UnaryOp_Dec32 = md(CD_int, CD_Ctx, CD_int);
 
     /**
      * The method type descriptor for Dec64 addition.
      */
-    MethodTypeDesc MD_BinaryOp_Dec64 = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long);
+    MethodTypeDesc MD_BinaryOp_Dec64 = md(CD_long, CD_Ctx, CD_long, CD_long);
 
     /**
      * The method type descriptor for Dec64 addition.
      */
-    MethodTypeDesc MD_UnaryOp_Dec64 = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long);
+    MethodTypeDesc MD_UnaryOp_Dec64 = md(CD_long, CD_Ctx, CD_long);
 
     /**
      * The method type descriptor for Dec128 addition.
      */
-    MethodTypeDesc MD_BinaryOp_Dec128 = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
+    MethodTypeDesc MD_BinaryOp_Dec128 = md(CD_long, CD_Ctx, CD_long, CD_long, CD_long, CD_long);
 
     /**
      * The method type descriptor for Dec128 addition.
      */
-    MethodTypeDesc MD_UnaryOp_Dec128 = MethodTypeDesc.of(CD_long, CD_Ctx, CD_long, CD_long);
+    MethodTypeDesc MD_UnaryOp_Dec128 = md(CD_long, CD_Ctx, CD_long, CD_long);
 
     /**
      * Build the optimized binary operation that will add two XVM primitive Dec32 types
