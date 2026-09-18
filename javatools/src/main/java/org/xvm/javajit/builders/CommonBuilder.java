@@ -204,12 +204,11 @@ public class CommonBuilder
         classBuilder.withInterfaceSymbols(interfaces.toArray(new ClassDesc[0]));
 
         // add the constructor
-        MethodTypeDesc initMD = md(CD_void, CD_Ctx, CD_TypeConstant);
-        classBuilder.withMethodBody(INIT_NAME, initMD, ClassFile.ACC_PUBLIC, code ->
+        classBuilder.withMethodBody(INIT_NAME, MD_xvmInitType, ClassFile.ACC_PUBLIC, code ->
             code.aload(0)
                 .aload(1)
                 .aload(2)
-                .invokespecial(CD_Class, INIT_NAME, initMD)
+                .invokespecial(CD_Class, INIT_NAME, MD_xvmInitType)
                 .return_());
 
         TypeConstant targetType = typeInfo.getType();
@@ -2356,7 +2355,7 @@ public class CommonBuilder
                 // load nType for the property type: nType.$ensureType(Ctx, TypeConstant)
                 loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
 
                 // load the values
                 code.aload(value1Slot);
@@ -2598,7 +2597,7 @@ public class CommonBuilder
                 // get and load the nType to the stack (compare param 1)
                 loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
 
                 // invoke the static compare method
                 IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
@@ -2720,7 +2719,7 @@ public class CommonBuilder
             // type of the primitive and the value can take more than one slot
             Builder.loadCtx(code);
             loadTypeConstant(code, type);
-            code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+            code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
             Builder.loadCtx(code);
             for (int i = 2, count = mdOptimized.parameterCount(); i < count; i++) {
                 Builder.load(code, mdOptimized.parameterType(i), code.parameterSlot(i));
@@ -2830,7 +2829,7 @@ public class CommonBuilder
                 // generate the same code that used for primitive constant hashCode$p
                 Builder.loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
                 Builder.loadCtx(code);
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
@@ -2849,7 +2848,7 @@ public class CommonBuilder
                 // nType for the property type: nType.$ensureType(Ctx, TypeConstant)
                 loadCtx(code);
                 loadTypeConstant(code, propType);
-                code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+                code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
                 code.aload(valueSlot);
                 loadProperty(code, type, propId, false);
 

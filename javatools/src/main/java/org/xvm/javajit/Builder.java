@@ -432,7 +432,7 @@ public abstract class Builder {
 
             loadCtx(bctx, code);
             loadTypeConstant(bctx, code, type.getParamType(0));
-            code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+            code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
             loadCtx(bctx, code)
                 .invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx));
             return new SingleSlot(type, Specific, CD_Class, "");
@@ -2248,6 +2248,7 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Duration_box = md(CD_Duration,CD_long, CD_long);
     public static final MethodTypeDesc MD_StringOf     = md(CD_String,  CD_Ctx,  CD_JavaString);
     public static final MethodTypeDesc MD_TypeIsA      = md(CD_boolean, CD_TypeConstant);
+    public static final MethodTypeDesc MD_EnsureType   = md(CD_nType,   CD_Ctx,  CD_TypeConstant);
     public static final MethodTypeDesc MD_FloorModI    = md(CD_int,     CD_int,  CD_int);
     public static final MethodTypeDesc MD_FloorModJ    = md(CD_long,    CD_long, CD_long);
     public static final MethodTypeDesc MD_UDivInt      = md(CD_int,     CD_int,  CD_int);
@@ -2260,4 +2261,5 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_I2F          = md(CD_float,   CD_int);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void,         CD_Ctx);
+    public static final MethodTypeDesc MD_xvmInitType  = md(CD_void,         CD_Ctx, CD_TypeConstant);
 }

@@ -180,14 +180,11 @@ public class EnumerationBuilder extends CommonBuilder {
     }
 
     private void assembleConstructor(ClassBuilder classBuilder) {
-        MethodTypeDesc mdSuper = md(CD_void, CD_Ctx, CD_TypeConstant);
-        int            flags   = ClassFile.ACC_PUBLIC;
-
-        classBuilder.withMethodBody("<init>", MD_xvmVoid, flags, code -> {
+        classBuilder.withMethodBody("<init>", MD_xvmVoid, ClassFile.ACC_PUBLIC, code -> {
             code.aload(0)
                 .aload(code.parameterSlot(0))
                 .getstatic(art.CD(), "$sc0", CD_TypeConstant)
-                .invokespecial(CD_Enumeration, "<init>", mdSuper)
+                .invokespecial(CD_Enumeration, "<init>", MD_xvmInitType)
                 .return_();
         });
     }

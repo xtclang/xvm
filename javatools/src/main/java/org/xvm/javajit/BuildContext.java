@@ -99,6 +99,7 @@ import static org.xvm.javajit.Builder.CD_nRef;
 import static org.xvm.javajit.Builder.CD_nTuple;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.EXT;
+import static org.xvm.javajit.Builder.MD_EnsureType;
 import static org.xvm.javajit.Builder.OPT;
 import static org.xvm.javajit.Builder.md;
 
@@ -1443,7 +1444,7 @@ public class BuildContext {
 
         loadCtx(code);
         loadTypeConstant(code, dataType);
-        code.invokestatic(CD_nType, "$ensureType", md(CD_nType, CD_Ctx, CD_TypeConstant));
+        code.invokestatic(CD_nType, "$ensureType", MD_EnsureType);
         return new SingleSlot(type, Specific, CD_nType, "");
     }
 
