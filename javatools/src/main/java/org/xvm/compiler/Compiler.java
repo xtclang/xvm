@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import static java.util.Objects.requireNonNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -33,9 +35,7 @@ public class Compiler {
         if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
-        if (errs == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
+        requireNonNull(errs, "errs");
 
         m_stmtModule = stmtModule;
         m_errs       = errs;

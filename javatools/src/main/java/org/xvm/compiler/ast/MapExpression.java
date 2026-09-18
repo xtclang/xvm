@@ -67,7 +67,7 @@ public class MapExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, null);
+        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, ErrorListener.BLACKHOLE);
         TypeConstant typeKey      = null;
         TypeConstant typeVal      = null;
         if (typeExplicit != null) {

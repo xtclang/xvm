@@ -315,8 +315,7 @@ public class InvocationExpression
             return TypeFit.Fit;
         }
 
-        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive,
-                                    errs == null ? ErrorListener.BLACKHOLE : errs);
+        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive, errs);
 
         return calcFitMulti(ctx, atype, atypeRequired);
     }

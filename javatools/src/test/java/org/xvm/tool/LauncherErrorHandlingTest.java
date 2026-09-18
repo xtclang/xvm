@@ -152,7 +152,7 @@ class LauncherErrorHandlingTest {
                 .addInputFile(new File("test.x"))
                 .enableVerbose() // Also enable in options (for consistency)
                 .build();
-        TestCompiler compiler = new TestCompiler(opts, console, null);
+        TestCompiler compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(INFO, "Test info message");
 
@@ -168,7 +168,7 @@ class LauncherErrorHandlingTest {
         CompilerOptions opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
         compiler.testLog(WARNING, "Test warning: {}", "detail");
         assertEquals(1, console.getMessages().size());
         assertTrue(console.getMessages().getFirst().contains("Test warning: detail"));
@@ -182,7 +182,7 @@ class LauncherErrorHandlingTest {
         CompilerOptions opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
         compiler.testLog(ERROR, "Test error: {} at line {}", "syntax", 42);
         assertEquals(1, console.getMessages().size());
         assertTrue(console.getMessages().getFirst().contains("Test error: syntax at line 42"));
@@ -196,7 +196,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         // FATAL error for now throws LauncherException immediately and the exception carries the
         // actual message to avoid double-dipping
@@ -211,7 +211,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         // Log multiple messages with different severities
         compiler.testLog(INFO, "Info message");
@@ -236,7 +236,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(INFO, "Info message");
 
@@ -250,7 +250,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(WARNING, "Warning message");
 
@@ -265,7 +265,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(ERROR, "Error message");
 
@@ -279,7 +279,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         // FATAL now throws LauncherException immediately - no need to call checkErrors()
         assertThrows(LauncherException.class, () -> compiler.testLog(FATAL, "Fatal error"));
@@ -291,7 +291,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         final var cause = new IOException("File not found");
         compiler.testLogWithThrowable(ERROR, cause, "Failed to read file: {}", "test.x");
@@ -309,7 +309,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         IOException cause = new IOException("File not found");
         compiler.testLogWithThrowable(ERROR, cause, null);
@@ -326,7 +326,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         IOException cause = new IOException("File not found");
         compiler.testLogWithThrowable(ERROR, cause, "");
@@ -343,29 +343,29 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        var compiler = new TestCompiler(opts, console, null);
+        var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         // Test abort behavior: ERROR and worse should trigger abort (via Launcher.isAbortDesired())
         compiler.testLog(Severity.NONE, "None message");
         assertFalse(compiler.isAbortDesired());
 
         console.clear();
-        compiler = new TestCompiler(opts, console, null);
+        compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
         compiler.testLog(INFO, "Info message");
         assertFalse(compiler.isAbortDesired());
 
         console.clear();
-        compiler = new TestCompiler(opts, console, null);
+        compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
         compiler.testLog(WARNING, "Warning message");
         assertFalse(compiler.isAbortDesired());
 
         console.clear();
-        compiler = new TestCompiler(opts, console, null);
+        compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
         compiler.testLog(ERROR, "Error message");
         assertTrue(compiler.isAbortDesired());
 
         console.clear();
-        final TestCompiler fatalCompiler = new TestCompiler(opts, console, null);
+        final TestCompiler fatalCompiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
         // FATAL now throws LauncherException immediately
         assertThrows(LauncherException.class, () -> fatalCompiler.testLog(FATAL, "Fatal message"));
     }
@@ -402,7 +402,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         // First checkpoint - should not throw, return 0
         compiler.testLog(INFO, "Info 1");
@@ -430,7 +430,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(WARNING, "Warning message");
 
@@ -447,7 +447,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(ERROR, "Error message");
 
@@ -464,7 +464,7 @@ class LauncherErrorHandlingTest {
                 .addInputFile(new File("test.x"))
                 .enableStrictMode()
                 .build();
-        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Stickler);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE, Compiler.Strictness.Stickler);
 
         compiler.testLog(WARNING, "Warning message");
 
@@ -481,7 +481,7 @@ class LauncherErrorHandlingTest {
                 .addInputFile(new File("test.x"))
                 .enableStrictMode()
                 .build();
-        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Stickler);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE, Compiler.Strictness.Stickler);
 
         compiler.testLog(ERROR, "Error message");
 
@@ -498,7 +498,7 @@ class LauncherErrorHandlingTest {
                 .addInputFile(new File("test.x"))
                 .disableWarnings()
                 .build();
-        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Suppressed);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE, Compiler.Strictness.Suppressed);
 
         compiler.testLog(WARNING, "Warning message");
 
@@ -516,7 +516,7 @@ class LauncherErrorHandlingTest {
                 .addInputFile(new File("test.x"))
                 .disableWarnings()
                 .build();
-        final var compiler = new TestCompiler(opts, console, null, Compiler.Strictness.Suppressed);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE, Compiler.Strictness.Suppressed);
 
         compiler.testLog(ERROR, "Error message");
 
@@ -531,7 +531,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         // No errors - should return 0
         assertEquals(0, compiler.checkErrors());
@@ -559,7 +559,7 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        final var compiler = new TestCompiler(opts, console, null);
+        final var compiler = new TestCompiler(opts, console, ErrorListener.BLACKHOLE);
 
         compiler.testLog(ERROR, "Error message");
 

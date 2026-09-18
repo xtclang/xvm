@@ -960,7 +960,7 @@ public class Context {
                 }
             }
         } else {
-            if (tokName != null && errs != null) {
+            if (tokName != null) {
                 if (isReservedName(sName)) {
                     MethodStructure  method = getMethod();
                     IdentityConstant idCtx  = method == null
@@ -1047,9 +1047,7 @@ public class Context {
     public boolean requireThis(long lPos, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null) {
-            if (errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
-            }
+            errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
             return false;
         }
         return ctxOuter.requireThis(lPos, errs);
@@ -1073,7 +1071,7 @@ public class Context {
 
         if (isVarWritable(sName)) {
             setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
-        } else if (tokName != null && errs != null) {
+        } else if (tokName != null) {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
         } else {
             throw new IllegalStateException("illegal var write: name=" + sName);

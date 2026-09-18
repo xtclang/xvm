@@ -48,12 +48,12 @@ public class Bundler extends Launcher<BundlerOptions> {
     /**
      * Bundler constructor for programmatic use.
      *
-     * @param options     pre-configured bundler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured bundler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Bundler(BundlerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Bundler(BundlerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

@@ -84,7 +84,7 @@ public class ElvisExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         // first try the less likely (and more complicated) "conditional" use case
-        ErrorListener  errsTemp  = errs == null ? ErrorListener.BLACKHOLE : errs.branch(this);
+        ErrorListener  errsTemp  = errs.branch(this);
         TypeConstant[] atypeCond = new TypeConstant[]{pool().typeBoolean(), typeRequired};
         TypeFit        fit       = expr1.testFitMulti(ctx, atypeCond, fExhaustive, errsTemp);
         if (fit.isFit()) {
@@ -150,7 +150,7 @@ public class ElvisExpression
                 ? null
                 : Op.selectCommonType(type1.removeNullable(), null, errs);
         if (typeRequired == null) {
-            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, null).isFit()) {
+            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, ErrorListener.BLACKHOLE).isFit()) {
                 // there are no requirements from outside and the second expression is not going to
                 // validate against the first expression type. Compute the narrowest type that expr2
                 // has a chance of validating - a union of type1 and the implicit type for expr2
@@ -160,7 +160,7 @@ public class ElvisExpression
                 }
             }
         } else {
-            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit()) {
+            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, ErrorListener.BLACKHOLE).isFit()) {
                 type2Req = typeRequired;
             }
         }
