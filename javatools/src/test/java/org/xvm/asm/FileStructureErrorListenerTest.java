@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
@@ -28,6 +29,18 @@ public class FileStructureErrorListenerTest {
         assertNotNull(errs, "a diagnostic accessor must never return null");
         assertSame(ErrorListener.RUNTIME, errs,
                 "with no explicit listener and no ambient pool, the runtime listener is the answer");
+    }
+
+    /**
+     * A structure could reach through its parent and redirect the diagnostics of a whole
+     * containment tree it did not own, because setErrorListener was inherited from XvmStructure
+     * and delegated the mutation upwards. Only the file itself decides now.
+     */
+    @Test
+    public void onlyTheFileItselfCanDirectItsDiagnostics() {
+        assertFalse(java.util.Arrays.stream(XvmStructure.class.getMethods())
+                        .anyMatch(m -> m.getName().equals("setErrorListener")),
+                "XvmStructure must not offer a setter that mutates its parent");
     }
 
     @Test
