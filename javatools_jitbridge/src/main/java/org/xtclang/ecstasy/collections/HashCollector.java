@@ -35,8 +35,7 @@ public interface HashCollector extends Object {
 
     /**
      * Reset this {@link HashCollector}.
-     * <p>
-     * This is the native implementation of Const.x:
+     * <p>This is the native implementation of Const.x:
      * <pre>
      *     @Abstract HashCollector reset();
      * </pre>

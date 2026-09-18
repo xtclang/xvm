@@ -38,8 +38,7 @@ public abstract class ValueConstant
 
     /**
      * {@inheritDoc}
-     * <p/>
-     * This method must be overridden by constant types which reference other constants.
+     * <p>This method must be overridden by constant types which reference other constants.
      */
     @Override
     protected void registerConstants(ConstantPool pool) {

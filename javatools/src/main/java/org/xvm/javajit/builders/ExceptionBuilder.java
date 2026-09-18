@@ -18,8 +18,7 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * The builder for Exception types.
- * <p/>
- * For every natural subtype "XYZ" of "ecstasy.Exception" this builder creates a method that
+ * <p>For every natural subtype "XYZ" of "ecstasy.Exception" this builder creates a method that
  * overrides the {@code $createJavaException(Throwable cause)} method at
  * "org.xtclang.ecstasy.Exception" class.
  * <br>

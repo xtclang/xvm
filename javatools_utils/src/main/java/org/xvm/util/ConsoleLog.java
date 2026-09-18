@@ -59,7 +59,7 @@ public class ConsoleLog {
     /**
      * Obtain the specified line of text.
      *
-     * @param i  the line number, <tt>0 < i < size()</tt>
+     * @param i  the line number, <code>0 < i < size()</code>
      *
      * @return the specified line of text
      */

@@ -60,8 +60,7 @@ public class UIntN extends UIntNumber {
 
     /**
      * Return this UIntN as an array of long values suitable for creating an {@link ArrayᐸBitᐳ}
-     * <p>
-     * The bit length the long values represent is returned in {@link Ctx#i0}.
+     * <p>The bit length the long values represent is returned in {@link Ctx#i0}.
      */
     protected long[] $longValues(Ctx ctx) {
         byte[] ab = $value.toByteArray();

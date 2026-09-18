@@ -25,10 +25,8 @@ import static java.lang.constant.ConstantDescs.CD_boolean;
 
 /**
  * FINALLY_END ; finish a "finally" handler (Implicit EXIT)
- * <p/>
- * Each FINALLY_END op must match up with a previous GUARD_ALL and FINALLY op.
- * <p/>
- * The FINALLY_END op either re-throws the exception that occurred within the GUARD_ALL block, or
+ * <p>Each FINALLY_END op must match up with a previous GUARD_ALL and FINALLY op.
+ * <p>The FINALLY_END op either re-throws the exception that occurred within the GUARD_ALL block, or
  * if no exception had occurred, it exits the scope and proceeds to the next instruction.
  */
 public class FinallyEnd

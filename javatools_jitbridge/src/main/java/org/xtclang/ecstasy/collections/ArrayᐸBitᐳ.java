@@ -23,8 +23,7 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Bit, stored in an array of Java longs, sixty-four Bits per long.
- * <p>
- * Object header
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -666,14 +665,11 @@ public class ArrayᐸBitᐳ
 
     /**
      * Return this bit array converted to a Java byte array.
-     * <p>
-     * The bits of the byte array will be in reverse order to this bit array, that is, the byte
+     * <p>The bits of the byte array will be in reverse order to this bit array, that is, the byte
      * at index zero will contain bits from index (size - 8)..(size - 1).
-     * <p>
-     * If the size of this bit array is not a multiple of eight, the byte at index zero will be
+     * <p>If the size of this bit array is not a multiple of eight, the byte at index zero will be
      * sign extended to 8-bits.
-     * <p>
-     * This method is typically used to convert this bit array to Java numbers such as
+     * <p>This method is typically used to convert this bit array to Java numbers such as
      * {@link java.math.BigInteger} or {@link java.math.BigDecimal} that require bytes in the
      * opposite order to this bit array.
      */
@@ -742,8 +738,7 @@ public class ArrayᐸBitᐳ
 
     /**
      * Convert this bit array to a {@link BigInteger}.
-     * <p>
-     * Called by the JIT in from IntN and UIntN constructors
+     * <p>Called by the JIT in from IntN and UIntN constructors
      */
     public BigInteger $toBigInteger(Ctx ctx, boolean signed) {
         int bitCount = (int) size$get$p(ctx);

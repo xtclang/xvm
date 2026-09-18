@@ -101,8 +101,7 @@ public class Int128 extends IntNumber {
     /**
      * This method is called at the end of a JIT primitive method to return the value of a
      * {@link BigInteger}.
-     * <p>
-     * The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64
+     * <p>The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64
      * bits will be returned as a {@code long}.
      *
      * @param ctx  the current context

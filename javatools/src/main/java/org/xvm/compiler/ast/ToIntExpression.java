@@ -21,8 +21,7 @@ import org.xvm.util.PackedInteger;
 /**
  * An expression that converts the result of another expression to an Ecstasy Int, using the rules
  * defined by {@link TypeConstant#isIntConvertible()} and {@link Constant#getIntValue()}.
- * <p/>
- * Steps, depending on the type of the underlying expression:
+ * <p>Steps, depending on the type of the underlying expression:
  * <ul>
  * <li>Extract: For Bit, Nibble, Char, and Enum types, the Int value is extracted from the
  *     underlying expression, resulting in an Int type, so at this point the resulting type is

@@ -32,7 +32,7 @@ import org.xvm.util.Severity;
  * value from the first expression.
  *
  * <ul>
- * <li><tt>COND_ELSE:  "?:"</tt> - the "elvis" operator</li>
+ * <li><code>COND_ELSE:  "?:"</code> - the "elvis" operator</li>
  * </ul>
  */
 public class ElvisExpression

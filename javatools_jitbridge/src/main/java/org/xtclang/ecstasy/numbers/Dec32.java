@@ -85,10 +85,10 @@ public class Dec32 extends DecimalFPNumber {
     public final int $bits;
 
     /**
-     * Construct a decimal value from a Java <tt>int</tt> whose format is that of an IEEE-754-2008
+     * Construct a decimal value from a Java <code>int</code> whose format is that of an IEEE-754-2008
      * 32-bit decimal.
      *
-     * @param bits  a 32-bit Java <tt>int</tt> containing the bits of an IEEE-754-2008 decimal
+     * @param bits  a 32-bit Java <code>int</code> containing the bits of an IEEE-754-2008 decimal
      */
     public Dec32(int bits) {
         $bits = bits;

@@ -26,8 +26,7 @@ import static org.xvm.javajit.Builder.CD_nException;
 
 /**
  * FINALLY ; begin a "finally" handler (implicit EXIT/ENTER and VAR_I of type "Exception?")
- * <p/>
- * The FINALLY op indicates the beginning of the "finally" block. If the block is executed at the
+ * <p>The FINALLY op indicates the beginning of the "finally" block. If the block is executed at the
  * normal conclusion of the "try" block, then the variable is null; if the block is executed due
  * to an exception within the "try" block, the variable holds that exception. The finally block
  * concludes with a matching FINALLY_END op.

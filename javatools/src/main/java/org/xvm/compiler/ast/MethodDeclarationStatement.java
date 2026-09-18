@@ -88,8 +88,7 @@ public class MethodDeclarationStatement
     /**
      * Create a MethodDeclarationStatement that turns an expression into a MethodStructure. This is
      * used, for example, by initializers.
-     * <p/>
-     * Note: the underlying expression can be retrieved using the {@link #getInitializerExpression()}
+     * <p>Note: the underlying expression can be retrieved using the {@link #getInitializerExpression()}
      * method.
      *
      * @param struct  the MethodStructure that this MethodDeclarationStatement is intended to
