@@ -362,19 +362,58 @@ shape the prior-art branch reached, measured against this tree.
 | Decorators - tee, SLF4J, JFR sinks | not started, and not needed until a host asks |
 | `ErrorList` thread-safety | **answered differently**; see below |
 
-Two of these are worth doing next and are small:
+None of it blocks an LSP that compiles a document with its own listener and reads what it
+collected. Why you would do each, and why you might not:
 
-**`RUNTIME` throwing from `log()`.** It throws `IllegalStateException` at `ERROR` and above, so the
-same diagnostic behaves differently depending on who is listening, and the throw pre-empts whatever
-the detecting code meant to throw next - making even the exception *type* depend on the listener.
-Reporting is not control flow.
+**`ResolutionCollector.getErrorListener()` - do it next.** It defaults to a silent listener, so
+name resolution reports into a sink nobody chose: the "quiet by default" hole phase 4 removed from
+parameters, surviving in a callback interface. Seven call sites plus the default; the fix is to
+pass `errs` to the three resolution methods. Compiler-enforced, low risk. Against: it widens three
+signatures that implementors must follow.
 
-**`ResolutionCollector.getErrorListener()`**, which still defaults to a silent listener, so name
-resolution reports into a sink nobody chose. The prior art passed it explicitly instead.
+**`RUNTIME` throwing from `log()` - a correctness hazard, not a style one.** It throws
+`IllegalStateException` from inside the reporting call at `ERROR` and above, so the throw pre-empts
+whatever the detecting code was about to throw, and the exception *type* ends up depending on who
+is listening. Against: something must still fail loudly when nobody is listening, and the
+no-listener case is exactly where nobody is watching, so the replacement behaviour has to be
+decided. Entangled with the next item.
 
-The rest is either large (`TypeInfo` diagnostics, the runtime side, the `System.err` census) or
-speculative (decorators, `Origin`), and none of it blocks an LSP that compiles a document with its
-own listener and reads what it collected.
+**`log()` returning `void` - the one thing between us and an honest host listener.** The boolean
+means *abort*, conflating recording with control flow: a host that only wants to watch has no
+correct value to return, since `false` suppresses a legitimate abort and `true` invents one.
+Mechanically tiny - six readers, of which only `Lexer` and `Parser` branch on it. Against: it is
+public API, so any external implementor breaks. Postponed for that reason alone.
+
+**`TypeInfo` diagnostics - the highest-value correctness item, and its own project.** `TypeInfo` is
+memoized, so whichever caller builds it first owns its diagnostics; if that is a speculative probe,
+the probe produces the user-visible errors and the caller that cared gets the cache and hears
+nothing. Ownership decided by call ordering is not something anyone can reason about. It also
+finishes the never-null story by deletion rather than relocation. Against: 126 `ensureTypeInfo()`
+call sites if the no-arg overload goes, and replay must be idempotent per listener or it
+reintroduces the double-reporting that phase 1 fixed.
+
+**`EvalCompiler` / `ModuleInfo.Node` listeners final - cheap, low value.** `EvalCompiler.m_errs` is
+null until `createLambda` runs, so `getErrors()` throws if asked first, and it is one-shot so it
+should be final. Local and near-zero risk, but it unblocks nothing.
+
+**The runtime side - not yet.** A host cannot observe VM-level failures today:
+`recordRuntimeFailure` captures a defect for `join()` to rethrow and prints it. That matters for a
+debugger or a test runner that *runs* code, and not at all for an LSP that compiles. Do it when
+there is a host that runs code.
+
+**`Origin` (thread, fiber) - not yet, and carefully when it happens.** It earns its keep only with
+parallel compilation or a server multiplexing requests. It is also a trap: it must never enter the
+deduplication key, which is the mechanism phase 1 repaired, so adding it early risks re-breaking
+that for no current benefit.
+
+**Decorators - when a host asks.** Small and additive, and trivial to add later precisely because
+the interface is now clean. That is the payoff of the phases, not more work to do up front.
+
+**The 56 `System.err` sites and 34 empty catches - an audit, not a refactor.** These are places
+where a failure has nowhere to go, and the prior art found real bugs in this category: a DNS
+continuation that turned an `Error` into "host not found", a swallowed keystore delete so a
+certificate revocation reported success. Each of the ninety needs a judgement call, and the output
+is bug reports rather than a diff. Worth doing as its own investigation.
 
 ### The decision, and what follows from it
 
