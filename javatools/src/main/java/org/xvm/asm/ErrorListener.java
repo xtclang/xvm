@@ -314,8 +314,11 @@ public interface ErrorListener {
                     .append(m_sCode);
 
             if (m_aoParam != null) {
+                // the parameters are part of the identity, so they have to be compared, not
+                // digested: a 32-bit hash collides, and a collision here does not merge two
+                // reports of the same thing, it discards one of two different things
                 sb.append('#')
-                  .append(Arrays.hashCode(m_aoParam));
+                  .append(Arrays.toString(m_aoParam));
             }
 
             if (!m_sCode.startsWith("VERIFY")) {
@@ -325,7 +328,7 @@ public interface ErrorListener {
                       .append(':')
                       .append(m_lPosStart)
                       .append(':')
-                      .append(m_lPosStart);
+                      .append(m_lPosEnd);
                 }
                 if (m_xs != null) {
                     sb.append(':')
