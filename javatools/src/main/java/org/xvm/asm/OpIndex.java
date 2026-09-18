@@ -495,16 +495,13 @@ public abstract class OpIndex
         boolean javaPrimitive = typeEl.removeNullable().isJavaPrimitive();
         boolean xvmPrimitive  = typeEl.removeNullable().isXvmPrimitive();
 
-        ClassDesc[] cds;
-        ClassDesc   cdEl;
-        if (javaPrimitive) {
-            cdEl = JitTypeDesc.requireJavaPrimitive(typeEl);
-            cds  = new ClassDesc[]{cdEl};
-        } else {
-            assert xvmPrimitive;
-            cds  = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
-            cdEl = cds[0];
-        }
+        assert javaPrimitive || xvmPrimitive;
+
+        // a Java primitive occupies one slot, an XVM primitive may occupy several
+        ClassDesc[] cds = javaPrimitive
+                ? new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeEl)}
+                : JitTypeDesc.getXvmPrimitiveClasses(typeEl);
+        ClassDesc   cdEl = cds[0];
 
         // get the element from the array
         bctx.loadCtx(code);
