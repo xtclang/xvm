@@ -203,6 +203,26 @@ public interface ErrorListener {
     }
 
     /**
+     * Where a diagnostic came from.
+     *
+     * Only meaningful once more than one thing reports at a time - parallel compilation, or a
+     * resident server serving several requests - where it answers "whose diagnostic is this".
+     *
+     * Never part of the deduplication key: two reports of the same problem from two threads are
+     * one problem, and keying on the thread would turn every duplicate into a distinct diagnostic.
+     *
+     * @param thread  the name of the thread that reported it
+     */
+    record Origin(String thread) {
+        /**
+         * @return the origin of a diagnostic reported now, on this thread
+         */
+        static Origin here() {
+            return new Origin(Thread.currentThread().getName());
+        }
+    }
+
+    /**
      * Where a diagnostic belongs.
      *
      * A listener receives the location as one of a small closed set of shapes, so a host that
@@ -397,6 +417,7 @@ public interface ErrorListener {
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam,
                 Source source, long lPosStart, long lPosEnd) {
+            m_origin     = Origin.here();
             m_severity   = severity;
             m_sCode      = sCode;
             m_aoParam    = aoParam;
@@ -416,6 +437,7 @@ public interface ErrorListener {
          * @param xs
          */
         public ErrorInfo(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
+            m_origin   = Origin.here();
             m_severity = severity;
             m_sCode    = sCode;
             m_aoParam  = aoParam;
@@ -434,6 +456,13 @@ public interface ErrorListener {
             return m_source != null ? new Site.In(m_source, m_lPosStart, m_lPosEnd)
                  : m_xs     != null ? new Site.At(m_xs)
                                     : NOWHERE;
+        }
+
+        /**
+         * @return where this diagnostic was reported from
+         */
+        public Origin origin() {
+            return m_origin;
         }
 
         /**
@@ -625,6 +654,7 @@ public interface ErrorListener {
         private final Severity     m_severity;
         private final String       m_sCode;
         private final Object[]     m_aoParam;
+        private final Origin       m_origin;
         private       Source       m_source;
         private       long         m_lPosStart;
         private       long         m_lPosEnd;
