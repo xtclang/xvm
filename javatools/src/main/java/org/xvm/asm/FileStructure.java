@@ -211,8 +211,8 @@ public class FileStructure
 
     /**
      * Merge the specified module into this FileStructure.
-     * <p>
-     * A fingerprint child with the merged module's id is superseded by the real module. The
+     *
+     * <p>A fingerprint child with the merged module's id is superseded by the real module. The
      * merged module's external dependencies are represented here as fingerprints: fingerprints
      * of the source file are cloned in, and dependencies that exist in the source file as real
      * (embedded) sibling modules — as in a multi-module container ("bundle") — are synthesized
@@ -976,8 +976,8 @@ public class FileStructure
     /**
      * Determine the major version of the XVM specification and related tool-chain that this
      * particular FileStructure corresponds to.
-     * <p/>
-     * This is unrelated to version labels and the versioning of modules.
+     *
+     * <p>This is unrelated to version labels and the versioning of modules.
      *
      * @return the major version of the binary form that this FileStructure was constructed from, or
      *         the current major version if this FileStructure was constructed from scratch
@@ -989,8 +989,8 @@ public class FileStructure
     /**
      * Determine the minor version of the XVM specification and related tool-chain that this
      * particular FileStructure corresponds to.
-     * <p/>
-     * This is unrelated to version labels and the versioning of modules.
+     *
+     * <p>This is unrelated to version labels and the versioning of modules.
      *
      * @return the minor version of the binary form that this FileStructure was constructed from, or
      *         the current minor version if this FileStructure was constructed from scratch
@@ -1010,8 +1010,8 @@ public class FileStructure
     /**
      * Determine the current major version of the XVM specification and related tool-chain that this
      * implementation supports.
-     * <p/>
-     * This is unrelated to version labels and the versioning of modules.
+     *
+     * <p>This is unrelated to version labels and the versioning of modules.
      *
      * @return the current major version of the XVM specification and related tool-chain that this
      *         implementation supports
@@ -1023,8 +1023,8 @@ public class FileStructure
     /**
      * Determine the current minor version of the XVM specification and related tool-chain that this
      * implementation supports.
-     * <p/>
-     * This is unrelated to version labels and the versioning of modules.
+     *
+     * <p>This is unrelated to version labels and the versioning of modules.
      *
      * @return the current minor version of the XVM specification and related tool-chain that this
      *         implementation supports
@@ -1036,8 +1036,8 @@ public class FileStructure
     /**
      * Determine if the specified version of an XVM file structure is supported by this version of
      * the XVM assembler.
-     * <p/>
-     * This is unrelated to version labels and the versioning of modules.
+     *
+     * <p>This is unrelated to version labels and the versioning of modules.
      *
      * @param nVerMajor  major version number
      * @param nVerMinor  minor version number

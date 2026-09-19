@@ -500,8 +500,8 @@ public abstract class AstNode
 
     /**
      * Test if the specified child is used as an R-Value, which is something that yields a value.
-     * <p/>
-     * In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
+     *
+     * <p>In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
      * can be used as a left side of an assignment, for example, which makes it an L-Value. In a
      * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
      * pre-/post-increment/-decrement operators.
@@ -580,8 +580,8 @@ public abstract class AstNode
 
     /**
      * (Post-validation) Determine if the statement or expression is able to complete normally.
-     * <p/>
-     * This method must be overridden by any statement or expression that may not complete, either
+     *
+     * <p>This method must be overridden by any statement or expression that may not complete, either
      * due to its own implementation or that of another AST node that is delegated to.
      *
      * @return true iff the AST node is able to complete
@@ -658,8 +658,8 @@ public abstract class AstNode
 
     /**
      * First logical compiler pass.
-     * <p/>
-     * <ul>
+     *
+     * <p><ul>
      * <li>At this point, names are NOT resolvable; we're really just organizing the tree and
      * checking for errors that are obvious from "this point down" (no lateral evaluation of
      * structures, because we can't count on them even existing yet.)</li>
@@ -681,17 +681,17 @@ public abstract class AstNode
     /**
      * Second logical compiler pass. This pass has access to imported modules, and is responsible
      * for resolving names.
-     * <p/>
-     * The rule of thumb is that no questions should be asked of other modules that could not have
+     *
+     * <p>The rule of thumb is that no questions should be asked of other modules that could not have
      * been answered by this module before this call; in other words, the order of the module
      * compilation is not only unpredictable, but the potential exists for dependencies in either
      * direction (first to last and/or vice versa).
-     * <p/>
-     * As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
+     *
+     * <p>As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
      * resolve, in which case the caller (another AstNode) has to add itself to the list of nodes
      * that require another pass.
-     * <p/>
-     * <ul>
+     *
+     * <p><ul>
      * <li>Packages that import modules are able to verify that those modules are available to
      * compile against;</li>
      *
@@ -1808,8 +1808,8 @@ public abstract class AstNode
 
     /**
      * Build and return a map that allows the caller to navigate the children of this node.
-     * <p/>
-     * Assume some type T which represents either an AstNode instance, or an object that implements
+     *
+     * <p>Assume some type T which represents either an AstNode instance, or an object that implements
      * toString(). The keys of the map should be strings that describe the categories of the
      * children, while the values should provide the info about the children of this AstNode,
      * either as an object of type T, a Collection of type T, an array of type T, or a Map whose

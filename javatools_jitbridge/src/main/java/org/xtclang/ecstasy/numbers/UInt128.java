@@ -109,8 +109,8 @@ public class UInt128 extends UIntNumber {
     /**
      * This method is called at the end of a JIT primitive method to return the value of a
      * {@link BigInteger}.
-     * <p>
-     * The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64
+     *
+     * <p>The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64
      * bits will be returned as a {@code long}.
      *
      * @param ctx  the current context
@@ -153,8 +153,8 @@ public class UInt128 extends UIntNumber {
 
     /**
      * The primitive implementation of:
-     * <p>
-     * {@code static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);}
+     *
+     * <p>{@code static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);}
      */
     public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
         UInt128 i1        = (UInt128) value1;

@@ -1078,8 +1078,8 @@ public class PropertyInfo
 
     /**
      * Obtain the TypeConstant representing the data type of the underlying "box" (Ref/Var).
-     * <p/>
-     * Note, that unlike the {@link PropertyConstant#getRefType}, this method returns the base
+     *
+     * <p>Note, that unlike the {@link PropertyConstant#getRefType}, this method returns the base
      * Ref type even for "custom" properties.
      *
      * @return the underlying Ref type

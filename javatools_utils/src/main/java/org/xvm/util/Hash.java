@@ -5,8 +5,7 @@ import java.util.Arrays;
 /**
  * Helper functions for producing compound hashes.
  *
- * <p>
- * For example given a class with fields {@code a, b, c, d} of any type, a compound hash can be
+ * <p>For example given a class with fields {@code a, b, c, d} of any type, a compound hash can be
  * computed via:
  * <pre>{@code
  * int hash = Hash.of(a,
@@ -220,8 +219,7 @@ public final class Hash {
     /**
      * Return a hash of the value.
      *
-     * <p>
-     * If the value is an array the hash will be via {@link java.util.Arrays#hashCode}.
+     * <p>If the value is an array the hash will be via {@link java.util.Arrays#hashCode}.
      *
      * @param v the value
      *

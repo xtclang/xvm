@@ -20,7 +20,7 @@ import static org.xvm.util.Handy.require;
 /**
  * A TypeSystem Linker is the "builder" for new TypeSystems.
  *
- * TODO differentiate between "shared" in the Java sense (applies to any module that can be broken
+ * <p>TODO differentiate between "shared" in the Java sense (applies to any module that can be broken
  *      out) and "shared" in the Ecstasy sense (able to pass things back and forth using those types)
  * TODO show example of how shared modules can be associated with Ecstasy module imports, especially
  *      in the db v1 vs db v2 example?)
@@ -128,8 +128,8 @@ public class Linker {
 
     /**
      * Specify a "condition name" for the modules that will be loaded and resolved.
-     * <p>
-     * This must be called BEFORE specifying the main module or any additional modules of the
+     *
+     * <p>This must be called BEFORE specifying the main module or any additional modules of the
      * TypeSystem, otherwise the Refiner will be used to determine the definition of any
      * unspecified names.
      *
@@ -149,8 +149,8 @@ public class Linker {
 
     /**
      * Specify the "condition names" for the modules that will be loaded and resolved.
-     * <p>
-     * This must be called BEFORE specifying the main module or any additional modules of the
+     *
+     * <p>This must be called BEFORE specifying the main module or any additional modules of the
      * TypeSystem that depend on these names, otherwise the Refiner will be used to determine
      * the definition of any unspecified names.
      *

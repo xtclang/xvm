@@ -14,8 +14,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Dec128, stored in an array of Java longs, two long array elements for ech Dec128.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref

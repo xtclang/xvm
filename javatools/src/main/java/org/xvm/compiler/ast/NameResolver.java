@@ -811,8 +811,8 @@ public class NameResolver
     /**
      * The goal of the NameResolver is either a type or a more general value (which itself might be
      * a type).
-     * <p/>
-     * Name resolution can be completely generic ("I need any value, including a type or a
+     *
+     * <p>Name resolution can be completely generic ("I need any value, including a type or a
      * multi-method"), or can be a bit more specific ("I am resolving for a type").
      */
     private final boolean m_fTypeGoal;

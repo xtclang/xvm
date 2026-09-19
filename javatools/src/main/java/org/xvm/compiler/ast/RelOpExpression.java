@@ -50,22 +50,22 @@ import org.xvm.util.Severity;
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
  * "expression operator expression".
- * <p/>
- * <ul>
- * <li><tt>COND_XOR:   "^^"</tt> - </li>
- * <li><tt>BIT_OR:     "|"</tt> - </li>
- * <li><tt>BIT_XOR:    "^"</tt> - </li>
- * <li><tt>BIT_AND:    "&"</tt> - </li>
- * <li><tt>DOTDOT:     ".."</tt> - </li>
- * <li><tt>SHL:        "<<"</tt> - </li>
- * <li><tt>SHR:        ">>"</tt> - </li>
- * <li><tt>USHR:       ">>>"</tt> - </li>
- * <li><tt>ADD:        "+"</tt> - </li>
- * <li><tt>SUB:        "-"</tt> - </li>
- * <li><tt>MUL:        "*"</tt> - </li>
- * <li><tt>DIV:        "/"</tt> - </li>
- * <li><tt>MOD:        "%"</tt> - </li>
- * <li><tt>DIVREM:     "/%"</tt> - </li>
+ *
+ * <p><ul>
+ * <li><code>COND_XOR:   "^^"</code> - </li>
+ * <li><code>BIT_OR:     "|"</code> - </li>
+ * <li><code>BIT_XOR:    "^"</code> - </li>
+ * <li><code>BIT_AND:    "&"</code> - </li>
+ * <li><code>DOTDOT:     ".."</code> - </li>
+ * <li><code>SHL:        "<<"</code> - </li>
+ * <li><code>SHR:        ">>"</code> - </li>
+ * <li><code>USHR:       ">>>"</code> - </li>
+ * <li><code>ADD:        "+"</code> - </li>
+ * <li><code>SUB:        "-"</code> - </li>
+ * <li><code>MUL:        "*"</code> - </li>
+ * <li><code>DIV:        "/"</code> - </li>
+ * <li><code>MOD:        "%"</code> - </li>
+ * <li><code>DIVREM:     "/%"</code> - </li>
  * </ul>
  */
 public class RelOpExpression

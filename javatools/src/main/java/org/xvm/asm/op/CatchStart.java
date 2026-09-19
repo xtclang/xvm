@@ -29,8 +29,8 @@ import static org.xvm.javajit.Builder.CD_nException;
 
 /**
  * CATCH ; begin an exception handler (implicit ENTER and VAR_IN)
- * <p/>
- * The CATCH op indicates the beginning of an exception handler. The exception handler concludes
+ *
+ * <p>The CATCH op indicates the beginning of an exception handler. The exception handler concludes
  * with a matching CATCH_END op.
  */
 public class CatchStart

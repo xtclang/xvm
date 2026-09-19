@@ -36,8 +36,8 @@ public abstract class Number
      * An unsigned Java long can store values up to 20 digits long (specifically up to
      * 18,446,744,073,709,551,615). Because standard mathematical methods and casting to double
      * fail at these extreme boundaries due to precision loss, we use an array lookup.
-     * <p>
-     * Because an unsigned long has a fixed maximum size, you can use a lookup array filled with
+     *
+     * <p>Because an unsigned long has a fixed maximum size, you can use a lookup array filled with
      * the unsigned power-of-10 thresholds. By using Long.compareUnsigned(), you avoid any object
      * creation.
      */

@@ -32,7 +32,7 @@ public class LongLong {
     }
 
     /**
-     * @return true iff the value is small enough to fit into a <tt>long</tt>
+     * @return true iff the value is small enough to fit into a <code>long</code>
      */
     public boolean isSmall(boolean fSigned) {
         return fSigned

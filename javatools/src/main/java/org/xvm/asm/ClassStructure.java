@@ -1505,8 +1505,8 @@ public class ClassStructure
 
     /**
      * Recursively check if the formal name is introduced by this class or any of its contributions.
-     * <p/>
-     * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
+     *
+     * <p>Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
      * functionality since the TypeInfo generation itself uses it.
      *
      * @return true if the formal type with this name exists
@@ -1578,8 +1578,8 @@ public class ClassStructure
     /**
      * Recursively find the type for the specified formal name. Note that the formal name could
      * be introduced by some contributions, rather than this class itself.
-     * <p/>
-     * Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
+     *
+     * <p>Note: while this seems to be a duplication of what TypoInfo does, we need to keep this
      * functionality since the TypeInfo generation itself uses it.
      *
      * @return the corresponding actual type or null if there is no matching formal type

@@ -16,10 +16,10 @@ import org.xvm.runtime.Frame;
 
 /**
  * GUARD_END rel_addr
- * <p/>
- * Each GUARD_END op must match up with a previous GUARD op.
- * <p/>
- * The GUARD_END op exits the scope and proceeds to the instruction at the location specified by
+ *
+ * <p>Each GUARD_END op must match up with a previous GUARD op.
+ *
+ * <p>The GUARD_END op exits the scope and proceeds to the instruction at the location specified by
  * "rel_addr".
  */
 public class GuardEnd

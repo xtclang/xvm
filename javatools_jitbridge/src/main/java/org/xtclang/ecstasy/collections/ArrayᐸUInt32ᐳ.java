@@ -16,8 +16,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of UInt32, stored in an array of Java longs, two UInt32 per long.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref

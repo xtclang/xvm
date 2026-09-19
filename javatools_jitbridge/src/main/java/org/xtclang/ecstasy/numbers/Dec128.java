@@ -242,8 +242,8 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Add two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal packed into two
      * {@code long} values.
-     * <p>
-     * The low 64-bits of the result will be returned, the high 64-bits of the result will be set
+     *
+     * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
      * @param ctx    the current {@link Ctx}
@@ -275,8 +275,8 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Divide two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal packed into two
      * {@code long} values.
-     * <p>
-     * The low 64-bits of the result will be returned, the high 64-bits of the result will be set
+     *
+     * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
      * @param ctx    the current {@link Ctx}
@@ -327,8 +327,8 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Return the modulus of two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal
      * packed into two {@code long} values.
-     * <p>
-     * The low 64-bits of the result will be returned, the high 64-bits of the result will be set
+     *
+     * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
      * @param ctx    the current {@link Ctx}
@@ -360,8 +360,8 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Multiply two Dec128 values, each represented by an IEEE-754-2008 64-bit decimal packed into
      * two {@code long} values.
-     * <p>
-     * The low 64-bits of the result will be returned, the high 64-bits of the result will be set
+     *
+     * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
      * @param ctx    the current {@link Ctx}
@@ -399,8 +399,8 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Negate a Dec128 value represented by an IEEE-754-2008 128-bit decimal packed into two
      * {@code long} values.
-     * <p>
-     * The low 64-bits of the result will be returned, the high 64-bits of the result will be set
+     *
+     * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
      * @param ctx   the current {@link Ctx}
@@ -427,8 +427,8 @@ public class Dec128 extends DecimalFPNumber {
     /**
      * Subtract one Dec128 value from another, each represented by an IEEE-754-2008 64-bit decimal
      * packed into two {@code long} values.
-     * <p>
-     * The low 64-bits of the result will be returned, the high 64-bits of the result will be set
+     *
+     * <p>The low 64-bits of the result will be returned, the high 64-bits of the result will be set
      * into the {@link Ctx#i0} field of the passed in context.
      *
      * @param ctx    the current {@link Ctx}
@@ -561,14 +561,14 @@ public class Dec128 extends DecimalFPNumber {
     }
 
     /**
-     * @return the significand of the decimal as a Java <tt>BigInteger</tt>
+     * @return the significand of the decimal as a Java <code>BigInteger</code>
      */
     public BigInteger $getSignificand() {
         return $getSignificand($lowBits, $highBits);
     }
 
     /**
-     * @return the significand of the decimal as a Java <tt>BigInteger</tt>
+     * @return the significand of the decimal as a Java <code>BigInteger</code>
      */
     public static BigInteger $getSignificand(long lowBits, long highBits) {
         long nHBits = $ensureFiniteHighBits(highBits);
@@ -610,18 +610,18 @@ public class Dec128 extends DecimalFPNumber {
     }
 
     /**
-     * @return the exponent of the decimal as a Java <tt>int</tt>
+     * @return the exponent of the decimal as a Java <code>int</code>
      */
     public int $getExponent() {
         return $getExponent($highBits);
     }
 
     /**
-     * Obtain the exponent of the decimal as a Java <tt>int</tt>
+     * Obtain the exponent of the decimal as a Java <code>int</code>
      *
      * @param highBits  the high 64-bits of a 128-bit IEEE-754-2008 decimal value
      *
-     * @return the exponent of the decimal as a Java <tt>int</tt>
+     * @return the exponent of the decimal as a Java <code>int</code>
      */
     public static int $getExponent(long highBits) {
         // a combination field is 17 bits (from bit 46 to bit 62), including 12 "pure" exponent bits
@@ -699,8 +699,8 @@ public class Dec128 extends DecimalFPNumber {
 
     /**
      * Convert a Java BigDecimal to an IEEE 754 128-bit decimal contained in two Java {@code long}s.
-     * <p>
-     * This method will set the most significant 64-bits of the IEEE 754 128-bit decimal into the
+     *
+     * <p>This method will set the most significant 64-bits of the IEEE 754 128-bit decimal into the
      * {@link Ctx#i0} field of the passed in context. The least significant 64-bits of the
      * IEEE 754 128-bit decimal will be returned.
      *

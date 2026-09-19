@@ -11,10 +11,9 @@ import java.math.RoundingMode;
 /**
  * A representation of an IEEE-754-2008 decimal.
  *
- * <p/>
- * Implementation notes:
- * <p/>
- * <tt><pre>
+ * <p>Implementation notes:
+ *
+ * <p><code><pre>
  * IEEE-754 decimal interchange format parameters (table 3.5):
  * parameter                    32-bit      64-bit      128-bit     decimal{k}
  * ---------------------------  ----------  ----------  ----------  ----------------
@@ -60,7 +59,7 @@ import java.math.RoundingMode;
  * transformations:
  *      e = q + p - 1
  *      m = c * b^(1-p)
- * </pre></tt>
+ * </pre></code>
  */
 public abstract class Decimal {
     // ----- accessors -----------------------------------------------------------------------------
@@ -87,7 +86,7 @@ public abstract class Decimal {
      * Obtain a byte of the IEEE-754-2008 formatted decimal.
      *
      * @param i  the index of the byte, where 0 is the most significant byte, and
-     *           <tt>({@link #getBitLength()}-1)</tt> is the least significant byte
+     *           <code>({@link #getBitLength()}-1)</code> is the least significant byte
      * @return
      */
     public abstract int getByte(int i);
@@ -678,8 +677,8 @@ public abstract class Decimal {
 
     /**
      * Convert the three least significant decimal digits of the passed integer value to a declet.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.4.
+     *
+     * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.4.
      *
      * @param nDigits  the int value containing the digits
      *
@@ -691,8 +690,8 @@ public abstract class Decimal {
 
     /**
      * Convert three decimal digits to a declet.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.4.
+     *
+     * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.4.
      *
      * @param d1  4-bit value "d1" from table 3.4 (most significant digit)
      * @param d2  4-bit value "d2" from table 3.4
@@ -719,14 +718,14 @@ public abstract class Decimal {
     }
 
     /**
-     * Convert the passed declet to three decimal digits, and format them as a Java <tt>int</tt> in
+     * Convert the passed declet to three decimal digits, and format them as a Java <code>int</code> in
      * the range 0-999.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.3.
+     *
+     * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.3.
      *
      * @param nBits  a declet
      *
-     * @return three decimal digits in a Java <tt>int</tt> (000-999)
+     * @return three decimal digits in a Java <code>int</code> (000-999)
      */
     public static int decletToInt(int nBits) {
         //               b6 b7 b8                b3 b4
@@ -789,13 +788,13 @@ public abstract class Decimal {
 
     /**
      * Convert the passed declet to three decimal digits, and return each of them in the three least
-     * significant bytes of a Java <tt>int</tt>.
-     * <p/>
-     * Details are in IEEE 754-2008 section 3.5.2, table 3.3.
+     * significant bytes of a Java <code>int</code>.
+     *
+     * <p>Details are in IEEE 754-2008 section 3.5.2, table 3.3.
      *
      * @param nBits  a declet
      *
-     * @return three decimal digits in a Java <tt>int</tt>, such that bits 0-7 contain the least
+     * @return three decimal digits in a Java <code>int</code>, such that bits 0-7 contain the least
      *         significant digit, bits 8-15 the second, and bits 16-23 the most significant digit
      */
     public static int decletToDigits(int nBits) {

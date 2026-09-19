@@ -2228,11 +2228,11 @@ public class ServiceContext {
 
     /**
      * The context scheduling "lock", atomic operations are performed via {@link #SCHEDULING_LOCK_HANDLE}.
-     * <p>
-     * This lock must be acquired in order to schedule context processing and is not released until
+     *
+     * <p>This lock must be acquired in order to schedule context processing and is not released until
      * the context is no longer scheduled.
-     * <p>
-     * The lock is implemented as a volatile counter, the thread which transitions from 0 to 1 becomes
+     *
+     * <p>The lock is implemented as a volatile counter, the thread which transitions from 0 to 1 becomes
      * the lock holder will release the lock by setting back via a getAndSet(0), which, if it yields
      * a prior value of something other than 1, indicates the lock contention.
      */

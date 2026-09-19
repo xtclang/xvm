@@ -981,8 +981,8 @@ public class ModuleStructure
      * <li>An embedded module is an entire module that is embedded within the FileStructure in order
      *     to fully satisfy the dependencies of an import.</li>
      * </ul>
-     * <p/>
-     * A fingerprint module has three levels that indicate how desired or required it is:
+     *
+     * <p>A fingerprint module has three levels that indicate how desired or required it is:
      * <ul>
      * <li>Optional indicates that the dependency is supported, but leaves the decision regarding
      *     whether to import the module to the linker;</li>

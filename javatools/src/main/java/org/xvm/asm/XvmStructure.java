@@ -20,8 +20,8 @@ import static org.xvm.util.Handy.stream;
 /**
  * Represents any of the various XVM structures, which are hierarchical in nature, and include such
  * structures as modules, namespaces, classes, methods, properties, and so on.
- * <p/>
- * The purpose of an XVM structure is to encapsulate a broad range of complexity behind a relatively
+ *
+ * <p>The purpose of an XVM structure is to encapsulate a broad range of complexity behind a relatively
  * uniform surface area, which is a fairly significant challenge. Quite a few design decisions are
  * hidden behind that limited surface area, but even with significant effort, the surface area has
  * expanded beyond what one would consider "small". Hereunder is an attempt to capture a few of the
@@ -262,8 +262,8 @@ public abstract class XvmStructure
 
     /**
      * Mark the XVM structure as having been modified.
-     * <p/>
-     * After calling this method, and before a call to {@link #resetModified()} occurs,
+     *
+     * <p>After calling this method, and before a call to {@link #resetModified()} occurs,
      * {@link #isModified()} must return true.
      */
     protected abstract void markModified();
@@ -271,8 +271,8 @@ public abstract class XvmStructure
     /**
      * If the XVM structure has been modified, reset that modified status such that subsequent calls
      * to {@link #isModified()} will return {@code false}.
-     * <p/>
-     * After calling this method, and before any further modifications occur, {@link #isModified()}
+     *
+     * <p>After calling this method, and before any further modifications occur, {@link #isModified()}
      * must return false.
      */
     protected void resetModified() {

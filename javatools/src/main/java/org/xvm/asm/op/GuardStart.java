@@ -23,13 +23,13 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * GUARD #handlers:(CONST_CLASS, CONST_STRING, rel_addr)
- * <p/>
- * The GUARD op indicates the beginning of a section of ops for which there are exception handlers.
+ *
+ * <p>The GUARD op indicates the beginning of a section of ops for which there are exception handlers.
  * The GUARD op contains the information, in order of precedence, for the types of exceptions that
  * are to be caught, and the address of the CATCH op that is the exception handler for each of those
  * exception types.
- * <p/>
- * The section of guarded ops concludes with a matching GUARD_END op.
+ *
+ * <p>The section of guarded ops concludes with a matching GUARD_END op.
  */
 public class GuardStart
         extends Op {

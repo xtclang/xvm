@@ -304,8 +304,8 @@ public class MethodInfo
 
     /**
      * Layer the MethodInfo for the validator.
-     * <p/>
-     * This method is different from the "layerOn" method above since the validator is quite special:
+     *
+     * <p>This method is different from the "layerOn" method above since the validator is quite special:
      * it is not virtual (not callable directly), but the runtime needs to have the full list
      * of the validators to perform the post-construction validation.
      *
@@ -343,8 +343,8 @@ public class MethodInfo
 
     /**
      * Layer the MethodInfo for the virtual constructor.
-     * <p/>
-     * This method is different from the "layerOn" method above since the virtual constructors are
+     *
+     * <p>This method is different from the "layerOn" method above since the virtual constructors are
      * quite special: they are not virtual (not callable directly), but the compiler and validator
      * need this information to enforce the virtual constructor's contract.
      *

@@ -29,12 +29,12 @@ import static org.xvm.util.Severity.WARNING;
  * The "bundle" command:
  * <p>
  *  java org.xvm.tool.Bundler [-L repo(s)] [-o output] [--main module] [module_name_or_file ...]
- * <p>
- * Merges compiled modules into a single multi-module .xtc file (a "bundle"). The resulting file is
+ *
+ * <p>Merges compiled modules into a single multi-module .xtc file (a "bundle"). The resulting file is
  * a self-contained module repository: the runner and compiler can resolve every bundled module from
  * it by name, e.g. {@code xec -L app.bundle.xtc app.bundle.xtc}.
- * <p>
- * With no explicit module selection, every non-system module found on the module path is bundled.
+ *
+ * <p>With no explicit module selection, every non-system module found on the module path is bundled.
  * System (xtclang.org) modules are never bundled implicitly; they remain external fingerprint
  * dependencies, resolved from the XDK at run time, exactly as with a lib directory.
  */

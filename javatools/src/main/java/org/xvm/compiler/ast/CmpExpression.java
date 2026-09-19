@@ -58,13 +58,13 @@ import org.xvm.util.Severity;
  * Comparison binary expression.
  *
  * <ul>
- * <li><tt>COMP_EQ:    "=="</tt> - </li>
- * <li><tt>COMP_NEQ:   "!="</tt> - </li>
- * <li><tt>COMP_LT:    "<"</tt> - </li>
- * <li><tt>COMP_GT:    "><tt>"</tt> - </li>
- * <li><tt>COMP_LTEQ:  "<="</tt> - </li>
- * <li><tt>COMP_GTEQ:  ">="</tt> - </li>
- * <li><tt>COMP_ORD:   "<=><tt>"</tt> - </li>
+ * <li><code>COMP_EQ:    "=="</code> - </li>
+ * <li><code>COMP_NEQ:   "!="</code> - </li>
+ * <li><code>COMP_LT:    "<"</code> - </li>
+ * <li><code>COMP_GT:    "&gt;"</code> - </li>
+ * <li><code>COMP_LTEQ:  "<="</code> - </li>
+ * <li><code>COMP_GTEQ:  ">="</code> - </li>
+ * <li><code>COMP_ORD:   "&lt;=&gt;"</code> - </li>
  * </ul>
  *
  * There are special cases when the left side of a Comparison is itself a similar Comparison:

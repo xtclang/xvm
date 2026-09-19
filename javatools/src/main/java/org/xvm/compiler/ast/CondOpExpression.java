@@ -31,8 +31,8 @@ import org.xvm.util.Severity;
  * Conditional operator expressions "||" and "&&".
  *
  * <ul>
- * <li><tt>COND_OR:  "||"</tt> - logical "or"</li>
- * <li><tt>COND_AND: "&&"</tt> - logical "and"</li>
+ * <li><code>COND_OR:  "||"</code> - logical "or"</li>
+ * <li><code>COND_AND: "&&"</code> - logical "and"</li>
  * </ul>
  */
 public class CondOpExpression

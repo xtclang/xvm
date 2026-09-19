@@ -17,7 +17,7 @@ import org.xvm.javajit.TypeSystem.Artifact;
 /**
  * The builder for Enum value types.
  *
- * It overrides the CommonBuilder to do the following:
+ * <p>It overrides the CommonBuilder to do the following:
  *   - create a synthetic "$name" field to hold the enum value name
  *   - supply the "ordinal" and "name" properties
  */

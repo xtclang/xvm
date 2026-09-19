@@ -113,8 +113,8 @@ public interface InPlaceSupport
 
     /**
      * Build the primitive local ops.
-     * <p>
-     * In:  nothing on the Java stack
+     *
+     * <p>In:  nothing on the Java stack
      * Out: the result on Java stack
      *
      * @param bctx  the current {@link BuildContext}
@@ -346,8 +346,8 @@ public interface InPlaceSupport
 
     /**
      * Build the XVM primitive local ops.
-     * <p>
-     * Nothing is on the Java stack before this method executes. The result will be on the Java
+     *
+     * <p>Nothing is on the Java stack before this method executes. The result will be on the Java
      * stack when the method completes.
      *
      * @param bctx  the current BuildContext
@@ -419,8 +419,8 @@ public interface InPlaceSupport
 
     /**
      * Build the non-primitive Sequential local ops.
-     * <p>
-     * Nothing is on the Java stack before this method executes. The result will be on the Java
+     *
+     * <p>Nothing is on the Java stack before this method executes. The result will be on the Java
      * stack when the method completes.
      *
      * @param bctx  the current BuildContext

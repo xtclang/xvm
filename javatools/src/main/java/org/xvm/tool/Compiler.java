@@ -40,26 +40,27 @@ import static org.xvm.util.Severity.WARNING;
 
 /**
  * This is the command-line Ecstasy compiler.
- * <p>
- * <p/>Find the root of the module containing the code in the current directory, and compile it, placing
+ *
+ * <p><p>Find the root of the module containing the code in the current directory, and compile it, placing
  * the result in the default location:
- * <p>
- * <p/>{@code  xcc}
  *
- * <p/>Compile the specified module, placing the result in the default location:
- * <p>
- * <p/>{@code  xcc ./path/to/module_name.x}
+ * <p><p>{@code  xcc}
  *
- * <p/>Compile the module that the specified file belongs to:
- * <p>
- * <p/>{@code  xcc MyClass.x}
+ * <p>Compile the specified module, placing the result in the default location:
  *
- * <p/>Alternatively, either of the following would work:
- * <p>
- * <p/>{@code  xcc MyClass.xtc}
- * <p/>{@code  xcc MyClass}
+ * <p><p>{@code  xcc ./path/to/module_name.x}
  *
- * <p/>The location for the resulting {@code .xtc} file follows the following rules:
+ * <p>Compile the module that the specified file belongs to:
+ *
+ * <p><p>{@code  xcc MyClass.x}
+ *
+ * <p>Alternatively, either of the following would work:
+ *
+ * <p><p>{@code  xcc MyClass.xtc}
+ *
+ * <p>{@code  xcc MyClass}
+ *
+ * <p>The location for the resulting {@code .xtc} file follows the following rules:
  * <ul>
  * <li>If the "-o" option is specified, then the corresponding location is used for the output;</li>
  * <li>If the module source file is named "MyModule.x", then the output is in the same-named file
@@ -70,28 +71,28 @@ import static org.xvm.util.Severity.WARNING;
  *     is written to "app/build/app.xtc".</li>
  * </ul>
  *
- * <p/>The location of additional resource files and/or directories can be specified by using the
+ * <p>The location of additional resource files and/or directories can be specified by using the
  * {@code -r} option; for example:
- * <p>
- * <p/>{@code  xcc -r ~/dev/prj/otherApp/build/}
  *
- * <p/>The location of the resulting {@code .xtc} file can be specified by using the {@code -o}
+ * <p><p>{@code  xcc -r ~/dev/prj/otherApp/build/}
+ *
+ * <p>The location of the resulting {@code .xtc} file can be specified by using the {@code -o}
  * option; for example:
- * <p>
- * <p/>{@code  xcc -o ~/modules/}
  *
- * <p/>The version of the resulting module can be specified by using the {@code -version} option;
+ * <p><p>{@code  xcc -o ~/modules/}
+ *
+ * <p>The version of the resulting module can be specified by using the {@code -version} option;
  * for example:
- * <p>
- * <p/>{@code  xcc --set-version 0.4-alpha}
  *
- * <p/>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
+ * <p><p>{@code  xcc --set-version 0.4-alpha}
+ *
+ * <p>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search
  * path can contain directories and/or ".xtc" files:
- * <p>
- * <p/>{@code  xcc -L ~/modules/:../build/:Utils.xtc}
  *
- * <p/>Other command line options:
+ * <p><p>{@code  xcc -L ~/modules/:../build/:Utils.xtc}
+ *
+ * <p>Other command line options:
  * <ul>
  * <li>{@code --rebuild} - force rebuild, even if the build appears to be up-to-date</li>
  * <li>{@code --qualify} - use fully qualified module names as the basis for output file names</li>

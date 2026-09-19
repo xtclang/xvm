@@ -223,8 +223,8 @@ public class PropertyBody
 
     /**
      * Property body implementations are one of the following:
-     * <p/>
-     * <ul>
+     *
+     * <p><ul>
      * <li><b>FromInto</b> - the method body represents a property known to exist for compilation
      * purposes, but is otherwise not present; this is the result of the {@code into} clause, or any
      * properties of {@code Object} in the context of an interface, for example;</li>

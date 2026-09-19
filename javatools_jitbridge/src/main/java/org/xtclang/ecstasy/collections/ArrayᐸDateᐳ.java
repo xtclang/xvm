@@ -17,8 +17,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Date, stored in an array of Java longs, two Date per long.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref

@@ -28,10 +28,10 @@ public class Decimal32
     }
 
     /**
-     * Construct a decimal value from a Java <tt>int</tt> whose format is that of an IEEE-754-2008
+     * Construct a decimal value from a Java <code>int</code> whose format is that of an IEEE-754-2008
      * 32-bit decimal.
      *
-     * @param nBits  a 32-bit Java <tt>int</tt> containing the bits of an IEEE-754-2008 decimal
+     * @param nBits  a 32-bit Java <code>int</code> containing the bits of an IEEE-754-2008 decimal
      */
     public Decimal32(int nBits) {
         m_nBits = nBits;
@@ -140,10 +140,10 @@ public class Decimal32
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Obtain the decimal value as a Java <tt>int</tt> whose format is that of an IEEE-754-2008
+     * Obtain the decimal value as a Java <code>int</code> whose format is that of an IEEE-754-2008
      * 32-bit decimal.
      *
-     * @return a 32-bit Java <tt>int</tt> containing the bits of an IEEE-754-2008 decimal
+     * @return a 32-bit Java <code>int</code> containing the bits of an IEEE-754-2008 decimal
      */
     public int toIntBits() {
         return m_nBits;
@@ -230,7 +230,7 @@ public class Decimal32
      *
      * @param dec  a Java BigDecimal value
      *
-     * @return a Java <tt>int</tt> that contains a 32-bit IEEE 754 decimal value
+     * @return a Java <code>int</code> that contains a 32-bit IEEE 754 decimal value
      *
      * @throws ArithmeticException if the value is out of range
      */
