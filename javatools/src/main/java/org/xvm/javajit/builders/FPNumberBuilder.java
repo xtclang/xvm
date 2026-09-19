@@ -363,6 +363,8 @@ public class FPNumberBuilder extends NumberBuilder {
                 .invokestatic(fp8CD, "$toBits", md(CD_int, CD_float));
         } else if (valueCD.equals(CD_float)) {
             code.d2f();
+        } else {
+            assert valueCD.equals(CD_double) : "unsupported \"double\" conversion: " + valueCD;
         }
     }
 
@@ -425,8 +427,8 @@ public class FPNumberBuilder extends NumberBuilder {
     }
 
     /**
-     * @return the jitbridge ClassDesc for this type if it is one of the 8-bit FP formats, whose
-     *         values are carried as their encoding rather than as a Java float; null otherwise
+     * @return the ClassDesc for this type if it is one of the 8-bit FP formats, whose values are
+     *         carried as their encoding rather than as a Java float; null otherwise
      */
     protected ClassDesc fp8ClassDesc() {
         return switch (thisType.getSingleUnderlyingClass(false).getName()) {

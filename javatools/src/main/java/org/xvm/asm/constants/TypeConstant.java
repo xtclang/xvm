@@ -7429,20 +7429,6 @@ public abstract class TypeConstant
      *                   computed and the jump needs be generated; otherwise the result of the
      *                   comparison should be placed on the Java stack
      */
-    /**
-     * The 8-bit FP formats are carried as their encoding in an int, sharing the "I" carrier with
-     * the small integer types while sharing none of their ordering: the encoding is sign-magnitude.
-     *
-     * @return the jitbridge ClassDesc for an FP8 type, or null if this is not one
-     */
-    private ClassDesc fp8JitClass() {
-        return switch (getSingleUnderlyingClass(false).getName()) {
-            case "Float8e4" -> Builder.CD_Float8e4;
-            case "Float8e5" -> Builder.CD_Float8e5;
-            default         -> null;
-        };
-    }
-
     public void buildCompare(BuildContext bctx, CodeBuilder code, int nOp,
                              RegisterInfo reg1, Loader argLoader, Label lblTrue) {
         TypeConstant type1 = reg1.type();
@@ -7469,7 +7455,12 @@ public abstract class TypeConstant
             }
             convertIfUnsignedPrimitive(code);
 
-            ClassDesc cdFP8 = fp8JitClass();
+            ClassDesc cdFP8 = switch (getSingleUnderlyingClass(false).getName()) {
+                case "Float8e4" -> Builder.CD_Float8e4;
+                case "Float8e5" -> Builder.CD_Float8e5;
+                default         -> null;
+            };
+
             if (cdFP8 != null) {
                 // an FP8 value is carried as its 8-bit encoding, which is sign-magnitude and
                 // therefore cannot be compared as an int: -4.0 encodes as 0xC8 and 4.0 as 0x48
@@ -7487,48 +7478,49 @@ public abstract class TypeConstant
                 case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.ifle(lblTrue);
                 default                          -> throw new IllegalStateException();
                 }
-            } else
-            switch (desc) {
-            case "I", "S", "B", "Z":
-                switch (nOp) {
-                case Op.OP_CMP -> {
-                    code.isub();
-                    generateOrdered(bctx, code);
-                    return;
-                }
-                case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.if_icmpeq(lblTrue);
-                case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.if_icmpne(lblTrue);
-                case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.if_icmpgt(lblTrue);
-                case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.if_icmpge(lblTrue);
-                case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.if_icmplt(lblTrue);
-                case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.if_icmple(lblTrue);
-                default                          -> throw new IllegalStateException();
-                }
-                break;
-
-            case "J", "F", "D":
+            } else {
                 switch (desc) {
-                case "J" -> code.lcmp();
-                case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
-                case "D" -> code.dcmpl(); // REVIEW CP: ditto
-                }
-                switch (nOp) {
-                case Op.OP_CMP -> {
-                    generateOrdered(bctx, code);
-                    return;
-                }
-                case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifeq(lblTrue);
-                case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifne(lblTrue);
-                case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.ifgt(lblTrue);
-                case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.ifge(lblTrue);
-                case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.iflt(lblTrue);
-                case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.ifle(lblTrue);
-                default                          -> throw new IllegalStateException();
-                }
-                break;
+                case "I", "S", "B", "Z":
+                    switch (nOp) {
+                    case Op.OP_CMP -> {
+                        code.isub();
+                        generateOrdered(bctx, code);
+                        return;
+                    }
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.if_icmpeq(lblTrue);
+                    case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.if_icmpne(lblTrue);
+                    case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.if_icmpgt(lblTrue);
+                    case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.if_icmpge(lblTrue);
+                    case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.if_icmplt(lblTrue);
+                    case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.if_icmple(lblTrue);
+                    default                          -> throw new IllegalStateException();
+                    }
+                    break;
 
-            default:
-                throw new IllegalStateException();
+                case "J", "F", "D":
+                    switch (desc) {
+                    case "J" -> code.lcmp();
+                    case "F" -> code.fcmpl(); // REVIEW CP: fcmpl vs fcmpg?
+                    case "D" -> code.dcmpl(); // REVIEW CP: ditto
+                    }
+                    switch (nOp) {
+                    case Op.OP_CMP -> {
+                        generateOrdered(bctx, code);
+                        return;
+                    }
+                    case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifeq(lblTrue);
+                    case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifne(lblTrue);
+                    case Op.OP_IS_GT,  Op.OP_JMP_GT  -> code.ifgt(lblTrue);
+                    case Op.OP_IS_GTE, Op.OP_JMP_GTE -> code.ifge(lblTrue);
+                    case Op.OP_IS_LT,  Op.OP_JMP_LT  -> code.iflt(lblTrue);
+                    case Op.OP_IS_LTE, Op.OP_JMP_LTE -> code.ifle(lblTrue);
+                    default                          -> throw new IllegalStateException();
+                    }
+                    break;
+
+                default:
+                    throw new IllegalStateException();
+                }
             }
         } else if (isXvmPrimitive()) {
             // type is a custom XVM primitive
