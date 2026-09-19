@@ -238,7 +238,14 @@ public class FileStructure
         }
 
         addChild(moduleClone);
-        moduleClone.cloneChildren(module.children());
+        // Newly inserted modules, including fingerprint replacement, still have an empty child
+        // map and need a deep clone of the source hierarchy. A real module that is already
+        // present is linked as a sibling: addChild()/linkSibling() already adopted the existing
+        // child map, and cloning into that shared map would duplicate nested children and fail
+        // the empty-children assertion in Component.adoptChildren().
+        if (!moduleClone.hasChildren()) {
+            moduleClone.cloneChildren(module.children());
+        }
 
         if (fTakeFile) {
             // provisionally establish the primary module id before any fingerprint synthesis:
