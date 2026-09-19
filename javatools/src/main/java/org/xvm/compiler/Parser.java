@@ -1299,6 +1299,17 @@ public class Parser {
      * @return a statement
      */
     Statement parseStatement() {
+        try (var ignore = nest()) {
+            return parseStatementBody();
+        }
+    }
+
+    /**
+     * Parse a statement, having already counted it against the nesting limit.
+     *
+     * @return a statement
+     */
+    private Statement parseStatementBody() {
         switch (peek().getId()) {
         case SEMICOLON:
             Token tokSemi = match(Id.SEMICOLON);
@@ -2491,11 +2502,13 @@ public class Parser {
      * @return an expression
      */
     Expression parseElseExpression(boolean fExtended) {
-        Expression expr = parseTernaryExpression(fExtended);
-        if (peek(Id.COLON)) {
-            expr = new ElseExpression(expr, current(), parseElseExpression(false));
+        try (var ignore = nest()) {
+            Expression expr = parseTernaryExpression(fExtended);
+            if (peek(Id.COLON)) {
+                expr = new ElseExpression(expr, current(), parseElseExpression(false));
+            }
+            return expr;
         }
-        return expr;
     }
 
     /**
@@ -2934,6 +2947,21 @@ public class Parser {
      * @return an expression
      */
     Expression parsePrefixExpression(boolean fExtended) {
+        try (var ignore = nest()) {
+            return parsePrefixExpressionBody(fExtended);
+        }
+    }
+
+    /**
+     * Parse a prefix expression, having already counted it against the nesting limit. A chain of
+     * unary operators recurses here directly, without passing back through the expression chain,
+     * so it needs its own count.
+     *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
+     * @return an expression
+     */
+    private Expression parsePrefixExpressionBody(boolean fExtended) {
         switch (peek().getId()) {
         case ADD:
             return new UnaryPlusExpression(current(), parsePrefixExpression(false));
@@ -4267,6 +4295,19 @@ public class Parser {
      * @return a type expression
      */
     TypeExpression parseNonBiTypeExpression(boolean fExtended) {
+        try (var ignore = nest()) {
+            return parseNonBiTypeExpressionBody(fExtended);
+        }
+    }
+
+    /**
+     * Parse a type expression, having already counted it against the nesting limit.
+     *
+     * @param fExtended  true to allow parsing of an extended type expression
+     *
+     * @return a type expression
+     */
+    private TypeExpression parseNonBiTypeExpressionBody(boolean fExtended) {
         TypeExpression type;
         Token tokAccess = null;
         switch (peek().getId()) {
@@ -5583,6 +5624,54 @@ public class Parser {
         }
     }
 
+    /**
+     * Count one level of nested parsing, to be released when the returned handle is closed:
+     *
+     * <p/><code><pre>
+     * try (var ignore = nest()) {
+     *     ...
+     * }
+     * </pre></code>
+     *
+     * The parser is a recursive descent, and a level of nesting in the source costs a dozen or so
+     * Java frames. Without a limit, sufficiently nested source exhausts the thread's stack, and a
+     * StackOverflowError is not something a caller can be asked to handle: it escapes the compiler
+     * and reaches whatever embeds it. Counting the levels turns that into an ordinary error with a
+     * source position.
+     *
+     * The count is shared by every construct that nests, because they nest through each other -
+     * a type inside an expression inside a statement - so one budget bounds the descent no matter
+     * how the source alternates between them. It counts levels of parsing rather than levels of
+     * source: one construct can pass more than one guard on its way down, so the limit is a bound
+     * on the descent, not a promise about how many brackets the source may contain.
+     *
+     * @return a handle that releases the level when closed
+     *
+     * @throws CompilerException if the source is nested deeper than {@link #MAX_NESTING_DEPTH}
+     */
+    private Nesting nest() {
+        if (m_cNesting >= MAX_NESTING_DEPTH) {
+            Token token = peek();
+            log(Severity.ERROR, NESTING_TOO_DEEP, token.getStartPosition(), token.getEndPosition(),
+                    MAX_NESTING_DEPTH);
+            throw new CompilerException("nested deeper than " + MAX_NESTING_DEPTH);
+        }
+        ++m_cNesting;
+        return f_nesting;
+    }
+
+    /**
+     * The handle returned by {@link #nest()}. There is one instance per parser, because the count
+     * it releases is a single depth, not a per-level object.
+     */
+    private class Nesting
+            implements AutoCloseable {
+        @Override
+        public void close() {
+            --m_cNesting;
+        }
+    }
+
     public class SafeLookAhead
             implements AutoCloseable {
         public SafeLookAhead() {
@@ -5772,12 +5861,34 @@ public class Parser {
      */
     public static final String MISSING_SEMICOLON = "PARSER-29";
 
+    /**
+     * Nesting is too deep.
+     */
+    public static final String NESTING_TOO_DEEP  = "PARSER-30";
+
+    /**
+     * The deepest nesting the parser will descend into. Chosen well below the level at which the
+     * recursive descent exhausts a default thread stack, and far above anything that occurs in
+     * readable source.
+     */
+    public static final int MAX_NESTING_DEPTH = 256;
+
     // ----- data members --------------------------------------------------------------------------
 
     /**
      * The Source to parse.
      */
     private final Source m_source;
+
+    /**
+     * The current nesting depth; see {@link #nest()}.
+     */
+    private int m_cNesting;
+
+    /**
+     * The handle handed out by {@link #nest()}.
+     */
+    private final Nesting f_nesting = new Nesting();
 
     /**
      * The ErrorListener to report errors to.
