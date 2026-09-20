@@ -637,14 +637,22 @@ public class BuildContext {
     }
 
     /**
-     * @return true iff the register id represents a local property
+     * @return true iff the argument id represents a local property
      */
-    public boolean isProperty(int regId) {
-        if (regId <= Op.CONSTANT_OFFSET) {
-            assert getConstant(regId) instanceof PropertyConstant;
+    public boolean isProperty(int argId) {
+        if (argId <= Op.CONSTANT_OFFSET) {
+            assert getConstant(argId) instanceof PropertyConstant;
             return true;
         }
         return false;
+    }
+
+    /**
+     * @return true iff the argument id represents a generic property
+     */
+    public boolean isGenericProperty(int argId) {
+        return argId <= Op.CONSTANT_OFFSET &&
+                getConstant(argId) instanceof PropertyConstant prop && prop.isFormalType();
     }
 
     /**
@@ -698,6 +706,15 @@ public class BuildContext {
             int ctxParam = isOptimized ? methodDesc.optimizedCtx() : methodDesc.standardCtx();
             code.localVariable(code.parameterSlot(ctxParam), "$ctx", CD_Ctx,
                     scope.startLabel, scope.endLabel);
+        }
+
+        Constant[] constants = methodStruct.getLocalConstants();
+        for (int i = 0, c = constants.length; i < c; i++) {
+            int argId = Op.CONSTANT_OFFSET - i;
+            Constant constant = constants[i];
+            if (constant instanceof PropertyConstant prop && prop.isFormalType()) {
+                typeMatrix.declareGenericProperty(argId, prop);
+            }
         }
 
         int            extraArgs = methodDesc.getImplicitParamCount(); // e.g. $ctx, $cctx, thi$, ...
@@ -1148,12 +1165,13 @@ public class BuildContext {
                 IdentityConstant constId = (IdentityConstant) constant;
                 type = constId.getValueType(pool(), null);
             } else if (constant instanceof PropertyConstant propId) {
-                type = propId.getType();
+                int addr = isReturn ? currOpAddr + 1 : currOpAddr;
 
                 PropertyInfo prop = typeInfo.findProperty(propId);
-                if (prop != null) {
-                    type = prop.inferImmutable(thisType);
-                }
+                assert prop != null;
+
+                type = prop.inferImmutable(thisType);
+                type = typeMatrix.augmentPropertyType(type, addr);
             } else if (isSpecialized &&
                     constant instanceof MethodConstant methodId && methodId.isLambda()) {
                 MethodStructure   lambda = (MethodStructure) methodId.getComponent();
@@ -1384,7 +1402,28 @@ public class BuildContext {
      * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, int argId) {
-        return loadConstant(code, getConstant(argId));
+        Constant     constant = getConstant(argId);
+        RegisterInfo reg      = loadConstant(code, constant);
+
+        if (constant instanceof PropertyConstant) {
+            TypeConstant type = getArgumentType(argId);
+            if (!type.equals(reg.type())) {
+                // a property type can be narrowed through one of its generic types; reference
+                // narrowing only requires a cast while XVM primitives require a temp
+                JitTypeDesc jtd = type.getJitDesc(builder);
+                if (reg.isSingle() && !reg.cd().isPrimitive() && !jtd.cd.isPrimitive()) {
+                    if (!reg.cd().equals(jtd.cd)) {
+                        generateCheckCast(code, type);
+                    }
+                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+                }
+
+                RegisterInfo narrowedReg = createTempRegister(type);
+                moveRegister(code, reg, narrowedReg, true);
+                return narrowedReg.load(code);
+            }
+        }
+        return reg;
     }
 
     /**
@@ -1872,7 +1911,8 @@ public class BuildContext {
                 break;
 
             case "Primitive->Specific",
-                 "Primitive->Widened":
+                 "Primitive->Widened",
+                 "XvmPrimitive->Widened":
                 Builder.box(code, typeFrom);
                 break;
 
