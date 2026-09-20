@@ -4400,8 +4400,6 @@ public class CommonBuilder
                    "removeAll")),      // TODO: key's formal type is tracked as Object
         Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
             Set.of("fromEntry")),      // TODO: A_SUPER argument for a virtual construction
-        Map.entry("org.xtclang.ecstasy.Range",
-            Set.of("appendTo", "estimateStringLength")), // TODO: if (Element.is(Type<Stringable>)) does not cast
         Map.entry("org.xtclang.ecstasy.Timeout",
             Set.of("construct")), // TODO: native Service is a Java class, but the call expects an interface
         Map.entry("org.xtclang.ecstasy.numbers.Number",
