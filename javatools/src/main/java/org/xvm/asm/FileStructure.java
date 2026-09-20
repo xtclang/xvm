@@ -238,7 +238,10 @@ public class FileStructure
         }
 
         addChild(moduleClone);
-        moduleClone.cloneChildren(module.children());
+        // prevent duplication of already cloned children
+        if (!moduleClone.hasChildren()) {
+            moduleClone.cloneChildren(module.children());
+        }
 
         if (fTakeFile) {
             // provisionally establish the primary module id before any fingerprint synthesis:
