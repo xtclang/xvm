@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.CastTypeConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnassignedTypeConstant;
 
@@ -28,6 +29,11 @@ public class TypeMatrix {
 
     private final BuildContext bctx;
     private final OpView[]     views;
+
+    /**
+     * The local constant ids for generic properties tracked by this matrix.
+     */
+    private final Map<PropertyConstant, Integer> generics = new HashMap<>();
 
     public record OpView(Map<Integer, TypeConstant> types, boolean isImmutable) {
         /**
@@ -59,7 +65,8 @@ public class TypeMatrix {
     /**
      * Propagate all register types from current op to the destination op.
      *
-     * @param exceptId  if not negative, indicates the register id **not** to propagate
+     * @param exceptId  if not {@code -1}, indicates the register or generic property id **not** to
+     *                  propagate
      *
      * @return the set of registers that have widened their types
      */
@@ -70,7 +77,8 @@ public class TypeMatrix {
     /**
      * Propagate all register types from the specified view to another op.
      *
-     * @param exceptId  if not negative, indicates the register id **not** to propagate
+     * @param exceptId  if not {@code -1}, indicates the register or generic property id **not** to
+     *                  propagate
      *
      * @return the set of registers that have widened their types
      */
@@ -117,6 +125,16 @@ public class TypeMatrix {
     }
 
     /**
+     * Declare a generic property whose value can participate in type narrowing.
+     */
+    public void declareGenericProperty(int propertyId, PropertyConstant property) {
+        assert property.isFormalType();
+
+        generics.put(property, propertyId);
+        declare(-1, propertyId, property.getConstraintType().resolveConstraints());
+    }
+
+    /**
      * Propagate all types from current op to the next op and assign the specified register's type.
      */
     public void assign(int currAddr, int regId, TypeConstant type) {
@@ -130,7 +148,7 @@ public class TypeMatrix {
     public void assign(int currAddr, int nextAddr, int regId, TypeConstant type) {
         assert currAddr >= 0 && type != null;
 
-        if (bctx.isProperty(regId)) {
+        if (bctx.isProperty(regId) && !bctx.isGenericProperty(regId)) {
             // some ops can store their result directly into a property; its declared type must not
             // participate in register type flow
             follow(currAddr, nextAddr, -1);
@@ -292,7 +310,7 @@ public class TypeMatrix {
         Set<Integer> changeSet = Collections.emptySet();
         for (var entry : currView.types.entrySet()) {
             Integer regId = entry.getKey();
-            if (regId < 0 || regId == exceptId) {
+            if (regId == -1 || regId == exceptId) {
                 continue;
             }
 
@@ -393,7 +411,35 @@ public class TypeMatrix {
     // ----- retrieval phase -----------------------------------------------------------------------
 
     /**
-     * @return the type for the specified register at the specified address
+     * Augment a property type with any generic type narrowing known at the specified address.
+     */
+    public TypeConstant augmentPropertyType(TypeConstant type, int addr) {
+        return type.containsFormalType(true)
+                ? type.resolveGenerics(bctx.pool(),
+                    formal -> formal instanceof PropertyConstant prop
+                        ? getGenericType(prop, addr)
+                        : null)
+                : type;
+    }
+
+    /**
+     * Resolve a generic type from the narrowing information at the specified address.
+     */
+    private TypeConstant getGenericType(PropertyConstant formal, int addr) {
+        Integer propId = generics.get(formal);
+        if (propId == null) {
+            return null;
+        }
+
+        OpView       view = views[addr];
+        TypeConstant type = view == null ? null : unwrap(view.types.get(propId));
+        return type instanceof CastTypeConstant castType
+                ? castType.getUnderlyingType2()
+                : type;
+    }
+
+    /**
+     * @return the type for the specified register or generic property at the specified address
      */
     public TypeConstant getType(int regId, int addr) {
         OpView view = views[addr];
