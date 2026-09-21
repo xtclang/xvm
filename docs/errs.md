@@ -27,7 +27,7 @@ kept as the record of what was wrong. Where that has since changed:
 
 | | before | after |
 |---|---|---|
-| null-coalescing sites | 33 | 2, both in `FileStructure.getErrorListener` (the deferred ownership area) |
+| null-coalescing sites | 33 | 1, plus one assert - the `FileStructure` pair is gone with the ambient lookup |
 | names for the listener | 6 | 1 - `errs` |
 | kinds of silence | 1 undifferentiated | one concept, 3 named reasons: `PROBE` (133), `DISCARD` (3), `CASCADE` (3) |
 | fields using null as a state flag | 4 | 0 |
@@ -660,13 +660,26 @@ All twenty distinct messages sit on anonymous inner classes and unbound generics
 artefacts. Nobody could have known, because until now they were destroyed rather than suppressed.
 **Whether any is real is a type-system question and deserves an owner.**
 
-Still deferred, because it needs the ownership decision below rather than more deletion:
+*And then deleted.* The park existed only to quieten one line - `TypeConstant.ensureTypeInfo()`,
+which walked up to the file because an interned value has no caller to ask. Two measurements
+settled what that line should do instead:
 
-- `FileStructure` still resolves its destination through a holder instead of taking a listener at
-  construction: 8 constructors, 67 call sites.
-- `getErrorListener()` still consults the ambient current pool.
-- The `RUNTIME`-versus-silent asymmetry therefore survives: an absent listener still prints after a
-  compilation and swallows during one.
+- across a full XDK build and test run, `ErrorListener.RUNTIME` - the end of the walk, which
+  prints to stdout - received **nothing** from real code. The one hit was a test calling it
+  deliberately. So the ~68 runtime and JIT callers never reported anything;
+- during a compilation the file was parked on a silence anyway, so the ~46 compile-time callers
+  were already quiet.
+
+Both halves were therefore already silent, by arrangement rather than by design.
+`ensureTypeInfo()` says its own silence now, and the arrangement is gone with it:
+`FileStructure.getErrorListener` and its pool-then-RUNTIME fallback, `FileStructure.reportingTo`
+and its holder, `XvmStructure.getErrorListener`, and the compiler's park. 166 lines deleted, 57
+added, and the XDK compiles to byte-identical modules.
+
+The lesson worth keeping: **ownership here was not fixed by propagating a listener to 115 call
+sites, it was fixed by deleting the thing that let 115 call sites exist.** What remains is the
+optional, incremental part - the ~46 compile-time sites can each be given a real listener one at a
+time, turning a deliberate silence into a diagnostic, visibly and reviewably.
 
 The prior art put ownership on `ConstantPool`, with a documented argument: the two callers of the
 old setter were the compiler patching in a listener it already had (a constructor parameter written

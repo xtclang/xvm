@@ -45,8 +45,6 @@ import static org.xvm.util.Handy.toInputStream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writeUtf8String;
 
-import static org.xvm.asm.ErrorListener.RUNTIME;
-
 /**
  * A representation of the file structure that contains one or more Ecstasy (XVM) modules. The
  * FileStructure is generally used as a container of one module, which may have dependencies on
@@ -209,7 +207,6 @@ public class FileStructure
 
         m_kind    = that.m_kind;
         m_fLinked = that.m_fLinked;
-        f_errs.adoptFrom(that.f_errs);
         resetModified();
     }
 
@@ -1456,45 +1453,6 @@ public class FileStructure
         return true;
     }
 
-    @Override
-    public ErrorListener getErrorListener() {
-        ErrorListener errs = f_errs.get();
-        if (errs == null) {
-            // getCurrentPool() is an AMBIENT thread-local: it is null on any thread that has not had
-            // a pool pushed onto it, which is every thread driving the compiler or runtime from
-            // ordinary Java code. Dereferencing it unconditionally turned this diagnostic accessor
-            // into an NPE source. Ownership belongs in a parameter, not a thread-local - see the PR
-            // discussion - but the null guard is the minimal, behaviour-preserving fix.
-            ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != null && poolCurrent != m_pool) {
-                errs = poolCurrent.getErrorListener();
-            }
-        }
-        return errs == null ? RUNTIME : errs;
-    }
-
-    /**
-     * Direct diagnostics raised against this file, where no listener was passed, to the specified
-     * one, until the returned scope is closed.
-     *
-     * A TypeConstant is an interned value shared by everything, so when it is asked to build a
-     * TypeInfo without being given a listener it has no caller to ask, and walks up to its file
-     * instead. That makes this the answer to "who hears a diagnostic nobody was given a listener
-     * for", which is a property of the work in progress rather than of the file - so it is a
-     * scope, closed by whoever opened it, rather than a mode set on the file and cleared later by
-     * whoever remembers.
-     *
-     * It is deliberately not inherited from XvmStructure: a structure used to be able to reach
-     * through its parent and redirect the diagnostics of a whole containment tree it did not own.
-     *
-     * @param errs  the listener to direct such diagnostics to
-     *
-     * @return the scope, which restores the previous setting when closed
-     */
-    public Reporting.Scope reportingTo(ErrorListener errs) {
-        return f_errs.to(errs);
-    }
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -1669,10 +1627,4 @@ public class FileStructure
      */
     private transient AssemblerContext m_ctx;
 
-    /**
-     * Holds an ErrorListener explicitly provided to this FileStructure. An absence of an
-     * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
-     * the current thread should be used, or failing that, the runtime ErrorListener should be used.
-     */
-    private final transient Reporting f_errs = new Reporting(null);
 }
