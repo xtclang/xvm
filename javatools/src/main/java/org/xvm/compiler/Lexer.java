@@ -50,7 +50,7 @@ public class Lexer
         requireNonNull(errs, "errs");
 
         m_source        = source;
-        m_errs = errs;
+        f_errs = errs;
 
         eatWhitespace();
     }
@@ -60,7 +60,7 @@ public class Lexer
      */
     protected Lexer(Lexer parent) {
         m_source        = parent.m_source;
-        m_errs = parent.m_errs;
+        f_errs = parent.f_errs;
         m_fWhitespace   = parent.m_fWhitespace;
     }
 
@@ -2515,9 +2515,9 @@ public class Lexer
      * to build one by hand.
      */
     protected void log(Severity severity, String sCode, ErrorListener.Site site, Object... aoParam) {
-        m_errs.log(severity, sCode, site, aoParam);
-        if (m_errs.isAbortDesired()) {
-            throw new CompilerException("error list is full: " + m_errs);
+        f_errs.log(severity, sCode, site, aoParam);
+        if (f_errs.isAbortDesired()) {
+            throw new CompilerException("error list is full: " + f_errs);
         }
     }
 
@@ -2875,7 +2875,7 @@ public class Lexer
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errs;
+    private final ErrorListener f_errs;
 
     /**
      * Keeps track of whether whitespace was encountered.
