@@ -389,7 +389,7 @@ public class xRTSocket
                 socket.shutdownOutput();
             }
             return Op.R_NEXT;
-        } catch (SocketException ignore) {
+        } catch (SocketException _) {
             return Op.R_NEXT;
         } catch (IOException e) {
             return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -409,7 +409,7 @@ public class xRTSocket
         if (socket != null) {
             try {
                 socket.close();
-            } catch (IOException ignore) {}
+            } catch (IOException _) {}
         }
     }
 
