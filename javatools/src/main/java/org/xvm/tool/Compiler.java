@@ -647,7 +647,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         // Use Compiler's strictness-aware abort threshold
         // no sentinel comparison: a silent listener answers false to isAbortDesired anyway, so
         // the guard could never change the answer - and there is now more than one silent listener
-        return isBadEnoughToAbort(m_sevWorst) || m_errs.isAbortDesired();
+        return isBadEnoughToAbort(m_sevWorst) || f_errs.isAbortDesired();
     }
 
     // ----- accessors -----------------------------------------------------------------------------
