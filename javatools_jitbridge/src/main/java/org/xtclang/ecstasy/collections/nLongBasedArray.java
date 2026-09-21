@@ -112,6 +112,32 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
+     * Construct a fixed-size 8-bit array filled with one encoded value.
+     *
+     * @param value    the encoded 8-bit element value
+     * @param factory  the constructor for the concrete array type
+     */
+    protected static <A extends nLongBasedArray<A>> A $new8Bit(
+            Ctx ctx, TypeConstant type, long size, int value,
+            BiFunction<Ctx, TypeConstant, A> factory) {
+        ctx.alloc(size); // REVIEW + HEADER_SIZE?
+        A array = factory.apply(ctx, type);
+        array.$mut($FIXED);
+
+        long bits = value & 0xFFL;
+        long fill = bits | (bits << 8) | (bits << 16) | (bits << 24);
+        fill |= (fill << 32);
+
+        if (!array.$growInPlace(ctx, size)) {
+            throw array.$oob(ctx, size);
+        }
+
+        Arrays.fill(array.$storage, fill);
+        array.$size((int) size);
+        return array;
+    }
+
+    /**
      * Construct a fixed-size 8-bit array initialized by an index function.
      *
      * @param unboxValue  the element unboxer, with signature {@code (Object)int}
@@ -620,12 +646,13 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
                 for (long i = 0; i < size; i++) {
                     $set8bitElement(i, (int) initializer.invokeExact(ctx, i));
                 }
-            } else {
-                MethodHandle initializer = fn.stdMethod.asType(BOXED_INITIALIZER_SIGNATURE);
-                for (long i = 0; i < size; i++) {
-                    Object value = (Object) initializer.invokeExact(ctx, Int64.$box(i));
-                    $set8bitElement(i, (int) unboxValue.invokeExact(value));
-                }
+                return;
+            }
+
+            MethodHandle initializer = fn.stdMethod.asType(BOXED_INITIALIZER_SIGNATURE);
+            for (long i = 0; i < size; i++) {
+                Object value = (Object) initializer.invokeExact(ctx, Int64.$box(i));
+                $set8bitElement(i, (int) unboxValue.invokeExact(value));
             }
         } catch (nException e) {
             throw e;

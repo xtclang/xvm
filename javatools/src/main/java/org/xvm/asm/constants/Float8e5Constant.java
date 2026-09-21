@@ -72,9 +72,8 @@ public class Float8e5Constant
             int result = Float.compare(toFloat(this.m_nBits), toFloat(thatFP8.m_nBits));
             // NaN encodings retain their sign and payload in the constant pool.
             return result == 0 ? Integer.compare(this.m_nBits, thatFP8.m_nBits) : result;
-        } else {
-            return -1;
         }
+        return -1;
     }
 
     @Override

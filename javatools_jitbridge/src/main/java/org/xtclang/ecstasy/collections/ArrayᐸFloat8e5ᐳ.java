@@ -2,8 +2,6 @@ package org.xtclang.ecstasy.collections;
 
 import java.lang.invoke.MethodHandle;
 
-import java.util.Arrays;
-
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IterableᐸFloat8e5ᐳ;
 import org.xtclang.ecstasy.IteratorᐸFloat8e5ᐳ;
@@ -56,21 +54,7 @@ public class ArrayᐸFloat8e5ᐳ
      */
     public static ArrayᐸFloat8e5ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Float8e5 boxed) {
-            ctx.alloc(size); // REVIEW + HEADER_SIZE?
-            ArrayᐸFloat8e5ᐳ array = new ArrayᐸFloat8e5ᐳ(ctx, type);
-            array.$mut($FIXED);
-
-            long value = boxed.$value & 0xFF;
-            long fill  = value == 0 ? 0 : value | (value << 8) | (value << 16) | (value << 24);
-            fill |= (fill << 32);
-
-            if (array.$growInPlace(ctx, size)) {
-                Arrays.fill(array.$storage, fill);
-                array.$size((int) size);
-                return array;
-            } else {
-                throw array.$oob(ctx, size);
-            }
+            return $new8Bit(ctx, type, size, boxed.$value, ArrayᐸFloat8e5ᐳ::new);
         }
 
         if (supply instanceof nFunction fn) {

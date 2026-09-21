@@ -60,13 +60,13 @@ public class ArrayᐸBFloat16ᐳ
             long fill  = value == 0 ? 0 : value | (value << 16);
             fill |= (fill << 32);
 
-            if (array.$growInPlace(ctx, size)) {
-                Arrays.fill(array.$storage, fill);
-                array.$size((int) size);
-                return array;
-            } else {
+            if (!array.$growInPlace(ctx, size)) {
                 throw array.$oob(ctx, size);
             }
+
+            Arrays.fill(array.$storage, fill);
+            array.$size((int) size);
+            return array;
         }
         // TODO
         throw new UnsupportedOperationException();
