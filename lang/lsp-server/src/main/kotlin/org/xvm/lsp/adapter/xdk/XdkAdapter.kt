@@ -9,9 +9,13 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
-import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.util.Severity as XtcSeverity
 
 /**
@@ -50,8 +54,28 @@ class XdkAdapter : AbstractAdapter() {
         uri: String,
         content: String,
     ): CompilationResult {
-        val diagnostics = compiles.submit<List<Diagnostic>> { compileNow(uri, content) }.get()
-        logger.debug("compile: uri={}, {} diagnostic(s)", uri, diagnostics.size)
+        val queued = System.nanoTime()
+        val depth = compiles.queue.size + 1
+        val (diagnostics, waited) =
+            compiles
+                .submit<Pair<List<Diagnostic>, Duration>> {
+                    val waited = (System.nanoTime() - queued).nanoseconds
+                    compileNow(uri, content) to waited
+                }.get()
+
+        // queue wait is reported separately from compile time on purpose: it is the number that
+        // says whether serialising compilations has started to hurt, and it is the one that would
+        // otherwise be invisible inside a single "how long did that take"
+        logger.info(
+            "compile: uri={}, {} bytes, {} diagnostic(s), queue={}, waited {}, compiled in {} [{}]",
+            uri,
+            content.length,
+            diagnostics.size,
+            depth,
+            waited,
+            lastCompile,
+            footprint(),
+        )
         return CompilationResult.withDiagnostics(uri, diagnostics, emptyList())
     }
 
@@ -71,6 +95,7 @@ class XdkAdapter : AbstractAdapter() {
     ): List<Diagnostic> {
         val heard = mutableListOf<ErrorListener.ErrorInfo>()
 
+        val started = System.nanoTime()
         try {
             // the document is named so that its diagnostics are distinguishable from another
             // unsaved document's; the listener answers for what it heard, which a bare lambda
@@ -91,6 +116,13 @@ class XdkAdapter : AbstractAdapter() {
             )
         }
 
+        lastCompile = (System.nanoTime() - started).nanoseconds
+        if (compiled.incrementAndGet() == 1L) {
+            // the first compilation pays for class loading, reading the XDK and an interpreter
+            // still warming up; measured over a long run it is about fourteen times the steady
+            // state, so it is worth telling apart from a slow one
+            logger.info("compile: first compilation in this server took {} (cold)", lastCompile)
+        }
         return heard.map { it.toDiagnostic(uri) }
     }
 
@@ -134,6 +166,15 @@ class XdkAdapter : AbstractAdapter() {
 
     private fun wholeDocument(uri: String): Location = Location(uri, 0, 0, 0, 0)
 
+    /**
+     * What the compiler is holding on to. A server that stays up for a working day either
+     * accumulates or it does not, and this is the cheap way to find out which from the log rather
+     * than from a profiler.
+     */
+    private fun footprint(): String =
+        runCatching { EmbeddingSupport.instance().footprint().toString() }
+            .getOrElse { "footprint unavailable: ${it.message}" }
+
     private fun XtcSeverity.toLspSeverity(): Diagnostic.Severity =
         when (this) {
             XtcSeverity.FATAL, XtcSeverity.ERROR -> Diagnostic.Severity.ERROR
@@ -170,11 +211,24 @@ class XdkAdapter : AbstractAdapter() {
         includeDeclaration: Boolean,
     ): List<Location> = emptyList()
 
+    /** How long the last compilation took, for the line that reports it. Worker thread only. */
+    @Volatile private var lastCompile: Duration = Duration.ZERO
+
+    private val compiled = AtomicLong()
+
+    /**
+     * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
+     * the queue where nothing can see it, and how many documents are waiting is the number that
+     * says whether one-at-a-time has become a problem.
+     */
     private val compiles =
-        Executors.newSingleThreadExecutor(
-            ThreadFactory { r ->
-                Thread(r, "xtc-compile").apply { isDaemon = true }
-            },
+        ThreadPoolExecutor(
+            1,
+            1,
+            0L,
+            TimeUnit.MILLISECONDS,
+            LinkedBlockingQueue(),
+            ThreadFactory { r -> Thread(r, "xtc-compile").apply { isDaemon = true } },
         )
 
     private companion object {

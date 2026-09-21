@@ -113,6 +113,43 @@ public class EmbeddingSupport {
     }
 
     /**
+     * A snapshot of what the compiler is holding on to.
+     *
+     * An embedding host that keeps a compiler alive across many compilations - a language server
+     * is the obvious one - needs some way to see whether it is accumulating. These are the cheap
+     * numbers: taking them costs a field read and a repository listing, so a host can log one per
+     * compilation without measuring itself instead of the compiler.
+     *
+     * @param modules        how many modules the configured repository offers
+     * @param constants      how many constants are interned in the current pool
+     * @param invalidations  how many times cached type information has been invalidated
+     * @param heapBytes      used heap, which is the JVM's figure and not the compiler's alone
+     */
+    public record Footprint(int modules, int constants, int invalidations, long heapBytes) {
+        @Override
+        public String toString() {
+            return "modules=" + modules + ", constants=" + constants
+                    + ", invalidations=" + invalidations
+                    + ", heap=" + (heapBytes / (1024 * 1024)) + "MB";
+        }
+    }
+
+    /**
+     * Take a {@link Footprint} of the compiler as it stands.
+     *
+     * @return the snapshot; the counts are zero where nothing has been configured or built yet
+     */
+    public Footprint footprint() {
+        ConstantPool pool    = configured ? getConstantPool() : null;
+        Runtime      runtime = Runtime.getRuntime();
+        return new Footprint(
+                cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(),
+                pool == null ? 0 : pool.size(),
+                pool == null ? 0 : pool.getInvalidationCount(),
+                runtime.totalMemory() - runtime.freeMemory());
+    }
+
+    /**
      * @return true if configured
      * @throws IllegalStateException if not configured
      */

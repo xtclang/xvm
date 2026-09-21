@@ -256,7 +256,18 @@ val fatJar =
             configurations.runtimeClasspath
                 .get()
                 .filter { it.name.endsWith("jar") }
-                .map { zipTree(it) }
+                .map { jar ->
+                    zipTree(jar).matching {
+                        // javatools is itself a shaded jar and bundles slf4j-nop. Merged in with
+                        // duplicatesStrategy = EXCLUDE, whose first entry wins, its NOP provider
+                        // shadowed logback's and the server logged nothing at all - no compile
+                        // times, no diagnostics counts, no errors. Keep the NOP binding out.
+                        exclude("org/slf4j/nop/**")
+                        if (jar.name.startsWith("javatools")) {
+                            exclude("META-INF/services/org.slf4j.spi.SLF4JServiceProvider")
+                        }
+                    }
+                }
         })
 
         // Exclude signature files from dependencies (they become invalid in fat JAR)
