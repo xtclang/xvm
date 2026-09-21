@@ -239,6 +239,187 @@ class XdkAdapterTest {
         }
     }
 
+    // ----- what the tree can answer, without knowing what anything means ----------------------
+
+    /**
+     * Folding is pure shape: a block that spans more than one line can be collapsed.
+     */
+    @Test
+    fun `blocks and declarations spanning more than a line can be folded`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Uses.x", USES)
+
+            val folds = xdk.getFoldingRanges("file:///Uses.x")
+
+            assertThat(folds).isNotEmpty()
+            assertThat(folds).allSatisfy { assertThat(it.endLine).isGreaterThan(it.startLine) }
+            assertThat(folds.map { it.startLine }).`as`("the module body folds").contains(0)
+        }
+    }
+
+    /**
+     * Expanding a selection is walking out through the tree, so each range has to contain the one
+     * it came from. Asserting the containment rather than specific spans keeps this a test of the
+     * walk and not of where the parser happens to put a node boundary.
+     */
+    @Test
+    fun `a selection expands outward through enclosing nodes`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Uses.x", USES)
+
+            val ranges = xdk.getSelectionRanges("file:///Uses.x", listOf(Position(3, 20)))
+
+            val innermost = ranges.single()
+            var range: SelectionRange? = innermost
+            var steps = 0
+            while (range?.parent != null) {
+                val parent = range.parent!!
+                assertThat(parent.range.start.line).isLessThanOrEqualTo(range.range.start.line)
+                assertThat(parent.range.end.line).isGreaterThanOrEqualTo(range.range.end.line)
+                range = parent
+                steps++
+            }
+            assertThat(steps).`as`("more than one level to expand through").isGreaterThan(1)
+        }
+    }
+
+    /**
+     * Highlighting is by name, which is all the tree knows. Two unrelated things called `count`
+     * would highlight together; telling them apart is a resolution question.
+     */
+    @Test
+    fun `the other places the same name is written are highlighted`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Uses.x", USES)
+
+            val highlights = xdk.getDocumentHighlights("file:///Uses.x", 3, 20)
+
+            // the declaration and both uses: a variable's name is a name in the tree too
+            assertThat(highlights).hasSize(3)
+            assertThat(highlights.map { it.range.start.line }).containsExactly(2, 3, 3)
+
+            assertThat(xdk.getDocumentHighlights("file:///Uses.x", 0, 0))
+                .`as`("not on a name")
+                .isEmpty()
+        }
+    }
+
+    /**
+     * The half of hover that no grammar can supply: what the compiler decided the expression
+     * under the cursor is.
+     */
+    @Test
+    fun `hover says what the expression under the cursor resolved to`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Uses.x", USES)
+
+            val hover = xdk.getHoverInfo("file:///Uses.x", 3, 20)
+
+            assertThat(hover).`as`("the type of count").contains("Int")
+        }
+    }
+
+    /**
+     * Across the documents this server has compiled - which is the ones that have been opened,
+     * not the whole project.
+     */
+    @Test
+    fun `symbols can be searched across compiled documents`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Outline.x", OUTLINE)
+            xdk.compile("file:///Uses.x", USES)
+
+            assertThat(xdk.findWorkspaceSymbols("dist").map { it.name })
+                .`as`("nested in one document")
+                .contains("distance")
+            assertThat(xdk.findWorkspaceSymbols("Uses").map { it.name }).contains("Uses")
+            assertThat(xdk.findWorkspaceSymbols("nothing-called-this")).isEmpty()
+        }
+    }
+
+    // ----- what a name resolved to ------------------------------------------------------------
+
+    /**
+     * A local. Its declaration is a name in the tree, so it can be pointed at - but a use of it
+     * is a *shadow* of the register the declaration produced, deliberately not equal to it, so
+     * this is the one case that is matched by name within the enclosing method rather than by
+     * identity.
+     */
+    @Test
+    fun `a local variable's declaration is found from a use of it`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Resolve.x", RESOLVE)
+
+            val at = xdk.findDefinition("file:///Resolve.x", 14, 20)
+
+            assertThat(at?.startLine).`as`("Int count = 1").isEqualTo(13)
+            assertThat(at?.uri).isEqualTo("file:///Resolve.x")
+        }
+    }
+
+    /**
+     * A class declared in this document. Nothing is written as a name where a class is declared,
+     * so this goes through the declaration's component identity rather than through an
+     * occurrence.
+     */
+    @Test
+    fun `a type's declaration is found from a use of it`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Resolve.x", RESOLVE)
+
+            val at = xdk.findDefinition("file:///Resolve.x", 15, 8)
+
+            assertThat(at?.startLine).`as`("const Point(Int x, Int y)").isEqualTo(1)
+        }
+    }
+
+    /**
+     * The point of resolution over text search: two properties spelled the same, on different
+     * classes, are different things.
+     */
+    @Test
+    fun `references follow what the name means, not how it is spelled`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Resolve.x", RESOLVE)
+
+            val holders = xdk.findReferences("file:///Resolve.x", 9, 19, includeDeclaration = true)
+
+            assertThat(holders.map { it.startLine })
+                .`as`("Holder.x, declared and used - not Point.x on line 3")
+                .containsExactlyInAnyOrder(7, 9)
+        }
+    }
+
+    /**
+     * A method call. The name in one resolves to nothing by itself - which method `sum` is
+     * depends on what it is called on and with what - so this goes through the invocation, which
+     * is where the compiler decided it.
+     */
+    @Test
+    fun `a method's declaration is found from a call to it`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Resolve.x", RESOLVE)
+
+            val at = xdk.findDefinition("file:///Resolve.x", 16, 18)
+
+            assertThat(at?.startLine).`as`("Int sum()").isEqualTo(2)
+        }
+    }
+
+    /**
+     * Declared in the core library, which this document has no place to point at. Saying nothing
+     * is the honest answer; jumping to another mention of Int in the same file would not be.
+     */
+    @Test
+    fun `a name declared in another module has nothing here to point at`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Resolve.x", RESOLVE)
+
+            assertThat(xdk.findDefinition("file:///Resolve.x", 13, 8)).`as`("Int").isNull()
+            assertThat(xdk.findDefinition("file:///Resolve.x", 0, 0)).`as`("not on anything").isNull()
+        }
+    }
+
     private companion object {
         val OUTLINE =
             """
@@ -275,6 +456,44 @@ class XdkAdapterTest {
             module Semantic {
                 void run() {
                     NoSuchTypeAnywhere x = 1;
+                }
+            }
+            """.trimIndent()
+
+        /** `count` is written twice on the fourth line, both times as a use. */
+        val USES =
+            """
+            module Uses {
+                void run() {
+                    Int count = 1;
+                    Int total = count + count;
+                }
+            }
+            """.trimIndent()
+
+        /**
+         * Two properties called `x` on different classes, a local used twice, and a type used
+         * where it is not declared. Line numbers are asserted, so the shape matters.
+         */
+        val RESOLVE =
+            """
+            module Resolve {
+                const Point(Int x, Int y) {
+                    Int sum() {
+                        return x + y;
+                    }
+                }
+                class Holder {
+                    Int x = 5;
+                    Int get() {
+                        return x;
+                    }
+                }
+                void run() {
+                    Int count = 1;
+                    Int total = count + count;
+                    Point p = new Point(1, 2);
+                    Int s = p.sum();
                 }
             }
             """.trimIndent()
