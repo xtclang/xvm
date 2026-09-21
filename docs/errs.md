@@ -19,7 +19,7 @@ kept as the record of what was wrong. Where that has since changed:
 |---|---|---|
 | null-coalescing sites | 33 | 3 — two in `FileStructure` (the deferred ownership area) and one assert |
 | names for the listener | 6 | 1 - `errs` |
-| kinds of silence | 1 undifferentiated | 3 named: `PROBE` (162), `BLACKHOLE` (9), `suppressCascade()` (7) |
+| kinds of silence | 1 undifferentiated | one concept, 3 named reasons: `PROBE` (133), `DISCARD` (4), `CASCADE` (2) |
 | fields using null as a state flag | 4 | 0 |
 | `new Object[]` at report sites | 31 | 0 (4 left in the tree, none of them report sites) |
 | callers of the array-shaped `log` overloads | all of them | 0 — the overloads are `@Deprecated` |
@@ -54,7 +54,7 @@ re-derivation, not a port.
 | Method/constructor declarations taking one | 586 |
 | Parameters already named `errs` | 587 of 676 (87%) |
 | Fields holding one | 15 — 11 final, 4 mutable/transient |
-| `ErrorListener.BLACKHOLE` references | 80, in 33 files |
+| `silent(DISCARD)` references | 80, in 33 files |
 | `branch(` / `merge()` call sites | 44 / 56 |
 | Null-check lines involving a listener | 35 |
 | `@param errs … (optional)` javadoc lines | ~29 |
@@ -65,7 +65,7 @@ everywhere, and `errs` is already the name. Three places already reject null out
 not propagated.
 
 **The real work is small and concentrated**: about 13 null-substitution sites
-(`errs == null ? BLACKHOLE : errs`) and 10 conditional-logging sites (`if (errs != null)`), across
+(`errs == null ? silent(DISCARD) : errs`) and 10 conditional-logging sites (`if (errs != null)`), across
 roughly 16 files.
 
 **Most `BLACKHOLE` use is legitimate and must survive.** Of the 80 references, ~52 are speculative
@@ -110,7 +110,7 @@ method after its first error**. The prior-art branch hit exactly this and had to
 **6. The CLI drains errors by downcast.**
 `tool/Compiler.java:328-337` flushes a stage's errors with `if (errs instanceof ErrorList list)`.
 A listener that is not an `ErrorList` is silently skipped. Relatedly, `:649` identity-compares
-`m_errors != ErrorListener.BLACKHOLE`, which becomes meaningless once `BLACKHOLE` stops being the
+`m_errors != BLACKHOLE`, which becomes meaningless once `BLACKHOLE` stops being the
 null stand-in.
 
 ## The target contract
@@ -141,13 +141,26 @@ not a sketch.
 | I want to collect diagnostics | `new ErrorList()`, or `ErrorListener.collecting(sink)` |
 | I am trying something and its failure *is* my answer | `PROBE` |
 | I am trying something and want the errors only if I keep the result | `errs.branch(node)`, then `merge()` on the branch you keep |
-| My result is already known to be incomplete | `errs.suppressCascade()` |
-| I genuinely want no diagnostics at all | `BLACKHOLE` |
+| My result is already known to be incomplete | `errs.silence(CASCADE)` |
+| I genuinely want no diagnostics at all | `silent(DISCARD)` |
 | I want to both act on them and watch them | `ErrorListener.tee(act, watch)` |
 
 The three silences behave identically on purpose — nothing may branch on which one it holds — so
 the choice is documentation for the next reader, and `grep PROBE` is the list of the compiler's
 speculative paths.
+
+They are one concept with the reason as a value, not three different constructs. Two entry points,
+differing only by whether you have a listener to derive from:
+
+```java
+silent(why)        // you have none: a shared constant per reason
+errs.silence(why)  // you have one: a wrapper that keeps it reachable via suppressed()
+```
+
+`silenceReason()` gives the reason back, so a host that republishes diagnostics can tell a probe
+from a cascade — which is what lets it offer the second as related information and drop the first.
+Of the 160 sites that reach for a probe, 76 have no listener in scope at all, which is why both
+entry points exist rather than one.
 
 
 ### Report a diagnostic
@@ -223,7 +236,7 @@ if (exprNew != null) {
 return value is what the caller acts on, so the diagnostics are noise by construction:
 
 ```java
-if (!ctx.requireThis(getStartPosition(), PROBE)) {
+if (!ctx.requireThis(getStartPosition(), silent(PROBE))) {
     return null;   // a question, not an assertion
 }
 ```
@@ -236,7 +249,7 @@ reporting it buries the one diagnostic that matters.
 
 ```java
 private static ErrorListener cascade(boolean fIncomplete, ErrorListener errs) {
-    return fIncomplete ? errs.suppressCascade() : errs;
+    return fIncomplete ? errs.silence(CASCADE) : errs;
 }
 ```
 
@@ -249,24 +262,25 @@ if (!collectChildInfo(constId, ..., cascade(fIncomplete, errs))) {
 }
 ```
 
-`suppressCascade()` wraps the receiver instead of returning a shared constant, so the suppression
+`silence(CASCADE)` wraps the receiver instead of returning a shared constant, so the suppression
 is a decision about one computation, and what was suppressed is still reachable:
 
 ```java
-ErrorListener quiet = errs.suppressCascade();
+ErrorListener quiet = errs.silence(CASCADE);
 assert quiet.isSilent();
-assert ((CascadeErrorListener) quiet).suppressed() == errs;
-assert quiet.suppressCascade() == quiet;   // idempotent; safe to call per use
+assert quiet.silenceReason() == CASCADE;
+assert ((SilentErrorListener) quiet).suppressed() == errs;
+assert quiet.silence(CASCADE) == quiet;   // idempotent; safe to call per use
 ```
 
 ### Say you want nothing
 
 ```java
-compile(source, BLACKHOLE);   // "I do not want them"
+compile(source, silent(DISCARD));   // "I do not want them"
 ```
 
-`BLACKHOLE` and `PROBE` behave identically and deliberately so — nothing may branch on which one
-it holds. They are separate names because they are separate intentions, and because
+`DISCARD` and `PROBE` behave identically and deliberately so — nothing may branch on which one a
+listener holds. They are separate reasons because they are separate intentions, and because
 `grep PROBE` is the list of the compiler's speculative paths.
 
 ### Host it
@@ -387,8 +401,8 @@ Five rules, each of which is a phase:
 3. **Report through the severity-named methods**, with the parameters trailing:
    `errs.error(CODE, at(this), a, b)`. The array-shaped overloads are deprecated.
 4. **Recording is not deciding.** `log` is `void`. If you need to stop, ask `isAbortDesired()`.
-5. **Say which silence you mean.** `PROBE`, `BLACKHOLE` and `suppressCascade()` are three
-   intentions, not three spellings.
+5. **Say which silence you mean.** `PROBE`, `CASCADE` and `DISCARD` are three intentions, not
+   three spellings — and the reason travels with the listener, so a host can tell them apart.
 
 ### Testing diagnostics
 
@@ -426,7 +440,7 @@ names collide with anything in the tree:
 import static org.xvm.asm.ErrorList.FIRST_ERROR;
 import static org.xvm.asm.ErrorList.UNLIMITED;
 import static org.xvm.asm.ErrorListener.NOWHERE;
-import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.silent(PROBE);
 import static org.xvm.asm.ErrorListener.at;
 import static org.xvm.asm.ErrorListener.collecting;
 import static org.xvm.asm.ErrorListener.in;
@@ -553,7 +567,7 @@ Both bite the moment someone writes the LSP listener, and neither is a sweep.
 
 ### Phase 4 — Never null *(the mechanical core)*
 
-- Delete the ~13 `errs == null ? BLACKHOLE : errs` substitutions and the ~10 `if (errs != null)`
+- Delete the ~13 `errs == null ? silent(DISCARD) : errs` substitutions and the ~10 `if (errs != null)`
   guards, in `StageMgr`, `Expression`, `InvocationExpression`, `TypeExpression`, `ElvisExpression`,
   `NameExpression`, `LambdaExpression`, `NewExpression`, `Launcher`, `api/EmbeddingSupport`.
 - Add `requireNonNull(errs, "errs")` at the boundaries only: the constructors that store one, and
@@ -608,9 +622,9 @@ failure is the answer" and kept `BLACKHOLE` for "no sink attached", behaviourall
 deliberately so, so that nothing can branch on which it holds. The value is that
 `grep PROBE` becomes the list of the compiler's speculative paths.
 
-Also replace the ~10 `errs = ErrorListener.BLACKHOLE` reassignments in `TypeConstant` — which mean
+Also replace the ~10 `errs = silent(DISCARD)` reassignments in `TypeConstant` — which mean
 "this result is provisional, stop reporting" — with a named method conveying that, e.g.
-`errs.suppressCascade()`. **Do not make these sites report.** They exist to prevent error cascades
+`errs.silence(CASCADE)`. **Do not make these sites report.** They exist to prevent error cascades
 from incomplete `TypeInfo` builds; "fixing" them regresses the compiler into cascades.
 
 *As built, this went further than planned.* Review pointed out that naming the decision was not
@@ -618,7 +632,7 @@ enough while it was still carried out by assigning over the `errs` **parameter**
 methods stopped meaning what its signature said partway down. Two changes followed:
 
 - the choice is made at each use — `cascade(fIncomplete, errs)` — so nothing is rebound;
-- `suppressCascade()` returns a `CascadeErrorListener` wrapping the receiver, instead of the
+- `errs.silence(CASCADE)` returns a `SilentErrorListener` wrapping the receiver, instead of the
   shared `PROBE` constant. A probe and a cascade are not the same silence: a probe's failure *is*
   the answer and nobody ever wants those diagnostics, whereas a cascade's are real diagnostics
   that happen to be consequences of a known-missing piece. Keeping the receiver is what leaves
@@ -677,7 +691,7 @@ shape the prior-art branch reached, measured against this tree.
 
 | | state |
 |---|---|
-| Dedup key, `PROBE`/`BLACKHOLE`, `suppressCascade`, `Site` + varargs, never-null, no parent-mutating setter, no null-as-state | done, phases 1-7 |
+| Dedup key, the named silences, `Site` + varargs, never-null, no parent-mutating setter, no null-as-state | done, phases 1-7 |
 | `log()` returns `void`, abort asked separately | done |
 | `ErrorListener.RUNTIME` stops throwing from inside `log()` | done |
 | `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | done |
