@@ -10,6 +10,9 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.appendChar;
 import static org.xvm.util.Handy.appendString;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * Representation of a language token.
  */
@@ -323,8 +326,8 @@ public class Token
         }
 
         errs.log(severity, sCode, source == null
-                ? ErrorListener.NOWHERE
-                : ErrorListener.in(source, getStartPosition(), getEndPosition()), aoParam);
+                ? NOWHERE
+                : in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- Object methods ------------------------------------------------------------------------

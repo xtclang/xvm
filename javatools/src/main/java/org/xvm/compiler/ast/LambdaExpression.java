@@ -66,6 +66,9 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
  * names only.
@@ -296,7 +299,7 @@ public class LambdaExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        if (!ensurePrepared(ErrorListener.PROBE)) {
+        if (!ensurePrepared(PROBE)) {
             return null;
         }
 
@@ -320,12 +323,12 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.PROBE)) {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, PROBE)) {
             return null;
         }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.PROBE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, PROBE);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -471,8 +474,7 @@ public class LambdaExpression
         int     cParams     = getParamCount();
 
         if (cReqParams != -1 && cParams != cReqParams) {
-            errs.error(Compiler.ARGUMENT_WRONG_COUNT,
-                    ErrorListener.in(getSource(), getStartPosition(), operator.getStartPosition()),
+            errs.error(Compiler.ARGUMENT_WRONG_COUNT, in(getSource(), getStartPosition(), operator.getStartPosition()),
                     cReqParams, cParams);
             fValid = false;
         }
@@ -593,8 +595,7 @@ public class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, ErrorListener.in(
-                        getSource(), paramNames.get(0).getStartPosition(),
+                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in( getSource(), paramNames.get(0).getStartPosition(),
                         paramNames.get(cParams-1).getEndPosition()));
                 fValid = false;
             }

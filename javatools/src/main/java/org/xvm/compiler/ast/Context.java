@@ -46,6 +46,9 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * Compiler context for compiling a method body.
  */
@@ -1047,7 +1050,7 @@ public class Context {
     public boolean requireThis(long lPos, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null) {
-            errs.error(Compiler.NO_THIS, ErrorListener.in(getSource(), lPos, lPos));
+            errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             return false;
         }
         return ctxOuter.requireThis(lPos, errs);
@@ -1141,7 +1144,7 @@ public class Context {
      * @return the Argument representing the meaning of the name, or null
      */
     public final Argument resolveName(String sName) {
-        return resolveName(sName, null, ErrorListener.PROBE);
+        return resolveName(sName, null, PROBE);
     }
 
     /**
@@ -2530,7 +2533,7 @@ public class Context {
                 case Property:
                 case TypeParameter: {
                     String   sName = constFormal.getName();
-                    Argument arg   = resolveName(sName, null, ErrorListener.PROBE);
+                    Argument arg   = resolveName(sName, null, PROBE);
                     if (arg != null) {
                         ensureFormalMap().putIfAbsent(sName, arg);
                     }
