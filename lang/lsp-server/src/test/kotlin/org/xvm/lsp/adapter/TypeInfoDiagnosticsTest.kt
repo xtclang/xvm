@@ -90,6 +90,59 @@ class TypeInfoDiagnosticsTest {
 
     private fun xdkHome(): String? = System.getenv("XDK_HOME")?.takeIf { File(it, "lib").isDirectory }
 
+    /**
+     * A warning raised while a TypeInfo is assembled reaches the caller.
+     *
+     * This one is worth its own test because master loses it. Compiling this source there reports
+     * nothing at all - the compiler parks the file on a silence for the duration of a compilation,
+     * and the warning goes into it - so the annotation is silently ignored and the author is never
+     * told. See the appendix of docs/errs.md.
+     */
+    @Test
+    fun `a duplicated property annotation is reported, which master swallows`() {
+        val errs = ErrorList(UNLIMITED)
+        compile(DUPLICATE_ANNOTATION, errs)
+
+        assertThat(errs.getErrors().map { it.code })
+            .`as`("the derived property re-declares @Atomic: %s", errs.getErrors())
+            .contains("VERIFY-75")
+        assertThat(errs.hasSeriousErrors())
+            .`as`("a warning, so the source still compiles")
+            .isFalse()
+    }
+
+    /**
+     * And a later caller hears it too, from the recording rather than from a second build.
+     *
+     * This is the case the memoized diagnostics exist for, and the only one where they can fire:
+     * a build that reports a warning leaves the TypeInfo cached, because only a serious error
+     * makes the compiler refuse to cache one. So the next caller takes the cached path - and
+     * without the recording would be told nothing, purely because somebody else asked first.
+     */
+    @Test
+    fun `a later caller hears a warning recorded by the build that cached the TypeInfo`() {
+        val errs = ErrorList(UNLIMITED)
+        val result = compile(DUPLICATE_ANNOTATION, errs)
+
+        assertThat(result.succeeded()).`as`("a warning does not fail the compilation").isTrue()
+        val pool = requireNotNull(result.pool())
+
+        val type =
+            requireNotNull(
+                pool.constants
+                    .filterIsInstance<ClassConstant>()
+                    .firstOrNull { it.name == "Derived" }
+                    ?.type,
+            ) { "the class the warning was about should be in the pool" }
+
+        val later = ErrorList(UNLIMITED)
+        type.ensureTypeInfo(later)
+
+        assertThat(later.getErrors().map { it.code })
+            .`as`("replayed to a caller that did not trigger the build: %s", later.getErrors())
+            .contains("VERIFY-75")
+    }
+
     private companion object {
         val OVERRIDE_WITH_NO_SUPER =
             """
@@ -97,6 +150,14 @@ class TypeInfoDiagnosticsTest {
                 class Foo {
                     @Override void nope() {}
                 }
+            }
+            """.trimIndent()
+
+        val DUPLICATE_ANNOTATION =
+            """
+            module TestDuplicateAnnotation {
+                class Base { @Atomic Int x = 1; }
+                class Derived extends Base { @Atomic @Override Int x = 2; }
             }
             """.trimIndent()
 
