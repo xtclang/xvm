@@ -90,8 +90,7 @@ public class ErrorDeduplicationTest {
 
         errs.error(CODE, in(source, 0, 10), "a", "b");
 
-        assertEquals(Thread.currentThread().getName(),
-                errs.getErrors().get(0).origin().thread());
+        assertEquals(Thread.currentThread().getName(), errs.getErrors().get(0).origin().thread());
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";

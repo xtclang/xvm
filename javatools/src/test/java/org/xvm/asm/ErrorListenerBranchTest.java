@@ -16,6 +16,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.asm.ErrorListener.in;
 
+import static org.xvm.asm.ErrorListener.collecting;
+
+import static org.xvm.asm.ErrorList.UNLIMITED;
+
 /**
  * Tests that branching and merging behave the same for a listener supplied by a host as they do
  * for an {@link ErrorList}.
@@ -78,7 +82,7 @@ public class ErrorListenerBranchTest {
     @Test
     public void testBranchOfAnErrorListBehavesTheSame() {
         Source        source = new Source(SOURCE);
-        ErrorList     parent = new ErrorList(0);
+        ErrorList     parent = new ErrorList(UNLIMITED);
         ErrorListener branch = parent.branch(null);
 
         branch.error(CODE, in(source, 0, 1), "a");
@@ -126,7 +130,7 @@ public class ErrorListenerBranchTest {
     public void testACollectingListenerAnswersTruthfully() {
         Source        source = new Source(SOURCE);
         List<String>  seen   = new ArrayList<>();
-        ErrorListener host   = ErrorListener.collecting(err -> seen.add(err.getCode()));
+        ErrorListener host   = collecting(err -> seen.add(err.getCode()));
 
         host.error(CODE, in(source, 0, 1), "a");
 

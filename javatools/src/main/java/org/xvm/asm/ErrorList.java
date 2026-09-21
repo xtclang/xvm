@@ -17,6 +17,16 @@ public class ErrorList
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct a list that tolerates {@link #DEFAULT_MAX_ERRORS} serious errors, for a caller
+     * with no reason to choose a number. A caller that has one says so with the other
+     * constructor, naming {@link #UNLIMITED} or {@link #FIRST_ERROR} where those are what it
+     * means.
+     */
+    public ErrorList() {
+        this(DEFAULT_MAX_ERRORS);
+    }
+
+    /**
      * @param cMaxErrors  the number of serious errors to tolerate before asking for the process to
      *                    be abandoned, or {@link #UNLIMITED} to tolerate any number
      */
@@ -195,8 +205,7 @@ public class ErrorList
             // against a structure carries no source location of its own, and the node is the
             // location the brancher knew about
             if (f_node != null && site instanceof Site.At) {
-                site = ErrorListener.in(f_node.getSource(),
-                        f_node.getStartPosition(), f_node.getEndPosition());
+                site = ErrorListener.in(f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
             }
             super.log(severity, sCode, site, aoParam);
         }
