@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Reporting;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 
@@ -413,7 +414,7 @@ public class Compiler {
      * The scope that suppresses fallout from half-finished structures, open for as long as the
      * compilation lasts. Null before it starts and once it has finished.
      */
-    private FileStructure.Reporting m_parked;
+    private Reporting.Scope m_parked;
 
     // ----- inner class: Stage enumeration --------------------------------------------------------
 

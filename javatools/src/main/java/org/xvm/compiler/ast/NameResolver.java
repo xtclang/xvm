@@ -14,6 +14,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Reporting;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
@@ -118,12 +119,8 @@ public class NameResolver
         // which meant the resolver went on holding a listener belonging to a request that had
         // finished: a later callback reported to it, and a resolver reused for a second name
         // silently replaced the first caller's.
-        ErrorListener errsPrev = m_errs;
-        m_errs = errs;
-        try {
+        try (Reporting.Scope reporting = f_errs.to(errs)) {
             return resolveStage(errs);
-        } finally {
-            m_errs = errsPrev;
         }
     }
 
@@ -379,7 +376,7 @@ public class NameResolver
                 // for methods (and multi-methods), it is not possible to further resolve the name,
                 // because methods are opaque from the outside, and multi-methods can only be
                 // resolved by analyzing signatures (not names)
-                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                 m_stage = Stage.ERROR;
                 return null;
             } else {
@@ -468,7 +465,7 @@ public class NameResolver
             }
 
             if (!type.isTypeOfType()) {
-                m_errs.error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
+                f_errs.get().error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
                 m_stage = Stage.ERROR;
                 return null;
             }
@@ -626,7 +623,7 @@ public class NameResolver
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant id = component.getIdentityConstant();
         if (component instanceof CompositeComponent composite && composite.isAmbiguous()) {
-            m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
+            m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_stage = Stage.ERROR;
             return ResolutionResult.ERROR;
         }
@@ -638,7 +635,7 @@ public class NameResolver
                 // typedef is allowed in type mode, but not in formal type mode
                 if (m_typeMode == TypeMode.FORMAL_TYPE &&
                         !component.getParent().getIdentityConstant().equals(getPool().clzType())) {
-                    m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
+                    m_node.log(f_errs.get(), Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
                             m_sName, id.getParentConstant().getValueString());
                     m_stage = Stage.ERROR;
                     return ResolutionResult.ERROR;
@@ -680,7 +677,7 @@ public class NameResolver
             }
 
             if (fNameMissing) {
-                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
+                m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
                 m_stage = Stage.ERROR;
                 return ResolutionResult.ERROR;
             }
@@ -696,7 +693,7 @@ public class NameResolver
                             ? module.getFingerprintOrigin()
                             : module;
                     if (component == null) {
-                        m_node.log(m_errs, Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
+                        m_node.log(f_errs.get(), Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
                         m_stage = Stage.ERROR;
                         return ResolutionResult.ERROR;
                     }
@@ -750,7 +747,7 @@ public class NameResolver
 
     @Override
     public ErrorListener getErrorListener() {
-        return m_errs;
+        return f_errs.get();
     }
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -844,5 +841,9 @@ public class NameResolver
     /**
      * The ErrorListener to log errors to.
      */
-    private ErrorListener m_errs;
+    /**
+     * Where the callbacks made during a resolution report. Empty outside {@link #resolve}, which
+     * holds the caller's listener here for the duration of the call.
+     */
+    private final Reporting f_errs = new Reporting(null);
 }
