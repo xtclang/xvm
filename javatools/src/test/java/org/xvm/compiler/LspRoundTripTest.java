@@ -63,8 +63,7 @@ public class LspRoundTripTest {
                         err.getSeverity(), err.getCode(), err.getMessage());
                 case Site.At at -> new Published(uri, 0, 0, 0, 0,
                         err.getSeverity(), err.getCode(), at.xs().getDescription());
-                case Site.None _ -> new Published(uri, 0, 0, 0, 0,
-                        err.getSeverity(), err.getCode(), err.getMessage());
+                case Site.None _ -> new Published(uri, 0, 0, 0, 0, err.getSeverity(), err.getCode(), err.getMessage());
             });
         }
         return published;
