@@ -46,6 +46,9 @@ import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Handy.removeExtension;
 import static org.xvm.util.Handy.resolveFile;
 
+import static org.xvm.asm.ErrorListener.BLACKHOLE;
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
 /**
  * Information gleaned about a module from a single specified file. This is a lazily populated
  * structure, not a point-in-time snapshot; as a result, in the presence of realtime changes
@@ -866,7 +869,7 @@ public class ModuleInfo {
          * nobody had logged to yet, and left two threads able to build two lists and keep
          * different halves of the errors.
          */
-        private final ErrorList m_errs = new ErrorList(ErrorList.DEFAULT_MAX_ERRORS);
+        private final ErrorList m_errs = new ErrorList();
     }
 
     /**
@@ -1028,7 +1031,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    error(DUP_NAME, ErrorListener.NOWHERE, name, descriptiveName());
+                    error(DUP_NAME, NOWHERE, name, descriptiveName());
                 } else {
                     children().put(name, node);
                 }
@@ -1039,7 +1042,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                error(MISSING_PKG_NODE, ErrorListener.NOWHERE, descriptiveName());
+                error(MISSING_PKG_NODE, NOWHERE, descriptiveName());
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1267,7 +1270,7 @@ public class ModuleInfo {
             try {
                 return readFileChars(m_file);
             } catch (IOException e) {
-                error(READ_FAILURE, ErrorListener.NOWHERE, m_file);
+                error(READ_FAILURE, NOWHERE, m_file);
             }
 
             return new char[0];
@@ -1430,7 +1433,7 @@ public class ModuleInfo {
             if (isExplicitSourceFile(name)) {
                 try {
                     Source source = new Source(file);
-                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+                    Parser parser = new Parser(source, BLACKHOLE);
                     return parser.parseModuleNameIgnoreEverythingElse();
                 } catch (CompilerException | IOException ignore) {}
             } else if (isExplicitCompiledFile(name)) {

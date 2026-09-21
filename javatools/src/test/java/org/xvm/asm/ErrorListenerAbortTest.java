@@ -11,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import static org.xvm.asm.ErrorListener.in;
 
+import static org.xvm.asm.ErrorListener.RUNTIME;
+
 /**
  * Recording a diagnostic and deciding to abandon the work are two questions.
  */
@@ -70,9 +72,8 @@ public class ErrorListenerAbortTest {
         Source source = new Source(SOURCE);
 
         assertDoesNotThrow(() ->
-                ErrorListener.RUNTIME.error(CODE, in(source, 0, 1), "a", "b"));
-        assertTrue(ErrorListener.RUNTIME.isAbortDesired(),
-                "it still says the work should stop, when asked");
+                RUNTIME.error(CODE, in(source, 0, 1), "a", "b"));
+        assertTrue(RUNTIME.isAbortDesired(), "it still says the work should stop, when asked");
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";
