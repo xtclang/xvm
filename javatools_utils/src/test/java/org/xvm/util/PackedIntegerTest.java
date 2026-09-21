@@ -84,7 +84,7 @@ public class PackedIntegerTest {
         try {
             in.readByte();
             throw new IllegalStateException("oops .. bytes left over");
-        } catch (IOException ignore) {}
+        } catch (IOException _) {}
     }
 
     @Test
@@ -111,7 +111,7 @@ public class PackedIntegerTest {
             try {
                 in.readByte();
                 throw new IllegalStateException("oops .. bytes left over");
-            } catch (IOException ignore) {}
+            } catch (IOException _) {}
         } while (System.currentTimeMillis() < lStop);
     }
 

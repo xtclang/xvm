@@ -276,7 +276,7 @@ public class CmpExpression
             if (expr1New.isConstant() && expr2New.isConstant()) {
                 try {
                     constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
-                } catch (RuntimeException ignore) {}
+                } catch (RuntimeException _) {}
                 break CheckInference;
             }
 

@@ -148,7 +148,7 @@ public class JitConnector
                     // TODO: add the service info; see Utils.log()
                     System.out.println("\nUnhandled exception: " +
                         cause.getClass().getField("exception").get(cause));
-                } catch (Throwable ignore) {}
+                } catch (Throwable _) {}
             } else {
                 if (cause instanceof VerifyError) {
                     dumpNames.add(extractVerifyErrorClassName(cause.getMessage()));

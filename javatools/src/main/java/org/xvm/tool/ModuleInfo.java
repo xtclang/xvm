@@ -558,7 +558,7 @@ public class ModuleInfo {
                     binaryVersion = struct.getModule().getVersion();
                     binaryContent = Content.Module;
                     return true;
-                } catch (Exception ignore) {}
+                } catch (Exception _) {}
             } else {
                 binaryStatus = Status.NotExists;
             }
@@ -1437,11 +1437,11 @@ public class ModuleInfo {
                     Source source = new Source(file);
                     Parser parser = new Parser(source, silent(DISCARD));
                     return parser.parseModuleNameIgnoreEverythingElse();
-                } catch (CompilerException | IOException ignore) {}
+                } catch (CompilerException | IOException _) {}
             } else if (isExplicitCompiledFile(name)) {
                 try {
                     return new FileStructure(file).getModuleId().getName();
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
         }
 

@@ -792,7 +792,7 @@ public abstract class Launcher<T extends LauncherOptions>
         String sVer = null;
         try {
             sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
-        } catch (Exception ignore) {}
+        } catch (Exception _) {}
 
         // Use version from a single source of truth if the module version is not available
         if (sVer == null) {

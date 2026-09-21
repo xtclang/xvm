@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.stream.Collectors;
+
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
@@ -135,45 +137,55 @@ public class Parser {
     }
 
     /**
-     * Quick-scan the file for the module name.
+     * Quick-scan the source for the name of the module it declares, ignoring everything else.
      *
-     * @return the module name
+     * Everything the scan walks past on the way is genuinely not the caller's business, so it is
+     * parsed against a {@link Silence#DISCARD} silence. The name itself is different: a name that
+     * is malformed is not the same answer as a source that declares no module, so it is parsed
+     * against a listener of its own, and the two outcomes stay distinguishable.
+     *
+     * @return the module's dotted name, or null if the source declares no module - or declares
+     *         one whose name does not parse
      */
     public String parseModuleNameIgnoreEverythingElse() {
-        ErrorListener errsPrev = m_errs;
-        try {
-            m_errs = silent(DISCARD);
-
-            Loop: while (!eof()) {
-                if (match(Id.MODULE) != null) {
-                    if (!eof()) {
-                        m_errs = new ErrorList(ErrorList.FIRST_ERROR);
-                        List<Token> tokens = parseQualifiedName();
-                        if (!m_errs.hasSeriousErrors()) {
-                            StringBuilder sb = new StringBuilder();
-                            for (int i = 0, c = tokens.size(); i < c; ++i) {
-                                if (i > 0) {
-                                    sb.append('.');
-                                }
-                                sb.append(tokens.get(i).getValueText());
-                            }
-                            return sb.toString();
-                        }
+        try (Reporting quiet = reportingTo(silent(DISCARD))) {
+            while (!eof()) {
+                if (match(Id.MODULE) == null) {
+                    // not a module declaration; skip it, and give up at the first body we meet,
+                    // because a module declaration cannot follow one
+                    Id id = current().getId();
+                    if (id == Id.L_CURLY || id == Id.R_CURLY) {
+                        return null;
                     }
-                } else {
-                    switch (current().getId()) {
-                    case L_CURLY:
-                    case R_CURLY:
-                        break Loop;
+                } else if (!eof()) {
+                    String sName = parseModuleName();
+                    if (sName != null) {
+                        return sName;
                     }
                 }
             }
-        } catch (RuntimeException ignore) {
-        } finally {
-            m_errs = errsPrev;
+        } catch (RuntimeException _) {
+            // a quick scan answers or gives up; it never reports, and never propagates
         }
 
         return null;
+    }
+
+    /**
+     * Parse the qualified name of a module that has just been announced by its keyword.
+     *
+     * @return the dotted name, or null if it did not parse cleanly
+     */
+    private String parseModuleName() {
+        ErrorList   errs = new ErrorList(ErrorList.FIRST_ERROR);
+        List<Token> tokens;
+        try (Reporting reporting = reportingTo(errs)) {
+            tokens = parseQualifiedName();
+        }
+
+        return errs.hasSeriousErrors()
+                ? null
+                : tokens.stream().map(Token::getValueText).collect(Collectors.joining("."));
     }
 
     /**
@@ -1704,7 +1716,7 @@ public class Parser {
                         attempt.keepResults();
                     }
                 }
-            } catch (CompilerException ignore) {}
+            } catch (CompilerException _) {}
 
             if (stmtAsn != null) {
                 stmtAsn.negate(tokNot, expect(Id.R_PAREN));
@@ -3076,7 +3088,7 @@ public class Parser {
                             } else {
                                 params = null;
                             }
-                        } catch (CompilerException ignore) {}
+                        } catch (CompilerException _) {}
                     }
 
                     if (expr instanceof NamedTypeExpression) {
@@ -3425,7 +3437,7 @@ public class Parser {
                     } else {
                         params = null;
                     }
-                } catch (CompilerException ignore) {}
+                } catch (CompilerException _) {}
             }
 
             // test to see if this is a tuple literal of the form "Tuple:(", or some other
@@ -3649,7 +3661,7 @@ public class Parser {
                     byte[] abData = null;
                     try {
                         abData = m_source.includeBinary(sFile);
-                    } catch (IOException ignore) {}
+                    } catch (IOException _) {}
                     if (abData == null) {
                         abData = new byte[0];
                         fErr   = true;
@@ -3660,7 +3672,7 @@ public class Parser {
                     try {
                         Source source = m_source.includeString(sFile);
                         sData = source == null ? null : source.toRawString();
-                    } catch (IOException ignore) {}
+                    } catch (IOException _) {}
                     if (sData == null) {
                         sData = "";
                         fErr  = true;
@@ -5589,6 +5601,38 @@ public class Parser {
                 throw new CompilerException("error list is full: " + m_errs);
             }
         }
+    }
+
+    /**
+     * Report to the given listener until the returned scope is closed.
+     *
+     * The parser reports through a field, so a stretch of parsing that wants its diagnostics to
+     * go somewhere else has to say so on the field. Making that a scope keeps the change to the
+     * stretch that asked for it, instead of leaving the parser's listener to be restored by hand
+     * and, when a path forgets, not at all.
+     *
+     * @param errs  the listener to report to for the duration of the scope
+     */
+    private Reporting reportingTo(ErrorListener errs) {
+        return new Reporting(errs);
+    }
+
+    /**
+     * The scope opened by {@link #reportingTo}.
+     */
+    private class Reporting
+            implements AutoCloseable {
+        Reporting(ErrorListener errs) {
+            f_errsPrev = m_errs;
+            m_errs     = requireNonNull(errs, "errs");
+        }
+
+        @Override
+        public void close() {
+            m_errs = f_errsPrev;
+        }
+
+        private final ErrorListener f_errsPrev;
     }
 
     public class SafeLookAhead
