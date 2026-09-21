@@ -18,6 +18,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.in;
 
+import static org.xvm.asm.ErrorListener.tee;
+
+import static org.xvm.asm.ErrorList.FIRST_ERROR;
+
 /**
  * Tests the reporting API that takes the message parameters as a trailing varargs.
  */
@@ -47,8 +51,7 @@ public class ErrorListenerSiteTest {
 
         List<Severity> actual = new ArrayList<>();
         errs.getErrors().forEach(err -> actual.add(err.getSeverity()));
-        assertEquals(List.of(Severity.INFO, Severity.WARNING, Severity.ERROR, Severity.FATAL),
-                actual);
+        assertEquals(List.of(Severity.INFO, Severity.WARNING, Severity.ERROR, Severity.FATAL), actual);
     }
 
     /**
@@ -86,9 +89,9 @@ public class ErrorListenerSiteTest {
     public void testATeeReportsToBothAndKeepsEithersAbort() {
         Source    source  = new Source(SOURCE);
         ErrorList watcher = new ErrorList(ErrorList.UNLIMITED);
-        ErrorList budget  = new ErrorList(1);
+        ErrorList budget  = new ErrorList(FIRST_ERROR);
 
-        ErrorListener both = ErrorListener.tee(budget, watcher);
+        ErrorListener both = tee(budget, watcher);
         both.error(CODE, in(source, 0, 1), "a", "b");
 
         assertEquals(1, budget.getErrors().size());
@@ -106,7 +109,7 @@ public class ErrorListenerSiteTest {
         ErrorList first    = new ErrorList(ErrorList.UNLIMITED);
         ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
 
-        ErrorListener.tee(first, recorder).error(CODE, in(source, 0, 1), "a", "b");
+        tee(first, recorder).error(CODE, in(source, 0, 1), "a", "b");
         assertEquals(1, first.getErrors().size());
 
         // a later caller, with its own listener, hears the same thing

@@ -319,7 +319,7 @@ public class xRTCompiler
         private final ErrorList m_errorList;
 
         protected CompilerAdapter(CompilerOptions options) {
-            super(options, null, m_errorList = new ErrorList(ErrorListener.DEFAULT_MAX_ERRORS));
+            super(options, null, m_errorList = new ErrorList());
         }
 
         // ----- accessors -------------------------------------------------------------------------
