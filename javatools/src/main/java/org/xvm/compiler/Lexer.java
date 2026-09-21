@@ -28,6 +28,8 @@ import static org.xvm.util.Handy.isHexit;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.quotedChar;
 
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * An Ecstasy source code parser supporting both demand-based and stream-based
  * parsing.
@@ -1040,7 +1042,8 @@ public class Lexer
                                 case LIT_FLOAT:
                                     if (!fFloat) {
                                         // we were expecting an integer
-                                        log(Severity.ERROR, ILLEGAL_NUMBER, span(lInitPos), extractSource(lInitPos, tokNum.getEndPosition()));
+                                        log(Severity.ERROR, ILLEGAL_NUMBER, span(lInitPos),
+                                                extractSource(lInitPos, tokNum.getEndPosition()));
                                         return tokNum;
                                     }
                                     // fall through
@@ -1817,7 +1820,8 @@ public class Lexer
     protected Token eatTime(long lInitPos) {
         Token tokDate = eatDate(lInitPos, true);
         if (!(match('t') || expect('T'))) {
-            log(Severity.ERROR, BAD_TIME, span(tokDate.getStartPosition(), tokDate.getEndPosition()), tokDate.getValue());
+            log(Severity.ERROR, BAD_TIME,
+                    span(tokDate.getStartPosition(), tokDate.getEndPosition()), tokDate.getValue());
             return tokDate;
         }
 
@@ -2523,7 +2527,7 @@ public class Lexer
      * @return the span from there to the current position in the script
      */
     protected ErrorListener.Site span(long lPosStart) {
-        return ErrorListener.in(m_source, lPosStart, m_source.getPosition());
+        return in(m_source, lPosStart, m_source.getPosition());
     }
 
     /**
@@ -2533,7 +2537,7 @@ public class Lexer
      * @return that span of the script
      */
     protected ErrorListener.Site span(long lPosStart, long lPosEnd) {
-        return ErrorListener.in(m_source, lPosStart, lPosEnd);
+        return in(m_source, lPosStart, lPosEnd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
