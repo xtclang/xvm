@@ -18,9 +18,24 @@ This document describes how to manually test every feature implemented in the Ec
 # Build with tree-sitter adapter (recommended for full functionality)
 ./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
 
-# Or build with mock adapter (default, no native dependencies)
+# Or with the XTC compiler itself - real semantic diagnostics, and an outline
+./gradlew :lang:lsp-server:build -Plsp.adapter=compiler
+
+# Or with mock adapter (no native dependencies)
 ./gradlew :lang:lsp-server:build -Plsp.adapter=mock
 ```
+
+**The compiler adapter needs an XDK to resolve the core library against.** It finds one from
+`XDK_HOME`, and says so as a warning diagnostic rather than failing if there is none, so an editor
+with no XDK configured still opens files - it just cannot analyse them.
+
+```bash
+export XDK_HOME=/path/to/xdk          # or ./xdk/build/install/xdk from this repo
+```
+
+It is also the slow one, deliberately: the first compilation in a session takes about a second
+(class loading, reading the XDK, a JIT still warming up) and then settles to about 60ms. If the
+first file you open seems to hang for a moment, that is what it is.
 
 ### 2. Launch in Your Editor
 
@@ -49,14 +64,32 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
 
 ### 3. Verify Which Adapter is Active
 
+The server runs out of process and writes its own log to `~/.xtc/logs/lsp-server.log`, for both
+editors. It announces itself on startup:
+
+```
+========================================
+Ecstasy Language Server v<version>
+backend: Tree-sitter
+log file: /Users/you/.xtc/logs/lsp-server.log
+========================================
+```
+
+The `backend:` line is the answer:
+- `backend: Tree-sitter` - tree-sitter is active
+- `backend: XTC Compiler` - the real compiler is active
+- `backend: Mock` - mock adapter is active
+- `backend: Mock` **together with** `tree-sitter was requested but failed to initialize` -
+  tree-sitter was asked for and fell back. The two lines together are the fallback; the `backend:`
+  line alone does not say whether it was chosen or settled for
+
+Clients can also ask over JSON-RPC (`xtc/healthCheck`), which answers with `adapter` set to
+`TreeSitter`, `XDK` or `Mock`.
+
 **IntelliJ:**
-1. Open IntelliJ → Help → Show Log in Finder/Explorer
-2. Search for `"Selected adapter:"` or `"XTC LSP Server started"`
-3. You should see one of:
-   - `"Selected adapter: TreeSitterAdapter"` - Tree-sitter is active
-   - `"Selected adapter: MockAdapter"` - Mock adapter is active
-   - `"Selected adapter: MockAdapter (fallback - ...)"` - Tree-sitter failed
-4. Also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
+1. Help → Show Log in Finder/Explorer for the IDE-side log, or read the server log directly
+2. Find the banner above
+3. Also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
 5. For IntelliJ plugin runs from this repo, also verify the startup command line in the IDE log:
    - `XTC LSP command configured`
    - `-Dxtc.lsp.semanticTokens=true`
@@ -65,7 +98,19 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
 **VS Code:**
 1. Open Output panel (Ctrl+Shift+U / Cmd+Shift+U)
 2. Select "Ecstasy Language Server" from the dropdown
-3. Look for `"Backend: TreeSitter"` or `"Backend: Mock"`
+3. Find the same banner
+
+**With the compiler adapter**, every compilation also logs what it cost and what the compiler is
+holding on to, which is the quickest way to tell it is really running:
+
+```
+XdkAdapter - compile: uri=file:///X.x, 106 bytes, 1 diagnostic(s), 3 symbol(s), queue=1,
+             waited 160us, compiled in 64ms [modules=24, constants=207196, invalidations=10, heap=281MB]
+```
+
+`queue` is how many documents are waiting: compilations are serialised, because the compiler was
+not written for two at once. `waited` growing while you type is the sign that serialising has
+started to hurt.
 
 ### 3. Create Test File
 
@@ -104,6 +149,13 @@ module TestModule {
 ---
 
 ## Test Cases by Feature
+
+> **"Both adapters" means mock and tree-sitter.** Those two are the ones that answer the whole
+> LSP surface. The compiler adapter answers two things and answers them better than either -
+> diagnostics (§7) and the outline (§6) - and returns nothing for the rest, so an editor running
+> it has no completion, no go-to-definition, no formatting. Sections that the compiler adapter
+> participates in say so; where it is not mentioned, it is not implemented. §7a covers what is
+> only testable with the compiler adapter.
 
 ### 1. Syntax Highlighting (TextMate)
 
@@ -225,7 +277,7 @@ module TestModule {
 
 **LSP Method:** `textDocument/documentSymbol`
 **Status:** ✅ Done
-**Works with:** Both adapters
+**Works with:** All three adapters
 
 **How to trigger:**
 - *IntelliJ:* Alt+7 (Structure tool window), Ctrl+F12 (File Structure popup)
@@ -236,34 +288,92 @@ module TestModule {
 | 6.1 | Structure view | IntelliJ: Alt+7; VS Code: Outline panel | Hierarchical outline |
 | 6.2 | File structure popup | IntelliJ: Ctrl+F12; VS Code: Ctrl+Shift+O | Popup with all symbols |
 | 6.3 | Breadcrumbs | Look at editor top (VS Code) or bottom (IntelliJ) | `TestModule > Person > getName` |
+| 6.4 | Outline on the compiler adapter | Same as 6.1, built with `-Plsp.adapter=compiler` | Same hierarchy. It comes from the parsed AST, not the compiled structures, so it appears for a file that does not compile |
+| 6.5 | Outline of a file with errors | Give a non-void method a bare `return;`, then Alt+7 / Outline | `COMPILER-41: Return is supposed to be non-void.`, and the outline still lists every declaration. A structure view that empties out on a typo is the bug this guards |
 
 ---
 
 ### 7. Diagnostics / Error Detection
 
 **LSP Method:** `textDocument/publishDiagnostics`
-**Status:** ⚠️ Partial
+**Status:** ✅ Done (compiler adapter) / ⚠️ Partial (others)
 **Works with:** Different behavior per adapter
 
 **How to trigger:** Diagnostics appear automatically as you type (push-based).
 - *IntelliJ:* Red/yellow squiggly underlines; Alt+Enter for quick fixes; F2 to jump to next error
 - *VS Code:* Red/yellow squiggly underlines; Ctrl+Shift+M (Problems panel); F8 to jump to next error
 
-| # | Test | Steps | Mock | Tree-sitter |
-|---|------|-------|:----:|:-----------:|
-| 7.1 | Syntax error (missing brace) | Delete a `}` | ❌ | ✅ |
-| 7.2 | Unmatched braces | Add `{` without `}` | ⚠️ | ✅ |
-| 7.3 | ERROR comment marker | Add `// ERROR: message` | ✅ | N/A |
-| 7.4 | WARN comment marker | Add `// WARN: message` | ✅ | N/A |
-| 7.5 | Semantic error (undefined var) | Use undefined variable | ❌ | ❌ |
-| 7.6 | Module-level property getter parses cleanly | At module scope (outside any class) write `Int val2.get() = 43;`. Same form inside a class body should also parse | N/A | ✅ no diagnostic |
-| 7.7 | Package-level property getter parses cleanly | Inside `package util { Int answer.get() = 42; }` | N/A | ✅ no diagnostic |
+| # | Test | Steps | Mock | Tree-sitter | Compiler |
+|---|------|-------|:----:|:-----------:|:--------:|
+| 7.1 | Syntax error (missing brace) | Delete a `}` | ❌ | ✅ | ✅ with the compiler's own code |
+| 7.2 | Unmatched braces | Add `{` without `}` | ⚠️ | ✅ | ✅ |
+| 7.3 | ERROR comment marker | Add `// ERROR: message` | ✅ | N/A | N/A |
+| 7.4 | WARN comment marker | Add `// WARN: message` | ✅ | N/A | N/A |
+| 7.5 | Semantic error (undefined var) | `Int y = x + 1;` with no `x` in scope | ❌ | ❌ | ✅ `COMPILER-38: Name "x" is unresolvable.` |
+| 7.6 | Module-level property getter parses cleanly | At module scope (outside any class) write `Int val2.get() = 43;`. Same form inside a class body should also parse | N/A | ✅ no diagnostic | ✅ no diagnostic |
+| 7.7 | Package-level property getter parses cleanly | Inside `package util { Int answer.get() = 42; }` | N/A | ✅ no diagnostic | ✅ no diagnostic |
+| 7.8 | Type error | `String s = 1;` | ❌ | ❌ | ✅ `COMPILER-43: Type mismatch: "String" expected, "IntLiteral" found.` |
+| 7.9 | Wrong argument count | Call a one-argument method with two | ❌ | ❌ | ✅ `COMPILER-56: Could not find a matching method or function "f" ...` - the compiler reports no *matching* method rather than a count |
+| 7.10 | Codes are the compiler's | Any of 7.1-7.9 | - | - | The code shown is the one `xcc` prints for the same file: `PARSER-*`, `COMPILER-*`, `VERIFY-*` |
 
 **Notes:**
 - Mock: Detects `// ERROR:` and `// WARN:` comment markers (testing convenience)
 - Tree-sitter: Real syntax error detection via parsing (doesn't use comment markers by design)
-- Comment markers: N/A for tree-sitter because it focuses on real parse errors
-- Semantic errors: Requires compiler adapter (future)
+- Comment markers: N/A for tree-sitter and the compiler, because both report real problems
+- Compiler: the same diagnostics `xcc` would print, at the same spans. A row it disagrees with
+  `xcc` about is a bug worth reporting either way - the two are meant to be the same compiler
+
+---
+
+### 7a. Compiler Adapter Specifics
+
+**Status:** ✅ Done
+**Works with:** Compiler adapter only (`-Plsp.adapter=compiler`)
+
+These are the behaviours that only exist because the adapter runs the real compiler. Nothing here
+is observable under mock or tree-sitter.
+
+**Prerequisite:** an XDK on `XDK_HOME`. Test 7a.1 is the one that deliberately does not have one.
+
+| # | Test | Steps | Expected Result |
+|---|------|-------|-----------------|
+| 7a.1 | No XDK configured | Unset `XDK_HOME`, restart the server, open a `.x` file | One warning on the file: `XTC analysis unavailable: ...`, code `XDK-UNAVAILABLE`. The editor stays usable - no crash, no error dialog, no dead server |
+| 7a.2 | XDK appears later | With the server still running from 7a.1, set `XDK_HOME` and restart the server, then edit the file | The warning is replaced by real diagnostics |
+| 7a.3 | Cold start | Watch the log on the first `.x` file opened in a session | `first compilation in this server took ... (cold)`, around a second. Slow once is expected; slow every time is not |
+| 7a.4 | Steady state | Edit the same file ten times, watching `compiled in` | Settles to tens of milliseconds. A number that keeps climbing means something is accumulating - compare `footprint` across the run |
+| 7a.5 | Queue depth | Type quickly across two or three open files | `queue=` rises above 1 and falls back. `waited` staying high is the signal that one-at-a-time has become the bottleneck |
+| 7a.6 | Superseded edit | Type continuously for several seconds without pausing | Log shows `superseded before it started, skipped` or `superseded after ..., abandoned`. No diagnostics are published for text that has already been replaced - a squiggle under an identifier you have finished typing is the failure this prevents |
+| 7a.7 | Memory over a session | Leave the server up, edit for a while, watch `heap=` in the `footprint` on each line | Flat, not a staircase |
+| 7a.8 | A diagnostic no other adapter can find | See the duplicate-annotation file below | One `WARNING VERIFY-75`, the annotation is ignored |
+| 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file | Diagnostics stop at a hundred serious errors rather than filling the panel with consequences of the first one |
+
+**7a.8 - the duplicate annotation.** This is the case worth keeping, because it is invisible
+everywhere else. No grammar can find it: it needs the compiler to lay `Derived` over `Base` and
+notice the annotation was already there.
+
+```xtc
+module DupAnno {
+    class Base {
+        @Atomic Int x = 1;
+    }
+    class Derived extends Base {
+        @Atomic @Override Int x = 2;     // VERIFY-75: duplicates the base property's annotation
+    }
+}
+```
+
+Expected: `WARNING VERIFY-75`, naming the annotation, the property and the derived class, and
+saying the annotation on the derived property is ignored.
+
+> Exactly one warning, not two. The compiler reports this one twice internally - once when the
+> type is laid out, once when a later stage asks for the same type again - and the adapter
+> collects through an `ErrorList`, which is what filters the repeat. Two identical warnings in the
+> Problems panel means that filtering has been lost.
+
+> Compiling the same file with `xcc` on **master** prints nothing at all - the warning is
+> produced and then discarded before anyone sees it. This is a real bug in master, recorded in
+> [docs/errs.md](../../docs/errs.md); the adapter showing it is the fix working, not a false
+> positive.
 
 ---
 
@@ -918,8 +1028,9 @@ This table maps every numbered feature from sections 1–19 to the exact VS Code
 | 3 | Completion | Type a prefix → `Ctrl+Space` | Completion popup | Subtests 3.1–3.11 — each row in §3 applies verbatim. |
 | 4 | Go to Definition | `F12` or `Cmd+Click` on a symbol | Editor jumps to declaration | Subtests 4.1–4.10 — see §4. `Opt+F12` peeks instead of jumping. |
 | 5 | Find References | `Shift+F12` on a symbol | "References" peek view | §5 covers both same-file and cross-file expectations. |
-| 6 | Outline | View → Outline (or Cmd+Shift+O for symbols-in-file) | Outline panel populates | §6 — module / class / method hierarchy. |
-| 7 | Diagnostics | Save a `.x` file with a known syntax error | Problems panel (Cmd+Shift+M) + red squigglies | §7. The mock adapter reports fewer diagnostics than tree-sitter. |
+| 6 | Outline | View → Outline (or Cmd+Shift+O for symbols-in-file) | Outline panel populates | §6 — module / class / method hierarchy. All three adapters. |
+| 7 | Diagnostics | Save a `.x` file with a known syntax error | Problems panel (Cmd+Shift+M) + red squigglies | §7. The mock adapter reports fewer diagnostics than tree-sitter; the compiler adapter reports semantics neither can see. |
+| 7a | Compiler adapter specifics | Build with `-Plsp.adapter=compiler` and `XDK_HOME` set; watch the server output channel | Problems panel + the `compile:` lines in the log | §7a — cold vs steady timing, queue depth, superseded edits, and the `XDK-UNAVAILABLE` warning when there is no XDK. |
 | 8 | Document highlight | Click on an identifier | Other same-name occurrences in file get a subtle highlight box | §8. |
 | 9 | Selection ranges | Place cursor in expression → `Shift+Opt+Cmd+→` (macOS) or `Shift+Alt+→` | Selection expands outward through AST nodes | §9. |
 | 10 | Folding ranges | Click the gutter triangles or `Cmd+Opt+[` | Block / method / class folds | §10 — verify all listed scopes fold correctly. |
@@ -1006,11 +1117,17 @@ Still remaining:
 - Cross-file find-references (workspace-wide name search)
 - Cross-file rename refactoring
 
-### Full Compiler Integration (TODO)
+### Full Compiler Integration (partly done)
 
-Planned features once compiler adapter is implemented:
-- Semantic error detection
+Done - see §6, §7 and §7a:
+- Semantic error detection, with the compiler's own codes and spans
+- Document outline, from the parsed AST
+
+Still to come. Each of these needs the compiler's *resolution* - what a name refers to - and not
+just what it reported. The compiler knows the answers; what it does not yet hand back is a map
+from a source position to the thing declared there, which is what an editor asks for:
 - Type inference in hover and inlay hints
 - Accurate completion filtering (type-aware)
+- Go to definition and find references
 - Cross-file rename refactoring
 - Diagnostic-driven quick fixes and refactorings
