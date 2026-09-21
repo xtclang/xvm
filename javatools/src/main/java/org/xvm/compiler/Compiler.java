@@ -12,8 +12,8 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import static org.xvm.asm.ErrorListener.Silence.CASCADE;
 import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A module compiler for Ecstasy code.
@@ -125,7 +125,13 @@ public class Compiler {
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.setErrorListener(silent(DISCARD));
+            // a TypeInfo built from the half-finished structures of a compilation in progress
+            // reports the half-finishedness, not the user's code; those diagnostics are fallout,
+            // and they are suppressed for as long as the compilation lasts. CASCADE rather than a
+            // bare silence so that what was suppressed stays reachable: measured over a full XDK
+            // build this swallows about sixty ERROR-severity diagnostics, and until they can be
+            // read there is no way to tell a spurious one from a real one
+            m_parked = m_structFile.reportingTo(m_errs.silence(CASCADE));
             setStage(Stage.Registered);
         }
 
@@ -301,7 +307,8 @@ public class Compiler {
                         m_structFile.validate(m_errs);
                     }
                 } finally {
-                    m_structFile.setErrorListener(null);
+                    m_parked.close();
+                    m_parked = null;
                 }
             }
         }
@@ -401,6 +408,12 @@ public class Compiler {
      * getting all of the nodes to complete that stage.
      */
     private StageMgr m_mgr;
+
+    /**
+     * The scope that suppresses fallout from half-finished structures, open for as long as the
+     * compilation lasts. Null before it starts and once it has finished.
+     */
+    private FileStructure.Reporting m_parked;
 
     // ----- inner class: Stage enumeration --------------------------------------------------------
 
