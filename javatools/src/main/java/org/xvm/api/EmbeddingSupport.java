@@ -140,7 +140,7 @@ public class EmbeddingSupport {
      * @return the snapshot; the counts are zero where nothing has been configured or built yet
      */
     public Footprint footprint() {
-        ConstantPool pool    = configured ? getConstantPool() : null;
+        ConstantPool pool    = configured ? ensureRuntimePool() : null;
         Runtime      runtime = Runtime.getRuntime();
         return new Footprint(
                 cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(),
@@ -256,10 +256,17 @@ public class EmbeddingSupport {
     }
 
     /**
-     * @return the ConstantPool of the core Ecstasy libraries used by the runtime Connector instance
-     *         that is instantiated by EmbeddingSupport
+     * Obtain the constant pool of the runtime, starting one if it is not running yet.
+     *
+     * This is not the pool a compilation used - that belongs to the {@link Compilation} it
+     * produced. Asking for this one boots an interpreter: a connector builds a NativeContainer,
+     * which loads a native template for every core module, so it needs the whole library and not
+     * just the part the compiler bootstraps against. The old name said "get" and read like an
+     * accessor.
+     *
+     * @return the runtime's constant pool
      */
-    public ConstantPool getConstantPool() {
+    public ConstantPool ensureRuntimePool() {
         verifyConfigured();
         return ensureConnector().getConstantPool();
     }
@@ -276,34 +283,77 @@ public class EmbeddingSupport {
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
     public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
-        return compile(source, null, input, errs);
+        return compile(new Source(source), input, errs);
     }
 
     /**
-     * Compile a module held in memory, under a name.
+     * Compile a module held in memory, as a named document.
      *
      * A diagnostic's identity includes the name of the source it came from, so a host holding
      * several documents that are not on disk - an editor's unsaved buffers - has to be able to
      * tell them apart. Without a name, two documents with a problem at the same offset produce
-     * the same identity and a listener that deduplicates discards the second.
+     * the same identity and a listener that deduplicates discards the second. The name belongs to
+     * the document rather than to the act of compiling it, which is why this takes a
+     * {@link Source}: {@code new Source(text, uri)} says it once, where a second String parameter
+     * would sit next to the first and be silently swappable with it.
      *
-     * @param source  the source code for an entire module to compile
-     * @param name    the name to report this source under, e.g. the document's URI; null for an
-     *                anonymous one
+     * @param source  the source to compile, carrying whatever name it was created with
      * @param input   (optional) the module repository to read any required modules from
      * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
-    public ModuleStructure compile(String source, String name, ModuleRepository input,
+    public ModuleStructure compile(Source source, ModuleRepository input,
                                    @NotNull ErrorListener errs) {
+        return compileModule(source, input, errs).module();
+    }
+
+    /**
+     * The outcome of compiling in-memory source.
+     *
+     * A failed compilation used to answer with nothing but null, which threw away everything the
+     * attempt had built. That is most of what a host wants when it fails: the structures a
+     * verification error was raised against still exist, and the pool they were interned in is
+     * the only way to reach them - to ask a type what building its TypeInfo had to say, for
+     * instance.
+     *
+     * @param module  the compiled module, or null if the compilation did not get that far
+     * @param file    the file structure that was built, or null if it did not get that far
+     */
+    public record Compilation(ModuleStructure module, FileStructure file) {
+        /**
+         * @return true iff a module came out of it
+         */
+        public boolean succeeded() {
+            return module != null;
+        }
+
+        /**
+         * @return the pool this compilation interned into, or null if there was no compilation
+         */
+        public ConstantPool pool() {
+            return file == null ? null : file.getConstantPool();
+        }
+    }
+
+    /**
+     * Compile a module held in memory, and answer with everything the attempt produced.
+     *
+     * @param source  the source to compile, carrying whatever name it was created with
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the outcome; never null, though its parts may be
+     */
+    public Compilation compileModule(Source source, ModuleRepository input,
+                                     @NotNull ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
+        EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
         try {
-            EmbeddingCompiler compiler = new EmbeddingCompiler(source, name, input, cfgRepo, errs);
             return compiler.process() == 0
-                    ? compiler.getModule()
-                    : null;
+                    ? new Compilation(compiler.getModule(), compiler.getFileStructure())
+                    : new Compilation(null, compiler.getFileStructure());
         } catch (RuntimeException | AssertionError e) {
             // as in run(): the compiler runs over caller-supplied source, so a failure in it is
             // reported here rather than thrown at the caller, who was promised a null instead.
@@ -315,7 +365,7 @@ public class EmbeddingSupport {
             if (!errs.hasSeriousErrors()) {
                 errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
-            return null;
+            return new Compilation(null, compiler.getFileStructure());
         }
     }
 
@@ -363,18 +413,25 @@ public class EmbeddingSupport {
      */
     private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
-        private final String           source;
-        private final String           name;
+        private final Source           source;
         private final ModuleRepository inRepo;
         private final ModuleRepository coreRepo;
         private       ModuleStructure  module;
+        private       FileStructure    file;
 
-        protected EmbeddingCompiler(String source, String name, ModuleRepository input,
+        /**
+         * @return the file structure this compilation built, which exists whether or not the
+         *         compilation went on to succeed
+         */
+        FileStructure getFileStructure() {
+            return file;
+        }
+
+        protected EmbeddingCompiler(Source source, ModuleRepository input,
                                     ModuleRepository core, ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.source   = source;
-            this.name     = name;
             this.inRepo   = input;
             this.coreRepo = core;
         }
@@ -389,8 +446,7 @@ public class EmbeddingSupport {
 
             StatementBlock block;
             try {
-                block = new Parser(name == null ? new Source(source)
-                        : new Source(source, name), this).parseSource();
+                block = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 return 1;
             }
@@ -407,6 +463,7 @@ public class EmbeddingSupport {
 
             Compiler      compiler = new Compiler(stmtModule, this);
             FileStructure struct   = compiler.generateInitialFileStructure();
+            this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {
                 return 1;
             }
