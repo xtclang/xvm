@@ -212,7 +212,7 @@ public class MethodDeclarationStatement
     /**
      * @return the simple name for this statement
      */
-    private String getName() {
+    public String getName() {
         if (name != null) {
             return name.getValueText();
         }
