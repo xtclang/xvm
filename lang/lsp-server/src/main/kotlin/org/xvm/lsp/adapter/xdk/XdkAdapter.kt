@@ -60,15 +60,15 @@ class XdkAdapter : AbstractAdapter() {
 
         // the edit this call is analysing is the newest one for this document, until it is not
         val generation = edited(uri)
-        val (diagnostics, waited) =
+        val (result, waited) =
             compiles
-                .submit<Pair<List<Diagnostic>, Duration>> {
+                .submit<Pair<Analysis, Duration>> {
                     val waited = (System.nanoTime() - queued).nanoseconds
                     if (isStale(uri, generation)) {
                         // a newer edit arrived while this one waited; analysing the old text
                         // would publish diagnostics for a document that no longer exists
                         logger.info("compile: uri={} superseded before it started, skipped", uri)
-                        emptyList<Diagnostic>() to waited
+                        Analysis() to waited
                     } else {
                         compileNow(uri, content, generation) to waited
                     }
@@ -78,17 +78,30 @@ class XdkAdapter : AbstractAdapter() {
         // says whether serialising compilations has started to hurt, and it is the one that would
         // otherwise be invisible inside a single "how long did that take"
         logger.info(
-            "compile: uri={}, {} bytes, {} diagnostic(s), queue={}, waited {}, compiled in {} [{}]",
+            "compile: uri={}, {} bytes, {} diagnostic(s), {} symbol(s), queue={}, waited {}, compiled in {} [{}]",
             uri,
             content.length,
-            diagnostics.size,
+            result.diagnostics.size,
+            result.symbols.size,
             depth,
             waited,
             lastCompile,
             footprint(),
         )
-        return CompilationResult.withDiagnostics(uri, diagnostics, emptyList())
+        cached[uri] = result
+        return CompilationResult.withDiagnostics(uri, result.diagnostics, result.symbols)
     }
+
+    override fun getCachedResult(uri: String): CompilationResult? =
+        cached[uri]?.let { CompilationResult.withDiagnostics(uri, it.diagnostics, it.symbols) }
+
+    /**
+     * What one compilation produced: the problems, and the shape of what was written.
+     */
+    private data class Analysis(
+        val diagnostics: List<Diagnostic> = emptyList(),
+        val symbols: List<SymbolInfo> = emptyList(),
+    )
 
     override fun close() {
         compiles.shutdown()
@@ -121,34 +134,40 @@ class XdkAdapter : AbstractAdapter() {
         uri: String,
         content: String,
         generation: Long,
-    ): List<Diagnostic> {
+    ): Analysis {
         val heard = mutableListOf<ErrorListener.ErrorInfo>()
 
         val started = System.nanoTime()
+        val parsed: org.xvm.compiler.ast.StatementBlock?
         try {
             // the document is named so that its diagnostics are distinguishable from another
             // unsaved document's; the listener answers for what it heard, which a bare lambda
             // would not
             // the compiler asks isAbortDesired at around twenty points; this is what answers yes
             // when the user has typed again and the answer is no longer wanted
-            EmbeddingSupport.instance().compile(
-                Source(content, uri),
-                null,
-                ErrorListener.cancellable(ErrorListener.collecting(heard::add)) {
-                    isStale(uri, generation)
-                },
-            )
+            parsed =
+                EmbeddingSupport
+                    .instance()
+                    .compileModule(
+                        Source(content, uri),
+                        null,
+                        ErrorListener.cancellable(ErrorListener.collecting(heard::add)) {
+                            isStale(uri, generation)
+                        },
+                    ).parsed()
         } catch (e: IllegalStateException) {
             // no XDK to compile against: report it where the user can see it rather than throwing
             // at the language server, and let them keep editing
             logger.warn("compile: uri={} has no XDK to resolve against: {}", uri, e.message)
-            return listOf(
-                Diagnostic(
-                    location = wholeDocument(uri),
-                    severity = Diagnostic.Severity.WARNING,
-                    message = "XTC analysis unavailable: ${e.message}",
-                    code = NO_XDK,
-                    source = SOURCE,
+            return Analysis(
+                listOf(
+                    Diagnostic(
+                        location = wholeDocument(uri),
+                        severity = Diagnostic.Severity.WARNING,
+                        message = "XTC analysis unavailable: ${e.message}",
+                        code = NO_XDK,
+                        source = SOURCE,
+                    ),
                 ),
             )
         }
@@ -158,7 +177,7 @@ class XdkAdapter : AbstractAdapter() {
             // abandoned part-way: what it managed to report describes text the user has already
             // replaced, so publishing it would put stale squiggles in the editor
             logger.info("compile: uri={} superseded after {}, abandoned", uri, lastCompile)
-            return emptyList()
+            return Analysis()
         }
         if (compiled.incrementAndGet() == 1L) {
             // the first compilation pays for class loading, reading the XDK and an interpreter
@@ -166,7 +185,7 @@ class XdkAdapter : AbstractAdapter() {
             // state, so it is worth telling apart from a slow one
             logger.info("compile: first compilation in this server took {} (cold)", lastCompile)
         }
-        return heard.map { it.toDiagnostic(uri) }
+        return Analysis(heard.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed))
     }
 
     /**
@@ -232,7 +251,7 @@ class XdkAdapter : AbstractAdapter() {
         uri: String,
         line: Int,
         column: Int,
-    ): SymbolInfo? = null
+    ): SymbolInfo? = XdkSymbols.at(cached[uri]?.symbols ?: emptyList(), line, column)
 
     override fun getCompletions(
         uri: String,
@@ -258,6 +277,9 @@ class XdkAdapter : AbstractAdapter() {
     @Volatile private var lastCompile: Duration = Duration.ZERO
 
     private val compiled = AtomicLong()
+
+    /** The last analysis of each open document, for requests that should not recompile. */
+    private val cached = ConcurrentHashMap<String, Analysis>()
 
     /** The generation of the newest edit seen per document; older ones are stale. */
     private val newest = ConcurrentHashMap<String, Long>()
