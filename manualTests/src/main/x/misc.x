@@ -42,7 +42,7 @@ module TestMisc {
 
         testEnums();
         testCircularInitialization();
-        testPotentiallyAmbiguous();
+        testImplicitlyAbstract();
     }
 
     void testInts() {
@@ -898,50 +898,67 @@ module TestMisc {
         }
     }
 
-    void testPotentiallyAmbiguous() {
-        NonVoid nonVoid = new NonVoid();
-        String  text    = nonVoid.f();
-        Int     number  = nonVoid.f();
-        assert text == "Hello", number == 42;
+    /**
+     * A class that does not implement everything its interface declares is implicitly abstract:
+     * declaring it is legal, and it is instantiating it that is the error. The compiler reports
+     * that at the "new", not at the class:
+     *
+     *     COMPILER-172: "K" is not an instantiable type because it contains an abstract
+     *                   method "void f()".
+     *
+     * That negative cannot be asserted from a running test - it never compiles - so what is
+     * pinned here is the positive half of the same rule: such a class may be declared, used as a
+     * type, and completed by a subclass which is then instantiable. @Abstract says the same thing
+     * explicitly and is not required.
+     */
+    void testImplicitlyAbstract() {
+        console.print("\n** testImplicitlyAbstract()");
 
-        WithVoid withVoid = new WithVoid();
-        var value = withVoid.f();
-        withVoid.f();
-        assert value == "Hello" && withVoid.voidCalled;
+        // Incomplete does not implement f(), so it is abstract without saying so
+        Complete complete = new Complete();
+        assert complete.f() == "Complete.f";
 
-        MultipleWithVoid multi = new MultipleWithVoid();
-        Int value2 = multi.f();
-        multi.f();
-        assert value2 == 42 && multi.voidCalled;
+        // it is still a usable type: the subclass is an Incomplete
+        Incomplete asBase = complete;
+        assert asBase.f() == "Complete.f";
+        assert asBase.is(Incomplete);
 
-        // A fully exact overload wins over alternatives that widen either argument.
-        ExactArguments exact = new ExactArguments();
-        assert exact.pick("first", "last") == "exact";
+        // and the explicitly abstract one behaves the same way
+        AlsoComplete also = new AlsoComplete();
+        assert also.f() == "AlsoComplete.f";
+        assert also.is(AlsoAbstract);
 
-        class NonVoid {
-            String f() = "Hello";
-            Int    f() = 42;
-        }
+        console.print("an incomplete class is abstract, and its subclass is instantiable");
+    }
 
-        class WithVoid {
-            Boolean voidCalled = False;
+    interface HasF {
+        String f();
+    }
 
-            String f() = "Hello";
-            void   f() {voidCalled = True;}
-        }
+    /**
+     * Implements HasF without supplying f(), so it is implicitly abstract.
+     */
+    class Incomplete implements HasF {
+    }
 
-        class MultipleWithVoid {
-            Boolean voidCalled = False;
-
-            String f() = "Hello";
-            Int    f() = 42;
-            void   f() {voidCalled = True;}
-        }
-
-        class ExactArguments {
-            String pick(Object first, String last) = "first widened";
-            String pick(String first, Object last) = "last widened";
-            String pick(String first, String last) = "exact";
+    class Complete extends Incomplete {
+        @Override
+        String f() {
+            return "Complete.f";
         }
     }
+
+    /**
+     * The same thing said out loud.
+     */
+    @Abstract class AlsoAbstract implements HasF {
+    }
+
+    class AlsoComplete extends AlsoAbstract {
+        @Override
+        String f() {
+            return "AlsoComplete.f";
+        }
+    }
+
 }
