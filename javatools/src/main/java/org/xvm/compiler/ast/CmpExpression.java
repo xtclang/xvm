@@ -54,6 +54,9 @@ import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Comparison binary expression.
  *
@@ -384,7 +387,7 @@ public class CmpExpression
             type2 = type2.getUnderlyingType2();
         }
 
-        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.PROBE);
+        TypeConstant typeCommon = Op.selectCommonType(type1, type2, silent(PROBE));
 
         if (type1 == null || type2 == null) {
             return typeCommon;

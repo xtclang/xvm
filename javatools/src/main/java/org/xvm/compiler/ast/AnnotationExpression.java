@@ -40,6 +40,9 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A type annotation is used for type annotations with an optional argument list.
  */
@@ -300,7 +303,7 @@ public class AnnotationExpression
                         if (exprNew instanceof NameExpression exprName &&
                                 exprName.getMeaning() == NameExpression.Meaning.Method) {
                             MethodConstant idMethod = (MethodConstant)
-                                exprName.resolveRawArgument(ctx, false, ErrorListener.PROBE);
+                                exprName.resolveRawArgument(ctx, false, silent(PROBE));
                             method = (MethodStructure) idMethod.getComponent();
                         } else if (exprNew instanceof LambdaExpression exprLambda) {
                             method = exprLambda.getLambda();

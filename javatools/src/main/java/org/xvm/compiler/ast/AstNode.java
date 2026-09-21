@@ -62,8 +62,10 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.indentLines;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
-import static org.xvm.asm.ErrorListener.PROBE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Common base class for all statements and expressions.
@@ -1221,7 +1223,7 @@ public abstract class AstNode
                                 lit.getLiteral().getValueText());
                     } else {
                         if (exprArg instanceof NameExpression exprName) {
-                            typeExpr = exprName.getImplicitType(ctx, typeParam, PROBE);
+                            typeExpr = exprName.getImplicitType(ctx, typeParam, silent(PROBE));
                         }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
@@ -1329,7 +1331,7 @@ public abstract class AstNode
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
-        Argument     arg  = exprName.resolveRawArgument(ctx, false, PROBE);
+        Argument     arg  = exprName.resolveRawArgument(ctx, false, silent(PROBE));
         if (arg instanceof Register reg) {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(

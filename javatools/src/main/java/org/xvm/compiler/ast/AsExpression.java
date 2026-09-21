@@ -17,7 +17,8 @@ import org.xvm.asm.op.MoveCast;
 
 import org.xvm.compiler.Token;
 
-import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Expression for "expression as type".
@@ -41,7 +42,7 @@ public class AsExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return ((TypeExpression) expr2).ensureTypeConstant(ctx, PROBE);
+        return ((TypeExpression) expr2).ensureTypeConstant(ctx, silent(PROBE));
     }
 
     @Override
@@ -65,7 +66,7 @@ public class AsExpression
 
         TypeConstant type = exprType.ensureTypeConstant(ctx, errs).resolveAutoNarrowingBase();
 
-        if (!exprType.isDynamic() && expr1.testFit(ctx, type, false, PROBE).isFit()) {
+        if (!exprType.isDynamic() && expr1.testFit(ctx, type, false, silent(PROBE)).isFit()) {
             typeRequest     = type;
             m_fCastRequired = false;
         }

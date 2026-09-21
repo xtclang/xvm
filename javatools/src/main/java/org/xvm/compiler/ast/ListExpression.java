@@ -31,6 +31,9 @@ import org.xvm.compiler.Compiler;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
  * type.
@@ -106,7 +109,7 @@ public class ListExpression
             return pool.typeArray();
         }
 
-        return type.ensureTypeConstant(ctx, ErrorListener.PROBE);
+        return type.ensureTypeConstant(ctx, silent(PROBE));
     }
 
     private TypeConstant getImplicitElementType(Context ctx) {

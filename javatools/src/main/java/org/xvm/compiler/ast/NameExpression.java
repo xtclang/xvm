@@ -53,7 +53,8 @@ import org.xvm.runtime.Utils;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
@@ -507,7 +508,7 @@ public class NameExpression
     public TypeConstant getImplicitType(Context ctx) {
         return isValidated()
                 ? getType()
-                : getImplicitType(ctx, null, PROBE);
+                : getImplicitType(ctx, null, silent(PROBE));
     }
 
     /**
@@ -549,7 +550,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, PROBE).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, silent(PROBE)).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 
@@ -769,7 +770,7 @@ public class NameExpression
                     else if (getParent() instanceof NameExpression) {
                         // a question, not an assertion: the comment below says the outer
                         // expression reports whatever follows from the answer
-                        if (!ctx.requireThis(getStartPosition(), PROBE)) {
+                        if (!ctx.requireThis(getStartPosition(), silent(PROBE))) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that
@@ -2144,7 +2145,7 @@ public class NameExpression
                     // process the "this.OuterName" construct
                     if (!typeLeft.isTypeOfType() && !fIdMode) {
                         Constant constTarget = new NameResolver(this, sName)
-                                .forceResolve(PROBE);
+                                .forceResolve(silent(PROBE));
                         if (constTarget instanceof IdentityConstant && constTarget.isClass()) {
                             if (constTarget.equals(pool.clzOuter())) {
                                 // this.Outer
@@ -2876,7 +2877,7 @@ public class NameExpression
                 break CheckDynamic;
             }
 
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, PROBE);
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, silent(PROBE));
             if (!(argLeft instanceof Register regLeft)) {
                 break CheckDynamic;
             }
@@ -3181,7 +3182,7 @@ public class NameExpression
         if (typeNarrow != null) {
             assert isValidated();
 
-            Argument arg = resolveRawArgument(ctx, false, PROBE);
+            Argument arg = resolveRawArgument(ctx, false, silent(PROBE));
 
             if (left != null) {
                 if (arg instanceof FormalTypeChildConstant constFormal) {

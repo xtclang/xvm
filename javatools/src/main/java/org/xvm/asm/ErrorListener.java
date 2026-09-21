@@ -344,26 +344,79 @@ public interface ErrorListener {
     }
 
     /**
-     * Obtain a listener for the remainder of a computation that has become incomplete.
+     * Why a stretch of work is not reporting its diagnostics.
      *
-     * A result built from incomplete information produces diagnostics that describe the
-     * incompleteness rather than the user's code, and reporting them buries the one diagnostic that
-     * matters under a cascade of consequences. This names that decision, which was previously made
-     * by overwriting the caller's listener with a silent one.
-     *
-     * The result wraps this listener rather than being a shared constant, so the suppression is a
-     * decision about one computation instead of an anonymous silence, and
-     * {@link CascadeErrorListener#suppressed} can still reach what was suppressed. A host that
-     * wants the consequences after all - an editor offering them as related information for the
-     * diagnostic that does matter - has somewhere to get them; a constant could never say.
-     *
-     * Applying it twice is the same suppression, so it is safe to call per use rather than having
-     * to hold the result.
-     *
-     * @return a listener that discards what the rest of this computation has to say
+     * The three behave identically - nothing may branch on which one a listener holds - but they
+     * are different intentions, and saying which is meant is the point. Grepping for one of these
+     * is the list of the places that meant it.
      */
-    default ErrorListener suppressCascade() {
-        return new CascadeErrorListener(this);
+    enum Silence {
+        /**
+         * Speculative work whose failure is the answer, and whose failure must therefore not be
+         * audible. The compiler constantly asks "would this expression fit that type?", and the
+         * return value - not a diagnostic - is what the caller acts on.
+         *
+         * Not for work whose failure the user should hear about if every alternative also fails;
+         * that is {@link ErrorListener#branch}.
+         */
+        PROBE,
+
+        /**
+         * The remainder of a computation already known to be incomplete. A result built from
+         * incomplete information produces diagnostics that describe the incompleteness rather
+         * than the user's code, and reporting them buries the one diagnostic that matters under
+         * a cascade of consequences. Unlike a probe, these are real diagnostics - a host may want
+         * them as related information for the diagnostic that does matter, which is why the
+         * listener they were taken from stays reachable.
+         */
+        CASCADE,
+
+        /**
+         * The caller has no sink to attach and wants none. Naming it is what keeps "I do not want
+         * these" from looking like "I did not think about these".
+         */
+        DISCARD
+    }
+
+    /**
+     * Obtain a listener that discards everything, for a caller with none of its own to derive
+     * from.
+     *
+     * @param why  why the diagnostics are being discarded
+     *
+     * @return a listener that discards what it is given
+     */
+    static ErrorListener silent(Silence why) {
+        return switch (why) {
+            case PROBE   -> SILENT_PROBE;
+            case CASCADE -> SILENT_CASCADE;
+            case DISCARD -> SILENT_DISCARD;
+        };
+    }
+
+    /**
+     * Obtain a listener that discards the rest of what this one would have been told.
+     *
+     * The result wraps this listener rather than being a shared constant, so the silence is a
+     * decision about one stretch of work instead of an anonymous gap, and
+     * {@link SilentErrorListener#suppressed} can still reach what was silenced.
+     *
+     * Applying it twice is the same silence, so it is safe to call per use rather than having to
+     * hold the result.
+     *
+     * @param why  why the diagnostics are being discarded
+     *
+     * @return a listener that discards what the rest of this work has to say
+     */
+    default ErrorListener silence(Silence why) {
+        return new SilentErrorListener(this, why);
+    }
+
+    /**
+     * @return why this listener is silent, or null if it is not
+     */
+    default Silence silenceReason() {
+        return null;
     }
 
     /**
@@ -396,67 +449,30 @@ public interface ErrorListener {
         return false;
     }
 
-    // ----- inner class: BlackholeErrorListener ---------------------------------------------------
+    // ----- inner class: SilentErrorListener ------------------------------------------------------
 
     /**
-     * A simple implementation of the ErrorListener that converts reported errors to ErrorInfo
-     * objects and routes them to a single sink method.
+     * A listener that discards everything, for one of the reasons {@link Silence} names.
+     *
+     * The three reasons behave identically and deliberately so - nothing may branch on which one
+     * it holds - but they are not the same intention, and a host that republishes diagnostics may
+     * want to treat them differently. Where the silence was derived from a real listener,
+     * {@link #suppressed} still reaches it.
      */
     class SilentErrorListener
             implements ErrorListener {
-        public SilentErrorListener(String sName) {
-            f_sName = sName;
-        }
-
-        @Override
-        public void log(ErrorInfo err) {
-        }
-
-        @Override
-        public ErrorListener merge() {
-            return this;
-        }
-
-        @Override
-        public boolean isSilent() {
-            return true;
-        }
-
-        @Override
-        public ErrorListener suppressCascade() {
-            // nothing reaches this listener to begin with; wrapping it would only add a layer
-            return this;
-        }
-
-        @Override
-        public String toString() {
-            return f_sName;
-        }
-
-        private final String f_sName;
-    }
-
-    // ----- inner class: CascadeErrorListener -----------------------------------------------------
-
-    /**
-     * The listener for the remainder of a computation that has become incomplete.
-     *
-     * It discards what it is given, as {@link #PROBE} does, but it keeps the listener it was made
-     * from. The two silences are not the same thing: a probe's failure is the answer and nobody
-     * ever wants those diagnostics, whereas these are real diagnostics that happen to be
-     * consequences of a piece already known to be missing. Keeping the receiver is what leaves
-     * that difference recoverable.
-     *
-     * @see ErrorListener#suppressCascade()
-     */
-    class CascadeErrorListener
-            implements ErrorListener {
-        public CascadeErrorListener(ErrorListener errs) {
-            f_errs = requireNonNull(errs, "errs");
+        /**
+         * @param errs  the listener being silenced, or null where the caller had none
+         * @param why   why the diagnostics are being discarded
+         */
+        public SilentErrorListener(ErrorListener errs, Silence why) {
+            f_errs = errs;
+            f_why  = requireNonNull(why, "why");
         }
 
         /**
-         * @return the listener whose cascade this suppresses
+         * @return the listener this silence was derived from, or null if it was not derived from
+         *         one - a caller that never had a listener has nothing to suppress
          */
         public ErrorListener suppressed() {
             return f_errs;
@@ -464,7 +480,7 @@ public interface ErrorListener {
 
         @Override
         public void log(ErrorInfo err) {
-            // discarded on purpose: see suppressCascade()
+            // discarded on purpose; f_why says which purpose
         }
 
         @Override
@@ -478,16 +494,23 @@ public interface ErrorListener {
         }
 
         @Override
-        public ErrorListener suppressCascade() {
+        public Silence silenceReason() {
+            return f_why;
+        }
+
+        @Override
+        public ErrorListener silence(Silence why) {
+            // already silent for a stated reason; a second reason would only add a layer
             return this;
         }
 
         @Override
         public String toString() {
-            return "(Cascade of " + f_errs + ")";
+            return f_errs == null ? "(" + f_why + ")" : "(" + f_why + " of " + f_errs + ")";
         }
 
         private final ErrorListener f_errs;
+        private final Silence       f_why;
     }
 
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
@@ -797,28 +820,14 @@ public interface ErrorListener {
     ResourceBundle RESOURCES = ResourceBundle.getBundle("errors");
 
     /**
-     * The listener for a question: speculative work whose failure is the answer, and whose failure
-     * must therefore not be audible. The compiler constantly asks "would this expression fit that
-     * type?", and the return value - not a diagnostic - is what the caller acts on.
-     *
-     * Behaviourally identical to {@link #BLACKHOLE}, and deliberately so: nothing may branch on
-     * which of the two it holds. They are separate constants because they are separate intentions,
-     * and because grepping for this one is the list of the compiler's speculative paths.
-     *
-     * Not for work whose failure the user should hear about if every alternative also fails; that
-     * is {@link #branch}. Not for the remainder of a computation already known to be incomplete
-     * either; that is {@link #suppressCascade}, which keeps the listener it silences instead of
-     * standing in for it.
+     * The shared silences, one per {@link Silence}, for callers with no listener to derive from.
+     * Reached through {@link #silent}, which is what call sites name.
      */
-    ErrorListener PROBE     = new SilentErrorListener("(Probe)");
+    ErrorListener SILENT_PROBE   = new SilentErrorListener(null, Silence.PROBE);
+    ErrorListener SILENT_CASCADE = new SilentErrorListener(null, Silence.CASCADE);
+    ErrorListener SILENT_DISCARD = new SilentErrorListener(null, Silence.DISCARD);
 
-    /**
-     * The listener for a caller that has no sink to attach: the diagnostics are genuinely not
-     * wanted by anyone. A convenience overload that wants no diagnostics says so by naming this,
-     * so that "I do not want them" and "I did not think about them" no longer look alike.
-     */
-    ErrorListener BLACKHOLE = new SilentErrorListener("(Blackhole)");
-    ErrorListener RUNTIME   = new RuntimeErrorListener();
+    ErrorListener RUNTIME = new RuntimeErrorListener();
 
     /**
      * Indicates that the compiler probably runs inside of IntelliJ IDEA.

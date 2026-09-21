@@ -8,6 +8,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * An expression that holds a copy of the result of another expression in order to provide optional
  * traceability.
@@ -26,7 +29,7 @@ public class TraceExpression
 
         assert expr.isValidated();
 
-        finishValidations(null, null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(), ErrorListener.PROBE);
+        finishValidations(null, null, expr.getTypes(), expr.getTypeFit(), expr.toConstants(), silent(PROBE));
     }
 
     // ----- accessors -----------------------------------------------------------------------------

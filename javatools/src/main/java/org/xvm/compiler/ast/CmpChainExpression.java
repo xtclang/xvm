@@ -48,6 +48,9 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Comparison over a chain of expressions.
  *
@@ -503,7 +506,7 @@ public class CmpChainExpression
         ctx = ctx.enterInferring(type);
 
         for (Expression expr : expressions) {
-            if (!expr.testFit(ctx, type, false, ErrorListener.PROBE).isFit()) {
+            if (!expr.testFit(ctx, type, false, silent(PROBE)).isFit()) {
                 return false;
             }
         }

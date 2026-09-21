@@ -47,7 +47,8 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
@@ -629,10 +630,10 @@ public class RelOpExpression
 
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
-        if (expr1.testFit(ctx, typeRequired, false, PROBE).isFit()) {
+        if (expr1.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()) {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, PROBE).isFit()) {
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, silent(PROBE)).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns()[0];
                     if (typeReturn.containsAutoNarrowing(false)) {
                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
@@ -648,10 +649,10 @@ public class RelOpExpression
 
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
-                if (expr1.testFit(ctx, typeParam, false, PROBE).isFit()) {
+                if (expr1.testFit(ctx, typeParam, false, silent(PROBE)).isFit()) {
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, PROBE).isFit()) {
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, silent(PROBE)).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns()[0];
                             if (typeReturn.containsAutoNarrowing(false)) {
                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
@@ -705,9 +706,9 @@ public class RelOpExpression
                 }
 
                 TypeConstant typeParam = idMethod.getRawParams()[0];
-                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, PROBE);
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, silent(PROBE));
                 if (!fit.isFit()) {
-                    fit = expr2.testFitExhaustive(ctx, typeParam, PROBE);
+                    fit = expr2.testFitExhaustive(ctx, typeParam, silent(PROBE));
                 }
 
                 if (fit.betterThan(fitBest)) {

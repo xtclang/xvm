@@ -36,7 +36,7 @@ public class ErrorListenerSiteTest {
         ErrorListener.ErrorInfo err = errs.getErrors().get(0);
         assertEquals(Severity.ERROR, err.getSeverity());
         assertEquals(CODE, err.getCode());
-        assertArrayEqualsAsList(new Object[]{"a", "b"}, err.getParams());
+        assertEquals(List.of("a", "b"), List.of(err.getParams()));
     }
 
     @Test
@@ -120,10 +120,6 @@ public class ErrorListenerSiteTest {
         // and asking twice does not say it twice
         recorder.logTo(later);
         assertEquals(1, later.getErrors().size());
-    }
-
-    private static void assertArrayEqualsAsList(Object[] expected, Object[] actual) {
-        assertEquals(List.of(expected), List.of(actual));
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";

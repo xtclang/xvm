@@ -12,6 +12,9 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A module compiler for Ecstasy code.
  * <p/>
@@ -122,7 +125,7 @@ public class Compiler {
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.setErrorListener(ErrorListener.BLACKHOLE);
+            m_structFile.setErrorListener(silent(DISCARD));
             setStage(Stage.Registered);
         }
 
@@ -286,7 +289,7 @@ public class Compiler {
             if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                // the file was parked on BLACKHOLE for the duration of the compilation; restore
+                // the file was parked on a DISCARD silence for the duration of the compilation; restore
                 // it whatever the outcome. Restoring it only when the compilation succeeded left a
                 // file that had reported errors permanently silenced, which a resident compiler
                 // would then reuse

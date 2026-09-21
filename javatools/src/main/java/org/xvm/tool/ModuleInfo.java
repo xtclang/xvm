@@ -46,8 +46,10 @@ import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Handy.removeExtension;
 import static org.xvm.util.Handy.resolveFile;
 
-import static org.xvm.asm.ErrorListener.BLACKHOLE;
 import static org.xvm.asm.ErrorListener.NOWHERE;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Information gleaned about a module from a single specified file. This is a lazily populated
@@ -1433,7 +1435,7 @@ public class ModuleInfo {
             if (isExplicitSourceFile(name)) {
                 try {
                     Source source = new Source(file);
-                    Parser parser = new Parser(source, BLACKHOLE);
+                    Parser parser = new Parser(source, silent(DISCARD));
                     return parser.parseModuleNameIgnoreEverythingElse();
                 } catch (CompilerException | IOException ignore) {}
             } else if (isExplicitCompiledFile(name)) {

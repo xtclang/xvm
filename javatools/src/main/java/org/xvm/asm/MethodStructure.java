@@ -73,8 +73,10 @@ import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
-import static org.xvm.asm.ErrorListener.PROBE;
 import static org.xvm.asm.ErrorListener.at;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An XVM Structure that represents a method or a function.
@@ -813,7 +815,7 @@ public class MethodStructure
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(PROBE);
+            TypeInfo info = typeResult.ensureTypeInfo(silent(PROBE));
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -829,7 +831,7 @@ public class MethodStructure
                     // the new parameter type is wider or the old return type is narrower; use it instead
                 } else {
                     // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, PROBE);
+                    typeResult = Op.selectCommonType(typePrev, typeResult, silent(PROBE));
                     if (typeResult == null) {
                         // different arguments cause the formal type to resolve into
                         // incompatible types

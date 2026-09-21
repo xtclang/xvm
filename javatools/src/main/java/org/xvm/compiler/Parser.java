@@ -27,8 +27,10 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.BLACKHOLE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A recursive descent parser for Ecstasy source code.
@@ -140,7 +142,7 @@ public class Parser {
     public String parseModuleNameIgnoreEverythingElse() {
         ErrorListener errsPrev = m_errs;
         try {
-            m_errs = BLACKHOLE;
+            m_errs = silent(DISCARD);
 
             Loop: while (!eof()) {
                 if (match(Id.MODULE) != null) {

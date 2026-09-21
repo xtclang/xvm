@@ -31,7 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import static org.xvm.asm.ErrorListener.BLACKHOLE;
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Tests for the "bundle" command: options parsing, launcher dispatch, and the multi-module
@@ -82,7 +83,7 @@ class BundlerTest {
     @Test
     void testBundleCommandDispatch() {
         // -h takes the help path through the real Bundler launcher and returns success
-        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"}, new Console() {}, BLACKHOLE);
+        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"}, new Console() {}, silent(DISCARD));
         assertEquals(0, result);
     }
 
@@ -205,7 +206,7 @@ class BundlerTest {
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {
                 "-o", tempDir.resolve("out.xtc").toString(),
                 fileFirst.getPath(),
-                fileSecond.getPath()}, console, BLACKHOLE);
+                fileSecond.getPath()}, console, silent(DISCARD));
 
         assertEquals(1, result);
         var output = console.getAllOutput();
@@ -263,7 +264,7 @@ class BundlerTest {
         for (var input : inputs) {
             args.add(input.getPath());
         }
-        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]), new CaptureConsole(), BLACKHOLE);
+        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]), new CaptureConsole(), silent(DISCARD));
     }
 
     private static final class CaptureConsole implements Console {
