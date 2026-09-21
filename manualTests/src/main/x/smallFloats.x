@@ -7,8 +7,5 @@ module TestSmallFloats {
         new Float8e4Tests().run();
         new Float8e5Tests().run();
         new BFloat16Tests().run();
-
-        @Inject Console console;
-        console.print("Small floating-point tests passed");
     }
 }

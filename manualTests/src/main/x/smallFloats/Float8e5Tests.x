@@ -1,7 +1,5 @@
 class Float8e5Tests {
 
-    @Inject Console console;
-
     void run() {
         // Comparison tests
         testFloat8e5CompareEq();

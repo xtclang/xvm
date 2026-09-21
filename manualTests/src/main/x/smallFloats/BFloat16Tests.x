@@ -1,7 +1,5 @@
 class BFloat16Tests {
 
-    @Inject Console console;
-
     void run() {
         testBFloat16Compare();
         testBFloat16AsField();
