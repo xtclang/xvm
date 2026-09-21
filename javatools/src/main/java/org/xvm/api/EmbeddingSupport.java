@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 
 import java.time.Instant;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,6 +92,27 @@ public class EmbeddingSupport {
     private Connector        connector;
 
     /**
+     * Build a read-only repository over whichever of the given directories exist.
+     *
+     * @param dirs  the directories, in search order
+     *
+     * @return the repository, or null if none of the directories exist
+     */
+    private static ModuleRepository repoOver(File... dirs) {
+        List<ModuleRepository> list = new ArrayList<>();
+        for (File dir : dirs) {
+            if (dir.isDirectory()) {
+                list.add(new DirRepository(dir, true));
+            }
+        }
+        return switch (list.size()) {
+            case 0  -> null;
+            case 1  -> list.getFirst();
+            default -> new LinkedRepository(list.toArray(ModuleRepository.NO_REPOS));
+        };
+    }
+
+    /**
      * @return true if configured
      * @throws IllegalStateException if not configured
      */
@@ -99,9 +121,16 @@ public class EmbeddingSupport {
             // attempt to auto-configure
             String home = System.getenv("XDK_HOME");
             if (home != null) {
-                File dir = new File(new File(home), "lib");
-                if (dir.isDirectory()) {
-                    configure(new DirRepository(dir, true), null);
+                // an XDK keeps its libraries in lib/ and the two modules the compiler bootstraps
+                // against - the turtle, mack.xtclang.org, and the native bridge - in javatools/.
+                // Configuring only lib/ produced a repository that could never compile anything:
+                // every compile failed in prelinkSystemLibraries with "Unable to load module:
+                // mack.xtclang.org", reported as an internal error with no location
+                File             dirHome = new File(home);
+                ModuleRepository repo    = repoOver(new File(dirHome, "lib"),
+                                                    new File(dirHome, "javatools"));
+                if (repo != null) {
+                    configure(repo, null);
                 }
             }
 
@@ -210,10 +239,31 @@ public class EmbeddingSupport {
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
     public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        return compile(source, null, input, errs);
+    }
+
+    /**
+     * Compile a module held in memory, under a name.
+     *
+     * A diagnostic's identity includes the name of the source it came from, so a host holding
+     * several documents that are not on disk - an editor's unsaved buffers - has to be able to
+     * tell them apart. Without a name, two documents with a problem at the same offset produce
+     * the same identity and a listener that deduplicates discards the second.
+     *
+     * @param source  the source code for an entire module to compile
+     * @param name    the name to report this source under, e.g. the document's URI; null for an
+     *                anonymous one
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the resulting ModuleStructure, or null if a compiler error occurred
+     */
+    public ModuleStructure compile(String source, String name, ModuleRepository input,
+                                   @NotNull ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
         try {
-            EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
+            EmbeddingCompiler compiler = new EmbeddingCompiler(source, name, input, cfgRepo, errs);
             return compiler.process() == 0
                     ? compiler.getModule()
                     : null;
@@ -277,15 +327,17 @@ public class EmbeddingSupport {
     private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
         private final String           source;
+        private final String           name;
         private final ModuleRepository inRepo;
         private final ModuleRepository coreRepo;
         private       ModuleStructure  module;
 
-        protected EmbeddingCompiler(String source, ModuleRepository input, ModuleRepository core,
-                                    ErrorListener errs) {
+        protected EmbeddingCompiler(String source, String name, ModuleRepository input,
+                                    ModuleRepository core, ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.source   = source;
+            this.name     = name;
             this.inRepo   = input;
             this.coreRepo = core;
         }
@@ -300,7 +352,8 @@ public class EmbeddingSupport {
 
             StatementBlock block;
             try {
-                block = new Parser(new Source(source), this).parseSource();
+                block = new Parser(name == null ? new Source(source)
+                        : new Source(source, name), this).parseSource();
             } catch (CompilerException e) {
                 return 1;
             }

@@ -131,6 +131,10 @@ dependencies {
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
 
+    // The XTC compiler, for the XdkAdapter: real diagnostics rather than a syntax approximation.
+    // Substituted from the included build when lang is built inside the composite.
+    implementation(libs.javatools)
+
     // LSP4J - Eclipse LSP implementation for Java
     // Bundled in fat JAR for out-of-process execution (not provided by IntelliJ)
     implementation(libs.lang.lsp4j)
