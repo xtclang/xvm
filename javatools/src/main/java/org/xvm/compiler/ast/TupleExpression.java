@@ -31,6 +31,9 @@ import org.xvm.compiler.Compiler.Stage;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A tuple expression is an expression containing some number (0 or more) expressions.
  */
@@ -147,7 +150,7 @@ public class TupleExpression
     @Override
     public TypeConstant getImplicitType(Context ctx) {
         ConstantPool pool      = pool();
-        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx, ErrorListener.PROBE);
+        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx, silent(PROBE));
 
         if (typeTuple.containsUnresolved() || !typeTuple.isTuple()) {
             // let someone else log an error later, e.g. during validation, if the specified type

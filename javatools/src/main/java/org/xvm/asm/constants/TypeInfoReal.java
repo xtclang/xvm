@@ -37,6 +37,9 @@ import org.xvm.compiler.Constants;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The fully realized "flattened" information about a type.
  */
@@ -803,7 +806,7 @@ public class TypeInfoReal
                 return false;
             }
             TypeConstant typeParent = f_type.getParentType();
-            if (!typeParent.ensureTypeInfo(errs).isNewable(false, ErrorListener.PROBE)) {
+            if (!typeParent.ensureTypeInfo(errs).isNewable(false, silent(PROBE))) {
                 // the parent is abstract, so the virtual child "new-ability" will be checked
                 // by concrete parent's subclasses
                 return true;

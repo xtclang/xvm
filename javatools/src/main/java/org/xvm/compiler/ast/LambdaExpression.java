@@ -66,8 +66,10 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
-import static org.xvm.asm.ErrorListener.PROBE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
@@ -299,7 +301,7 @@ public class LambdaExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        if (!ensurePrepared(PROBE)) {
+        if (!ensurePrepared(silent(PROBE))) {
             return null;
         }
 
@@ -323,12 +325,12 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, PROBE)) {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, silent(PROBE))) {
             return null;
         }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, false, PROBE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, silent(PROBE));
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);

@@ -45,7 +45,8 @@ import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
@@ -420,12 +421,12 @@ public class AssignmentStatement
                 // contributions
                 Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
-                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, PROBE);
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, silent(PROBE));
 
                 if (!fit.isFit() && cLeft > 1) {
                     Expression exprUnpack = new UnpackExpression(rvalue, null);
 
-                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, PROBE);
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, silent(PROBE));
                     if (fit.isFit()) {
                         rvalue = exprUnpack;
                     }
@@ -469,7 +470,7 @@ public class AssignmentStatement
                 if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar()) {
                     // test for a future assignment first
                     TypeConstant typeFuture = pool.ensureFuture(typeLeft);
-                    if (rvalue.testFit(ctxRValue, typeFuture, false, PROBE).isFit()) {
+                    if (rvalue.testFit(ctxRValue, typeFuture, false, silent(PROBE)).isFit()) {
                         typeLeft = typeFuture;
                     }
                 }

@@ -12,6 +12,9 @@ import org.xvm.asm.op.GP_Compl;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The "~" that precedes a value (or "!" for a Boolean).
  */
@@ -46,7 +49,7 @@ public class UnaryComplementExpression
             // the "!" operator only applies to a boolean
             typeRight = pool().typeBoolean();
             fBoolean  = true;
-        } else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, ErrorListener.PROBE).isFit()
+        } else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("not", "~", 0).isEmpty()) {
             typeRight = typeRequired;
             fBoolean  = typeRight.isA(pool().typeBoolean());
