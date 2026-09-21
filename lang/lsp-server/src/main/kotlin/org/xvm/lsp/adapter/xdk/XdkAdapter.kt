@@ -100,7 +100,7 @@ class XdkAdapter : AbstractAdapter() {
             // the document is named so that its diagnostics are distinguishable from another
             // unsaved document's; the listener answers for what it heard, which a bare lambda
             // would not
-            EmbeddingSupport.instance().compile(content, uri, null, ErrorListener.collecting(heard::add))
+            EmbeddingSupport.instance().compile(Source(content, uri), null, ErrorListener.collecting(heard::add))
         } catch (e: IllegalStateException) {
             // no XDK to compile against: report it where the user can see it rather than throwing
             // at the language server, and let them keep editing
