@@ -20,7 +20,13 @@ came out of review:
 - the ambient listener lookup is gone rather than propagated through - see *Deleting the ambient
   lookup* below;
 - the language server compiles through the embedding API and publishes real diagnostics, which is
-  the first thing that actually consumes any of this.
+  the first thing that actually consumes any of this;
+- a warning master loses entirely is reported again - see *A warning master never shows you* in
+  the appendix, which is worth an issue against master on its own.
+
+**Behaviour change worth calling out:** source that compiled silently before can now emit
+`VERIFY-75`. Anyone with a duplicated property annotation will see a new warning. That is the
+point - master was dropping it - but it is a visible change and not only a refactor.
 
 What remains is one decision and the work that follows from it; see *What is left*.
 
@@ -1038,21 +1044,75 @@ thread-local. Guarded now, falling back to the pool the body's own identity belo
 
 **Two other things that probe turned up, neither fixed:**
 
-- `ensureTypeInfo` on such a type *rebuilds* rather than replaying - successive calls return
-  different instances, so `isUpToDate` is answering false. The memo is therefore not being used on
-  this path, which is why `TypeInfoDiagnosticsTest` asserts only that a later caller is told, not
-  that it was told from the recording.
+- `ensureTypeInfo` on such a type *rebuilds* rather than replaying, and deliberately: a build that
+  reports a serious error does not cache its TypeInfo, which `TypeConstant` says in as many words -
+  `if (errs.hasSeriousErrors()) { // we need to return what we've got, but don't cache it`. So for
+  an error the recording and the cached path are mutually exclusive by construction, and the later
+  caller hears the diagnostics from a fresh build instead. That rule is on master too, unchanged.
+
+  A **warning** is the case where they do meet, because only a *serious* error prevents caching. A
+  warning-only build caches its TypeInfo and keeps its recording, so the next caller takes the
+  cached path and is told what the first caller was told. That is the whole reason the memoized
+  diagnostics exist, it is the only condition under which they can fire, and it is now covered -
+  measured firing as `REPLAYED VERIFY-75 ... (cached path, not rebuilt)`. I had concluded the memo
+  was dead code on the strength of error cases alone and was about to delete it.
 - That is two ambient-pool NPEs found in one branch, in unrelated code, by accident. There are
   **19** call sites left. It is worth assuming more of them are wrong.
 
+### A warning master never shows you *(fix here; file against master)*
+
+**This one should be an issue.** On `origin/master`, this compiles and reports *nothing at all*:
+
+```
+module M {
+    class Base    { @Atomic Int x = 1; }
+    class Derived extends Base { @Atomic @Override Int x = 2; }
+}
+```
+
+The compiler does detect it - `VERIFY-75: The annotation "Atomic" on property "x" on "M:Derived"
+duplicates an annotation that is already present from the base property; the annotation on the
+derived property is ignored` - and then loses it. The author is never told, and their annotation
+is silently dropped.
+
+Reproduced, attributed and fixed:
+
+| | master | this branch |
+|---|---|---|
+| what the compilation reports | **0 diagnostics** | 1 - `WARNING VERIFY-75` |
+
+Instrumenting master's park prints `### PARK SWALLOWED WARNING VERIFY-75` at the moment it goes.
+The cause is `Compiler.generateInitialFileStructure`, which set the file structure's listener to
+`BLACKHOLE` for the duration of a compilation; a diagnostic raised while a TypeInfo was assembled
+reached that listener rather than the caller's. Deleting the ambient lookup removed the park and
+with it the loss, so the fix is already here - but the **bug is master's** and wants an issue of
+its own, because it is user-visible, silent, and has nothing to do with error listeners as far as
+anyone reading the symptom would be able to tell.
+
+It is a warning, not an error: the duplicate is redundant, the base already carries the
+annotation, and the code compiles and runs correctly. Nothing crashes. What is wrong is only that
+you are not told.
+
+`TypeInfoDiagnosticsTest` covers it, and covers the replay below.
+
 ### The parked diagnostics nobody has read
 
-The compiler's old park swallowed about sixty ERROR-severity diagnostics during a *successful* XDK
-build - `VERIFY-70` x30, `VERIFY-67` x24, `COMPILER-140` x4, `COMPILER-38` x3. All twenty distinct
-messages sit on anonymous inner classes and unbound generics, one naming `Future<PendingTypeParameter>`,
-which is the signature of a TypeInfo built on half-finished structures. They are very probably
-artefacts. Nobody could have known before, because they were destroyed rather than suppressed.
-**Whether any is real is a type-system question and deserves an owner.**
+The same park swallowed about sixty ERROR-severity diagnostics during a *successful* XDK build -
+`VERIFY-70` x30, `VERIFY-67` x24, `COMPILER-140` x4, `COMPILER-38` x3. All twenty distinct
+messages sit on anonymous inner classes and unbound generics, one naming
+`Future<PendingTypeParameter>`, which is the signature of a TypeInfo built on half-finished
+structures.
+
+I assumed these were all artefacts. **`VERIFY-75` above is the reason not to.** It was lost by the
+same mechanism, it looked like more of the same, and it turned out to be signal - it only surfaced
+because a specific source shape was constructed to provoke it. "Probably noise" was an assumption,
+not a finding.
+
+These differ from `VERIFY-75` in a way that matters: they are ERRORs. If any is genuine then the
+XDK built successfully while the compiler was suppressing errors that should have failed it. That
+is a different order of problem from a missing warning, and **it is a type-system question that
+deserves an owner.** They are recoverable now rather than destroyed, so the triage is possible
+where before it was not.
 
 ### Printed failures and empty catches
 
