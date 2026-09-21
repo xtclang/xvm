@@ -16,7 +16,11 @@ came out of review:
 - the parser's speculation is a `branch`, not a second reporting mechanism of its own;
 - the compile-time silence is a scope with a stated lifetime, not a setter on a shared structure;
 - one `Reporting` holder owns the only mutable listener reference left, so every listener field
-  in `javatools/src/main` is final.
+  in `javatools/src/main` is final;
+- the ambient listener lookup is gone rather than propagated through - see *Deleting the ambient
+  lookup* below;
+- the language server compiles through the embedding API and publishes real diagnostics, which is
+  the first thing that actually consumes any of this.
 
 What remains is one decision and the work that follows from it; see *What is left*.
 
@@ -34,7 +38,7 @@ kept as the record of what was wrong. Where that has since changed:
 | `new Object[]` at report sites | 31 | 0 (4 left in the tree, none of them report sites) |
 | callers of the array-shaped `log` overloads | all of them | 0 — the overloads are `@Deprecated` |
 | `errs` parameters rebound mid-method | 8 in `TypeConstant` | 0 |
-| tests covering the listener contract | 0 | 43, in 9 files |
+| tests covering the listener contract | 0 | 46, in 10 files, plus 8 in the language server |
 | mutable listener references | 15 fields | 1, inside `Reporting` |
 | reporting mechanisms in the parser | 2, checked in order | 1 |
 | `catch (… ignore)` naming an exception only to drop it | 62 | 0 - the unnamed variable instead |
@@ -145,6 +149,29 @@ null stand-in.
 
 Worked examples of the API the phases arrived at. Each is real code from the tree or the tests,
 not a sketch.
+
+### Compiling from a host
+
+The embedding API is what a host calls, and it gained two things the language server needed:
+
+```java
+// the document carries its own name, so its diagnostics are distinguishable from another
+// unsaved document's - the name belongs to the document, not to the act of compiling it
+embedding.compile(new Source(text, uri), null, errs);
+
+// and a failed compilation no longer answers with nothing but null: the structures a
+// verification error was raised against still exist, and the pool they were interned in is
+// the only way to reach them
+Compilation result = embedding.compileModule(new Source(text, uri), null, errs);
+result.succeeded();   // a module came out
+result.file();        // what was built, either way
+result.pool();        // what it interned into
+```
+
+`ensureRuntimePool()` is not that pool. It boots an interpreter - a connector builds a
+NativeContainer, which loads a native template for every core module - so it needs the whole
+library, not just the part the compiler bootstraps against. It was called `getConstantPool()`,
+which read like an accessor.
 
 ### Which listener do I want?
 
@@ -799,7 +826,9 @@ shape the prior-art branch reached, measured against this tree.
 | the parser's speculation expressed as `branch`/`merge` rather than its own mechanism | done |
 | the compile-time park expressed as a scope with a stated lifetime | done |
 | an end-to-end test of what an editor is told | done - `LspRoundTripTest` |
-| the LSP server's `XdkAdapter` wired to the compiler | **not started - nothing consumes any of this yet** |
+| the LSP server's `XdkAdapter` wired to the compiler | done - it compiles through the embedding API and publishes diagnostics |
+| the ambient listener lookup | deleted rather than propagated through |
+| cancellation of a stale compilation | not started; `isAbortDesired()` is the hook and nothing drives it |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
 | Failures with nowhere to go: 56 `System.err`, 35 empty catches | audited; see `errs-audit.md` |
 | `Origin` (thread, fiber) stamped on each diagnostic | POC done, unconsumed |
@@ -957,3 +986,71 @@ single-threaded path pays nothing.
   removing one closed.
 Thread safety is answered above: per-request listeners, immutable value types, and no explicit
 synchronization.
+
+## Appendix: what this work found and did not fix
+
+Things turned up along the way that are real, are not this branch's to fix, and would otherwise be
+forgotten. Each is written with what was measured, so the next person does not have to re-derive
+it.
+
+### The ambient constant pool
+
+`ConstantPool.getCurrentPool()` is a thread-local, read at **19 call sites**. It is the same
+mistake as the ambient listener this branch deleted, in the same place: "which pool am I working
+in" is a property of the work, not of the thread, so it is an ownership parameter in disguise. It
+has already bitten exactly that way - `FileStructure.getErrorListener()` dereferenced it
+unconditionally and threw a NullPointerException on any thread that had never had a pool pushed,
+which is every thread driving the compiler from ordinary Java. That consumer is gone; the other 19
+remain.
+
+Fixing it is the same shape of job as the listener propagation below, and wants the same owner.
+
+### Propagating a listener to the TypeInfo builders
+
+`ensureTypeInfo()` - the form that takes no listener - is called at **124 sites**, and since the
+ambient lookup was deleted each one visibly says `silent(CASCADE)`: "I am deliberately not
+reporting". They divide:
+
+| | sites | what a listener would mean |
+|---|---|---|
+| runtime and JIT | 69 | nothing - there is no compilation |
+| compile-time | 55 | a real diagnostic |
+| …whose own method already takes a listener | 6 | one line each |
+| …whose method does not | 49 | a decision per site, and its callers too |
+
+The 49 cluster - `RelOpExpression` 7, `TypeConstant` 6, `ArrayAccessExpression` 4 - so a single
+file is a contained change. This is no longer a transitive closure; it is a backlog.
+
+### Calling ensureTypeInfo on a failed compilation's types
+
+A type reached from a `Compilation` that failed answers `ensureTypeInfo` once, and throws on a
+later call: `MethodBody.pool()` is null by then. Found while trying to assert that a memoized
+TypeInfo replays rather than rebuilds, which is why `TypeInfoDiagnosticsTest` asserts the weaker
+property. Worth understanding before anyone relies on introspecting a failed compilation.
+
+### The parked diagnostics nobody has read
+
+The compiler's old park swallowed about sixty ERROR-severity diagnostics during a *successful* XDK
+build - `VERIFY-70` x30, `VERIFY-67` x24, `COMPILER-140` x4, `COMPILER-38` x3. All twenty distinct
+messages sit on anonymous inner classes and unbound generics, one naming `Future<PendingTypeParameter>`,
+which is the signature of a TypeInfo built on half-finished structures. They are very probably
+artefacts. Nobody could have known before, because they were destroyed rather than suppressed.
+**Whether any is real is a type-system question and deserves an owner.**
+
+### Printed failures and empty catches
+
+`docs/errs-audit.md` has the full count: 56 places that print a failure instead of reporting it,
+and 35 `catch` blocks with empty bodies. Deliberately not swept - each needs a judgement about
+whether the failure is real and where it should go, and those judgements belong to whoever owns
+the code. The prior-art branch found real bugs in this category, not just untidiness.
+
+### Smaller things
+
+- `EmbeddingSupport` is a singleton that takes its configuration once, so two tests cannot
+  configure it differently in one JVM. Awkward for testing; not wrong for its purpose.
+- The language server has no cancellation. `isAbortDesired()` is the hook the compiler already
+  has, and nothing drives it. Until something does, a stale keystroke's compilation runs to
+  completion - which is why the adapter queues rather than parallelises.
+- Symbols, completion and navigation in the XDK adapter are unimplemented. They need the
+  compiler's symbol table rather than its diagnostics, which is a different piece of work.
+
