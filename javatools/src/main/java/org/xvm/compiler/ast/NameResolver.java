@@ -449,8 +449,7 @@ public class NameResolver
             }
 
             if (!type.isTypeOfType()) {
-                m_errs.error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component),
-                        id.getValueString());
+                m_errs.error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
                 m_stage = Stage.ERROR;
                 return null;
             }

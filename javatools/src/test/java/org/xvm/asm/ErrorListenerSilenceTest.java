@@ -4,6 +4,8 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.compiler.Source;
 
+import org.xvm.util.Severity;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -30,7 +32,7 @@ public class ErrorListenerSilenceTest {
         assertNotSame(PROBE, BLACKHOLE, "they are separate constants");
 
         for (ErrorListener errs : new ErrorListener[]{PROBE, BLACKHOLE}) {
-            errs.log(org.xvm.util.Severity.ERROR, CODE, in(source, 0, 1), "a");
+            errs.log(Severity.ERROR, CODE, in(source, 0, 1), "a");
             assertFalse(errs.isAbortDesired());
             assertFalse(errs.hasSeriousErrors());
             assertTrue(errs.isSilent());
