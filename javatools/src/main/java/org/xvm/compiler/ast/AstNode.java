@@ -645,9 +645,9 @@ public abstract class AstNode
      */
     public void log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
-        errs.log(severity, sCode, aoParam, source,
-                source == null ? 0L : getStartPosition(),
-                source == null ? 0L : getEndPosition());
+        errs.log(severity, sCode, source == null
+                ? ErrorListener.NOWHERE
+                : ErrorListener.in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- compile phases ------------------------------------------------------------------------
