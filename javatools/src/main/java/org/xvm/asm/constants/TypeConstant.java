@@ -6475,7 +6475,7 @@ public abstract class TypeConstant
             return true;
         }
 
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = poolInUse();
         if (typeCtx instanceof UnionTypeConstant typeUnion) {
             if (this.containsAutoNarrowing(true) || typeBase.containsAutoNarrowing(true)) {
                 boolean fCovariant = isCovariantReturn(typeBase, pool.ensureIntersectionTypeConstant(
@@ -6556,7 +6556,7 @@ public abstract class TypeConstant
             return true;
         }
 
-        ConstantPool pool = ConstantPool.getCurrentPool();
+        ConstantPool pool = poolInUse();
 
         TypeConstant typeThisR = this.containsAutoNarrowing(true)
                 ? this.resolveAutoNarrowing(pool, false, typeCtx, null)
