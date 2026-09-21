@@ -2059,6 +2059,26 @@ public abstract class TypeConstant
     }
 
     /**
+     * Choose the listener to report the rest of a TypeInfo build to.
+     *
+     * Once a contribution has turned out to be incomplete, what follows is reported against a
+     * type that is known to be missing pieces, so the diagnostics are consequences of what is
+     * absent rather than faults in the source. They are suppressed for the remainder of the
+     * build; the incompleteness itself is what the caller is told, by the return value.
+     *
+     * The choice is made at each use rather than by rebinding the listener, so that the errs
+     * parameter still means what its signature says all the way down the method.
+     *
+     * @param fIncomplete  whether the build is already known to be incomplete
+     * @param errs         the caller's listener
+     *
+     * @return the listener to report to
+     */
+    private static ErrorListener cascade(boolean fIncomplete, ErrorListener errs) {
+        return fIncomplete ? errs.suppressCascade() : errs;
+    }
+
+    /**
      * Determine if the passed TypeInfo is up-to-date for this type.
      *
      * @param info  the TypeInfo
@@ -2634,7 +2654,8 @@ public abstract class TypeConstant
                 typeContrib = typeContrib.removeAccess();
                 typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT);
 
-                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(errs);
+                TypeInfo infoContrib =
+                        typeContrib.ensureTypeInfoInternal(cascade(fIncomplete, errs));
                 if (isComplete(infoContrib)) {
                     for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet()) {
                         PropertyInfo prop = entry.getValue();
@@ -2646,14 +2667,13 @@ public abstract class TypeConstant
                     }
                 } else {
                     fIncomplete = true;
-                    errs        = errs.suppressCascade();
                 }
                 break;
             }}
         }
 
         // add Object.toString() method
-        MethodInfo infoToString = pool.typeObject().ensureTypeInfo(errs).
+        MethodInfo infoToString = pool.typeObject().ensureTypeInfo(cascade(fIncomplete, errs)).
                 getMethodBySignature(pool.sigToString());
         mapMethods.putIfAbsent(infoToString.getIdentity(), infoToString);
 
@@ -3442,18 +3462,17 @@ public abstract class TypeConstant
             case Into: {
                 // append to the call chain
                 TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
-                TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
+                TypeInfo     infoContrib = typeContrib.adjustAccess(constId)
+                        .ensureTypeInfoInternal(cascade(fIncomplete, errs));
 
                 if (!isComplete(infoContrib)) {
                     fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
-                    if (fIncomplete) {
-                        errs = errs.suppressCascade();
-                    }
                 }
                 if (infoContrib != null) {
                     infoContrib.contributeChains(listmapClassChain, listmapDefaultChain,
                                                  listmapRootChain, composition);
-                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), errs);
+                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(),
+                            cascade(fIncomplete, errs));
                 }
                 break;
             }
@@ -3595,18 +3614,17 @@ public abstract class TypeConstant
                 int nBasePropRank = mapProps.size();
                 int nBaseMethRank = mapMethods.size();
 
-                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, errs)) {
+                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps,
+                        nBasePropRank, cascade(fIncomplete, errs))) {
                     fIncomplete = true;
-                    errs        = errs.suppressCascade();
                 }
 
                 var     listExplode          = new ArrayList<PropertyConstant>();
                 boolean fInterface           = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
-                        mapVirtProps, nBasePropRank, nBaseMethRank, errs)) {
+                        mapVirtProps, nBasePropRank, nBaseMethRank, cascade(fIncomplete, errs))) {
                     fIncomplete = true;
-                    errs        = errs.suppressCascade();
                 }
 
                 // the order in which the properties are layered on and exploded is extremely
@@ -3628,21 +3646,20 @@ public abstract class TypeConstant
                     // layer on the property so its information is all correct before we have to
                     // make any decisions about how to process the property
                     prop = layerOnProp(constId, ContribSource.Self, null, mapProps, mapVirtProps,
-                            typeContrib, idProp, prop, errs);
+                            typeContrib, idProp, prop, cascade(fIncomplete, errs));
 
                     // now that the necessary data is in place, explode the property
-                    if (!fNative && !explodeProperty(constId, struct, idProp, prop,
-                            mapProps, mapVirtProps, mapMethods, mapVirtMethods, errs)) {
+                    if (!fNative && !explodeProperty(constId, struct, idProp, prop, mapProps,
+                            mapVirtProps, mapMethods, mapVirtMethods, cascade(fIncomplete, errs))) {
                         fIncomplete = true;
-                        errs        = errs.suppressCascade();
                     }
                 }
             } else {
-                infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(errs);
+                infoContrib = typeContrib.adjustAccess(constId)
+                        .ensureTypeInfoInternal(cascade(fIncomplete, errs));
                 if (!isComplete(infoContrib)) {
                     if (computeIncomplete(composition, typeContrib, infoContrib, setDepends)) {
                         fIncomplete = true;
-                        errs        = errs.suppressCascade();
                     }
                     if (infoContrib == null) {
                         // even if the contribution has an incomplete info we can still proceed
@@ -3696,7 +3713,7 @@ public abstract class TypeConstant
 
             // process properties
             layerOnProps(constId, contribSource, idDelegate, mapProps, mapVirtProps,
-                    typeContrib, mapContribProps, errs);
+                    typeContrib, mapContribProps, cascade(fIncomplete, errs));
 
             // if there are any remaining declared-but-not-overridden properties originating from
             // an interface on a class once the "self" layer is applied, then those need to be
@@ -3704,7 +3721,8 @@ public abstract class TypeConstant
             if (fSelf && !isInterface(constId, struct) && !struct.isExplicitlyAbstract()) {
                 for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet()) {
                     PropertyInfo infoOld = entry.getValue();
-                    PropertyInfo infoNew = infoOld.finishAdoption(fNative, errs);
+                    PropertyInfo infoNew = infoOld.finishAdoption(fNative,
+                            cascade(fIncomplete, errs));
                     if (infoNew != infoOld) {
                         entry.setValue(infoNew);
                         if (infoNew.isVirtual()) {
@@ -3721,7 +3739,7 @@ public abstract class TypeConstant
             if (!mapContribMethods.isEmpty()) {
                 assert contrib.getComposition() != Composition.Annotation;
                 layerOnMethods(constId, contribSource, idDelegate, mapMethods, mapVirtMethods,
-                               typeContrib, mapContribMethods, errs);
+                               typeContrib, mapContribMethods, cascade(fIncomplete, errs));
             }
 
             // process children
@@ -3733,7 +3751,7 @@ public abstract class TypeConstant
                     if (infoPrev != null) {
                         ChildInfo infoNew = infoPrev.layerOn(infoChild);
                         if (infoNew == null) {
-                            log(errs, Severity.ERROR, VE_CHILD_COLLISION,
+                            log(cascade(fIncomplete, errs), Severity.ERROR, VE_CHILD_COLLISION,
                                     constId,
                                     sName,
                                     contrib.getTypeConstant(),
@@ -3751,7 +3769,8 @@ public abstract class TypeConstant
                 // to be processed by "finishAdoption"
                 for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
                     MethodInfo infoOld = entry.getValue();
-                    MethodInfo infoNew = infoOld.finishAdoption(fNative, errs);
+                    MethodInfo infoNew = infoOld.finishAdoption(fNative,
+                            cascade(fIncomplete, errs));
                     if (infoNew != infoOld) {
                         entry.setValue(infoNew);
                         if (infoNew.isVirtual()) {
@@ -3833,7 +3852,6 @@ public abstract class TypeConstant
             infoProp.getHead().markExploded();
         } else {
             fComplete = false;
-            errs      = errs.suppressCascade();
         }
 
         // layer on any annotations, if any
@@ -3851,13 +3869,13 @@ public abstract class TypeConstant
             }
             typeAnno = pool.ensureAccessTypeConstant(typeAnno, Access.PROTECTED);
 
-            TypeInfo infoAnno = typeAnno.ensureTypeInfoInternal(errs);
+            TypeInfo infoAnno = typeAnno.ensureTypeInfoInternal(cascade(!fComplete, errs));
             if (infoAnno == null) {
                 fComplete = false;
-                errs      = errs.suppressCascade();
             } else {
                 nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
-                               typeAnno, infoAnno, ContribSource.Annotation, errs);
+                               typeAnno, infoAnno, ContribSource.Annotation,
+                               cascade(!fComplete, errs));
             }
         }
 
@@ -3912,11 +3930,13 @@ public abstract class TypeConstant
                                 idGet.getValueString() + " at " + this.getValueString());
                     }
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(idGet,
-                            idGet.getSignature(), Implementation.Implicit), nRank), false, errs);
+                            idGet.getSignature(), Implementation.Implicit), nRank), false,
+                            cascade(!fComplete, errs));
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
-                                idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
+                                idSet.getSignature(), Implementation.Implicit), nRank+1), false,
+                                cascade(!fComplete, errs));
                     }
                 }
 
