@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.AbstractAdapter
@@ -135,25 +136,28 @@ class XdkAdapter : AbstractAdapter() {
         content: String,
         generation: Long,
     ): Analysis {
-        val heard = mutableListOf<ErrorListener.ErrorInfo>()
+        // an ErrorList rather than a bare collector, because it is what the compiler's own
+        // front end collects into: it filters redundant reports by the compiler's identity rule
+        // and stops after a hundred errors. Both matter here. A type's diagnostics are reported
+        // once when its TypeInfo is built and again whenever a later stage asks for it, so a
+        // collector that keeps everything shows the same warning twice in the Problems panel
+        val heard = ErrorList()
 
         val started = System.nanoTime()
         val parsed: org.xvm.compiler.ast.StatementBlock?
         try {
             // the document is named so that its diagnostics are distinguishable from another
-            // unsaved document's; the listener answers for what it heard, which a bare lambda
-            // would not
+            // unsaved document's
             // the compiler asks isAbortDesired at around twenty points; this is what answers yes
-            // when the user has typed again and the answer is no longer wanted
+            // when the user has typed again and the answer is no longer wanted, and the ErrorList
+            // underneath answers yes once the file has produced more errors than are worth reading
             parsed =
                 EmbeddingSupport
                     .instance()
                     .compileModule(
                         Source(content, uri),
                         null,
-                        ErrorListener.cancellable(ErrorListener.collecting(heard::add)) {
-                            isStale(uri, generation)
-                        },
+                        ErrorListener.cancellable(heard) { isStale(uri, generation) },
                     ).parsed()
         } catch (e: IllegalStateException) {
             // no XDK to compile against: report it where the user can see it rather than throwing
@@ -185,7 +189,7 @@ class XdkAdapter : AbstractAdapter() {
             // state, so it is worth telling apart from a slow one
             logger.info("compile: first compilation in this server took {} (cold)", lastCompile)
         }
-        return Analysis(heard.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed))
+        return Analysis(heard.errors.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed))
     }
 
     /**

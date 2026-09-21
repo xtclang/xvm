@@ -221,6 +221,24 @@ class XdkAdapterTest {
         }
     }
 
+    /**
+     * A warning about a type is produced when the type is laid out and again whenever a later
+     * stage asks for that type, so the same warning reaches the listener more than once. An
+     * editor must not show it twice, which is why the adapter collects through the same
+     * ErrorList the compiler's own front end uses rather than keeping everything it hears.
+     */
+    @Test
+    fun `a warning heard twice is shown once`() {
+        adapter().use { xdk ->
+            val result = xdk.compile("file:///Dup.x", DUPLICATE_ANNOTATION)
+
+            val warnings = result.diagnostics.filter { it.code == "VERIFY-75" }
+            assertThat(warnings).`as`("the annotation warning, once").hasSize(1)
+            assertThat(warnings.single().severity).isEqualTo(Diagnostic.Severity.WARNING)
+            assertThat(warnings.single().message).contains("Atomic", "duplicates")
+        }
+    }
+
     private companion object {
         val OUTLINE =
             """
@@ -257,6 +275,19 @@ class XdkAdapterTest {
             module Semantic {
                 void run() {
                     NoSuchTypeAnywhere x = 1;
+                }
+            }
+            """.trimIndent()
+
+        /** Redeclares an annotation the base property already has: VERIFY-75, a warning. */
+        val DUPLICATE_ANNOTATION =
+            """
+            module DupAnno {
+                class Base {
+                    @Atomic Int x = 1;
+                }
+                class Derived extends Base {
+                    @Atomic @Override Int x = 2;
                 }
             }
             """.trimIndent()
