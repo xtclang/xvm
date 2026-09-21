@@ -17,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.asm.ErrorListener.collecting;
+
 /**
  * What a host is told when it compiles source that does not compile.
  *
@@ -28,7 +30,7 @@ public class CompilerDiagnosticsTest {
     @Test
     public void testAHostListenerHearsTheDiagnostics() {
         List<ErrorListener.ErrorInfo> heard = new ArrayList<>();
-        ErrorListener host = ErrorListener.collecting(heard::add);
+        ErrorListener host = collecting(heard::add);
 
         parse("""
                 module TestSimple {
@@ -58,7 +60,7 @@ public class CompilerDiagnosticsTest {
                         Int y = ;
                     }
                 }
-                """, ErrorListener.collecting(heard::add));
+                """, collecting(heard::add));
 
         assertFalse(heard.isEmpty(), "broken source produces diagnostics");
         for (ErrorListener.ErrorInfo err : heard) {
@@ -87,7 +89,7 @@ public class CompilerDiagnosticsTest {
                         console.print("two")
                     }
                 }
-                """, ErrorListener.collecting(heard::add));
+                """, collecting(heard::add));
 
         assertEquals(2, heard.size(), "both problems reach the host");
         assertNotEquals(heard.get(0).genUID(), heard.get(1).genUID(),
@@ -127,8 +129,7 @@ public class CompilerDiagnosticsTest {
         parse(new Source(DOC), errs);
         parse(new Source(DOC), errs);
 
-        assertEquals(1, errs.getErrors().size(),
-                "identical unnamed sources produce one identity, so one diagnostic");
+        assertEquals(1, errs.getErrors().size(), "identical unnamed sources produce one identity, so one diagnostic");
     }
 
     private static void parse(String source, ErrorListener errs) {
