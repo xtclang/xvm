@@ -1652,12 +1652,25 @@ public abstract class TypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     /**
-     * Obtain the information about this type, resolved from its recursive composition.
+     * Obtain the information about this type, resolved from its recursive composition, without
+     * reporting anything about the attempt.
+     *
+     * A TypeConstant is an interned value shared by everything, so when it is asked to build a
+     * TypeInfo and given no listener it has no caller to ask. It used to walk up to its file
+     * structure and report to whatever that file was last told - an ambient lookup which, for the
+     * two thirds of these call sites that run after compilation is over, ended at a listener that
+     * prints to stdout. Measured across a full XDK build and test run, that listener never
+     * received anything, and during a compilation the file was parked on a silence anyway. So the
+     * silence is said here instead of arranged elsewhere.
+     *
+     * What this does not report is a cascade: these diagnostics describe a type that could not be
+     * built, which the caller learns from the TypeInfo it gets back. A caller that wants to hear
+     * about it passes a listener to {@link #ensureTypeInfo(ErrorListener)}.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo() {
-        return ensureTypeInfo(getErrorListener());
+        return ensureTypeInfo(silent(CASCADE));
     }
 
     /**

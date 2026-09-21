@@ -488,17 +488,6 @@ public abstract class XvmStructure
         errs.log(sev, sCode, ErrorListener.at(this), aoParam);
     }
 
-    /**
-     * The listener for diagnostics about this structure that are raised where the caller's own
-     * listener is not in hand. Prefer passing one: this walks to the containing FileStructure, so
-     * it answers whatever that file was last told, which is not necessarily the caller's.
-     *
-     * @return the error listener of the containing structure
-     */
-    public ErrorListener getErrorListener() {
-        return m_xsParent.getErrorListener();
-    }
-
     // ----- debugging support ---------------------------------------------------------------------
 
     /**
