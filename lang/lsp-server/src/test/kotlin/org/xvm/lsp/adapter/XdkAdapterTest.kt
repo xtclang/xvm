@@ -108,6 +108,56 @@ class XdkAdapterTest {
         }
     }
 
+    /**
+     * The rule cancellation turns on, tested as a decision rather than through a race: an edit is
+     * stale once a newer one has been recorded for the same document.
+     *
+     * A race is not something a test can make happen on demand - whether two compilations overlap
+     * depends on the scheduler, the core count and what else the machine is doing - so asserting
+     * "at least one of these was superseded" would pass on a busy laptop and fail on a single-core
+     * agent. What is deterministic is what the adapter does once it knows.
+     */
+    @Test
+    fun `an edit is stale once a newer one arrives for the same document`() {
+        XdkAdapter().use { xdk ->
+            val first = xdk.edited("file:///A.x")
+            assertThat(xdk.isStale("file:///A.x", first)).isFalse()
+
+            val second = xdk.edited("file:///A.x")
+            assertThat(xdk.isStale("file:///A.x", first)).`as`("superseded").isTrue()
+            assertThat(xdk.isStale("file:///A.x", second)).`as`("the newest one is not").isFalse()
+
+            // and one document's edits say nothing about another's
+            val other = xdk.edited("file:///B.x")
+            assertThat(xdk.isStale("file:///B.x", other)).isFalse()
+            assertThat(xdk.isStale("file:///A.x", second)).isFalse()
+        }
+    }
+
+    /**
+     * Concurrent requests for one document all get an answer, and every answer belongs to that
+     * document. How many of them are superseded is up to the scheduler, so it is not asserted.
+     */
+    @Test
+    fun `concurrent edits of one document are all answered`() {
+        adapter().use { xdk ->
+            val uri = "file:///Racing.x"
+            val results =
+                (1..6)
+                    .toList()
+                    .parallelStream()
+                    .map { n ->
+                        xdk.compile(uri, "module Racing { void run() { Int x$n = ; } }")
+                    }.toList()
+
+            assertThat(results).hasSize(6)
+            assertThat(results).allSatisfy { r ->
+                assertThat(r.uri).isEqualTo(uri)
+                assertThat(r.diagnostics).allSatisfy { assertThat(it.location.uri).isEqualTo(uri) }
+            }
+        }
+    }
+
     private companion object {
         val CLEAN =
             """
