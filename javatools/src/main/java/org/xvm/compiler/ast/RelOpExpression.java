@@ -341,7 +341,10 @@ public class RelOpExpression
                 typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, null);
             }
 
-            for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1)) {
+            // testFit asks a question and the return value is the answer, so this is a probe:
+            // not the no-arg form, whose silence is a cascade and whose callers are the runtime
+            for (MethodConstant idMethod :
+                    typeConv.ensureTypeInfo(silent(PROBE)).findOpMethods(sMethod, sOp, 1)) {
                 TypeConstant[] aRets = idMethod.getRawReturns();
                 if (aRets.length >= 1 && isAssignable(ctx, aRets[0], typeRequired)) {
                     // there is a solution via an operator on the result of a conversion
