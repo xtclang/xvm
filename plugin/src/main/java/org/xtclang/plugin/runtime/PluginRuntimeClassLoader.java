@@ -33,7 +33,7 @@ public final class PluginRuntimeClassLoader extends URLClassLoader {
                 try {
                     final var found = findClass(name);
                     return resolveIfNeeded(found, resolve);
-                } catch (final ClassNotFoundException ignored) {
+                } catch (final ClassNotFoundException _) {
                     // Fall through to parent delegation. Higher-level runtime owners should
                     // log this using the Gradle logger if this becomes diagnostically useful.
                 }
