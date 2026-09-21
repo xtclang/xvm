@@ -847,7 +847,7 @@ shape the prior-art branch reached, measured against this tree.
 | an end-to-end test of what an editor is told | done - `LspRoundTripTest` |
 | the LSP server's `XdkAdapter` wired to the compiler | done - it compiles through the embedding API and publishes diagnostics |
 | an outline from the compiler: `documentSymbol`, and the symbol under the cursor | done - from the AST, since the structures carry no positions |
-| completion, go-to-definition, find-references | not started; they need resolution, not syntax |
+| completion, go-to-definition, find-references | definition and references done for one document, on two new accessors; completion blocked, see below |
 | the ambient listener lookup | deleted rather than propagated through |
 | cancellation of a stale compilation | done, coarsely - `ErrorListener.cancellable` drives `isAbortDesired()` from "a newer edit exists", and the compiler asks between stages |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
@@ -1011,6 +1011,9 @@ Two findings shape the whole list, both verified in this tree:
    node, out of reach. That changes definition, hover and references from "needs a new
    resolution layer" into "needs an accessor and a walk".
 
+   **Done**, along with group 2 and most of group 3: see "What the compiler adapter can and
+   cannot do, measured" below for what that turned out to cost and where it stops.
+
 ### 1. Make what exists actually run *(nothing new; it is all testing)*
 
 | | task |
@@ -1062,6 +1065,63 @@ These are `errs` tasks rather than LSP tasks, but each changes what an editor ca
 | 4.2 | Re-triage the ~67 still-suppressed ERROR diagnostics | each is either a diagnostic the editor should show or a spurious one that should be suppressed deliberately rather than by accident. Three were sampled; that is a sample, not a survey |
 | 4.3 | The `TypeInfo` diagnostics migration, 126 call sites | today only the type being built reports; a type the document merely *uses* reports nothing |
 | 4.4 | The 7 broad empty catches in `errs-audit.md` | `catch (Exception)` x4, `catch (Throwable)` x3 - a compiler failure that reaches one of these is invisible to the editor as well |
+
+### What the compiler adapter can and cannot do, measured
+
+Groups 2 and 3 above were done with the compiler alone - no tree-sitter, deliberately, to find
+out what xtc is missing rather than to route around it. What follows was measured on this tree.
+
+**Working, with no compiler change at all.** Folding, selection expansion, document highlights,
+workspace symbols and the declaration half of hover. `AstNode` gives a parent, children and a
+span, which is enough to say what encloses a position and how far it reaches.
+`NamedTypeExpression.getIdentityConstant()` was already public, so a type name already knew its
+class.
+
+**Working, after two accessors.** Both expose information the compiler already computes and
+keeps on the node, where nothing outside the compiler could read it:
+
+| accessor | what it answers | why it has to be there |
+|---|---|---|
+| `NameExpression.getResolvedTarget()` | what a name refers to - a `PropertyConstant`, a `Register` | decided during validation, kept in a `private transient` field |
+| `InvocationExpression.getResolvedMethod()` | which method a call is a call to | the name in a call resolves to nothing by itself: `print` means nothing without knowing what it is called on and with what |
+
+With those, go-to-definition and find-references work within a document for locals, properties,
+types and method calls - and references tell `Holder.x` from `Point.x`, which no text search can.
+
+**What is actually missing in xtc.** Five things, in the order they will hurt:
+
+1. **There is no error-tolerant parse.** This is the big one. Typing `console.` and asking for
+   completion produces `PARSER-03: Expected token IDENTIFIER` and **no AST at all** - not a
+   partial one. Completion is asked for at exactly the moment the document does not parse, so on
+   the compiler alone there is nothing to complete from. Every other gap here is a missing
+   accessor or a missing index; this one is a property of the parser. It is also the entire
+   justification for a hybrid adapter, and the reason completion is not implemented.
+2. **A local has no identity that survives narrowing.** A declaration produces a `Register`; a
+   use of it is a `ShadowRegister`, and `Register.equals` deliberately answers false between the
+   two, while comparing an index and a type - so two different variables can compare equal.
+   There is no stable "this is that variable" to group uses by, and the host approximates with
+   name-within-method.
+3. **Nothing maps an identity back to where it was written.** A `Component` knows its name, kind
+   and children and carries no source position. Cross-file definition therefore needs an index
+   the host builds from documents it has compiled, and a language server cannot compile a project
+   it has not been asked to open.
+4. **Not everything declared is declared by a statement.** A `const`'s constructor parameter
+   becomes a property, and there is no `PropertyDeclarationStatement` to point at. The name
+   resolves; there is simply nowhere to go.
+5. **The same node is reachable by two paths.** A constructor parameter appears under the
+   declaration and under the property it becomes, so a walk sees it twice. Harmless once known -
+   the host deduplicates by span - but it is the kind of thing that silently doubles a reference
+   list.
+
+Two smaller notes: `Expression.getType()` throws unless the expression was validated, so a host
+asking about a document that does not compile has to check `isValidated()` first, which is public
+and does the job; and the parsed AST has to be kept per open document, because re-parsing to
+answer a hover would mean a compilation per keystroke.
+
+**Not attempted, and why.** Completion needs 1. Rename needs 3 to be safe across files. Signature
+help needs the same resolution definition uses, and is worth doing next. Semantic tokens are
+reachable - the tree knows what every name resolved to, which is more than a grammar knows - and
+are the best remaining use of what is now exposed.
 
 ### What this is not
 
