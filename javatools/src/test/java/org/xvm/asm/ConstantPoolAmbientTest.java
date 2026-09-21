@@ -27,8 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 public class ConstantPoolAmbientTest {
     @Test
     public void withNoPoolBoundTheFallbackIsUsed() {
-        assertNull(ConstantPool.getCurrentPool(),
-                "the premise: a test thread has never had a pool bound");
+        assertNull(ConstantPool.getCurrentPool(), "the premise: a test thread has never had a pool bound");
 
         ConstantPool pool = new FileStructure("test").getConstantPool();
 
@@ -57,8 +56,7 @@ public class ConstantPoolAmbientTest {
         assertNull(ConstantPool.getCurrentPool(), "the premise");
 
         FileStructure  file = new FileStructure("test");
-        ClassStructure clz  = file.getModule().createClass(
-                Access.PUBLIC, Format.CLASS, "Test", null);
+        ClassStructure clz  = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Test", null);
         TypeConstant   type = clz.getCanonicalType();
 
         assertNotNull(type.getConstantPool());
