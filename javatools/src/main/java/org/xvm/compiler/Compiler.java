@@ -4,7 +4,6 @@ import static java.util.Objects.requireNonNull;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.Reporting;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.ModuleRepository;
 
@@ -13,7 +12,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
-import static org.xvm.asm.ErrorListener.Silence.CASCADE;
 import static org.xvm.asm.ErrorListener.Silence.DISCARD;
 
 /**
@@ -126,13 +124,6 @@ public class Compiler {
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            // a TypeInfo built from the half-finished structures of a compilation in progress
-            // reports the half-finishedness, not the user's code; those diagnostics are fallout,
-            // and they are suppressed for as long as the compilation lasts. CASCADE rather than a
-            // bare silence so that what was suppressed stays reachable: measured over a full XDK
-            // build this swallows about sixty ERROR-severity diagnostics, and until they can be
-            // read there is no way to tell a spurious one from a real one
-            m_parked = m_structFile.reportingTo(f_errs.silence(CASCADE));
             setStage(Stage.Registered);
         }
 
@@ -296,20 +287,11 @@ public class Compiler {
             if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                // the file was parked on a DISCARD silence for the duration of the compilation; restore
-                // it whatever the outcome. Restoring it only when the compilation succeeded left a
-                // file that had reported errors permanently silenced, which a resident compiler
-                // would then reuse
-                try {
-                    if (!f_errs.hasSeriousErrors()) {
-                        // "purge" the constant pool and do a final validation on the entire module
-                        // structure
-                        m_structFile.reregisterConstants(true);
-                        m_structFile.validate(f_errs);
-                    }
-                } finally {
-                    m_parked.close();
-                    m_parked = null;
+                if (!f_errs.hasSeriousErrors()) {
+                    // "purge" the constant pool and do a final validation on the entire module
+                    // structure
+                    m_structFile.reregisterConstants(true);
+                    m_structFile.validate(f_errs);
                 }
             }
         }
@@ -409,12 +391,6 @@ public class Compiler {
      * getting all of the nodes to complete that stage.
      */
     private StageMgr m_mgr;
-
-    /**
-     * The scope that suppresses fallout from half-finished structures, open for as long as the
-     * compilation lasts. Null before it starts and once it has finished.
-     */
-    private Reporting.Scope m_parked;
 
     // ----- inner class: Stage enumeration --------------------------------------------------------
 
