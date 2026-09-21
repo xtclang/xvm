@@ -75,7 +75,7 @@ public class ErrorListenerSiteTest {
             published.add(switch (err.site()) {
                 case Site.In site -> site.lPosStart() + ".." + site.lPosEnd();
                 case Site.At site -> site.xs().getDescription();
-                case Site.None ignore -> "whole file";
+                case Site.None _ -> "whole file";
             });
         }
         assertEquals(List.of("3..7", "whole file"), published);
