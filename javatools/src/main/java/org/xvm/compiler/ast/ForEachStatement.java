@@ -44,6 +44,8 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+
 /**
  * An "Iterable"-based "for" statement.
  */
@@ -367,7 +369,7 @@ public class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                 };
 
-                if (exprRVal.testFit(ctx, typeRVal, false, ErrorListener.PROBE).isFit()) {
+                if (exprRVal.testFit(ctx, typeRVal, false, PROBE).isFit()) {
                     atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
@@ -395,7 +397,7 @@ public class ForEachStatement
                     typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
                 }
 
-                if (exprRVal.testFit(ctx, typeRValExact, false, ErrorListener.PROBE).isFit()) {
+                if (exprRVal.testFit(ctx, typeRValExact, false, PROBE).isFit()) {
                     typeRVal = typeRValExact;
                 } else {
                     // the specific container type didn't fit; proceed with the basic type,
