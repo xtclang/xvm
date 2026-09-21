@@ -5,10 +5,20 @@ compiler's call stack, so that an embedding host — an LSP server above all —
 every diagnostic the compiler produces.
 
 **Status.** All seven phases are implemented on `lagergren/errs`, plus the follow-on work that
-came out of review: the array-shaped reporting overloads are deprecated with no callers left, a
-cascade suppression is a decorator rather than a shared constant, an in-memory document can be
-named, and `TypeConstant` no longer rebinds its `errs` parameter. What remains is one decision and
-the work that follows from it; see *What is left*.
+came out of review:
+
+- the array-shaped reporting overloads are deprecated, with no callers left in the tree;
+- an in-memory document can be named, so a host compiling several of them stops losing diagnostics;
+- the three silences are one concept with the reason as a value, and a derived silence keeps what
+  it silenced;
+- nothing rebinds an `errs` parameter any more - not `TypeConstant`, not the parser's module-name
+  scan;
+- the parser's speculation is a `branch`, not a second reporting mechanism of its own;
+- the compile-time silence is a scope with a stated lifetime, not a setter on a shared structure;
+- one `Reporting` holder owns the only mutable listener reference left, so every listener field
+  in `javatools/src/main` is final.
+
+What remains is one decision and the work that follows from it; see *What is left*.
 
 If you are here to *use* the thing rather than to read how it got this way, skip to *Using it*.
 
@@ -17,14 +27,17 @@ kept as the record of what was wrong. Where that has since changed:
 
 | | before | after |
 |---|---|---|
-| null-coalescing sites | 33 | 3 — two in `FileStructure` (the deferred ownership area) and one assert |
+| null-coalescing sites | 33 | 2, both in `FileStructure.getErrorListener` (the deferred ownership area) |
 | names for the listener | 6 | 1 - `errs` |
-| kinds of silence | 1 undifferentiated | one concept, 3 named reasons: `PROBE` (133), `DISCARD` (4), `CASCADE` (2) |
+| kinds of silence | 1 undifferentiated | one concept, 3 named reasons: `PROBE` (133), `DISCARD` (3), `CASCADE` (3) |
 | fields using null as a state flag | 4 | 0 |
 | `new Object[]` at report sites | 31 | 0 (4 left in the tree, none of them report sites) |
 | callers of the array-shaped `log` overloads | all of them | 0 — the overloads are `@Deprecated` |
 | `errs` parameters rebound mid-method | 8 in `TypeConstant` | 0 |
-| tests covering the listener contract | 0 | 31, in 6 files |
+| tests covering the listener contract | 0 | 43, in 9 files |
+| mutable listener references | 15 fields | 1, inside `Reporting` |
+| reporting mechanisms in the parser | 2, checked in order | 1 |
+| `catch (… ignore)` naming an exception only to drop it | 62 | 0 - the unnamed variable instead |
 
 ## Why
 
@@ -403,6 +416,8 @@ Five rules, each of which is a phase:
 4. **Recording is not deciding.** `log` is `void`. If you need to stop, ask `isAbortDesired()`.
 5. **Say which silence you mean.** `PROBE`, `CASCADE` and `DISCARD` are three intentions, not
    three spellings — and the reason travels with the listener, so a host can tell them apart.
+6. **Speculate with `branch`.** A trial whose diagnostics count only if you keep the result is a
+   branch; the parser's `attempt()` is one. Do not build a second mechanism for it.
 
 ### Testing diagnostics
 
@@ -419,6 +434,29 @@ public void testUnnamedDocumentsAreIndistinguishable() {
             "identical unnamed sources produce one identity, so one diagnostic");
 }
 ```
+
+### Divert reporting for a stretch of work
+
+Most code takes a listener as a parameter and passes it on. Three things cannot: the parser
+(threading one through two hundred parse methods is not a refactor), a `FileStructure` (an interned
+`TypeConstant` asked to build a `TypeInfo` has no caller to ask), and a `NameResolver` (the
+callbacks it makes have no listener of their own). Those report through a destination, and
+`Reporting` is where the destination lives.
+
+```java
+private final Reporting f_errs;              // the holder is final
+
+f_errs.get().log(...);                       // where diagnostics go right now
+
+try (Reporting.Scope quiet = f_errs.to(silent(DISCARD))) {
+    ...                                      // and for this stretch, somewhere else
+}                                            // put back on every exit, exceptions included
+```
+
+It is the only mutable `ErrorListener` reference left in the compiler. **It fixes lifetime, not
+ownership**: the destination is reachable by anything holding the owner, so two threads through one
+owner still interfere. Ownership is fixed by a parameter. Do not add a fourth user without first
+asking whether a parameter would do.
 
 ### A note on budgets
 
@@ -440,7 +478,7 @@ names collide with anything in the tree:
 import static org.xvm.asm.ErrorList.FIRST_ERROR;
 import static org.xvm.asm.ErrorList.UNLIMITED;
 import static org.xvm.asm.ErrorListener.NOWHERE;
-import static org.xvm.asm.silent(PROBE);
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.at;
 import static org.xvm.asm.ErrorListener.collecting;
 import static org.xvm.asm.ErrorListener.in;
@@ -602,12 +640,32 @@ Done:
   compilation that reported errors left the file permanently silenced - which matters for a
   resident compiler that reuses structures across requests. It is a `finally` now.
 
-Deferred, because it needs the ownership decision below rather than more deletion:
+*Since built:* the park is a scope rather than a setting. `setErrorListener` is gone;
+`reportingTo()` hands out a `Reporting.Scope` that restores on close and nests, and the compiler
+holds it for exactly as long as the compilation lasts. The silence is derived from the caller's
+listener as a `CASCADE`, so what it suppresses stays reachable - which matters, because
+instrumenting it showed the park swallows about sixty ERROR-severity diagnostics during a
+*successful* XDK build:
 
-- `FileStructure` still resolves its listener through a field instead of taking one at
+| code | count | |
+|---|---|---|
+| `VERIFY-70` | 30 | `@Override` indicated, no super method found |
+| `VERIFY-67` | 24 | property information contains conflicting types |
+| `COMPILER-140` | 4 | annotation not applicable |
+| `COMPILER-38` | 3 | name unresolvable |
+
+All twenty distinct messages sit on anonymous inner classes and unbound generics - one names
+`Future<PendingTypeParameter>`, an internal placeholder for a type parameter that has not resolved
+- which is the signature of a `TypeInfo` built on half-finished structures. They are very probably
+artefacts. Nobody could have known, because until now they were destroyed rather than suppressed.
+**Whether any is real is a type-system question and deserves an owner.**
+
+Still deferred, because it needs the ownership decision below rather than more deletion:
+
+- `FileStructure` still resolves its destination through a holder instead of taking a listener at
   construction: 8 constructors, 67 call sites.
 - `getErrorListener()` still consults the ambient current pool.
-- The `RUNTIME`-versus-silent asymmetry therefore survives: an absent listener still throws after a
+- The `RUNTIME`-versus-silent asymmetry therefore survives: an absent listener still prints after a
   compilation and swallows during one.
 
 The prior art put ownership on `ConstantPool`, with a documented argument: the two callers of the
@@ -682,6 +740,33 @@ Per phase:
 Throughout: `./gradlew spotlessCheck` alone before every commit, since locally `check` runs
 `spotlessApply` and silently repairs the tree.
 
+### The gate that actually catches things
+
+A green build says less than it looks. Three things caught real mistakes in this work and are
+worth repeating on anything that touches reporting:
+
+**Compiled output, byte for byte.** Every change here claims not to alter what the compiler emits,
+and that is checkable: build the XDK before and after and compare the modules. The only difference
+between two builds of identical source is the wall-clock timestamp stamped into each module
+(`FileStructure(String)` uses `Instant.now()`; the `(String, Instant)` overload exists for
+reproducibility and the tests use it). Mask that and the comparison is exact - 179 differing bytes
+across 22 modules, every one of them inside an ISO-8601 timestamp.
+
+```java
+Pattern TS = Pattern.compile("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d+Z");
+// blank the timestamps, then compare xdk/build/install/xdk/lib/*.xtc before and after
+```
+
+**A positive control.** A test that passes proves nothing until you have watched it fail. Every
+guard added here was checked by reverting the fix and confirming the test catches it - the naming
+fix, the kept-attempt warning. A guard nobody has seen fail is a guard nobody knows works.
+
+**Measuring rather than asserting.** Several confident-sounding claims in this document started out
+wrong and were corrected by instrumenting: that the park discarded nothing (it discards about
+sixty diagnostics a build), that the error budgets were chosen (no budget ever binds), that a
+cascade decorator would be too costly (7040 allocations over a whole XDK build). If a claim about
+behaviour can be counted, count it.
+
 ## What is left
 
 Nothing in the seven phases. This section is the gap between what those phases did and the full
@@ -696,7 +781,12 @@ shape the prior-art branch reached, measured against this tree.
 | `ErrorListener.RUNTIME` stops throwing from inside `log()` | done |
 | `ResolutionCollector.getErrorListener()` - the listener smuggled through a callback interface | done |
 | `TypeInfo` carries and replays its own diagnostics | mechanism POC done; the 126-call-site migration is not |
-| `EvalCompiler.m_errs` / `ModuleInfo.Node.m_errs` final and created with their owner | not started |
+| `EvalCompiler` / `ModuleInfo.Node` listeners final and created with their owner | done |
+| every listener field final; one mutable reference, inside `Reporting` | done |
+| the parser's speculation expressed as `branch`/`merge` rather than its own mechanism | done |
+| the compile-time park expressed as a scope with a stated lifetime | done |
+| an end-to-end test of what an editor is told | done - `LspRoundTripTest` |
+| the LSP server's `XdkAdapter` wired to the compiler | **not started - nothing consumes any of this yet** |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
 | Failures with nowhere to go: 56 `System.err`, 35 empty catches | audited; see `errs-audit.md` |
 | `Origin` (thread, fiber) stamped on each diagnostic | POC done, unconsumed |
@@ -756,6 +846,22 @@ where a failure has nowhere to go, and the prior art found real bugs in this cat
 continuation that turned an `Error` into "host not found", a swallowed keystore delete so a
 certificate revocation reported success. Each of the ninety needs a judgement call, and the output
 is bug reports rather than a diff. Worth doing as its own investigation.
+
+### Why not ScopedValue
+
+A dynamically-scoped ambient value is the obvious modern answer to "who hears a diagnostic nobody
+was given a listener for", and Java 25 has `ScopedValue`. It was considered and rejected.
+
+It would fix the lifetime and the thread-confinement of the ambient lookup while preserving the
+actual defect: a signature still would not say where diagnostics go. A missed binding would not
+fail - it would fall back silently, here to `RUNTIME`, which prints. That is the same failure class
+this work exists to remove, and the invisibility to the type system is exactly how 110 of the 124
+`ensureTypeInfo()` call sites came to have no listener in scope in the first place.
+
+Explicit propagation is the correct fix. It is not affordable yet, and the measurement says why:
+those 110 sites are not a mechanical rename but 110 decisions about where a listener comes from,
+each cascading into its callers. Approach it from the leaves, if and when someone is working on the
+type system anyway.
 
 ### The decision, and what follows from it
 
