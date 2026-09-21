@@ -48,12 +48,10 @@ public class MethodBodyAmbientPoolTest {
      * is what makes the test meaningful rather than accidental.
      */
     private static MethodBody bodyOnAThreadWithNoPool() {
-        assertNull(ConstantPool.getCurrentPool(),
-                "the premise: a test thread has never had a pool pushed onto it");
+        assertNull(ConstantPool.getCurrentPool(), "the premise: a test thread has never had a pool pushed onto it");
 
         FileStructure   file   = new FileStructure("test");
-        ClassStructure  clz    = file.getModule().createClass(
-                Access.PUBLIC, Format.CLASS, "Test", null);
+        ClassStructure  clz    = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Test", null);
         MethodStructure method = clz.createMethod(false, Access.PUBLIC, null,
                 org.xvm.asm.Parameter.NO_PARAMS, "go", org.xvm.asm.Parameter.NO_PARAMS, true, true);
 
