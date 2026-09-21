@@ -142,7 +142,7 @@ public class Parser {
             Loop: while (!eof()) {
                 if (match(Id.MODULE) != null) {
                     if (!eof()) {
-                        m_errs = new ErrorList(1);
+                        m_errs = new ErrorList(ErrorList.FIRST_ERROR);
                         List<Token> tokens = parseQualifiedName();
                         if (!m_errs.hasSeriousErrors()) {
                             StringBuilder sb = new StringBuilder();

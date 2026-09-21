@@ -3919,7 +3919,7 @@ public class ConstantPool
             }
             Source src = new Source(loader.getResourceAsStream("implicit.x"));
 
-            ErrorList errs   = new ErrorList(1);
+            ErrorList errs   = new ErrorList(ErrorList.FIRST_ERROR);
             Parser    parser = new Parser(src, errs);
             Map<String, String[]> mapImplicits = parser.parseImplicits();
 

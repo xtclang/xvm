@@ -809,28 +809,24 @@ public class ModuleInfo {
 
         @Override
         public boolean isAbortDesired() {
-            return m_errs != null && m_errs.isAbortDesired();
+            return m_errs.isAbortDesired();
         }
 
         @Override
         public boolean hasSeriousErrors() {
-            return m_errs != null && m_errs.hasSeriousErrors();
+            return m_errs.hasSeriousErrors();
         }
 
         @Override
         public boolean hasError(String sCode) {
-            return m_errs != null && m_errs.hasError(sCode);
+            return m_errs.hasError(sCode);
         }
 
         /**
          * @return the list containing any errors accumulated on (or under) this node
          */
         public ErrorList errs() {
-            ErrorList errs = m_errs;
-            if (errs == null) {
-                m_errs = errs = new ErrorList(341);
-            }
-            return errs;
+            return m_errs;
         }
 
         /**
@@ -864,9 +860,13 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The error list which buffers errors for the file node, if any.
+         * The errors accumulated on (or under) this node. A Node is an ErrorListener, so it has
+         * to be able to answer for what it has seen from the moment it exists: the list used to be
+         * built on first use, which left the three queries above answering "nothing" for a node
+         * nobody had logged to yet, and left two threads able to build two lists and keep
+         * different halves of the errors.
          */
-        private ErrorList m_errs;
+        private final ErrorList m_errs = new ErrorList(ErrorList.DEFAULT_MAX_ERRORS);
     }
 
     /**
