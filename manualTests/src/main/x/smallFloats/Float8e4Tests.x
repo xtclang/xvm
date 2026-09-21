@@ -36,6 +36,9 @@ class Float8e4Tests {
         // Number tests
         testFloat8e4toArray();
         testArrays();
+        testArrayInitializer();
+        testBoxedArrayInitializer();
+        testFailingArrayInitializer();
         testNegativeFields();
         testFloat8e4Rounding();
         testFloat8e4Negate();
@@ -408,6 +411,66 @@ class Float8e4Tests {
         assert duplicate.size == values.size && duplicate[7] == -2.0;
         values[7] = 4.0;
         assert duplicate[7] == -2.0 && copy[7] == -2.0;
+    }
+
+    void testArrayInitializer() {
+        InitializerState state = new InitializerState();
+        Float8e4 negative = -4.0;
+        function Float8e4(Int) supply = i -> {
+            assert i == state.calls;
+            ++state.calls;
+            return i % 2 == 0 ? Float8e4:2.0 : negative;
+        };
+
+        // Cross two packed-long boundaries and check call order and captured values.
+        Float8e4[] values = new Float8e4[17](supply);
+        assert values.mutability == Fixed && values.size == 17;
+        assert state.calls == 17;
+        for (Int i : 0..<values.size) {
+            Float8e4 expected = i % 2 == 0 ? Float8e4:2.0 : negative;
+            assert values[i] == expected;
+        }
+        values[8] = -1.0;
+        assert values[7] == negative && values[8] == -1.0 && values[9] == negative;
+
+        Float8e4[] empty = new Float8e4[0](supply);
+        assert empty.empty && empty.mutability == Fixed;
+        assert state.calls == 17;
+    }
+
+    void testBoxedArrayInitializer() {
+        // A generic return type requires the boxed calling convention in the JIT.
+        function Float8e4(Int) boxedSupply = alternatingInitializer(Float8e4:-2.0, Float8e4:4.0);
+        Float8e4[] boxed = new Float8e4[17](boxedSupply);
+        for (Int i : 0..<boxed.size) {
+            Float8e4 expected = i % 2 == 0 ? Float8e4:-2.0 : Float8e4:4.0;
+            assert boxed[i] == expected;
+        }
+    }
+
+    void testFailingArrayInitializer() {
+        InitializerState state = new InitializerState();
+        try {
+            Float8e4[] failed = new Float8e4[17](i -> {
+                ++state.calls;
+                if (i == 3) {
+                    throw new IllegalState("initializer failed");
+                }
+                return Float8e4:1.0;
+            });
+            assert False;
+        } catch (IllegalState e) {
+            assert e.text == "initializer failed";
+        }
+        assert state.calls == 4;
+    }
+
+    static <Element> function Element(Int) alternatingInitializer(Element even, Element odd) {
+        return i -> i % 2 == 0 ? even : odd;
+    }
+
+    static class InitializerState {
+        Int calls = 0;
     }
 
 }

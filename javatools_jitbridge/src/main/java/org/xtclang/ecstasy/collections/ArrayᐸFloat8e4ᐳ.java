@@ -1,11 +1,14 @@
 package org.xtclang.ecstasy.collections;
 
+import java.lang.invoke.MethodHandle;
+
 import java.util.Arrays;
 
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.IterableᐸFloat8e4ᐳ;
 import org.xtclang.ecstasy.IteratorᐸFloat8e4ᐳ;
 import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.numbers.Float8e4;
@@ -26,6 +29,8 @@ import org.xvm.javajit.Ctx;
  */
 public class ArrayᐸFloat8e4ᐳ
         extends nLongBasedArray<ArrayᐸFloat8e4ᐳ> {
+
+    private static final MethodHandle UNBOX = $unbox8Bit(Float8e4.class);
 
     public ArrayᐸFloat8e4ᐳ(Ctx ctx, TypeConstant type) {
         super(ctx, type);
@@ -67,7 +72,11 @@ public class ArrayᐸFloat8e4ᐳ
                 throw array.$oob(ctx, size);
             }
         }
-        // TODO
+
+        if (supply instanceof nFunction fn) {
+            return $new8Bit(ctx, type, size, fn, UNBOX, ArrayᐸFloat8e4ᐳ::new);
+        }
+
         throw new UnsupportedOperationException();
     }
 
