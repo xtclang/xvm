@@ -39,12 +39,12 @@ kept as the record of what was wrong. Where that has since changed:
 |---|---|---|
 | null-coalescing sites | 33 | 1, plus one assert - the `FileStructure` pair is gone with the ambient lookup |
 | names for the listener | 6 | 1 - `errs` |
-| kinds of silence | 1 undifferentiated | one concept, 3 named reasons: `PROBE` (133), `DISCARD` (3), `CASCADE` (3) |
+| kinds of silence | 1 undifferentiated | one concept, 3 named reasons: `PROBE` (134), `DISCARD` (3), `CASCADE` (2) |
 | fields using null as a state flag | 4 | 0 |
 | `new Object[]` at report sites | 31 | 0 (4 left in the tree, none of them report sites) |
 | callers of the array-shaped `log` overloads | all of them | 0 — the overloads are `@Deprecated` |
 | `errs` parameters rebound mid-method | 8 in `TypeConstant` | 0 |
-| tests covering the listener contract | 0 | 46, in 10 files, plus 8 in the language server |
+| tests covering the listener contract | 0 | 50, in 12 files, plus 15 in the language server |
 | mutable listener references | 15 fields | 1, inside `Reporting` |
 | unguarded reads of the ambient constant pool | 18 | 0 |
 | reporting mechanisms in the parser | 2, checked in order | 1 |
