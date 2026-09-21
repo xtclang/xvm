@@ -23,7 +23,6 @@ import org.xvm.asm.Version;
 
 import org.xvm.compiler.InstantRepository;
 
-import static org.xvm.util.Severity.ERROR;
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
 
@@ -338,8 +337,7 @@ public class EmbeddingSupport {
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                    NOWHERE, moduleName, version);
+            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER, NOWHERE, moduleName, version);
             return null;
         }
 
@@ -359,8 +357,7 @@ public class EmbeddingSupport {
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e,
-                    "Unable to start " + moduleName);
+            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e, "Unable to start " + moduleName);
             return null;
         }
     }
