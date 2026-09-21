@@ -9,6 +9,7 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
@@ -56,11 +57,21 @@ class XdkAdapter : AbstractAdapter() {
     ): CompilationResult {
         val queued = System.nanoTime()
         val depth = compiles.queue.size + 1
+
+        // the edit this call is analysing is the newest one for this document, until it is not
+        val generation = edited(uri)
         val (diagnostics, waited) =
             compiles
                 .submit<Pair<List<Diagnostic>, Duration>> {
                     val waited = (System.nanoTime() - queued).nanoseconds
-                    compileNow(uri, content) to waited
+                    if (isStale(uri, generation)) {
+                        // a newer edit arrived while this one waited; analysing the old text
+                        // would publish diagnostics for a document that no longer exists
+                        logger.info("compile: uri={} superseded before it started, skipped", uri)
+                        emptyList<Diagnostic>() to waited
+                    } else {
+                        compileNow(uri, content, generation) to waited
+                    }
                 }.get()
 
         // queue wait is reported separately from compile time on purpose: it is the number that
@@ -87,11 +98,29 @@ class XdkAdapter : AbstractAdapter() {
     }
 
     /**
+     * Whether a newer edit has arrived for this document since the given one was queued.
+     *
+     * Internal rather than private so that it can be tested for what it is - a decision - rather
+     * than through a race, which is not a thing a test can make happen on demand.
+     */
+    internal fun isStale(
+        uri: String,
+        generation: Long,
+    ): Boolean = (newest[uri] ?: generation) > generation
+
+    /**
+     * Record an edit of the given document and answer its generation, so that anything queued for
+     * an earlier one becomes stale.
+     */
+    internal fun edited(uri: String): Long = newest.compute(uri) { _, previous -> (previous ?: 0L) + 1 }!!
+
+    /**
      * Runs on the worker thread, one document at a time.
      */
     private fun compileNow(
         uri: String,
         content: String,
+        generation: Long,
     ): List<Diagnostic> {
         val heard = mutableListOf<ErrorListener.ErrorInfo>()
 
@@ -100,7 +129,15 @@ class XdkAdapter : AbstractAdapter() {
             // the document is named so that its diagnostics are distinguishable from another
             // unsaved document's; the listener answers for what it heard, which a bare lambda
             // would not
-            EmbeddingSupport.instance().compile(Source(content, uri), null, ErrorListener.collecting(heard::add))
+            // the compiler asks isAbortDesired at around twenty points; this is what answers yes
+            // when the user has typed again and the answer is no longer wanted
+            EmbeddingSupport.instance().compile(
+                Source(content, uri),
+                null,
+                ErrorListener.cancellable(ErrorListener.collecting(heard::add)) {
+                    isStale(uri, generation)
+                },
+            )
         } catch (e: IllegalStateException) {
             // no XDK to compile against: report it where the user can see it rather than throwing
             // at the language server, and let them keep editing
@@ -117,6 +154,12 @@ class XdkAdapter : AbstractAdapter() {
         }
 
         lastCompile = (System.nanoTime() - started).nanoseconds
+        if (isStale(uri, generation)) {
+            // abandoned part-way: what it managed to report describes text the user has already
+            // replaced, so publishing it would put stale squiggles in the editor
+            logger.info("compile: uri={} superseded after {}, abandoned", uri, lastCompile)
+            return emptyList()
+        }
         if (compiled.incrementAndGet() == 1L) {
             // the first compilation pays for class loading, reading the XDK and an interpreter
             // still warming up; measured over a long run it is about fourteen times the steady
@@ -215,6 +258,9 @@ class XdkAdapter : AbstractAdapter() {
     @Volatile private var lastCompile: Duration = Duration.ZERO
 
     private val compiled = AtomicLong()
+
+    /** The generation of the newest edit seen per document; older ones are stale. */
+    private val newest = ConcurrentHashMap<String, Long>()
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
