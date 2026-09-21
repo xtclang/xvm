@@ -12,6 +12,7 @@ import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import org.xvm.compiler.Source;
@@ -195,6 +196,83 @@ public interface ErrorListener {
 
             private final Set<String> f_setCodes = ConcurrentHashMap.newKeySet();
             private volatile Severity           m_severity = Severity.NONE;
+        };
+    }
+
+    /**
+     * Obtain a listener that also abandons the work when someone outside asks it to.
+     *
+     * The compiler asks {@link #isAbortDesired} at around twenty points - in the lexer, the
+     * parser, each pass of the stage manager, and statement validation - so that a spent error
+     * budget or a FATAL stops the work rather than letting it run to the end. That is the same
+     * question a host needs answered when the work has become pointless for a reason the compiler
+     * cannot see: an editor whose user has typed again, so the document being analysed is two
+     * keystrokes stale, or a request the client has cancelled.
+     *
+     * Everything else is the wrapped listener's: what it is told, what it has seen, whether it is
+     * silent. Only the decision to stop is shared.
+     *
+     * @param errs       the listener to wrap
+     * @param cancelled  asked whenever the compiler asks whether to stop; it is polled rather
+     *                   than pushed, so it must be cheap and safe to call from the compiling
+     *                   thread
+     *
+     * @return a listener that abandons the work when either the wrapped listener or the caller
+     *         says so
+     */
+    static ErrorListener cancellable(ErrorListener errs, BooleanSupplier cancelled) {
+        requireNonNull(errs, "errs");
+        requireNonNull(cancelled, "cancelled");
+        return new ErrorListener() {
+            @Override
+            public void log(ErrorInfo err) {
+                errs.log(err);
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return cancelled.getAsBoolean() || errs.isAbortDesired();
+            }
+
+            @Override
+            public boolean hasSeriousErrors() {
+                return errs.hasSeriousErrors();
+            }
+
+            @Override
+            public boolean hasError(String sCode) {
+                return errs.hasError(sCode);
+            }
+
+            @Override
+            public boolean isSilent() {
+                return errs.isSilent();
+            }
+
+            @Override
+            public ErrorListener branch(AstNode node) {
+                // a branch of a cancellable listener is still cancellable: work inside it is just
+                // as pointless once the answer is not wanted
+                return cancellable(errs.branch(node), cancelled);
+            }
+
+            @Override
+            public ErrorListener merge() {
+                // and it has to be mergeable, or branching it would quietly throw the branch away:
+                // the default merge() answers "this", which for a wrapper means the wrapped
+                // branch is never merged into what it branched from
+                return cancellable(errs.merge(), cancelled);
+            }
+
+            @Override
+            public Silence silenceReason() {
+                return errs.silenceReason();
+            }
+
+            @Override
+            public String toString() {
+                return "Cancellable(" + errs + ")";
+            }
         };
     }
 
