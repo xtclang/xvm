@@ -469,7 +469,7 @@ public abstract class XvmStructure
      * @param aoParam  the parameters of the error
      */
     public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
-        errs.log(sev, sCode, aoParam, this);
+        errs.log(sev, sCode, ErrorListener.at(this), aoParam);
     }
 
     /**

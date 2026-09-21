@@ -356,7 +356,7 @@ public class xRTCompiler
         }
 
         protected void logError(Severity severity, String sCode, Object... aoParam) {
-            m_errorList.log(severity, sCode, aoParam, null);
+            m_errorList.log(severity, sCode, ErrorListener.NOWHERE, aoParam);
         }
 
         /**
