@@ -112,10 +112,29 @@ public class NameResolver
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
     public Result resolve(ErrorListener errs) {
-        // store off the error list for use by call backs
-        // (note: there's no attempt to clean this up later)
+        // the callbacks this resolution makes - ResolutionCollector.getErrorListener() among them
+        // - have no listener of their own, so the caller's is held for the duration of the call
+        // and given back afterwards. It used to be assigned and left, as the comment here admitted,
+        // which meant the resolver went on holding a listener belonging to a request that had
+        // finished: a later callback reported to it, and a resolver reused for a second name
+        // silently replaced the first caller's.
+        ErrorListener errsPrev = m_errs;
         m_errs = errs;
+        try {
+            return resolveStage(errs);
+        } finally {
+            m_errs = errsPrev;
+        }
+    }
 
+    /**
+     * The stage machine behind {@link #resolve}, which runs with the caller's listener held.
+     *
+     * @param errs  the listener to report to
+     *
+     * @return the result of advancing the resolution as far as it can go
+     */
+    private Result resolveStage(ErrorListener errs) {
         switch (m_stage) {
         case CHECK_IMPORTS:
             // the first name could be an import, in which case that needs to be evaluated right
