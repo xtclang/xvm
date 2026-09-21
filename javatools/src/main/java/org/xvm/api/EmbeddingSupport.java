@@ -5,10 +5,12 @@ import org.jetbrains.annotations.NotNull;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.time.Instant;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,15 +18,34 @@ import java.util.Objects;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
+
+import org.xvm.compiler.Token.Id;
+
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.tool.Console;
+import org.xvm.tool.Launcher.LauncherException;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.ModuleInfo.Node;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.util.Handy.readFileChars;
+import static org.xvm.util.Severity.ERROR;
 
 /**
  * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
@@ -78,6 +99,27 @@ public class EmbeddingSupport {
     private Connector        connector;
 
     /**
+     * Build a read-only repository over whichever of the given directories exist.
+     *
+     * @param dirs  the directories, in search order
+     *
+     * @return the repository, or null if none of the directories exist
+     */
+    private static ModuleRepository repoOver(File... dirs) {
+        List<ModuleRepository> list = new ArrayList<>();
+        for (File dir : dirs) {
+            if (dir.isDirectory()) {
+                list.add(new DirRepository(dir, true));
+            }
+        }
+        return switch (list.size()) {
+            case 0  -> null;
+            case 1  -> list.getFirst();
+            default -> new LinkedRepository(list.toArray(ModuleRepository.NO_REPOS));
+        };
+    }
+
+    /**
      * @return true if configured
      * @throws IllegalStateException if not configured
      */
@@ -86,9 +128,16 @@ public class EmbeddingSupport {
             // attempt to auto-configure
             String home = System.getenv("XDK_HOME");
             if (home != null) {
-                File dir = new File(new File(home), "lib");
-                if (dir.isDirectory()) {
-                    configure(new DirRepository(dir, true), null);
+                // an XDK keeps its libraries in lib/ and the two modules the compiler bootstraps
+                // against - the turtle, mack.xtclang.org, and the native bridge - in javatools/.
+                // Configuring only lib/ produced a repository that could never compile anything:
+                // every compile failed in prelinkSystemLibraries with "Unable to load module:
+                // mack.xtclang.org", reported as an internal error with no location
+                File             dirHome = new File(home);
+                ModuleRepository repo    = repoOver(new File(dirHome, "lib"),
+                                                    new File(dirHome, "javatools"));
+                if (repo != null) {
+                    configure(repo, null);
                 }
             }
 
@@ -199,9 +248,47 @@ public class EmbeddingSupport {
      * @see ModuleCompiler#compile(String, ModuleRepository, ErrorListener)
      */
     public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        return compile(source, null, input, errs);
+    }
+
+    /**
+     * Compile a module held in memory, under a name.
+     *
+     * A diagnostic's identity includes the name of the source it came from, so a host holding
+     * several documents that are not on disk - an editor's unsaved buffers - has to be able to
+     * tell them apart. Without a name, two documents with a problem at the same offset produce
+     * the same identity and a listener that deduplicates discards the second.
+     *
+     * @param source  the source code for an entire module to compile
+     * @param name    the name to report this source under, e.g. the document's URI; null for an
+     *                anonymous one
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the resulting ModuleStructure, or null if a compiler error occurred
+     */
+    public ModuleStructure compile(String source, String name, ModuleRepository input,
+                                   @NotNull ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        return new ModuleCompiler(cfgRepo).compile(source, input, errs);
+        try {
+            EmbeddingCompiler compiler = new EmbeddingCompiler(source, name, input, cfgRepo, errs);
+            return compiler.process() == 0
+                    ? compiler.getModule()
+                    : null;
+        } catch (RuntimeException | AssertionError e) {
+            // as in run(): the compiler runs over caller-supplied source, so a failure in it is
+            // reported here rather than thrown at the caller, who was promised a null instead.
+            // Aborting because the source has errors is the ordinary failure though, and those
+            // errors have already been reported through this same listener; saying "internal
+            // error" again would add a diagnostic that is not true and has no location, which a
+            // host showing a problem list puts at the top of a file whose real problems are
+            // further down
+            if (!errs.hasSeriousErrors()) {
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+            }
+            return null;
+        }
     }
 
     /**
@@ -220,7 +307,122 @@ public class EmbeddingSupport {
                            @NotNull ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        return new ModuleCompiler(cfgRepo).compile(file, input, output, errs);
+        ModuleStructure module;
+        try {
+            module = compile(new String(readFileChars(file)), input, errs);
+        } catch (IOException e) {
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
+            return false;
+        }
+
+        if (module == null) {
+            assert errs.hasSeriousErrors();
+            return false;
+        }
+
+        if (output != null) {
+            try {
+                output.storeModule(module);
+            } catch (IOException e) {
+                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Adapter that supplies the source and repositories to the standard compiler pipeline and
+     * captures its single compiled module instead of writing it to disk.
+     */
+    private static class EmbeddingCompiler
+            extends org.xvm.tool.Compiler {
+        private final String           source;
+        private final String           name;
+        private final ModuleRepository inRepo;
+        private final ModuleRepository coreRepo;
+        private       ModuleStructure  module;
+
+        protected EmbeddingCompiler(String source, String name, ModuleRepository input,
+                                    ModuleRepository core, ErrorListener errs) {
+            super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
+
+            this.source   = source;
+            this.name     = name;
+            this.inRepo   = input;
+            this.coreRepo = core;
+        }
+
+        @Override
+        protected int process() {
+            ModuleRepository repoLib = ensureLibraryRepo();
+            checkErrors("repository setup");
+
+            prelinkSystemLibraries(repoLib);
+            checkErrors("system library linking");
+
+            StatementBlock block;
+            try {
+                block = new Parser(name == null ? new Source(source)
+                        : new Source(source, name), this).parseSource();
+            } catch (CompilerException e) {
+                return 1;
+            }
+            if (checkErrors("source parsing") != 0) {
+                return 1;
+            }
+
+            Statement stmt = block.getStatements().getLast();
+            if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
+                    stmtModule.getCategory().getId() != Id.MODULE) {
+                log(ERROR, "In-memory source does not contain a module");
+                return checkErrors("source parsing");
+            }
+
+            Compiler      compiler = new Compiler(stmtModule, this);
+            FileStructure struct   = compiler.generateInitialFileStructure();
+            if (struct == null || checkErrors("module creation") != 0) {
+                return 1;
+            }
+
+            try {
+                repoLib.storeModule(struct.getModule());
+            } catch (IOException e) {
+                log(ERROR, e, "I/O exception storing module: {}", struct.getModule().getName());
+                return 1;
+            }
+
+            int result = super.compile(List.of(compiler), repoLib);
+            if (result == 0) {
+                this.module = struct.getModule();
+            }
+            return result;
+        }
+
+        @Override
+        protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        @Override
+        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
+            BuildRepository build = new BuildRepository();
+            return inRepo == null || inRepo == coreRepo
+                    ? new LinkedRepository(true, build, coreRepo)
+                    : new LinkedRepository(true, build, inRepo, coreRepo);
+        }
+
+        @Override
+        protected int emitModules(List<Node> allNodes, ModuleRepository ignore) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        /**
+         * @return the result of the compilation
+         */
+        protected ModuleStructure getModule() {
+            return module;
+        }
     }
 
     /**
