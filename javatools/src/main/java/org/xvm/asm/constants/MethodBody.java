@@ -719,8 +719,7 @@ public class MethodBody {
      * @return the pool; never null
      */
     private ConstantPool pool() {
-        ConstantPool pool = ConstantPool.getCurrentPool();
-        return pool == null ? m_id.getConstantPool() : pool;
+        return ConstantPool.currentOr(m_id.getConstantPool());
     }
 
     // ----- Object methods ------------------------------------------------------------------------
