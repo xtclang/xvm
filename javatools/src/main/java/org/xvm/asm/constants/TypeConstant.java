@@ -39,6 +39,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
@@ -1710,7 +1711,14 @@ public abstract class TypeConstant
         // record what building it has to say, so a later caller can be told the same
         ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
         info = ensureTypeInfo(info, tee(errs, recorder));
-        m_diagnostics = recorder;
+
+        // freeze it. An ErrorList is a listener, which is what the recording needed to be while
+        // it was being made and not what it should be once it is made: keeping one per
+        // TypeConstant for the life of the pool holds an error budget, a severity, a dedup set
+        // and a mutable list, to say something a List already says. Most builds report nothing -
+        // measured over an XDK build, all of them - and copyOf gives back the shared empty list
+        // for those, so saying "nothing" costs no allocation at all
+        m_diagnostics = List.copyOf(recorder.getErrors());
         return info;
     }
 
@@ -1723,10 +1731,7 @@ public abstract class TypeConstant
      * @param errs  the listener to replay them to
      */
     private void replayDiagnostics(ErrorListener errs) {
-        ErrorList diagnostics = m_diagnostics;
-        if (diagnostics != null && diagnostics.hasErrors()) {
-            diagnostics.logTo(errs);
-        }
+        m_diagnostics.forEach(errs::log);
     }
 
     private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
@@ -1995,8 +2000,12 @@ public abstract class TypeConstant
     /**
      * The diagnostics produced while this type's TypeInfo was built, replayed to later callers
      * that get the memoized result; see {@link #replayDiagnostics}.
+     *
+     * Empty until the TypeInfo has been built, and empty afterwards when building it had nothing
+     * to say - which is the ordinary case. Never null: "not built yet" and "built quietly" are
+     * the same answer to everyone who reads this, so there is nothing for a third state to say.
      */
-    private transient volatile ErrorList m_diagnostics;
+    private transient volatile List<ErrorInfo> m_diagnostics = List.of();
 
     /**
      * @return the invalidation count that this TypeConstant has already processed
