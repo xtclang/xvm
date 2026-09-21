@@ -46,6 +46,7 @@ plugins {
 // The LSP server can use different parsing backends:
 //
 //   treesitter  - Tree-sitter parsing (DEFAULT, syntax-level intelligence, needs native lib)
+//   compiler    - The XTC compiler itself (real diagnostics and outline; needs an XDK on XDK_HOME)
 //   mock        - Regex-based parsing (no native dependencies, for testing/fallback)
 //
 // Set via Gradle property: -Plsp.adapter=mock (to override default)
