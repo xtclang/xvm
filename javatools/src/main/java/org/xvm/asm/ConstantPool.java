@@ -3692,7 +3692,7 @@ public class ConstantPool
      * @return the contents of the "implicit.x" resource
      */
     private static Implicits parseImplicits() {
-        var errs = new ErrorList(1);
+        var errs = new ErrorList(ErrorList.FIRST_ERROR);
         var mapByName = new Parser(readImplicitSource(), errs).parseImplicits();
         errs.getErrors().forEach(System.err::println);
         if (errs.hasSeriousErrors()) {

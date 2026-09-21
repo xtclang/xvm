@@ -65,7 +65,7 @@ public class EvalCompiler {
      */
     public MethodStructure createLambda(TypeConstant typeReturn) {
         ConstantPool pool = f_frame.poolContext();
-        ErrorList    errs = m_errs = new ErrorList(1);
+        ErrorList    errs = m_errs;
 
         MethodStructure      method = f_frame.f_function;
         ClassStructure       clz    = method.getContainingClass();
@@ -309,9 +309,12 @@ public class EvalCompiler {
     private final Source f_source;
 
     /**
-     * The errors.
+     * The errors from this evaluation. An EvalCompiler is built per evaluation - the debugger
+     * makes one each time - so the list is the instance's, rather than something createLambda
+     * leaves behind. It used to be assigned there, so getErrors() threw if anything asked before
+     * that ran.
      */
-    private ErrorList m_errs;
+    private final ErrorList m_errs = new ErrorList(ErrorList.FIRST_ERROR);
 
     /**
      * A synthetic MethodDeclarationStatement that contains the eval body.
