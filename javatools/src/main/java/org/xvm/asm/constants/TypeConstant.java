@@ -111,8 +111,11 @@ import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
 
-import static org.xvm.asm.PROBE;
 import static org.xvm.asm.ErrorListener.tee;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+import static org.xvm.asm.ErrorListener.Silence.CASCADE;
 
 /**
  * A base class for the various forms of Constants that will represent data types.
@@ -2199,7 +2202,7 @@ public abstract class TypeConstant
      * @return the listener to report to
      */
     private static ErrorListener cascade(boolean fIncomplete, ErrorListener errs) {
-        return fIncomplete ? errs.suppressCascade() : errs;
+        return fIncomplete ? errs.silence(CASCADE) : errs;
     }
 
     /**
@@ -2397,7 +2400,7 @@ public abstract class TypeConstant
 
         // validate the type parameters against the properties
         checkTypeParameterProperties(mapTypeParams, mapVirtProps,
-                fComplete && !errs.hasSeriousErrors() ? errs : errs.suppressCascade());
+                fComplete && !errs.hasSeriousErrors() ? errs : errs.silence(CASCADE));
 
         Annotation[] aAnnoMixin = fComplete
                 ? collectMixinAnnotations(listProcess)
@@ -7638,7 +7641,7 @@ public abstract class TypeConstant
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
         TypeConstant type = getJitCCType();
-        assert type.ensureTypeInfo().isNewable(false, PROBE);
+        assert type.ensureTypeInfo().isNewable(false, silent(PROBE));
         return type;
     }
 
