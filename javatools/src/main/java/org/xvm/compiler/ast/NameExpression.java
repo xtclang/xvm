@@ -367,6 +367,27 @@ public class NameExpression
     }
 
     /**
+     * What this name turned out to refer to.
+     *
+     * The compiler decides this while it resolves the name, and the answer stays on the node
+     * afterwards; this only makes it readable from outside the compiler. It is what a host needs
+     * in order to answer "where is this declared", which cannot be answered from the text: two
+     * names spelled the same can refer to different things, and the same thing can be referred to
+     * by different names.
+     *
+     * The result is a {@link Constant} - usually an
+     * {@link org.xvm.asm.constants.IdentityConstant} - when the name refers to something the
+     * module declares, and a {@link org.xvm.asm.Register} when it refers to a local variable,
+     * which has no identity beyond the method it lives in.
+     *
+     * @return what the name resolved to, or null if it was never resolved, which is the ordinary
+     *         case in source that does not compile
+     */
+    public Argument getResolvedTarget() {
+        return m_arg;
+    }
+
+    /**
      * @return true iff there are any trailing type expressions
      */
     public boolean hasTrailingTypeParams() {
