@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import org.xvm.compiler.Source;
 
-import org.xvm.util.Severity;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import static org.xvm.asm.ErrorListener.in;
 
 /**
  * Tests that {@link ErrorList} suppresses only genuine duplicates.
@@ -24,8 +24,8 @@ public class ErrorDeduplicationTest {
         Source    source = new Source(SOURCE);
         ErrorList errs   = new ErrorList(10);
 
-        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
-        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 40);
+        errs.error(CODE, in(source, 0, 10), "a", "b");
+        errs.error(CODE, in(source, 0, 40), "a", "b");
 
         assertEquals(2, errs.getErrors().size());
     }
@@ -41,8 +41,8 @@ public class ErrorDeduplicationTest {
 
         assertEquals("Aa".hashCode(), "BB".hashCode(), "the premise of this test");
 
-        errs.log(Severity.ERROR, CODE, new Object[]{"Aa", "x"}, source, 0, 10);
-        errs.log(Severity.ERROR, CODE, new Object[]{"BB", "x"}, source, 0, 10);
+        errs.error(CODE, in(source, 0, 10), "Aa", "x");
+        errs.error(CODE, in(source, 0, 10), "BB", "x");
 
         assertEquals(2, errs.getErrors().size());
     }
@@ -55,8 +55,8 @@ public class ErrorDeduplicationTest {
         Source    source = new Source(SOURCE);
         ErrorList errs   = new ErrorList(10);
 
-        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
-        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
+        errs.error(CODE, in(source, 0, 10), "a", "b");
+        errs.error(CODE, in(source, 0, 10), "a", "b");
 
         assertEquals(1, errs.getErrors().size());
     }
@@ -72,11 +72,11 @@ public class ErrorDeduplicationTest {
         Source    source = new Source(SOURCE);
         ErrorList errs   = new ErrorList(10);
 
-        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
+        errs.error(CODE, in(source, 0, 10), "a", "b");
 
         // the same diagnostic, reported from a different thread
         Thread other = new Thread(() ->
-                errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10), "other");
+                errs.error(CODE, in(source, 0, 10), "a", "b"), "other");
         other.start();
         other.join();
 
@@ -88,7 +88,7 @@ public class ErrorDeduplicationTest {
         Source    source = new Source(SOURCE);
         ErrorList errs   = new ErrorList(10);
 
-        errs.log(Severity.ERROR, CODE, new Object[]{"a", "b"}, source, 0, 10);
+        errs.error(CODE, in(source, 0, 10), "a", "b");
 
         assertEquals(Thread.currentThread().getName(),
                 errs.getErrors().get(0).origin().thread());
