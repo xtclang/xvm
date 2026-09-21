@@ -7,8 +7,9 @@ import java.util.Objects;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op;
+
+import static org.xvm.asm.ErrorListener.PROBE;
 
 /**
  * A TypeCollector is used to collect a number of types, such as would occur from return statements
@@ -172,14 +173,14 @@ public class TypeCollector {
         if (typeRequired != null && typeRequired.containsFormalType(true)) {
             typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
         }
-        typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.PROBE);
+        typeCommon = Op.selectCommonType(typeCommon, typeRequired, PROBE);
 
         if (typeRequired != null &&
                 (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
-            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), ErrorListener.PROBE);
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), PROBE);
             for (int i = 1; i < cTypes; i++) {
-                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), ErrorListener.PROBE);
+                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), PROBE);
             }
 
             if (typeAlt != null) {
@@ -342,8 +343,7 @@ public class TypeCollector {
             for (int iCol = 0; iCol < cWidth; ++iCol) {
                 TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
                 if (typeRequired != null) {
-                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired,
-                            ErrorListener.PROBE);
+                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired, PROBE);
                 }
             }
         }
@@ -429,7 +429,7 @@ public class TypeCollector {
                     }
                 }
 
-                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.PROBE);
+                typeCommon = Op.selectCommonType(type, typeCommon, PROBE);
                 if (typeCommon == null) {
                     // no obvious common type
                     return null;
