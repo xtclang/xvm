@@ -78,11 +78,11 @@ public class TestNumber {
         try {
             longAdd(MAX64, 1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longAdd(MIN64, -1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
 
         // sub
         assertEquals(2L - 1L, longSub(2L, 1L, SHIFT), "2-1");
@@ -94,11 +94,11 @@ public class TestNumber {
         try {
             longSub(MIN64, 1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longSub(MAX64, -1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
     }
 
     @Test
@@ -112,11 +112,11 @@ public class TestNumber {
         try {
             longUnsignedAdd(MAX64U, 1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longUnsignedAdd(MAX64U, MAX64U, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
 
         // sub
         assertEquals(2L - 1L, longUnsignedSub(2L, 1L, SHIFT), "2-1");
@@ -125,11 +125,11 @@ public class TestNumber {
         try {
             longUnsignedSub(1L, 2L, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longUnsignedSub(1L, MAX64U, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
     }
 
     @Test
@@ -146,11 +146,11 @@ public class TestNumber {
         try {
             longAdd(MAX32, 1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longAdd(MIN32, -1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
 
         // sub
         assertEquals(2L - 1L, longSub(2L, 1L, SHIFT), "2-1");
@@ -162,11 +162,11 @@ public class TestNumber {
         try {
             longSub(MIN32, 1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longSub(MAX32, -1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
     }
 
     @Test
@@ -180,11 +180,11 @@ public class TestNumber {
         try {
             longUnsignedAdd(MAX32U, 1, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longUnsignedAdd(MAX32U, MAX32U, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
 
         // sub
         assertEquals(2L - 1L, longUnsignedSub(2L, 1L, SHIFT), "2-1");
@@ -193,11 +193,11 @@ public class TestNumber {
         try {
             longUnsignedSub(1L, 2L, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
         try {
             longUnsignedSub(1, MAX32U, SHIFT);
             fail();
-        } catch (ArithmeticException ignore) {}
+        } catch (ArithmeticException _) {}
     }
 
     // ----- the algorithms used by native code ----------------------------------------------------
