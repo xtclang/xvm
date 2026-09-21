@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.lsp.model.SymbolInfo
 import java.io.File
 
 /**
@@ -158,7 +159,79 @@ class XdkAdapterTest {
         }
     }
 
+    /**
+     * The outline an editor draws. Symbols have to come from the AST rather than the compiled
+     * structures, because a ClassStructure knows its name, kind and members and nothing about
+     * where it was written - and a symbol you cannot point at is no use to an editor.
+     */
+    @Test
+    fun `declarations are reported with the place they were written`() {
+        adapter().use { xdk ->
+            val result = xdk.compile("file:///Outline.x", OUTLINE)
+
+            val module = result.symbols.single()
+            assertThat(module.name).isEqualTo("Outline")
+            assertThat(module.kind).isEqualTo(SymbolInfo.SymbolKind.MODULE)
+
+            val names = module.children.map { it.name }
+            assertThat(names).contains("Point", "helper")
+
+            val point = module.children.single { it.name == "Point" }
+            assertThat(point.kind).isEqualTo(SymbolInfo.SymbolKind.CONST)
+            assertThat(point.location.uri).isEqualTo("file:///Outline.x")
+            assertThat(point.location.startLine).`as`("Point is declared on the second line").isEqualTo(1)
+            assertThat(point.children.map { it.name }).contains("distance")
+        }
+    }
+
+    /**
+     * And the cursor can be placed in one. This is what every request phrased as "the thing I am
+     * pointing at" needs underneath it.
+     */
+    @Test
+    fun `the innermost declaration containing a position is found`() {
+        adapter().use { xdk ->
+            xdk.compile("file:///Outline.x", OUTLINE)
+
+            val inner = xdk.findSymbolAt("file:///Outline.x", 2, 20)
+            assertThat(inner?.name).`as`("inside Point.distance").isEqualTo("distance")
+
+            val outer = xdk.findSymbolAt("file:///Outline.x", 1, 10)
+            assertThat(outer?.name).`as`("on Point itself").isEqualTo("Point")
+
+            assertThat(xdk.findSymbolAt("file:///Nothing.x", 0, 0))
+                .`as`("a document nobody compiled")
+                .isNull()
+        }
+    }
+
+    /**
+     * A request that should not recompile gets the last analysis instead.
+     */
+    @Test
+    fun `the cached analysis is handed back without recompiling`() {
+        adapter().use { xdk ->
+            assertThat(xdk.getCachedResult("file:///Outline.x")).isNull()
+
+            val fresh = xdk.compile("file:///Outline.x", OUTLINE)
+            val cached = xdk.getCachedResult("file:///Outline.x")
+
+            assertThat(cached).isNotNull()
+            assertThat(cached!!.symbols.map { it.name }).isEqualTo(fresh.symbols.map { it.name })
+        }
+    }
+
     private companion object {
+        val OUTLINE =
+            """
+            module Outline {
+                const Point(Int x, Int y) {
+                    Int distance() { return x + y; }
+                }
+                void helper() {}
+            }
+            """.trimIndent()
+
         val CLEAN =
             """
             module Clean {
