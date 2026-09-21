@@ -315,8 +315,10 @@ public class EmbeddingSupport {
      *
      * @param module  the compiled module, or null if the compilation did not get that far
      * @param file    the file structure that was built, or null if it did not get that far
+     * @param ast     the parsed source, or null if it did not parse; the structures carry no
+     *                source positions, so this is the only thing that can say where anything is
      */
-    public record Compilation(ModuleStructure module, FileStructure file) {
+    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
         /**
          * @return true iff a module came out of it
          */
@@ -329,6 +331,19 @@ public class EmbeddingSupport {
          */
         public ConstantPool pool() {
             return file == null ? null : file.getConstantPool();
+        }
+
+        /**
+         * Walk the parsed source.
+         *
+         * A host that wants to say where something is has to come through here: a
+         * {@link org.xvm.asm.Component} knows its name, its kind and its children, and nothing
+         * about the text it was written in. Only the AST carries positions.
+         *
+         * @return the root of the parsed source, or null if it did not parse
+         */
+        public StatementBlock parsed() {
+            return ast;
         }
     }
 
@@ -346,9 +361,8 @@ public class EmbeddingSupport {
         requireNonNull(errs, "errs");
         EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
         try {
-            return compiler.process() == 0
-                    ? new Compilation(compiler.getModule(), compiler.getFileStructure())
-                    : new Compilation(null, compiler.getFileStructure());
+            compiler.process();
+            return compiler.result();
         } catch (RuntimeException | AssertionError e) {
             // as in run(): the compiler runs over caller-supplied source, so a failure in it is
             // reported here rather than thrown at the caller, who was promised a null instead.
@@ -360,7 +374,7 @@ public class EmbeddingSupport {
             if (!errs.hasSeriousErrors()) {
                 errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
-            return new Compilation(null, compiler.getFileStructure());
+            return compiler.result();
         }
     }
 
@@ -412,6 +426,21 @@ public class EmbeddingSupport {
         private final ModuleRepository coreRepo;
         private       ModuleStructure  module;
         private       FileStructure    file;
+        private       StatementBlock   ast;
+
+        /**
+         * Everything this attempt produced.
+         *
+         * Each part is present when the attempt got that far and null when it did not, which the
+         * fields already say: the module is only ever assigned on success, and the file structure
+         * and the AST only once they exist. So there is nothing for the caller to decide, and no
+         * success flag to pass in and get wrong.
+         *
+         * @return the outcome; never null, though its parts may be
+         */
+        Compilation result() {
+            return new Compilation(module, file, ast);
+        }
 
         /**
          * @return the file structure this compilation built, which exists whether or not the
@@ -439,7 +468,7 @@ public class EmbeddingSupport {
 
             StatementBlock block;
             try {
-                block = new Parser(source, this).parseSource();
+                block = this.ast = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 return 1;
             }
