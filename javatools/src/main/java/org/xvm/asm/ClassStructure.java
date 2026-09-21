@@ -42,6 +42,9 @@ import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * An XVM Structure that represents an entire Class. This is also the base class for module and
  * package structures.
@@ -987,7 +990,7 @@ public class ClassStructure
         if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE) {
             // look into the Service interface itself
             ClassStructure   clzSvc       = (ClassStructure) getConstantPool().clzService().getComponent();
-            SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.PROBE);
+            SimpleCollector  collectorSvc = new SimpleCollector(silent(PROBE));
             ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc);
             if (resultSvc == ResolutionResult.RESOLVED) {
                 // only allow child classes; properties and methods are resolved by the TypeInfo

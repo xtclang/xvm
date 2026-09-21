@@ -54,6 +54,9 @@ import static org.xvm.util.Severity.NONE;
 import static org.xvm.util.Severity.WARNING;
 import static org.xvm.util.Severity.worstOf;
 
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The "launcher" commands:
  *
@@ -200,7 +203,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 console,
                 // the command line has no delegate to forward to: a Launcher is itself an
                 // ErrorListener, and reports through the Console it was given
-                ErrorListener.BLACKHOLE);
+                silent(DISCARD));
     }
 
     /**
