@@ -316,10 +316,10 @@ public class xRTCompiler
         private List<Node>                      m_allNodes;
 
         // error collection
-        private final ErrorList m_errorList;
+        private final ErrorList f_errs;
 
         protected CompilerAdapter(CompilerOptions options) {
-            super(options, null, m_errorList = new ErrorList());
+            super(options, null, f_errs = new ErrorList());
         }
 
         // ----- accessors -------------------------------------------------------------------------
@@ -346,7 +346,7 @@ public class xRTCompiler
         }
 
         protected List<String> getErrors() {
-            return m_errorList.getErrors().stream()
+            return f_errs.getErrors().stream()
                     .map(err -> err.getSeverity().desc() + ": " + err.getMessage())
                     .toList();
         }
@@ -356,7 +356,7 @@ public class xRTCompiler
         }
 
         protected void logError(Severity severity, String sCode, Object... aoParam) {
-            m_errorList.log(severity, sCode, ErrorListener.NOWHERE, aoParam);
+            f_errs.log(severity, sCode, ErrorListener.NOWHERE, aoParam);
         }
 
         /**
@@ -465,7 +465,7 @@ public class xRTCompiler
             m_compilers   = null;
             m_repoOutput  = null;
             m_allNodes    = null;
-            m_errorList.clear();
+            f_errs.clear();
         }
 
         // ----- Compiler API ----------------------------------------------------------------------
