@@ -501,7 +501,7 @@ public abstract class IdentityConstant
         }
 
         private Object resolve(Object element) {
-            ConstantPool pool = ConstantPool.getCurrentPool();
+            ConstantPool pool = poolInUse();
             return m_resolver != null && element instanceof SignatureConstant sig
                     ? sig.resolveGenericTypes(pool, m_resolver)
                     : element;

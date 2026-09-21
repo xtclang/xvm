@@ -3407,7 +3407,7 @@ public class ConstantPool
         // the number of returns on the left must not exceed the number of returns on the right;
         // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
         if (cLR > cRR) {
-            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(getCurrentPool().typeTuple0())
+            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(currentOr(this).typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
         }
@@ -3662,6 +3662,32 @@ public class ConstantPool
 
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();
         return info.asNakedRef(this, typeReferent, resolver);
+    }
+
+    /**
+     * The pool to work in: the one bound to this thread if there is one, and the given fallback
+     * otherwise.
+     *
+     * {@link #getCurrentPool} is a thread-local, bound by {@link #withPool} around stretches of
+     * compilation and by the runtime container. Outside those it is simply null - on a thread
+     * that is driving the compiler from ordinary Java code, in a test, in a debugger evaluating a
+     * watch - and code that dereferenced it threw there. Two such NullPointerExceptions were
+     * found by accident while doing something else, one of them in the code meant to describe a
+     * structure for a log line.
+     *
+     * The ambient pool is preferred rather than ignored, because it is not always the pool a
+     * given constant belongs to: {@link #withPool} exists precisely because the compiler works
+     * across pools, and a well-known constant fetched from the wrong one answers wrongly rather
+     * than not at all. So this changes nothing where a pool is bound, and answers instead of
+     * throwing where none is.
+     *
+     * @param poolFallback  the pool to use when no pool is bound to this thread
+     *
+     * @return the pool to work in; null only if the fallback is null
+     */
+    public static ConstantPool currentOr(ConstantPool poolFallback) {
+        ConstantPool pool = getCurrentPool();
+        return pool == null ? poolFallback : pool;
     }
 
     /**

@@ -460,6 +460,19 @@ public abstract class Constant
         return (ConstantPool) getContaining();
     }
 
+    /**
+     * The pool to work in when resolving other constants from this one.
+     *
+     * The thread's pool where the compiler has bound one, and this constant's own otherwise, so
+     * that a constant asked to do something outside a compilation - printed by a debugger, used
+     * by a test - answers rather than throwing. See {@link ConstantPool#currentOr}.
+     *
+     * @return the pool to work in; never null
+     */
+    protected ConstantPool poolInUse() {
+        return ConstantPool.currentOr(getConstantPool());
+    }
+
     @Override
     public boolean isModified() {
         // it's a constant; it can't be modified
