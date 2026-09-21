@@ -61,8 +61,7 @@ public interface ErrorListener {
      *             location as {@link #in in(source, lPosStart, lPosEnd)}
      */
     @Deprecated
-    default void log(Severity severity, String sCode, Object[] aoParam,
-            Source source, long lPosStart, long lPosEnd) {
+    default void log(Severity severity, String sCode, Object[] aoParam, Source source, long lPosStart, long lPosEnd) {
         log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
     }
 
