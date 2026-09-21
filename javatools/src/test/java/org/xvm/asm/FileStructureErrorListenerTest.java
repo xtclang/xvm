@@ -4,48 +4,55 @@ import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
- * {@link FileStructure#getErrorListener()} must not depend on an ambient "current pool" being bound
- * to the calling thread.
+ * A structure must not be a place diagnostics are routed through.
  *
- * <p>It consulted {@code ConstantPool.getCurrentPool()} - a thread-local - and dereferenced the
- * result unconditionally. That thread-local is simply {@code null} on any thread that has not had a
- * pool pushed onto it, which is every thread that drives the compiler or runtime from ordinary Java
- * code (an embedding host, a build tool, a test). The accessor is a DIAGNOSTIC accessor, so the
- * failure mode was a {@code NullPointerException} thrown from the very code meant to report
- * problems.</p>
+ * <p>It used to be. A {@code TypeConstant} asked to build a {@code TypeInfo} without being given a
+ * listener had no caller to ask, so it walked up to the containing {@code FileStructure} and
+ * reported to whatever that file was last told - and failing that, to a listener that prints to
+ * stdout. Three things were wrong with it, and this class is what keeps them from coming back.</p>
+ *
+ * <p>It answered for the wrong request: "whatever this file was last told" is not "the caller's".
+ * It consulted {@code ConstantPool.getCurrentPool()}, a thread-local that is null on any thread
+ * that has not had a pool pushed onto it - which is every thread driving the compiler from
+ * ordinary Java code - and dereferenced it, so the accessor meant to report problems threw an NPE.
+ * And it was writable through a setter inherited from {@code XvmStructure}, so a structure could
+ * redirect the diagnostics of a whole containment tree it did not own.</p>
+ *
+ * <p>All of it is gone. {@code ensureTypeInfo()} says its own silence, which is what the file was
+ * being parked on anyway, and the two thirds of its callers that run after compilation is over no
+ * longer reach a listener that prints.</p>
  */
 public class FileStructureErrorListenerTest {
+    /**
+     * No structure offers a listener, so nothing can route through one.
+     */
     @Test
-    public void getErrorListenerWorksWithNoAmbientPoolBound() {
-        // a plain FileStructure with no explicit ErrorListener set; this test thread has never had a
-        // pool bound, so getCurrentPool() returns null
-        var file = new FileStructure("test");
-
-        ErrorListener errs = file.getErrorListener();
-
-        assertNotNull(errs, "a diagnostic accessor must never return null");
-        assertSame(ErrorListener.RUNTIME, errs,
-                "with no explicit listener and no ambient pool, the runtime listener is the answer");
+    public void aStructureDoesNotAnswerForDiagnostics() {
+        for (Class<?> clz : new Class<?>[]{XvmStructure.class, FileStructure.class,
+                                           Component.class, TypeConstant.class}) {
+            assertFalse(Arrays.stream(clz.getMethods())
+                            .anyMatch(m -> m.getName().equals("getErrorListener")),
+                    clz.getSimpleName() + " must not offer a listener to route through");
+        }
     }
 
     /**
-     * A structure could reach through its parent and redirect the diagnostics of a whole
-     * containment tree it did not own, because setErrorListener was inherited from XvmStructure
-     * and delegated the mutation upwards. Only the file itself decides now, and only for as long
-     * as it holds the scope open.
+     * Nor can one be set on a structure, for itself or - as was once possible by inheritance -
+     * for its parent.
      */
     @Test
-    public void onlyTheFileItselfCanDirectItsDiagnostics() {
-        assertFalse(Arrays.stream(XvmStructure.class.getMethods())
-                        .anyMatch(m -> m.getName().equals("setErrorListener")
-                                    || m.getName().equals("reportingTo")),
-                "XvmStructure must not offer a way to mutate its parent's reporting");
+    public void aStructuresReportingCannotBeRedirected() {
+        for (Class<?> clz : new Class<?>[]{XvmStructure.class, FileStructure.class}) {
+            assertFalse(Arrays.stream(clz.getMethods())
+                            .anyMatch(m -> m.getName().equals("setErrorListener")
+                                        || m.getName().equals("reportingTo")),
+                    clz.getSimpleName() + " must not offer a way to redirect reporting");
+        }
     }
 
     /**
@@ -58,51 +65,5 @@ public class FileStructureErrorListenerTest {
         assertFalse(ComponentResolver.ResolutionCollector.class
                         .getMethod("getErrorListener").isDefault(),
                 "the collector must supply a listener rather than inherit silence");
-    }
-
-    @Test
-    public void getErrorListenerPrefersTheListenerOfTheOpenScope() {
-        var file = new FileStructure("test");
-        var mine = new ErrorList();
-
-        try (var reporting = file.reportingTo(mine)) {
-            assertSame(mine, file.getErrorListener(),
-                    "an explicitly supplied listener must win over any fallback");
-        }
-    }
-
-    /**
-     * The direction lasts as long as the work that asked for it, and no longer. It used to be a
-     * setting cleared by whoever remembered, which left a file that had been compiled once
-     * answering for a listener belonging to a request that had finished - and, when the clearing
-     * was skipped on a failed compile, permanently silenced.
-     */
-    @Test
-    public void theDirectionEndsWithTheScope() {
-        var file = new FileStructure("test");
-
-        try (var reporting = file.reportingTo(new ErrorList())) {
-            assertNotSame(ErrorListener.RUNTIME, file.getErrorListener());
-        }
-
-        assertSame(ErrorListener.RUNTIME, file.getErrorListener(),
-                "the scope closed, so the file answers for nobody in particular again");
-    }
-
-    /**
-     * Scopes nest: an inner stretch of work can narrow the reporting and give it back.
-     */
-    @Test
-    public void scopesNest() {
-        var file  = new FileStructure("test");
-        var outer = new ErrorList();
-        var inner = new ErrorList();
-
-        try (var a = file.reportingTo(outer)) {
-            try (var b = file.reportingTo(inner)) {
-                assertSame(inner, file.getErrorListener());
-            }
-            assertSame(outer, file.getErrorListener());
-        }
     }
 }
