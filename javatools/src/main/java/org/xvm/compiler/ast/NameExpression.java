@@ -765,7 +765,9 @@ public class NameExpression
                     }
                     // there is a read of the implicit "this" variable
                     else if (getParent() instanceof NameExpression) {
-                        if (!ctx.requireThis(getStartPosition(), null)) {
+                        // a question, not an assertion: the comment below says the outer
+                        // expression reports whatever follows from the answer
+                        if (!ctx.requireThis(getStartPosition(), ErrorListener.PROBE)) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that
