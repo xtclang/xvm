@@ -46,6 +46,7 @@ kept as the record of what was wrong. Where that has since changed:
 | `errs` parameters rebound mid-method | 8 in `TypeConstant` | 0 |
 | tests covering the listener contract | 0 | 46, in 10 files, plus 8 in the language server |
 | mutable listener references | 15 fields | 1, inside `Reporting` |
+| unguarded reads of the ambient constant pool | 18 | 0 |
 | reporting mechanisms in the parser | 2, checked in order | 1 |
 | `catch (… ignore)` naming an exception only to drop it | 62 | 0 - the unnamed variable instead |
 
@@ -999,17 +1000,34 @@ Things turned up along the way that are real, are not this branch's to fix, and 
 forgotten. Each is written with what was measured, so the next person does not have to re-derive
 it.
 
-### The ambient constant pool
+### The ambient constant pool *(made safe; ownership still ambient)*
 
-`ConstantPool.getCurrentPool()` is a thread-local, read at **19 call sites**. It is the same
-mistake as the ambient listener this branch deleted, in the same place: "which pool am I working
-in" is a property of the work, not of the thread, so it is an ownership parameter in disguise. It
-has already bitten exactly that way - `FileStructure.getErrorListener()` dereferenced it
-unconditionally and threw a NullPointerException on any thread that had never had a pool pushed,
-which is every thread driving the compiler from ordinary Java. That consumer is gone; the other 19
-remain.
+`ConstantPool.getCurrentPool()` is a thread-local, bound by `withPool` around stretches of
+compilation and by the runtime container. Outside those it is null, which is the ordinary state of
+every thread driving the compiler from Java - a build tool, an embedding host, a test, a debugger
+evaluating a watch - and eighteen places dereferenced it without asking. Two of them threw during
+this branch's own work, in unrelated code, **both found by accident**: `FileStructure.getErrorListener`,
+and the code that describes a `MethodBody` for a log line, where the NullPointerException hid the
+assertion failure it was formatting.
 
-Fixing it is the same shape of job as the listener propagation below, and wants the same owner.
+All eighteen are guarded now, in a separate commit so it can be reviewed and moved on its own:
+
+```java
+ConstantPool.currentOr(fallback)   // the primitive
+Constant.poolInUse()               // for a constant, its own pool as the fallback
+```
+
+The ambient pool is **preferred, not replaced**. `withPool` exists precisely because the compiler
+works across pools, so a constant's own pool is not always the one the caller meant, and answering
+from the wrong pool is worse than answering from none. What says the preference order is right:
+the XDK compiles to byte-identical modules, so every one of these had a pool bound during a build
+and none of them changed answer. The fix reaches only the null case.
+
+**What is not fixed is the ownership.** "Which pool am I working in" is still a property of the
+thread rather than of the work, and that is still an ownership parameter in disguise - the same
+mistake as the ambient listener, which this branch deleted rather than guarded. Guarding it
+removes the crashes, not the design. Doing it properly is the same shape of job as the listener
+propagation below, and wants the same owner.
 
 ### Propagating a listener to the TypeInfo builders
 
@@ -1021,11 +1039,23 @@ reporting". They divide:
 |---|---|---|
 | runtime and JIT | 69 | nothing - there is no compilation |
 | compile-time | 55 | a real diagnostic |
-| …whose own method already takes a listener | 6 | one line each |
-| …whose method does not | 49 | a decision per site, and its callers too |
+| …whose own method already takes a listener | 2 | done - see below |
+| …whose method does not | 53 | a decision per site, and its callers too |
 
-The 49 cluster - `RelOpExpression` 7, `TypeConstant` 6, `ArrayAccessExpression` 4 - so a single
-file is a contained change. This is no longer a transitive closure; it is a backlog.
+The rest cluster - `RelOpExpression`, `TypeConstant`, `ArrayAccessExpression` - so a single file is
+a contained change. This is no longer a transitive closure; it is a backlog.
+
+**The two that were one hop away are done, and they are the warning for the rest.** They wanted
+*opposite* treatment:
+
+- `StatementBlock.resolveReservedName` is resolving `super`. If the TypeInfo for the context type
+  cannot be built, that is the caller's business, so it reports to the `errs` it was given.
+- `RelOpExpression`'s site is inside `testFit`, which is the speculative question - the return
+  value is the answer and a diagnostic would be noise. It now says `silent(PROBE)` rather than
+  using the no-arg form, whose javadoc says it is for the runtime and whose silence is a cascade.
+
+A sweep would have made both report and one would have been wrong. Whoever takes the remaining 53
+should expect to read each one.
 
 ### A TypeInfo that could not describe itself *(fixed)*
 
@@ -1113,6 +1143,30 @@ XDK built successfully while the compiler was suppressing errors that should hav
 is a different order of problem from a missing warning, and **it is a type-system question that
 deserves an owner.** They are recoverable now rather than destroyed, so the triage is possible
 where before it was not.
+
+#### A first pass at the triage
+
+With the park gone, these now reach the explicit `silent(CASCADE)` in `ensureTypeInfo()` instead,
+so they can be captured there. Over an XDK build that is **70 distinct** ERROR-severity messages,
+dominated by `VERIFY-70`. Three were followed to their source, chosen to be different shapes:
+
+| | what it is | why the `@Override` has no super |
+|---|---|---|
+| `maps.ListMapIndex.clear()` | `mixin ListMapIndex into ListMap` | `ListMap` declares `clear()`; the super exists only once the mixin is layered onto its `into` target |
+| `Interval.adjoins(…)` | `mixin Interval into Range` | the same |
+| `json:ObjectInputStream.PeekAhead.openObject(…)` | `annotation PeekAhead` | the same |
+
+So the dominant shape is a TypeInfo built for a mixin or annotation **in isolation**, where by
+construction the members it overrides are not yet present. The `VERIFY-67`s are on
+`…Object:1.element…`, anonymous inner classes with unbound type parameters, and the `COMPILER-38`
+names `Future<PendingTypeParameter>`, an internal placeholder. All consistent with building a type
+that is not yet in its final composition - which is what a cascade suppression is *for*.
+
+On this evidence the cascade silence is doing its job and the park was the over-broad one: it
+silenced everything for the whole compilation, which is how it caught a real warning as well.
+
+**Three of seventy is a sample, not a survey.** It is recorded so the next person starts from a
+hypothesis rather than from nothing, not so they can skip the other sixty-seven.
 
 ### Printed failures and empty catches
 
