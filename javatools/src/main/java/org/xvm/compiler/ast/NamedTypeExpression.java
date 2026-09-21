@@ -39,6 +39,9 @@ import org.xvm.util.Severity;
 
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A type expression specifies a named type with optional parameters.
  */
@@ -352,7 +355,7 @@ public class NamedTypeExpression
 
         // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.PROBE);
+        TypeConstant type = calculateDefaultType(ctx, constId, silent(PROBE));
 
         if (listParams != null) {
             int            cParams     = listParams.size();

@@ -43,8 +43,10 @@ import org.xvm.util.Severity;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
-import static org.xvm.asm.ErrorListener.PROBE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A method declaration.
@@ -728,7 +730,7 @@ public class MethodDeclarationStatement
                     shuffle(atypeInto,  iFound, iNext);
                     shuffle(atypeAnno, iFound, iNext);
 
-                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, PROBE)) {
+                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, silent(PROBE))) {
                         fReordered = true;
                         break Validate;
                     }

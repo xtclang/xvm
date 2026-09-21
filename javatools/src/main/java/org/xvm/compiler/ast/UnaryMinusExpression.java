@@ -11,6 +11,9 @@ import org.xvm.asm.op.GP_Neg;
 
 import org.xvm.compiler.Token;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The "-" that precedes a number.
  */
@@ -55,7 +58,7 @@ public class UnaryMinusExpression
         // operation, then do so (just like with binary ops, convert as "deep" in the AST tree as
         // possible)
         TypeConstant typeRight = null;
-        if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, ErrorListener.PROBE).isFit()
+        if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("neg", "-#", 0).isEmpty()) {
             typeRight = typeRequired;
         }
