@@ -360,7 +360,7 @@ public class nType
 
             try {
                 return valueClass.getDeclaredMethod(methodName, paramClasses);
-            } catch (NoSuchMethodException ignore) {
+            } catch (NoSuchMethodException _) {
                 valueClass = valueClass.getSuperclass();
             }
         } while (valueClass != null);

@@ -68,7 +68,7 @@ public class UnaryComplementExpression
         } else if (exprRight.isConstant()) {
             try {
                 constVal = exprRight.toConstant().apply(operator.getId(), null);
-            } catch (RuntimeException ignore) {}
+            } catch (RuntimeException _) {}
         }
 
         return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);

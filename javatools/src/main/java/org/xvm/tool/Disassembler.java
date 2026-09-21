@@ -281,7 +281,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         LocalDateTime time = null;
         try {
             time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
-        } catch (Exception ignore) {}
+        } catch (Exception _) {}
         if (time == null) {
             buf.append("??? ??  ????");
         } else {
@@ -393,7 +393,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         String findString = null;
         try {
             findString = new String(readFileChars(target));
-        } catch (IOException ignore) {}
+        } catch (IOException _) {}
 
         // load the file metadata
         var    findName     = target.getName();
