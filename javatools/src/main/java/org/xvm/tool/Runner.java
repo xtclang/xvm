@@ -170,7 +170,7 @@ public class Runner extends Launcher<RunnerOptions> {
                         .enableVerbose(opts.isVerbose());
                 outFile.ifPresent(builder::setOutputLocation);
 
-                int exitCode = new Compiler(builder.build(), m_console, m_errs).run();
+                int exitCode = new Compiler(builder.build(), m_console, f_errs).run();
                 if (exitCode != 0) {
                     log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
                     return checkErrors("compilation");
