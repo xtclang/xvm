@@ -112,6 +112,9 @@ import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
 
+import static org.xvm.asm.PROBE;
+import static org.xvm.asm.ErrorListener.tee;
+
 /**
  * A base class for the various forms of Constants that will represent data types.
  *
@@ -1802,7 +1805,7 @@ public abstract class TypeConstant
 
         // record what building it has to say, so a later caller can be told the same
         ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
-        info = ensureTypeInfo(info, ErrorListener.tee(errs, recorder));
+        info = ensureTypeInfo(info, tee(errs, recorder));
         m_diagnostics = recorder;
         return info;
     }
@@ -3602,8 +3605,7 @@ public abstract class TypeConstant
                     fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                 }
                 if (infoContrib != null) {
-                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain,
-                                                 listmapRootChain, composition);
+                    infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, listmapRootChain, composition);
                     layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(),
                             cascade(fIncomplete, errs));
                 }
@@ -7681,7 +7683,7 @@ public abstract class TypeConstant
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
         TypeConstant type = getJitCCType();
-        assert type.ensureTypeInfo().isNewable(false, ErrorListener.PROBE);
+        assert type.ensureTypeInfo().isNewable(false, PROBE);
         return type;
     }
 
