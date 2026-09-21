@@ -43,7 +43,7 @@ public final class IsolatedDirectExecutor {
      */
     public static int executeCompile(final DirectCompileRequest request, final Logger logger,
             final LibraryModules libraries) {
-        final var err = new ErrorList(ErrorList.DEFAULT_MAX_ERRORS);
+        final var err = new ErrorList();
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildCompilerOptions(request);
         synchronized (libraries) {
@@ -72,14 +72,14 @@ public final class IsolatedDirectExecutor {
     }
 
     public static int executeRun(final DirectRunRequest request, final Logger logger) {
-        final var err = new ErrorList(ErrorList.DEFAULT_MAX_ERRORS);
+        final var err = new ErrorList();
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildRunnerOptions(request);
         return new Runner(options, console, err).run();
     }
 
     public static int executeTest(final DirectTestRequest request, final Logger logger) {
-        final var err = new ErrorList(ErrorList.DEFAULT_MAX_ERRORS);
+        final var err = new ErrorList();
         final var console = createConsole(logger);
         final var options = new IsolatedLauncherOptionsBuilder().buildTestRunnerOptions(request);
         return new TestRunner(options, console, err).run();
