@@ -5578,7 +5578,7 @@ public class Parser {
         if (m_lookAhead != null) {
             m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
         } else {
-            m_errs.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+            m_errs.log(severity, sCode, ErrorListener.in(m_source, lPosStart, lPosEnd), aoParam);
             if (m_errs.isAbortDesired()) {
                 m_fAvoidRecovery = true;
                 throw new CompilerException("error list is full: " + m_errs);

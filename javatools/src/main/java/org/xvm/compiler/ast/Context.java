@@ -1047,7 +1047,7 @@ public class Context {
     public boolean requireThis(long lPos, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null) {
-            errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
+            errs.error(Compiler.NO_THIS, ErrorListener.in(getSource(), lPos, lPos));
             return false;
         }
         return ctxOuter.requireThis(lPos, errs);

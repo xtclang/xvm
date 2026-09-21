@@ -436,10 +436,9 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
-                            new String[] {sModule}, source,
+                    errs.fatal(Compiler.MODULE_BAD_NAME, ErrorListener.in(source,
                             qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition());
+                            qualified.get(qualified.size()-1).getEndPosition()), sModule);
                     return;
                 }
 
@@ -1420,8 +1419,8 @@ public class TypeCompositionStatement
             lStart = listParams.get(0).getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
-        errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-            new String[] {sb.toString()}, getSource(), lStart, lEnd);
+        errs.error(Compiler.SIGNATURE_AMBIGUOUS,
+            ErrorListener.in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**

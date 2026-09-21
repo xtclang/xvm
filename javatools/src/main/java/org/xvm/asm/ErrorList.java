@@ -190,13 +190,15 @@ public class ErrorList
         }
 
         @Override
-        public void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-            if (f_node == null) {
-                super.log(severity, sCode, aoParam, xs);
-            } else {
-                log(severity, sCode, aoParam,
-                        f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
+        public void log(Severity severity, String sCode, Site site, Object... aoParam) {
+            // a branch taken for a particular node re-anchors at that node: a diagnostic raised
+            // against a structure carries no source location of its own, and the node is the
+            // location the brancher knew about
+            if (f_node != null && site instanceof Site.At) {
+                site = ErrorListener.in(f_node.getSource(),
+                        f_node.getStartPosition(), f_node.getEndPosition());
             }
+            super.log(severity, sCode, site, aoParam);
         }
 
         @Override
