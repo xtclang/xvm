@@ -103,9 +103,34 @@ val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
 // Aggregate subproject tasks
 // =============================================================================
 
+// The IDE plugins are attached separately from the rest of lang, because they are expensive in a
+// way nothing else here is: the IntelliJ plugin resolves the IntelliJ Platform, which is a
+// download measured in hundreds of megabytes and a cache CI has to find room for, and the VS Code
+// extension needs an npm toolchain. Neither is needed to build or test the language server, which
+// is the part of lang that moves with the compiler - lsp-server depends on javatools, so it has
+// to be built when the compiler changes; the plugins do not.
+//
+// Turn one on with -PincludeBuildAttachIntellijPlugin=true or -PincludeBuildAttachVsCodeExtension=true,
+// or build it directly: ./gradlew :lang:intellij-plugin:buildPlugin
+val attachIntellijPlugin =
+    providers.gradleProperty("includeBuildAttachIntellijPlugin").orElse("false").get().toBoolean()
+val attachVsCodeExtension =
+    providers.gradleProperty("includeBuildAttachVsCodeExtension").orElse("false").get().toBoolean()
+
 // Projects to aggregate standard lifecycle tasks from
-val coreProjects = listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin")
-val allProjects = coreProjects + ":vscode-extension"
+val coreProjects =
+    listOfNotNull(
+        ":dsl",
+        ":tree-sitter",
+        ":lsp-server",
+        ":dap-server",
+        ":intellij-plugin".takeIf { attachIntellijPlugin },
+        ":vscode-extension".takeIf { attachVsCodeExtension },
+    )
+
+// clean is cheap and resolves nothing, so it always covers everything that can leave a build dir
+val allProjects =
+    listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
 
 // Map of aggregate task -> subproject task (null means same name)
 val taskMappings = mapOf(
