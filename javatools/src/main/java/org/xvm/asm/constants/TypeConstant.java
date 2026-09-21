@@ -3814,8 +3814,7 @@ public abstract class TypeConstant
             if (fSelf && !isInterface(constId, struct) && !struct.isExplicitlyAbstract()) {
                 for (Entry<PropertyConstant, PropertyInfo> entry : mapProps.entrySet()) {
                     PropertyInfo infoOld = entry.getValue();
-                    PropertyInfo infoNew = infoOld.finishAdoption(fNative,
-                            cascade(fIncomplete, errs));
+                    PropertyInfo infoNew = infoOld.finishAdoption(fNative, cascade(fIncomplete, errs));
                     if (infoNew != infoOld) {
                         entry.setValue(infoNew);
                         if (infoNew.isVirtual()) {
@@ -3844,9 +3843,7 @@ public abstract class TypeConstant
                     if (infoPrev != null) {
                         ChildInfo infoNew = infoPrev.layerOn(infoChild);
                         if (infoNew == null) {
-                            log(cascade(fIncomplete, errs), Severity.ERROR, VE_CHILD_COLLISION,
-                                    constId,
-                                    sName,
+                            log(cascade(fIncomplete, errs), Severity.ERROR, VE_CHILD_COLLISION, constId, sName,
                                     contrib.getTypeConstant(),
                                     infoPrev.getIdentity());
                         } else {
@@ -3862,8 +3859,7 @@ public abstract class TypeConstant
                 // to be processed by "finishAdoption"
                 for (Entry<MethodConstant, MethodInfo> entry : mapMethods.entrySet()) {
                     MethodInfo infoOld = entry.getValue();
-                    MethodInfo infoNew = infoOld.finishAdoption(fNative,
-                            cascade(fIncomplete, errs));
+                    MethodInfo infoNew = infoOld.finishAdoption(fNative, cascade(fIncomplete, errs));
                     if (infoNew != infoOld) {
                         entry.setValue(infoNew);
                         if (infoNew.isVirtual()) {

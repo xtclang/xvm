@@ -1780,7 +1780,7 @@ public class MethodStructure
                 // REVIEW need a better error?
                 AstNode node = collector.getNode();
                 if (node == null) {
-                    collector.getErrorListener().error( Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, at(this));
+                    collector.getErrorListener().error(Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, at(this));
                 } else {
                     node.log(collector.getErrorListener(), Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
