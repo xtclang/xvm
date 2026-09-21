@@ -150,12 +150,18 @@ module TestModule {
 
 ## Test Cases by Feature
 
-> **"Both adapters" means mock and tree-sitter.** Those two are the ones that answer the whole
-> LSP surface. The compiler adapter answers two things and answers them better than either -
-> diagnostics (§7) and the outline (§6) - and returns nothing for the rest, so an editor running
-> it has no completion, no go-to-definition, no formatting. Sections that the compiler adapter
-> participates in say so; where it is not mentioned, it is not implemented. §7a covers what is
-> only testable with the compiler adapter.
+> **"Both adapters" means mock and tree-sitter**, which is how this document was written when
+> there were two. The compiler adapter now answers diagnostics (§7), the outline (§6), hover
+> (§2), go-to-definition (§4), find-references (§5), document highlights (§8), selection ranges
+> (§9), folding (§10) and workspace symbols - within one document, and where the document
+> parses.
+>
+> It still answers nothing for completion, rename, formatting, signature help, code actions,
+> code lens or semantic tokens. Completion is not an oversight: the compiler produces no AST at
+> all for a document that does not parse, and `console.` does not parse, so there is nothing to
+> complete from. See `docs/errs.md`, "What the compiler adapter can and cannot do, measured".
+>
+> Sections say which adapters they apply to. §7a covers what is only testable with the compiler.
 
 ### 1. Syntax Highlighting (TextMate)
 
@@ -201,7 +207,7 @@ module TestModule {
 
 **LSP Method:** `textDocument/completion`
 **Status:** ⚠️ Partial (Mock not context-aware; tree-sitter scope-aware in BODY context)
-**Works with:** Both adapters (tree-sitter better)
+**Works with:** All three (the compiler adds the type, which no grammar can)
 
 **How to trigger:**
 - *IntelliJ:* Ctrl+Space (Basic Completion), or type and wait for auto-popup
@@ -227,7 +233,7 @@ module TestModule {
 
 **LSP Method:** `textDocument/definition`
 **Status:** ✅ Done (scope-aware same-file + cross-file via workspace index)
-**Works with:** Both adapters (cross-file: tree-sitter only)
+**Works with:** All three (compiler: same document only; cross-file needs an index that does not exist yet)
 
 **How to trigger:**
 - *IntelliJ:* Ctrl+Click on a symbol, or Ctrl+B, or F12
@@ -257,7 +263,7 @@ module TestModule {
 
 **LSP Method:** `textDocument/references`
 **Status:** ⚠️ Partial
-**Works with:** Tree-sitter (Mock limited)
+**Works with:** Tree-sitter, and the compiler (same document, by what the name means rather than how it is spelled). Mock limited
 
 **How to trigger:**
 - *IntelliJ:* Alt+F7 (Find Usages), or right-click → Find Usages, or Shift+F12
@@ -346,6 +352,11 @@ is observable under mock or tree-sitter.
 | 7a.7 | Memory over a session | Leave the server up, edit for a while, watch `heap=` in the `footprint` on each line | Flat, not a staircase |
 | 7a.8 | A diagnostic no other adapter can find | See the duplicate-annotation file below | One `WARNING VERIFY-75`, the annotation is ignored |
 | 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file | Diagnostics stop at a hundred serious errors rather than filling the panel with consequences of the first one |
+| 7a.10 | References follow meaning, not spelling | Two classes each with a property `x`; Shift+F12 on one | Only that class's `x`. A text search cannot do this, and neither can a grammar |
+| 7a.11 | Definition of a method call | F12 on `p.sum()` | Jumps to `sum`'s declaration. The name in a call resolves to nothing by itself - which method it is depends on the target and the arguments - so this is the compiler's answer, not a name match |
+| 7a.12 | Definition of something from the core library | F12 on `Int` or `Console` | Nothing happens. It resolves perfectly well and this document has nowhere to point at; jumping to another mention of `Int` in the same file would be worse than doing nothing |
+| 7a.13 | Hover shows a type | Hover over a variable in an expression | The declaration, and the type the compiler decided. On a document that does not compile the type may be absent - an expression only has one once it has been validated |
+| 7a.14 | Completion is absent | Type `console.` and press Ctrl+Space | Nothing. Not a bug to file: with a trailing dot the document does not parse, and the compiler produces no tree at all for it |
 
 **7a.8 - the duplicate annotation.** This is the case worth keeping, because it is invisible
 everywhere else. No grammar can find it: it needs the compiler to lay `Derived` over `Base` and
@@ -381,7 +392,7 @@ saying the annotation on the derived property is ignored.
 
 **LSP Method:** `textDocument/documentHighlight`
 **Status:** ✅ Done
-**Works with:** Both adapters
+**Works with:** All three (the compiler matches by name within the document)
 
 **How to trigger:**
 - *IntelliJ:* Click on any identifier — other occurrences highlight automatically
@@ -402,8 +413,8 @@ saying the annotation on the derived property is ignored.
 ### 9. Selection Ranges (Smart Select)
 
 **LSP Method:** `textDocument/selectionRange`
-**Status:** ✅ Done (tree-sitter only)
-**Works with:** Tree-sitter adapter
+**Status:** ✅ Done
+**Works with:** Tree-sitter, and the compiler (it expands out through the parsed tree)
 
 **How to trigger:**
 - *IntelliJ:* Ctrl+W (Expand) / Ctrl+Shift+W (Shrink)
@@ -421,7 +432,7 @@ saying the annotation on the derived property is ignored.
 
 **LSP Method:** `textDocument/foldingRange`
 **Status:** ✅ Done
-**Works with:** Both adapters
+**Works with:** All three (the compiler folds blocks and declarations that span more than a line)
 
 **How to trigger:**
 - *IntelliJ:* Click the fold/unfold arrows in the editor gutter (left margin); Ctrl+Shift+Minus (fold all) / Ctrl+Shift+Plus (unfold all)
