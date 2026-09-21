@@ -1119,7 +1119,7 @@ public class ArrayAccessExpression
             Constant constLit = exprLit.getLiteralConstant();
             try {
                 return (IntConstant) constLit.convertTo(pool().typeInt64());
-            } catch (ArithmeticException ignore) {}
+            } catch (ArithmeticException _) {}
         }
 
         return null;

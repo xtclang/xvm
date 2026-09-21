@@ -139,7 +139,7 @@ public class CompilerDiagnosticsTest {
     private static void parse(Source source, ErrorListener errs) {
         try {
             new Parser(source, errs).parseSource();
-        } catch (CompilerException ignore) {
+        } catch (CompilerException _) {
             // an unrecoverable parse abandons its progress; the diagnostics are the point here
         }
     }

@@ -32,7 +32,7 @@ public class SetTest {
                 cSteps = Math.max(1, Integer.parseInt(args[0]));
                 try {
                     cIters = Math.max(1, Integer.parseInt(args[1]));
-                } catch (final Exception ignore) {}
+                } catch (final Exception _) {}
             } catch (final Exception e) {
                 sFile = args[0];
             }

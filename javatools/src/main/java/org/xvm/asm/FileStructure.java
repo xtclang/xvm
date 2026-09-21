@@ -159,7 +159,7 @@ public class FileStructure
             if (fAutoClose) {
                 try {
                     in.close();
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
         }
     }
