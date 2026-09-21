@@ -4,8 +4,13 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
+import org.xvm.compiler.ast.AstNode
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.CompletionItem
+import org.xvm.lsp.adapter.DocumentHighlight
+import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -97,11 +102,18 @@ class XdkAdapter : AbstractAdapter() {
         cached[uri]?.let { CompilationResult.withDiagnostics(uri, it.diagnostics, it.symbols) }
 
     /**
-     * What one compilation produced: the problems, and the shape of what was written.
+     * What one compilation produced: the problems, the shape of what was written, and the tree
+     * itself.
+     *
+     * The tree is kept because every question about a position needs it, and re-parsing to answer
+     * one would mean a compilation per keystroke of hovering. It is the largest thing the adapter
+     * holds - one validated AST per open document - so it is worth watching `heap` in the
+     * footprint line if a lot of documents are open at once.
      */
     private data class Analysis(
         val diagnostics: List<Diagnostic> = emptyList(),
         val symbols: List<SymbolInfo> = emptyList(),
+        val ast: AstNode? = null,
     )
 
     override fun close() {
@@ -189,7 +201,7 @@ class XdkAdapter : AbstractAdapter() {
             // state, so it is worth telling apart from a slow one
             logger.info("compile: first compilation in this server took {} (cold)", lastCompile)
         }
-        return Analysis(heard.errors.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed))
+        return Analysis(heard.errors.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed), parsed)
     }
 
     /**
@@ -249,7 +261,7 @@ class XdkAdapter : AbstractAdapter() {
             XtcSeverity.NONE -> Diagnostic.Severity.HINT
         }
 
-    // ----- not implemented here: these need the symbol table, not the diagnostics ----------------
+    // ----- what the tree can answer --------------------------------------------------------------
 
     override fun findSymbolAt(
         uri: String,
@@ -257,25 +269,124 @@ class XdkAdapter : AbstractAdapter() {
         column: Int,
     ): SymbolInfo? = XdkSymbols.at(cached[uri]?.symbols ?: emptyList(), line, column)
 
-    override fun getCompletions(
+    /**
+     * The declaration the cursor is in, and - where the compiler validated the expression under
+     * it - what that expression's type turned out to be. The type is the half no grammar can
+     * supply, and the half an author actually wants from a hover.
+     */
+    override fun getHoverInfo(
         uri: String,
         line: Int,
         column: Int,
-        triggerCharacter: String?,
-    ): List<CompletionItem> = emptyList()
+    ): String? {
+        val declared = super.getHoverInfo(uri, line, column)
+        val type = XdkAst.typeAt(cached[uri]?.ast, line, column)
+        return when {
+            type == null -> declared
+            declared == null -> "```xtc\n$type\n```"
+            else -> "$declared\n\n```xtc\n$type\n```"
+        }
+    }
 
+    /**
+     * Where else the name under the cursor is written in this document.
+     *
+     * By name, not by meaning: two unrelated locals called `count` highlight together. Telling
+     * them apart is a resolution question, and the answer to it is not reachable from here -
+     * see the note on [findDefinition].
+     */
+    override fun getDocumentHighlights(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<DocumentHighlight> {
+        val ast = cached[uri]?.ast ?: return emptyList()
+        val under = XdkAst.nameAt(ast, line, column) ?: return emptyList()
+        return XdkAst
+            .namesIn(ast)
+            .filter { it.name == under.name }
+            .map { DocumentHighlight(XdkAst.rangeOf(it), DocumentHighlight.HighlightKind.TEXT) }
+    }
+
+    /**
+     * Blocks and declarations that span more than one line. An editor offers a fold per region,
+     * so a region per expression would be noise rather than help.
+     */
+    override fun getFoldingRanges(uri: String): List<FoldingRange> =
+        XdkAst.foldingRegions(cached[uri]?.ast).map { (start, end) -> FoldingRange(start, end) }
+
+    /**
+     * Expanding a selection walks out through the tree, which is exactly what the parent chain of
+     * the innermost node containing the cursor is.
+     */
+    override fun getSelectionRanges(
+        uri: String,
+        positions: List<Position>,
+    ): List<SelectionRange> {
+        val ast = cached[uri]?.ast ?: return emptyList()
+        return positions.mapNotNull { position ->
+            XdkAst
+                .chainAt(ast, position.line, position.column)
+                .fold(null as SelectionRange?) { parent, node ->
+                    SelectionRange(XdkAst.rangeOf(node), parent)
+                }
+        }
+    }
+
+    /**
+     * Across every document this server has compiled - which is every document that has been
+     * opened, not the whole project. A workspace-wide answer would mean compiling files nobody
+     * has looked at.
+     */
+    override fun findWorkspaceSymbols(query: String): List<SymbolInfo> =
+        cached.values
+            .flatMap { flatten(it.symbols) }
+            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+
+    private fun flatten(symbols: List<SymbolInfo>): List<SymbolInfo> = symbols.flatMap { listOf(it) + flatten(it.children) }
+
+    // ----- what the name resolved to -------------------------------------------------------------
+
+    /**
+     * Within this document. A name that refers to something declared elsewhere - anything from
+     * the core library - resolves perfectly well and still has nowhere here to point at, so the
+     * answer is null rather than a guess.
+     */
     override fun findDefinition(
         uri: String,
         line: Int,
         column: Int,
-    ): Location? = null
+    ): Location? =
+        XdkResolution
+            .declarationOf(cached[uri]?.ast, line, column)
+            ?.let { locationOf(uri, it) }
 
     override fun findReferences(
         uri: String,
         line: Int,
         column: Int,
         includeDeclaration: Boolean,
-    ): List<Location> = emptyList()
+    ): List<Location> =
+        XdkResolution
+            .referencesTo(cached[uri]?.ast, line, column, includeDeclaration)
+            .map { locationOf(uri, it) }
+
+    private fun locationOf(
+        uri: String,
+        node: AstNode,
+    ): Location =
+        XdkAst.rangeOf(node).let {
+            Location(uri, it.start.line, it.start.column, it.end.line, it.end.column)
+        }
+
+    // ----- not implemented here ------------------------------------------------------------------
+
+    override fun getCompletions(
+        uri: String,
+        line: Int,
+        column: Int,
+        triggerCharacter: String?,
+    ): List<CompletionItem> = emptyList()
 
     /** How long the last compilation took, for the line that reports it. Worker thread only. */
     @Volatile private var lastCompile: Duration = Duration.ZERO
