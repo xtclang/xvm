@@ -93,8 +93,7 @@ public class ErrorListenerCancelTest {
     public void testCancellingDoesNotChangeWhereABranchReports() {
         ErrorList     errs   = new ErrorList(UNLIMITED);
         List<String>  seen   = new ArrayList<>();
-        ErrorListener quits  = cancellable(ErrorListener.collecting(err -> seen.add(err.getCode())),
-                                           () -> false);
+        ErrorListener quits  = cancellable(ErrorListener.collecting(err -> seen.add(err.getCode())), () -> false);
         ErrorListener branch = quits.branch(null);
 
         branch.error(CODE, in(new Source(SOURCE), 0, 1), "a");

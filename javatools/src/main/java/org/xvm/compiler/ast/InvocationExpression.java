@@ -1844,7 +1844,8 @@ public class InvocationExpression
                     // try to use the type info
                     TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
-                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any, true, atypeReturn, silent(PROBE));
+                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any, true, atypeReturn,
+                            silent(PROBE));
                     if (arg instanceof MethodConstant idMethod) {
                         MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                         if (method == null) {
