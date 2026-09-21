@@ -209,7 +209,7 @@ public class FileStructure
 
         m_kind    = that.m_kind;
         m_fLinked = that.m_fLinked;
-        m_errs    = that.m_errs;
+        f_errs.adoptFrom(that.f_errs);
         resetModified();
     }
 
@@ -1458,7 +1458,7 @@ public class FileStructure
 
     @Override
     public ErrorListener getErrorListener() {
-        ErrorListener errs = m_errs;
+        ErrorListener errs = f_errs.get();
         if (errs == null) {
             // getCurrentPool() is an AMBIENT thread-local: it is null on any thread that has not had
             // a pool pushed onto it, which is every thread driving the compiler or runtime from
@@ -1491,26 +1491,8 @@ public class FileStructure
      *
      * @return the scope, which restores the previous setting when closed
      */
-    public Reporting reportingTo(ErrorListener errs) {
-        return new Reporting(errs);
-    }
-
-    /**
-     * The scope opened by {@link #reportingTo}.
-     */
-    public class Reporting
-            implements AutoCloseable {
-        Reporting(ErrorListener errs) {
-            f_errsPrev = m_errs;
-            m_errs     = requireNonNull(errs, "errs");
-        }
-
-        @Override
-        public void close() {
-            m_errs = f_errsPrev;
-        }
-
-        private final ErrorListener f_errsPrev;
+    public Reporting.Scope reportingTo(ErrorListener errs) {
+        return f_errs.to(errs);
     }
 
     // ----- Object methods ------------------------------------------------------------------------
@@ -1692,5 +1674,5 @@ public class FileStructure
      * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
      * the current thread should be used, or failing that, the runtime ErrorListener should be used.
      */
-    private transient ErrorListener m_errs;
+    private final transient Reporting f_errs = new Reporting(null);
 }

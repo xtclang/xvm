@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.Reporting;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token.Id;
@@ -57,7 +58,7 @@ public class Parser {
      * @param atoken  the tokens to parse
      */
     protected Parser(Parser parent, Token[] atoken) {
-        this(parent.m_source, parent.f_errs, parent.m_lexer.createLexer(atoken));
+        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken));
     }
 
     private Parser(Source source, ErrorListener errs, Lexer lexer) {
@@ -67,10 +68,9 @@ public class Parser {
 
         requireNonNull(errs, "errs");
 
-        m_source        = source;
-        f_errs        = requireNonNull(errs, "errs");
-        m_errsCurrent = f_errs;
-        m_lexer         = lexer;
+        m_source = source;
+        f_errs   = new Reporting(requireNonNull(errs, "errs"));
+        m_lexer  = lexer;
 
         // prime the token stream
         next();
@@ -149,7 +149,7 @@ public class Parser {
      *         one whose name does not parse
      */
     public String parseModuleNameIgnoreEverythingElse() {
-        try (Reporting quiet = reportingTo(silent(DISCARD))) {
+        try (Reporting.Scope quiet = reportingTo(silent(DISCARD))) {
             while (!eof()) {
                 if (match(Id.MODULE) == null) {
                     // not a module declaration; skip it, and give up at the first body we meet,
@@ -180,7 +180,7 @@ public class Parser {
     private String parseModuleName() {
         ErrorList   errs = new ErrorList(ErrorList.FIRST_ERROR);
         List<Token> tokens;
-        try (Reporting reporting = reportingTo(errs)) {
+        try (Reporting.Scope reporting = reportingTo(errs)) {
             tokens = parseQualifiedName();
         }
 
@@ -729,7 +729,7 @@ public class Parser {
             // evaluate annotations
             if (annotations != null) {
                 for (AnnotationExpression annotation : annotations) {
-                    annotation.log(m_errsCurrent, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
+                    annotation.log(f_errs.get(), Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
                 }
             }
 
@@ -747,7 +747,7 @@ public class Parser {
                         }
                         // fall through
                     default:
-                        modifier.log(m_errsCurrent, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED,
+                        modifier.log(f_errs.get(), m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED,
                                 modifier.getValueText());
                         break;
                     }
@@ -858,7 +858,7 @@ public class Parser {
                             if (expr.isLValueSyntax()) {
                                 listLVals.add(expr);
                             } else {
-                                expr.log(m_errsCurrent, Severity.ERROR, NOT_ASSIGNABLE);
+                                expr.log(f_errs.get(), Severity.ERROR, NOT_ASSIGNABLE);
                             }
                         } else {
                             listLVals.add(new VariableDeclarationStatement(
@@ -2455,7 +2455,7 @@ public class Parser {
      */
     Expression parseLinkerCondition() {
         Expression expr = parseExpression();
-        expr.validateCondition(m_errsCurrent);
+        expr.validateCondition(f_errs.get());
         return expr;
     }
 
@@ -5594,43 +5594,20 @@ public class Parser {
      * @param aoParam
      */
     protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam) {
-        m_errsCurrent.log(severity, sCode, in(m_source, lPosStart, lPosEnd), aoParam);
-        if (m_errsCurrent.isAbortDesired()) {
+        f_errs.get().log(severity, sCode, in(m_source, lPosStart, lPosEnd), aoParam);
+        if (f_errs.get().isAbortDesired()) {
             m_fAvoidRecovery = true;
-            throw new CompilerException("error list is full: " + m_errsCurrent);
+            throw new CompilerException("error list is full: " + f_errs.get());
         }
     }
 
     /**
      * Report to the given listener until the returned scope is closed.
      *
-     * The parser reports through a field, so a stretch of parsing that wants its diagnostics to
-     * go somewhere else has to say so on the field. Making that a scope keeps the change to the
-     * stretch that asked for it, instead of leaving the parser's listener to be restored by hand
-     * and, when a path forgets, not at all.
-     *
      * @param errs  the listener to report to for the duration of the scope
      */
-    private Reporting reportingTo(ErrorListener errs) {
-        return new Reporting(errs);
-    }
-
-    /**
-     * The scope opened by {@link #reportingTo}.
-     */
-    private class Reporting
-            implements AutoCloseable {
-        Reporting(ErrorListener errs) {
-            f_errsPrev    = m_errsCurrent;
-            m_errsCurrent = requireNonNull(errs, "errs");
-        }
-
-        @Override
-        public void close() {
-            m_errsCurrent = f_errsPrev;
-        }
-
-        private final ErrorListener f_errsPrev;
+    private Reporting.Scope reportingTo(ErrorListener errs) {
+        return f_errs.to(errs);
     }
 
     /**
@@ -5653,10 +5630,11 @@ public class Parser {
     public class Attempt
             implements AutoCloseable, ErrorListener {
         public Attempt() {
-            f_errsPrev    = m_errsCurrent;
-            f_branch      = m_errsCurrent.branch(null);
-            f_mark        = mark();
-            m_errsCurrent = this;
+            // read the destination before moving it: the branch buffers into whatever this parser
+            // was reporting to when the attempt began
+            f_branch = f_errs.get().branch(null);
+            f_scope  = f_errs.to(this);
+            f_mark   = mark();
             ++m_cSpeculating;
         }
 
@@ -5688,8 +5666,8 @@ public class Parser {
 
         @Override
         public void close() {
-            assert m_errsCurrent == this;
-            m_errsCurrent = f_errsPrev;
+            assert f_errs.get() == this;
+            f_scope.close();
             --m_cSpeculating;
 
             if (m_fKeep) {
@@ -5701,10 +5679,10 @@ public class Parser {
             }
         }
 
-        private final ErrorListener f_errsPrev;
-        private final ErrorListener f_branch;
-        private final Mark          f_mark;
-        private boolean             m_fKeep;
+        private final ErrorListener   f_branch;
+        private final Reporting.Scope f_scope;
+        private final Mark            f_mark;
+        private boolean               m_fKeep;
     }
 
     /**
@@ -5865,16 +5843,10 @@ public class Parser {
      * The ErrorListener to report errors to.
      */
     /**
-     * The listener this parser was handed. Never reassigned: a stretch of parsing that reports
-     * somewhere else moves {@link #m_errsCurrent}, so the caller's own listener is always here.
+     * Where this parser's diagnostics go: the listener it was handed, or - for as long as a
+     * scope or an {@link Attempt} is open - somewhere else.
      */
-    private final ErrorListener f_errs;
-
-    /**
-     * Where {@link #log} sends diagnostics right now - the caller's listener, or the branch of an
-     * {@link Attempt} that may yet be discarded.
-     */
-    private ErrorListener m_errsCurrent;
+    private final Reporting f_errs;
 
     /**
      * The lexical analyzer.
