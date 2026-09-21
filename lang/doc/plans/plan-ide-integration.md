@@ -77,9 +77,17 @@ What it does not yet do is everything that needs *resolution* rather than syntax
 go-to-definition, find-references, rename, signature help, semantic tokens. The reason is
 specific and worth knowing before anyone picks this up: symbols come from the AST, because the
 compiled structures carry no source positions and an editor cannot use a symbol it cannot point
-at. But an AST node knows what was *written*, not what it *resolved to*. The side that knows the
-answer has no positions; the side with positions does not know the answer. Bridging those two is
-the next piece of work, and it is larger than the outline was.
+at.
+
+What an AST node knows about what it *resolved to* is the better news than it first appears. A
+`NameExpression` records its resolved target in `m_arg` while it is being validated, and still
+holds it when compilation returns - as a `private transient` field with no accessor. So the
+answer and the position are on the same object; what is missing is a way to ask. Within one
+document that makes go-to-definition and hover-with-types a small compiler API plus a walk.
+Across documents it is genuinely larger: the target is an `IdentityConstant`, and mapping one
+back to the place it was declared needs an index built from other compiled documents.
+
+`docs/errs.md`, "Next: what the language server still needs", has the ordered list.
 
 Until then the two adapters are complementary rather than competing: tree-sitter is error-tolerant,
 incremental and fast, and is the better source for everything syntactic. The compiler is the only
