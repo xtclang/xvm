@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,14 +40,19 @@ public class Source
     }
 
     /**
-     * Construct a Source from Ecstasy source code that is associated with a name.
+     * Construct a Source from Ecstasy source code that is not in a file, naming it anyway.
+     *
+     * The name a diagnostic reports is part of its identity, so a host holding several documents
+     * that are not on disk - an editor's unsaved buffers - needs to be able to tell them apart.
+     * Two unnamed documents with a problem at the same offset produce the same identity, and a
+     * listener that deduplicates then discards the second one.
      *
      * @param sScript  the Ecstasy source code, as a String
      * @param sName    the name to report this source under, e.g. the document's URI
      */
     public Source(String sScript, String sName) {
         this(sScript.toCharArray());
-        m_sFile = requireNonNull(sName, "Name is required");
+        m_sFile = requireNonNull(sName, "sName");
     }
 
     /**
