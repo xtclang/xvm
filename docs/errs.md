@@ -173,7 +173,19 @@ Compilation result = embedding.compileModule(new Source(text, uri), null, errs);
 result.succeeded();   // a module came out
 result.file();        // what was built, either way
 result.pool();        // what it interned into
+result.parsed();      // and the AST, which is the only thing that knows where anything is
 ```
+
+**Where symbols come from, which is not where you would look first.** A `ClassStructure` knows
+its name, its kind, its members and their types - it is the resolved side of the compiler, and it
+is the side with all the answers - and it knows nothing whatever about the text it was written in.
+It carries no source position. An editor cannot use a symbol it cannot point at, so the resolved
+side is the wrong source for an outline and the AST is the right one.
+
+That is the whole reason `Compilation` carries the parsed source. It costs precision: an AST node
+knows what was *written*, not what it *resolved to*, so names are as they appear and nothing is
+qualified. That is enough for `documentSymbol` and for finding what the cursor is inside. It is
+not enough for completion or go-to-definition, which need to know what a name refers to.
 
 `ensureRuntimePool()` is not that pool. It boots an interpreter - a connector builds a
 NativeContainer, which loads a native template for every core module - so it needs the whole
@@ -834,6 +846,8 @@ shape the prior-art branch reached, measured against this tree.
 | the compile-time park expressed as a scope with a stated lifetime | done |
 | an end-to-end test of what an editor is told | done - `LspRoundTripTest` |
 | the LSP server's `XdkAdapter` wired to the compiler | done - it compiles through the embedding API and publishes diagnostics |
+| an outline from the compiler: `documentSymbol`, and the symbol under the cursor | done - from the AST, since the structures carry no positions |
+| completion, go-to-definition, find-references | not started; they need resolution, not syntax |
 | the ambient listener lookup | deleted rather than propagated through |
 | cancellation of a stale compilation | not started; `isAbortDesired()` is the hook and nothing drives it |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
@@ -1182,6 +1196,10 @@ the code. The prior-art branch found real bugs in this category, not just untidi
 - The language server has no cancellation. `isAbortDesired()` is the hook the compiler already
   has, and nothing drives it. Until something does, a stale keystroke's compilation runs to
   completion - which is why the adapter queues rather than parallelises.
-- Symbols, completion and navigation in the XDK adapter are unimplemented. They need the
-  compiler's symbol table rather than its diagnostics, which is a different piece of work.
+- Completion, go-to-definition and find-references in the XDK adapter are unimplemented. The
+  outline is done - symbols with real positions, walked out of the AST, and the innermost
+  declaration containing a position - but these three need *resolution* rather than syntax: what
+  a name refers to, not what was typed. The AST cannot answer that, and the resolved structures
+  that can have no positions to answer it with. Something has to bridge the two, and that is a
+  larger piece of work than the outline was.
 
