@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -1473,16 +1475,42 @@ public class FileStructure
 
     /**
      * Direct diagnostics raised against this file, where no listener was passed, to the specified
-     * one; null restores the default.
+     * one, until the returned scope is closed.
      *
-     * This is the file's own setting and not a mutation of it. It is deliberately not inherited
-     * from XvmStructure: a structure used to be able to reach through its parent and redirect the
-     * diagnostics of a whole containment tree it did not own.
+     * A TypeConstant is an interned value shared by everything, so when it is asked to build a
+     * TypeInfo without being given a listener it has no caller to ask, and walks up to its file
+     * instead. That makes this the answer to "who hears a diagnostic nobody was given a listener
+     * for", which is a property of the work in progress rather than of the file - so it is a
+     * scope, closed by whoever opened it, rather than a mode set on the file and cleared later by
+     * whoever remembers.
      *
-     * @param errs  the error listener, or null to fall back to RUNTIME
+     * It is deliberately not inherited from XvmStructure: a structure used to be able to reach
+     * through its parent and redirect the diagnostics of a whole containment tree it did not own.
+     *
+     * @param errs  the listener to direct such diagnostics to
+     *
+     * @return the scope, which restores the previous setting when closed
      */
-    public void setErrorListener(ErrorListener errs) {
-        m_errs = errs;
+    public Reporting reportingTo(ErrorListener errs) {
+        return new Reporting(errs);
+    }
+
+    /**
+     * The scope opened by {@link #reportingTo}.
+     */
+    public class Reporting
+            implements AutoCloseable {
+        Reporting(ErrorListener errs) {
+            f_errsPrev = m_errs;
+            m_errs     = requireNonNull(errs, "errs");
+        }
+
+        @Override
+        public void close() {
+            m_errs = f_errsPrev;
+        }
+
+        private final ErrorListener f_errsPrev;
     }
 
     // ----- Object methods ------------------------------------------------------------------------
