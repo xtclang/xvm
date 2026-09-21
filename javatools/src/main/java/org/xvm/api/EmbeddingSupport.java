@@ -142,9 +142,7 @@ public class EmbeddingSupport {
     public Footprint footprint() {
         ConstantPool pool    = configured ? ensureRuntimePool() : null;
         Runtime      runtime = Runtime.getRuntime();
-        return new Footprint(
-                cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(),
-                pool == null ? 0 : pool.size(),
+        return new Footprint(cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(), pool == null ? 0 : pool.size(),
                 pool == null ? 0 : pool.getInvalidationCount(),
                 runtime.totalMemory() - runtime.freeMemory());
     }
@@ -164,8 +162,7 @@ public class EmbeddingSupport {
                 // every compile failed in prelinkSystemLibraries with "Unable to load module:
                 // mack.xtclang.org", reported as an internal error with no location
                 File             dirHome = new File(home);
-                ModuleRepository repo    = repoOver(new File(dirHome, "lib"),
-                                                    new File(dirHome, "javatools"));
+                ModuleRepository repo    = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
                 if (repo != null) {
                     configure(repo, null);
                 }
@@ -303,8 +300,7 @@ public class EmbeddingSupport {
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
-    public ModuleStructure compile(Source source, ModuleRepository input,
-                                   @NotNull ErrorListener errs) {
+    public ModuleStructure compile(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         return compileModule(source, input, errs).module();
     }
 
@@ -345,8 +341,7 @@ public class EmbeddingSupport {
      *
      * @return the outcome; never null, though its parts may be
      */
-    public Compilation compileModule(Source source, ModuleRepository input,
-                                     @NotNull ErrorListener errs) {
+    public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
         EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
@@ -380,8 +375,7 @@ public class EmbeddingSupport {
      *
      * @return true if the compilation succeeded and the result was placed into the output
      */
-    public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           @NotNull ErrorListener errs) {
+    public boolean compile(File file, ModuleRepository input, ModuleRepository output, @NotNull ErrorListener errs) {
         requireNonNull(errs, "errs");
         ModuleStructure module;
         try {
@@ -427,8 +421,7 @@ public class EmbeddingSupport {
             return file;
         }
 
-        protected EmbeddingCompiler(Source source, ModuleRepository input,
-                                    ModuleRepository core, ErrorListener errs) {
+        protected EmbeddingCompiler(Source source, ModuleRepository input, ModuleRepository core, ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.source   = source;

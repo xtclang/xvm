@@ -597,7 +597,7 @@ public class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in( getSource(), paramNames.get(0).getStartPosition(),
+                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in(getSource(), paramNames.get(0).getStartPosition(),
                         paramNames.get(cParams-1).getEndPosition()));
                 fValid = false;
             }

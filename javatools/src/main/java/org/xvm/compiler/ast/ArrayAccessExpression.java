@@ -241,7 +241,8 @@ public class ArrayAccessExpression
                 // array[index..index] or array[index..index)
                 // REVIEW what if it is a Range<IntLiteral> or Range<UInt> ???
                 if (exprTarget.testFit(ctx, typeRequired, fExhaustive, errs) == TypeFit.Fit
-                        && exprIndex.testFit(ctx, pool.ensureRangeType(pool.typeInt64()), fExhaustive, silent(PROBE)).isFit()) {
+                        && exprIndex.testFit(ctx, pool.ensureRangeType(pool.typeInt64()), fExhaustive,
+                                silent(PROBE)).isFit()) {
                     return TypeFit.Fit;
                 }
             } else { // not a List, but might still be UniformIndexed and/or Sliceable
@@ -1183,7 +1184,8 @@ public class ArrayAccessExpression
         for (MethodInfo info : setInfos) {
             typeIndex = info.getSignature().getRawReturns()[0];
             if (exprArray.testFit(ctx,
-                    pool.ensureParameterizedTypeConstant(pool.typeIndexed(), typeIndex), false, silent(PROBE)).isFit()) {
+                    pool.ensureParameterizedTypeConstant(pool.typeIndexed(), typeIndex), false,
+                            silent(PROBE)).isFit()) {
                 return typeIndex;
             }
         }
