@@ -120,10 +120,7 @@ public abstract class BaseBinaryFP
             double d = ((FloatHandle) hTarget).getValue();
             long   l = ((JavaLong) hArg).getValue();
 
-            // scale by the radix raised to n -- for a binary FP type that is 2^n, which is
-            // exactly what scalb does. This used to be Math.pow(d, l), raising the value to the
-            // power of n instead of scaling it by one, so 2.0.scaleByPow(3) gave 8.0 (2^3) rather
-            // than 16.0 (2 * 2^3).
+            // scale by 2^n, the radix raised to the requested power
             return frame.assignValue(iReturn,
                     makeHandle(Math.scalb(d, (int) Math.clamp(l, Integer.MIN_VALUE, Integer.MAX_VALUE))));
         }

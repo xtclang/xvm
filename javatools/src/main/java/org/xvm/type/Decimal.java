@@ -4,11 +4,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import java.math.BigDecimal;
-
-import java.util.function.DoubleUnaryOperator;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
+
+import java.util.function.DoubleUnaryOperator;
 
 /**
  * A representation of an IEEE-754-2008 decimal.
@@ -313,9 +313,8 @@ public abstract class Decimal {
     /**
      * Apply a double-precision function to this value.
      *
-     * <p>The double is a working representation only: a decimal that does not fit is approximated,
-     * which is the same accuracy every caller here already had. The non-finite result differs per
-     * operation, so each supplies its own.</p>
+     * <p>Values are approximated using double precision. Each operation supplies the result to
+     * return for a non-finite input.</p>
      *
      * @param op            the function to apply to this value as a double
      * @param decNonFinite  what to return when this value is not finite
@@ -841,16 +840,8 @@ public abstract class Decimal {
     }
 
     /**
-     * The log2(10) value.
-     */
-    /**
-     * The natural logarithm of two, for computing a base-2 logarithm as log(x) / log(2). Shared
-     * with the binary FP templates, which compute log2 the same way; it lives here because
-     * org.xvm.type is the lower layer of the two.
-     *
-     * <p>NOTE: log2 used to be computed as log10(x) * (1/log10(2)). That identity is exact in real
-     * arithmetic but not in floating point: it returned a non-integer for 13 of the 41 exact
-     * powers of two between 2^-20 and 2^20, so log2(8.0) came back as 2.9999999999999996.</p>
+     * The natural logarithm of two, shared with the binary FP templates to compute log2(x)
+     * as log(x) / log(2).
      */
     public static final double LOG_2 = Math.log(2);
 }

@@ -140,10 +140,6 @@ public abstract class BaseFP
     }
 
     /**
-     * The log2(10) value.
-     */
-
-    /**
      * The number of bits for this Float type.
      */
     protected final int f_cBits;

@@ -138,8 +138,7 @@ public abstract class BaseDecFP
             Decimal dec  = ((DecimalHandle) hTarget).getValue();
             long    lPow = ((JavaLong) hArg).getValue();
 
-            // scale by the radix raised to n -- 10^n for a decimal FP type -- rather than
-            // raising the value to the power of n, which is what dec.pow(n) did
+            // scale by 10^n, the radix raised to the requested power
             return frame.assignValue(iReturn, makeHandle(
                     dec.scaleByPow((int) Math.clamp(lPow, Integer.MIN_VALUE, Integer.MAX_VALUE))));
         }
