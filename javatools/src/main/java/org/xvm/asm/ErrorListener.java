@@ -441,9 +441,16 @@ public interface ErrorListener {
     }
 
     /**
-     * Used for debugging only.
+     * Whether this listener discards what it is told, for one of the reasons {@link Silence}
+     * names. {@link #silenceReason} says which.
      *
-     * @return true iff this listener sits on top of the BlackHoleListener
+     * Not debugging-only, despite what this said for a long time: work that exists solely to
+     * produce a diagnostic is worth skipping when nobody is listening, and
+     * {@code MethodDeclarationStatement} and {@code PropertyDeclarationStatement} both ask before
+     * doing it. That is the one thing a caller may branch on - never on <em>which</em> silence it
+     * is, which is why the three behave identically.
+     *
+     * @return true iff this listener discards what it is told
      */
     default boolean isSilent() {
         return false;
