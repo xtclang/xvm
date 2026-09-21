@@ -1021,12 +1021,29 @@ reporting". They divide:
 The 49 cluster - `RelOpExpression` 7, `TypeConstant` 6, `ArrayAccessExpression` 4 - so a single
 file is a contained change. This is no longer a transitive closure; it is a backlog.
 
-### Calling ensureTypeInfo on a failed compilation's types
+### A TypeInfo that could not describe itself *(fixed)*
 
-A type reached from a `Compilation` that failed answers `ensureTypeInfo` once, and throws on a
-later call: `MethodBody.pool()` is null by then. Found while trying to assert that a memoized
-TypeInfo replays rather than rebuilds, which is why `TypeInfoDiagnosticsTest` asserts the weaker
-property. Worth understanding before anyone relies on introspecting a failed compilation.
+Recorded here first as "`ensureTypeInfo` throws on a later call", which was wrong - a misreading
+of a stack trace. `ensureTypeInfo` is fine; what threw was `TypeInfo.toString()`, called by AssertJ
+while formatting an assertion failure. The failure it was formatting got lost behind the
+NullPointerException it raised.
+
+The cause was `MethodBody.pool()`, which was
+`return ConstantPool.getCurrentPool()` - the ambient thread-local again, null on any thread that
+has never had a pool pushed. It is reached from `isOp()` and from `toString()`, so printing a
+MethodBody threw out of the code meant to describe it, and an assertion failure mentioning one
+could not report itself. Exactly the fault `FileStructure.getErrorListener()` had, from the same
+thread-local. Guarded now, falling back to the pool the body's own identity belongs to, with
+`MethodBodyAmbientPoolTest` pinning it on a thread that has no ambient pool.
+
+**Two other things that probe turned up, neither fixed:**
+
+- `ensureTypeInfo` on such a type *rebuilds* rather than replaying - successive calls return
+  different instances, so `isUpToDate` is answering false. The memo is therefore not being used on
+  this path, which is why `TypeInfoDiagnosticsTest` asserts only that a later caller is told, not
+  that it was told from the recording.
+- That is two ambient-pool NPEs found in one branch, in unrelated code, by accident. There are
+  **19** call sites left. It is worth assuming more of them are wrong.
 
 ### The parked diagnostics nobody has read
 
