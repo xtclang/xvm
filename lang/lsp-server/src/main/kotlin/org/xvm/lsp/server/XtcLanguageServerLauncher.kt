@@ -25,6 +25,7 @@ import java.util.Properties
  * Adapter Selection:
  * - The adapter is selected at build time via: ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=treesitter
  * - Default is 'treesitter' (syntax-aware, requires native library bundled in JAR)
+ * - Use 'compiler' for real diagnostics from the XTC compiler (needs an XDK on XDK_HOME)
  * - Use 'mock' for regex-based features (no native dependencies)
  *
  * Important: This LSP server uses stdio for communication. All logging goes to stderr
@@ -73,10 +74,7 @@ private enum class AdapterBackend(
 private fun createAdapter(adapterType: String): Pair<Adapter, AdapterBackend> =
     when (adapterType.lowercase()) {
         "compiler", "xtc", "full" -> {
-            // Stub adapter - all methods log warnings, no actual compiler integration yet
-            // TODO: Replace with real compiler adapter when parallel compiler integration is ready
-            // See PLAN_LSP_PARALLEL_LEXER.md for the integration roadmap
-            logger.info("using compiler stub adapter - all LSP calls will be logged but return empty results")
+            logger.info("using the XTC compiler for diagnostics and document symbols")
             XdkAdapter() to AdapterBackend.COMPILER
         }
 
@@ -129,8 +127,9 @@ fun main(
         }
 
         AdapterBackend.COMPILER -> {
-            logger.warn("XTC Compiler adapter is a STUB - all methods log but return empty results")
-            logger.info("when implemented, will provide: full semantic analysis, type inference, cross-file navigation")
+            logger.info("the compiler provides: syntax and semantic diagnostics, document symbols")
+            logger.info("not yet from the compiler: completion, go-to-definition, references, formatting")
+            logger.info("an XDK is required; without one, files open but report XDK-UNAVAILABLE")
         }
 
         AdapterBackend.MOCK -> {
