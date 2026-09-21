@@ -65,13 +65,24 @@ only the methods they actually implement -- all others inherit traceable logging
 |---------|---------|----------------------|--------|
 | `MockAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
 | `TreeSitterAdapter` | Tree-sitter grammar | ~85% (syntax + structure + workspace index) | **DEFAULT** - Implemented |
-| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Diagnostics and outline | Implemented; the rest needs resolution |
+| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Diagnostics, outline, hover, definition, references, highlights, folding, selection - one document | Implemented; completion blocked on error-tolerant parsing |
 
 **`XdkAdapter` is no longer a placeholder.** It compiles through the embedding API and reports
 what the compiler actually says - syntax *and* semantics, with the compiler's own codes, messages
 and spans - which is the thing no grammar can do: `COMPILER-38: Name "NoSuchTypeAnywhere" is
 unresolvable` is not a syntax error and tree-sitter cannot find it. It also supplies the outline
 and the symbol under the cursor.
+
+It now also answers the position questions, within one document: hover with the type the compiler
+decided, go-to-definition and find-references by what a name *means* - two properties called `x`
+on different classes are different things - plus highlights, folding and selection expansion.
+Two accessors in the compiler made that possible (`NameExpression.getResolvedTarget`,
+`InvocationExpression.getResolvedMethod`), both exposing what it already computes.
+
+What stops it going further is one property of the compiler rather than a missing feature: there
+is no error-tolerant parse. A document with a trailing `.` produces `PARSER-03` and no AST at
+all, and that is exactly the keystroke at which completion is wanted. That is what a hybrid
+adapter would be for.
 
 What it does not yet do is everything that needs *resolution* rather than syntax - completion,
 go-to-definition, find-references, rename, signature help, semantic tokens. The reason is
@@ -105,16 +116,16 @@ Where it is implemented today it says so; everything else is the plan, not the s
 |---------|------|-------------|----------|
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | Full semantic tokens |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
-| Go-to-definition (same file) | By name | By name | Semantic |
-| Go-to-definition (cross-file) | - | Via workspace index | Full |
-| Find references (same file) | Decl only | By name | Full |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | Types + members |
+| Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
+| Go-to-definition (cross-file) | - | Via workspace index | Needs an identity-to-position index |
+| Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Blocked** - needs an error-tolerant parse |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
-| Hover (signature) | Basic | Basic | Full types |
-| Document highlights | Text match | AST identifiers with READ/WRITE distinction | Semantic |
-| Selection ranges | - | AST walk-up | AST walk-up |
-| Folding ranges | Braces | AST nodes | AST nodes |
+| Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
+| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by name; READ/WRITE not distinguished |
+| Selection ranges | - | AST walk-up | **Done** - AST walk-up |
+| Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Resolved URIs |
 | Signature help | - | Same-file | Cross-file |
 | Rename (same file) | Text | AST | Semantic |
