@@ -41,11 +41,10 @@ import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
-import static org.xvm.util.Handy.readFileChars;
-
-import static org.xvm.util.Severity.ERROR;
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.util.Handy.readFileChars;
+import static org.xvm.util.Severity.ERROR;
 
 /**
  * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
@@ -264,8 +263,7 @@ public class EmbeddingSupport {
             try {
                 output.storeModule(module);
             } catch (IOException e) {
-                errs.error(ERR_INTERNAL, at(module), e,
-                        "Unable to store module " + module.getName());
+                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
                 return false;
             }
         }
@@ -479,8 +477,7 @@ public class EmbeddingSupport {
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                    NOWHERE, moduleName, version);
+            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER, NOWHERE, moduleName, version);
             return null;
         }
 
@@ -500,8 +497,7 @@ public class EmbeddingSupport {
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e,
-                    "Unable to start " + moduleName);
+            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e, "Unable to start " + moduleName);
             return null;
         }
     }

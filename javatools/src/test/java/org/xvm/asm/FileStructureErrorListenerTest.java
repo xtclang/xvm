@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import java.util.Arrays;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -38,7 +40,7 @@ public class FileStructureErrorListenerTest {
      */
     @Test
     public void onlyTheFileItselfCanDirectItsDiagnostics() {
-        assertFalse(java.util.Arrays.stream(XvmStructure.class.getMethods())
+        assertFalse(Arrays.stream(XvmStructure.class.getMethods())
                         .anyMatch(m -> m.getName().equals("setErrorListener")),
                 "XvmStructure must not offer a setter that mutates its parent");
     }

@@ -65,6 +65,8 @@ import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * A block statement specifies a series of statements.
  * <p/>
@@ -341,8 +343,7 @@ public class StatementBlock
                     astRoot = new StmtBlockAST(newStmts, true);
                 }
             } else {
-                errs.error(Compiler.RETURN_REQUIRED, ErrorListener.in(getSource(),
-                        getEndPosition(), getEndPosition()));
+                errs.error(Compiler.RETURN_REQUIRED, in(getSource(), getEndPosition(), getEndPosition()));
             }
         } else {
             // it is possible that there is a dangling label at the end that is unreachable,
@@ -794,7 +795,7 @@ public class StatementBlock
                     : !isFunction();
 
             if (!fHasThis) {
-                errs.error(Compiler.NO_THIS, ErrorListener.in(getSource(), lPos, lPos));
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             }
             return fHasThis;
         }

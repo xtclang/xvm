@@ -73,6 +73,9 @@ import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writePackedLong;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.at;
+
 /**
  * An XVM Structure that represents a method or a function.
  */
@@ -810,7 +813,7 @@ public class MethodStructure
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.PROBE);
+            TypeInfo info = typeResult.ensureTypeInfo(PROBE);
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -826,7 +829,7 @@ public class MethodStructure
                     // the new parameter type is wider or the old return type is narrower; use it instead
                 } else {
                     // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.PROBE);
+                    typeResult = Op.selectCommonType(typePrev, typeResult, PROBE);
                     if (typeResult == null) {
                         // different arguments cause the formal type to resolve into
                         // incompatible types
@@ -1775,8 +1778,7 @@ public class MethodStructure
                 // REVIEW need a better error?
                 AstNode node = collector.getNode();
                 if (node == null) {
-                    collector.getErrorListener().error(
-                        Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, ErrorListener.at(this));
+                    collector.getErrorListener().error( Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, at(this));
                 } else {
                     node.log(collector.getErrorListener(), Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);

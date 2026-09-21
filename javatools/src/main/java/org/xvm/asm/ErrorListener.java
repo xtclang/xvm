@@ -8,6 +8,11 @@ import java.text.MessageFormat;
 
 import java.util.Arrays;
 import java.util.ResourceBundle;
+import java.util.Set;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+import java.util.function.Consumer;
 
 import org.xvm.compiler.Source;
 
@@ -97,8 +102,7 @@ public interface ErrorListener {
      */
     default void log(Severity severity, String sCode, Site site, Object... aoParam) {
         switch (site) {
-            case Site.In in -> log(new ErrorInfo(severity, sCode, aoParam,
-                    in.source(), in.lPosStart(), in.lPosEnd()));
+            case Site.In in -> log(new ErrorInfo(severity, sCode, aoParam, in.source(), in.lPosStart(), in.lPosEnd()));
             case Site.At at -> log(new ErrorInfo(severity, sCode, aoParam, at.xs()));
             case Site.None ignore -> log(new ErrorInfo(severity, sCode, aoParam, null, 0, 0));
         }
@@ -156,7 +160,7 @@ public interface ErrorListener {
      *
      * @return a listener that reports to the consumer and remembers what it reported
      */
-    static ErrorListener collecting(java.util.function.Consumer<ErrorInfo> consumer) {
+    static ErrorListener collecting(Consumer<ErrorInfo> consumer) {
         requireNonNull(consumer, "consumer");
         return new ErrorListener() {
             @Override
@@ -189,7 +193,7 @@ public interface ErrorListener {
                 return "Collecting(worst=" + m_severity + ")";
             }
 
-            private final java.util.Set<String> f_setCodes = java.util.concurrent.ConcurrentHashMap.newKeySet();
+            private final Set<String> f_setCodes = ConcurrentHashMap.newKeySet();
             private volatile Severity           m_severity = Severity.NONE;
         };
     }

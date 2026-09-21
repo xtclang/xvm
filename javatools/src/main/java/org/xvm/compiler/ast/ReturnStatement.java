@@ -38,6 +38,8 @@ import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+
 /**
  * A return statement specifies a return with optional values.
  */
@@ -205,13 +207,13 @@ public class ReturnStatement
             // let's test several possibilities:
             do {
                 // - most likely the expression matches the return types for the method
-                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, ErrorListener.PROBE).isFit()) {
+                if (cRets < 0 || exprOld.testFitMulti(ctx, aRetTypes, false, PROBE).isFit()) {
                     exprNew = exprOld.validateMulti(ctx, aRetTypes, errs);
                     break;
                 }
 
                 // - it could be a conditional false
-                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, ErrorListener.PROBE).isFit()) {
+                if (fConditional && exprOld.testFit(ctx, pool.typeFalse(), false, PROBE).isFit()) {
                     exprNew = exprOld.validate(ctx, pool.typeFalse(), errs);
                     if (exprNew != null && (!exprNew.isConstant() || !exprNew.toConstant().equals(pool.valFalse()))) {
                         // it's not clear how this could happen; it's more like an assertion
@@ -224,7 +226,7 @@ public class ReturnStatement
                 // - it could be a Future return
                 if (cRets == 1) {
                     TypeConstant typeFuture = pool.ensureFuture(aRetTypes[0]);
-                    if (exprOld.testFit(ctx, typeFuture, false, ErrorListener.PROBE).isFit()) {
+                    if (exprOld.testFit(ctx, typeFuture, false, PROBE).isFit()) {
                         exprNew = exprOld.validate(ctx, typeFuture, errs);
                         m_fFutureReturn = true;
                         break;
@@ -233,7 +235,7 @@ public class ReturnStatement
 
                 // - it could be a tuple return
                 TypeConstant typeTuple = pool.ensureTupleType(aRetTypes);
-                if (exprOld.testFit(ctx, typeTuple, false, ErrorListener.PROBE).isFit()) {
+                if (exprOld.testFit(ctx, typeTuple, false, PROBE).isFit()) {
                     exprNew = exprOld.validate(ctx, typeTuple, errs);
                     m_fTupleReturn = true;
                     break;

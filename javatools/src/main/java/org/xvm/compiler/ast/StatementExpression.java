@@ -17,6 +17,9 @@ import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * Statement expression is conceptually similar to a lambda, except that it does not require an
  * actual function, and it behaves as if it is executed at the point in the code where it is
@@ -115,7 +118,7 @@ public class StatementExpression
         ctx = enterStatementContext(ctx);
 
         // the resulting returned types come back in the type collector
-        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.PROBE);
+        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, PROBE);
         ctx = ctx.exit();
 
         // extract the type information (if everything validated ok)
@@ -162,7 +165,7 @@ public class StatementExpression
         blockTempOld.suppressScope();
         ctx = enterStatementContext(ctx);
 
-        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, ErrorListener.PROBE);
+        StatementBlock blockTempNew = (StatementBlock) blockTempOld.validate(ctx, PROBE);
         ctx = ctx.exit();
 
         TypeFit fit = TypeFit.NoFit;
@@ -228,10 +231,8 @@ public class StatementExpression
     @Override
     public void generateAssignments(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
         m_aLVal = aLVal;
-        if (body.completes(ctx, true, code, errs) &&
-                m_atypeRequired != null && m_atypeRequired.length > 0) {
-            errs.error(Compiler.RETURN_REQUIRED, ErrorListener.in(getSource(),
-                    getEndPosition(), getEndPosition()));
+        if (body.completes(ctx, true, code, errs) && m_atypeRequired != null && m_atypeRequired.length > 0) {
+            errs.error(Compiler.RETURN_REQUIRED, in(getSource(), getEndPosition(), getEndPosition()));
         }
         m_astBody = ctx.getHolder().getAst(body);
     }

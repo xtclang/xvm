@@ -44,6 +44,8 @@ import org.xvm.util.ListSet;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+
 /**
  * The CaseManager is shared compilation logic used by both the "switch" statement and  expression.
  */
@@ -454,9 +456,9 @@ public class CaseManager<CookieType> {
                     Expression exprField = listFields.get(i);
                     if (exprField instanceof IgnoredNameExpression) {
                         lIgnore |= 1L << i;
-                    } else if (!exprField.testFit(ctx, m_atypeCond[i], false, ErrorListener.PROBE).isFit()) {
+                    } else if (!exprField.testFit(ctx, m_atypeCond[i], false, PROBE).isFit()) {
                         TypeConstant typeRange = pool.ensureRangeType(m_atypeCond[i]);
-                        if (exprField.testFit(ctx, typeRange, false, ErrorListener.PROBE).isFit()) {
+                        if (exprField.testFit(ctx, typeRange, false, PROBE).isFit()) {
                             lRange |= 1L << i;
 
                             if (atypeAlt == null) {
@@ -469,9 +471,9 @@ public class CaseManager<CookieType> {
             } else if (getConditionCount() == 1) {
                 if (exprCase instanceof IgnoredNameExpression) {
                     lIgnore = 1;
-                } else if (!exprCase.testFit(ctx, m_typeCase, false, ErrorListener.PROBE).isFit()) {
+                } else if (!exprCase.testFit(ctx, m_typeCase, false, PROBE).isFit()) {
                     TypeConstant typeRange = pool.ensureRangeType(m_typeCase);
-                    if (exprCase.testFit(ctx, typeRange, false, ErrorListener.PROBE).isFit()) {
+                    if (exprCase.testFit(ctx, typeRange, false, PROBE).isFit()) {
                         lRange    = 1;
                         typeMatch = typeRange;
                     }

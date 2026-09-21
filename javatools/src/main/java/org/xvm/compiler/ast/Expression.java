@@ -37,6 +37,8 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+
 /**
  * Base class for all Ecstasy expressions.
  * <p/>
@@ -466,8 +468,8 @@ public abstract class Expression
         // real error depended on what that caller happened to pass. validateAsType(), below,
         // already had this right
         TypeExpression exprType = toTypeExpression();
-        return new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.PROBE).fastForward(20)
-                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.PROBE)
+        return new StageMgr(exprType, Compiler.Stage.Validated, PROBE).fastForward(20)
+                ? exprType.testFit(ctx, typeRequired, fExhaustive, PROBE)
                 : TypeFit.NoFit;
     }
 
@@ -479,7 +481,7 @@ public abstract class Expression
     protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
 
-        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.PROBE).fastForward(20)) {
+        if (new StageMgr(exprType, Compiler.Stage.Validated, PROBE).fastForward(20)) {
             ErrorListener errsTemp = errs.branch(this);
             Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
             if (exprNew != null) {
@@ -1939,7 +1941,7 @@ public abstract class Expression
             TypeConstant typeElse = atypeElse[i];
 
             ConstantPool pool       = pool();
-            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.PROBE);
+            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, PROBE);
             atypeCommon[i] = typeCommon == null && typeThen != null && typeElse != null
                     ? typeThen.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeElse)
                     : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)

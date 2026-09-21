@@ -106,6 +106,9 @@ import static org.xvm.compiler.Lexer.isWhitespace;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * A type declaration.
  */
@@ -436,8 +439,7 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.fatal(Compiler.MODULE_BAD_NAME, ErrorListener.in(source,
-                            qualified.get(0).getStartPosition(),
+                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.get(0).getStartPosition(),
                             qualified.get(qualified.size()-1).getEndPosition()), sModule);
                     return;
                 }
@@ -1419,8 +1421,7 @@ public class TypeCompositionStatement
             lStart = listParams.get(0).getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
-        errs.error(Compiler.SIGNATURE_AMBIGUOUS,
-            ErrorListener.in(getSource(), lStart, lEnd), sb.toString());
+        errs.error(Compiler.SIGNATURE_AMBIGUOUS, in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**
@@ -1493,8 +1494,7 @@ public class TypeCompositionStatement
                 lEndPos   = compositions.getFirst().getEndPosition();
             }
 
-            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION,
-                    ErrorListener.in(getSource(), lStartPos, lEndPos),
+            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION, in(getSource(), lStartPos, lEndPos),
                     contribCyclical.getComponent().getIdentityConstant().getValueString(),
                     contribCyclical.getTypeConstant().getValueString());
             return;
@@ -2323,8 +2323,7 @@ public class TypeCompositionStatement
                 if (typeConstraint != null) {
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
-                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            fAllowInto, ErrorListener.PROBE);
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto, PROBE);
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();

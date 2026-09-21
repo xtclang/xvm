@@ -59,6 +59,9 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * "New object" expression.
  */
@@ -183,7 +186,7 @@ public class NewExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, ErrorListener.PROBE);
+        return calculateTargetType(ctx, PROBE);
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
@@ -692,7 +695,7 @@ public class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures; force a temp clone of the inner class to go through its validate() stage so
             // that we can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.PROBE);
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, PROBE);
 
             // the capture information gets collected in a specialized Context that was created with
             // the inner class
@@ -1587,7 +1590,7 @@ public class NewExpression
         @Override
         public boolean requireThis(long lPos, ErrorListener errs) {
             if (getMethod().isStatic()) {
-                errs.error(Compiler.NO_THIS, ErrorListener.in(getSource(), lPos, lPos));
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
                 return false;
             }
 

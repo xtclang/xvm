@@ -61,6 +61,10 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * Common base class for all statements and expressions.
  */
@@ -646,8 +650,8 @@ public abstract class AstNode
     public void log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
         errs.log(severity, sCode, source == null
-                ? ErrorListener.NOWHERE
-                : ErrorListener.in(source, getStartPosition(), getEndPosition()), aoParam);
+                ? NOWHERE
+                : in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -1217,7 +1221,7 @@ public abstract class AstNode
                                 lit.getLiteral().getValueText());
                     } else {
                         if (exprArg instanceof NameExpression exprName) {
-                            typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.PROBE);
+                            typeExpr = exprName.getImplicitType(ctx, typeParam, PROBE);
                         }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
@@ -1325,7 +1329,7 @@ public abstract class AstNode
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
-        Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.PROBE);
+        Argument     arg  = exprName.resolveRawArgument(ctx, false, PROBE);
         if (arg instanceof Register reg) {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(

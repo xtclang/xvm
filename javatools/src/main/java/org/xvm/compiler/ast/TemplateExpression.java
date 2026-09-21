@@ -31,6 +31,8 @@ import org.xvm.util.Handy;
 
 import static org.xvm.asm.Assignment.AssignedOnce;
 
+import static org.xvm.asm.ErrorListener.PROBE;
+
 /**
  * A template expression is a string literal expression containing expressions that will be
  * evaluated and concatenated with the literal portions to produce a resulting string.
@@ -103,9 +105,9 @@ public class TemplateExpression
         for (int i = 0; i < cExprs; ++i) {
             Expression     exprOld = exprs.get(i);
             TypeConstant[] atypeExpr;
-            if (exprOld.testFit(ctx, T_STRING, false, ErrorListener.PROBE).isFit()) {
+            if (exprOld.testFit(ctx, T_STRING, false, PROBE).isFit()) {
                 atypeExpr = A_STRING;
-            } else if (exprOld.testFit(ctx, T_OBJECT, false, ErrorListener.PROBE).isFit()) {
+            } else if (exprOld.testFit(ctx, T_OBJECT, false, PROBE).isFit()) {
                 atypeExpr = A_OBJECT;
             } else {
                 // void expression (e.g. a lambda-style expr explicitly appending to "$"); note that

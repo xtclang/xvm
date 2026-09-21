@@ -43,6 +43,8 @@ import static org.xvm.util.Handy.toInputStream;
 import static org.xvm.util.Handy.writeMagnitude;
 import static org.xvm.util.Handy.writeUtf8String;
 
+import static org.xvm.asm.ErrorListener.RUNTIME;
+
 /**
  * A representation of the file structure that contains one or more Ecstasy (XVM) modules. The
  * FileStructure is generally used as a container of one module, which may have dependencies on
@@ -1466,7 +1468,7 @@ public class FileStructure
                 errs = poolCurrent.getErrorListener();
             }
         }
-        return errs == null ? ErrorListener.RUNTIME : errs;
+        return errs == null ? RUNTIME : errs;
     }
 
     /**
@@ -1477,7 +1479,7 @@ public class FileStructure
      * from XvmStructure: a structure used to be able to reach through its parent and redirect the
      * diagnostics of a whole containment tree it did not own.
      *
-     * @param errs  the error listener, or null to fall back to ErrorListener.RUNTIME
+     * @param errs  the error listener, or null to fall back to RUNTIME
      */
     public void setErrorListener(ErrorListener errs) {
         m_errs = errs;
