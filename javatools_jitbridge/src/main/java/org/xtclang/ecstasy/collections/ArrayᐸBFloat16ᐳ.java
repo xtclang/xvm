@@ -1,0 +1,211 @@
+package org.xtclang.ecstasy.collections;
+
+import java.util.Arrays;
+
+import org.xtclang.ecstasy.Iterable;
+import org.xtclang.ecstasy.IterableᐸBFloat16ᐳ;
+import org.xtclang.ecstasy.IteratorᐸBFloat16ᐳ;
+import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.nType;
+
+import org.xtclang.ecstasy.numbers.BFloat16;
+import org.xtclang.ecstasy.numbers.Int64;
+
+import org.xvm.asm.constants.BFloat16Constant;
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.Ctx;
+
+/**
+ * Array of BFloat16, stored in an array of Java longs, four BFloat16 per long.
+ * <p>
+ * Object header
+ * xObj - 64 bits of flags
+ * ---
+ * Delegate - ref
+ * Storage - ref
+ */
+public class ArrayᐸBFloat16ᐳ
+        extends nLongBasedArray<ArrayᐸBFloat16ᐳ> {
+
+    public ArrayᐸBFloat16ᐳ(Ctx ctx, TypeConstant type) {
+        super(ctx, type);
+    }
+
+    // ----- Array API -----------------------------------------------------------------------------
+
+    /**
+     * @see {@link Array#$new$p}
+     */
+    public static ArrayᐸBFloat16ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
+        assert !type.isImmutable();
+
+        ctx.alloc(64); // REVIEW how big?
+        ArrayᐸBFloat16ᐳ array = new ArrayᐸBFloat16ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.$capCfg(ctx, capacity);
+        return array;
+    }
+
+    /**
+     * @see {@link Array#$new$1$p}
+     */
+    public static ArrayᐸBFloat16ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
+        if (supply instanceof BFloat16 boxed) {
+            ctx.alloc(size); // REVIEW + HEADER_SIZE?
+            ArrayᐸBFloat16ᐳ array = new ArrayᐸBFloat16ᐳ(ctx, type);
+            array.$mut($FIXED);
+
+            long value = BFloat16Constant.toHalf(boxed.$value) & 0xFFFF;
+            long fill  = value == 0 ? 0 : value | (value << 16);
+            fill |= (fill << 32);
+
+            if (array.$growInPlace(ctx, size)) {
+                Arrays.fill(array.$storage, fill);
+                array.$size((int) size);
+                return array;
+            } else {
+                throw array.$oob(ctx, size);
+            }
+        }
+        // TODO
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * @see {@link Array#$new$2}
+     */
+    public static ArrayᐸBFloat16ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
+        long size = elements.size$get$p(ctx);
+        ctx.alloc(size * 2); // REVIEW + HEADER_SIZE?
+        ArrayᐸBFloat16ᐳ array = new ArrayᐸBFloat16ᐳ(ctx, type);
+        array.$mut($MUTABLE);
+        array.addAll(ctx, elements);
+        array.$mut((int) mutability.ordinal$get$p(ctx));
+        return array;
+    }
+
+    public static ArrayᐸBFloat16ᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability,
+                                            IterableᐸBFloat16ᐳ elements) {
+        return $new$2$p(ctx, type, mutability, elements);
+    }
+
+    /**
+     * @see {@link Array#$new$3}
+     */
+    public static ArrayᐸBFloat16ᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸBFloat16ᐳ that) {
+        return $new$2$p(ctx, type, that.mutability$get(ctx), (Iterable) that);
+    }
+
+    public BFloat16 getElement(Ctx ctx, Int64 index) {
+        return BFloat16.$box(getElement$pi(ctx, index.$value));
+    }
+
+    public float getElement$p(Ctx ctx, long index) {
+        return getElement$pi(ctx, index);
+    }
+
+    public float getElement$pi(Ctx ctx, long index) {
+        return BFloat16Constant.toFloat((int) $getElement$pi(ctx, index));
+    }
+
+    public void setElement(Ctx ctx, Int64 index, Object value) {
+        super.setElement$pi(ctx, index.$value, BFloat16Constant.toHalf(((BFloat16) value).$value));
+    }
+
+    public void setElement$p(Ctx ctx, long index, float value) {
+        setElement$pi(ctx, index, value);
+    }
+
+    public void setElement$pi(Ctx ctx, long index, float value) {
+        super.setElement$pi(ctx, index, BFloat16Constant.toHalf(value));
+    }
+
+    public IteratorᐸBFloat16ᐳ iterator(Ctx ctx) {
+        return new nIterator(ctx);
+    }
+
+    @Override
+    public ArrayᐸBFloat16ᐳ add(Ctx ctx, Object element) {
+        return add$p(ctx, ((BFloat16) element).$value);
+    }
+
+    public ArrayᐸBFloat16ᐳ add$p(Ctx ctx, float value) {
+        return super.add$p(ctx, BFloat16Constant.toHalf(value));
+    }
+
+    public ArrayᐸBFloat16ᐳ insert$p(Ctx ctx, long index, float value) {
+        if (index < 0 || index > size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $insert(ctx, index, 1);
+        $set16bitElement(index, BFloat16Constant.toHalf(value));
+        return this;
+    }
+
+    @Override
+    public ArrayᐸBFloat16ᐳ delete$p(Ctx ctx, long index) {
+        if (index < 0 || index >= size$get$p(ctx)) {
+            throw $oob(ctx, index);
+        }
+        $delete(ctx, index, 1);
+        return this;
+    }
+
+    // ----- Array internals -----------------------------------------------------------------------
+
+    // ToDo GG/JK remove this (and sub classes) when toString() can be generated by the JIT
+    @Override
+    protected String $elementToString(Ctx ctx, long index) {
+        BFloat16 c = BFloat16.$box(getElement$p(ctx, index));
+        return c.toString(ctx).toString();
+    }
+
+    @Override
+    protected long $storageCapacity() {
+        return $storageCapacity16bit();
+    }
+
+    @Override
+    protected long $getElement(Ctx ctx, long index) {
+        return $get16bitUnsignedElement(index);
+    }
+
+    @Override
+    protected void $setElement(Ctx ctx, long index, long value) {
+        $set16bitElement(index, value);
+    }
+
+    @Override
+    protected long $cap2len(long cap) {
+        return $cap2len16bits(cap);
+    }
+
+    @Override
+    protected long $calculateHash(Ctx ctx) {
+        return $calculate16BitUnsignedHash(ctx);
+    }
+
+    @Override
+    protected void $deleteElements(long index, long count) {
+        $delete16bit(index, count);
+    }
+
+    @Override
+    protected void $insertElements(long index, long count) {
+        $insert16bit(index, count);
+    }
+
+    // ---- Iterator implementation ----------------------------------------------------------------
+
+    private class nIterator extends nBaseIterator implements IteratorᐸBFloat16ᐳ {
+        public nIterator(Ctx ctx) {
+            super(ctx);
+        }
+
+        @Override
+        public nType Element$get(Ctx ctx) {
+            return nType.$ensureType(ctx, ctx.pool().typeBFloat16());
+        }
+    }
+}

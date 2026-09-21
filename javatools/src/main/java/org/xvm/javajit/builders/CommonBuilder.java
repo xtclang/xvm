@@ -858,6 +858,8 @@ public class CommonBuilder
 
                 if (prop.getInitializer() == null) {
                     RegisterInfo reg = loadConstant(code, prop.getInitialValue());
+                    ClassDesc fieldCD = prop.getType().removeNullable().isJavaPrimitive()
+                            ? JitTypeDesc.getPrimitiveFieldClass(prop.getType()) : reg.cd();
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
                         // loadConstant() has already loaded the value and the boolean
@@ -868,7 +870,7 @@ public class CommonBuilder
                             .goto_(endIf)
                             .labelBinding(ifTrue);
                         pop(code, extSlot.cd());
-                        code.putstatic(CD_this, jitName, reg.cd());
+                        code.putstatic(CD_this, jitName, fieldCD);
                         code.labelBinding(endIf);
                     } else if (reg instanceof MultiSlot multiSlot) {
                         ClassDesc[] cds = multiSlot.slotCds();
@@ -885,12 +887,12 @@ public class CommonBuilder
                             for (ClassDesc cd : cds) {
                                 pop(code, cd);
                             }
-                            code.putstatic(CD_this, jitName, reg.cd());
+                            code.putstatic(CD_this, jitName, fieldCD);
                             code.labelBinding(endIf);
                         }
                     } else {
                         assert reg.isSingle();
-                        code.putstatic(CD_this, jitName, reg.cd());
+                        code.putstatic(CD_this, jitName, fieldCD);
                     }
                 } else {
                     MethodConstant init = prop.getInitializer();
@@ -1246,6 +1248,7 @@ public class CommonBuilder
                         loadPropertyOwner(code, jmd);
                         code.getfield(CD_this, jitFieldName, cdOpt);
                     }
+                    normalizePrimitiveField(code, type);
                     addReturn(code, cdOpt);
                     break;
 
@@ -1260,6 +1263,7 @@ public class CommonBuilder
                         code.getfield(CD_this, jitFieldName+EXT, CD_boolean);
                     }
                     storeToContext(code, CD_boolean, jmd.optimizedReturns[1].altIndex, ctxSlot);
+                    normalizePrimitiveField(code, type);
                     addReturn(code, cdOpt);
                     break;
 
@@ -1351,7 +1355,7 @@ public class CommonBuilder
             if (isOpt) {
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
                 TypeConstant type    = prop.getType();
-                ClassDesc    cdOpt   = type.isJavaPrimitive()
+                ClassDesc    cdOpt   = type.removeNullable().isJavaPrimitive()
                                             ? JitTypeDesc.getPrimitiveFieldClass(type)
                                             : pdOpt.cd;
                 int          extSlot = argSlot + toTypeKind(cdOpt).slotSize();

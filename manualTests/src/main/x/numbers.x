@@ -1,4 +1,5 @@
 module TestNumbers {
+    package smallFloats import TestSmallFloats;
     @Inject ecstasy.io.Console console;
 
     void run() {
@@ -9,11 +10,9 @@ module TestNumbers {
         testFloat64();
         testFloat32();
         testFloat16();
-        // TODO: enable once the runtime can materialise a BFloat16 constant. Today this dies with
-        // "Unknown constant: BFloat16{value=1.0}": there is no xBFloat16 template in
-        // runtime/template/numbers, so no BFloat16 value can be created at all.
-        // testBFloat16();
+        testBFloat16();
         testFloat8();
+        smallFloats.run();
         testDec64();
         testInfinity();
         testFPMath();
@@ -303,8 +302,6 @@ module TestNumbers {
      * is how it rounds. It used to "round" by multiplying the value by 1.001957, which leaves
      * exactly representable values alone -- so round trips looked clean -- while moving 12.5% of
      * the values that actually need rounding to the wrong neighbour.
-     *
-     * NOTE: not called from run() yet -- see the TODO at the call site.
      */
     void testBFloat16() {
         console.print("\n** testBFloat16()");

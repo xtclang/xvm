@@ -19,7 +19,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native Float8e5 ("E5M2") wrapper.
  *
- * <p>Unlike [Float16], the value is carried as the 8-bit FP8 encoding held in a Java int, not as a
+ * <p>Unlike [Float16], the value is carried as the 8-bit FP8 encoding held in a Java byte, not as a
  * Java float. An FP8 format has only 256 values, so the encoding is the natural carrier: every
  * representable value is exact by construction, and the box cache below is complete.</p>
  */
@@ -30,13 +30,13 @@ public class Float8e5 extends BinaryFPNumber {
      * @param value  the 8-bit E5M2 encoding, in the low 8 bits
      */
     private Float8e5(int value) {
-        $value = value;
+        $value = (byte) value;
     }
 
     /**
      * The 8-bit E5M2 encoding, in the low 8 bits.
      */
-    public final int $value;
+    public final byte $value;
 
     /**
      * Every E5M2 value. An 8-bit format has only 256 of them, so the table is built once during

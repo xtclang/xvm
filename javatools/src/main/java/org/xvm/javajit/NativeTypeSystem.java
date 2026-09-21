@@ -322,7 +322,8 @@ public class NativeTypeSystem
 
         TypeConstant[] primitiveTypes = new TypeConstant[] {
                 pool.typeBit(), pool.typeBoolean(), typeChar, pool.typeDec32(), pool.typeDec64(),
-                pool.typeDec128(), pool.typeFloat32(), pool.typeFloat64(),
+                pool.typeDec128(), pool.typeFloat8e4(), pool.typeFloat8e5(), pool.typeBFloat16(),
+                pool.typeFloat32(), pool.typeFloat64(),
                 pool.typeInt8(), pool.typeInt16(), pool.typeInt32(), pool.typeInt64(),
                 pool.typeInt128(), pool.typeNibble(), pool.typeUInt8(), pool.typeUInt16(),
                 pool.typeUInt32(), pool.typeUInt64(), pool.typeUInt128(),
@@ -334,6 +335,13 @@ public class NativeTypeSystem
             String       typeName  = type.getSingleUnderlyingClass(false).getName();
             String       className = "org.xtclang.ecstasy.Iterator" + L_ANGLE + typeName + R_ANGLE;
             nativeByType.put(typeIter,  className);
+        }
+
+        for (TypeConstant type : new TypeConstant[] {
+                pool.typeFloat8e4(), pool.typeFloat8e5(), pool.typeBFloat16()}) {
+            TypeConstant iterable = pool.ensureParameterizedTypeConstant(pool.typeIterable(), type);
+            String typeName = type.getSingleUnderlyingClass(false).getName();
+            nativeByType.put(iterable, "org.xtclang.ecstasy.Iterable" + L_ANGLE + typeName + R_ANGLE);
         }
 
         TypeConstant typeInt        = pool.typeInt64();

@@ -2658,6 +2658,9 @@ public class BuildContext {
                         : fieldName;
             ClassDesc cd = i == 0 ? cdField : ret.cd;
             code.getfield(cdOwner, name, cd);
+            if (i == 0) {
+                Builder.normalizePrimitiveField(code, propInfo.getType());
+            }
 
             if (i > 0) {
                 storeToContext(code, ret.cd, ret.altIndex);

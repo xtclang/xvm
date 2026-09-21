@@ -518,28 +518,43 @@ val runSequential = tasks.register<XtcRunTask>("runSequential") {
     testModuleNames.filter { it !in excludedModules }.forEach { moduleName(it) }
 }
 
+// The same compiled module exercises the numeric subset supported by both backends.
+// runSmallFloats also accepts --jit for a direct comparison from the command line.
+val runSmallFloats = tasks.register<XtcRunTask>("runSmallFloats") {
+    group = "verification"
+    description = "Run the shared small floating-point tests."
+    moduleName("TestSmallFloats")
+}
+
+val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
+    group = "verification"
+    description = "Run the shared small floating-point tests using the JIT."
+    jit = true
+    moduleName("TestSmallFloats")
+}
+
 val runAllTestTasks = tasks.register("runAllTestTasks") {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runSequential)
+    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runSequential, runSmallFloatsJit)
 }
 
 val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel)
+    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel, runSmallFloatsJit)
 }
 
 val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runSequential)
+    dependsOn(runTestAllExecutionModes, runSequential, runSmallFloatsJit)
 }
 
 val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runParallel)
+    dependsOn(runTestAllExecutionModes, runParallel, runSmallFloatsJit)
 }
 
 /**

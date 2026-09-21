@@ -35,6 +35,8 @@ class Float8e4Tests {
 
         // Number tests
         testFloat8e4toArray();
+        testArrays();
+        testNegativeFields();
         testFloat8e4Rounding();
         testFloat8e4Negate();
         testFloat8e4Arithmetic();
@@ -354,4 +356,58 @@ class Float8e4Tests {
         n = -10;
         assert n.estimateStringLength() == 5; // "-10.0"
     }
+
+    void testNegativeFields() {
+        Float8e4AsField holder = new Float8e4AsField();
+        holder.field = -4.0;
+        assert holder.field == -4.0;
+        assert holder.field.toFloat32() == -4.0;
+        assert holder.field.toByteArray()[0] == 0xC8;
+
+        Float8e4AsNullableField nullable = new Float8e4AsNullableField();
+        nullable.field = -4.0;
+        assert nullable.field == -4.0;
+        nullable.field = Null;
+        assert nullable.field == Null;
+    }
+
+    void testArrays() {
+        Float8e4[] literal = [1.0, -2.0, 4.0];
+        assert literal.size == 3;
+        assert literal[0] == 1.0 && literal[1] == -2.0 && literal[2] == 4.0;
+
+        Float8e4[] fixed = new Float8e4[17](-4.0);
+        assert fixed.mutability == Fixed;
+        assert fixed[0] == -4.0 && fixed[7] == -4.0 && fixed[8] == -4.0 && fixed[16] == -4.0;
+        fixed[8] = 2.0;
+        fixed[8] += 1.0;
+        assert fixed[7] == -4.0 && fixed[8] == 3.0 && fixed[9] == -4.0;
+
+        Float8e4[] values = new Array(1);
+        for (Int i : 0..<17) {
+            values.add(i % 2 == 0 ? Float8e4:1.0 : Float8e4:-2.0);
+        }
+        assert values.size == 17;
+        assert values[7] == -2.0 && values[8] == 1.0 && values[16] == 1.0;
+        Int count = 0;
+        for (Float8e4 value : values) {
+            assert value == (count % 2 == 0 ? Float8e4:1.0 : Float8e4:-2.0);
+            ++count;
+        }
+        assert count == 17;
+
+        values.insert(8, -4.0);
+        assert values.size == 18 && values[7] == -2.0 && values[8] == -4.0 && values[9] == 1.0;
+        values.delete(8);
+        assert values.size == 17 && values[7] == -2.0 && values[8] == 1.0;
+
+        Float8e4[] copy = new Array(Fixed, values);
+        assert copy.size == values.size;
+        assert copy[7] == -2.0 && copy[8] == 1.0 && copy[16] == 1.0;
+        Float8e4[] duplicate = new Array(values);
+        assert duplicate.size == values.size && duplicate[7] == -2.0;
+        values[7] = 4.0;
+        assert duplicate[7] == -2.0 && copy[7] == -2.0;
+    }
+
 }
