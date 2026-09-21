@@ -352,7 +352,7 @@ public final class DebugConsole
                     iPC = iResult;
                     break NextCommand;
                 }
-            } catch (IOException ignored) {}
+            } catch (IOException _) {}
         }
 
         frame.f_context.setDebuggerActive(

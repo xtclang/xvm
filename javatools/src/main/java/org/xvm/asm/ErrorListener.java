@@ -104,7 +104,7 @@ public interface ErrorListener {
         switch (site) {
             case Site.In in -> log(new ErrorInfo(severity, sCode, aoParam, in.source(), in.lPosStart(), in.lPosEnd()));
             case Site.At at -> log(new ErrorInfo(severity, sCode, aoParam, at.xs()));
-            case Site.None ignore -> log(new ErrorInfo(severity, sCode, aoParam, null, 0, 0));
+            case Site.None _ -> log(new ErrorInfo(severity, sCode, aoParam, null, 0, 0));
         }
     }
 

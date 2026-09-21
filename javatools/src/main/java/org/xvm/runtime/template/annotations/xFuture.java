@@ -780,7 +780,7 @@ public class xFuture
             if (future != null && future.isDone()) {
                 try {
                     return future.get();
-                } catch (Exception ignore) {}
+                } catch (Exception _) {}
             }
 
             return null;

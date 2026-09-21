@@ -187,7 +187,7 @@ public class xTerminalConsole
                     READER   = builder.build();
                     TERMINAL = terminal;
                 }
-            } catch (IOException ignore) {}
+            } catch (IOException _) {}
         }
         return READER;
     }
@@ -210,7 +210,7 @@ public class xTerminalConsole
                 // purge a quarter of the history
                 try {
                     trimHistory(f_path, f_cMaxEntries - (f_cMaxEntries >> 2));
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
             super.add(time, line);
         }
