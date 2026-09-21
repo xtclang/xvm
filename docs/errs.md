@@ -849,7 +849,7 @@ shape the prior-art branch reached, measured against this tree.
 | an outline from the compiler: `documentSymbol`, and the symbol under the cursor | done - from the AST, since the structures carry no positions |
 | completion, go-to-definition, find-references | not started; they need resolution, not syntax |
 | the ambient listener lookup | deleted rather than propagated through |
-| cancellation of a stale compilation | not started; `isAbortDesired()` is the hook and nothing drives it |
+| cancellation of a stale compilation | done, coarsely - `ErrorListener.cancellable` drives `isAbortDesired()` from "a newer edit exists", and the compiler asks between stages |
 | Runtime-side listener: `Container`, the connector, `recordRuntimeFailure` | not started |
 | Failures with nowhere to go: 56 `System.err`, 35 empty catches | audited; see `errs-audit.md` |
 | `Origin` (thread, fiber) stamped on each diagnostic | POC done, unconsumed |
@@ -991,6 +991,82 @@ another thread is then safe by construction. If a concurrent sink is ever unavoi
 compilation reporting into one list - it should accumulate lock-free rather than with a monitor,
 and be a separate implementation of the interface rather than a change to `ErrorList`, so the
 single-threaded path pays nothing.
+
+## Next: what the language server still needs
+
+The compiler adapter answers two things - diagnostics and an outline - and returns nothing for
+the other eighteen capabilities the tree-sitter adapter implements. This is the ordered list of
+what it would take to close that, written after measuring rather than from the feature matrix.
+
+Two findings shape the whole list, both verified in this tree:
+
+1. **The XDK-backed tests never run in CI.** `XdkAdapterTest` and `TypeInfoDiagnosticsTest`
+   `assumeTrue` on `XDK_HOME`, `lang/lsp-server`'s test task does not set it, and CI does not
+   either. They skip silently - green, having executed nothing. Everything below is untested
+   until this is fixed, so it is first.
+2. **A validated AST node already knows what a name resolved to; it just will not say.**
+   `NameExpression.m_arg` is a `private transient Argument`, set during resolution and still
+   there when `compileModule` returns, with no accessor. The document said the side with
+   positions does not know the answer. After validation that is not true - the answer is on the
+   node, out of reach. That changes definition, hover and references from "needs a new
+   resolution layer" into "needs an accessor and a walk".
+
+### 1. Make what exists actually run *(nothing new; it is all testing)*
+
+| | task |
+|---|---|
+| 1.1 | `lang/lsp-server`'s test task supplies the XDK from `:xdk:installDist` as a declared input, so the compiler-backed tests run for anyone who builds. The `assumeTrue` stays for a bare `./gradlew :lang:lsp-server:test`, but stops being the normal case |
+| 1.2 | CI asserts `skipped=0` for those classes when it built an XDK, so a silent skip fails instead of passing |
+| 1.3 | A protocol-level test: `didOpen` a document, capture `publishDiagnostics` from a mock `LanguageClient`, assert the codes. `LspIntegrationTest` already does this for tree-sitter; the compiler adapter has never been driven through the protocol at all, only called directly |
+| 1.4 | A test for the cancellation path end to end - two edits in flight, the older one publishes nothing |
+
+### 2. What the AST alone can answer *(no compiler change)*
+
+`Analysis` currently walks the AST for symbols and then drops it. Keeping it is the enabling
+step; each of these is then a walk:
+
+| | task | notes |
+|---|---|---|
+| 2.1 | Keep the parsed AST on the cached analysis | everything in this group depends on it |
+| 2.2 | `documentHighlight` | same-file occurrences of a name, by token text; no resolution needed |
+| 2.3 | `foldingRange`, `selectionRange` | both are node extents, which the AST has exactly |
+| 2.4 | `workspaceSymbol` | the per-document symbols are already cached per URI; this is a query over them |
+| 2.5 | Hover, the declaration half | the signature of the declaration under the cursor, from the same walk the outline uses |
+
+**Worth deciding before doing any of this.** Tree-sitter already answers all of 2.2-2.5, well,
+and on a grammar that survives text the compiler cannot parse at all. Reimplementing them on the
+AST buys one adapter that answers everything, at the cost of a second implementation of each. The
+alternative is a composite adapter - syntax from tree-sitter, semantics from the compiler, chosen
+per request - which is less code and degrades better while a document is mid-edit, but adds a
+seam where the two disagree about what the document says. This is a real decision and it should
+be made deliberately rather than by starting at 2.2.
+
+### 3. The bridge: what a name refers to *(a small compiler API, then the features)*
+
+| | task | notes |
+|---|---|---|
+| 3.1 | Expose the resolved target of a name: an accessor on `NameExpression` for what it resolved to, or a visitor over the returned AST that yields (position, `Constant`) pairs | the information exists and is retained; this is about reach, not computation. Read-only, and it cannot change what the compiler decides |
+| 3.2 | Go-to-definition, same file | name -> `IdentityConstant` -> the declaring node in this document |
+| 3.3 | Hover with types | the node's resolved type, which is what makes hover worth more than a signature |
+| 3.4 | Find-references, same file | the inverse of 3.2 over one AST |
+| 3.5 | A workspace index from `IdentityConstant` to (URI, position), built from compiled documents | cross-file definition and references fall out of it; this is where "the structures have no positions" actually bites, and the index is the answer |
+| 3.6 | Completion after a dot | needs the `TypeInfo` of the expression to the left, which `ensureTypeInfo` now gives without polluting the caller's diagnostics. Realistically last: it is the one that has to be fast and right on text that does not compile |
+
+### 4. The diagnostics work this branch left open
+
+These are `errs` tasks rather than LSP tasks, but each changes what an editor can show:
+
+| | task | why the editor cares |
+|---|---|---|
+| 4.1 | File the master `VERIFY-75` issue | a user-visible warning master silently drops; write-up is in the appendix |
+| 4.2 | Re-triage the ~67 still-suppressed ERROR diagnostics | each is either a diagnostic the editor should show or a spurious one that should be suppressed deliberately rather than by accident. Three were sampled; that is a sample, not a survey |
+| 4.3 | The `TypeInfo` diagnostics migration, 126 call sites | today only the type being built reports; a type the document merely *uses* reports nothing |
+| 4.4 | The 7 broad empty catches in `errs-audit.md` | `catch (Exception)` x4, `catch (Throwable)` x3 - a compiler failure that reaches one of these is invisible to the editor as well |
+
+### What this is not
+
+Not a plan for the runtime-side listener, and not a plan for the `Container` work. Those are in
+"Gap to full parity" and nothing in the language server needs them.
 
 ## Open questions
 
