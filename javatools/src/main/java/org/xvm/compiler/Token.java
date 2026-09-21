@@ -322,8 +322,9 @@ public class Token
             aoParam = new Object[] {source == null ? toString() : getString(source)};
         }
 
-        errs.log(severity, sCode, aoParam, source,
-                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
+        errs.log(severity, sCode, source == null
+                ? ErrorListener.NOWHERE
+                : ErrorListener.in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- Object methods ------------------------------------------------------------------------

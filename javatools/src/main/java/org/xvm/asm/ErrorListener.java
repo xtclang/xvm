@@ -50,9 +50,11 @@ public interface ErrorListener {
      * @param lPosStart   the position in the source where the error was detected
      * @param lPosEnd     the position in the source at which the error concluded
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
+     * @deprecated use {@link #log(Severity, String, Site, Object...)}, or the severity-named
+     *             {@link #error}, {@link #warn}, {@link #info} and {@link #fatal}, and pass the
+     *             location as {@link #in in(source, lPosStart, lPosEnd)}
      */
+    @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam,
             Source source, long lPosStart, long lPosEnd) {
         log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
@@ -69,9 +71,11 @@ public interface ErrorListener {
      * @param xs          the XvmStructure that the error is related to; may
      *                    be null
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt continue the process
+     * @deprecated use {@link #log(Severity, String, Site, Object...)}, or the severity-named
+     *             {@link #error}, {@link #warn}, {@link #info} and {@link #fatal}, and pass the
+     *             location as {@link #at at(xs)}
      */
+    @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
         log(new ErrorInfo(severity, sCode, aoParam, xs));
     }
@@ -90,8 +94,6 @@ public interface ErrorListener {
      * @param sCode     the error code that identifies the message
      * @param site      where the diagnostic belongs; see {@link #at} and {@link #in}
      * @param aoParam   the message parameters
-     *
-     * @return true to attempt to abort the process that reported the error
      */
     default void log(Severity severity, String sCode, Site site, Object... aoParam) {
         switch (site) {
@@ -721,9 +723,6 @@ public interface ErrorListener {
      */
     ResourceBundle RESOURCES = ResourceBundle.getBundle("errors");
 
-    /**
-     * Stateless ErrorListeners.
-     */
     /**
      * The listener for a question: speculative work whose failure is the answer, and whose failure
      * must therefore not be audible. The compiler constantly asks "would this expression fit that
