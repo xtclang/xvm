@@ -4,19 +4,27 @@ Scoping document for making `ErrorListener` an always-present, non-null, immutab
 compiler's call stack, so that an embedding host — an LSP server above all — can rely on hearing
 every diagnostic the compiler produces.
 
-**Status.** All seven phases are implemented on `lagergren/errs`. What remains is one decision and
+**Status.** All seven phases are implemented on `lagergren/errs`, plus the follow-on work that
+came out of review: the array-shaped reporting overloads are deprecated with no callers left, a
+cascade suppression is a decorator rather than a shared constant, an in-memory document can be
+named, and `TypeConstant` no longer rebinds its `errs` parameter. What remains is one decision and
 the work that follows from it; see *What is left*.
+
+If you are here to *use* the thing rather than to read how it got this way, skip to *Using it*.
 
 Measurements throughout are of `origin/master` at `794bf23e6` - the state this was written against,
 kept as the record of what was wrong. Where that has since changed:
 
 | | before | after |
 |---|---|---|
-| null-coalescing sites | 33 | 8, all in the deferred ownership area |
+| null-coalescing sites | 33 | 3 — two in `FileStructure` (the deferred ownership area) and one assert |
 | names for the listener | 6 | 1 - `errs` |
-| kinds of silence | 1 undifferentiated | 133 `PROBE`, 6 `BLACKHOLE`, 10 `suppressCascade()` |
+| kinds of silence | 1 undifferentiated | 3 named: `PROBE` (162), `BLACKHOLE` (9), `suppressCascade()` (7) |
 | fields using null as a state flag | 4 | 0 |
-| `new Object[]` at report sites | 31 | 0 |
+| `new Object[]` at report sites | 31 | 0 (4 left in the tree, none of them report sites) |
+| callers of the array-shaped `log` overloads | all of them | 0 — the overloads are `@Deprecated` |
+| `errs` parameters rebound mid-method | 8 in `TypeConstant` | 0 |
+| tests covering the listener contract | 0 | 31, in 6 files |
 
 ## Why
 
@@ -119,6 +127,311 @@ null stand-in.
 - **`@NotNull` means enforced.** An annotation with no `requireNonNull` behind it is a comment with
   syntax. Enforcement lives at the boundaries where a listener enters the system or is stored — not
   on all 586 parameters, which would be decoration.
+
+## Using it
+
+Worked examples of the API the phases arrived at. Each is real code from the tree or the tests,
+not a sketch.
+
+### Which listener do I want?
+
+| situation | use |
+|---|---|
+| I am the compiler and someone passed me one | the `errs` parameter. Pass it on; never replace it |
+| I want to collect diagnostics | `new ErrorList()`, or `ErrorListener.collecting(sink)` |
+| I am trying something and its failure *is* my answer | `PROBE` |
+| I am trying something and want the errors only if I keep the result | `errs.branch(node)`, then `merge()` on the branch you keep |
+| My result is already known to be incomplete | `errs.suppressCascade()` |
+| I genuinely want no diagnostics at all | `BLACKHOLE` |
+| I want to both act on them and watch them | `ErrorListener.tee(act, watch)` |
+
+The three silences behave identically on purpose — nothing may branch on which one it holds — so
+the choice is documentation for the next reader, and `grep PROBE` is the list of the compiler's
+speculative paths.
+
+
+### Report a diagnostic
+
+The message parameters are the trailing arguments. The location is a `Site`, which is what makes
+that possible: an `Object[]` in the middle of the signature is what used to force every call site
+to build an array by hand.
+
+Static-import the site factories and the silences rather than qualifying them; `ErrorListener.`
+repeated on every line is noise, and these names do not collide with anything:
+
+```java
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
+errs.error(Compiler.NAME_UNRESOLVABLE, at(this), getValueString());
+errs.warn (Compiler.SUSPICIOUS_CAST, in(source, lStart, lEnd), typeFrom, typeTo);
+errs.fatal(Parser.FATAL_ERROR, NOWHERE);
+```
+
+Three ways to say where, and they are a closed set, so a host can switch over them exhaustively:
+
+| | means |
+|---|---|
+| `in(source, lPosStart, lPosEnd)` | a span of source text |
+| `at(xs)` | an XVM structure, which has no source location of its own |
+| `NOWHERE` | genuinely nowhere: a whole-compilation failure |
+
+The older `log(severity, sCode, Object[], source, start, end)` overloads still exist and are
+deprecated. Nothing in the tree calls them; `javatools` compiles under `-Xlint:all` with no
+deprecation warning, which is the check that keeps it that way.
+
+### Ask what a listener has seen
+
+Recording a diagnostic and deciding to abandon the work are separate questions. `log` is `void`
+precisely so that they cannot be confused.
+
+```java
+if (errs.isAbortDesired()) {          // budget spent, or a FATAL arrived
+    throw new CompilerException("error list is full: " + errs);
+}
+if (errs.hasSeriousErrors()) { ... }  // an ERROR or worse has been reported
+if (errs.hasError(Compiler.NAME_MISSING)) { ... }  // this specific code
+```
+
+### Choose a budget
+
+Three named values, defined once on `ErrorList` and nowhere else:
+
+```java
+new ErrorList()                      // no reason to choose a number: DEFAULT_MAX_ERRORS
+new ErrorList(ErrorList.UNLIMITED)   // only a FATAL stops the work
+new ErrorList(ErrorList.FIRST_ERROR) // stop at the first serious error
+```
+
+### Speculate
+
+Two different things, and picking the wrong one is the classic bug in this area.
+
+**A trial whose failure the user should hear about** if every alternative also fails — branch,
+then merge only the attempt you keep:
+
+```java
+ErrorListener errsAttempt = errs.branch(node);
+Expression    exprNew     = expr.validate(ctx, typeTarget, errsAttempt);
+if (exprNew != null) {
+    errsAttempt.merge();   // it was the right road; the diagnostics count
+}                          // otherwise drop it: nothing was reported
+```
+
+**A trial whose failure *is* the answer** — "would this expression fit that type?" — probe. The
+return value is what the caller acts on, so the diagnostics are noise by construction:
+
+```java
+if (!ctx.requireThis(getStartPosition(), PROBE)) {
+    return null;   // a question, not an assertion
+}
+```
+
+### Suppress a cascade
+
+Different again from both of the above. Once a result is known to be built from incomplete
+information, everything after it describes the incompleteness rather than the user's code, and
+reporting it buries the one diagnostic that matters.
+
+```java
+private static ErrorListener cascade(boolean fIncomplete, ErrorListener errs) {
+    return fIncomplete ? errs.suppressCascade() : errs;
+}
+```
+
+Choose at each use rather than rebinding the listener, so that an `errs` parameter still means
+what its signature says all the way down a method:
+
+```java
+if (!collectChildInfo(constId, ..., cascade(fIncomplete, errs))) {
+    fIncomplete = true;
+}
+```
+
+`suppressCascade()` wraps the receiver instead of returning a shared constant, so the suppression
+is a decision about one computation, and what was suppressed is still reachable:
+
+```java
+ErrorListener quiet = errs.suppressCascade();
+assert quiet.isSilent();
+assert ((CascadeErrorListener) quiet).suppressed() == errs;
+assert quiet.suppressCascade() == quiet;   // idempotent; safe to call per use
+```
+
+### Say you want nothing
+
+```java
+compile(source, BLACKHOLE);   // "I do not want them"
+```
+
+`BLACKHOLE` and `PROBE` behave identically and deliberately so — nothing may branch on which one
+it holds. They are separate names because they are separate intentions, and because
+`grep PROBE` is the list of the compiler's speculative paths.
+
+### Host it
+
+A host implements the interface, or takes the one-liner. A bare lambda is a trap: it supplies
+only `log`, and inherits defaults that answer as though nothing had been reported, which the
+compiler asks around a hundred times to decide whether a stage may proceed.
+
+```java
+// WRONG: receives the diagnostics, then tells the compiler they did not happen
+ErrorListener naive = problems::add;
+assert !naive.hasSeriousErrors();   // even after an ERROR
+
+// RIGHT: same one-liner, answers truthfully
+ErrorListener host = collecting(problems::add);
+```
+
+Report to two places at once — one to act on, one to watch — with `tee`:
+
+```java
+ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
+buildSomething(tee(errs, recorder));
+// later, replay to a different caller; deduplication makes it idempotent
+recorder.logTo(errsLater);
+```
+
+### Publish to a problem view
+
+What an LSP adapter actually needs. `Site` being a closed set is what lets the mapping be
+exhaustive instead of testing which nullable field happened to be populated:
+
+```java
+ErrorListener host = collecting(err -> publish(switch (err.site()) {
+    case Site.In   site -> diagnostic(err, site.source(), site.lPosStart(), site.lPosEnd());
+    case Site.At   site -> diagnostic(err, site.xs().getDescription());
+    case Site.None ignore -> wholeFileDiagnostic(err);
+}));
+```
+
+**Name every document.** A diagnostic's identity includes the name of the source it came from,
+and an `ErrorList` drops anything whose identity it has already seen. Two unnamed in-memory
+documents with a problem at the same offset therefore collide, and the second is discarded
+uncounted. An editor's unsaved buffers are exactly that case — not on disk, but the host knows
+the URI:
+
+```java
+new Source(text, uri.toString())   // not new Source(text)
+```
+
+### Tutorial: wiring a host from scratch
+
+What an embedding host — an editor's language server, say — has to do, end to end. Each step is
+one of the guarantees the phases exist to provide.
+
+**1. Build a listener that answers truthfully.** Do not pass a bare lambda. `ErrorListener` is a
+functional interface, so a lambda compiles, but it supplies only `log` and inherits defaults that
+say nothing was reported. The compiler asks those defaults around a hundred times to decide
+whether a stage may proceed.
+
+```java
+List<ErrorInfo> problems = new ArrayList<>();
+ErrorListener   errs     = collecting(problems::add);   // NOT problems::add on its own
+```
+
+**2. Name the document.** A diagnostic's identity includes the name of the source it came from,
+and an `ErrorList` drops anything whose identity it has already seen. Two unnamed in-memory
+documents with a problem at the same offset collide, and the second is silently discarded.
+
+```java
+Source source = new Source(text, uri.toString());
+```
+
+**3. Compile, and expect failure to be ordinary.** Source that does not compile is the normal
+case for an editor, not an exceptional one. Aborting because the source has errors is not an
+internal error, and the diagnostics have already been reported through the listener.
+
+```java
+try {
+    new Parser(source, errs).parseSource();
+} catch (CompilerException ignore) {
+    // an unrecoverable parse abandons its progress; the diagnostics are the point
+}
+```
+
+**4. Ask the listener, not the exception, what happened.**
+
+```java
+if (errs.hasSeriousErrors()) { ... }
+```
+
+**5. Turn each diagnostic into whatever your protocol wants.** `Site` is a sealed interface, so
+this switch is exhaustive and the compiler will tell you if a new shape is ever added — which is
+the whole reason it is a closed set rather than three nullable fields.
+
+```java
+for (ErrorInfo err : problems) {
+    publish(switch (err.site()) {
+        case Site.In   site   -> range(site.source(), site.lPosStart(), site.lPosEnd());
+        case Site.At   site   -> wholeSymbol(site.xs().getDescription());
+        case Site.None ignore -> wholeFile();
+    }, err.getSeverity(), err.getCode(), err.getMessage());
+}
+```
+
+**6. Reuse the listener across documents if you want one problem list** — that works, provided
+step 2 was done. `CompilerDiagnosticsTest` pins both halves of this: that named documents
+accumulate, and, as the positive control, that unnamed ones do not.
+
+### Writing compiler code that reports
+
+Five rules, each of which is a phase:
+
+1. **Take `errs` as a parameter and pass it on.** Never find one ambiently, never store one you
+   were not given, never assign over the parameter. If you need a different listener for part of
+   the work, choose it at the point of use.
+2. **Never accept `null`.** There is nothing to check, because nothing produces one. A caller that
+   wants silence names it.
+3. **Report through the severity-named methods**, with the parameters trailing:
+   `errs.error(CODE, at(this), a, b)`. The array-shaped overloads are deprecated.
+4. **Recording is not deciding.** `log` is `void`. If you need to stop, ask `isAbortDesired()`.
+5. **Say which silence you mean.** `PROBE`, `BLACKHOLE` and `suppressCascade()` are three
+   intentions, not three spellings.
+
+### Testing diagnostics
+
+The contract is covered by six test classes; add to them rather than re-deriving. The pattern that
+catches the most is a **positive control** — assert the thing still fails when the fix is removed:
+
+```java
+@Test
+public void testUnnamedDocumentsAreIndistinguishable() {
+    ErrorList errs = new ErrorList(UNLIMITED);
+    parse(new Source(DOC), errs);
+    parse(new Source(DOC), errs);
+    assertEquals(1, errs.getErrors().size(),
+            "identical unnamed sources produce one identity, so one diagnostic");
+}
+```
+
+### A note on budgets
+
+`ErrorList` takes a number of serious errors to tolerate. Most call sites in the tree pass a
+literal, and the literals are arbitrary: instrumenting every construction across the whole test
+suite and a full XDK build shows that **no budget except a deliberate one in a budget test ever
+binds** — the largest number of errors any list actually accumulated was 50, against budgets of
+5, 10, 24, 25, 100 and 1000.
+
+So do not agonise. `new ErrorList()` is the answer unless you have a reason; name `UNLIMITED` or
+`FIRST_ERROR` when you do.
+
+### Style
+
+`ErrorListener.` repeated on every line is noise. Static-import what you use — none of these
+names collide with anything in the tree:
+
+```java
+import static org.xvm.asm.ErrorList.FIRST_ERROR;
+import static org.xvm.asm.ErrorList.UNLIMITED;
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.asm.ErrorListener.collecting;
+import static org.xvm.asm.ErrorListener.in;
+```
+
 
 ## Plan
 
@@ -299,6 +612,20 @@ Also replace the ~10 `errs = ErrorListener.BLACKHOLE` reassignments in `TypeCons
 "this result is provisional, stop reporting" — with a named method conveying that, e.g.
 `errs.suppressCascade()`. **Do not make these sites report.** They exist to prevent error cascades
 from incomplete `TypeInfo` builds; "fixing" them regresses the compiler into cascades.
+
+*As built, this went further than planned.* Review pointed out that naming the decision was not
+enough while it was still carried out by assigning over the `errs` **parameter**, which in all four
+methods stopped meaning what its signature said partway down. Two changes followed:
+
+- the choice is made at each use — `cascade(fIncomplete, errs)` — so nothing is rebound;
+- `suppressCascade()` returns a `CascadeErrorListener` wrapping the receiver, instead of the
+  shared `PROBE` constant. A probe and a cascade are not the same silence: a probe's failure *is*
+  the answer and nobody ever wants those diagnostics, whereas a cascade's are real diagnostics
+  that happen to be consequences of a known-missing piece. Keeping the receiver is what leaves
+  that difference recoverable for a host that wants them as related information.
+
+Verified byte-for-byte: the whole XDK compiles to identical modules before and after, all 22 of
+them, once the wall-clock timestamp stamped into each one is masked out.
 
 ### Phase 7 — The state-flag fields
 
@@ -483,9 +810,17 @@ and be a separate implementation of the interface rather than a change to `Error
 single-threaded path pays nothing.
 
 ## Open questions
-- ~~Should `log()` keep returning `boolean`?~~ Done: it is `void`, and `isAbortDesired()` is asked separately. It currently means *abort*, which conflates recording
-  with control flow and leaves a host that only wants to watch with no correct value to return.
-  The prior art made it `void` and asked `isAbortDesired()` separately; only 3–5 call sites read
-  the result. Cheap, but it is an API break.
+
+- ~~Should `log()` keep returning `boolean`?~~ **Answered: no, and it should not return anything
+  else either.** It is `void`; `isAbortDesired()` is asked separately. The old `boolean` meant
+  *abort*, which conflated recording with control flow and left a listener that only wants to
+  watch with no correct value to return. Exactly three call sites on master read it —
+  `Lexer.java:2507`, `Parser.java:5580`, `Token.java:328` — all of them asking "is the error list
+  full?", which is now its own question.
+
+  Returning `this` for fluent chaining was considered and rejected: nowhere in
+  `javatools/src/main/java` are two diagnostics reported in a row to the same listener, so
+  chaining has no customer, and re-introducing a value on `log` re-opens the ambiguity that
+  removing one closed.
 Thread safety is answered above: per-request listeners, immutable value types, and no explicit
 synchronization.
