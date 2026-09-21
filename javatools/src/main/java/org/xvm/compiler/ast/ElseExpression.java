@@ -20,6 +20,9 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The trailing "else" expression for any short-circuited expressions that precede it:
  *
@@ -97,7 +100,7 @@ public class ElseExpression
         TypeConstant[] atype2Req = selectCommonTypes(atype1, new TypeConstant[atype1.length]);
 
         if (atypeRequired != null && atypeRequired.length > 0 &&
-                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, ErrorListener.PROBE).isFit())) {
+                (atype2Req == null || !expr2.testFitMulti(ctx, atype2Req, false, silent(PROBE)).isFit())) {
             atype2Req = atypeRequired;
         }
 

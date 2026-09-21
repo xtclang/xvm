@@ -9,7 +9,8 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
-import static org.xvm.asm.ErrorListener.PROBE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A TypeCollector is used to collect a number of types, such as would occur from return statements
@@ -173,14 +174,14 @@ public class TypeCollector {
         if (typeRequired != null && typeRequired.containsFormalType(true)) {
             typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
         }
-        typeCommon = Op.selectCommonType(typeCommon, typeRequired, PROBE);
+        typeCommon = Op.selectCommonType(typeCommon, typeRequired, silent(PROBE));
 
         if (typeRequired != null &&
                 (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
-            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), PROBE);
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), silent(PROBE));
             for (int i = 1; i < cTypes; i++) {
-                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), PROBE);
+                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), silent(PROBE));
             }
 
             if (typeAlt != null) {
@@ -343,7 +344,7 @@ public class TypeCollector {
             for (int iCol = 0; iCol < cWidth; ++iCol) {
                 TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
                 if (typeRequired != null) {
-                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired, PROBE);
+                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired, silent(PROBE));
                 }
             }
         }
@@ -429,7 +430,7 @@ public class TypeCollector {
                     }
                 }
 
-                typeCommon = Op.selectCommonType(type, typeCommon, PROBE);
+                typeCommon = Op.selectCommonType(type, typeCommon, silent(PROBE));
                 if (typeCommon == null) {
                     // no obvious common type
                     return null;

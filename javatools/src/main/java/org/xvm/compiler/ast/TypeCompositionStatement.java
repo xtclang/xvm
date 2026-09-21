@@ -93,8 +93,10 @@ import static org.xvm.compiler.Lexer.isWhitespace;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
-import static org.xvm.asm.ErrorListener.PROBE;
 import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A type declaration.
@@ -2309,7 +2311,7 @@ public class TypeCompositionStatement
                 if (typeConstraint != null) {
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
-                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto, PROBE);
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto, silent(PROBE));
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();
