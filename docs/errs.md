@@ -1139,6 +1139,42 @@ you are not told.
 
 `TypeInfoDiagnosticsTest` covers it, and covers the replay below.
 
+### The same diagnostic, twice *(filtered, not fixed)*
+
+A consequence of the replay, found while writing the manual test plan for the language server.
+The VERIFY-75 above reaches a raw listener **twice** in one compilation:
+
+```
+heard VERIFY-75  <- AstNode.ensureTypeInfo -> BranchedErrorListener.merge
+                    (TypeCompositionStatement.validateContent, the type being laid out)
+heard VERIFY-75  <- TypeConstant.replayDiagnostics
+                    (PropertyDeclarationStatement.generateCode, a later stage asking again)
+```
+
+Neither is wrong on its own. The first is the warning being produced; the second is the memo
+doing exactly what it is for - answering a later `ensureTypeInfo` with what the build found,
+instead of silently losing it. But a caller that keeps everything it hears shows the author two
+identical warnings.
+
+Nothing in the compiler noticed, because everything in the compiler collects into `ErrorList`,
+which filters by `ErrorInfo.genUID()` - severity, code and parameters - and so has always
+collapsed repeats like this one. It is only visible to a *new* kind of caller: an embedding that
+collects into its own structure. The language server was exactly that, and the fix was to stop
+being it - `XdkAdapter` collects into an `ErrorList` like everyone else, and gets the compiler's
+own idea of what counts as the same diagnostic along with the hundred-error budget.
+
+So this is filtered rather than fixed, and worth writing down for the next embedder:
+
+- **A raw `ErrorListener` lambda will hear duplicates.** `collecting(...)` deduplicates nothing,
+  by design - it is the unopinionated one.
+- The deduplication rule lives in `ErrorList.log`, not in the listener interface, so it is opt-in
+  by choice of collector.
+- Whether the *compiler* should report a memoized diagnostic to a stage that has already heard it
+  is a real question, and not one to answer from the language server. Answering it means knowing
+  which stages share a listener, which is the ownership question this branch only half settles.
+
+`XdkAdapterTest.a warning heard twice is shown once` is the guard.
+
 ### The parked diagnostics nobody has read
 
 The same park swallowed about sixty ERROR-severity diagnostics during a *successful* XDK build -
@@ -1193,9 +1229,11 @@ the code. The prior-art branch found real bugs in this category, not just untidi
 
 - `EmbeddingSupport` is a singleton that takes its configuration once, so two tests cannot
   configure it differently in one JVM. Awkward for testing; not wrong for its purpose.
-- The language server has no cancellation. `isAbortDesired()` is the hook the compiler already
-  has, and nothing drives it. Until something does, a stale keystroke's compilation runs to
-  completion - which is why the adapter queues rather than parallelises.
+- The language server's cancellation is coarse. `ErrorListener.cancellable` drives
+  `isAbortDesired()` from "a newer edit exists for this document", and the compiler asks at about
+  twenty points - but those points are between stages, not inside them, so a compilation is
+  abandoned at the next boundary rather than promptly. Good enough while compilations take tens
+  of milliseconds; the thing to watch is `waited` in the adapter's log.
 - Completion, go-to-definition and find-references in the XDK adapter are unimplemented. The
   outline is done - symbols with real positions, walked out of the AST, and the innermost
   declaration containing a position - but these three need *resolution* rather than syntax: what
