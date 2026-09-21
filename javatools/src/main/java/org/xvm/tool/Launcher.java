@@ -134,9 +134,9 @@ public abstract class Launcher<T extends LauncherOptions>
     /**
      * Optional ErrorListener that receives ALL errors (tool-level and compilation). When
      * provided (not null), errors are forwarded for external programmatic access. Console
-     * displays errors, but m_errs provides structured access.
+     * displays errors, but f_errs provides structured access.
      */
-    protected final ErrorListener m_errs;
+    protected final ErrorListener f_errs;
 
     /**
      * The worst severity issue encountered thus far.
@@ -159,7 +159,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     protected Launcher(T options, Console console, @NotNull ErrorListener errs) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
-        m_errs = requireNonNull(errs, "errs");
+        f_errs = requireNonNull(errs, "errs");
         m_options = options;
         moduleCache = new HashMap<>();
     }
@@ -602,7 +602,7 @@ public abstract class Launcher<T extends LauncherOptions>
     public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
         log(err.getSeverity(), err.toString());
-        m_errs.log(err);
+        f_errs.log(err);
     }
 
     /**

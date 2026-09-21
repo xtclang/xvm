@@ -814,31 +814,31 @@ public class ModuleInfo {
 
         @Override
         public boolean isAbortDesired() {
-            return m_errs.isAbortDesired();
+            return f_errs.isAbortDesired();
         }
 
         @Override
         public boolean hasSeriousErrors() {
-            return m_errs.hasSeriousErrors();
+            return f_errs.hasSeriousErrors();
         }
 
         @Override
         public boolean hasError(String sCode) {
-            return m_errs.hasError(sCode);
+            return f_errs.hasError(sCode);
         }
 
         /**
          * @return the list containing any errors accumulated on (or under) this node
          */
         public ErrorList errs() {
-            return m_errs;
+            return f_errs;
         }
 
         /**
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            ErrorList deferred = m_errs;
+            ErrorList deferred = f_errs;
             if (deferred != null) {
                 for (ErrorInfo err : deferred.getErrors()) {
                     errs.log(err);
@@ -871,7 +871,7 @@ public class ModuleInfo {
          * nobody had logged to yet, and left two threads able to build two lists and keep
          * different halves of the errors.
          */
-        private final ErrorList m_errs = new ErrorList();
+        private final ErrorList f_errs = new ErrorList();
     }
 
     /**

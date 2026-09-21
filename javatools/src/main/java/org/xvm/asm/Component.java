@@ -3532,7 +3532,7 @@ public abstract class Component
     public static class SimpleCollector
             implements ResolutionCollector {
         public SimpleCollector(@NotNull ErrorListener errs) {
-            m_errs = requireNonNull(errs, "errs");
+            f_errs = requireNonNull(errs, "errs");
         }
 
         @Override
@@ -3549,7 +3549,7 @@ public abstract class Component
 
         @Override
         public ErrorListener getErrorListener() {
-            return m_errs;
+            return f_errs;
         }
 
         /**
@@ -3569,7 +3569,7 @@ public abstract class Component
         /**
          * The error listener.
          */
-        private final ErrorListener m_errs;
+        private final ErrorListener f_errs;
     }
 
     // ----- constants -----------------------------------------------------------------------------

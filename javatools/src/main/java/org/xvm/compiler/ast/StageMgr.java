@@ -41,7 +41,7 @@ public class StageMgr {
 
         m_listRevisit = Collections.singletonList(node);
         m_target      = stageTarget;
-        m_errs        = requireNonNull(errs, "errs");
+        f_errs        = requireNonNull(errs, "errs");
     }
 
     /**
@@ -58,7 +58,7 @@ public class StageMgr {
 
         m_listRevisit = list;
         m_target      = stageTarget;
-        m_errs        = requireNonNull(errs, "errs");
+        f_errs        = requireNonNull(errs, "errs");
     }
 
     /**
@@ -77,7 +77,7 @@ public class StageMgr {
      *         target stage
      */
     public boolean processComplete() {
-        ErrorListener errs = m_errs;
+        ErrorListener errs = f_errs;
         if (errs.isAbortDesired()) {
             return false;
         }
@@ -164,7 +164,7 @@ public class StageMgr {
      * @return this Stage Manager's error list
      */
     public ErrorListener getErrorListener() {
-        return m_errs;
+        return f_errs;
     }
 
     /**
@@ -198,7 +198,7 @@ public class StageMgr {
                 node.setStage(stageTarget.getTransitionStage());
                 switch (stageTarget) {
                 case Registered:
-                    node.registerStructures(this, m_errs);
+                    node.registerStructures(this, f_errs);
                     break;
 
                 case Loaded:
@@ -207,15 +207,15 @@ public class StageMgr {
                     return true;
 
                 case Resolved:
-                    node.resolveNames(this, m_errs);
+                    node.resolveNames(this, f_errs);
                     break;
 
                 case Validated:
-                    node.validateContent(this, m_errs);
+                    node.validateContent(this, f_errs);
                     break;
 
                 case Emitted:
-                    node.generateCode(this, m_errs);
+                    node.generateCode(this, f_errs);
                     break;
 
                 default:
@@ -444,7 +444,7 @@ public class StageMgr {
     /**
      * Error list to log processing errors to.
      */
-    private final ErrorListener m_errs;
+    private final ErrorListener f_errs;
 
     /**
      * The current node being processed if processing is occurring.
