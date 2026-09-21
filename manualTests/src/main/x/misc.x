@@ -41,6 +41,7 @@ module TestMisc {
 
         testEnums();
         testCircularInitialization();
+        testImplicitlyAbstract();
     }
 
     void testInts() {
@@ -853,4 +854,68 @@ module TestMisc {
             return value;
         }
     }
+
+    /**
+     * A class that does not implement everything its interface declares is implicitly abstract:
+     * declaring it is legal, and it is instantiating it that is the error. The compiler reports
+     * that at the "new", not at the class:
+     *
+     *     COMPILER-172: "K" is not an instantiable type because it contains an abstract
+     *                   method "void f()".
+     *
+     * That negative cannot be asserted from a running test - it never compiles - so what is
+     * pinned here is the positive half of the same rule: such a class may be declared, used as a
+     * type, and completed by a subclass which is then instantiable. @Abstract says the same thing
+     * explicitly and is not required.
+     */
+    void testImplicitlyAbstract() {
+        console.print("\n** testImplicitlyAbstract()");
+
+        // Incomplete does not implement f(), so it is abstract without saying so
+        Complete complete = new Complete();
+        assert complete.f() == "Complete.f";
+
+        // it is still a usable type: the subclass is an Incomplete
+        Incomplete asBase = complete;
+        assert asBase.f() == "Complete.f";
+        assert asBase.is(Incomplete);
+
+        // and the explicitly abstract one behaves the same way
+        AlsoComplete also = new AlsoComplete();
+        assert also.f() == "AlsoComplete.f";
+        assert also.is(AlsoAbstract);
+
+        console.print("an incomplete class is abstract, and its subclass is instantiable");
+    }
+
+    interface HasF {
+        String f();
+    }
+
+    /**
+     * Implements HasF without supplying f(), so it is implicitly abstract.
+     */
+    class Incomplete implements HasF {
+    }
+
+    class Complete extends Incomplete {
+        @Override
+        String f() {
+            return "Complete.f";
+        }
+    }
+
+    /**
+     * The same thing said out loud.
+     */
+    @Abstract class AlsoAbstract implements HasF {
+    }
+
+    class AlsoComplete extends AlsoAbstract {
+        @Override
+        String f() {
+            return "AlsoComplete.f";
+        }
+    }
+
 }
