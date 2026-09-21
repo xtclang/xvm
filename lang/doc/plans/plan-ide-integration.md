@@ -49,7 +49,7 @@ The LSP server uses a pluggable adapter pattern to support different backends:
          ▼                  ▼                  ▼
    MockAdapter       TreeSitter-         XdkAdapter
    (adapter.mock)    Adapter             (adapter.xdk)
-   (regex-based)     (adapter.treesitter)(future: semantic)
+   (regex-based)     (adapter.treesitter)(the XTC compiler)
 ```
 
 All adapters extend `AbstractAdapter` which provides:
@@ -65,23 +65,44 @@ only the methods they actually implement -- all others inherit traceable logging
 |---------|---------|----------------------|--------|
 | `MockAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
 | `TreeSitterAdapter` | Tree-sitter grammar | ~85% (syntax + structure + workspace index) | **DEFAULT** - Implemented |
-| `XdkAdapter` | XTC / semantic future path | 100% (semantic) | Placeholder |
+| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Diagnostics and outline | Implemented; the rest needs resolution |
+
+**`XdkAdapter` is no longer a placeholder.** It compiles through the embedding API and reports
+what the compiler actually says - syntax *and* semantics, with the compiler's own codes, messages
+and spans - which is the thing no grammar can do: `COMPILER-38: Name "NoSuchTypeAnywhere" is
+unresolvable` is not a syntax error and tree-sitter cannot find it. It also supplies the outline
+and the symbol under the cursor.
+
+What it does not yet do is everything that needs *resolution* rather than syntax - completion,
+go-to-definition, find-references, rename, signature help, semantic tokens. The reason is
+specific and worth knowing before anyone picks this up: symbols come from the AST, because the
+compiled structures carry no source positions and an editor cannot use a symbol it cannot point
+at. But an AST node knows what was *written*, not what it *resolved to*. The side that knows the
+answer has no positions; the side with positions does not know the answer. Bridging those two is
+the next piece of work, and it is larger than the outline was.
+
+Until then the two adapters are complementary rather than competing: tree-sitter is error-tolerant,
+incremental and fast, and is the better source for everything syntactic. The compiler is the only
+source for semantic truth.
 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
 out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 25).
 
 **What Each Adapter Provides:**
 
+In the table below the **Compiler** column is what a full compiler adapter should eventually do.
+Where it is implemented today it says so; everything else is the plan, not the state.
+
 | Feature | Mock | Tree-sitter | Compiler |
 |---------|------|-------------|----------|
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | Full semantic tokens |
-| Document symbols | Full | Full | Full |
+| Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | Semantic |
 | Go-to-definition (cross-file) | - | Via workspace index | Full |
 | Find references (same file) | Decl only | By name | Full |
 | Completions | Keywords | Context-aware keywords/types/locals/members/imports | Types + members |
-| Syntax errors | Markers | Full | Full |
-| Semantic errors | - | - | Full |
+| Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
+| Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | Full types |
 | Document highlights | Text match | AST identifiers with READ/WRITE distinction | Semantic |
 | Selection ranges | - | AST walk-up | AST walk-up |
