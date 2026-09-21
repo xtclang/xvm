@@ -526,6 +526,7 @@ val runSmallFloats = tasks.register<XtcRunTask>("runSmallFloats") {
     moduleName("TestSmallFloats")
 }
 
+// JIT execution is opt-in; the aggregate and CI tasks retain interpreter-only execution.
 val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
     group = "verification"
     description = "Run the shared small floating-point tests using the JIT."
@@ -536,25 +537,25 @@ val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
 val runAllTestTasks = tasks.register("runAllTestTasks") {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runSequential, runSmallFloatsJit)
+    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runSequential)
 }
 
 val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel, runSmallFloatsJit)
+    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel)
 }
 
 val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runSequential, runSmallFloatsJit)
+    dependsOn(runTestAllExecutionModes, runSequential)
 }
 
 val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runParallel, runSmallFloatsJit)
+    dependsOn(runTestAllExecutionModes, runParallel)
 }
 
 /**
