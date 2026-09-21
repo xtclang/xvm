@@ -347,10 +347,19 @@ public interface ErrorListener {
      * matters under a cascade of consequences. This names that decision, which was previously made
      * by overwriting the caller's listener with a silent one.
      *
+     * The result wraps this listener rather than being a shared constant, so the suppression is a
+     * decision about one computation instead of an anonymous silence, and
+     * {@link CascadeErrorListener#suppressed} can still reach what was suppressed. A host that
+     * wants the consequences after all - an editor offering them as related information for the
+     * diagnostic that does matter - has somewhere to get them; a constant could never say.
+     *
+     * Applying it twice is the same suppression, so it is safe to call per use rather than having
+     * to hold the result.
+     *
      * @return a listener that discards what the rest of this computation has to say
      */
     default ErrorListener suppressCascade() {
-        return PROBE;
+        return new CascadeErrorListener(this);
     }
 
     /**
@@ -410,11 +419,71 @@ public interface ErrorListener {
         }
 
         @Override
+        public ErrorListener suppressCascade() {
+            // nothing reaches this listener to begin with; wrapping it would only add a layer
+            return this;
+        }
+
+        @Override
         public String toString() {
             return f_sName;
         }
 
         private final String f_sName;
+    }
+
+    // ----- inner class: CascadeErrorListener -----------------------------------------------------
+
+    /**
+     * The listener for the remainder of a computation that has become incomplete.
+     *
+     * It discards what it is given, as {@link #PROBE} does, but it keeps the listener it was made
+     * from. The two silences are not the same thing: a probe's failure is the answer and nobody
+     * ever wants those diagnostics, whereas these are real diagnostics that happen to be
+     * consequences of a piece already known to be missing. Keeping the receiver is what leaves
+     * that difference recoverable.
+     *
+     * @see ErrorListener#suppressCascade()
+     */
+    class CascadeErrorListener
+            implements ErrorListener {
+        public CascadeErrorListener(ErrorListener errs) {
+            f_errs = requireNonNull(errs, "errs");
+        }
+
+        /**
+         * @return the listener whose cascade this suppresses
+         */
+        public ErrorListener suppressed() {
+            return f_errs;
+        }
+
+        @Override
+        public void log(ErrorInfo err) {
+            // discarded on purpose: see suppressCascade()
+        }
+
+        @Override
+        public ErrorListener merge() {
+            return this;
+        }
+
+        @Override
+        public boolean isSilent() {
+            return true;
+        }
+
+        @Override
+        public ErrorListener suppressCascade() {
+            return this;
+        }
+
+        @Override
+        public String toString() {
+            return "(Cascade of " + f_errs + ")";
+        }
+
+        private final ErrorListener f_errs;
     }
 
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
@@ -733,7 +802,9 @@ public interface ErrorListener {
      * and because grepping for this one is the list of the compiler's speculative paths.
      *
      * Not for work whose failure the user should hear about if every alternative also fails; that
-     * is {@link #branch}.
+     * is {@link #branch}. Not for the remainder of a computation already known to be incomplete
+     * either; that is {@link #suppressCascade}, which keeps the listener it silences instead of
+     * standing in for it.
      */
     ErrorListener PROBE     = new SilentErrorListener("(Probe)");
 
