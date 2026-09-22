@@ -12,7 +12,7 @@ import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.numbers.xNibble;
 
 /**
- * Native RTDelegate<Nibble> implementation.
+ * Native {@code RTDelegate<Nibble>} implementation.
  */
 public class xRTNibbleDelegate
         extends LongBasedDelegate

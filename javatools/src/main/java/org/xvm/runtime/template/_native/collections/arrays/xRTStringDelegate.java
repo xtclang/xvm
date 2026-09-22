@@ -271,7 +271,7 @@ public class xRTStringDelegate
          * @return  the String value at the specified index in the array
          *
          * @throws IndexOutOfBoundsException if the index is out of
-         *         range (nIndex < 0 || nIndex >= m_cSize)
+         *         range ({@code nIndex < 0 || nIndex >= m_cSize})
          */
         public String get(long nIndex) {
             if (nIndex < 0 || nIndex >= m_cSize) {

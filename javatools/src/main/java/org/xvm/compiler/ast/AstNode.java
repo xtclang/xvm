@@ -909,7 +909,7 @@ public abstract class AstNode
      * For example, having a function
      *      void foo(Int a, Int b = 0, Boolean c = False, Int d = 1)
      * a [call] expression "foo(1, c=True)" will result into a function call "foo(1, 0, True, 1)",
-     * while the equivalent [bind] expression "&foo(1, c=True)" will result into a function of
+     * while the equivalent [bind] expression {@code &foo(1, c=True)} will result into a function of
      * type "function void (Int, Int)", where parameters "b" and "d" remain unbound.
      *
      * @param ctx           the compilation context
@@ -1301,7 +1301,7 @@ public abstract class AstNode
     }
 
     /**
-     * Iterate over the specified argument list, and transform all canonical <code>Type<></code>
+     * Iterate over the specified argument list, and transform all canonical {@code Type<>}
      * types to the corresponding dynamic types.
      */
     protected TypeConstant[] transformTypeArguments(Context ctx,
@@ -1323,8 +1323,8 @@ public abstract class AstNode
     }
 
     /**
-     * Given a NameExpression whose type is <code>Type<></code>, transform it to a dynamic type
-     * constant <code>Type<[name].DataType></code>.
+     * Given a NameExpression whose type is {@code Type<>}, transform it to a dynamic type
+     * constant {@code Type<[name].DataType>}.
      */
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();

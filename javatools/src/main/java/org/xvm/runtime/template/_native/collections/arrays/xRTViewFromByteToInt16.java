@@ -17,7 +17,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.numbers.xInt16;
 
 /**
- * The native RTViewFromByte<Int16> implementation.
+ * The native {@code RTViewFromByte<Int16>} implementation.
  */
 public class xRTViewFromByteToInt16
         extends xRTViewFromByte {

@@ -73,10 +73,10 @@ public class Parser {
     /**
      * Parse the compilation unit.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * CompilationUnit
      *     AliasStatements-opt TypeDeclaration
-     * </pre></code>
+     * }</pre>
      *
      * @return the top level type declaration
      *
@@ -174,7 +174,7 @@ public class Parser {
     /**
      * As part of the runtime (NOT compile-time), parse the name of the class that is in the source.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ClassExpression
      *     AnnotationList-opt ModuleName-opt QualifiedName TypeParameterTypeList-opt ChildClasses-opt Modifiers-opt
      *
@@ -202,7 +202,7 @@ public class Parser {
      * ClassModifier
      *     "[" DimIndicators-opt "]"
      *     "..."
-     * </pre></code>
+     * }</pre>
      *
      * In the above BNF, the definitions are custom to this method, except for ArgumentList,
      * DimIndicators, and QualifiedName
@@ -263,7 +263,7 @@ public class Parser {
     /**
      * Parse a type declaration
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeComposition
      *     Modifiers-opt Category QualifiedName TypeParameterList-opt     ->
      *             ParameterList-opt Compositions-opt TypeCompositionBody
@@ -295,7 +295,7 @@ public class Parser {
      * TypeCompositionBody
      *     "{" EnumList-opt TypeCompositionComponents-opt "}"
      *     ";"
-     * </pre></code>
+     * }</pre>
      *
      * @return a TypeDeclaration
      */
@@ -484,7 +484,7 @@ public class Parser {
     /**
      * Parse the body of a type composition, including support for enum bodies.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * EnumList
      *     Enums ";"
      *
@@ -494,7 +494,7 @@ public class Parser {
      *
      * Enum
      *     Annotations-opt Name TypeParameterTypeList-opt ArgumentList-opt TypeCompositionBody-opt
-     * </pre></code>
+     * }</pre>
      *
      * @return
      */
@@ -554,7 +554,7 @@ public class Parser {
     /**
      * Parse the components of a type composition.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeCompositionComponents
      *     TypeCompositionComponent
      *     TypeCompositionComponents TypeCompositionComponent
@@ -566,7 +566,7 @@ public class Parser {
      *     PropertyDeclaration
      *     MethodDeclaration
      *     ConstantDeclaration
-     * </pre></code>
+     * }</pre>
      *
      * @return a list of statements
      */
@@ -635,18 +635,18 @@ public class Parser {
     /**
      * Parse the components of a type composition.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeCompositionComponent
      *     [..]
      *     TypeComposition
      *     PropertyDeclaration
      *     MethodDeclaration
      *     ConstantDeclaration
-     * </pre></code>
+     * }</pre>
      *
      * And if other statements are allowed:
      *
-     * <p><code><pre>
+     * <pre>{@code
      * VariableDeclarationStatement
      *     TypeExpression Name VariableInitializerFinish-opt ";"
      *
@@ -670,7 +670,7 @@ public class Parser {
      *
      * ExpressionStatement
      *     Expression ";"
-     * </pre></code>
+     * }</pre>
      *
      *
      * @param exprCondition  the condition applying to this composition component, or null
@@ -1066,13 +1066,13 @@ public class Parser {
     }
 
     /**
-     * <p><code><pre>
+     * <pre>{@code
      * ParameterList MethodDeclarationFinish
      *
      * MethodDeclarationFinish
      *     ;
      *     StatementBlock
-     * </pre></code>
+     * }</pre>
      *
      * @return a MethodDeclarationStatement
      */
@@ -1121,12 +1121,12 @@ public class Parser {
     /**
      * Parse the remainder of a property statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * PropertyDeclarationFinish
      *     "=" Expression ";"
      *     "." Name Parameters MethodBody
      *     TypeCompositionBody
-     * </pre></code>
+     * }</pre>
      *
      * @return a StatementBlock
      */
@@ -1183,9 +1183,6 @@ public class Parser {
     /**
      * Parse a block statement.
      *
-     * <p><code><pre>
-     * </pre></code>
-     *
      * @return a StatementBlock
      */
     StatementBlock parseStatementBlock() {
@@ -1201,7 +1198,7 @@ public class Parser {
     /**
      * Parse an Ecstasy statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * Statement
      *     TypeComposition
      *     PropertyDeclarationStatement
@@ -1294,7 +1291,7 @@ public class Parser {
      *
      * TypeDefStatement
      *     "typedef" TypeExpression Name ";"
-     * </pre></code>
+     * }</pre>
      *
      * @return a statement
      */
@@ -1401,7 +1398,7 @@ public class Parser {
     /**
      * Parse an "assert" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * AssertStatement
      *     AssertInstruction ConditionList-opt AssertMessage-opt ";"
      *
@@ -1417,7 +1414,7 @@ public class Parser {
      *
      * AssertMessage
      *     "as" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @return an "assert" statement
      */
@@ -1461,10 +1458,10 @@ public class Parser {
     /**
      * Parse a "do" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * DoStatement
      *     "do" StatementBlock "while" "(" ConditionList ")" ";"
-     * </pre></code>
+     * }</pre>
      *
      * @return a "do" statement
      */
@@ -1482,7 +1479,7 @@ public class Parser {
     /**
      * Parse a "for" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ForStatement
      *     "for" "(" ForCondition ")" StatementBlock
      *
@@ -1512,7 +1509,7 @@ public class Parser {
      * VariableModification
      *     Assignment
      *     Expression
-     * </pre></code>
+     * }</pre>
      *
      * @return a for statement
      */
@@ -1622,14 +1619,14 @@ public class Parser {
     /**
      * Parse an "if" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * IfStatement
      *     "if" "(" ConditionList ")" StatementBlock ElseStatement-opt
      *
      * ElseStatement
      *     "else" IfStatement
      *     "else" StatementBlock
-     * </pre></code>
+     * }</pre>
      *
      * @return an "if" statement
      */
@@ -1651,7 +1648,7 @@ public class Parser {
     /**
      * Parse a ConditionList, which is used in "assert", "if", "for", "while", and "do" statements.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ConditionList
      *     Condition
      *     ConditionList, Condition
@@ -1684,7 +1681,7 @@ public class Parser {
      *     "val"
      *     "var"
      *     TypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return the Expression that provides the condition, or the conditional AssignmentStatement
      */
@@ -1769,7 +1766,7 @@ public class Parser {
     /**
      * Parse an import statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ImportStatement
      *     "import" QualifiedName ImportFinish
      *
@@ -1777,7 +1774,7 @@ public class Parser {
      *     ";"
      *     "as" Name ";"
      *     NoWhitespace ".*" ";"
-     * </pre></code>
+     * }</pre>
      *
      * @return an ImportStatement
      */
@@ -1814,14 +1811,14 @@ public class Parser {
     /**
      * Parse a return statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ReturnStatement
      *     "return" ReturnValue-opt ";"
      *
      * ReturnValue
      *     TupleLiteral
      *     ExpressionList
-     * </pre></code>
+     * }</pre>
      *
      * @return a return statement
      */
@@ -1842,7 +1839,7 @@ public class Parser {
     /**
      * Parse a "switch" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * SwitchStatement
      *     switch "(" SwitchCondition-opt ")" "{" SwitchBlocks "}"
      *
@@ -1888,7 +1885,7 @@ public class Parser {
      *
      * ContinueStatement:
      *     "continue" Name-opt ";"
-     * </pre></code>
+     * }</pre>
      *
      * @return a switch statement
      */
@@ -1971,7 +1968,7 @@ public class Parser {
     /**
      * Parse a "switch" condition.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * SwitchCondition
      *     SwitchConditionExpression
      *     SwitchCondition "," SwitchConditionExpression
@@ -1999,7 +1996,7 @@ public class Parser {
      *
      * VariableInitializerFinish
      *     "=" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @return a switch condition, or null if there is none
      */
@@ -2061,7 +2058,7 @@ public class Parser {
     /**
      * Parse an expression list for a case label, but one that does not look for a trailing ':'.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * SwitchLabel
      *     "case" CaseOptionList ":"
      *     "default" ":"
@@ -2086,7 +2083,7 @@ public class Parser {
      * SafeCaseExpression:
      *     "_"
      *     TernaryExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return
      */
@@ -2213,7 +2210,7 @@ public class Parser {
     /**
      * Parse a "try" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TryStatement
      *     "try" ResourceDeclaration-opt StatementBlock TryFinish
      *
@@ -2230,7 +2227,7 @@ public class Parser {
      *
      * Catch
      *     "catch" "(" TypeExpression Name ")" StatementBlock
-     * </pre></code>
+     * }</pre>
      *
      * @return a "try" statement
      */
@@ -2265,10 +2262,10 @@ public class Parser {
     /**
      * Parse a typedef statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeDefStatement
      *     "typedef" Type Name ";"
-     * </pre></code>
+     * }</pre>
      *
      * @param tokenAccess  if the typedef is a type composition component, it can be declared with
      *                     an access modifier
@@ -2293,13 +2290,13 @@ public class Parser {
     /**
      * Parse a "using" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * UsingStatement
      *     "using" ResourceDeclaration StatementBlock
      *
      * ResourceDeclaration
      *     "(" VariableInitializationList ")"
-     * </pre></code>
+     * }</pre>
      *
      * @return a "using" statement
      */
@@ -2314,10 +2311,10 @@ public class Parser {
     /**
      * Parse a "while" statement.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * WhileStatement
      *     "while" "(" ConditionList ")" StatementBlock
-     * </pre></code>
+     * }</pre>
      *
      * @return a "while" statement
      */
@@ -2333,7 +2330,7 @@ public class Parser {
     /**
      * Parse a variable initializer:
      *
-     * <p><code><pre>
+     * <pre>{@code
      * VariableInitializationList
      *     VariableInitializer
      *     VariableInitializationList "," VariableInitializer
@@ -2343,7 +2340,7 @@ public class Parser {
      *
      * VariableInitializerFinish
      *     "=" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @param fRequired   true iff at least one VariableInitializer is required
      * @param fAllowExpr  true iff a naked expression can be used as an implicit variable initializer
@@ -2370,13 +2367,13 @@ public class Parser {
     /**
      * Parse a variable initializer:
      *
-     * <p><code><pre>
+     * <pre>{@code
      * VariableInitializer
      *     TypeExpression-opt Name VariableInitializerFinish
      *
      * VariableInitializerFinish
      *     "=" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @param fAllowExpr  allow an R-Value expression to be specified, as if an implicit "val _ ="
      *                    precedes it
@@ -2433,7 +2430,7 @@ public class Parser {
     /**
      * Parse a condition expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * while parsing is of a generic Expression, there are only a few expression
      * forms that are permitted:
      * 1. StringLiteral "." "defined"
@@ -2441,7 +2438,7 @@ public class Parser {
      * 3. QualifiedName "." "versionMatches" "(" VersionLiteral ")"
      * 4. Any of 1-3 and 5 negated using "!"
      * 5. Any two of 1-5 combined using "&", "&&", "|", or "||"
-     * </pre></code>
+     * }</pre>
      *
      * @return an expression
      */
@@ -2454,11 +2451,11 @@ public class Parser {
     /**
      * Parse a list of expressions.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ExpressionList
      *     Expression
      *     ExpressionList "," Expression
-     * </pre></code>
+     * }</pre>
      *
      * @return an expression
      */
@@ -2491,11 +2488,11 @@ public class Parser {
     /**
      * Parse an "else" expression (the "grounding" expression for any short-circuit expressions).
      *
-     * <p><code><pre>
+     * <pre>{@code
      * Expression
      *     TernaryExpression
      *     TernaryExpression ":" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2514,11 +2511,11 @@ public class Parser {
     /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TernaryExpression
      *     OrExpression
      *     OrExpression Whitespace "?" OrExpression ":" TernaryExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return an expression
      */
@@ -2529,11 +2526,11 @@ public class Parser {
     /**
      * Parse a ternary expression, which is the "a ? b : c" expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TernaryExpression
      *     OrExpression
      *     OrExpression Whitespace "?" TernaryExpression ":" TernaryExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2554,12 +2551,12 @@ public class Parser {
     /**
      * Parse a logical "or"/"xor" expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * OrExpression
      *     AndExpression
      *     OrExpression || AndExpression
      *     OrExpression ^^ AndExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2586,11 +2583,11 @@ public class Parser {
     /**
      * Parse a logical "and" expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * AndExpression
      *     EqualityExpression
      *     AndExpression && EqualityExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2607,12 +2604,12 @@ public class Parser {
     /**
      * Parse an equality/inequality expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * EqualityExpression
      *     RelationalExpression
      *     EqualityExpression "==" RelationalExpression
      *     EqualityExpression "!=" RelationalExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2662,7 +2659,7 @@ public class Parser {
     /**
      * Parse a relational expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * RelationalExpression
      *     AssignmentExpression
      *     AssignmentExpression "<=>" AssignmentExpression
@@ -2670,7 +2667,7 @@ public class Parser {
      *     RelationalExpression "<="  AssignmentExpression
      *     RelationalExpression ">"   AssignmentExpression
      *     RelationalExpression ">="  AssignmentExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2741,11 +2738,11 @@ public class Parser {
     /**
      * Parse an assignment expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * AssignmentExpression
      *     RangeExpression
      *     RangeExpression "<-" AssignmentExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2786,11 +2783,11 @@ public class Parser {
     /**
      * Parse an interval or range expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * RangeExpression
      *     BitwiseExpression
      *     RangeExpression ".." BitwiseExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2816,7 +2813,7 @@ public class Parser {
     /**
      * Parse a bitwise shift expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ShiftExpression
      *     AdditiveExpression
      *     ShiftExpression "<<"  AdditiveExpression
@@ -2825,7 +2822,7 @@ public class Parser {
      *     ShiftExpression "&"   AdditiveExpression
      *     ShiftExpression "^"   AdditiveExpression
      *     ShiftExpression "|"   AdditiveExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2854,12 +2851,12 @@ public class Parser {
     /**
      * Parse an addition or subtraction expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * AdditiveExpression
      *     MultiplicativeExpression
      *     AdditiveExpression "+" MultiplicativeExpression
      *     AdditiveExpression "-" MultiplicativeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2877,14 +2874,14 @@ public class Parser {
     /**
      * Parse a multiplication / division / modulo expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * MultiplicativeExpression
      *     ElvisExpression
      *     MultiplicativeExpression "*"  ElvisExpression
      *     MultiplicativeExpression "/"  ElvisExpression
      *     MultiplicativeExpression "%"  ElvisExpression
      *     MultiplicativeExpression "/%" ElvisExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2910,11 +2907,11 @@ public class Parser {
     /**
      * Parse an "elvis" expression, which is of the form "a ?: b".
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ElvisExpression
      *     PrefixExpression
      *     PrefixExpression ?: ElvisExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2931,7 +2928,7 @@ public class Parser {
     /**
      * Parse a prefix expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * PrefixExpression
      *     PostfixExpression
      *     "++" PrefixExpression
@@ -2940,7 +2937,7 @@ public class Parser {
      *     "-" PrefixExpression
      *     "!" PrefixExpression
      *     "~" PrefixExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -2985,7 +2982,7 @@ public class Parser {
     /**
      * Parse a prefix expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * PostfixExpression
      *     PrimaryExpression
      *     PostfixExpression "++"
@@ -3027,7 +3024,7 @@ public class Parser {
      * NewArguments
      *     ArrayIndexes ArgumentList-opt
      *     ArgumentList
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -3249,14 +3246,14 @@ public class Parser {
      * Note: The use of QualifiedName instead of a simple Name here (which would be logical and even
      *       expected since PostfixExpression takes care of the ".Name.Name" etc. suffix parsing) is
      *       used to capture the case where the expression is a type expression containing type
-     *       parameters, and which the opening '<' of the type parameters would be parsed by the
-     *       RelationalExpression rule if we miss handling it here. Unfortunately, that means that the
-     *       TypeParameterList is parsed speculatively if the '<' opening token is encountered after
-     *       a name, because it could (might/will occasionally) still be a "less than sign" and not a
-     *       parameterized type.
+     *       parameters, and which the opening {@code <} of the type parameters would be parsed by
+     *       the RelationalExpression rule if we miss handling it here. Unfortunately, that means
+     *       that the TypeParameterList is parsed speculatively if the {@code <} opening token is
+     *       encountered after a name, because it could (might/will occasionally) still be a
+     *       "less than sign" and not a parameterized type.
      * </li></ul>
      *
-     * <p><code><pre>
+     * <pre>{@code
      * PrimaryExpression
      *     "(" Expression ")"
      *     "new" TypeExpression ArgumentList AnonClassBody-opt
@@ -3273,7 +3270,7 @@ public class Parser {
      *     "throw" TernaryExpression       # non-completing
      *     "T0D0" TodoFinish-opt           # non-completing
      *     "assert"                        # non-completing
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to allow parsing of an extended type expression
      *
@@ -3850,13 +3847,13 @@ public class Parser {
     /**
      * Parse a "to-do" expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * "T0D0" TodoFinish-opt       (note: 'O' replaced with '0' to suppress IDE highlighting)
      *
      * TodoFinish
      *     InputCharacter-not-"(" InputCharacters LineTerminator
      *     NoWhitespace "(" Expression-opt ")"
-     * </pre></code>
+     * }</pre>
      *
      * @return a ThrowExpression for a T0D0
      */
@@ -3887,7 +3884,7 @@ public class Parser {
     /**
      * Parses a "switch" expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * SwitchExpression
      *     switch "(" SwitchCondition-opt ")" "{" SwitchExpressionBlocks "}"
      *
@@ -3932,7 +3929,7 @@ public class Parser {
      * SafeCaseExpression:
      *     "_"
      *     TernaryExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return a SwitchExpression
      */
@@ -3995,7 +3992,7 @@ public class Parser {
     /**
      * Parse a complex literal.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TupleLiteral
      *     "(" ExpressionList "," Expression ")"                     # compile/runtime type is Tuple
      *     TypeExpression NoWhitespace ":" "(" ExpressionList-opt ")"# type must be a Tuple
@@ -4014,7 +4011,7 @@ public class Parser {
      *
      * Entry
      *     Expression "=" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @return a literal expression
      */
@@ -4160,10 +4157,10 @@ public class Parser {
     /**
      * Parse a type expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeExpression
      *     IntersectingTypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return a TypeExpression
      */
@@ -4174,10 +4171,10 @@ public class Parser {
     /**
      * Parse an extended type expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ExtendedTypeExpression
      *     ExtendedIntersectingTypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return a TypeExpression
      */
@@ -4188,7 +4185,7 @@ public class Parser {
     /**
      * Parse a type expression of the form "Type + Type" or "Type - Type".
      *
-     * <p><code><pre>
+     * <pre>{@code
      * IntersectingTypeExpression
      *     UnionedTypeExpression
      *     IntersectingTypeExpression + UnionedTypeExpression
@@ -4198,7 +4195,7 @@ public class Parser {
      *     ExtendedUnionedTypeExpression
      *     ExtendedIntersectingTypeExpression + ExtendedUnionedTypeExpression
      *     ExtendedIntersectingTypeExpression - ExtendedUnionedTypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
@@ -4218,7 +4215,7 @@ public class Parser {
     /**
      * Parse a type expression of the form "Type | Type", otherwise .
      *
-     * <p><code><pre>
+     * <pre>{@code
      * UnionedTypeExpression
      *     NonBiTypeExpression
      *     UnionedTypeExpression | NonBiTypeExpression
@@ -4226,7 +4223,7 @@ public class Parser {
      * ExtendedUnionedTypeExpression
      *     ExtendedNonBiTypeExpression
      *     ExtendedUnionedTypeExpression | ExtendedNonBiTypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
@@ -4243,7 +4240,7 @@ public class Parser {
     /**
      * Parse any type expression that does NOT look like "Type + Type" or "Type | Type".
      *
-     * <p><code><pre>
+     * <pre>{@code
      * NonBiTypeExpression
      *     "(" TypeExpression ")"
      *     AnnotatedTypeExpression
@@ -4289,7 +4286,7 @@ public class Parser {
      * ExpressionList
      *     Expression
      *     ExpressionList "," Expression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
@@ -4438,13 +4435,13 @@ public class Parser {
     /**
      * Parse a type expression that is preceded by an annotation.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * AnnotatedTypeExpression
      *     Annotation NonBiTypeExpression
      *
      * ExtendedAnnotatedTypeExpression
      *     Annotation ExtendedNonBiTypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param fExtended  true to parse for the "extended" form instead of the "limited" form
      *
@@ -4460,14 +4457,14 @@ public class Parser {
     /**
      * Parse a function type expression.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * FunctionTypeExpression
      *     "function" ReturnList FunctionTypeFinish
      *
      * FunctionTypeFinish
      *     Name ParameterTypeList
      *     ParameterTypeList Name
-     * </pre></code>
+     * }</pre>
      *
      * @return a FunctionTypeExpression
      */
@@ -4496,9 +4493,9 @@ public class Parser {
     /**
      * Parse a type expression in the form:
      *
-     *   "name.name.name<param, param>.name!<param, param>"
+     *   {@code name.name.name<param, param>.name!<param, param>}
      *
-     * <p><code><pre>
+     * <pre>{@code
      * NamedTypeExpression
      *     NamedTypeExpressionPart
      *     NamedTypeExpression '.' Annotations-opt NamedTypeExpressionPart
@@ -4508,7 +4505,7 @@ public class Parser {
      *
      * NoAutoNarrowModifier
      *     NoWhitespace "!"
-     * </pre></code>
+     * }</pre>
      *
      * @param tokAccess  PUBLIC, PROTECTED, PRIVATE, STRUCT, or (usually) null
      *
@@ -4576,11 +4573,11 @@ public class Parser {
     /**
      * Parse a dot-delimited list of names.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * QualifiedName
      *    Name
      *    QualifiedName "." Name
-     * </pre></code>
+     * }</pre>
      *
      * @return a list of zero or more identifier tokens
      */
@@ -4595,7 +4592,7 @@ public class Parser {
     /**
      * Parse a sequence of modifiers, including annotations
      *
-     * <p><code><pre>
+     * <pre>{@code
      * Modifiers
      *     Modifier
      *     Modifiers Modifier
@@ -4612,7 +4609,7 @@ public class Parser {
      *
      * Annotation
      *     "@" NamedTypeExpression ArgumentList-opt
-     * </pre></code>
+     * }</pre>
      *
      * @return a List&lt;Token | Annotation&gt;
      */
@@ -4623,11 +4620,11 @@ public class Parser {
     /**
      * Mostly a continuation of the above, but also supporting the following parsing:
      *
-     * <p><code><pre>
+     * <pre>{@code
      * PropertyAccessModifier
      *     AccessModifier
      *     AccessModifier "/" AccessModifier
-     * </pre></code>
+     * }</pre>
      *
      * Also verifies that modifiers are not repeated or obviously conflicting.
      *
@@ -4703,10 +4700,10 @@ public class Parser {
     /**
      * Parse an annotation.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * Annotation
      *     "@" NamedTypeExpression ArgumentList-opt
-     * </pre></code>
+     * }</pre>
      *
      * @param required  true iff the annotation is required
      *
@@ -4738,7 +4735,7 @@ public class Parser {
     /**
      * If the next token is a &quot;&lt;&quot;, then parse a list of formal type parameters.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeParameterList
      *     "<" TypeParameters ">"
      *
@@ -4751,7 +4748,7 @@ public class Parser {
      *
      * TypeParameterConstraint
      *     "extends" Type
-     * </pre></code>
+     * }</pre>
      *
      * @param required  true iff the angle brackets are required
      *
@@ -4785,7 +4782,7 @@ public class Parser {
      * for {@code Map<String, Int>}, this would parse the "{@code <String, Int>}" portion and
      * produce a list of two types: {@code String, Int}.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeParameterTypeList
      *     "<" TypeParameterTypes ">"
      *
@@ -4795,7 +4792,7 @@ public class Parser {
      *
      * TypeParameterType
      *     TypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @param required  true iff the angle brackets are required
      *
@@ -4817,11 +4814,11 @@ public class Parser {
     /**
      * Parse a list of type expressions.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * TypeExpressionList
      *     TypeExpression
      *     TypeExpressionList "," TypeExpression
-     * </pre></code>
+     * }</pre>
      *
      * @return a list of type expressions
      */
@@ -4846,7 +4843,7 @@ public class Parser {
     /**
      * Parse a list of package injections, starting with the opening parenthesis.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ResourceList
      *     "inject" "(" ResourceListContents-opt ")"
      *
@@ -4863,7 +4860,7 @@ public class Parser {
      * ResourceFinish
      *     Name
      *     "_"
-     * </pre></code>
+     * }</pre>
      *
      * @return a list of Parameter objects, or  null if no "inject" clause is encountered
      */
@@ -4891,7 +4888,7 @@ public class Parser {
     /**
      * Parse a sequence of parameters, starting with the opening parenthesis.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ParameterList
      *     "(" Parameters ")"
      *
@@ -4904,7 +4901,7 @@ public class Parser {
      *
      * DefaultValue
      *     "=" Expression
-     * </pre></code>
+     * }</pre>
      *
      * @param required  true iff the parenthesis are required
      *
@@ -4932,10 +4929,10 @@ public class Parser {
     /**
      * Parse a list of parameter types (without parameter names).
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ParameterTypeList
      *     "(" TypeExpressionList-opt ")"
-     * </pre></code>
+     * }</pre>
      *
      * @param required
      * @return
@@ -4954,7 +4951,7 @@ public class Parser {
     /**
      * Parse an argument list.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ArgumentList
      *     "(" Arguments-opt ")"
      *
@@ -4973,7 +4970,7 @@ public class Parser {
      *
      * NamedArgument
      *     Name "="
-     * </pre></code>
+     * }</pre>
      *
      *
      * @param required        true iff the parenthesis are required
@@ -5076,7 +5073,7 @@ public class Parser {
     /**
      * Parse a declared list of return types.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * ReturnList
      *     "void"
      *     SingleReturnList
@@ -5091,7 +5088,7 @@ public class Parser {
      *
      * MultiReturn
      *     TypeExpression Name-opt
-     * </pre></code>
+     * }</pre>
      */
     List<Parameter> parseReturnList() {
         List<Parameter> listReturn;
@@ -5111,7 +5108,7 @@ public class Parser {
     /**
      * Parse a sequence of version override clauses.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * VersionRequirement
      *     Version VersionOverrides-opt
      *
@@ -5130,7 +5127,7 @@ public class Parser {
      * Versions
      *     Version
      *     Versions, Version
-     * </pre></code>
+     * }</pre>
      *
      * @param required  true if a version requirement must be present next in the stream of tokens
      *
@@ -5180,7 +5177,7 @@ public class Parser {
     /**
      * Parse a version literal.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * VersionString
      *     NonGASuffix
      *     VersionNumbers VersionFinish-opt
@@ -5202,7 +5199,7 @@ public class Parser {
      *     "alpha"         # build selected for external alpha test (pre-release)
      *     "beta"          # build selected for external beta test (pre-release)
      *     "rc"            # build selected as a release candidate (pre-release; GA pending)
-     * </pre></code>
+     * }</pre>
      *
      * @param fRequired  true if a version requirement must be present next in the stream of tokens
      *
@@ -5845,7 +5842,8 @@ public class Parser {
      */
     public static final String BAD_CHAINED_EQ    = "PARSER-25";
     /**
-     * Incompatible chained ordering operators: Cannot mix \"<\"/\"<=\" and \">\"/\">=\".
+     * Incompatible chained ordering operators: Cannot mix {@code <}/{@code <=} and
+     * {@code >}/{@code >=}.
      */
     public static final String BAD_CHAINED_CMP   = "PARSER-26";
     /**

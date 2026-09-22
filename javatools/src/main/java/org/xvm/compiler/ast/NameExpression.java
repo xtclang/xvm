@@ -93,8 +93,8 @@ import org.xvm.util.Severity;
  * there is a "this" or not.
  *
  * <p>A name resolution also has an implicit de-reference, or an explicit non-dereference (a
- * suppression of the de-reference using the "&" symbol). The result of the name being resolved
- * will differ based on whether the name is implicitly de-referenced, or explicitly not
+ * suppression of the de-reference using the {@code &} symbol). The result of the name being
+ * resolved will differ based on whether the name is implicitly de-referenced, or explicitly not
  * de-referenced.
  *
  * <p>The starting point for de-referencing is within a "method body", which is one of:
@@ -128,7 +128,7 @@ import org.xvm.util.Severity;
  * no longer refers to the name of an import, but rather to the component (Module, Package,
  * Class, Property, Multi-Method) being imported by that name.
  *
- * <p><code><pre>
+ * <pre>{@code
  *   Name          method             specifies            "static" context /    specifies
  *   refers to     context            no-de-ref            identity mode         no-de-ref
  *   ------------  -----------------  -------------------  ------------------    -------------------
@@ -149,7 +149,7 @@ import org.xvm.util.Severity;
  *   Typedef       Type<..>           Error                Type                  Error
  *
  *   MultiMethod   Error              Error                Error                 Error
- * </pre></code>
+ * }</pre>
  *
  * <p>Note: '*' signifies potential "identity mode"
  *
@@ -203,7 +203,7 @@ public class NameExpression
     /**
      * This constructor is used to implement an "initial name" expression.
      *
-     * @param amp      the (optional) no-de-reference token "&"
+     * @param amp      the (optional) no-de-reference token {@code &}
      * @param name     the (required) name
      * @param params   the (optional)
      * @param lEndPos  the end of the expression
@@ -217,7 +217,7 @@ public class NameExpression
      * the dot is passed as "left".
      *
      * @param left     the (optional) expression to the left of the dot
-     * @param amp      the (optional) no-de-reference token "&"
+     * @param amp      the (optional) no-de-reference token {@code &}
      * @param name     the (required) name
      * @param params   the (optional)
      * @param lEndPos  the end of the expression
@@ -337,8 +337,8 @@ public class NameExpression
     }
 
     /**
-     * @return true iff the expression is explicitly non-de-referencing, as with the '&' prefix on
-     *         a class, property, or method name
+     * @return true iff the expression is explicitly non-de-referencing, as with the {@code &}
+     *         prefix on a class, property, or method name
      */
     public boolean isSuppressDeref() {
         return amp != null;

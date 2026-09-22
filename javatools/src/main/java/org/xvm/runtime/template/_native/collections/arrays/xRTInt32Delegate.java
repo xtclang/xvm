@@ -13,7 +13,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.numbers.xInt32;
 
 /**
- * Native RTDelegate<Int32> implementation.
+ * Native {@code RTDelegate<Int32>} implementation.
  */
 public class xRTInt32Delegate
         extends LongBasedDelegate

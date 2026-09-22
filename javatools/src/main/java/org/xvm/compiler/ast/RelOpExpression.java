@@ -55,9 +55,9 @@ import org.xvm.util.Severity;
  * <li><code>COND_XOR:   "^^"</code> - </li>
  * <li><code>BIT_OR:     "|"</code> - </li>
  * <li><code>BIT_XOR:    "^"</code> - </li>
- * <li><code>BIT_AND:    "&"</code> - </li>
+ * <li>{@code BIT_AND:    "&"} - </li>
  * <li><code>DOTDOT:     ".."</code> - </li>
- * <li><code>SHL:        "<<"</code> - </li>
+ * <li>{@code SHL:        "<<"} - </li>
  * <li><code>SHR:        ">>"</code> - </li>
  * <li><code>USHR:       ">>>"</code> - </li>
  * <li><code>ADD:        "+"</code> - </li>

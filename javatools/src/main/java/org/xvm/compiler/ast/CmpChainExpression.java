@@ -51,12 +51,12 @@ import org.xvm.util.Severity;
 /**
  * Comparison over a chain of expressions.
  *
- * <pre><code>
+ * <pre>{@code
  *     if (a == b == c) {...}
  *     if (a != b != c) {...}
  *     if (a < b <= c) {...}
  *     if (a > b >= c) {...}
- * </code></pre>
+ * }</pre>
  *
  * @see CmpExpression
  */

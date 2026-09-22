@@ -24,7 +24,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.LongArrayHandle;
 
 /**
- * The abstract base for RTDelegate<Int128> and RTDelegate<UInt128> implementations.
+ * The abstract base for {@code RTDelegate<Int128>} and {@code RTDelegate<UInt128>} implementations.
  */
 public abstract class LongLongDelegate
         extends xRTDelegate {

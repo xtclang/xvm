@@ -259,9 +259,9 @@ public class Lexer
     /**
      * Eat a template literal. A template literal is a string literal that may contain expressions;
      * for example:
-     * <blockquote><code><pre>
+     * <blockquote><pre>{@code
      *   $"x={x}"
-     * </pre></code></blockquote>
+     * }</pre></blockquote>
      *
      * @param lInitPos  the start of the template literal
      *
@@ -274,12 +274,12 @@ public class Lexer
     /**
      * Eat a template literal that uses the multi-line format. A template literal is a string
      * literal that may contain expressions; for example:
-     * <blockquote><code><pre>
+     * <blockquote><pre>{@code
      *    $|# TOML doc
      *     |[name]
      *     |first = "{person.firstname}"
      *     |last = "{person.lastname}"
-     * </pre></code></blockquote>
+     * }</pre></blockquote>
      *
      * @param lInitPos  the start of the template literal
      *
@@ -1902,7 +1902,7 @@ public class Lexer
     /**
      * Eat a literal version value.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * VersionString
      *     NonGASuffix
      *     VersionNumbers VersionFinish-opt
@@ -1924,7 +1924,7 @@ public class Lexer
      *     "alpha"         # build selected for external alpha test (pre-release)
      *     "beta"          # build selected for external beta test (pre-release)
      *     "rc"            # build selected as a release candidate (pre-release; GA pending)
-     * </pre></code>
+     * }</pre>
      *
      * @param lInitPos  the location of the start of the literal token
      *
@@ -2749,7 +2749,7 @@ public class Lexer
      */
     public static final char NEL = 0x0085;
     /**
-     * Unicode: Non-Breaking Space aka "&nbsp".
+     * Unicode: Non-Breaking Space aka {@code &nbsp;}.
      */
     public static final char NBS = 0x00A0;
     /**

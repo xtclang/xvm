@@ -18,7 +18,8 @@ import org.xvm.runtime.template._native.collections.arrays.ByteBasedDelegate.Byt
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 /**
- * A base class for native ArrayDelegate<Bit> views that point to delegates holding byte arrays.
+ * A base class for native {@code ArrayDelegate<Bit>} views that point to delegates holding
+ * byte arrays.
  */
 public abstract class ByteBasedBitView
         extends xRTViewToBit
@@ -135,7 +136,7 @@ public abstract class ByteBasedBitView
     // ----- handle --------------------------------------------------------------------------------
 
     /**
-     * DelegateArray<Bit> view delegate.
+     * {@code DelegateArray<Bit>} view delegate.
      */
     protected static class ViewHandle
             extends xRTView.ViewHandle {

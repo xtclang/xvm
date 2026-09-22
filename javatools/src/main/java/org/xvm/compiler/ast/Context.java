@@ -322,21 +322,21 @@ public class Context {
      * specified type's contributions.
      *
      * <p>As a result, it allows us to write:
-     * <pre><code>
+     * <pre>{@code
      *    Color color = Red;
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    Color color = Color.Red;
-     * </code></pre>
+     * }</pre>
      * or
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Red)
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Color.Red)
-     * </code></pre>
+     * }</pre>
      *
      * @param typeLeft  the "infer from" type
      *
@@ -350,13 +350,13 @@ public class Context {
      * Create a delegating context that allows this context to resolve names for elements in a list.
      *
      * <p>As a result, it allows us to write:
-     * <pre><code>
+     * <pre>{@code
      *    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    FileChannel open(ReadOption read=Read, WriteOption... write=[WriteOption.Write]);
-     * </code></pre>
+     * }</pre>
      *
      * @return a new context
      */
@@ -930,7 +930,7 @@ public class Context {
      *
      * @param tokName  the variable name as a token from the source code
      * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
-     *                 suppressed (e.g: &val)
+     *                 suppressed (e.g: {@code &val})
      * @param errs     the error list to log to
      */
     public final void markVarRead(Token tokName, boolean fDeref, ErrorListener errs) {
@@ -944,7 +944,7 @@ public class Context {
      * @param sName    the variable name
      * @param tokName  the variable name as a token from the source code (optional)
      * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
-     *                 suppressed (e.g: &val)
+     *                 suppressed (e.g: {@code &val})
      * @param errs     the error list to log to (optional)
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
@@ -1655,7 +1655,7 @@ public class Context {
     }
 
     /**
-     * @return an array of RegisterAst<Constant> for the method parameters
+     * @return an array of {@link RegisterAST} for the method parameters
      */
     public RegisterAST[] collectParameters() {
         // create registers for the method parameters
@@ -2040,7 +2040,7 @@ public class Context {
     // ----- inner class: AndContext ---------------------------------------------------------------
 
     /**
-     * A nested context for handling "&&" expressions.
+     * A nested context for handling {@code &&} expressions.
      */
     public static class AndContext
             extends Context {
@@ -2352,21 +2352,21 @@ public class Context {
      * contributions.
      *
      * As a result, it allows us to write:
-     * <pre><code>
+     * <pre>{@code
      *    Color color = Red;
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    Color color = Color.Red;
-     * </code></pre>
+     * }</pre>
      * or
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Red)
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Color.Red)
-     * </code></pre>
+     * }</pre>
      */
     public static class InferringContext
             extends Context {

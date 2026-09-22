@@ -23,7 +23,7 @@ import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.runtime.template.numbers.xInt64;
 
 /**
- * Native RTDelegate<Float64> implementation.
+ * Native {@code RTDelegate<Float64>} implementation.
  */
 public class xRTFloat64Delegate
         extends xRTDelegate {

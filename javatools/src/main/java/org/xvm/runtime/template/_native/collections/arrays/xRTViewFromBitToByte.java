@@ -20,7 +20,7 @@ import org.xvm.runtime.template.numbers.xUInt8;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 /**
- * The native RTViewFromBit<Byte> implementation.
+ * The native {@code RTViewFromBit<Byte>} implementation.
  */
 public class xRTViewFromBitToByte
         extends xRTViewFromBit {

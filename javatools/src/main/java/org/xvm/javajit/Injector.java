@@ -43,7 +43,8 @@ public class Injector {
     /**
      * Obtain a supplier for the specified Resource.
      *
-     * @param res  the Resource that is required for dependency injection
+     * @param resourceType  the type of the Resource required for dependency injection
+     * @param resourceName  the name of the Resource required for dependency injection
      *
      * @return a supplier Function, or null if that Resource cannot be supplied
      */

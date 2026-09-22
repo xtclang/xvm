@@ -121,7 +121,7 @@ public interface NumberSupport
 
     /**
      * Build the optimized binary operation that will logically AND two primitive types from the
-     * stack (T & T -> T).
+     * stack ({@code T & T -> T}).
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -141,7 +141,7 @@ public interface NumberSupport
 
     /**
      * Build the optimized binary operation that will logically AND two XVM primitive types
-     * (T & T -> T).
+     * ({@code T & T -> T}).
      *
      * <p>Each type may be represented by one or more Java primitive types stored on the stack.
      *
@@ -248,9 +248,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will calculate the remainder from dividing two
      * primitive types.
-     * <pre>
+     * <pre>{@code
      *     remainder = a - (b * quotient)
-     * </pre>
+     * }</pre>
      * Nothing should be on the stack, the remainder result wil be on the stack after execution.
      *
      * @param bctx       the current build context
@@ -310,9 +310,9 @@ public interface NumberSupport
     /**
      * Build the optimized binary operation that will calculate the remainder from dividing two
      * XVM primitive types.
-     * <pre>
+     * <pre>{@code
      *     remainder = a - (b * quotient)
-     * </pre>
+     * }</pre>
      * Nothing should be on the stack, the remainder result wil be on the stack after execution.
      *
      * @param bctx       the current build context
@@ -568,7 +568,7 @@ public interface NumberSupport
 
     /**
      * Build the optimized binary operation that will logically shift left a primitive type
-     * (T << T -> T).
+     * ({@code T << T -> T}).
      *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
@@ -605,7 +605,7 @@ public interface NumberSupport
 
     /**
      * Build the optimized binary operation that will logically shift left a XVM primitive type
-     * (T << T -> T).
+     * ({@code T << T -> T}).
      *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *

@@ -19,7 +19,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.util.Handy;
 
 /**
- * The native RTViewFromByte<Int64> implementation.
+ * The native {@code RTViewFromByte<Int64>} implementation.
  */
 public class xRTViewFromByteToInt64
         extends xRTViewFromByte {

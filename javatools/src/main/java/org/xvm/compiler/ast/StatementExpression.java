@@ -22,13 +22,13 @@ import org.xvm.util.Severity;
  * actual function, and it behaves as if it is executed at the point in the code where it is
  * encountered. In other words, these two are conceptually quite similar:
  *
- * <code><pre>
+ * <pre>{@code
  *   x = () -> {2 + 2}();   // note the trailing "call"
- * </pre></code>
+ * }</pre>
  * and:
- * <code><pre>
+ * <pre>{@code
  *   x = {return 2 + 2;}
- * </pre></code>
+ * }</pre>
  *
  * <p>To determine the type of the StatementExpression, the one or more required "return" statements
  * need to be analyzed to determine their types.

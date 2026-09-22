@@ -27,7 +27,8 @@ import static org.xvm.runtime.template._native.collections.arrays.LongBasedDeleg
 import static org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.bitMask;
 
 /**
- * A base class for native ArrayDelegate<Bit> views that point to delegates holding double arrays.
+ * A base class for native {@code ArrayDelegate<Bit>} views that point to delegates holding
+ * double arrays.
  */
 public class xRTViewToBitFromFloat64
         extends xRTViewToBit
@@ -248,7 +249,7 @@ public class xRTViewToBitFromFloat64
     // ----- handle --------------------------------------------------------------------------------
 
     /**
-     * DelegateArray<Bit> view delegate.
+     * {@code DelegateArray<Bit>} view delegate.
      */
     protected static class ViewHandle
             extends xRTView.ViewHandle {

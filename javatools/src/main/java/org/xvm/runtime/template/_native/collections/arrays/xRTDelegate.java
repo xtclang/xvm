@@ -35,7 +35,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.numbers.xInt64;
 
 /**
- * The native RTDelegate<Object> implementation.
+ * The native {@code RTDelegate<Object>} implementation.
  */
 public class xRTDelegate
         extends ClassTemplate
@@ -839,7 +839,7 @@ public class xRTDelegate
          * @return  the ObjectHandle at the specified index in the array
          *
          * @throws IndexOutOfBoundsException if the index is out of
-         *         range (nIndex < 0 || nIndex >= m_cSize)
+         *         range ({@code nIndex < 0 || nIndex >= m_cSize})
          */
         public ObjectHandle get(long nIndex) {
             return m_ahValue[(int) nIndex];

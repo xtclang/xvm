@@ -1132,11 +1132,11 @@ public class AssignmentStatement
          */
         Assign,
         /**
-         * a += b, a &= b, etc.
+         * {@code a += b}, {@code a &= b}, etc.
          */
         InPlace,
         /**
-         * a &&= b, a ||= b, a ?:= b
+         * {@code a &&= b}, {@code a ||= b}, {@code a ?:= b}
          */
         CondLeft,
         /**

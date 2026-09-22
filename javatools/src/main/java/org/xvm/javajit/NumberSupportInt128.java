@@ -200,7 +200,7 @@ public interface NumberSupportInt128 {
     /**
      * Build the optimized binary operation that will logically AND two XVM primitives that are
      * each represented by two long Java primitive values.
-     * (T & T -> T).
+     * ({@code T & T -> T}).
      *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *
@@ -427,7 +427,7 @@ public interface NumberSupportInt128 {
     /**
      * Build the optimized binary operation that will logically shift left a XVM primitive that
      * is represented by two long Java primitive values.
-     * (T << T -> T).
+     * ({@code T << T -> T}).
      *
      * <p>Neither the target nor argument should have been loaded to the stack.
      *

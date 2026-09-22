@@ -89,6 +89,7 @@ import static org.xvm.util.Handy.checkElementsNonNull;
  *
  * 6. An expression that is allowed to short-circuit must be provided with a label to which it can
  *    short-circuit. This also affects the definite assignment rules.
+ * </pre>
  */
 public abstract class Expression
         extends AstNode {
@@ -120,14 +121,14 @@ public abstract class Expression
     /**
      * Validate that this expression is structurally correct to be a link-time condition.
      *
-     * <p><code><pre>
+     * <pre>{@code
      * There are only a few expression forms that are permitted:
      * 1. StringLiteral "." "defined"
      * 2. QualifiedName "." "present"
      * 3. QualifiedName "." "versionMatches" "(" VersionLiteral ")"
      * 4. Any of 1-3 and 5 negated using "!"
      * 5. Any two of 1-5 combined using "&", "&&", "|", or "||"
-     * </pre></code>
+     * }</pre>
      *
      * @param errs  the error listener to log any errors to
      *
@@ -1560,15 +1561,16 @@ public abstract class Expression
      *
      * @param ctx       the compilation context for the statement
      * @param code      the code block
-     * @param label     the label to conditionally jump to
+     * @param lVal      the destination for the conditionally assigned value
+     * @param labelEnd  the label to conditionally jump to
      * @param errs      the error list to log any errors to
      */
     public void generateConditionalAssignment(Context ctx, Code code,
-                                              Assignable LVal, Label labelEnd, ErrorListener errs) {
+                                              Assignable lVal, Label labelEnd, ErrorListener errs) {
         Assignable   varCond = createTempVar(code, pool().typeBoolean());
-        Assignable[] LVals   = new Assignable[] {varCond, LVal};
+        Assignable[] lVals   = new Assignable[] {varCond, lVal};
 
-        generateAssignments(ctx, code, LVals, errs);
+        generateAssignments(ctx, code, lVals, errs);
 
         code.add(new JumpTrue(varCond.getRegister(), labelEnd));
     }
@@ -2367,13 +2369,13 @@ public abstract class Expression
         /**
          * Generate an argument that represents the result of this LValue. This method exists to
          * support language constructs that require an LValue to provide a value, such as the
-         * bi-expressions for the "&&=", "||=", and "?:=" operators. The primary difference between
-         * this method and the expression's own generateArgument() method is that using this method
-         * prevents a duplicate side-effect of generating the L-Value; for example, the side-effect
-         * of the post-increment in the following statement must only occur one time:
-         * <code><pre>
+         * bi-expressions for the {@code &&=}, {@code ||=}, and {@code ?:=} operators. The primary
+         * difference between this method and the expression's own generateArgument() method is that
+         * using this method prevents a duplicate side-effect of generating the L-Value; for example,
+         * the side-effect of the post-increment in the following statement must only occur one time:
+         * <pre>{@code
          * a[i++] &&= foo();
-         * </pre></code>
+         * }</pre>
          *
          * @param ctx           the compilation context for the statement
          * @param code          the code block

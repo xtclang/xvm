@@ -8,7 +8,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 
 /**
- * The native RTViewToBit<UInt16> implementation.
+ * The native {@code RTViewToBit<UInt16>} implementation.
  */
 public class xRTViewToBitFromUInt16
         extends LongBasedBitView {

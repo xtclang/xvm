@@ -533,7 +533,7 @@ public class SwitchStatement
          * context by collecting assignments that were defined by *every* block.
          *
          * @param listAdd  a list of maps of assignments from a previous calls to
-         *                 {@link Statement#addBreak)}
+         *                 {@link Statement#addBreak}
          */
         protected void mergeBreaks(List<Map<String, Assignment>> listAdd) {
             // collect all assigned names, counting the occurrences and collect the current assignments

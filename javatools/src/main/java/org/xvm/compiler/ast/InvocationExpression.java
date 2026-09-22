@@ -76,22 +76,22 @@ import org.xvm.util.Severity;
  *
  * <p>Most of the time, this is all accomplished in a single syntactic step, but not always:
  *
- * <p><pre><code>
+ * <pre>{@code
  *   // bind target "list" to method "add", bind argument, call function
  *   list.add(item);
  *
  *   // on "List" type, find "add" method with one parameter (four alternatives shown)
  *   Method m = List.&add(?);
- *   Method m = List.&add(&lt;List.Element&gt;?);
+ *   Method m = List.&add(<List.Element>?);
  *   Method m = List.add(?);
- *   Method m = List.add(&lt;List.Element&gt;?);
+ *   Method m = List.add(<List.Element>?);
  *
  *    // bind target "list" to method "add", bind argument
  *   function void () fn = list.&add(item);
  *
  *   // call the function held in "fn"
  *   fn();
- * </code></pre>
+ * }</pre>
  *
  * <p>There are op codes for:
  * <ul>
@@ -107,7 +107,7 @@ import org.xvm.util.Severity;
  * <p>Each of these operations is type safe, requiring a provably correct target reference, arguments,
  * and destinations for each of the return values.
  *
- * <p><pre><code>
+ * <pre>{@code
  *                                            bind    bind
  *   description                              target  args    call    result
  *   ---------------------------------------  ------  ------  ------  ------------------------------
@@ -119,7 +119,7 @@ import org.xvm.util.Severity;
  *   method invocation                        X               X       result of call
  *   method and parameter binding             X       X               function from a method name
  *   method invocation                        X       X       X       result of call
- * </code></pre>
+ * }</pre>
  *
  * <p>The implementation is specialized when the method or function <b>name</b> is provided. The
  * invocation expression knows this situation exists because its {@link #expr} refers to a {@link
@@ -194,7 +194,7 @@ import org.xvm.util.Severity;
  *     If there are no more outer scopes, then it is an error. (Done.)</li>
  * <li>If one method match from steps 6 &amp; 7, then that method is selected. (Done.)</li>
  * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
- *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+ *     selected. First, the algorithm from {@link TypeConstant#selectBest} is
  *     used. If that algorithm results in a single selection, then that single selection is used.
  *     Otherwise, the redundant return types are used as a tiebreaker; if that results in a single
  *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
@@ -2569,9 +2569,9 @@ public class InvocationExpression
 
     /**
      * Find a named method or function that best matches the specified requirements.
-     * </p>
-     * Note: we need to pass both typeParent and infoParent, since in some context-sensitive cases
-     *  typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
+     *
+     * <p>Note: we need to pass both typeParent and infoParent, since in some context-sensitive
+     * cases typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
      *
      * @param ctx           the context
      * @param typeParent    the type to search the method or function for

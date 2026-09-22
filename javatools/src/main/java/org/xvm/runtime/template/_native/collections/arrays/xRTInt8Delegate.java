@@ -11,7 +11,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.numbers.xInt8;
 
 /**
- * Native RTDelegate<Int8> implementation.
+ * Native {@code RTDelegate<Int8>} implementation.
  */
 public class xRTInt8Delegate
         extends ByteBasedDelegate

@@ -60,21 +60,21 @@ import org.xvm.util.Severity;
  * <ul>
  * <li><code>COMP_EQ:    "=="</code> - </li>
  * <li><code>COMP_NEQ:   "!="</code> - </li>
- * <li><code>COMP_LT:    "<"</code> - </li>
- * <li><code>COMP_GT:    "&gt;"</code> - </li>
- * <li><code>COMP_LTEQ:  "<="</code> - </li>
+ * <li>{@code COMP_LT:    "<"} - </li>
+ * <li>{@code COMP_GT:    ">"} - </li>
+ * <li>{@code COMP_LTEQ:  "<="} - </li>
  * <li><code>COMP_GTEQ:  ">="</code> - </li>
- * <li><code>COMP_ORD:   "&lt;=&gt;"</code> - </li>
+ * <li>{@code COMP_ORD:   "<=>"} - </li>
  * </ul>
  *
  * There are special cases when the left side of a Comparison is itself a similar Comparison:
  *
- * <pre><code>
+ * <pre>{@code
  *     if (a == b == c) {...}
  *     if (a != b != c) {...}
  *     if (a < b <= c) {...}
  *     if (a > b >= c) {...}
- * </code></pre>
+ * }</pre>
  *
  * <ul><li>The first compares a to b, and if equal, then compares b to c, and if equals, the result
  *         is True; otherwise the result is False.
@@ -89,8 +89,9 @@ import org.xvm.util.Severity;
  *
  * In all examples, the expressions a, b, and c will not be evaluated more than once.
  *
- * The parser will not allow "==" and "!=" to be mixed. The parser will allow "<" and "<=" to be
- * mixed, and ">" and ">=" to be mixed, but will not allow "<"/"<=" and ">"/">=" to be mixed.
+ * The parser will not allow "==" and "!=" to be mixed. The parser will allow {@code <} and
+ * {@code <=} to be mixed, and {@code >} and {@code >=} to be mixed, but will not allow
+ * {@code <}/{@code <=} and {@code >}/{@code >=} to be mixed.
  *
  * @see TypeConstant#supportsEquals
  * @see TypeConstant#supportsCompare

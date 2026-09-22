@@ -66,12 +66,12 @@ public class ExceptionBuilder extends CommonBuilder {
 
     /**
      * The class for e$XYZ (this class name) should look like this:
-     * <code><pre>
+     * <pre><code>
      * public class e$XYZ extends xException {
      *     public e$XYZ(Throwable cause, XYZ exception) {
      *         super(cause, exception);
      *     }
-     *</pre></code>
+     *</code></pre>
      */
     public void assembleJavaException(String className, ClassBuilder classBuilder) {
         TypeConstant superType = typeInfo.getExtends();

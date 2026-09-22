@@ -136,7 +136,7 @@ public abstract class Builder {
      * Ensure a unique Java class that represents a "JIT Call Class Name" for the specified type in
      * this builder's TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String ensureJitClassName(TypeConstant type) {
         return type.ensureJitClassName(typeSystem);
@@ -146,7 +146,7 @@ public abstract class Builder {
      * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
      * in this builder's TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String ensureJitInstanceClassName(TypeConstant type) {
         assert type.isSingleUnderlyingClass(false);
@@ -2105,32 +2105,32 @@ public abstract class Builder {
     /**
      * The name of the internal equals method expected to be present on XVM primitive types.
      * The signature should be:
-     * <pre>
+     * <pre>{@code
      *     public boolean $equals(primitive p1, primitive p2 ...)
-     * </pre>
+     * }</pre>
      * Where the method returns a boolean and takes as parameters two sets of the primitive
      * types that make up the XVM primitive type.
      * For example, an Int128 type is made up of two Java long values, so its equals signature
      * would be:
-     * <pre>
+     * <pre>{@code
      *     public boolean $equals(long low1, long high1, long low2, long high2)
-     * </pre>
+     * }</pre>
      */
     public static final String XVM_PRIMITIVE_EQUALS = "$equals";
 
     /**
      * The name of the internal compare method expected to be present on XVM primitive types.
      * The signature should be:
-     * <pre>
+     * <pre>{@code
      *     public int $compare(primitive p1, primitive p2 ...)
-     * </pre>
+     * }</pre>
      * Where the method returns an int and takes as parameters two sets of the primitive
      * types that make up the XVM primitive type.
      * For example, an Int128 type is made up of two Java long values, so its compare signature
      * would be:
-     * <pre>
+     * <pre>{@code
      *     public int $compare(long low1, long high1, long low2, long high2)
-     * </pre>
+     * }</pre>
      */
     public static final String XVM_PRIMITIVE_COMPARE = "$compare";
 

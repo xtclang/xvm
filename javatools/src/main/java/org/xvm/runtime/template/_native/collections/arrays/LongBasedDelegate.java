@@ -505,18 +505,18 @@ public abstract class LongBasedDelegate
     }
 
     /**
-     * Calculate an index of the specified bit in the byte array.
+     * Calculate an index of the specified bit in the long array.
      *
      * @param lBit  the bit index
      *
-     * @return the byte index
+     * @return the long-array index
      */
     protected static int bitIndex(long lBit) {
         return (int) (lBit / 64);
     }
 
     /**
-     * Calculate a mask of the specified bit in the byte array at {@ling #index}.
+     * Calculate a mask of the specified bit in the long array at {@link #bitIndex(long)}.
      *
      * @param lBit  the bit index
      *

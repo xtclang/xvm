@@ -322,7 +322,7 @@ public class BuildContext {
      *
      * <p>For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
      * conditional jumps as necessary. As an example, for a block:
-     * <pre><code>
+     * <pre>{@code
      *  Loop:
      *    while (True) {
      *      try {
@@ -337,11 +337,11 @@ public class BuildContext {
      *          fin();
      *      }
      *   }
-     * </code></pre>
+     * }</pre>
      *
      * <p>we produce the bytecode that look like the following pseudocode:
      *
-     * <pre><code>
+     * <pre>{@code
      *     Throwable $rethrow  = null;
      *     boolean   $jump1    = false;
      *     boolean   $jump2    = false;
@@ -374,7 +374,7 @@ public class BuildContext {
      *     if ($jump1) GOTO Loop.Continue
      *     if ($jump2) GOTO Loop.Exit
      *     if ($doReturn) return $r1
-     * </code></pre>
+     * }</pre>
      *
      * @param code
      * @param ops
@@ -1117,7 +1117,7 @@ public class BuildContext {
      * known during the {@link Op#build} cycle by **that same op** that has just computed it. A
      * common use case is represented by the {@link org.xvm.asm.OpInvocable}, which assigns the
      * type of the "retValue" at the end of {@link org.xvm.asm.OpInvocable#computeInvokeTypes}
-     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#computeInvoke} method
+     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#buildInvoke} method
      * via the call to {@link #assignReturns}.
      *
      * To facilitate that, all we need is to look up the computed type at the very next op address.
@@ -1449,9 +1449,9 @@ public class BuildContext {
     }
 
     /**
-     * Load the {@link nType} represented by the specified formal constant.
+     * Load the {@code nType} represented by the specified formal constant.
      *
-     * @return the register information for the loaded {@link nType}
+     * @return the register information for the loaded {@code nType}
      */
     private RegisterInfo loadFormalType(CodeBuilder code, FormalConstant formalConst) {
         if (formalConst instanceof TypeParameterConstant typeParam) {
@@ -1471,10 +1471,10 @@ public class BuildContext {
     }
 
     /**
-     * Load the {@link nType} represented by the specified formal constant from a target that is
+     * Load the {@code nType} represented by the specified formal constant from a target that is
      * already on the Java stack.
      *
-     * @return the register information for the loaded {@link nType}
+     * @return the register information for the loaded {@code nType}
      */
     private RegisterInfo loadFormalType(CodeBuilder code, RegisterInfo targetReg,
                                         FormalConstant formalConst) {

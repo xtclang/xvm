@@ -12,7 +12,7 @@ import org.xvm.runtime.template.numbers.LongLong;
 import org.xvm.runtime.template.numbers.xInt128;
 
 /**
- * Native RTDelegate<Int128> implementation.
+ * Native {@code RTDelegate<Int128>} implementation.
  */
 public class xRTInt128Delegate
         extends LongLongDelegate {

@@ -303,8 +303,6 @@ public class AnonInnerClass {
      *
      * @param exprType  the type expression of the super class
      * @param type      the type of the expression
-     *
-     * @return false iff the specified expression cannot be used
      */
     private void setSuper(TypeExpression exprType, TypeConstant type) {
         assert exprType != null;

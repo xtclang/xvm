@@ -38,7 +38,8 @@ public class xRTViewFromBit
     }
 
     /**
-     * Create an ArrayDelegate<NumType> view into the specified ArrayDelegate<Bit> source.
+     * Create an {@code ArrayDelegate<NumType>} view into the specified
+     * {@code ArrayDelegate<Bit>} source.
      *
      * @param hSource     the source (of bit type) delegate
      * @param mutability  the desired mutability
@@ -92,7 +93,7 @@ public class xRTViewFromBit
     // ----- handle --------------------------------------------------------------------------------
 
     /**
-     * DelegateArray<NumType> view delegate.
+     * {@code DelegateArray<NumType>} view delegate.
      */
     protected static class ViewHandle
             extends xRTView.ViewHandle {

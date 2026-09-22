@@ -14,7 +14,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.numbers.xBit;
 
 /**
- * Native RTDelegate<Bit> implementation.
+ * Native {@code RTDelegate<Bit>} implementation.
  */
 public class xRTBitDelegate
         extends BitBasedDelegate {

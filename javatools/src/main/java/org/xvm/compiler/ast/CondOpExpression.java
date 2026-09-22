@@ -28,11 +28,11 @@ import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
 /**
- * Conditional operator expressions "||" and "&&".
+ * Conditional operator expressions "||" and {@code &&}.
  *
  * <ul>
  * <li><code>COND_OR:  "||"</code> - logical "or"</li>
- * <li><code>COND_AND: "&&"</code> - logical "and"</li>
+ * <li>{@code COND_AND: "&&"} - logical "and"</li>
  * </ul>
  */
 public class CondOpExpression

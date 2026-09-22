@@ -20,23 +20,23 @@ import org.xvm.compiler.Token;
  * <li><code>COND_ELSE:  "?:"</code> - the "elvis" operator</li>
  * <li><code>COND_OR:    "||"</code> - </li>
  * <li><code>COND_XOR:   "^^"</code> - </li>
- * <li><code>COND_AND:   "&&"</code> - </li>
+ * <li>{@code COND_AND:   "&&"} - </li>
  * <li><code>BIT_OR:     "|"</code> - </li>
  * <li><code>BIT_XOR:    "^"</code> - </li>
- * <li><code>BIT_AND:    "&"</code> - </li>
+ * <li>{@code BIT_AND:    "&"} - </li>
  * <li><code>COMP_EQ:    "=="</code> - </li>
  * <li><code>COMP_NEQ:   "!="</code> - </li>
- * <li><code>COMP_LT:    "<"</code> - </li>
+ * <li>{@code COMP_LT:    "<"} - </li>
  * <li><code>COMP_GT:    ">"</code> - </li>
- * <li><code>COMP_LTEQ:  "<="</code> - </li>
+ * <li>{@code COMP_LTEQ:  "<="} - </li>
  * <li><code>COMP_GTEQ:  ">="</code> - </li>
- * <li><code>COMP_ORD:   "&lt;=&gt;"</code> - </li>
+ * <li>{@code COMP_ORD:   "<=>"} - </li>
  * <li><code>AS:         "as"</code> - </li>
  * <li><code>IS:         "is"</code> - </li>
  * <li><code>DOTDOT:     ".."</code> - </li>
- * <li><code>SHL:        "<<"</code> - </li>
+ * <li>{@code SHL:        "<<"} - </li>
  * <li><code>SHR:        ">>"</code> - </li>
- * <li><code>USHR:       "&gt;&gt;&gt;"</code> - </li>
+ * <li>{@code USHR:       ">>>"} - </li>
  * <li><code>ADD:        "+"</code> - </li>
  * <li><code>SUB:        "-"</code> - </li>
  * <li><code>MUL:        "*"</code> - </li>

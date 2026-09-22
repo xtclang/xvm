@@ -16,7 +16,7 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 /**
- * The native RTSlicingDelegate<Object> implementation.
+ * The native {@code RTSlicingDelegate<Object>} implementation.
  */
 public class xRTSlicingDelegate
         extends xRTDelegate {
