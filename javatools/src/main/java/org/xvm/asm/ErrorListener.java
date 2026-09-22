@@ -307,6 +307,11 @@ public interface ErrorListener {
             }
 
             @Override
+            public boolean hasError(String sCode) {
+                return first.hasError(sCode) || second.hasError(sCode);
+            }
+
+            @Override
             public boolean isSilent() {
                 return first.isSilent() && second.isSilent();
             }
@@ -570,6 +575,12 @@ public interface ErrorListener {
         @Override
         public ErrorListener merge() {
             return this;
+        }
+
+        @Override
+        public boolean isAbortDesired() {
+            // Suppressing reports does not make cancelled work useful again.
+            return f_errs != null && f_errs.isAbortDesired();
         }
 
         @Override
