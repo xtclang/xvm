@@ -1,6 +1,6 @@
 # Ecstasy Language Support Implementation
 
-> **Last Updated**: 2026-04-10
+> **Last Updated**: 2026-09-22 (adapter capability review)
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -65,7 +65,7 @@ only the methods they actually implement -- all others inherit traceable logging
 |---------|---------|----------------------|--------|
 | `MockAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
 | `TreeSitterAdapter` | Tree-sitter grammar | ~85% (syntax + structure + workspace index) | **DEFAULT** - Implemented |
-| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Diagnostics, outline, hover, definition, references, highlights, folding, selection - one document | Implemented; completion blocked on error-tolerant parsing |
+| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics, cross-file semantic navigation, workspace symbols over current modules and direct source type hierarchy | **Opt-in** (`-Plsp.adapter=compiler`); Tree-sitter remains the shipped default |
 
 **`XdkAdapter` is no longer a placeholder.** It compiles through the embedding API and reports
 what the compiler actually says - syntax *and* semantics, with the compiler's own codes, messages
@@ -73,23 +73,26 @@ and spans - which is the thing no grammar can do: `COMPILER-38: Name "NoSuchType
 unresolvable` is not a syntax error and tree-sitter cannot find it. It also supplies the outline
 and the symbol under the cursor.
 
-It now also answers the position questions, within one document: hover with the type the compiler
+It also answers the position questions across a compiled module: hover with the type the compiler
 decided, go-to-definition and find-references by what a name *means* - two properties called `x`
-on different classes are different things - plus highlights, folding and selection expansion.
-The Kotlin semantic snapshot now supplies types, symbol identities, declared signatures and
+on different classes are different things - plus document-local highlights, folding and selection.
+The Kotlin semantic snapshot supplies types, symbol identities, declared signatures, inheritance and
 source occurrences without retaining compiler objects. The compiler exposes the binding facts;
 lambda capture associations live in a helper owned by the lambda compilation context.
 
 The compiler backend still has no completion, signature help, rename, semantic tokens, document
-links, formatting or code actions. A trailing `.` can produce `PARSER-03` with no AST, so there is
-no semantic result for the position where member completion is requested. Compiler recovery or a
-hybrid syntax/semantic adapter remains a separate decision. The bundled XDK is part of the server;
-no external installation is required.
+links, formatting or code actions. Call hierarchy, go-to-type-definition, find-implementations,
+inlay hints, code lenses and linked editing are also unimplemented. A trailing `.` can produce
+`PARSER-03` with no AST, so there is no semantic result for the position where member completion
+is requested. Compiler recovery or a hybrid syntax/semantic adapter remains a separate decision.
+The bundled XDK is part of the server; no external installation is required.
 
-Navigation includes type-parameter declarations and anonymous-class captures within one complete
-module source. Cross-file navigation needs project compilation,
-source ownership and unsaved overlays as well as an index; IDs from independently built snapshots
-cannot simply be joined. Workspace symbols cover completed analyses of open documents only.
+Navigation includes type-parameter declarations and anonymous-class captures. Module sessions
+combine disk sources with unsaved overlays, including new member files, and build per-source views
+in one identity domain. Definitions in bundled libraries still have no source target. Workspace
+symbols search current completed modules by case-insensitive substring, including closed members;
+edits invalidate those views and closing the last open member releases the session. This does not
+index other workspace modules or join identities from separate compilations.
 
 The current verification, reporting audit and remaining work are recorded in
 [errs-integration-plan.md](../../../docs/errs-integration-plan.md).
@@ -100,32 +103,72 @@ the compiler supplies validated semantic facts. A combined adapter has not been 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
 out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 25).
 
-**What Each Adapter Provides:**
+#### Adapter capability matrix
 
-The **Compiler** column below describes the current implementation. Unimplemented entries are
-follow-up work, not advertised capabilities.
+The **Compiler (XdkAdapter)** column describes the current implementation. The nine optional
+features in [XdkAdapter.capabilities](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt)
+are filtered into the server's
+[advertised capabilities](../../lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt).
+Diagnostics and document synchronization are provided separately. Unimplemented compiler features
+are not advertised; inherited adapter stubs or basic formatting helpers do not enable them.
 
-| Feature | Mock | Tree-sitter | Compiler |
+| Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | No compiler semantic tokens; editor TextMate remains available |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
-| Go-to-definition (cross-file) | - | Via workspace index | Needs project/source ownership and an index |
+| Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the current module |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Blocked** - needs an error-tolerant parse |
+| Find references (cross-file) | - | - | **Done** - across the current module, including closed member files |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | Not implemented - needs incomplete-source handling and resolved member/call-site facts |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
 | Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE not distinguished |
-| Selection ranges | - | AST walk-up | **Done** - AST walk-up |
+| Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | Not implemented |
+| Signature help | - | Same-file | Not implemented - snapshot has declared signatures, but no instantiated call-site/active-argument model |
 | Rename (same file) | Text | AST | Not implemented |
+| Rename (cross-file) | - | - | Not implemented - module references exist; workspace ownership, edit validation and rename rules remain |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
-| Formatting | Trailing WS | Trailing WS | Not implemented |
-| Workspace symbols | - | Fuzzy search (4-tier) | **Done** - completed analyses of open documents |
+| Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | Not implemented |
+| Range formatting | Trailing WS in range | Structural formatting in range | Not implemented |
+| On-type formatting | - | Structural formatting on trigger characters | Not implemented |
+| Workspace symbols | - | Fuzzy search (4-tier) | **Done** - substring search over completed module sessions, including closed members |
 | Semantic tokens | - | Lexer-based (18 contexts) | Not implemented |
+| Code lenses | - | Run action on module declarations | Not implemented |
+| Linked editing | - | Same-file identifiers | Not implemented |
+| Inlay hints | - | - | Not implemented |
+| Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
+| Go-to-type-definition | - | - | Not implemented |
+| Find implementations | - | - | Not implemented |
+| Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
+| Call hierarchy (callers/callees) | - | - | Not implemented - needs resolved call edges and cross-file indexing |
+
+Semantic results can be partial when validation fails. If parsing yields no AST, diagnostics still
+work, but semantic navigation, outline and folding have no tree to query. Selection ranges retain
+one response per cursor. An edit invalidates the old analysis; queries do not reuse semantic
+positions from an older document version.
+
+The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
+declared callable signatures and direct inheritance edges. The compiler adapter compiles a module
+root and its member tree together, taking unsaved source overlays ahead of disk. New unsaved member
+files and implicit packages participate without temporary files. Source membership and text are
+captured per attempt; member edits invalidate the module, and diagnostics publish with each open
+file's own version. Closing an overlay reanalyses remaining members from disk; filesystem events
+refresh membership and clear removed-file diagnostics.
+
+Definitions and references share identities across one module compilation. Hierarchy items carry a
+compilation token; items from before an edit return no results. Hierarchy currently includes declared
+`extends` and `implements`, with source locations available in the module. It does not discover
+library sources, conditional mixin relationships or other modules in the workspace. Method
+implementation lookup, completion and signature help still need additional semantic contracts.
+
+Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
+single-source inputs. Opening a module does not establish a workspace-wide dependency build or
+persistent index. Tree-sitter remains the shipped default. See the
+[module hardening results](../../../docs/errs-integration-plan.md#eighth-pass-module-sessions-and-hierarchy-2026-09-22).
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
 - `CompilationResult` - Compilation output with diagnostics and symbols
@@ -237,9 +280,11 @@ Full tree-sitter support for fast, incremental parsing:
 ### Medium-term (Compiler Integration)
 
 6. **Extend the compiler adapter**
-   - Diagnostics, bundled libraries, semantic snapshots and same-document navigation are implemented
+   - Diagnostics, bundled libraries, semantic snapshots, module overlays and cross-file navigation are implemented
    - Preserve regression coverage for type-parameter declarations and anonymous-class captures
-   - Design project compilation and unsaved overlays before cross-file navigation
+   - Extend module ownership to dependency sources and other workspace modules before workspace-wide references/rename
+   - Direct source type hierarchy is implemented; method implementation lookup still needs override relationships
+   - Copy resolved call edges for call hierarchy
    - Design incomplete-source support before type-aware completion
    - Add call-site facts before signature help; declared signatures alone are insufficient
 
@@ -326,7 +371,9 @@ The IntelliJ plugin uses Red Hat's [LSP4IJ](https://github.com/redhat-developer/
 | LSP Console (debug traces) | Yes | No |
 | DAP Client | Yes | No |
 
-Code Lens, Call Hierarchy, and Type Hierarchy remain on the roadmap. See
+Server support depends on the adapter: Tree-sitter supplies run code lenses, the compiler supplies
+direct source type hierarchy, and call hierarchy remains unimplemented. See the
+[adapter matrix](#adapter-capability-matrix),
 [`lsp-feature-tiers.md`](./lsp-feature-tiers.md) for the LSP capability tiering and
 [`idea-specific.md`](./idea-specific.md) for IntelliJ-specific follow-up work.
 
