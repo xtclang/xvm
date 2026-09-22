@@ -281,6 +281,18 @@ public class EmbeddingSupport {
         return ensureConnector().getConstantPool();
     }
 
+    /**
+     * Obtain the runtime's constant pool, starting the runtime if necessary.
+     *
+     * @return the runtime's constant pool
+     * @deprecated use {@link #ensureRuntimePool()} to make runtime initialization explicit;
+     *             use {@link Compilation#pool()} for a compilation's pool
+     */
+    @Deprecated
+    public ConstantPool getConstantPool() {
+        return ensureRuntimePool();
+    }
+
     // ----- compiler support ----------------------------------------------------------------------
 
     /**

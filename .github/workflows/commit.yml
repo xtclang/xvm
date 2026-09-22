@@ -537,11 +537,13 @@ jobs:
                     :lang:lsp-server:test \
                     --tests org.xvm.lsp.adapter.XdkAdapterTest \
                     --tests org.xvm.lsp.adapter.XdkNavigationTest \
+                    --tests org.xvm.lsp.adapter.SemanticModelTest \
                     --tests org.xvm.lsp.adapter.XdkDiagnosticTest \
                     --tests org.xvm.lsp.adapter.XdkAdapterLifecycleTest \
                     --tests org.xvm.lsp.adapter.TypeInfoDiagnosticsTest \
                     --tests org.xvm.lsp.adapter.EmbeddingDiagnosticsTest \
-                    --tests org.xvm.lsp.server.XdkLanguageServerTest
+                    --tests org.xvm.lsp.server.XdkLanguageServerTest \
+                    --tests org.xvm.lsp.server.AdapterBackendTest
 
             - name: Validate lang (tree-sitter grammar, LSP adapters, VS Code extension)
               if: |
@@ -645,9 +647,9 @@ jobs:
                   results = Path("lang/lsp-server/build/test-results/test")
                   suites = [
                       "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
-                      "adapter.XdkAdapterLifecycleTest",
+                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest",
                       "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
-                      "server.XdkLanguageServerTest",
+                      "server.XdkLanguageServerTest", "server.AdapterBackendTest",
                   ]
                   for suite in suites:
                       result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()

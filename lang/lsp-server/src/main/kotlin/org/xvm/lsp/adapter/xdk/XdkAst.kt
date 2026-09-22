@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
-import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.Position
@@ -11,8 +10,8 @@ import org.xvm.lsp.adapter.Range
 /**
  * Reading a compiled document's AST for the questions an editor asks about a position.
  *
- * The AST exposes children and source spans for folding, selection and expression types.
- * [XdkResolution] uses the compiler's resolved identities for navigation and highlights.
+ * The AST exposes children and source spans for folding and selection. Semantic queries use
+ * the compiler-owned snapshot cached by [XdkAdapter].
  */
 internal object XdkAst {
     /**
@@ -40,24 +39,6 @@ internal object XdkAst {
     }
 
     /**
-     * Every node under this one, itself included, in source order.
-     *
-     * The same node can be reached by more than one path - a constructor parameter belongs to the
-     * declaration and to the property it becomes - so a caller that turns these into places in the
-     * text must deduplicate source spans.
-     */
-    fun nodesIn(root: AstNode?): List<AstNode> {
-        val found = mutableListOf<AstNode>()
-
-        fun walk(node: AstNode) {
-            found += node
-            node.childList().forEach(::walk)
-        }
-        root?.let(::walk)
-        return found.sortedBy { it.startPosition }
-    }
-
-    /**
      * The regions worth collapsing: anything that spans more than one line and is a block or a
      * declaration. An editor offers a fold per region, so a region per expression would be noise.
      */
@@ -77,24 +58,6 @@ internal object XdkAst {
         root?.let(::walk)
         return found.toList()
     }
-
-    /**
-     * The type of the expression at a position, when the compiler got far enough to know it.
-     *
-     * An expression only has a type once it has been validated, and asking one that has not
-     * throws - which is the normal case in a document that does not compile, and an editor asks
-     * about those constantly.
-     */
-    fun typeAt(
-        root: AstNode?,
-        line: Int,
-        column: Int,
-    ): String? =
-        chainAt(root, line, column)
-            .filterIsInstance<Expression>()
-            .lastOrNull { it.isValidated && it.type != null }
-            ?.type
-            ?.valueString
 
     fun rangeOf(node: AstNode): Range = spanOf(node.startPosition, node.endPosition)
 

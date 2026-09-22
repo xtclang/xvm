@@ -1664,9 +1664,11 @@ public abstract class TypeConstant
      * received anything, and during a compilation the file was parked on a silence anyway. So the
      * silence is said here instead of arranged elsewhere.
      *
-     * What this does not report is a cascade: these diagnostics describe a type that could not be
-     * built, which the caller learns from the TypeInfo it gets back. A caller that wants to hear
-     * about it passes a listener to {@link #ensureTypeInfo(ErrorListener)}.
+     * This convenience read does not report diagnostics to a host. It is used by speculative and
+     * metadata queries, including provisional compositions. Diagnostics recorded by a completed
+     * build remain available for replay; a caller responsible for reporting a selected source use
+     * must pass its listener to {@link #ensureTypeInfo(ErrorListener)}. Silence here is not evidence
+     * that every diagnostic encountered is spurious.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */

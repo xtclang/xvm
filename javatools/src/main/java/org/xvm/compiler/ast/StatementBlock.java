@@ -379,6 +379,7 @@ public class StatementBlock
                             Assignment asnVar = ctx.getVarAssignment(sName);
                             Register   regVal = param.deref(regVar, method);
 
+                            exprLambda.bindSourceParameter(param.getIndex(), regVal);
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
                             ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment
                         }
@@ -871,6 +872,7 @@ public class StatementBlock
                     Register     reg    = createRegister(type, sName);
                     mapByName.put(sName, reg);
                     ensureCaptureVars().put(sName, reg);
+                    exprNew.bindSourceCapture(sName, reg);
 
                     // TODO REVIEW CP
                     //      we need to know the definite assignment of the variable at the point
@@ -1293,6 +1295,9 @@ public class StatementBlock
                         if (index < declaration.params.size()) {
                             declaration.params.get(index).setResolvedTarget(reg);
                         }
+                    } else if (f_stmt.getParent() instanceof LambdaExpression lambda &&
+                            lambda.getLambda() == method) {
+                        lambda.bindSourceParameter(i, reg);
                     }
 
                     // the variable has been definitely assigned, but not multiple times (i.e. it's

@@ -124,6 +124,20 @@ public class LambdaExpression
     }
 
     /**
+     * @return the source bindings retained by this lambda's compilation context, or null before
+     *         its generated method has been validated
+     */
+    public LambdaBindings getSourceBindings() {
+        return m_ctxLambda == null || !m_ctxLambda.f_bindings.isFor(m_lambda)
+                ? null : m_ctxLambda.f_bindings;
+    }
+
+    /** Record a generated parameter through the context that owns its source associations. */
+    void bindSourceParameter(int index, Register register) {
+        m_ctxLambda.f_bindings.bind(this, m_ctxLambda, index, register);
+    }
+
+    /**
      * @return true iff the lambda declaration has parameters
      */
     public boolean hasParameters() {
@@ -1446,6 +1460,8 @@ public class LambdaExpression
                 }
             }
         }
+
+        private final LambdaBindings f_bindings = new LambdaBindings();
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;

@@ -58,28 +58,39 @@ private fun loadBuildProperties(): Properties =
 /**
  * Adapter backend types for the LSP server.
  */
-private enum class AdapterBackend(
+internal enum class AdapterBackend(
     val displayName: String,
 ) {
     MOCK("Mock"),
     TREE_SITTER("Tree-sitter"),
     COMPILER("XTC Compiler"),
+    ;
+
+    companion object {
+        fun fromSetting(setting: String? = null): AdapterBackend =
+            when (setting?.lowercase()) {
+                "mock" -> MOCK
+                null, "treesitter", "tree-sitter" -> TREE_SITTER
+                "compiler", "xtc", "full" -> COMPILER
+                else -> throw IllegalArgumentException("Unknown lsp.adapter '$setting'; expected treesitter, compiler or mock")
+            }
+    }
 }
 
 /**
  * Create the appropriate adapter based on build configuration.
  *
- * @param adapterType The adapter type from build properties: "mock", "treesitter", or "compiler"
+ * @param requested The backend selected by the build properties
  * @return The configured adapter and which backend is active
  */
-private fun createAdapter(adapterType: String): Pair<Adapter, AdapterBackend> =
-    when (adapterType.lowercase()) {
-        "compiler", "xtc", "full" -> {
+private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBackend> =
+    when (requested) {
+        AdapterBackend.COMPILER -> {
             logger.info("using the XTC compiler for diagnostics and document symbols")
             XdkAdapter() to AdapterBackend.COMPILER
         }
 
-        "treesitter", "tree-sitter" -> {
+        AdapterBackend.TREE_SITTER -> {
             try {
                 TreeSitterAdapter() to AdapterBackend.TREE_SITTER
             } catch (e: UnsatisfiedLinkError) {
@@ -94,7 +105,7 @@ private fun createAdapter(adapterType: String): Pair<Adapter, AdapterBackend> =
             }
         }
 
-        else -> {
+        AdapterBackend.MOCK -> {
             MockAdapter() to AdapterBackend.MOCK
         }
     }
@@ -108,11 +119,11 @@ fun main(
 
     // Load build properties to determine adapter type
     val buildProps = loadBuildProperties()
-    val adapterType = buildProps.getProperty("lsp.adapter", "mock")
+    val requested = AdapterBackend.fromSetting(buildProps.getProperty("lsp.adapter"))
     val version = buildProps.getProperty("lsp.version", "unknown")
 
     // Create adapter based on build configuration
-    val (adapter, backend) = createAdapter(adapterType)
+    val (adapter, backend) = createAdapter(requested)
 
     // Log startup banner prominently
     val logFile = "${System.getProperty("user.home")}/.xtc/logs/lsp-server.log"
@@ -135,7 +146,7 @@ fun main(
 
         AdapterBackend.MOCK -> {
             logger.info("mock backend provides: basic symbol detection (regex-based)")
-            if (adapterType.lowercase() in listOf("treesitter", "tree-sitter")) {
+            if (requested == AdapterBackend.TREE_SITTER) {
                 logger.warn("tree-sitter was requested but failed to initialize - check native library")
             }
         }

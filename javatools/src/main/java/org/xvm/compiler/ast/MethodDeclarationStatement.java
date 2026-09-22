@@ -550,6 +550,13 @@ public class MethodDeclarationStatement
 
         MethodStructure method = (MethodStructure) getComponent();
         if (method != null) {
+            if (typeParams != null) {
+                for (int i = 0; i < typeParams.size(); ++i) {
+                    typeParams.get(i).setResolvedTarget(
+                            method.getParam(i).asTypeParameterConstant(method.getIdentityConstant()));
+                }
+            }
+
             // methods are opaque, so everything inside the curlies can be deferred until we get to the
             // validateContent() stage
             mgr.processChildrenExcept((child) -> child == body);

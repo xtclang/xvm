@@ -10,10 +10,14 @@ integration record is [errs-integration-plan.md](errs-integration-plan.md), and 
 triage is at the end of [errs-audit.md](errs-audit.md). Compiler tests now require their dependencies
 and cannot silently skip. The server bundles its compiled core/bootstrap libraries, publishes
 versioned diagnostics, rejects stale work, preserves foreign-source attribution, and supports
-identity-based local/method-parameter navigation and constructor-generated properties. Stdio exit
-and repository failure reporting are covered by the latest hardening pass. Remaining work includes
-incomplete syntax, capture/type-parameter source mapping, project compilation and the unclassified
-TypeInfo suppression cases. No full semantic-model API has been implemented yet.
+identity-based navigation for locals, method/lambda parameters, constructor-generated properties,
+lambda capture chains and qualified type segments. Stdio exit and repository failure reporting are
+covered by the hardening passes. An immutable Kotlin semantic snapshot in the LSP server now backs
+typed hover and navigation; it holds structured types, symbol identities, declared signatures and
+source occurrences without retaining compiler objects. Remaining work includes incomplete syntax,
+project compilation and the remaining final-type checks from the TypeInfo suppression audit.
+Class/method type parameters and anonymous-class capture origins now have regressions; see the
+AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
 **Status.** All seven phases are implemented on `lagergren/errs`, plus the follow-on work that
 came out of review:
@@ -108,9 +112,10 @@ probes — `testFit`, `getImplicitType`, `resolveRawArgument`, `isNewable`, `sel
 the *return value* is the answer and the diagnostics are genuinely unwanted. Only ~7 are
 null-substitution placeholders.
 
-### Where the actual design questions live
+### Original design questions
 
-These are not mechanical, and they are the reason this is a plan rather than a sweep.
+These describe the pre-change compiler and explain the implemented phases below. They are not
+current outages; the status at the top and the integration plan record what remains.
 
 **1. "Absent listener" currently means two opposite things.**
 `XvmStructure.ensureErrorListener(errs)` and `FileStructure.getErrorListener()` fall back to
@@ -837,10 +842,13 @@ sixty diagnostics a build), that the error budgets were chosen (no budget ever b
 cascade decorator would be too costly (7040 allocations over a whole XDK build). If a claim about
 behaviour can be counted, count it.
 
-## What is left
+## Historical parity assessment
 
-Nothing in the seven phases. This section is the gap between what those phases did and the full
-shape the prior-art branch reached, measured against this tree.
+This assessment records the branch before the later hardening passes. The rationale below includes
+decisions that have since been implemented, notably `void log`, nonthrowing `RUNTIME`, final listener
+ownership and TypeInfo replay. It is not the current backlog. Use
+[the integration plan](errs-integration-plan.md#remaining-limitations-and-the-next-hardening-work)
+for current limits and the pre-extraction review.
 
 ### Gap to full parity
 
@@ -1003,11 +1011,13 @@ compilation reporting into one list - it should accumulate lock-free rather than
 and be a separate implementation of the interface rather than a change to `ErrorList`, so the
 single-threaded path pays nothing.
 
-## Next: what the language server still needs
+## Language-server investigation and current status
 
-The compiler adapter answers two things - diagnostics and an outline - and returns nothing for
-the other eighteen capabilities the tree-sitter adapter implements. This is the ordered list of
-what it would take to close that, written after measuring rather than from the feature matrix.
+The original work groups below explain how the compiler adapter grew beyond diagnostics and an
+outline. Most are now implemented. The adapter also supplies typed hover, definition, references,
+identity-based highlights, folding, selection and symbols from compiled open documents. These
+answers now use a Kotlin semantic snapshot for semantic facts and the retained AST for structure.
+The tables distinguish completed work from remaining compiler and editor limitations.
 
 Two historical findings shaped this list; both have since been addressed:
 
@@ -1029,31 +1039,28 @@ Two historical findings shaped this list; both have since been addressed:
 
 | | task |
 |---|---|
-| 1.1 | `lang/lsp-server`'s test task supplies the XDK from `:xdk:installDist` as a declared input, so the compiler-backed tests run for anyone who builds. The `assumeTrue` stays for a bare `./gradlew :lang:lsp-server:test`, but stops being the normal case |
-| 1.2 | CI asserts `skipped=0` for those classes when it built an XDK, so a silent skip fails instead of passing |
-| 1.3 | A protocol-level test: `didOpen` a document, capture `publishDiagnostics` from a mock `LanguageClient`, assert the codes. `LspIntegrationTest` already does this for tree-sitter; the compiler adapter has never been driven through the protocol at all, only called directly |
-| 1.4 | A test for the cancellation path end to end - two edits in flight, the older one publishes nothing |
+| 1.1 | Done: Gradle consumes compiled module variants directly and bundles them in the server. Required compiler-consumer tests fail on missing resources; no `installDist`, extraction task, `XDK_HOME` or skip assumption is needed |
+| 1.2 | Done: CI requires the selected consumer classes to execute with `skipped=0` |
+| 1.3 | Done: `XdkLanguageServerTest` covers protocol behavior; `XdkStdioTest` launches the packaged server and exercises real stdio, bundled resources and process exit |
+| 1.4 | Done: controlled lifecycle/protocol tests cover stale-result rejection, cancellation and close/reopen; the packaged test exercises rapid edits |
 
 ### 2. What the AST alone can answer *(no compiler change)*
 
-`Analysis` currently walks the AST for symbols and then drops it. Keeping it is the enabling
-step; each of these is then a walk:
+`Analysis` now retains the AST for structural queries and a separate immutable semantic snapshot.
+The original structural work list is complete; highlights moved to resolved-identity matching:
 
 | | task | notes |
 |---|---|---|
 | 2.1 | Keep the parsed AST on the cached analysis | everything in this group depends on it |
-| 2.2 | `documentHighlight` | same-file occurrences of a name, by token text; no resolution needed |
+| 2.2 | `documentHighlight` | implemented by resolved identity; read/write roles are not distinguished |
 | 2.3 | `foldingRange`, `selectionRange` | both are node extents, which the AST has exactly |
 | 2.4 | `workspaceSymbol` | the per-document symbols are already cached per URI; this is a query over them |
 | 2.5 | Hover, the declaration half | the signature of the declaration under the cursor, from the same walk the outline uses |
 
-**Worth deciding before doing any of this.** Tree-sitter already answers all of 2.2-2.5, well,
-and on a grammar that survives text the compiler cannot parse at all. Reimplementing them on the
-AST buys one adapter that answers everything, at the cost of a second implementation of each. The
-alternative is a composite adapter - syntax from tree-sitter, semantics from the compiler, chosen
-per request - which is less code and degrades better while a document is mid-edit, but adds a
-seam where the two disagree about what the document says. This is a real decision and it should
-be made deliberately rather than by starting at 2.2.
+**The remaining design choice.** Tree-sitter already supplies these structural queries on an
+error-tolerant parse. A hybrid could preserve syntax features while the compiler cannot parse an
+edit, but it needs explicit document-version ownership so syntax and semantic ranges cannot be
+mixed across edits. This is the incomplete-source decision; the current adapter remains compiler-only.
 
 ### 3. The bridge: what a name refers to *(a small compiler API, then the features)*
 
@@ -1063,8 +1070,8 @@ be made deliberately rather than by starting at 2.2.
 | 3.2 | Go-to-definition, same file | name -> `IdentityConstant` -> the declaring node in this document |
 | 3.3 | Hover with types | the node's resolved type, which is what makes hover worth more than a signature |
 | 3.4 | Find-references, same file | the inverse of 3.2 over one AST |
-| 3.5 | A workspace index from `IdentityConstant` to (URI, position), built from compiled documents | cross-file definition and references fall out of it; this is where "the structures have no positions" actually bites, and the index is the answer |
-| 3.6 | Completion after a dot | needs the `TypeInfo` of the expression to the left, which `ensureTypeInfo` now gives without polluting the caller's diagnostics. Realistically last: it is the one that has to be fast and right on text that does not compile |
+| 3.5 | Project compilation and cross-file source ownership, then an index | still deferred; unsaved overlays and module identity are prerequisites. Snapshot-scoped IDs from separate compilations cannot simply be joined |
+| 3.6 | Completion after a dot | unavailable; requires incomplete-source support, scope/member enumeration and generic substitution. Snapshot queries must not trigger TypeInfo construction on request threads |
 
 ### 4. The diagnostics work this branch left open
 
@@ -1072,23 +1079,24 @@ These are `errs` tasks rather than LSP tasks, but each changes what an editor ca
 
 | | task | why the editor cares |
 |---|---|---|
-| 4.1 | File the master `VERIFY-75` issue | a user-visible warning master silently drops; write-up is in the appendix |
-| 4.2 | Re-triage the ~67 still-suppressed ERROR diagnostics | each is either a diagnostic the editor should show or a spurious one that should be suppressed deliberately rather than by accident. Three were sampled; that is a sample, not a survey |
-| 4.3 | The `TypeInfo` diagnostics migration, 126 call sites | today only the type being built reports; a type the document merely *uses* reports nothing |
-| 4.4 | The 7 broad empty catches in `errs-audit.md` | `catch (Exception)` x4, `catch (Throwable)` x3 - a compiler failure that reaches one of these is invisible to the editor as well |
+| 4.1 | Preserve the `VERIFY-75` reproducer with the replay PR | fixed and regression-tested here. The original base lost the warning; filing a remote issue remains a separate authorized action, not a coding blocker |
+| 4.2 | Follow up the fresh TypeInfo capture | 37 distinct messages are classified by source/caller; array assigned-properties, XODB anonymous map and XML cursor final-type checks remain open. The historical 70-message survey is not declared complete |
+| 4.3 | Audit generic/external-type uses and reporting ownership | the refreshed audit counted 121 no-argument calls, including runtime/JIT paths. Four source-use cases plus generic and serialized-dependency cases preserve the warning. No blanket migration or general claim that used types lose diagnostics is justified |
+| 4.4 | Continue the classified failure-path audit | the seven historical broad catches include runtime and display fallbacks. Only reachable, reproduced compiler losses justify fixes in this milestone |
 
 ### What the compiler adapter can and cannot do, measured
 
-Groups 2 and 3 above were done with the compiler alone - no tree-sitter, deliberately, to find
-out what xtc is missing rather than to route around it. What follows was measured on this tree.
+Groups 2 and the same-document parts of 3 were implemented with the compiler alone. The original
+accessor investigation below is retained as rationale; semantic queries now read the immutable
+snapshot instead of traversing compiler objects on request threads.
 
-**Working, with no compiler change at all.** Folding, selection expansion, document highlights,
-workspace symbols and the declaration half of hover. `AstNode` gives a parent, children and a
-span, which is enough to say what encloses a position and how far it reaches.
+**Structural features.** Folding, selection expansion, workspace symbols and the declaration half
+of hover use the AST or copied outline. Highlights use resolved identities from the snapshot.
+`AstNode` supplies parent/child relationships and source spans for structural queries.
 `NamedTypeExpression.getIdentityConstant()` was already public, so a type name already knew its
 class.
 
-**Working, after two accessors.** Both expose information the compiler already computes and
+**Initial navigation, after two accessors.** Both expose information the compiler already computes and
 keeps on the node, where nothing outside the compiler could read it:
 
 | accessor | what it answers | why it has to be there |
@@ -1104,35 +1112,117 @@ types and method calls - and references tell `Holder.x` from `Point.x`, which no
 1. **There is no error-tolerant parse.** This is the big one. Typing `console.` and asking for
    completion produces `PARSER-03: Expected token IDENTIFIER` and **no AST at all** - not a
    partial one. Completion is asked for at exactly the moment the document does not parse, so on
-   the compiler alone there is nothing to complete from. Every other gap here is a missing
-   accessor or a missing index; this one is a property of the parser. It is also the entire
-   justification for a hybrid adapter, and the reason completion is not implemented.
+   the compiler alone there is nothing to complete from. Recovery is one prerequisite for
+   completion; accessible member enumeration, scope and call-site type substitution are others.
+   A hybrid syntax adapter is one possible recovery strategy.
 2. **Local identity: fixed.** `Register.equals` is unsuitable for source identity, but the existing
    `getOriginalRegister()` connects narrowed shadows to their original register. The adapter now
    compares those objects by identity and reads the declaration register through a public accessor.
    The earlier claim that the compiler retained no such identity was incorrect.
-3. **Nothing maps an identity back to where it was written.** A `Component` knows its name, kind
-   and children and carries no source position. Cross-file definition therefore needs an index
-   the host builds from documents it has compiled, and a language server cannot compile a project
-   it has not been asked to open.
+3. **Cross-file source ownership is missing.** The snapshot maps supported same-file symbols to
+   source spans. Cross-file definition still needs project compilation, dependency repositories,
+   unsaved overlays and a module/source index. Opening several independent documents does not
+   establish that shared compilation context.
 4. **Constructor-parameter properties: fixed.** The compiler does synthesize property declaration
    statements with the parameter's source token. The parameter now retains the corresponding
    identity, so navigation also works when requested at the declaration. Ordinary method parameters
-   retain their registers. Captured locals and other generated bindings remain separate work.
+   retain their registers. Lambda parameters and nested/mutable/narrowed lambda captures now retain
+   source associations through a context-owned helper. The AST inventory below covers the
+   additional anonymous-class and type-parameter bindings.
 5. **The same node is reachable by two paths.** A constructor parameter appears under the
    declaration and under the property it becomes, so a walk sees it twice. Harmless once known -
-   the host deduplicates by span - but it is the kind of thing that silently doubles a reference
-   list.
+   the snapshot builder visits nodes by identity and deduplicates occurrences by span.
 
-Two smaller notes: `Expression.getType()` throws unless the expression was validated, so a host
-asking about a document that does not compile has to check `isValidated()` first, which is public
-and does the job; and the parsed AST has to be kept per open document, because re-parsing to
-answer a hover would mean a compilation per keystroke.
+The snapshot builder checks validation state before reading expression types and excludes
+unresolved names' placeholder types. Queries need no compiler state. The adapter still retains
+the AST per open document for folding and selection; hover and navigation use the copied snapshot.
 
 **Not attempted, and why.** Completion needs 1. Rename needs 3 to be safe across files. Signature
-help needs the same resolution definition uses, and is worth doing next. Semantic tokens are
-reachable - the tree knows what every name resolved to, which is more than a grammar knows - and
-are the best remaining use of what is now exposed.
+help needs call-site facts beyond the declared signatures currently copied: selected/instantiated
+signatures, argument spans and active-argument information. Semantic tokens also need classification
+and modifiers; they are a possible later consumer, not already supplied by the snapshot.
+
+### AST changes for embedding and LSP: ownership and placement
+
+This inventory covers the branch's source-binding additions and its changes to reporting inside
+`javatools/compiler/ast`. The AST is the compiler's source-positioned, progressively validated
+representation. The assembler structures have identities but generally lack source tokens; a
+Tree-sitter tree has tokens but cannot know which overload or narrowed register the compiler chose.
+A passive link between a source token and that existing compiler decision belongs here. Building an
+editor index, copying types, deciding LSP capabilities and answering protocol requests do not.
+
+#### Passive source facts on nodes
+
+| Location | Change and reason for placement | Ownership / limits |
+|---|---|---|
+| `NameExpression` | `getResolvedTarget()` exposes the existing resolved `Argument`. | No new resolution or cache. A failed/unvisited name can return null. The consumer distinguishes register object identity from constant equality. |
+| `InvocationExpression` | `getInvokedExpression()` and `getResolvedMethod()` expose the callee expression and selected overload. | Only invocation validation knows which overload won. A bare method name is insufficient. No call-site substitution or signature-help model is added. |
+| `VariableDeclarationStatement` | Public access to its existing declaration register. | Connects the written local declaration to its uses without matching names or register numbers. Narrowed shadows use `getOriginalRegister()`. |
+| `MethodDeclarationStatement`, `PropertyDeclarationStatement`, `TypeCompositionStatement`, `TypedefStatement` | Small `getNameToken()` accessors for the written declaration. | The node already owns the token; consumers must not reverse-engineer a name span from `toString()` or component names. |
+| `Parameter` | Name token and an optional retained resolved target; its setter remains package-private. | Unlike declarations backed by components, ordinary parameters need a link to a register. Constructor parameters can instead denote synthetic properties; class/method formals denote formal constants. Missing links remain unknown. |
+| `StatementBlock.RootContext.initNameMap` | Associates ordinary source parameters with the registers the compiler has just allocated. | This is where the register-to-parameter relationship is authoritative. Generated methods without matching source parameters are excluded. |
+| `TypeCompositionStatement` | Associates constructor parameters with generated property identities and class type parameters with the properties returned by `addTypeParam`. | Record at synthesis, where both source and generated identity are available. No alternative property creation or inference is introduced. |
+| `MethodDeclarationStatement.resolveNames` | Associates source type parameters with the method's formal parameter constants. | Uses the compiler's existing formal-parameter API. Interfaces and methods without bodies still have declarations; body-register allocation alone cannot supply them. |
+| `NameResolver` | Remembers each successfully resolved qualified segment, returning a copied list. | This is the only place that knows a prefix succeeded before a later segment failed. Reading the list cannot resume its resolution state machine. |
+| `NamedTypeExpression` | `NameBinding(Token, Constant)` and `getNameBindings()` join written segments to that resolved prefix. | Handles a qualified left-hand type recursively; unresolved suffixes have null targets. It avoids the older accessor that can initiate resolution. |
+
+#### Captures: compiler provenance, with helper logic outside nodes
+
+`LambdaBindings` is a separate Java helper owned by `LambdaExpression.LambdaContext`. It records
+source parameter tokens and capture-register origins while `StatementBlock` allocates parameters
+or replaces implicit Ref/Var captures with dereferenced registers. `LambdaExpression` only exposes
+the helper and forwards the binding event. The helper checks the generated method's identity;
+a cloned lambda cannot read bindings from the original validation context. No new lambda clone
+reset/copy implementation is needed.
+
+Anonymous classes use a different compiler path: a captured variable becomes a synthetic property,
+and a method reading it allocates a fresh register. `StatementBlock.RootContext.resolveRegularName`
+records that register's origin at the point of allocation. `AnonymousClassBindings` holds the
+identity map outside `NewExpression`, alongside the existing captured-name/register map. This
+replaces that earlier map field with one capture-analysis result, created at the same phase
+boundary. All helper fields are final; there is no additional nullable helper cache and no manual
+`if (helper == null) helper = ...` initialization. The result remains phase-assigned because
+capture analysis happens after parsing. A final `Lazy.Bound` on the node would be shared by a
+shallow clone and bound to the wrong owner; this representation avoids that problem. The temporary
+capture-analysis context is discarded before consumers see the final tree. `NewExpression` exposes
+these bindings and a copied map from generated capture properties to their existing enclosing
+registers. The helper checks its owning expression, so cloning cannot expose the original's map.
+The node's existing capture maps remain compiler implementation data; no second name resolver or
+register allocator is added for the editor.
+
+This is a deliberate distinction in lifetime, not a request to move all capture logic into AST
+nodes. The small node link is needed to recover provenance after compilation; association tables,
+parameter/capture classification and copying belong in helpers. The Kotlin snapshot builder follows
+these links by register identity, including nested captures. It owns symbol IDs, type copying,
+occurrence deduplication, hover and navigation. Those remain in `lang/lsp-server`; javatools has no
+Kotlin dependency and the branch adds no separate semantic library.
+
+#### Reporting changes in the AST package
+
+These changes support any compiler host, not just LSP. They remain at the compiler operations that
+know whether a diagnostic is a real validation failure, a rejected candidate, or a cascade.
+
+| Compiler locations | Change and why it belongs there |
+|---|---|
+| `AstNode`, `Context` | Report through the supplied non-null listener and explicit source/nowhere sites; `AstNode.log` returns void. Reserved-name, `this` and assignment errors no longer invent null-listener behavior. |
+| `NameResolver` | A `Reporting` scope binds callbacks to the current operation and releases the listener when resolution returns, including exceptional paths. Source bindings are separate from this listener lifetime. |
+| `StageMgr` | Requires and retains the supplied non-null listener instead of silently replacing null. Its existing abort checks at stage boundaries now observe that listener. Cancellation is cooperative; this does not make individual compiler stages preemptible. |
+| `ValidationScope`, `ForStatement`, `WhileStatement`, `TryStatement` | Operation-scoped validation listeners replace listener fields retained on statement nodes across attempts. The separate scope helper restores nested state. |
+| `Expression`, `NameExpression`, `NamedTypeExpression`, `ArrayAccessExpression`, `InvocationExpression`, `LambdaExpression`, `NewExpression`, `TypeExpression` | Replace implicit/blackhole reporting with explicit probe silences where a fit or staging attempt is speculative; real validation continues through its caller's listener. `testFitAsType` has no reporting-listener parameter because its result, not a rejected candidate diagnostic, is the answer. |
+| `AnnotationExpression`, `AnonInnerClass`, `AsExpression`, `AssignmentStatement`, `CaseManager`, `CmpChainExpression`, `CmpExpression`, `ElseExpression`, `ElvisExpression`, `ListExpression`, `MapExpression`, `NonBindingExpression`, `NotNullExpression`, `ParenthesizedExpression`, `RelOpExpression`, `ReturnStatement`, `SequentialAssignExpression`, `StatementExpression`, `TemplateExpression`, `TernaryExpression`, `TraceExpression`, `TupleExpression`, `UnaryComplementExpression`, `UnaryMinusExpression` | Update callers to the explicit reporting/probe contract. These are compiler fit, conversion and validation operations; moving them into the adapter would change compiler behavior according to the host. |
+| `ForEachStatement`, `StatementBlock`, `TypeCompositionStatement`, `MethodDeclarationStatement`, `Parameter` | Update source-site reporting and explicit listeners in loop generation, body validation, declaration synthesis and parameter diagnostics, alongside the separately listed source-binding hooks. |
+
+The inventory does not imply that every no-argument TypeInfo read should become a reporting read.
+The [TypeInfo audit](errs-audit.md#fresh-typeinfo-capture-2026-09-22) classifies the observed callers.
+No LSP request is allowed to continue validation or build TypeInfo; snapshot extraction runs on the
+compiler worker and copies only existing facts. Partial validation can leave gaps, and unsupported
+or unresolved names must remain unknown.
+
+Verification belongs with these boundaries: resolved/unresolved qualified segments; constructor,
+class and method parameters; overloads and aliases; nested generic types; narrowed, nested and
+mutable captures; cloned-node isolation; immutable snapshot queries without an ambient pool; and
+packaged-server queries after edits and close/reopen. Each extracted compiler slice must run its
+own applicable tests before the consumer slice is introduced.
 
 ### What this is not
 
@@ -1304,7 +1394,7 @@ instead of silently losing it. But a caller that keeps everything it hears shows
 identical warnings.
 
 Nothing in the compiler noticed, because everything in the compiler collects into `ErrorList`,
-which filters by `ErrorInfo.genUID()` - severity, code and parameters - and so has always
+which filters by `ErrorInfo.genUID()` - including source identity, full span, severity, code and parameters - and so has always
 collapsed repeats like this one. It is only visible to a *new* kind of caller: an embedding that
 collects into its own structure. The language server was exactly that, and the fix was to stop
 being it - `XdkAdapter` collects into an `ErrorList` like everyone else, and gets the compiler's
