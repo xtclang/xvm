@@ -1,8 +1,10 @@
 package org.xvm.compiler.ast;
 
-import org.xvm.compiler.Token;
-
 import java.lang.reflect.Field;
+
+import org.xvm.asm.Argument;
+
+import org.xvm.compiler.Token;
 
 /**
  * A parameter type and name, with an optional default value.
@@ -37,6 +39,18 @@ public class Parameter
 
     public Token getNameToken() {
         return name;
+    }
+
+    /**
+     * @return the validated method parameter register or the property implied by a constructor
+     *         parameter, or null if that source association has not been established
+     */
+    public Argument getResolvedTarget() {
+        return m_arg;
+    }
+
+    void setResolvedTarget(Argument arg) {
+        m_arg = arg;
     }
 
     public Expression getValue() {
@@ -100,6 +114,8 @@ public class Parameter
     protected TypeExpression type;
     protected Token          name;
     protected Expression     value;
+
+    private transient Argument m_arg;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(Parameter.class, "type", "value");
 }

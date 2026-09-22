@@ -224,6 +224,13 @@ public class MethodDeclarationStatement
                 : struct.getName();
     }
 
+    /**
+     * @return the declared name token, or null for an implicit method without a source name
+     */
+    public Token getNameToken() {
+        return name;
+    }
+
     @Override
     public Access getDefaultAccess() {
         // methods are *not* taking the parent's access by default
