@@ -250,7 +250,10 @@ class XdkAdapter internal constructor(
         if (isStale(request)) throw CancellationException()
         logger.info("compile: scope={} [{}]", request.scope, EmbeddingSupport.instance().footprint(compilation))
         if (compiled.incrementAndGet() == 1L) logger.info("compile: first compilation in this server completed (cold)")
-        val roots = XdkAst.rootsBySource(compilation.parsed())
+        val roots =
+            buildMap {
+                compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
+            }
         val views = compilation.semanticSnapshots()
         val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
         val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
