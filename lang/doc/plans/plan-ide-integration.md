@@ -83,8 +83,8 @@ lambda capture associations live in a helper owned by the lambda compilation con
 The compiler backend still has no completion, signature help, rename, semantic tokens, document
 links, formatting or code actions. Call hierarchy, go-to-type-definition, find-implementations,
 inlay hints, code lenses and linked editing are also unimplemented. A trailing `.` can produce
-`PARSER-03` with no AST, so there is no semantic result for the position where member completion
-is requested. Compiler recovery or a hybrid syntax/semantic adapter remains a separate decision.
+`PARSER-03`; Java parser recovery preserves the surrounding method/module syntax, but the invalid
+expression has no semantic result for member completion. Compiler mode stays Java-only.
 The bundled XDK is part of the server; no external installation is required.
 
 Navigation includes type-parameter declarations and anonymous-class captures. Module sessions
@@ -146,10 +146,13 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
 | Call hierarchy (callers/callees) | - | - | Not implemented - needs resolved call edges and cross-file indexing |
 
-Semantic results can be partial when validation fails. If parsing yields no AST, diagnostics still
-work, but semantic navigation, outline and folding have no tree to query. Selection ranges retain
-one response per cursor. An edit invalidates the old analysis; queries do not reuse semantic
-positions from an older document version.
+Semantic results can be partial when validation fails. Parse errors prevent semantic compilation,
+but `Compilation.sourceTrees()` retains available per-file syntax for outline, folding and selection.
+Statement-boundary recovery omits malformed statements and preserves surrounding declarations;
+missing braces retain completed method/module headers. Broken headers or lexer failures can still
+leave gaps. Selection ranges retain one response per cursor, with a cursor-only fallback if no
+syntax covers that position. An edit invalidates the old analysis; queries do not reuse semantic
+positions from an older document version. No Tree-sitter fallback is used in compiler mode.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared callable signatures and direct inheritance edges. The compiler adapter compiles a module
@@ -168,7 +171,7 @@ implementation lookup, completion and signature help still need additional seman
 Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
 single-source inputs. Opening a module does not establish a workspace-wide dependency build or
 persistent index. Tree-sitter remains the shipped default. See the
-[module hardening results](../../../docs/errs-integration-plan.md#eighth-pass-module-sessions-and-hierarchy-2026-09-22).
+[module and recovery hardening results](../../../docs/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
 - `CompilationResult` - Compilation output with diagnostics and symbols
@@ -285,7 +288,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Extend module ownership to dependency sources and other workspace modules before workspace-wide references/rename
    - Direct source type hierarchy is implemented; method implementation lookup still needs override relationships
    - Copy resolved call edges for call hierarchy
-   - Design incomplete-source support before type-aware completion
+   - Extend Java parser recovery beyond structural results before type-aware completion
    - Add call-site facts before signature help; declared signatures alone are insufficient
 
    The selected implementation uses the existing javatools compiler. The older research-fork

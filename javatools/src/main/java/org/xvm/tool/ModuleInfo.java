@@ -730,6 +730,31 @@ public class ModuleInfo {
     }
 
     /**
+     * Read the source trees retained by the last loading attempt, including recovered syntax
+     * when {@link #getSourceTree(ErrorListener)} could not assemble the module. This does not load,
+     * parse, register names or link trees. Synthetic package sources are excluded.
+     *
+     * @return a snapshot of the available per-file syntax; these trees may be incomplete and
+     *         must not be used for semantic compilation after a loading/parsing error
+     */
+    public List<StatementBlock> getParsedSources() {
+        List<StatementBlock> sources = new ArrayList<>();
+        collectParsedSources(sourceNode, sources);
+        return List.copyOf(sources);
+    }
+
+    private void collectParsedSources(Node node, List<StatementBlock> sources) {
+        if (node instanceof DirNode dir) {
+            collectParsedSources(dir.sourceNode(), sources);
+            dir.classNodes().values().forEach(file -> collectParsedSources(file, sources));
+            dir.packageNodes().forEach(pkg -> collectParsedSources(pkg, sources));
+        } else if (node instanceof FileNode file && file.file() != null &&
+                   file.ast() instanceof StatementBlock block) {
+            sources.add(block);
+        }
+    }
+
+    /**
      * Represents either a module/package or a class source node.
      */
     public abstract class Node

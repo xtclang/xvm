@@ -43,7 +43,7 @@ internal object XdkAst {
             chain += node
             // the AST nests, so at most one child can contain a position - except where two
             // siblings share a boundary, and then the first one that does is as good an answer
-            val next = node.childList().firstOrNull { it.source === root.source && it.contains(line, column) } ?: return chain
+            val next = node.childList().firstOrNull { it.belongsTo(root) && it.contains(line, column) } ?: return chain
             node = next
         }
     }
@@ -56,7 +56,7 @@ internal object XdkAst {
         val found = LinkedHashSet<Pair<Int, Int>>()
 
         fun walk(node: AstNode) {
-            if (node.source !== root?.source) return
+            if (root != null && !node.belongsTo(root)) return
             if (node is StatementBlock || node is TypeCompositionStatement) {
                 val start = lineOf(node.startPosition)
                 val end = lineOf(node.endPosition)
@@ -84,6 +84,10 @@ internal object XdkAst {
     private fun lineOf(position: Long): Int = Source.calculateLine(position)
 
     private fun columnOf(position: Long): Int = Source.calculateOffset(position)
+
+    // Parent pointers are installed during compilation. Before that, children without their own
+    // Source inherit the source of the syntax tree being traversed.
+    private fun AstNode.belongsTo(root: AstNode): Boolean = source == null || source === root.source
 
     /**
      * [AstNode.children] is an iterator that supports replacement during a compiler pass; a

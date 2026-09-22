@@ -540,6 +540,7 @@ jobs:
                     --tests org.xvm.lsp.adapter.SemanticModelTest \
                     --tests org.xvm.lsp.adapter.CompilerProjectTest \
                     --tests org.xvm.lsp.adapter.XdkModuleSessionTest \
+                    --tests org.xvm.lsp.adapter.XdkRecoveryTest \
                     --tests org.xvm.lsp.adapter.TypeInfoFinalCompositionTest \
                     --tests org.xvm.lsp.server.XdkModuleServerTest \
                     --tests org.xvm.lsp.adapter.XdkDiagnosticTest \
@@ -653,7 +654,7 @@ jobs:
                       "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
                       "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest", "adapter.CompilerProjectTest",
                       "adapter.TypeInfoDiagnosticsTest", "adapter.TypeInfoFinalCompositionTest", "adapter.EmbeddingDiagnosticsTest",
-                      "adapter.XdkModuleSessionTest", "server.XdkModuleServerTest",
+                      "adapter.XdkModuleSessionTest", "adapter.XdkRecoveryTest", "server.XdkModuleServerTest",
                       "server.XdkLanguageServerTest", "server.AdapterBackendTest",
                   ]
                   for suite in suites:

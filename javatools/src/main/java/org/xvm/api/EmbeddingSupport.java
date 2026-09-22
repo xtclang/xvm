@@ -332,7 +332,7 @@ public class EmbeddingSupport {
     }
 
     /**
-     * The outcome of compiling in-memory source.
+     * The outcome of compiling a source or module source tree.
      *
      * A failed compilation used to answer with nothing but null, which threw away everything the
      * attempt had built. That is most of what a host wants when it fails: the structures a
@@ -340,12 +340,27 @@ public class EmbeddingSupport {
      * the only way to reach them - to ask a type what building its TypeInfo had to say, for
      * instance.
      *
-     * @param module  the compiled module, or null if the compilation did not get that far
-     * @param file    the file structure that was built, or null if it did not get that far
-     * @param ast     the parsed source tree, or null if loading/parsing failed; linked member
-     *                trees retain their original Sources and positions
+     * Recovered source trees have not entered compiler passes. Traverse their children using
+     * each root's Source; child parent pointers may not yet be installed.
+     *
+     * @param module       the compiled module, or null if the compilation did not get that far
+     * @param file         the file structure that was built, or null if it did not get that far
+     * @param ast          the assembled source tree, or null if loading/parsing failed; linked
+     *                     member trees retain their original Sources and positions
+     * @param sourceTrees  available per-source syntax, including recovered trees on parse failure;
+     *                     these are structural facts, not a promise of semantic validity
      */
-    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
+    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                              List<StatementBlock> sourceTrees) {
+        public Compilation {
+            sourceTrees = List.copyOf(sourceTrees);
+        }
+
+        /** Retain the original construction API for hosts supplying one assembled tree. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
+            this(module, file, ast, ast == null ? List.of() : List.of(ast));
+        }
+
         /**
          * Represent file structures without a successful module or retained source tree.
          *
@@ -372,13 +387,14 @@ public class EmbeddingSupport {
         }
 
         /**
-         * Walk the parsed source.
+         * Walk the assembled source after successful loading/parsing.
          *
          * A host that wants to say where something is has to come through here: a
          * {@link org.xvm.asm.Component} knows its name, its kind and its children, and nothing
          * about the text it was written in. Only the AST carries positions.
          *
-         * @return the root of the parsed source, or null if it did not parse
+         * @return the assembled source root, or null after loading/parsing errors; use
+         *         {@link #sourceTrees()} for available structural syntax in that case
          */
         public StatementBlock parsed() {
             return ast;
@@ -396,7 +412,10 @@ public class EmbeddingSupport {
      */
     public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(source, "source");
-        return compileModule(listener -> new Parser(source, listener).parseSource(), input, errs);
+        return compileModule(listener -> {
+            StatementBlock tree = new Parser(source, listener).parseSource();
+            return new ParsedSources(listener.hasSeriousErrors() ? null : tree, List.of(tree));
+        }, input, errs);
     }
 
     /**
@@ -416,11 +435,15 @@ public class EmbeddingSupport {
         requireNonNull(sources, "sources");
         return compileModule(listener -> {
             Node root = sources.getSourceTree(listener);
-            return root == null ? null : (StatementBlock) root.ast();
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
+                    sources.getParsedSources());
         }, input, errs);
     }
 
-    private Compilation compileModule(Function<ErrorListener, StatementBlock> parse,
+    /** An assembled tree is available only when parsing/loading succeeded. */
+    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {}
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
                                       ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
@@ -484,13 +507,14 @@ public class EmbeddingSupport {
      */
     private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
-        private final Function<ErrorListener, StatementBlock> parse;
+        private final Function<ErrorListener, ParsedSources> parse;
 
-        private final ModuleRepository inRepo;
-        private final ModuleRepository coreRepo;
-        private       ModuleStructure  module;
-        private       FileStructure    file;
-        private       StatementBlock   ast;
+        private final ModuleRepository     inRepo;
+        private final ModuleRepository     coreRepo;
+        private       ModuleStructure      module;
+        private       FileStructure        file;
+        private       StatementBlock       ast;
+        private       List<StatementBlock> sourceTrees = List.of();
 
         /**
          * Everything this attempt produced.
@@ -503,7 +527,7 @@ public class EmbeddingSupport {
          * @return the outcome; never null, though its parts may be
          */
         Compilation result() {
-            return new Compilation(module, file, ast);
+            return new Compilation(module, file, ast, sourceTrees);
         }
 
         /**
@@ -514,7 +538,7 @@ public class EmbeddingSupport {
             return file;
         }
 
-        protected EmbeddingCompiler(Function<ErrorListener, StatementBlock> parse,
+        protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
                                     ModuleRepository input, ModuleRepository core, ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
@@ -533,7 +557,13 @@ public class EmbeddingSupport {
 
             StatementBlock block;
             try {
-                block = this.ast = parse.apply(this);
+                // The launcher stops the next compilation stage on any error. Parsing can still
+                // recover within its own stage, subject to the host's budget and cancellation.
+                ErrorListener errs = ErrorListener.cancellable(
+                        ErrorListener.collecting(this::log), f_errs::isAbortDesired);
+                ParsedSources parsed = parse.apply(errs);
+                block = this.ast = parsed.root();
+                this.sourceTrees = parsed.sources();
             } catch (CompilerException e) {
                 return 1;
             }

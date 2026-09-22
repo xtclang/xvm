@@ -86,7 +86,10 @@ public class Parser {
      *     AliasStatements-opt TypeDeclaration
      * </pre></code>
      *
-     * @return the top level type declaration
+     * Recover at statement/declaration boundaries when possible. Recovered syntax is incomplete;
+     * callers must check their listener for errors before entering semantic compilation.
+     *
+     * @return the top level syntax, possibly omitting malformed statements or declarations
      *
      * @throws CompilerException if a parsing error occurs while parsing the
      *         source code that forces the parser to abandon its progress before
@@ -99,9 +102,13 @@ public class Parser {
             // during parsing
             m_fDone = true;
 
+            long lStart = peek().getStartPosition();
             List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-            m_root = new StatementBlock(stmts, m_source, stmts.getFirst().getStartPosition(),
-                    stmts.getLast().getEndPosition());
+            if (stmts.isEmpty() && !f_errs.get().hasSeriousErrors()) {
+                log(Severity.ERROR, NO_TYPE_FOUND, lStart, m_source.getPosition());
+            }
+            m_root = new StatementBlock(stmts, m_source, lStart,
+                    stmts.isEmpty() ? m_source.getPosition() : stmts.getLast().getEndPosition());
 
             // there shouldn't be more in the file; (note that a zero-length token doesn't count,
             // since it is probably the synthetic closing '}')
@@ -591,59 +598,64 @@ public class Parser {
     List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts,
                                                    boolean fFileLevel) {
         boolean fFoundType = false;
-        while (match(Id.R_CURLY) == null) {
-            Statement stmt;
-            switch (peek().getId()) {
-            case IMPORT:
-                stmt = parseImportStatement(exprCondition);
-                break;
+        while (!atBlockEnd(fFileLevel)) {
+            Mark statementStart = mark();
+            try {
+                Statement stmt;
+                switch (peek().getId()) {
+                case IMPORT:
+                    stmt = parseImportStatement(exprCondition);
+                    break;
 
-            case TYPEDEF:
-                stmt = parseTypeDefStatement(exprCondition, null);
-                break;
+                case TYPEDEF:
+                    stmt = parseTypeDefStatement(exprCondition, null);
+                    break;
 
-            default: {
-                Token start = peek();
+                default: {
+                    Token start = peek();
 
-                stmt = parseTypeCompositionComponent(exprCondition, false);
-                fFoundType = true;
+                    stmt = parseTypeCompositionComponent(exprCondition, false);
+                    fFoundType = true;
 
-                if (fFileLevel) {
-                    // module cannot have any statements before it in the source
-                    if (stmt instanceof TypeCompositionStatement stmtType) {
-                        if (stmtType.getCategory().getId() == Id.MODULE && !stmts.isEmpty()) {
-                            if (stmts.stream().allMatch(ImportStatement.class::isInstance)) {
-                                // transfer the imports from outside the module body to inside
-                                // the module body
-                                stmtType.ensureBody().getStatements().addAll(0, stmts);
-                                stmts.clear();
-                            } else {
-                                log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
-                                        start.getEndPosition());
+                    if (fFileLevel) {
+                        // module cannot have any statements before it in the source
+                        if (stmt instanceof TypeCompositionStatement stmtType) {
+                            if (stmtType.getCategory().getId() == Id.MODULE && !stmts.isEmpty()) {
+                                if (stmts.stream().allMatch(ImportStatement.class::isInstance)) {
+                                    // transfer the imports from outside the module body to inside
+                                    // the module body
+                                    stmtType.ensureBody().getStatements().addAll(0, stmts);
+                                    stmts.clear();
+                                } else {
+                                    log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
+                                            start.getEndPosition());
+                                }
                             }
+                        } else {
+                            log(Severity.ERROR, NO_TYPE_FOUND, start.getStartPosition(),
+                                    start.getEndPosition());
                         }
-                    } else {
-                        log(Severity.ERROR, NO_TYPE_FOUND, start.getStartPosition(),
-                                start.getEndPosition());
+                    }
+
+                    break;
+                }
+                }
+
+                stmts.add(stmt);
+                if (stmt instanceof MethodDeclarationStatement) {
+                    MethodDeclarationStatement stmtFinally =
+                            ((MethodDeclarationStatement) stmt).getConstructorFinally();
+                    if (stmtFinally != null) {
+                        stmts.add(stmtFinally);
                     }
                 }
 
-                break;
-            }
-            }
-
-            stmts.add(stmt);
-            if (stmt instanceof MethodDeclarationStatement) {
-                MethodDeclarationStatement stmtFinally =
-                        ((MethodDeclarationStatement) stmt).getConstructorFinally();
-                if (stmtFinally != null) {
-                    stmts.add(stmtFinally);
+                if (fFileLevel && fFoundType) {
+                    // at the file level, there is nothing after the outermost type's conclusion
+                    break;
                 }
-            }
-
-            if (fFileLevel && fFoundType) {
-                // at the file level, there is nothing after the outermost type's conclusion
-                break;
+            } catch (CompilerException e) {
+                recoverStatement(statementStart, e);
             }
         }
 
@@ -1210,8 +1222,13 @@ public class Parser {
     StatementBlock parseStatementBlock() {
         Token tokStart = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
-        while (match(Id.R_CURLY) == null) {
-            stmts.add(parseStatement());
+        while (!atBlockEnd(false)) {
+            Mark statementStart = mark();
+            try {
+                stmts.add(parseStatement());
+            } catch (CompilerException e) {
+                recoverStatement(statementStart, e);
+            }
         }
 
         return new StatementBlock(stmts, tokStart.getStartPosition(), prev().getEndPosition());
@@ -5191,18 +5208,65 @@ public class Parser {
     }
 
     /**
+     * Finish a block without consuming the synthetic EOF token. Missing braces are errors, but
+     * completed declarations and statements remain useful to source tools. A speculative parse
+     * still fails immediately, and cancellation/error budgets always stop recovery.
+     */
+    private boolean atBlockEnd(boolean fFileLevel) {
+        if (f_errs.get().isAbortDesired()) {
+            throw new CompilerException("Parsing aborted");
+        }
+        if (eof()) {
+            if (!fFileLevel && !f_errs.get().hasError(UNEXPECTED_EOF)) {
+                log(Severity.ERROR, UNEXPECTED_EOF, m_source.getPosition(), m_source.getPosition());
+            }
+            // Retain an end marker for recovered containers without advancing past EOF.
+            m_tokenPrev = new Token(m_source.getPosition(), m_source.getPosition(), Id.R_CURLY);
+            return true;
+        }
+        return match(Id.R_CURLY) != null;
+    }
+
+    /**
+     * Drop one malformed statement and resume at a lexical statement boundary. Rewind to its
+     * beginning so delimiters consumed by the failed parse cannot change the enclosing scope.
+     * Always consume its first token before scanning, even if that token is a statement keyword.
+     */
+    private void recoverStatement(Mark start, CompilerException error) {
+        if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            throw error;
+        }
+        if (eof()) {
+            return;
+        }
+        restore(start);
+        Token token = current();
+        switch (token.getId()) {
+        case L_CURLY, L_PAREN, L_SQUARE:
+            skipEnclosed(token.getId());
+            break;
+        default:
+            skipToNextStatement();
+            break;
+        }
+    }
+
+    /**
      * Attempt to get out of whatever parsing mess we got ourselves into by
      * figuring out where the current statement ends, and starting anew from
      * there.
      */
     void skipToNextStatement() {
-        while (true) {
+        while (!eof()) {
             switch (peek().getId()) {
             case SEMICOLON:
                 next();
                 return;
 
             case L_CURLY:
+                skipEnclosed(current().getId());
+                return;
+
             case L_PAREN:
             case L_SQUARE:
                 skipEnclosed(current().getId());
@@ -5263,7 +5327,7 @@ public class Parser {
      * @param idOpen  the opening parenthesis / curlies / brackets
      */
     void skipEnclosed(Id idOpen) {
-        while (true) {
+        while (!eof()) {
             switch (peek().getId()) {
             case L_CURLY:
             case L_PAREN:
