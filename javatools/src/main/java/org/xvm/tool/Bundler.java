@@ -27,8 +27,8 @@ import static org.xvm.util.Severity.WARNING;
 
 /**
  * The "bundle" command:
- * <p>
- *  java org.xvm.tool.Bundler [-L repo(s)] [-o output] [--main module] [module_name_or_file ...]
+ *
+ * <p>{@code java org.xvm.tool.Bundler [-L repo(s)] [-o output] [--main module] [module_name_or_file ...]}
  *
  * <p>Merges compiled modules into a single multi-module .xtc file (a "bundle"). The resulting file is
  * a self-contained module repository: the runner and compiler can resolve every bundled module from

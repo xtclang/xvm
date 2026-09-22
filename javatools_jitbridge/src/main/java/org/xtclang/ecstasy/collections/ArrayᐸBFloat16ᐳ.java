@@ -18,8 +18,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of BFloat16, stored in an array of Java longs, four BFloat16 per long.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -35,7 +35,7 @@ public class ArrayᐸBFloat16ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸBFloat16ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -48,7 +48,7 @@ public class ArrayᐸBFloat16ᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸBFloat16ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof BFloat16 boxed) {
@@ -73,7 +73,7 @@ public class ArrayᐸBFloat16ᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸBFloat16ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -91,7 +91,7 @@ public class ArrayᐸBFloat16ᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸBFloat16ᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸBFloat16ᐳ that) {
         return $new$2$p(ctx, type, that.mutability$get(ctx), (Iterable) that);

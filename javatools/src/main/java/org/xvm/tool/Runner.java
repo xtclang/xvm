@@ -43,8 +43,8 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * The "execute" command:
- * <p>
- *  java org.xvm.tool.Runner [-L repo(s)] [-M method_name] app.xtc [argv]
+ *
+ * <p>{@code java org.xvm.tool.Runner [-L repo(s)] [-M method_name] app.xtc [argv]}
  *
  * <p>where the default method is "run" with no arguments.
  */

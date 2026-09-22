@@ -15,7 +15,7 @@ import java.util.function.DoubleUnaryOperator;
  *
  * <p>Implementation notes:
  *
- * <p><code><pre>
+ * <pre>{@code
  * IEEE-754 decimal interchange format parameters (table 3.5):
  * parameter                    32-bit      64-bit      128-bit     decimal{k}
  * ---------------------------  ----------  ----------  ----------  ----------------
@@ -61,7 +61,7 @@ import java.util.function.DoubleUnaryOperator;
  * transformations:
  *      e = q + p - 1
  *      m = c * b^(1-p)
- * </pre></code>
+ * }</pre>
  */
 public abstract class Decimal {
     // ----- accessors -----------------------------------------------------------------------------

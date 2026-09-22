@@ -39,9 +39,8 @@ import static org.xvm.util.Severity.INFO;
 
 /**
  * The "disassemble" command:
- * <p>
- *  java org.xvm.tool.Disassembler xtc_path
  *
+ * <p>{@code java org.xvm.tool.Disassembler xtc_path}
  */
 public class Disassembler extends Launcher<DisassemblerOptions> {
 

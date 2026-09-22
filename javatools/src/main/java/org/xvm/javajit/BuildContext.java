@@ -2722,7 +2722,7 @@ public class BuildContext {
 
     /**
      * Set the property value.
-     * <p>
+     *
      * @param code          the code builder
      * @param targetType    the type of the target object containing the property to be set
      * @param targetLoader  the loader for the target object

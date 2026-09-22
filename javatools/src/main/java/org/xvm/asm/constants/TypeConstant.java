@@ -189,7 +189,6 @@ public abstract class TypeConstant
      * <li>{@link UnionTypeConstant}</li>
      * <li>{@link DifferenceTypeConstant}</li>
      * </ul>
-     * <p>
      *
      * @return true iff this is a relational type constant
      */
