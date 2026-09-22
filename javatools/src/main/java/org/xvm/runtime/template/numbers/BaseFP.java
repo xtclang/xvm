@@ -53,6 +53,7 @@ public abstract class BaseFP
         markNativeMethod("sqrt"       , VOID, THIS);
         markNativeMethod("cbrt"       , VOID, THIS);
         markNativeMethod("sin"        , VOID, THIS);
+        markNativeMethod("cos"        , VOID, THIS);
         markNativeMethod("tan"        , VOID, THIS);
         markNativeMethod("asin"       , VOID, THIS);
         markNativeMethod("acos"       , VOID, THIS);
@@ -62,7 +63,6 @@ public abstract class BaseFP
         markNativeMethod("sinh"       , VOID, THIS);
         markNativeMethod("cosh"       , VOID, THIS);
         markNativeMethod("tanh"       , VOID, THIS);
-        markNativeMethod("asinh"      , VOID, THIS);
         markNativeMethod("acosh"      , VOID, THIS);
         markNativeMethod("atanh"      , VOID, THIS);
         markNativeMethod("deg2rad"    , VOID, THIS);
@@ -138,11 +138,6 @@ public abstract class BaseFP
 
         private final RoundingMode f_mode;
     }
-
-    /**
-     * The log2(10) value.
-     */
-    public static final double LOG2_10 = 1.0/Math.log10(2);
 
     /**
      * The number of bits for this Float type.

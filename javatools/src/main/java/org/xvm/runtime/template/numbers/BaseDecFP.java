@@ -138,7 +138,9 @@ public abstract class BaseDecFP
             Decimal dec  = ((DecimalHandle) hTarget).getValue();
             long    lPow = ((JavaLong) hArg).getValue();
 
-            return frame.assignValue(iReturn, makeHandle(dec.pow((int) lPow)));
+            // scale by 10^n, the radix raised to the requested power
+            return frame.assignValue(iReturn, makeHandle(
+                    dec.scaleByPow((int) Math.clamp(lPow, Integer.MIN_VALUE, Integer.MAX_VALUE))));
         }
 
         case "atan2": {
@@ -232,6 +234,9 @@ public abstract class BaseDecFP
 
         case "sin":
             return frame.assignValue(iReturn, makeHandle(dec.sin()));
+
+        case "cos":
+            return frame.assignValue(iReturn, makeHandle(dec.cos()));
 
         case "tan":
             return frame.assignValue(iReturn, makeHandle(dec.tan()));

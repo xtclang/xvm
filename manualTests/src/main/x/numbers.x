@@ -16,6 +16,7 @@ module TestNumbers {
         testFloat8();
         testDec64();
         testInfinity();
+        testFPMath();
         testConverter();
         testAggregator();
         testDec28();
@@ -397,6 +398,136 @@ module TestNumbers {
             f = -f*f;
             d = -d*d;
         }
+    }
+
+    /**
+     * Trigonometric and hyperbolic functions across the FP types.
+     */
+    void testFPMath() {
+        Float64 zero = 0.0;
+        assert zero.cos() == 1.0;
+        assert zero.sin() == 0.0;
+
+        Float64 x = 1.0;
+        Float64 s = x.sin();
+        Float64 c = x.cos();
+        assert (s*s + c*c - 1.0).abs() < 0.000000001;
+
+        // cos must work for every binary FP width, not just Float64
+        Float32 f32 = 0.0;
+        assert f32.cos() == 1.0;
+        // compare through Float64 so the expected value does not depend on Float16 literal decoding
+        Float16 f16 = 0.0;
+        assert f16.cos().toFloat64() == 1.0;
+
+        // and for the decimal types, which route through a separate implementation
+        Dec64 d64 = 0.0;
+        assert d64.cos() == 1.0;
+        Dec32 d32 = 0.0;
+        assert d32.cos() == 1.0;
+
+        // artanh over its own domain, and its inverse
+        Float64 h = 0.5;
+        Float64 a = h.atanh();
+        assert (a - 0.5493061443340549).abs() < 0.000000001;
+        assert (a.tanh() - 0.5).abs() < 0.000000001;
+
+        Dec64 hd = 0.5;
+        assert (hd.atanh().toFloat64() - 0.5493061443340549).abs() < 0.000000001;
+
+        // the neighbouring inverse hyperbolics
+        assert (h.asinh() - 0.48121182505960347).abs() < 0.000000001;
+        Float64 two = 2.0;
+        assert (two.acosh() - 1.3169578969248166).abs() < 0.000000001;
+
+        testFPMathSurface();
+    }
+
+    /**
+     * Every transcendental FPNumber declares, checked against a known value.
+     */
+    void testFPMathSurface() {
+        Float64 h = 0.5;
+
+        // trigonometric
+        assert close(h.sin(),  0.479425538604203);
+        assert close(h.cos(),  0.8775825618903728);
+        assert close(h.tan(),  0.5463024898437905);
+        assert close(h.asin(), 0.5235987755982988);
+        assert close(h.acos(), 1.0471975511965976);
+        assert close(h.atan(), 0.46364760900080615);
+
+        Float64 one = 1.0;
+        Float64 two = 2.0;
+        assert close(one.atan2(two), 0.4636476090008061);
+
+        // hyperbolic, and their inverses
+        assert close(h.sinh(),  0.5210953054937474);
+        assert close(h.cosh(),  1.1276259652063807);
+        assert close(h.tanh(),  0.46211715726000974);
+        assert close(h.asinh(), 0.48121182505960347);
+        assert close(two.acosh(), 1.3169578969248166);
+        assert close(h.atanh(), 0.5493061443340549);
+
+        // exponential and logarithmic
+        assert close(one.exp(), 2.718281828459045);
+        Float64 e = 2.718281828459045;
+        assert close(e.log(), 1.0);
+        // log2 of these exact powers of two must equal the exponent exactly
+        Float64 eight = 8.0;
+        assert eight.log2() == 3.0;
+        Float64 half = 0.5;
+        assert half.log2() == -1.0;
+        Float64 k = 1024.0;
+        assert k.log2() == 10.0;
+        Float64 tiny = 0.00006103515625;        // 2^-14
+        assert tiny.log2() == -14.0;
+
+        // and the decimal path shares the formula
+        Dec64 d8 = 8.0;
+        assert d8.log2() == 3.0;
+        Float64 thousand = 1000.0;
+        assert close(thousand.log10(), 3.0);
+
+        // roots
+        assert close(two.sqrt(), 1.4142135623730951);
+        Float64 twentySeven = 27.0;
+        assert close(twentySeven.cbrt(), 3.0);
+
+        // angle conversion, round tripping through each other
+        Float64 straight = 180.0;
+        assert close(straight.deg2rad(), 3.141592653589793);
+        assert close(straight.deg2rad().rad2deg(), 180.0);
+
+        // rounding and adjacency
+        Float64 threeHalves = 1.5;
+        assert threeHalves.floor() == 1.0;
+        assert threeHalves.ceil() == 2.0;
+        assert threeHalves.round() == 2.0;
+        assert threeHalves.round(TowardZero) == 1.0;
+        assert one.nextUp() > one;
+        assert one.nextDown() < one;
+        assert one.nextUp().nextDown() == one;
+
+        // scaleByPow scales by 2^n for binary types
+        assert two.scaleByPow(3) == 16.0;
+        assert two.scaleByPow(0) == two;
+        assert two.scaleByPow(-1) == 1.0;
+        assert one.scaleByPow(10) == 1024.0;
+
+        // and by 10^n for decimal types
+        Dec64 dec = 2.0;
+        assert dec.scaleByPow(3) == 2000.0;
+        assert dec.scaleByPow(0) == dec;
+        assert dec.scaleByPow(-1) == 0.2;
+
+        // pow, and its relationship to sqrt
+        assert close(two.pow(10.0), 1024.0);
+        assert close(two.pow(0.5), 1.4142135623730951);
+    }
+
+    static Boolean close(Float64 actual, Float64 expected) {
+        return (actual - expected).abs() < 0.000000001;
     }
 
     void testConverter() {

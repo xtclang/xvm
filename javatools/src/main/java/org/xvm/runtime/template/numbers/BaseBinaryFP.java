@@ -120,7 +120,9 @@ public abstract class BaseBinaryFP
             double d = ((FloatHandle) hTarget).getValue();
             long   l = ((JavaLong) hArg).getValue();
 
-            return frame.assignValue(iReturn, makeHandle(Math.pow(d, l)));
+            // scale by 2^n, the radix raised to the requested power
+            return frame.assignValue(iReturn,
+                    makeHandle(Math.scalb(d, (int) Math.clamp(l, Integer.MIN_VALUE, Integer.MAX_VALUE))));
         }
 
         case "atan2": {
@@ -188,7 +190,7 @@ public abstract class BaseBinaryFP
             return frame.assignValue(iReturn, makeHandle(Math.log(d)));
 
         case "log2":
-            return frame.assignValue(iReturn, makeHandle(Math.log10(d)*LOG2_10));
+            return frame.assignValue(iReturn, makeHandle(Math.log(d) / Decimal.LOG_2));
 
         case "log10":
             return frame.assignValue(iReturn, makeHandle(Math.log10(d)));
@@ -201,6 +203,9 @@ public abstract class BaseBinaryFP
 
         case "sin":
             return frame.assignValue(iReturn, makeHandle(Math.sin(d)));
+
+        case "cos":
+            return frame.assignValue(iReturn, makeHandle(Math.cos(d)));
 
         case "tan":
             return frame.assignValue(iReturn, makeHandle(Math.tan(d)));
@@ -230,7 +235,7 @@ public abstract class BaseBinaryFP
             return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
 
         case "atanh":
-            return frame.assignValue(iReturn, makeHandle(0.5*Math.log((d+1.0)/(d-1.0))));
+            return frame.assignValue(iReturn, makeHandle(0.5 * Math.log((1.0 + d) / (1.0 - d))));
 
         case "deg2rad":
             return frame.assignValue(iReturn, makeHandle(Math.toRadians(d)));
