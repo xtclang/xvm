@@ -47,7 +47,7 @@ plugins {
 // The LSP server can use different parsing backends:
 //
 //   treesitter  - Tree-sitter parsing (DEFAULT, syntax-level intelligence, needs native lib)
-//   compiler    - The XTC compiler itself (real diagnostics and outline; needs an XDK on XDK_HOME)
+//   compiler    - The XTC compiler with bundled XDK libraries (diagnostics and semantic navigation)
 //   mock        - Regex-based parsing (no native dependencies, for testing/fallback)
 //
 // Set via Gradle property: -Plsp.adapter=mock (to override default)
@@ -125,9 +125,9 @@ repositories {
 // Consume the tree-sitter native libraries for all supported platforms.
 // This library is built on-demand using Zig cross-compilation.
 
-// Test consumers resolve the compiled modules from the composite, without a distribution archive.
-val compilerTestModules =
-    configurations.create("compilerTestModules") {
+// Consume the compiled XDK modules through the same variants as other composite consumers.
+val compilerModules =
+    configurations.create("compilerModules") {
         isCanBeConsumed = false
         isCanBeResolved = true
         attributes {
@@ -155,9 +155,8 @@ val treeSitterNativeLib =
     }
 
 dependencies {
-    testImplementation(libs.javatools)
-    compilerTestModules(libs.xdk.ecstasy)
-    compilerTestModules(libs.javatools.bridge)
+    compilerModules(libs.xdk.ecstasy)
+    compilerModules(libs.javatools.bridge)
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
 
@@ -208,10 +207,26 @@ val copyNativeLibToResources =
         into(layout.buildDirectory.dir("generated/resources/native-libraries"))
     }
 
+val compilerModuleFiles = compilerModules.asFileTree.matching { include("**/*.xtc") }
+val compilerModuleIndex =
+    tasks.register<WriteProperties>("compilerModuleIndex") {
+        destinationFile.set(layout.buildDirectory.file("generated/compiler/modules.properties"))
+        inputs.files(compilerModuleFiles).withPathSensitivity(PathSensitivity.NONE)
+        property("modules", compilerModuleFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+    }
+
 // Add native library resources to source sets
 sourceSets.main {
     resources.srcDir(copyNativeLibToResources)
 }
+
+// Ensure native library is copied before processResources
+val processResources =
+    tasks.named<ProcessResources>("processResources") {
+        dependsOn(copyNativeLibToResources)
+        from(compilerModuleFiles) { into("org/xvm/lsp/xdk") }
+        from(compilerModuleIndex) { into("org/xvm/lsp/xdk") }
+    }
 
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
@@ -220,11 +235,6 @@ tasks.withType<JavaCompile>().configureEach {
 val classes = tasks.named("classes")
 
 tasks.test {
-    jvmArgumentProviders.add(
-        objects.newInstance<CompilerTestModulesArguments>().apply {
-            modules.from(compilerTestModules)
-        },
-    )
     useJUnitPlatform()
     testLogging {
         events("failed")
