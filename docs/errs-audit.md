@@ -237,8 +237,15 @@ three open families produced no diagnostics:
 
 The probe also checked the Boolean Array translator and six nested XODB classes: fifteen final
 compositions in total, with no diagnostics or exceptions. A small fresh-source anonymous Byte
-property compiled cleanly and produced the correct Boolean `assigned` metadata. These were
-temporary local probes; permanent regression tests are still needed.
+property compiled cleanly and produced the correct Boolean `assigned` metadata. The initial probes
+are now retained in
+[`TypeInfoFinalCompositionTest`](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/TypeInfoFinalCompositionTest.kt).
+The tests deserialize fresh copies of compiled modules supplied by test-only Gradle `xtc` variants,
+then inspect the linked dependencies in their owning pools. They require no installed distribution
+or `XDK_HOME`. All fifteen compositions must build without diagnostics; selected Array, XML and XODB
+members additionally have assertions for their substituted types and inherited chains. The
+fresh-source control deliberately introduces an unmatched `@Override` and requires a real `VERIFY`
+error naming that method, a failed compilation and no `EMB-5`.
 
 The captured Array stacks reach the provisional lookup through `TypeConstant.getConverterTo`
 and `Expression.calcFit`. XODB/XML stacks reach it while `NewExpression` builds its `RoughDraft`.
@@ -249,7 +256,20 @@ that spelling cannot establish that a method identity is unresolved.
 **Disposition:** no new lost diagnostic was reproduced, so no production TypeInfo listener sweep
 was made. Every message in this capture has a classified source/caller group, and the three
 previously open families now have direct final-metadata evidence supporting provisional silence.
-Turn these artifact and fresh-source probes into durable regressions, including an invalid-override
-control. They do not establish all runtime behavior or justify every historic silence. The
+The artifact and fresh-source regressions pass, including the invalid-override control. They do not
+establish all runtime behavior or justify every historic silence. The
 `@Parsed` constructor family was outside this deeper pass. Existing unmatched `@Override` and
 duplicate-annotation tests continue to pin real errors/warnings reaching the host.
+
+### Fatal forwarding follow-up, 2026-09-22
+
+The module-session regression reproduced a separate reporting loss. Renaming a base class in the
+module root left a member extending the missing class. The compiler produced FATAL `COMPILER-30`,
+but `Launcher.log(ErrorInfo)` called console reporting before its host delegate. Console reporting
+threw `LauncherException`, so the member's original diagnostic never reached the collector and the
+embedding boundary synthesized `EMB-5` on the root.
+
+Forwarding the structured diagnostic before console reporting fixes the loss while preserving the
+CLI abort. `LauncherErrorHandlingTest` checks delivery of the original fatal diagnostic before the
+exception; `XdkModuleServerTest` checks its member URI and version after the root edit. Both pass.
+This is a demonstrated pipeline defect, independent of the provisional TypeInfo suppressions above.

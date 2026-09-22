@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -110,6 +111,7 @@ class XtcTextDocumentService(
     private class Document(
         val content: String,
         val version: Int,
+        val scope: String,
         val analysis: CompletableFuture<CompilationResult>,
     )
 
@@ -117,6 +119,7 @@ class XtcTextDocumentService(
     private val lifecycle = Any()
     private val openDocuments = ConcurrentHashMap<String, Document>()
     private var closed = false
+    private val publishedByScope = mutableMapOf<String, Set<String>>()
 
     private fun <R> supplyAsync(
         method: String,
@@ -167,38 +170,73 @@ class XtcTextDocumentService(
         }
     }
 
-    /** Called under lifecycle; registering after installation also handles completed futures. */
+    /** A member edit replaces the analysis future for every open document in that module. */
     private fun analyse(
         uri: String,
         content: String,
         version: Int,
     ) {
         val analysis = adapter.compileAsync(uri, content)
-        val document = Document(content, version, analysis)
-        val previous = openDocuments.put(uri, document)
-        previous?.analysis?.cancel(false)
+        val scope = adapter.analysisScope(uri)
+        val affected =
+            openDocuments.filter { (otherUri, document) ->
+                otherUri == uri || document.scope == scope || adapter.analysisScope(otherUri) == scope
+            }
+        val current = affected.mapValues { (_, document) -> Document(document.content, document.version, scope, analysis) }.toMutableMap()
+        current[uri] = Document(content, version, scope, analysis)
+        openDocuments.putAll(current)
+        affected.values
+            .map { it.analysis }
+            .distinct()
+            .filter { it !== analysis }
+            .forEach { it.cancel(false) }
         analysis.whenComplete { result, failure ->
             synchronized(lifecycle) {
-                if (!closed && openDocuments[uri] === document) {
+                if (!closed && current.all { (documentUri, document) -> openDocuments[documentUri] === document }) {
                     if (failure == null) {
-                        server.publishDiagnostics(uri, result.diagnostics, version)
+                        publish(scope, result)
                     } else if (failure !is CancellationException) {
                         logger.error("analysis failed: uri={}, version={}", uri, version, failure)
-                        server.publishDiagnostics(
-                            uri,
-                            listOf(
-                                Diagnostic(
-                                    location = DiagnosticLocation(uri, 0, 0, 0, 0),
-                                    severity = Diagnostic.Severity.ERROR,
-                                    message = "XTC analysis failed; see the language server log for details",
-                                    code = "ANALYSIS-FAILED",
-                                    source = "xtc",
+                        publish(
+                            scope,
+                            CompilationResult.failure(
+                                uri,
+                                listOf(
+                                    Diagnostic(
+                                        location = DiagnosticLocation(uri, 0, 0, 0, 0),
+                                        severity = Diagnostic.Severity.ERROR,
+                                        message = "XTC analysis failed; see the language server log for details",
+                                        code = "ANALYSIS-FAILED",
+                                        source = "xtc",
+                                    ),
                                 ),
                             ),
-                            version,
                         )
                     }
                 }
+            }
+        }
+    }
+
+    /** All source documents in a module publish together; foreign dependencies remain related info. */
+    private fun publish(
+        scope: String,
+        result: CompilationResult,
+    ) {
+        val previous = publishedByScope.put(scope, result.documentUris).orEmpty()
+        (previous - result.documentUris).forEach { server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version) }
+        result.documentUris.forEach { uri ->
+            val diagnostics =
+                result.diagnostics.filter {
+                    it.location.uri == uri || (uri == result.uri && it.location.uri !in result.documentUris)
+                }
+            server.publishDiagnostics(uri, diagnostics, openDocuments[uri]?.version)
+        }
+        // Root discovery can change after file creation/removal; release publications of old scopes.
+        val inactive = publishedByScope.keys.filter { key -> openDocuments.values.none { it.scope == key } }
+        inactive.forEach { key ->
+            publishedByScope.remove(key).orEmpty().filter { it !in result.documentUris }.forEach {
+                server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
             }
         }
     }
@@ -209,7 +247,29 @@ class XtcTextDocumentService(
             val document = openDocuments.remove(uri)
             document?.analysis?.cancel(false)
             adapter.closeDocument(uri)
-            if (!closed) server.publishDiagnostics(uri, emptyList(), document?.version)
+            if (closed) return
+            server.publishDiagnostics(uri, emptyList(), document?.version)
+            val remaining = openDocuments.entries.firstOrNull { it.value.scope == document?.scope }
+            if (remaining != null) {
+                analyse(remaining.key, remaining.value.content, remaining.value.version)
+            } else {
+                publishedByScope.remove(document?.scope).orEmpty().filter { it != uri }.forEach {
+                    server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
+                }
+            }
+        }
+    }
+
+    /** Re-read closed files and module membership after filesystem notifications. */
+    fun refreshForFile(uri: String) {
+        synchronized(lifecycle) {
+            if (closed) return
+            val scope = adapter.analysisScope(uri)
+            val document =
+                openDocuments.entries.firstOrNull {
+                    it.value.scope == scope || uri in publishedByScope[it.value.scope].orEmpty()
+                } ?: return
+            analyse(document.key, document.value.content, document.value.version)
         }
     }
 
@@ -218,6 +278,7 @@ class XtcTextDocumentService(
             closed = true
             val documents = openDocuments.toMap()
             openDocuments.clear()
+            publishedByScope.clear()
             documents.forEach { (uri, document) ->
                 document.analysis.cancel(false)
                 adapter.closeDocument(uri)
@@ -231,6 +292,7 @@ class XtcTextDocumentService(
      */
     override fun didSave(params: DidSaveTextDocumentParams) {
         logger.info("textDocument/didSave: {}", params.textDocument.uri)
+        refreshForFile(params.textDocument.uri)
     }
 
     /**
@@ -945,6 +1007,7 @@ class XtcTextDocumentService(
                 this.selectionRange.toLsp(),
             ).apply {
                 this.detail = this@toLsp.detail
+                this.data = this@toLsp.data
             }
     }
 
@@ -956,6 +1019,12 @@ class XtcTextDocumentService(
             range = toAdapterRange(range),
             selectionRange = toAdapterRange(selectionRange),
             detail = detail,
+            data =
+                when (val value = data) {
+                    is String -> value
+                    is JsonPrimitive -> if (value.isString) value.asString else null
+                    else -> null
+                },
         )
 
     private fun AdapterCallHierarchyItem.toLspCallItem(): org.eclipse.lsp4j.CallHierarchyItem {

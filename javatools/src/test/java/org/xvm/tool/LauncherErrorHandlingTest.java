@@ -1,6 +1,7 @@
 package org.xvm.tool;
 
 import org.junit.jupiter.api.Test;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -29,6 +30,18 @@ import static org.xvm.asm.ErrorListener.silent;
  * Tests the error accumulation, severity tracking, and checkErrors() behavior.
  */
 class LauncherErrorHandlingTest {
+
+    @Test
+    void fatalDiagnosticReachesHostBeforeConsoleAborts() {
+        var errors = new ErrorList();
+        var compiler = new TestCompiler(CompilerOptions.builder().build(), new TestConsole(), errors);
+
+        assertThrows(LauncherException.class,
+                () -> compiler.fatal("PARSER-03", ErrorListener.NOWHERE, "identifier"));
+        assertEquals(1, errors.getErrors().size());
+        assertEquals("PARSER-03", errors.getErrors().getFirst().getCode());
+        assertEquals(FATAL, errors.getErrors().getFirst().getSeverity());
+    }
 
     /**
      * Custom console that captures log output for testing.
