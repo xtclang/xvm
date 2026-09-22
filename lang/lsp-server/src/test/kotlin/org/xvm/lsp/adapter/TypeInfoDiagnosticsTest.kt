@@ -2,6 +2,8 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorList.UNLIMITED
@@ -23,6 +25,40 @@ import org.xvm.compiler.Source
  * actually cared would hear nothing at all unless the diagnostics were kept and replayed.
  */
 class TypeInfoDiagnosticsTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["array", "assignment", "constructor", "property"])
+    fun `validated uses retain the type warning without cascades`(operation: String) {
+        val body =
+            when (operation) {
+                "array" -> "Base target = new Derived(); Int value = target[0];"
+                "assignment" -> "Base target = new Derived(); target += target;"
+                "constructor" -> "Derived target = new Derived(2);"
+                "property" -> "Derived target = new Derived(); Ref<Int> ref = target.&count;"
+                else -> error(operation)
+            }
+        val errors = ErrorList(UNLIMITED)
+        val result =
+            compile(
+                """
+                module TypeInfoUses {
+                    class Base {
+                        construct(Int seed = 1) { count = seed; }
+                        @Atomic Int count = 1;
+                        @Op("[]") Int getElement(Int index) = count;
+                        @Op("+") Base add(Base other) = this;
+                    }
+                    class Derived(Int seed = 1) extends Base(seed) {
+                        @Atomic @Override Int count = 2;
+                    }
+                    void run() { $body }
+                }
+                """.trimIndent(),
+                errors,
+            )
+        assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        assertThat(errors.errors.map { it.code }).containsExactly("VERIFY-75")
+    }
+
     @Test
     fun `an unmatched Override is reported while the TypeInfo is assembled`() {
         val errs = ErrorList(UNLIMITED)
