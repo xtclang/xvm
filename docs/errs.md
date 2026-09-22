@@ -23,8 +23,10 @@ unsaved overlays, publish diagnostics per file and support cross-file definition
 direct type hierarchy within the compiled module. Permanent TypeInfo regressions cover the fifteen
 investigated final compositions and an invalid-override control. Java parser recovery now retains
 per-source syntax for outlines, folding and selection around malformed statements and unfinished
-bodies. Parse errors still block semantic compilation. Remaining work includes semantic analysis of
-incomplete source, cross-module indexing, call-site facts and the unexamined TypeInfo families.
+bodies. Ordinary compilation still rejects parse errors. An explicit `analyzeIncomplete` probe now
+validates intact receivers and arguments at a bounded trailing EOF site, without producing a
+compiled module or changing XdkAdapter's feature behavior. Broader incomplete-source analysis,
+cross-module indexing, call-site facts and the unexamined TypeInfo families remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -230,6 +232,7 @@ which read like an accessor.
 | `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
 | Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
 | `Compilation.sourceTrees()` / `ModuleInfo.getParsedSources()` | Preserve per-file syntax after a loading/parsing error without presenting it as an assembled or semantically valid module. Structural queries can retain current outlines and ranges. |
+| `analyzeIncomplete(Source, ...)` / `PartialAnalysis` | Opt-in, single-source probe for a standalone trailing `receiver.` or unfinished call. Retains intact syntax, receiver/argument validation and lexical parentage; never returns a compiled module or selects an incomplete call's overload. Normal compilation is unchanged. |
 
 The source-tree API adds `compileModule(ModuleInfo, repository, errs)` and the protected
 `ModuleInfo.readSource(File)` and `sourceEntries(File)` hooks. A fresh source-tree input uses the
@@ -1172,12 +1175,12 @@ types and method calls - and references tell `Holder.x` from `Point.x`, which no
 
 **Findings from the original adapter investigation, with current status:**
 
-1. **There is no error-tolerant parse.** This is the big one. Typing `console.` and asking for
-   completion produces `PARSER-03: Expected token IDENTIFIER` and **no AST at all** - not a
-   partial one. Completion is asked for at exactly the moment the document does not parse, so on
-   the compiler alone there is nothing to complete from. Recovery is one prerequisite for
-   completion; accessible member enumeration, scope and call-site type substitution are others.
-   A hybrid syntax adapter is one possible recovery strategy.
+1. **Incomplete-source semantics remain bounded.** The original investigation found no AST for
+   `console.`. The ninth pass retains structural syntax; the tenth adds an explicit compiler-only
+   probe that validates a trailing receiver and complete arguments in their real method scope.
+   This probe is separate from normal compilation and is not yet used by XdkAdapter. Accessible
+   member enumeration, expected argument types and call-site substitutions remain prerequisites
+   for completion and signature help. Compiler mode stays Java-only.
 2. **Local identity: fixed.** `Register.equals` is unsuitable for source identity, but the existing
    `getOriginalRegister()` connects narrowed shadows to their original register. The adapter now
    compares those objects by identity and reads the declaration register through a public accessor.
@@ -1221,10 +1224,33 @@ tables, copied inheritance edges and the reverse subtype index live in Kotlin un
 Hierarchy extraction reads existing class contributions after successful compilation; it does not
 construct TypeInfo or resume validation from an LSP request.
 
-The recovery pass also adds no AST fields or recovery-expression nodes. It wires Parser's existing
+The ninth recovery pass added no AST fields or recovery-expression nodes. It wires Parser's existing
 skip helpers into its declaration/statement loops and exposes the resulting source trees through
 ModuleInfo and Compilation. This belongs in the compiler parser because it owns tokens, balanced
 delimiters and speculative rollback. LSP-specific retention and queries remain in Kotlin.
+
+#### Incomplete statements for explicit partial analysis
+
+The tenth pass adds `IncompleteStatement`, a compiler syntax node created only by
+`Parser.forPartialAnalysis`. It represents an unfinished standalone statement at EOF: the written
+receiver/callee, dot or opening parenthesis, complete arguments, top-level commas and source end.
+It is not an expression and has no fabricated result type. This belongs in the AST because only
+the compiler's statement validation supplies the correct lexical and flow-narrowed context.
+The embedding API must not reconstruct that scope by matching names or compiling altered text.
+
+Its `validateImpl` validates intact receiver/argument children, reports the original EOF boundary
+and returns failure. The normal method-body validation gate prevents emission; its `emit` method
+also rejects direct use. Overload selection and expected parameter types remain unavailable;
+lambda and unbound arguments are retained without contextual validation. A failed child's
+placeholder type is not a semantic answer: consumers require successful TypeFit as well as
+validation and an available target/type.
+
+The only mutable fields are ordinary AST child references that validation may replace. Existing
+child-field adoption and cloning copy them; the clone regression verifies independent receiver,
+callee and argument nodes. No validation Context, callback, scope map or separate semantic cache
+is stored, and no clone-reset override is added. No existing AST class gains fields or accessors in
+this pass. Kotlin consumer tests exercise the API, but model copying, completion queries and LSP
+integration remain subsequent work in the existing LSP module.
 
 #### Passive source facts on nodes
 
