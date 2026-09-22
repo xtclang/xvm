@@ -273,3 +273,15 @@ Forwarding the structured diagnostic before console reporting fixes the loss whi
 CLI abort. `LauncherErrorHandlingTest` checks delivery of the original fatal diagnostic before the
 exception; `XdkModuleServerTest` checks its member URI and version after the root edit. Both pass.
 This is a demonstrated pipeline defect, independent of the provisional TypeInfo suppressions above.
+
+### Parser recovery and unterminated strings, 2026-09-22
+
+Separating parser recovery from the launcher's stage-abort policy exposed an existing lexer loop.
+At EOF inside a string, `Lexer.eatStringChars` reported `STRING_NO_TERM` but neither exited the loop
+nor advanced input. The identical diagnostic could be deduplicated forever, so a finite ErrorList
+budget did not necessarily stop it. The code is also present at the local base `4a1eae6f7`.
+
+The lexer now reports once and returns the unterminated literal token, leaving the source error
+recorded. A regression covers ordinary and template strings, including empty and Unicode content,
+with an unlimited listener. Its observer fails immediately if the diagnostic repeats, avoiding a
+test that leaves a spinning lexer behind. This fixes termination; it does not make the source valid.
