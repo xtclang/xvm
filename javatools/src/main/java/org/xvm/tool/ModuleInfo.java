@@ -634,15 +634,56 @@ public class ModuleInfo {
     // ----- source tree ---------------------------------------------------------------------------
 
     /**
+     * A source-tree entry. The directory flag describes the input snapshot, so a host can supply
+     * files and packages that have not yet been saved to disk.
+     */
+    public record SourceEntry(File file, boolean directory) {}
+
+    /**
+     * List the immediate source-tree entries of a directory. Hosts overriding this together with
+     * {@link #readSource} must use one consistent input snapshot for the entire compilation.
+     * Resource lookup remains based on the original disk locations.
+     *
+     * @param directory  the directory to enumerate
+     * @return the entries, including directories needed to assemble nested packages
+     */
+    protected List<SourceEntry> sourceEntries(File directory) {
+        return listFiles(directory).stream()
+                .map(file -> new SourceEntry(file, file.isDirectory()))
+                .toList();
+    }
+
+    /**
+     * Read the text of a discovered source file. Hosts may override this to supply unsaved text
+     * while retaining the file's identity and resource directory. Use a fresh ModuleInfo for each
+     * compilation; source trees and their text are cached for this instance.
+     *
+     * @param file  the discovered source file, resolved by ModuleInfo; hosts should normalize
+     *              overlay keys to the same canonical paths
+     *
+     * @return the source characters, owned by the caller
+     *
+     * @throws IOException if the source cannot be read
+     */
+    protected char[] readSource(File file)
+            throws IOException {
+        return readFileChars(file);
+    }
+
+    /**
      * When working with a source code tree and given a "module file", produce a source tree of
      * the desired processing stage.
      *
-     * @param errs  an optional error listener
+     * @param errs  the reporting and cancellation listener for this attempt
      *
      * @return the root {@link Node} of the tree, or null if the ModuleInfo does not know the source
      *         location, or if serious errors occur loading the source tree
      */
     public Node getSourceTree(ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
+        if (errs.isAbortDesired()) {
+            return null;
+        }
         if (sourceNode != null) {
             return sourceNode;
         }
@@ -656,7 +697,6 @@ public class ModuleInfo {
         if (isSourceTree()) {
             assert fileName != null;
             File subDir = new File(srcDir, fileName);
-            assert subDir.exists();
             DirNode dirNode = new DirNode(/*parent=*/null, subDir, srcFile);
             dirNode.buildSourceTree();
             sourceNode = dirNode;
@@ -668,7 +708,7 @@ public class ModuleInfo {
             return null;
         }
 
-        sourceNode.parse();
+        sourceNode.parse(errs);
         sourceNode.logErrors(errs);
         if (errs.hasSeriousErrors() || errs.isAbortDesired()) {
             return null;
@@ -774,6 +814,16 @@ public class ModuleInfo {
          * Load and parse the source code, as necessary.
          */
         public abstract void parse();
+
+        /**
+         * Parse while observing the host's abort request. The no-argument entry point is retained
+         * for CLI consumers that drain the node's diagnostics themselves.
+         */
+        public void parse(ErrorListener errs) {
+            if (!errs.isAbortDesired()) {
+                parse();
+            }
+        }
 
         /**
          * Collect the various top-level type names within the module.
@@ -888,7 +938,6 @@ public class ModuleInfo {
          */
         DirNode(DirNode parent, File dir, File fileSrc) {
             super(parent, dir);
-            assert dir.isDirectory();
 
             if (fileSrc != null) {
                 m_fileSrc = fileSrc;
@@ -901,12 +950,18 @@ public class ModuleInfo {
          */
         void buildSourceTree() {
             File thisDir = file();
-            for (File file : listFiles(thisDir)) {
+            List<SourceEntry> entries = sourceEntries(thisDir);
+            var directories = entries.stream().filter(SourceEntry::directory)
+                    .map(entry -> entry.file().getName()).toList();
+            var files = entries.stream().filter(entry -> !entry.directory())
+                    .map(entry -> entry.file().getName()).toList();
+            for (SourceEntry entry : entries) {
+                File file = entry.file();
                 String name = file.getName();
-                if (file.isDirectory()) {
+                if (entry.directory()) {
                     // if the directory has no corresponding ".x" file, then it is an implied package;
                     // ignore invalid package names; they wouldn't have compiled anyway
-                    if (!new File(thisDir, name + ".x").exists() && Lexer.isValidIdentifier(name)) {
+                    if (!files.contains(name + ".x") && Lexer.isValidIdentifier(name)) {
                         DirNode child = new DirNode(this, file, null);
                         packageNodes().add(child);
                         child.buildSourceTree();
@@ -915,7 +970,7 @@ public class ModuleInfo {
                     // if there is a directory by the same name (minus the ".x"), then recurse to create
                     // a subtree
                     File subDir = new File(thisDir, removeExtension(name));
-                    if (subDir.exists() && subDir.isDirectory()) {
+                    if (directories.contains(subDir.getName())) {
                         // create a subtree
                         DirNode child = new DirNode(this, subDir, file);
                         packageNodes().add(child);
@@ -986,19 +1041,27 @@ public class ModuleInfo {
          */
         @Override
         public void parse() {
+            parse(silent(DISCARD));
+        }
+
+        @Override
+        public void parse(ErrorListener errs) {
+            if (errs.isAbortDesired()) {
+                return;
+            }
             if (m_nodeSrc == null) {
                 // provide a default implementation
                 assert m_parent != null;
                 m_nodeSrc = new FileNode(this, "package " + file().getName() + "{}");
             }
-            m_nodeSrc.parse();
+            m_nodeSrc.parse(errs);
 
             for (FileNode cmpFile : m_mapClzNodes.values()) {
-                cmpFile.parse();
+                cmpFile.parse(errs);
             }
 
             for (DirNode child : m_listPkgNodes) {
-                child.parse();
+                child.parse(errs);
             }
         }
 
@@ -1270,7 +1333,7 @@ public class ModuleInfo {
             }
 
             try {
-                return readFileChars(m_file);
+                return readSource(m_file);
             } catch (IOException e) {
                 error(READ_FAILURE, NOWHERE, m_file);
             }
@@ -1349,11 +1412,20 @@ public class ModuleInfo {
 
         @Override
         public void parse() {
+            parse(silent(DISCARD));
+        }
+
+        @Override
+        public void parse(ErrorListener errs) {
+            if (errs.isAbortDesired()) {
+                return;
+            }
             Source source = source();
             try {
-                m_stmtAST = new Parser(source, this).parseSource();
+                m_stmtAST = new Parser(source,
+                        ErrorListener.cancellable(this, errs::isAbortDesired)).parseSource();
             } catch (CompilerException e) {
-                if (!hasSeriousErrors()) {
+                if (!hasSeriousErrors() && !errs.isAbortDesired()) {
                     log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
                             source.getPosition(), source.getPosition());
                 }

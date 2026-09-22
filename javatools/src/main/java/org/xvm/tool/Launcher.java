@@ -601,8 +601,10 @@ public abstract class Launcher<T extends LauncherOptions>
     @Override
     public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
-        log(err.getSeverity(), err.toString());
+        // Console reporting may throw for FATAL. The host must receive the structured diagnostic
+        // before that abort, including its original source location and code.
         f_errs.log(err);
+        log(err.getSeverity(), err.toString());
     }
 
     /**

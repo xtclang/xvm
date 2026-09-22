@@ -14,6 +14,16 @@ import org.xvm.lsp.adapter.Range
  * the compiler-owned snapshot cached by [XdkAdapter].
  */
 internal object XdkAst {
+    /** Each source keeps its own structural root even when module assembly nests the trees. */
+    fun rootsBySource(root: AstNode?): Map<String, AstNode> =
+        buildMap {
+            fun visit(node: AstNode) {
+                node.source?.fileName?.let { putIfAbsent(it, node) }
+                node.children().forEachRemaining(::visit)
+            }
+            root?.let(::visit)
+        }
+
     /**
      * The chain of nodes containing a position, outermost first, innermost last.
      *
@@ -33,7 +43,7 @@ internal object XdkAst {
             chain += node
             // the AST nests, so at most one child can contain a position - except where two
             // siblings share a boundary, and then the first one that does is as good an answer
-            val next = node.childList().firstOrNull { it.contains(line, column) } ?: return chain
+            val next = node.childList().firstOrNull { it.source === root.source && it.contains(line, column) } ?: return chain
             node = next
         }
     }
@@ -46,6 +56,7 @@ internal object XdkAst {
         val found = LinkedHashSet<Pair<Int, Int>>()
 
         fun walk(node: AstNode) {
+            if (node.source !== root?.source) return
             if (node is StatementBlock || node is TypeCompositionStatement) {
                 val start = lineOf(node.startPosition)
                 val end = lineOf(node.endPosition)

@@ -150,15 +150,36 @@ module TestModule {
 > **"Both adapters" means mock and tree-sitter**, which is how this document was written when
 > there were two. The compiler adapter now answers diagnostics (§7), the outline (§6), hover
 > (§2), go-to-definition (§4), find-references (§5), document highlights (§8), selection ranges
-> (§9), folding (§10) and workspace symbols - within one document, and where the document
-> parses.
+> (§9) and folding (§10), plus type hierarchy. Definition/reference queries span the active module,
+> including closed members. Workspace-symbol search covers completed module sessions.
 >
-> It still answers nothing for completion, rename, formatting, signature help, code actions,
-> code lens or semantic tokens. Completion is not an oversight: the compiler produces no AST at
+> The compiler backend does not advertise completion, rename, formatting, signature help, code
+> actions, code lenses, document links, linked editing, inlay hints or semantic tokens. Cross-module
+> navigation, go-to-type-definition, find-implementations and call hierarchy remain unavailable.
+> Completion needs incomplete-source handling: the compiler produces no AST at
 > all for a document that does not parse, and `console.` does not parse, so there is nothing to
 > complete from. See `docs/errs.md`, "What the compiler adapter can and cannot do, measured".
 >
 > Sections say which adapters they apply to. §7a covers what is only testable with the compiler.
+
+### Compiler module sessions and hierarchy
+
+With the compiler backend, create `Project.x` containing `module Project { class Base {} }` and
+`Project/Child.x` containing `class Child extends Base {}`.
+
+| Check | Action | Expected |
+|---|---|---|
+| Member diagnostics | Open Child.x; change Base to Missing in its extends clause | A compiler diagnostic points into Child.x, with no generic internal error on Project.x. |
+| Sibling invalidation | Restore Child.x; rename Base in the open Project.x buffer | Child.x is reanalysed and its diagnostic updates even without an edit there. |
+| Unsaved member | Open a new `Project/pkg/Added.x` buffer containing `class Added extends Base {}` | It joins the module without being saved; no temporary source files appear on disk. |
+| Cross-file navigation | Navigate from Base in Child.x; find references on the Base declaration | Definition points into Project.x; references include Child.x. Highlights remain document-local. |
+| Hierarchy | Prepare hierarchy on Base and expand its subtypes; inspect Child's supertype | Child and Base point to their own files. A generic parent retains its type arguments. |
+| Close overlay | Introduce an error in Child.x, then discard and close its buffer while Project.x stays open | The disk version replaces the overlay; obsolete diagnostics clear. |
+| Membership | Create an invalid member on disk, then delete it | File notifications refresh the module and clear the deleted file's diagnostics. |
+| Broken syntax | Remove a member's closing brace, then restore it | No stale module navigation survives the parse failure; correction restores it. |
+
+These checks do not imply workspace dependency builds, library-source navigation, conditional mixin
+hierarchy or method-implementation lookup.
 
 ### 1. Syntax Highlighting (TextMate)
 
@@ -389,7 +410,7 @@ saying the annotation on the derived property is ignored.
 
 **LSP Method:** `textDocument/documentHighlight`
 **Status:** ✅ Done
-**Works with:** All three (the compiler matches by name within the document)
+**Works with:** All three (the compiler matches resolved identity within the document)
 
 **How to trigger:**
 - *IntelliJ:* Click on any identifier — other occurrences highlight automatically
@@ -404,6 +425,9 @@ saying the annotation on the derived property is ignored.
 | 8.5 | Write highlight | Click on `x` in `Int x = 42;` | Declaration site shows as **write** highlight (different color/style from reads) |
 | 8.6 | Read highlight | Click on `x` in `return x;` | Usage site shows as **read** highlight |
 | 8.7 | Assignment write | Click on `age` in `age = newAge;` | Assignment target shows as **write** highlight |
+
+Rows 8.5–8.7 require Tree-sitter's read/write classification. The compiler adapter currently emits
+text highlights for matching identities without distinguishing reads and writes.
 
 ---
 
@@ -691,7 +715,7 @@ Workspace folders take precedence; extra roots are merged in. Non-existent paths
 
 ## Adapter Comparison Summary
 
-> See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical adapter comparison matrix.
+> See [plan-ide-integration.md](plans/plan-ide-integration.md#adapter-capability-matrix) for the canonical adapter comparison matrix.
 
 ---
 
@@ -1117,25 +1141,27 @@ Phase 1 (Tier 1+) is implemented and enabled by default. Future phases:
 - **Tier 2**: Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification)
 - **Tier 3** (compiler): Override tree-sitter tokens with compiler-resolved classifications
 
-### Cross-File References (TODO)
+### Cross-File References (partly done)
 
-Cross-file go-to-definition and workspace symbols are implemented via the workspace index.
-Import link navigation is now implemented (resolves import paths to file URIs via workspace index).
+Tree-sitter supplies cross-file go-to-definition, workspace symbols and import links through its
+workspace index. The compiler supplies definition and references across the current module by
+resolved identity, including closed member files; workspace symbols cover current module sessions.
 Still remaining:
-- Cross-file find-references (workspace-wide name search)
+- References across other workspace modules and dependency sources
 - Cross-file rename refactoring
 
 ### Full Compiler Integration (partly done)
 
-Done - see §6, §7 and §7a:
+Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-sessions-and-hierarchy):
 - Semantic error detection, with the compiler's own codes and spans
 - Document outline, from the parsed AST
+- Typed hover and identity-based definition/references across a module
+- Unsaved member overlays, sibling invalidation and diagnostics at each file's URI/version
+- Direct extends/implements hierarchy between source types, including generic parents
 
-Still to come. Each of these needs the compiler's *resolution* - what a name refers to - and not
-just what it reported. The compiler knows the answers; what it does not yet hand back is a map
-from a source position to the thing declared there, which is what an editor asks for:
-- Type inference in hover and inlay hints
-- Accurate completion filtering (type-aware)
-- Go to definition and find references
+Still to come:
+- Incomplete-source recovery or a hybrid syntax/semantic adapter
+- Type-aware completion, instantiated call-site signature help and inlay hints
+- Cross-module indexing, library-source navigation and method implementation lookup
 - Cross-file rename refactoring
 - Diagnostic-driven quick fixes and refactorings

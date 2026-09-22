@@ -765,8 +765,9 @@ jobs:
                   results = Path("lang/lsp-server/build/test-results/test")
                   suites = [
                       "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
-                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest",
-                      "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
+                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest", "adapter.CompilerProjectTest",
+                      "adapter.TypeInfoDiagnosticsTest", "adapter.TypeInfoFinalCompositionTest", "adapter.EmbeddingDiagnosticsTest",
+                      "adapter.XdkModuleSessionTest", "server.XdkModuleServerTest",
                       "server.XdkLanguageServerTest", "server.AdapterBackendTest",
                   ]
                   for suite in suites:
