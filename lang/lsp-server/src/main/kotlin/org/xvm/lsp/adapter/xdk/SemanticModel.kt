@@ -7,15 +7,14 @@ import java.util.Map.copyOf as immutableMap
 /**
  * Immutable semantic facts copied from one compilation, with no compiler or LSP protocol objects.
  * Queries can run concurrently without an ambient constant pool or error listener. IDs belong to
- * this snapshot; the adapter associates it with a document version. Missing facts are null, never
- * inferred from spelling. Declaration ranges refer only to this source, not external libraries.
+ * this compilation snapshot; document views from one extraction share IDs. The adapter associates
+ * them with source versions. Missing facts are null, never inferred from spelling.
  */
 class SemanticModel internal constructor(
     val id: UUID,
     val status: Status,
     val sourceName: String?,
-    symbols: Map<SymbolId, Symbol>,
-    types: Map<TypeId, Type>,
+    private val facts: Facts,
     occurrences: List<Occurrence>,
     expressions: List<ExpressionType>,
 ) {
@@ -74,6 +73,12 @@ class SemanticModel internal constructor(
         val index: Int,
     )
 
+    /** A declaration location in the source tree; the name follows the compiler's Source identity. */
+    data class SourceLocation(
+        val sourceName: String?,
+        val range: Range,
+    )
+
     /**
      * Arguments are generic arguments; underlying types are a modifier's base or a relational
      * type's ordered operands. Display text is for presentation, not identity or assignability.
@@ -110,6 +115,7 @@ class SemanticModel internal constructor(
         val declaration: Range?,
         val type: TypeId?,
         val signature: Signature?,
+        val declarationSource: String?,
     )
 
     /** A written name; a null symbol explicitly represents an unresolved occurrence. */
@@ -126,18 +132,43 @@ class SemanticModel internal constructor(
         val type: TypeId,
     )
 
-    val symbols: List<Symbol> = immutableList(symbols.values)
-    val types: List<Type> = immutableList(types.values)
+    data class Supertype(
+        val symbol: SymbolId,
+        val type: TypeId,
+    )
+
+    /** Direct declared extends/implements relationships, copied only from a successful compilation. */
+    data class TypeDeclaration(
+        val symbol: SymbolId,
+        val category: String,
+        val location: SourceLocation,
+        val parents: List<Supertype>,
+    )
+
+    val symbols: List<Symbol> = facts.symbols
+    val types: List<Type> = facts.types
     val occurrences: List<Occurrence> = immutableList(occurrences)
     val expressions: List<ExpressionType> = immutableList(expressions)
-    private val symbolsById = immutableMap(symbols)
-    private val typesById = immutableMap(types)
+    val typeDeclarations: Map<SymbolId, TypeDeclaration> = facts.typeDeclarations
+
+    /** One immutable symbol/type table shared by every source view of the compilation. */
+    internal class Facts(
+        symbols: Map<SymbolId, Symbol>,
+        types: Map<TypeId, Type>,
+        typeDeclarations: Map<SymbolId, TypeDeclaration> = emptyMap(),
+    ) {
+        val symbolsById = immutableMap(symbols)
+        val typesById = immutableMap(types)
+        val symbols = immutableList(symbols.values)
+        val types = immutableList(types.values)
+        val typeDeclarations = immutableMap(typeDeclarations)
+    }
 
     /** IDs from another snapshot return no result. */
-    fun symbol(id: SymbolId): Symbol? = symbolsById[id]
+    fun symbol(id: SymbolId): Symbol? = facts.symbolsById[id]
 
     /** IDs from another snapshot return no result. */
-    fun type(id: TypeId): Type? = typesById[id]
+    fun type(id: TypeId): Type? = facts.typesById[id]
 
     fun occurrenceAt(
         line: Int,
@@ -169,7 +200,13 @@ class SemanticModel internal constructor(
     fun definitionAt(
         line: Int,
         column: Int,
-    ): Range? = symbolAt(line, column)?.declaration
+    ): Range? = definitionLocationAt(line, column)?.takeIf { it.sourceName == sourceName }?.range
+
+    /** Resolve a declaration in any source of this compilation, retaining its source identity. */
+    fun definitionLocationAt(
+        line: Int,
+        column: Int,
+    ): SourceLocation? = symbolAt(line, column)?.let { symbol -> symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) } }
 
     fun referencesAt(
         line: Int,

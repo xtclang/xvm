@@ -12,9 +12,12 @@ the two Markdown files above.
 
 ## Recommendation
 
-**Current execution order:** harden the existing branch before extracting PRs. The first pass is
-reliable compiler diagnostics and the existing LSP features; project compilation across multiple
-files is deferred. The PR slices below describe eventual integration, not the current work queue.
+**Current execution order:** harden the existing branch before extracting PRs. The initial scope
+was reliable compiler diagnostics and existing LSP features. The subsequently approved
+[eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) now adds permanent final-TypeInfo
+regressions, module sessions with overlays, cross-file navigation and direct type hierarchy.
+Incomplete syntax, cross-module indexing and richer call-site features remain open. The numbered
+passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
 
 ### Branch hardening design
 
@@ -47,7 +50,8 @@ outline and semantic navigation work in later PRs, so accepting the listener cha
 require accepting a particular LSP implementation. Investigate the remaining suppressed
 diagnostics separately, with a reproducer and a decision for each source shape.
 
-Use fourteen bounded PRs below. Four foundations can start independently; the compiler changes form a short
+Use the seventeen bounded PRs below, including three additive slices for module support and hierarchy.
+Four foundations can start independently; the compiler changes form a short
 stack; the adapter changes follow the public API they consume. The unit of review is an observable
 contract, not one historical phase or one commit. A PR that migrates an interface may legitimately
 touch many files, but should change only that interface's contract and its required consumers.
@@ -65,9 +69,12 @@ renaming. Reconstruct the final implementation for each slice and verify that in
   TypeInfo builds record diagnostics for later replay; an `ErrorList` filters repeat reports.
 - `compileModule(Source, repository, errs)` preserves the AST, file structure and compilation pool
   when those stages were reached. XDK auto-configuration includes both `lib` and `javatools`.
+- `compileModule(ModuleInfo, repository, errs)` reuses the CLI's module assembly with overridable
+  source text and membership. Single-source input shares the same downstream pipeline.
 - The adapter reports real syntax and semantic diagnostics. It also has an outline, hover,
-  highlights, folding, selection, symbols from previously compiled documents, and limited same-file
-  definition and references. The latter came in `956d56f41`; older “not implemented” passages are stale.
+  highlights, folding, selection, symbols from current completed modules, and cross-file definition
+  and references within those modules. Source types support direct extends/implements hierarchy.
+  New unsaved members, per-file versions, sibling invalidation and stale hierarchy items have tests.
 
 This is a useful embedding foundation. It does not yet establish that every relevant compiler
 diagnostic reaches every editor request, or that arbitrary project files can be compiled in isolation.
@@ -170,7 +177,9 @@ interactive IDE or multi-hour memory validation.
 
 ### Remaining limitations and the next hardening work
 
-Keep these explicit before deciding the branch is ready to split:
+This list records the boundaries after the first three passes. The
+[eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) supersedes the deferred
+module/cross-file work and selected final-type checks; its remaining-boundaries paragraph is current.
 
 1. **Remaining declaration mapping.** Locals, method parameters, constructor-generated properties,
    lambda parameters and lambda capture chains now have source associations, including narrowing
@@ -208,17 +217,17 @@ The build/CI contract is in [the test task](../lang/lsp-server/build.gradle.kts)
 
 ### Readiness review before extracting PRs, 2026-09-22
 
-The diagnostic/lifecycle gate passes, including the fifth pass's semantic consumer. This is evidence
-for the integrated branch, not proof that every extracted intermediate PR works. No new compiler
-diagnostic loss was demonstrated by this documentation review. The following work remains bounded
-enough to do here before extraction; full project support and completion remain separate milestones.
+The diagnostic/lifecycle gate passes, including the eighth pass's module consumer. This is evidence
+for the integrated branch, not proof that every extracted intermediate PR works. The module tests
+found and fixed a further fatal-forwarding defect in Launcher. The following table reflects the
+current readiness checks; cross-module support and completion remain separate milestones.
 
 | Priority | Work | Evidence and completion condition |
 |---|---|---|
 | Done; carry into L1 | Reject unintended backend fallback | Tree-sitter remains the shipped/default backend, including when the embedded setting is absent. Compiler selection is opt-in. Unknown settings now fail explicitly instead of silently selecting Mock; explicit Mock and existing compiler aliases remain supported. Unit and packaged-startup regressions pass. |
-| Bounded investigation complete; retain regressions in C4 | Generic/external-type diagnostic ownership | Generic instantiations and a serialized external base preserve `VERIFY-75`; silent first lookup preserves replay. The fresh TypeInfo capture classifies 37 distinct messages by source shape and caller. Final artifact probes verify the six Array translators, XODB anonymous map and XML cursor with correct member types/inheritance and no diagnostics. No new host diagnostic loss was reproduced. Convert the probes into permanent tests; the historical 70-message survey remains open. See `errs-audit.md`. |
-| Done for the selected same-file scope; carry into E2/L4 | Remaining source bindings and snapshot boundaries | Type-parameter declarations, aliases, overloads, nested generic types, anonymous captures, mutable/nested capture chains and shadowing have regressions. Cloned lambdas and anonymous classes cannot expose the original helper maps. The AST inventory in `errs.md` explains placement and lifecycle. Cross-file source ownership remains deferred. |
-| Done; carry into L1/L4 | Semantic queries through the packaged server | The real stdio tests now assert hover, definition, references, highlights and advertised capabilities after correction and close/reopen with changed names/types. They also cover diagnostics, resources, invalid backend selection and shutdown. |
+| Bounded investigation complete; retain regressions in C4 | Generic/external-type diagnostic ownership | Generic instantiations and a serialized external base preserve `VERIFY-75`; silent first lookup preserves replay. The fresh TypeInfo capture classifies 37 distinct messages by source shape and caller. Permanent final-composition tests inspect fifteen deserialized types and selected member/inheritance substitutions, plus a fresh property and invalid-override control. No new TypeInfo host diagnostic loss was reproduced. The historical 70-message survey and `@Parsed` constructor family remain open. See `errs-audit.md`. |
+| Done for the selected module scope; carry into E2/L4/L5 | Source bindings and snapshot boundaries | Type-parameter declarations, aliases, overloads, nested generic types, anonymous captures, mutable/nested capture chains and shadowing have regressions. Clones cannot expose the original helper maps. Per-source views share one immutable identity domain; different compilations remain distinct. Cross-file navigation now has adapter/server tests. The AST inventory in `errs.md` explains placement and lifecycle. |
+| Done; carry into L1/L4/L5/L6 | Semantic queries through the packaged server | Real stdio tests assert hover, definition, references, highlights and advertised capabilities after correction and close/reopen. They cover module diagnostics, cross-file definition and type hierarchy with stale-item rejection, plus resources, invalid backend selection and shutdown. |
 | Bounded checks complete; longer/manual checks open | Interactive use, latency and retention | Seven VS Code extension-host checks pass with the compiler backend, including hover. The 180-analysis workload retained 0/180 ASTs, pools and snapshots after close/shutdown/GC; warmed median was 58.6 ms and p95 78.1 ms. One editor compilation logged 2.1 ms queue wait and 360.5 ms compilation. These are local samples, not latency guarantees or multi-hour/visual validation. |
 
 Agreed API compatibility policy (2026-09-22): `log(ErrorInfo)`
@@ -240,11 +249,11 @@ and schedules do not describe the current snapshot. `errs-audit.md` remains the 
 backlog; its historical counts are not fresh measurements of this worktree.
 
 Deferred capabilities are still visible outages when choosing the compiler backend: incomplete
-syntax can remove the AST, individual project member files cannot be compiled independently,
-navigation has no cross-file source ownership, and completion, signature help, rename, semantic
-tokens, formatting, code actions, document links and hierarchy features are unavailable. The current
-snapshot has declared signatures and structural type relationships; it has no member index,
-instantiated call-site model, project identity scheme or incremental compiler. These are feature
+syntax can remove the module AST; navigation covers the current module's source files, with no
+cross-module index or library-source lookup. Completion, signature help, rename, semantic tokens,
+formatting, code actions, document links and method implementation lookup remain unavailable.
+The snapshot has declared signatures and direct type hierarchy; it has no completion member index,
+instantiated call-site model, persistent workspace identity scheme or incremental compiler. These are feature
 boundaries, not reasons to delay the listener foundation indefinitely.
 
 Runtime/Container failure listeners, JIT/debugger sinks, diagnostic thread/fiber origins, SLF4J/JFR
@@ -274,10 +283,14 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L2 | Complete cancellation and document lifecycle handling | L1; includes the listener cancellation decorator |
 | L3 | Add the outline and structural AST features | E1, L2 |
 | L4 | Snapshot semantic facts in Kotlin and use them for navigation and hover | E2, L3; I2 for ambient-pool handling |
+| E3 | Compile source trees with host text/membership and member cancellation | E1, C3; L2's listener decorator for cancellation; I3 for compiled-XDK tests |
+| L5 | Add module sessions, per-file publication and cross-file navigation | E3, L2, L4 |
+| L6 | Copy direct inheritance edges and support source type hierarchy | L5 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
-E2, L3 and L4 can follow without delaying the diagnostics milestone. These are fourteen PRs, not fourteen
-simultaneous open branches. Keep only the next few ready for review, and update dependent patches
+E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
+additively. These are seventeen PRs, not seventeen simultaneous open branches.
+Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
 ### I1 — Preserve distinct diagnostics and name in-memory sources
@@ -301,6 +314,11 @@ because the calling thread has no pool; a bound pool still takes precedence over
 Take the final combined state of `cae4f9452` and `610873fb6`, including `currentOr`, `poolInUse`
 and their consumers. Do not land the first MethodBody workaround and then replace it in a second
 PR. Review each fallback for ownership, particularly cross-pool operations and the connector.
+
+All eighteen guarded reads predate this branch. The earlier FileStructure null-pool fix is already
+in the base via `5effa757d` (#548); it is not an additional fix to extract here. C4 removes that
+listener lookup altogether. The [listener write-up](errs-error-listeners.md#ambient-constant-pools-pre-existing-defects-versus-branch-changes)
+records the provenance and distinguishes reproduced failures from preventative guards.
 
 Use `MethodBodyAmbientPoolTest` and `ConstantPoolAmbientTest`, including the bound-pool precedence
 case. Compare compiled XDK output with the baseline after removing only the known timestamp
@@ -449,6 +467,10 @@ TypeInfo, and appearing once in an `ErrorList`. Carry the first pass's assertion
 requests return the same `TypeInfo` instance, proving replay without a rebuild. Serious-error cases
 rebuild by design and do not prove replay. Check behavior after invalidation and with a fresh sink.
 
+Include `TypeInfoFinalCompositionTest` and its test-only XML/JSONDB module variants. They retain
+the deeper audit's final metadata checks and invalid-override control, without changing production
+reporting policy or enlarging the LSP's production module bundle.
+
 Compare compiled XDK output and classify any change in emitted diagnostics. `VERIFY-75` newly
 appearing is an intended user-visible fix, not an output-equivalence failure. Record its reproducer
 with this PR; file the separate upstream issue only when explicitly authorized.
@@ -545,6 +567,50 @@ property identity connects constructor-generated properties to their source para
 definition when a source association is unavailable. Include `SemanticModelTest` in the required
 zero-skip gate. Type-parameter declarations and anonymous-class captures now have regressions.
 Cross-file targets remain follow-ups before rename can be supported safely.
+
+### E3 — Compile module source snapshots
+
+**Contract:** a host can compile the same module tree as the CLI while supplying immutable source
+text and membership, and cancellation reaches member parsing without inventing an error.
+
+Extract `compileModule(ModuleInfo, ...)`, the shared Source/tree pipeline and `compile(File, ...)`
+delegation. Include the protected `readSource` and `sourceEntries` hooks, `SourceEntry`, cancellable
+`Node.parse(errs)` and valid-token abort checks in Lexer. Preserve default disk discovery and
+resource context, including resource-only and empty implicit package directories. Require a fresh
+ModuleInfo per attempt. The single-source convenience remains a special case of compilation.
+
+Keep Kotlin editor URIs, versions and sessions out of this API slice. Adapt `CompilerProjectTest`
+and `EmbeddingDiagnosticsTest` to verify module/member entry points, new virtual members, source
+attribution, parse failure and cancellation. Carry the Launcher fatal-forwarding correction with
+its direct regression here (or extract it independently against the old listener API): a host must
+receive the original structured FATAL before the CLI exception. No semantic AST fields are needed.
+
+### L5 — Own module analyses and publish by source
+
+**Contract:** one edit replaces all current views of a module; diagnostics and navigation refer to
+the correct source/version, including unchanged siblings and closed members.
+
+Extract `XdkSources`, module-scoped request/cache ownership, per-source immutable semantic views and
+the server's publication/clearing rules. Preserve a single compiler worker. Source names map through
+canonical paths to editor URIs; no temporary source files or dependency builds are introduced.
+One snapshot identity domain supplies cross-file definitions/references; document highlights and
+structural ranges stay local. Workspace symbols include closed members of current completed modules.
+
+Carry module session/server tests for unsaved members, sibling invalidation, parser failure recovery,
+watched creation/deletion, cancellation, per-file versions, close/overlay removal and cross-file
+navigation. Include the corresponding packaged-stdio case without its L6 hierarchy assertions.
+Document conventional root discovery and the absence of a persistent cross-module index.
+
+### L6 — Support direct source type hierarchy
+
+**Contract:** prepare/supertype/subtype queries use copied direct extends/implements relationships
+from a successful module compilation, and reject items from obsolete compilations.
+
+Extract the type-declaration/supertype facts, generic parent types, reverse subtype index and
+`XdkHierarchy` queries. Include capability selection and string token conversion through real LSP
+JSON-RPC. Test generic parents, interfaces, cross-file source locations and stale items. The extractor
+reads existing class contributions; it must not build TypeInfo or validate from request threads.
+External library source, conditional mixins and method implementation lookup remain explicit limits.
 
 ## Changes to hold out of the initial integration
 
@@ -716,6 +782,108 @@ The final `:xdk:installDist`, `spotlessCheck` and `git diff --check` also passed
 checks found no missing local targets across 57 links; the AST inventory covers all 50 changed
 AST-package files, including the new helpers. No remote CI results were consulted.
 
+### Seventh pass: API feasibility probes, 2026-09-22
+
+`CompilerProjectTest` exercises a real module root and member file. `compileModule(ModuleInfo, ...)`
+reuses CLI source-tree assembly, while `ModuleInfo.readSource(File)` lets a host supply unsaved text
+for discovered files. The Source entry point and tree entry point share the compilation pipeline;
+`compile(File, ...)` delegates to it for both a module file and a directory. A fresh ModuleInfo is
+required per attempt. Canonicalizing overlay keys matters: the first probe exposed the macOS
+`/var` versus `/private/var` alias, which otherwise caused the disk text to win silently.
+
+The Kotlin extractor now builds per-source semantic views together, sharing an immutable symbol/type
+table. Declaration locations include source names; occurrences use source-plus-range keys. Tests
+cover cross-file definitions/references, overload selection, same-named parameters, equal offsets
+in different files, and snapshots surviving the next compilation. The single-source convenience
+delegates to the same extractor and rejects multi-source input instead of assigning it one URI.
+
+The compiler APIs also expose a generic superclass with its actual arguments, enough to derive a
+subtype relation in the fixture. A public-access TypeInfo lists inherited members with substituted
+parameter/return types and excludes a private method. Resolved invocation identities and expression
+result types are available. These are API probes, not implementations of advertised hierarchy or
+completion features. The semantic extractor itself still does not build TypeInfo.
+
+Remaining boundaries are explicit:
+
+- The test overlay provider rejects files absent from disk with `UnsupportedOperationException`.
+  New/deleted unsaved-file discovery and a stable editor-URI mapping need a project input model.
+- The CLI loader returns no linked AST when a member fails parsing. The probe checks the member
+  diagnostic and absence of a stale successful tree. Error-tolerant project analysis remains open.
+- IDs are shared within one compilation, not stable across edits. Project-wide publication,
+  invalidation, reverse indexes, library source navigation and rename are not implemented.
+- `InvocationExpression` exposes the selected method and invoked expression, but no public
+  source-argument-to-parameter mapping. Named/default arguments, method type substitutions,
+  partial application and the active argument still need a focused call-site contract.
+- The installed XdkAdapter remains single-document and the capability matrix remains unchanged.
+  No new AST hooks were required for these probes.
+
+The [embedding API summary](errs.md#embedding-api-changes-for-editor-hosts) collects the changes
+made throughout the branch. The compiler-consumer workflow includes the project probes and requires
+nonzero test execution with zero skips.
+
+Verification forced `:javatools:test`, `:lang:lsp-server:test` and
+`:lang:lsp-server:compilerStdioTest` with `--rerun-tasks --no-build-cache`: 462 compiler cases
+(40 existing skips), 519 LSP cases (3 existing skips) and 5 packaged-server cases (zero skips),
+all with zero failures/errors. The required subset ran 104 in-process and 5 process cases without
+skips. A subsequent file-entry cancellation fix permits an aborted result without asserting that
+an error exists; its final focused run passed all 12 project probes and 4 embedding diagnostic
+cases without skips. The installed XDK build, `spotlessCheck` and `git diff --check` passed.
+Local documentation checks also resolved 41 file links and heading anchors.
+
+### Eighth pass: module sessions and hierarchy, 2026-09-22
+
+The three follow-ups are implemented together on this branch:
+
+1. `TypeInfoFinalCompositionTest` reloads compiled modules through test-only Gradle module variants.
+   It checks the seven Array translator compositions, the XML cursor and seven XODB compositions,
+   with substituted member types and inherited chains. A fresh anonymous-property case and an
+   invalid-override control verify that silence does not hide a real source error. No additional
+   TypeInfo reporting sweep was needed; the `@Parsed` constructor family remains a separate audit.
+2. XdkAdapter owns one compilation session per module. A fresh immutable source snapshot combines
+   disk membership with open overlays; new unsaved members and implicit packages need no temporary
+   files. `ModuleInfo.sourceEntries` exposes source membership alongside `readSource`. Member parsing
+   observes the host's cancellation request, and Lexer polls abort at token boundaries even when
+   the input is valid. An edit replaces the entire module analysis; the server retains each open
+   document's version, publishes per source, refreshes watched files and clears removed publications.
+3. Per-source semantic snapshots now drive module-wide definition/reference queries. Structural
+   views stay source-local. Copied direct extends/implements edges and a reverse index implement
+   prepare/supertypes/subtypes; generic parent arguments are retained. Hierarchy items carry a
+   compilation token, and obsolete items return no result. This is the ninth advertised compiler
+   capability; Tree-sitter remains the default and does not advertise this feature.
+
+The sibling-edit test found a further listener defect: `Launcher.log(ErrorInfo)` called console
+reporting before its host delegate. Console reporting throws for FATAL, so an unresolved superclass
+in a member became EMB-5 on the root and its original COMPILER-30 never reached the host. Forwarding
+now precedes that abort. `LauncherErrorHandlingTest` and the real module server test pin the fix.
+
+Tests cover member URI aliases, overlays in new packages, sibling invalidation/cancellation, parser
+failure recovery, source-specific outlines, cross-file navigation, versioned publication, file
+creation/removal, close/reopen behavior, and hierarchy tokens through protocol conversion. The
+packaged stdio suite also exercises module diagnostics, cross-file definition and hierarchy.
+
+Remaining boundaries: conventional module root discovery; non-file inputs remain single-source;
+no cross-module dependency build, persistent workspace index or library-source navigation; no
+method implementation lookup or conditional-mixin hierarchy; incomplete parsing still removes the
+linked module AST. Source/resource paths remain rooted in the original filesystem; the overlay
+contract covers source text and membership, not unsaved resource assets. Compilation remains
+serialized. No new semantic AST fields were needed for this pass.
+
+Verification forced `:javatools:test`, `:lang:lsp-server:test` and
+`:lang:lsp-server:compilerStdioTest` with `--rerun-tasks --no-build-cache`. JUnit XML reports
+463 compiler cases (40 existing skips), 533 LSP cases (3 existing skips) and 6 packaged-server cases
+(zero skips), all with zero failures/errors: 959 executed cases passed. The new TypeInfo, module,
+cancellation and fatal-forwarding regressions executed without skips. The compiler-consumer
+workflow now requires the new suites through its existing nonzero/zero-skip XML gate.
+
+A final source-snapshot parity fix preserves resource-only/empty directories as implicit packages.
+Its focused rerun passed all 8 module-session and 3 module-server tests, with zero skips, and
+`:xdk:installDist` and `spotlessCheck` passed in the same run. Real tasks stored and reused the
+configuration cache while developing the new test-only module configuration. The changes remain
+local; remote CI was not inspected. No new output-equivalence or long-running editor measurement
+is claimed; these remain independent extraction/operational gates.
+Final documentation checks resolved all 61 local links and heading anchors across the seven
+updated Markdown files; `git diff --check` passed.
+
 ## Extraction and verification procedure
 
 1. Preserve `lagergren/errs` as the reference. Prepare one local branch per slice from the agreed
@@ -778,7 +946,8 @@ embedding consumer receives attributable compiler diagnostics without initializi
 logging, and the real server correctly handles open, edit, correction, supersession and close.
 Known single-module and source-location limits must be visible in the usage documentation.
 
-Full editor/project support is a later milestone: unsaved project overlays, partial syntax,
-stable semantic identities and cross-file source mapping. The suppressed-diagnostic and failure
+Full workspace/editor support is a later milestone: partial syntax, cross-module ownership and
+indexing, safe rename and instantiated call-site facts. Module overlays, cross-file source mapping
+and direct source type hierarchy are implemented in the eighth pass. The suppressed-diagnostic and failure
 audits remain explicit backlogs until their cases are classified; neither “seven phases complete”
 nor a green adapter test run closes those investigations.

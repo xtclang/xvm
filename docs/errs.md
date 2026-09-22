@@ -4,6 +4,10 @@ Scoping document for making `ErrorListener` an always-present, non-null, immutab
 compiler's call stack, so that an embedding host — an LSP server above all — can rely on hearing
 every diagnostic the compiler produces.
 
+For a focused explanation of the final contract and why the pipeline changes were necessary, see
+[Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
+separates the pre-existing ambient-pool defects from this branch's ownership changes.
+
 **Current hardening status (2026-09-22).** This document preserves the investigation's chronology;
 some later sections describe limitations that subsequent work removed. The current execution and
 integration record is [errs-integration-plan.md](errs-integration-plan.md), and the refreshed failure
@@ -14,8 +18,11 @@ identity-based navigation for locals, method/lambda parameters, constructor-gene
 lambda capture chains and qualified type segments. Stdio exit and repository failure reporting are
 covered by the hardening passes. An immutable Kotlin semantic snapshot in the LSP server now backs
 typed hover and navigation; it holds structured types, symbol identities, declared signatures and
-source occurrences without retaining compiler objects. Remaining work includes incomplete syntax,
-project compilation and the remaining final-type checks from the TypeInfo suppression audit.
+source occurrences without retaining compiler objects. Module sessions now combine disk sources and
+unsaved overlays, publish diagnostics per file and support cross-file definition/references and
+direct type hierarchy within the compiled module. Permanent TypeInfo regressions cover the fifteen
+investigated final compositions and an invalid-override control. Remaining work includes incomplete
+syntax, cross-module indexing, call-site facts and the unexamined TypeInfo families.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -175,7 +182,7 @@ not a sketch.
 
 ### Compiling from a host
 
-The embedding API is what a host calls, and it gained two things the language server needed:
+The embedding API accepts named in-memory source and preserves the result of each compilation:
 
 ```java
 // the document carries its own name, so its diagnostics are distinguishable from another
@@ -207,6 +214,50 @@ not enough for completion or go-to-definition, which need to know what a name re
 NativeContainer, which loads a native template for every core module - so it needs the whole
 library, not just the part the compiler bootstraps against. It was called `getConstantPool()`,
 which read like an accessor.
+
+### Embedding API changes for editor hosts
+
+| Change | Why the host needs it |
+|---|---|
+| `Source(text, name)` and `compile(Source, repository, errs)` | Unsaved text carries its source identity into diagnostics. The existing string entry point remains a convenience. |
+| `compileModule(...)` and `Compilation` | Keep the AST, file structure and compilation pool produced before an error; `succeeded()` describes whether a module was completed. `Compilation.forFile(...)` names a partial result without positional null arguments. |
+| Explicit, non-null listeners | Reporting reaches the supplied host listener through parsing, resolution, validation, TypeInfo construction and repository failures. Diagnostic sites, collectors, branch/merge, budgets and cancellation have explicit contracts. |
+| Diagnostic identity and TypeInfo replay | Distinct source/position/message combinations survive deduplication; a later reporting consumer can receive diagnostics from cached TypeInfo. |
+| Failure and cancellation handling | Already-cancelled work does not parse. Expected aborts do not invent internal errors; an unexpected failure remains reportable after a source error. |
+| Pool and bootstrap ownership | `Compilation.pool()` is the compilation pool. `ensureRuntimePool()` explicitly initializes a runtime; deprecated `getConstantPool()` delegates to it. XDK auto-configuration includes `lib` and `javatools`. |
+| `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
+| Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
+
+The source-tree API adds `compileModule(ModuleInfo, repository, errs)` and the protected
+`ModuleInfo.readSource(File)` and `sourceEntries(File)` hooks. A fresh source-tree input uses the
+CLI's existing assembly; overrides can supply both unsaved text and source membership while retaining
+resource context. `SourceEntry` distinguishes files from directories without requiring them on disk.
+Single-source input and tree input feed one compilation pipeline. The existing `compile(File, ...)`
+convenience now delegates to tree compilation, so its documented directory/member-file behavior
+actually works. Member parsing carries the host's cancellation request through its local collectors;
+Lexer checks abort at token boundaries even for valid input. `Launcher` forwards a structured FATAL
+diagnostic to the host before console reporting can throw and terminate the stage.
+
+The Kotlin `XdkSources` consumer captures canonical source paths, editor URI aliases, directory
+membership and overlay text for one attempt. New unsaved members and implicit packages require no
+temporary files. Module versions, invalidation and publication belong to the adapter/server, not to
+`ModuleInfo` or the AST. Resource-only and empty package directories remain visible to assembly;
+resource assets themselves are read from the original filesystem.
+
+The Kotlin consumer now offers `Compilation.semanticSnapshots()` for per-source views sharing one
+immutable symbol/type table and identity domain. `semanticSnapshot()` remains the single-source
+convenience and rejects a multi-source result. Declaration locations retain their source name;
+identical offsets in different files cannot overwrite each other. IDs remain scoped to one
+compilation and do not establish a persistent workspace index. XdkAdapter replaces all views of a
+module together after an edit. Definitions and references span those views; direct extends/implements
+edges supply type hierarchy, including generic parent arguments. Obsolete hierarchy items are
+rejected. See the [eighth pass](errs-integration-plan.md#eighth-pass-module-sessions-and-hierarchy-2026-09-22)
+for publication rules, regressions and limits.
+
+The listener migration is deliberately breaking: `boolean log(ErrorInfo)` becomes `void`, null
+listeners are rejected and ambient listener setters/lookups are removed. Listener implementors
+must migrate and recompile. The pool rename retains its deprecated alias. See the
+[compatibility policy](errs-integration-plan.md#readiness-review-before-extracting-prs-2026-09-22).
 
 ### Which listener do I want?
 
@@ -1151,6 +1202,13 @@ Tree-sitter tree has tokens but cannot know which overload or narrowed register 
 A passive link between a source token and that existing compiler decision belongs here. Building an
 editor index, copying types, deciding LSP capabilities and answering protocol requests do not.
 
+The module-session and hierarchy pass adds no semantic fields or hooks to AST nodes. Source
+membership and cancellation forwarding live in `ModuleInfo`; valid-token cancellation polling lives
+in `Lexer`; fatal-report forwarding lives in `Launcher`. Per-source AST traversal, immutable symbol
+tables, copied inheritance edges and the reverse subtype index live in Kotlin under `lang/lsp-server`.
+Hierarchy extraction reads existing class contributions after successful compilation; it does not
+construct TypeInfo or resume validation from an LSP request.
+
 #### Passive source facts on nodes
 
 | Location | Change and reason for placement | Ownership / limits |
@@ -1254,12 +1312,17 @@ it.
 ### The ambient constant pool *(made safe; ownership still ambient)*
 
 `ConstantPool.getCurrentPool()` is a thread-local, bound by `withPool` around stretches of
-compilation and by the runtime container. Outside those it is null, which is the ordinary state of
-every thread driving the compiler from Java - a build tool, an embedding host, a test, a debugger
-evaluating a watch - and eighteen places dereferenced it without asking. Two of them threw during
-this branch's own work, in unrelated code, **both found by accident**: `FileStructure.getErrorListener`,
-and the code that describes a `MethodBody` for a log line, where the NullPointerException hid the
-assertion failure it was formatting.
+compilation and by the runtime container. It can be null on ordinary host, test and debugger
+threads outside those scopes. Eighteen readers guarded in `610873fb6` already existed in the branch
+base `4a1eae6f7`. The MethodBody formatting failure was exposed during this branch's tests; the
+broader guard hardens the same pre-existing assumption, not eighteen independently reproduced
+crashes.
+
+**Provenance correction, 2026-09-22:** the earlier text grouped `FileStructure.getErrorListener()`
+with new failures found in this branch. Its null-pool defect had already been fixed on master by
+`5effa757d` (#548, 2026-08-31), before both the original documented baseline and the current merge
+base. This branch subsequently removed that ambient listener lookup in `0af497641`. See the
+[source/history breakdown](errs-error-listeners.md#ambient-constant-pools-pre-existing-defects-versus-branch-changes).
 
 All eighteen are guarded now, in a separate commit so it can be reviewed and moved on its own:
 
@@ -1271,8 +1334,9 @@ Constant.poolInUse()               // for a constant, its own pool as the fallba
 The ambient pool is **preferred, not replaced**. `withPool` exists precisely because the compiler
 works across pools, so a constant's own pool is not always the one the caller meant, and answering
 from the wrong pool is worse than answering from none. What says the preference order is right:
-the XDK compiles to byte-identical modules, so every one of these had a pool bound during a build
-and none of them changed answer. The fix reaches only the null case.
+the recorded XDK output comparison found byte-identical modules after normalizing the known
+timestamp difference. That is evidence for the exercised build paths, not proof that every guarded
+operation ran. The fallback changes only the case where no pool is bound.
 
 **What is not fixed is the ownership.** "Which pool am I working in" is still a property of the
 thread rather than of the work, and that is still an ownership parameter in disguise - the same
@@ -1323,7 +1387,7 @@ could not report itself. Exactly the fault `FileStructure.getErrorListener()` ha
 thread-local. Guarded now, falling back to the pool the body's own identity belongs to, with
 `MethodBodyAmbientPoolTest` pinning it on a thread that has no ambient pool.
 
-**Two other things that probe turned up, neither fixed:**
+**What that probe established about caching:**
 
 - `ensureTypeInfo` on such a type *rebuilds* rather than replaying, and deliberately: a build that
   reports a serious error does not cache its TypeInfo, which `TypeConstant` says in as many words -
@@ -1337,8 +1401,10 @@ thread-local. Guarded now, falling back to the pool the body's own identity belo
   diagnostics exist, it is the only condition under which they can fire, and it is now covered -
   measured firing as `REPLAYED VERIFY-75 ... (cached path, not rebuilt)`. I had concluded the memo
   was dead code on the strength of error cases alone and was about to delete it.
-- That is two ambient-pool NPEs found in one branch, in unrelated code, by accident. There are
-  **19** call sites left. It is worth assuming more of them are wrong.
+
+The original note also proposed auditing the remaining ambient reads. That audit became
+`610873fb6`; its guard and the corrected provenance are described above. The old count of
+"19 call sites left" is not a current backlog.
 
 ### A warning master never shows you *(fix here; file against master)*
 
