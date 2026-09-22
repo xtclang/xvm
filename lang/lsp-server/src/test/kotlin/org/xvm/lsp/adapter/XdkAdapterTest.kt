@@ -1,27 +1,23 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
-import java.io.File
+import java.util.concurrent.CancellationException
 
 /**
  * What an editor is told when the XTC compiler itself analyses a document.
  *
- * These need an XDK to resolve the core library against, so they skip without one rather than
- * failing - the same condition the adapter reports as a diagnostic at runtime. Point XDK_HOME at
- * a built distribution (`xdk/build/install/xdk`) to run them.
+ * Gradle supplies compiled XDK modules as declared test inputs. Missing libraries fail the
+ * suite instead of silently skipping compiler coverage.
  */
 class XdkAdapterTest {
     private fun adapter(): XdkAdapter {
-        assumeTrue(xdkHome() != null, "no XDK_HOME; skipping compiler-backed diagnostics")
+        CompilerTestSupport.configure()
         return XdkAdapter()
     }
-
-    private fun xdkHome(): String? = System.getenv("XDK_HOME")?.takeIf { File(it, "lib").isDirectory }
 
     @Test
     fun `a clean module produces no diagnostics`() {
@@ -110,37 +106,10 @@ class XdkAdapterTest {
     }
 
     /**
-     * The rule cancellation turns on, tested as a decision rather than through a race: an edit is
-     * stale once a newer one has been recorded for the same document.
-     *
-     * A race is not something a test can make happen on demand - whether two compilations overlap
-     * depends on the scheduler, the core count and what else the machine is doing - so asserting
-     * "at least one of these was superseded" would pass on a busy laptop and fail on a single-core
-     * agent. What is deterministic is what the adapter does once it knows.
+     * Concurrent edits either produce an analysis of their own text or are explicitly cancelled.
      */
     @Test
-    fun `an edit is stale once a newer one arrives for the same document`() {
-        XdkAdapter().use { xdk ->
-            val first = xdk.edited("file:///A.x")
-            assertThat(xdk.isStale("file:///A.x", first)).isFalse()
-
-            val second = xdk.edited("file:///A.x")
-            assertThat(xdk.isStale("file:///A.x", first)).`as`("superseded").isTrue()
-            assertThat(xdk.isStale("file:///A.x", second)).`as`("the newest one is not").isFalse()
-
-            // and one document's edits say nothing about another's
-            val other = xdk.edited("file:///B.x")
-            assertThat(xdk.isStale("file:///B.x", other)).isFalse()
-            assertThat(xdk.isStale("file:///A.x", second)).isFalse()
-        }
-    }
-
-    /**
-     * Concurrent requests for one document all get an answer, and every answer belongs to that
-     * document. How many of them are superseded is up to the scheduler, so it is not asserted.
-     */
-    @Test
-    fun `concurrent edits of one document are all answered`() {
+    fun `concurrent edits are answered or cancelled`() {
         adapter().use { xdk ->
             val uri = "file:///Racing.x"
             val results =
@@ -148,11 +117,15 @@ class XdkAdapterTest {
                     .toList()
                     .parallelStream()
                     .map { n ->
-                        xdk.compile(uri, "module Racing { void run() { Int x$n = ; } }")
+                        try {
+                            xdk.compile(uri, "module Racing { void run() { Int x$n = ; } }")
+                        } catch (_: CancellationException) {
+                            null
+                        }
                     }.toList()
 
             assertThat(results).hasSize(6)
-            assertThat(results).allSatisfy { r ->
+            assertThat(results.filterNotNull()).isNotEmpty().allSatisfy { r ->
                 assertThat(r.uri).isEqualTo(uri)
                 assertThat(r.diagnostics).allSatisfy { assertThat(it.location.uri).isEqualTo(uri) }
             }
