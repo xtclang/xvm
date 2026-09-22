@@ -1,5 +1,7 @@
 package org.xvm.api;
 
+import java.time.Duration;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,19 +23,31 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.text.xString;
 
+import static org.xvm.runtime.Runtime.DEFAULT_SHUTDOWN_TIMEOUT;
+
 /**
  * The Connector implementation using the interpreter.
  */
 public class InterpreterConnector
-        extends Connector {
+        extends Connector
+        implements AutoCloseable {
     /**
      * Construct the Connector based on the specified ModuleRepository.
      */
     public InterpreterConnector(ModuleRepository repository) {
         super(repository);
 
-        f_runtime         = new Runtime();
-        f_containerNative = new NativeContainer(f_runtime, repository);
+        f_runtime = new Runtime();
+        try (var ignore = ConstantPool.withPool(null)) {
+            f_containerNative = new NativeContainer(f_runtime, repository);
+        } catch (RuntimeException | Error e) {
+            try {
+                f_runtime.close();
+            } catch (RuntimeException cleanup) {
+                e.addSuppressed(cleanup);
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -145,6 +159,28 @@ public class InterpreterConnector
         int nResult = m_containerMain.getResult();
         m_containerMain = null;
         return nResult;
+    }
+
+    /**
+     * Terminate all containers and release the runtime owned by this connector.
+     */
+    @Override
+    public void close() {
+        close(DEFAULT_SHUTDOWN_TIMEOUT);
+    }
+
+    /**
+     * Terminate this connector using the host's shutdown budget.
+     */
+    public void close(Duration timeout) {
+        f_runtime.close(timeout);
+    }
+
+    /**
+     * @return true once the connector's runtime has terminated
+     */
+    public boolean isClosed() {
+        return f_runtime.isTerminated();
     }
 
     // ----- data fields ---------------------------------------------------------------------------

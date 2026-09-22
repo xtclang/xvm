@@ -5,6 +5,8 @@ import java.util.List;
 
 public record DirectRunRequest(
         File projectDir,
+        File stdoutFile,
+        File stderrFile,
         List<File> modulePath,
         boolean showVersion,
         boolean verbose,

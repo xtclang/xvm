@@ -40,8 +40,8 @@ public class TransientThreadLocal<T>
         var map   = TRANSIENT_MAP.get();
         T   value = (T) map.get(this);
 
-        if (value == null) {
-            map.put(this, value = initialValue());
+        if (value == null && (value = initialValue()) != null) {
+            map.put(this, value);
         }
 
         return value;
@@ -49,7 +49,11 @@ public class TransientThreadLocal<T>
 
     @Override
     public void set(T value) {
-        TRANSIENT_MAP.get().put(this, value);
+        if (value == null) {
+            remove();
+        } else {
+            TRANSIENT_MAP.get().put(this, value);
+        }
     }
 
     @Override

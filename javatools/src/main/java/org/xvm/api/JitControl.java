@@ -3,6 +3,7 @@ package org.xvm.api;
 import java.io.File;
 import java.io.PrintWriter;
 
+import java.time.Duration;
 import java.time.Instant;
 
 import org.xvm.asm.ErrorListener;
@@ -50,7 +51,7 @@ class JitControl
     }
 
     @Override
-    public void close() {
+    public void close(Duration timeout) {
         throw unsupported();
     }
 

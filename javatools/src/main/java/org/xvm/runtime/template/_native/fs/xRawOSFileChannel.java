@@ -188,7 +188,7 @@ public class xRawOSFileChannel
             }
         };
 
-        CompletableFuture<Integer> cfRead = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<Integer> cfRead = frame.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -226,7 +226,7 @@ public class xRawOSFileChannel
 
         Callable<Integer> task = () -> hChannel.f_channel.write(buffer);
 
-        frame.f_context.f_container.scheduleIO(task); // don't wait
+        frame.scheduleIO(task); // don't wait
 
         return frame.assignValue(iReturn, xInt64.makeHandle(0)); // OK
     }

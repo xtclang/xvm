@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
 import org.xvm.asm.Component.Injection;
@@ -517,6 +518,14 @@ public class Frame
         return call(frameNext);
     }
 
+    /**
+     * Schedule IO owned by the application that initiated this call, including calls through
+     * services shared with its parent container.
+     */
+    public <R> CompletableFuture<R> scheduleIO(Callable<R> task) {
+        return f_fiber.getResourceContainer().scheduleIO(task);
+    }
+
     // a convenience method for futures that complete on the IO thread
     public int waitForIO(CompletableFuture cf, Continuation continuation) {
         return call(createWaitIOFrame(cf, continuation));
@@ -525,8 +534,12 @@ public class Frame
     // a convenience method for futures that complete outside the service response queue
     public int waitForExternalCompletion(CompletableFuture<ObjectHandle> cf, int iReturn,
                                          Continuation continuation) {
-        // this future is completed directly; similarly to WaitIOFrame need to schedule the waiter
-        cf.whenComplete((r, x) -> f_context.ensureScheduled(true));
+        // Mark the fiber ready before scheduling it. Independent completion callbacks can run
+        // in either order, allowing the scheduler to miss the readiness notification.
+        cf.whenComplete((r, x) -> {
+            f_fiber.onResponse();
+            f_context.ensureScheduled(true);
+        });
 
         return wait(cf, iReturn, continuation);
     }

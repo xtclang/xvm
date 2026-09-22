@@ -3,10 +3,12 @@ package org.xtclang.plugin.runtime;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Comparator;
 import java.util.List;
 
 import org.xtclang.plugin.XtcLauncherRuntime;
@@ -24,22 +26,45 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
 record DirectRuntimeFingerprint(
         String source,
         String pluginCodeSource,
-        List<String> classpathEntries) {
+        List<String> classpathEntries,
+        List<String> coreModules) {
 
     String describeForLogging() {
         return "source=" + source
             + ", pluginCodeSource=" + pluginCodeSource
-            + ", classpathEntries=" + classpathEntries;
+            + ", classpathEntries=" + classpathEntries
+            + ", coreModules=" + coreModules;
     }
 
     static DirectRuntimeFingerprint from(final XtcLauncherRuntime runtime, final URL pluginCodeSource) {
+        return from(runtime, pluginCodeSource, List.of());
+    }
+
+    static DirectRuntimeFingerprint from(final XtcLauncherRuntime runtime, final URL pluginCodeSource, final List<File> coreModules) {
         return new DirectRuntimeFingerprint(
             runtime.source(),
-            pluginCodeSource.toExternalForm(),
+            describeCodeSource(pluginCodeSource),
             runtime.classpath().stream()
                 .map(DirectRuntimeFingerprint::describeFile)
-                .toList()
+                .toList(),
+            coreModules.stream().sorted(Comparator.comparing(File::getAbsolutePath))
+                .map(DirectRuntimeFingerprint::describeFile).toList()
         );
+    }
+
+    private static String describeCodeSource(final URL source) {
+        try {
+            final var file = new File(source.toURI());
+            if (!file.isDirectory()) {
+                return describeFile(file);
+            }
+            try (var files = Files.walk(file.toPath())) {
+                return source + "::" + files.filter(Files::isRegularFile).sorted()
+                    .map(path -> describeFile(path.toFile())).toList();
+            }
+        } catch (final IOException | URISyntaxException e) {
+            throw failure(e, "Failed to fingerprint plugin code source: {}", source);
+        }
     }
 
     private static String describeFile(final File file) {

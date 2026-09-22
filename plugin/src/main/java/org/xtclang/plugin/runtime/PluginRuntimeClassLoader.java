@@ -8,13 +8,14 @@ import java.util.List;
  * Child-first loader for runtime implementation classes that must resolve against
  * the selected XDK runtime rather than the already-loaded plugin classloader.
  *
- * <p>Only the small implementation package is child-first. Everything else stays
- * parent-first on purpose so the outer plugin API surface, Gradle APIs, and request
- * DTO types are shared rather than duplicated across classloaders.
+ * <p>XVM implementation classes and the bridge are isolated together. The outer plugin API,
+ * Gradle APIs and request DTOs remain shared with the parent loader.
  */
 public final class PluginRuntimeClassLoader extends URLClassLoader {
     private static final List<String> CHILD_FIRST_PREFIXES = List.of(
-        "org.xtclang.plugin.runtime.impl."
+        "org.xtclang.plugin.runtime.impl.",
+        "org.xvm.",
+        "org.xtclang.ecstasy."
     );
 
     public PluginRuntimeClassLoader(final URL[] urls, final ClassLoader parent) {
@@ -30,13 +31,9 @@ public final class PluginRuntimeClassLoader extends URLClassLoader {
             }
 
             if (isChildFirst(name)) {
-                try {
-                    final var found = findClass(name);
-                    return resolveIfNeeded(found, resolve);
-                } catch (final ClassNotFoundException ignored) {
-                    // Fall through to parent delegation. Higher-level runtime owners should
-                    // log this using the Gradle logger if this becomes diagnostically useful.
-                }
+                // Runtime classes must come from the selected distribution, never a different
+                // XDK already loaded by Gradle or another plugin.
+                return resolveIfNeeded(findClass(name), resolve);
             }
 
             return super.loadClass(name, resolve);

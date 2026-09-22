@@ -9,4 +9,6 @@ dependencies {
     // and the xunit engine. Transitive dependencies are resolved automatically.
     xtcModuleTest(libs.javatools.bridge)
     xtcModuleTest(libs.xdk.xunit.engine)
+    // The embedding backend hosts test executions in the runner registry.
+    xtcModuleTest(libs.xdk.runner)
 }

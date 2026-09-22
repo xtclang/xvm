@@ -189,7 +189,7 @@ public class xOSFile
 
         Callable<byte[]> task = () -> Handy.readFileBytes(path.toFile());
 
-        CompletableFuture<byte[]> cfRead = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<byte[]> cfRead = frame.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
                 return frameCaller.assignValue(iReturn,
@@ -216,7 +216,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfWrite = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture cfWrite = frame.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -250,7 +250,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture<Integer> cfRead = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<Integer> cfRead = frame.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -298,7 +298,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfTruncate = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture cfTruncate = frame.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -326,7 +326,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture cfAppend = frame.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {
@@ -359,7 +359,7 @@ public class xOSFile
             }
         };
 
-        CompletableFuture cfAppend = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture cfAppend = frame.scheduleIO(task);
 
         Frame.Continuation continuation = frameCaller -> {
             try {

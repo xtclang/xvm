@@ -122,7 +122,8 @@ public class LinkedRepository
             if (module != null) {
                 if (i > 0 && readThrough) {
                     try {
-                        repos[0].storeModule(module);
+                        FileStructure fileClone = new FileStructure(module, false);
+                        repos[0].storeModule(module = fileClone.getModule());
                     } catch (IOException e) {
                         System.err.println(e.getMessage());
                         break;

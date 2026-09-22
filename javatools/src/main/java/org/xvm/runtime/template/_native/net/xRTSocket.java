@@ -165,7 +165,7 @@ public class xRTSocket
         Callable<Socket> task = () ->
                 openConnectedSocket(abRemoteIP, nRemotePort, abLocalIP, nLocalPort);
 
-        CompletableFuture<Socket> cf = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<Socket> cf = frame.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
                 Socket      socket  = cf.get();
@@ -301,7 +301,7 @@ public class xRTSocket
             System.arraycopy(buf, 0, actual, 0, off);
             return actual;
         };
-        CompletableFuture<byte[]> cf = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<byte[]> cf = frame.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
                 return frameCaller.assignValue(iReturn,
@@ -345,7 +345,7 @@ public class xRTSocket
             return null;
         };
 
-        CompletableFuture<Void> cf = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<Void> cf = frame.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
                 cf.get();

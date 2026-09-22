@@ -444,6 +444,11 @@ tasks.withType<Tar>().configureEach {
 tasks.test {
     // Tests require the XDK to be fully installed with all XTC libraries
     dependsOn(tasks.installDist)
+    inputs.files(tasks.installDist)
+
+    // Nested xUnit integration tests exceed Gradle's default 512 MiB worker heap. Match the
+    // existing Gradle daemon budget by default, with an independent override for this worker.
+    maxHeapSize = providers.gradleProperty("xdkTestMaxHeapSize").orElse("2g").get()
 
     // Set working directory for tests
     workingDir = projectDir

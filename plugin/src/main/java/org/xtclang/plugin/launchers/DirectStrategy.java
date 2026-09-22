@@ -1,5 +1,7 @@
 package org.xtclang.plugin.launchers;
 
+import java.io.File;
+import java.lang.management.ManagementFactory;
 import java.util.List;
 
 import org.gradle.api.logging.Logger;
@@ -7,10 +9,11 @@ import org.gradle.api.provider.Provider;
 
 import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.runtime.DirectCompileRequest;
-import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
 import org.xtclang.plugin.runtime.DirectRunRequest;
+import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
 import org.xtclang.plugin.runtime.DirectTestRequest;
 import org.xtclang.plugin.tasks.XtcCompileTask;
+import org.xtclang.plugin.tasks.XtcLauncherTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
 
@@ -18,7 +21,7 @@ import static org.xtclang.plugin.tasks.XtcLauncherTask.EXIT_CODE_ERROR;
 
 /**
  * Direct (in-process) execution strategy.
- * Calls Launcher.launch() directly with pre-built options.
+ * Reuses an owned embedding session for compilation and execution.
  * Works for both compile and run tasks.
  */
 public class DirectStrategy implements ExecutionStrategy {
@@ -41,7 +44,9 @@ public class DirectStrategy implements ExecutionStrategy {
     public int execute(final XtcCompileTask task) {
         logger.info("[plugin] Invoking compiler directly in current thread (no fork)");
         try {
-            return directRuntimeService.get().executeCompile(task.resolveLauncherRuntime(), createCompileRequest(task), logger);
+            validateJvmArguments(task);
+            return directRuntimeService.get().executeCompile(task.resolveLauncherRuntime(),
+                List.copyOf(task.getInputXdkContents().getFiles()), createCompileRequest(task), logger);
         } catch (final Exception e) {
             logger.error("[plugin] Direct compiler execution failed", e);
             return EXIT_CODE_ERROR;
@@ -52,7 +57,9 @@ public class DirectStrategy implements ExecutionStrategy {
     public int execute(final XtcRunTask task, final XtcRunModule runConfig) {
         logger.info("[plugin] Invoking runner directly in current thread (no fork)");
         try {
-            return directRuntimeService.get().executeRun(task.resolveLauncherRuntime(), createRunRequest(task, runConfig), logger);
+            validateJvmArguments(task);
+            return directRuntimeService.get().executeRun(task.resolveLauncherRuntime(),
+                executionModules(task), createRunRequest(task, runConfig), logger);
         } catch (final Exception e) {
             logger.error("[plugin] Direct runner execution failed", e);
             return EXIT_CODE_ERROR;
@@ -63,11 +70,21 @@ public class DirectStrategy implements ExecutionStrategy {
     public int execute(final XtcTestTask task, final XtcRunModule runConfig) {
         logger.info("[plugin] Invoking test runner directly in current thread (no fork)");
         try {
-            return directRuntimeService.get().executeTest(task.resolveLauncherRuntime(), createTestRequest(task, runConfig), logger);
+            validateJvmArguments(task);
+            return directRuntimeService.get().executeTest(task.resolveLauncherRuntime(),
+                executionModules(task), createTestRequest(task, runConfig), logger);
         } catch (final Exception e) {
             logger.error("[plugin] Direct test runner execution failed", e);
             return EXIT_CODE_ERROR;
         }
+    }
+
+    private static List<File> executionModules(final XtcLauncherTask<?> task) {
+        final var xdkModules = task.getInputXdkContents().getFiles();
+        // Bootstrap consumers use declared module dependencies instead of an installed XDK.
+        return List.copyOf(xdkModules.isEmpty()
+            ? task.getXtcModuleDependencies().getAsFileTree().matching(pattern -> pattern.include("**/*.xtc")).getFiles()
+            : xdkModules);
     }
 
     private static DirectCompileRequest createCompileRequest(final XtcCompileTask task) {
@@ -77,6 +94,8 @@ public class DirectStrategy implements ExecutionStrategy {
             : XtcCompileTask.semanticVersion(rawVersion);
         return new DirectCompileRequest(
             task.getProjectDirectory().get().getAsFile(),
+            task.hasStdoutRedirect() ? ForkedStrategy.configuredRedirectFile(task, true) : null,
+            task.hasStderrRedirect() ? ForkedStrategy.configuredRedirectFile(task, false) : null,
             task.getOutputDirectoryInternal().getAsFile(),
             task.getResourceDirectoryInternal().getAsFile(),
             task.resolveFullModulePath(),
@@ -91,9 +110,27 @@ public class DirectStrategy implements ExecutionStrategy {
         );
     }
 
+    private void validateJvmArguments(final XtcLauncherTask<?> task) {
+        final var hostArguments = ManagementFactory.getRuntimeMXBean().getInputArguments();
+        for (final var argument : task.getJvmArgs().get()) {
+            if (argument.equals("-showversion") || argument.equals("--show-version")) {
+                logger.lifecycle("[plugin] DIRECT host JVM: {}", Runtime.version());
+                continue;
+            }
+            // Assertions are enabled on the isolated implementation loader. Other startup options
+            // must already be present on the host JVM; direct execution cannot apply them later.
+            if (!argument.equals("-ea") && !hostArguments.contains(argument)) {
+                throw new IllegalArgumentException("DIRECT cannot apply JVM argument '" + argument
+                    + "'; configure the Gradle JVM or use ATTACHED mode");
+            }
+        }
+    }
+
     private static DirectRunRequest createRunRequest(final XtcRunTask task, final XtcRunModule runConfig) {
         return new DirectRunRequest(
             task.getProjectDirectory().get().getAsFile(),
+            task.hasStdoutRedirect() ? ForkedStrategy.configuredRedirectFile(task, true) : null,
+            task.hasStderrRedirect() ? ForkedStrategy.configuredRedirectFile(task, false) : null,
             task.resolveFullModulePath(),
             task.getShowVersion().get(),
             task.getVerbose().get(),
@@ -107,6 +144,8 @@ public class DirectStrategy implements ExecutionStrategy {
     private static DirectTestRequest createTestRequest(final XtcTestTask task, final XtcRunModule runConfig) {
         return new DirectTestRequest(
             task.getProjectDirectory().get().getAsFile(),
+            task.hasStdoutRedirect() ? ForkedStrategy.configuredRedirectFile(task, true) : null,
+            task.hasStderrRedirect() ? ForkedStrategy.configuredRedirectFile(task, false) : null,
             task.getOutputDirectory().get().getAsFile(),
             task.resolveFullModulePath(),
             task.getShowVersion().get(),

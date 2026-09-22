@@ -60,8 +60,6 @@ import org.xvm.runtime.template._native.reflect.xRTFunction;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
-import org.xvm.runtime.template._native.temporal.xLocalClock;
-
 import org.xvm.util.concurrent.VarHandles;
 
 /**
@@ -79,6 +77,13 @@ public class ServiceContext {
 
     public Runtime getRuntime() {
         return f_container.f_runtime;
+    }
+
+    /**
+     * Schedule an alarm owned by this service's container.
+     */
+    public void scheduleTimer(TimerTask task, long delayMillis) {
+        f_container.scheduleTimer(task, delayMillis);
     }
 
     public LinkerContext getLinkerContext() {
@@ -172,7 +177,11 @@ public class ServiceContext {
      * @return the ServiceContext associated with the current Java thread
      */
     public static ServiceContext getCurrentContext() {
-        return s_tloContext.get()[0];
+        ServiceContext context = s_tloContext.get()[0];
+        if (context == null) {
+            s_tloContext.remove();
+        }
+        return context;
     }
 
     /**
@@ -336,6 +345,9 @@ public class ServiceContext {
             return !f_queueSuspended.isReady();
         } finally {
             tloCtx[0] = ctxPrior;
+            if (ctxPrior == null) {
+                s_tloContext.remove();
+            }
 
             if (ctxPrior != null) {
                 // now that we've switched back to the caller's service context process any responses
@@ -837,6 +849,7 @@ public class ServiceContext {
 
         if (!fiber.hasPendingRequests()) {
             f_setFibers.remove(fiber);
+            f_container.signalIdle();
         }
     }
 
@@ -1581,6 +1594,7 @@ public class ServiceContext {
     protected void callUnhandledExceptionHandler(ExceptionHandle hException) {
         FunctionHandle hFunction = m_hExceptionHandler;
         if (hFunction == null) {
+            f_container.unhandledException(hException);
             hFunction = new NativeFunctionHandle((frame, ahArg, iReturn) -> {
                 switch (Utils.callToString(frame, ahArg[0])) {
                 case Op.R_NEXT -> {
@@ -2090,7 +2104,7 @@ public class ServiceContext {
             f_ldtScheduled = ldtWakeUp;
             m_taskCurrent  = task;
 
-            xLocalClock.TIMER.schedule(task, Math.max(1, ldtWakeUp - ldtNow));
+            scheduleTimer(task, Math.max(1, ldtWakeUp - ldtNow));
         }
 
         /**

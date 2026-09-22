@@ -160,6 +160,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.directRuntimeService = project.getGradle().getSharedServices()
             .registerIfAbsent(DIRECT_RUNTIME_SERVICE_NAME, DirectRuntimeBuildService.class, spec -> {
             });
+        // Requests are serialized by the service. Attached tasks can still execute in parallel.
+        usesService(directRuntimeService);
 
         // Validate configuration-time captures for configuration cache compatibility
         validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");

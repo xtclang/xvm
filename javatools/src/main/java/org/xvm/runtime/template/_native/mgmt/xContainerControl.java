@@ -59,6 +59,7 @@ public class xContainerControl
         markNativeProperty("innerTypeSystem");
 
         markNativeMethod("invoke", null, null);
+        markNativeMethod("join",   VOID, VOID);
         markNativeMethod("kill",   VOID, VOID);
 
         invalidateTypeInfo();
@@ -90,6 +91,11 @@ public class xContainerControl
 
         case "kill":
             return invokeKill(frame, (ControlHandle) hTarget, iReturn);
+
+        case "join":
+            return frame.waitForExternalCompletion(
+                    ((ControlHandle) hTarget).f_container.whenIdle().thenApply(_ -> xTuple.H_VOID),
+                    iReturn, _ -> Op.R_NEXT);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);

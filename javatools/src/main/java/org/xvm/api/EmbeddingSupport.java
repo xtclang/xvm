@@ -1,14 +1,24 @@
 package org.xvm.api;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.time.Duration;
 import java.time.Instant;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -37,21 +47,26 @@ import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo.Node;
 
-import static org.xvm.util.Handy.readFileChars;
+import org.xvm.util.Deadline;
+
+import static org.xvm.runtime.Runtime.DEFAULT_SHUTDOWN_TIMEOUT;
 
 import static org.xvm.util.Severity.ERROR;
 
 /**
  * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
  * run a long-running Ecstasy application (in "Container Zero") that is responsible for spinning up
- * any number of child containers to "run()" modules. EmbeddingSupport is a singleton, but it does
- * require configuration; specifically, it requires a Module Repository from which to load the core
- * Ecstasy classes. Without configuration, EmbeddingSupport will attempt to locate the core Ecstasy
- * classes using the "XDK_HOME" OS property.
+ * any number of child containers to "run()" modules. Use {@link #create} for an owned session or
+ * {@link #instance} for the legacy singleton. Configuration supplies the Module Repository from
+ * which to load the core Ecstasy classes. Without configuration, the singleton attempts to locate
+ * them using the "XDK_HOME" environment variable.
  *
- * The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
+ * <p>Host-side compilation and request preparation are serialized. Applications run asynchronously
+ * in separate containers. Close each control to release its request and close the session to stop
+ * its runtime.
  */
-public class EmbeddingSupport {
+public class EmbeddingSupport
+        implements AutoCloseable {
     // ----- internal (construction etc.) ----------------------------------------------------------
 
     /**
@@ -84,12 +99,27 @@ public class EmbeddingSupport {
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
     private Connector        connector;
+    private volatile boolean closed;
+    private Throwable        cleanupFailure;
+
+    private final Set<OwnedControl> controls = new HashSet<>();
+    private final CompletableFuture<Void> completion = new CompletableFuture<>();
+
+    // Native templates contain mutable static state; an implementation loader can host only one
+    // live embedding runtime. Release ownership only after its executors have terminated.
+    private static EmbeddingSupport runtimeOwner;
 
     /**
      * @return true if configured
      * @throws IllegalStateException if not configured
      */
     private boolean verifyConfigured() {
+        if (closed) {
+            throw new IllegalStateException("Embedding session is closed");
+        }
+        if (cleanupFailure != null) {
+            throw new IllegalStateException("Embedding session failed to release a request", cleanupFailure);
+        }
         if (!configured) {
             // attempt to auto-configure
             String home = System.getenv("XDK_HOME");
@@ -120,10 +150,16 @@ public class EmbeddingSupport {
      */
     public Connector ensureConnector() {
         synchronized (LOCK) {
+            verifyConfigured();
             if (connector == null) {
+                if (runtimeOwner != null && runtimeOwner != this) {
+                    throw new IllegalStateException(
+                            "Another embedding session owns the runtime in this classloader");
+                }
                 this.connector = useJit()
                         ? JitControl.createConnector(cfgRepo)
                         : InterpreterControl.createConnector(cfgRepo);
+                runtimeOwner = this;
             }
             return connector;
         }
@@ -139,6 +175,104 @@ public class EmbeddingSupport {
     }
 
     /**
+     * Create an owned embedding session without starting its execution runtime.
+     *
+     * <p>Close the session when the host is finished. Only one session per implementation
+     * classloader may own a live native runtime; a closed session cannot be reopened.
+     *
+     * @param coreRepo  the repository containing the XDK libraries
+     *
+     * @return a configured session
+     */
+    public static EmbeddingSupport create(ModuleRepository coreRepo) {
+        return new EmbeddingSupport().configure(Objects.requireNonNull(coreRepo), null);
+    }
+
+    /**
+     * Close outstanding controls and terminate the session's runtime. Caller-owned consoles,
+     * repositories, and file-system roots remain owned by the caller.
+     */
+    @Override
+    public void close() {
+        close(DEFAULT_SHUTDOWN_TIMEOUT);
+    }
+
+    /**
+     * Close the session using one budget for all controls and runtime termination.
+     *
+     * @param timeout  the nonnegative shutdown budget
+     */
+    public void close(Duration timeout) {
+        Deadline deadline = Deadline.after(timeout);
+        List<OwnedControl> pending;
+        Connector          runtime;
+        synchronized (LOCK) {
+            if (closed) {
+                pending = null;
+                runtime = null;
+            } else {
+                closed  = true;
+                pending = List.copyOf(controls);
+                runtime = connector;
+            }
+        }
+        if (pending == null) {
+            try {
+                completion.get(deadline.remainingNanos(), TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while closing embedding session", e);
+            } catch (ExecutionException | TimeoutException e) {
+                throw new IllegalStateException("Embedding session did not close", e);
+            }
+            return;
+        }
+
+        Throwable failure = null;
+        for (OwnedControl control : pending) {
+            try {
+                control.close(deadline.remaining());
+            } catch (RuntimeException | Error e) {
+                failure = collectFailure(failure, e);
+            }
+        }
+        boolean stopped = runtime == null;
+        try {
+            if (runtime instanceof InterpreterConnector interpreter) {
+                try {
+                    interpreter.close(deadline.remaining());
+                } finally {
+                    stopped = interpreter.isClosed();
+                }
+            }
+        } catch (RuntimeException | Error e) {
+            failure = collectFailure(failure, e);
+        } finally {
+            synchronized (LOCK) {
+                controls.clear();
+                connector = null;
+                if (stopped && runtimeOwner == this) {
+                    runtimeOwner = null;
+                }
+            }
+            if (failure == null) {
+                completion.complete(null);
+            } else {
+                completion.completeExceptionally(failure);
+            }
+        }
+        completion.join();
+    }
+
+    private static Throwable collectFailure(Throwable failure, Throwable next) {
+        if (failure == null) {
+            return next;
+        }
+        failure.addSuppressed(next);
+        return failure;
+    }
+
+    /**
      * Provide configuration necessary for the underlying Ecstasy tools and libraries. Must be
      * called exactly one time before any other method.
      *
@@ -149,6 +283,9 @@ public class EmbeddingSupport {
      */
     public EmbeddingSupport configure(ModuleRepository coreRepo, String customInjector) {
         synchronized (LOCK) {
+            if (closed) {
+                throw new IllegalStateException("Embedding session is closed");
+            }
             if (configured) {
                 if (!(Objects.equals(coreRepo, cfgRepo) && Objects.equals(customInjector, cfgInjector))) {
                     throw new IllegalStateException("configuration has been performed, and cannot be modified");
@@ -189,7 +326,6 @@ public class EmbeddingSupport {
      *         that is instantiated by EmbeddingSupport
      */
     public ConstantPool getConstantPool() {
-        verifyConfigured();
         return ensureConnector().getConstantPool();
     }
 
@@ -205,25 +341,54 @@ public class EmbeddingSupport {
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
     public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
-        verifyConfigured();
-        try {
-            EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
-            return compiler.process() == 0
-                    ? compiler.getModule()
-                    : null;
-        } catch (RuntimeException | AssertionError e) {
-            // as in run(): the compiler runs over caller-supplied source, so a failure in it is
-            // reported here rather than thrown at the caller, who was promised a null instead
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Compilation failed"}, null);
+        synchronized (LOCK) {
+            try (var ignore = ConstantPool.withPool(null)) {
+                verifyConfigured();
+                try {
+                    EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
+                    return compiler.process() == 0
+                            ? compiler.getModule()
+                            : null;
+                } catch (RuntimeException | AssertionError e) {
+                    // as in run(): the compiler runs over caller-supplied source, so a failure in it is
+                    // reported here rather than thrown at the caller, who was promised a null instead
+                    if (errs != null) {
+                        errs.log(ERROR, ERR_INTERNAL,
+                                new Object[] {e, "Compilation failed"}, null);
+                    }
+                    return null;
+                }
             }
-            return null;
         }
     }
 
     /**
-     * Compile a module that is in a file or directory.
+     * Compile source trees and resources using the standard compiler options and output rules.
+     * Each call uses fresh compilation state without starting the execution runtime.
+     *
+     * @return zero on success, nonzero if compilation fails
+     */
+    public int compile(CompilerOptions options, Console console, ErrorListener errs) {
+        synchronized (LOCK) {
+            try (var ignore = ConstantPool.withPool(null)) {
+                verifyConfigured();
+                try {
+                    return new FileCompiler(options, console == null ? SILENT_CONSOLE : console,
+                            errs, cfgRepo, null, null).compile();
+                } catch (LauncherException e) {
+                    return 1;
+                } catch (RuntimeException | AssertionError e) {
+                    if (errs != null) {
+                        errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
+                    }
+                    return 1;
+                }
+            }
+        }
+    }
+
+    /**
+     * Compile a module that is in a file or directory, including nested sources and resources.
      *
      * @param file    the location of the module source code on disk, either the module source file
      *                or the directory containing a single .x file and nested contents thereof
@@ -235,34 +400,21 @@ public class EmbeddingSupport {
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
                            ErrorListener errs) {
-        ModuleStructure module;
-        try {
-            module = compile(new String(readFileChars(file)), input, errs);
-        } catch (IOException e) {
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Unable to read module " + file}, null);
-            }
-            return false;
-        }
-
-        if (module == null) {
-            assert errs == null || errs.hasSeriousErrors();
-            return false;
-        }
-
-        if (output != null) {
-            try {
-                output.storeModule(module);
-            } catch (IOException e) {
-                if (errs != null) {
-                    errs.log(ERROR, ERR_INTERNAL,
-                            new Object[] {e, "Unable to store module " + module.getName()}, module);
+        synchronized (LOCK) {
+            try (var ignore = ConstantPool.withPool(null)) {
+                verifyConfigured();
+                var options = CompilerOptions.builder().addInputFile(file).forceRebuild(true).build();
+                try {
+                    return new FileCompiler(options, SILENT_CONSOLE, errs, cfgRepo, input,
+                            output == null ? new BuildRepository() : output).compile() == 0;
+                } catch (RuntimeException | AssertionError e) {
+                    if (errs != null) {
+                        errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
+                    }
+                    return false;
                 }
-                return false;
             }
         }
-        return true;
     }
 
     /**
@@ -325,7 +477,16 @@ public class EmbeddingSupport {
 
             int result = super.compile(List.of(compiler), repoLib);
             if (result == 0) {
-                this.module = struct.getModule();
+                // Publish assembled code, just as file compilation does. Compiler-owned ops still
+                // refer to the compilation pool and cannot safely be cloned into runtime pools.
+                try {
+                    var bytes = new ByteArrayOutputStream();
+                    struct.writeTo(bytes);
+                    this.module = new FileStructure(new ByteArrayInputStream(bytes.toByteArray())).getModule();
+                } catch (IOException e) {
+                    log(ERROR, e, "I/O exception assembling module: {}", struct.getModule().getName());
+                    return 1;
+                }
             }
             return result;
         }
@@ -392,7 +553,16 @@ public class EmbeddingSupport {
          * Stop the app if necessary, wait for it to terminate, and release all of its resources.
          */
         @Override
-        void close();
+        default void close() {
+            close(DEFAULT_SHUTDOWN_TIMEOUT);
+        }
+
+        /**
+         * Stop the application and release its resources within the supplied budget.
+         *
+         * @param timeout  the nonnegative shutdown budget
+         */
+        void close(Duration timeout);
     }
 
     // ----- run support ---------------------------------------------------------------------------
@@ -400,7 +570,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the provided module.
      *
-     * A limited set of injections are made available to the module, including the console, clock,
+     * <p>A limited set of injections are made available to the module, including the console, clock,
      * and other "safe" injectable types. The FileSystem is provided as detailed by the "rootDir"
      * parameter.
      *
@@ -408,7 +578,7 @@ public class EmbeddingSupport {
      * @param console     (optional) the PrintWriter for the executing application
      * @param rootDir     (optional) the root directory for the application's file system; supplied
      *                    directories are caller-owned and are not deleted; null selects a
-     *                    task-specific directory under "./.runner" that is deleted when the
+     *                    unique temporary directory that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
      * @param errs        (optional) a means for the container to report uncaught exceptions and
@@ -429,7 +599,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the specified module.
      *
-     * The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
+     * <p>The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
      * will be loaded into its own container, and provided with the full set of injectable resources
      * that Ecstasy supports, also including any provided String injections; in turn, that
      * implementation provides the injections that will be available to the specified module within
@@ -441,7 +611,7 @@ public class EmbeddingSupport {
      * @param console         (optional) the PrintWriter for the executing application
      * @param rootDir         (optional) the root directory for the application's file system;
      *                        supplied directories are caller-owned and are not deleted; null
-     *                        selects a task-specific directory under "./.runner" that is deleted
+     *                        selects a unique temporary directory that is deleted
      *                        when the returned Control is closed
      * @param injections      (optional) additional "String" and "String[]" injections
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
@@ -462,44 +632,120 @@ public class EmbeddingSupport {
             Map<String, List<String>> injections,
             String                    customInjector,
             ErrorListener             errs) {
-        verifyConfigured();
+        return run(input, moduleName, version, console, rootDir, injections, customInjector,
+                "run", List.of(), false, errs);
+    }
 
-        ModuleRepository repository = input == null || input == cfgRepo
-                ? cfgRepo
-                : new LinkedRepository(input, cfgRepo);
-        ModuleStructure module = version == null
-                ? repository.loadModule(moduleName)
-                : repository.loadModule(moduleName, version, true);
-        if (module == null) {
-            if (errs != null) {
-                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        new Object[] {moduleName, version}, null);
+    /**
+     * Execute a module with an explicit entry point and host resource context.
+     */
+    public Control run(RunRequest request, ErrorListener errs) {
+        return run(request.repository(), request.moduleName(), null, request.console(),
+                request.directory(), request.injections(), null, request.method(), request.arguments(),
+                request.hostFileSystem(), errs);
+    }
+
+    private Control run(ModuleRepository input, String moduleName, Version version, PrintWriter console,
+                        File rootDir, Map<String, List<String>> injections, String customInjector,
+                        String method, List<String> arguments, boolean hostFileSystem, ErrorListener errs) {
+        synchronized (LOCK) {
+            try (var ignore = ConstantPool.withPool(null)) {
+                verifyConfigured();
+
+                ModuleRepository repository = input == null || input == cfgRepo
+                        ? new LinkedRepository(true, new BuildRepository(), cfgRepo)
+                        : new LinkedRepository(true, new BuildRepository(), input, cfgRepo);
+                ModuleStructure module = version == null
+                        ? repository.loadModule(moduleName)
+                        : repository.loadModule(moduleName, version, true);
+                if (module == null) {
+                    if (errs != null) {
+                        errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
+                                new Object[] {moduleName, version}, null);
+                    }
+                    return null;
+                }
+
+                if (customInjector != null || cfgInjector != null) {
+                    throw new UnsupportedOperationException(
+                            "Custom injectors are not implemented yet");
+                }
+
+                try {
+                    Connector connector = ensureConnector();
+                    Control delegate = useJit()
+                            ? JitControl.create(connector, module, repository, console, rootDir, errs)
+                            : InterpreterControl.create(connector, module, repository, console, rootDir,
+                                    method, arguments, hostFileSystem,
+                                    injections == null ? Map.of() : injections, errs);
+                    var control = new OwnedControl(delegate);
+                    controls.add(control);
+                    return control;
+                } catch (RuntimeException | AssertionError e) {
+                    // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
+                    // assertion in the structure code past this report and out to the host. Errors are
+                    // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
+                    // this module failed to start, and handling one is not something to rely on
+                    if (errs != null) {
+                        errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
+                                new Object[] {e, "Unable to start " + moduleName}, module);
+                    }
+                    return null;
+                }
             }
-            return null;
+        }
+    }
+
+    /**
+     * Keep each control owned by its session until its resources have been released.
+     */
+    private class OwnedControl
+            implements Control {
+        OwnedControl(Control delegate) {
+            this.delegate = delegate;
         }
 
-        if (injections != null && !injections.isEmpty()
-                || customInjector != null || cfgInjector != null) {
-            throw new UnsupportedOperationException(
-                    "Custom injectors are not implemented yet");
+        @Override
+        public boolean running() {
+            return delegate.running();
         }
 
-        try {
-            Connector connector = ensureConnector();
-            return useJit()
-                    ? JitControl.create(connector, module, repository, console, rootDir, errs)
-                    : InterpreterControl.create(connector, module, repository, console, rootDir, errs);
-        } catch (RuntimeException | AssertionError e) {
-            // an AssertionError is an Error, so the RuntimeException guard alone let a tripped
-            // assertion in the structure code past this report and out to the host. Errors are
-            // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
-            // this module failed to start, and handling one is not something to rely on
-            if (errs != null) {
-                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                        new Object[] {e, "Unable to start " + moduleName}, module);
+        @Override
+        public void join() {
+            delegate.join();
+        }
+
+        @Override
+        public Instant whenStarted() {
+            return delegate.whenStarted();
+        }
+
+        @Override
+        public Instant whenStopped() {
+            return delegate.whenStopped();
+        }
+
+        @Override
+        public Long result() {
+            return delegate.result();
+        }
+
+        @Override
+        public void close(Duration timeout) {
+            try {
+                delegate.close(timeout);
+            } catch (RuntimeException | Error e) {
+                synchronized (LOCK) {
+                    cleanupFailure = e;
+                }
+                throw e;
             }
-            return null;
+            synchronized (LOCK) {
+                controls.remove(this);
+            }
         }
+
+        private final Control delegate;
     }
 
     // ----- constants -----------------------------------------------------------------------------

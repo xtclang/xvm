@@ -145,7 +145,7 @@ public class xRTCertificateManager
     }
 
     private int invokeAsIOTask(Frame frame, Callable<ExceptionHandle> task) {
-        CompletableFuture<ExceptionHandle> cfResult = frame.f_context.f_container.scheduleIO(task);
+        CompletableFuture<ExceptionHandle> cfResult = frame.scheduleIO(task);
         Frame.Continuation continuation = frameCaller -> {
             try {
                 ExceptionHandle hFailure = cfResult.get();
@@ -489,7 +489,7 @@ public class xRTCertificateManager
         StringHandle hPwd         = xRTKeyStore.getPassword(frame, ahArg[1]);
         StringHandle hName        = (StringHandle) ahArg[2];
 
-        CompletableFuture<Key> cfResult = frame.f_context.f_container.scheduleIO(
+        CompletableFuture<Key> cfResult = frame.scheduleIO(
                 () -> loadKey(hPathOrStore, hPwd, hName));
 
         Frame.Continuation continuation = frameCaller -> {

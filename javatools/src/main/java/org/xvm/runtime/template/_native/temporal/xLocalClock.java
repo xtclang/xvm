@@ -1,7 +1,6 @@
 package org.xvm.runtime.template._native.temporal;
 
 import java.util.TimeZone;
-import java.util.Timer;
 import java.util.TimerTask;
 
 import org.xvm.asm.ClassStructure;
@@ -128,7 +127,7 @@ public class xLocalClock
 
         Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
         try {
-            TIMER.schedule(alarm.getTrigger(), cDelay);
+            frame.f_context.scheduleTimer(alarm.getTrigger(), cDelay);
         } catch (Exception e) {
             alarm.cancel();
             return frame.raiseException(e.getMessage());
@@ -219,13 +218,13 @@ public class xLocalClock
          */
         public void run() {
             ServiceContext context = f_refCallback.get();
-            if (context != null) {
+            if (context != null && !context.isTerminated()) {
                 Container container = context.f_container;
                 if (container.isTimeFrozen()) {
                     // if the time is currently frozen, we have no way of knowing when it's going to
                     // be ready (how long will someone be looking at the debugger screen); so
                     // re-checking in a second seems like a reasonable compromise
-                    TIMER.schedule(m_trigger = new Trigger(this), 1000);
+                    context.scheduleTimer(m_trigger = new Trigger(this), 1000);
                     return;
                 }
 
@@ -238,7 +237,7 @@ public class xLocalClock
                     }
                 } else {
                     // reschedule
-                    TIMER.schedule(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
+                    context.scheduleTimer(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
                 }
             }
         }
@@ -279,8 +278,6 @@ public class xLocalClock
     }
 
     // ----- constants and fields ------------------------------------------------------------------
-
-    public static Timer TIMER = new Timer("ecstasy:LocalClock", true);
 
     /**
      * Cached LocalClock handle.

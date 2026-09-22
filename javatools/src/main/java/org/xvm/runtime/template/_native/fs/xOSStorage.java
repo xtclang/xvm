@@ -2,6 +2,7 @@ package org.xvm.runtime.template._native.fs;
 
 import java.io.IOException;
 
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -13,6 +14,7 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.ClassStructure;
@@ -187,7 +189,7 @@ public class xOSStorage
 
             try {
                 Path pathDir = Paths.get(hPathStringDir.getStringValue());
-                ensureWatchDaemon(pool()).register(pathDir, hStorage);
+                ensureWatchDaemon().register(pathDir, hStorage);
                 return Op.R_NEXT;
             } catch (IOException|InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -248,17 +250,19 @@ public class xOSStorage
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    protected static synchronized WatchServiceDaemon ensureWatchDaemon(ConstantPool pool) {
-        WatchServiceDaemon daemonWatch = s_daemonWatch;
-        if (daemonWatch == null) {
+    protected synchronized WatchServiceDaemon ensureWatchDaemon() throws IOException {
+        if (watchDaemon == null) {
+            var daemon = new WatchServiceDaemon(pool());
             try {
-                daemonWatch = s_daemonWatch = new WatchServiceDaemon(pool);
-                daemonWatch.start();
-            } catch (IOException e) {
-                return null;
+                f_container.onTermination(daemon::closeAsync);
+                daemon.start();
+                watchDaemon = daemon;
+            } catch (RuntimeException | Error e) {
+                daemon.closeAsync();
+                throw e;
             }
         }
-        return daemonWatch;
+        return watchDaemon;
     }
 
     protected static class WatchServiceDaemon
@@ -290,13 +294,30 @@ public class xOSStorage
 
         @Override
         public void run() {
-            try (var ignore = ConstantPool.withPool(f_pool)) {
+            try (var ignore = ConstantPool.withPool(f_pool); f_service) {
                 while (true) {
                     processKey(f_service.take());
                 }
             } catch (InterruptedException e) {
-                // TODO ?
+                Thread.currentThread().interrupt();
+            } catch (ClosedWatchServiceException e) {
+                // Normal container shutdown unblocks take() by closing the service.
+            } catch (IOException | RuntimeException | Error e) {
+                completion.completeExceptionally(e);
+            } finally {
+                f_mapWatches.clear();
+                completion.complete(null);
             }
+        }
+
+        CompletableFuture<Void> closeAsync() {
+            try {
+                f_service.close();
+            } catch (IOException e) {
+                completion.completeExceptionally(e);
+                interrupt();
+            }
+            return completion;
         }
 
         protected void processKey(WatchKey key) {
@@ -357,11 +378,12 @@ public class xOSStorage
         private final ConstantPool                f_pool;
         private final Map<WatchKey, WatchContext> f_mapWatches;
         private final WatchService                f_service;
+        private final CompletableFuture<Void>     completion = new CompletableFuture<>();
     }
 
     // ----- constants -----------------------------------------------------------------------------
 
     private static MethodStructure s_methodOnEvent;
 
-    private static WatchServiceDaemon s_daemonWatch;
+    private WatchServiceDaemon watchDaemon;
 }

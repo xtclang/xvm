@@ -95,12 +95,11 @@ public class xRTNameService
 
         switch (method.getName()) {
             case "nativeRecords": { // String[] nativeRecords(String name)
-                Container container = frame.f_context.f_container;
-                String    sName     = ((StringHandle) ahArg[0]).getStringValue();
+                String sName = ((StringHandle) ahArg[0]).getStringValue();
 
                 Callable<String[]> task = () -> getAllRecords(sName);
 
-                CompletableFuture<String[]> cfRecords = container.scheduleIO(task);
+                CompletableFuture<String[]> cfRecords = frame.scheduleIO(task);
                 Frame.Continuation continuation = frameCaller -> {
                     try {
                         return frameCaller.assignValue(iReturn,
@@ -134,7 +133,7 @@ public class xRTNameService
 
             Callable<InetAddress[]> task = () -> InetAddress.getAllByName(sName);
 
-            CompletableFuture<InetAddress[]> cfResolve = container.scheduleIO(task);
+            CompletableFuture<InetAddress[]> cfResolve = frame.scheduleIO(task);
             Frame.Continuation continuation = frameCaller -> {
                 try {
                     InetAddress[] aAddr = cfResolve.get();
@@ -166,7 +165,7 @@ public class xRTNameService
 
             Callable<InetAddress> task = () -> InetAddress.getByAddress(abIP);
 
-            CompletableFuture<InetAddress> cfLookup = frame.f_context.f_container.scheduleIO(task);
+            CompletableFuture<InetAddress> cfLookup = frame.scheduleIO(task);
             Frame.Continuation continuation = frameCaller -> {
                 try {
                     InetAddress addr     = cfLookup.get();

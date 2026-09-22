@@ -5,6 +5,8 @@ import java.util.List;
 
 public record DirectTestRequest(
         File projectDir,
+        File stdoutFile,
+        File stderrFile,
         File outputDir,
         List<File> modulePath,
         boolean showVersion,

@@ -117,7 +117,7 @@ public class xNanosTimer
      */
     public ObjectHandle ensureTimer(Frame frame, ObjectHandle hOpts) {
         // quite intentionally the NanoTimer service always belongs to the native container, holding
-        // onto Alarm objects that are registered with Java's Timer (xLocalClock.TIMER);
+        // onto Alarm objects that are registered with the runtime's Java Timer;
         // in turn, the Alarm holds a user-supplied function via a WeakRef, allowing the
         // corresponding container to be shut down and garbage collected
         return createServiceHandle(
@@ -302,7 +302,11 @@ public class xNanosTimer
                     return;
                 }
 
-                Container container = f_refCallback.get().f_container;
+                ServiceContext context = f_refCallback.get();
+                if (context == null || context.isTerminated()) {
+                    return;
+                }
+                Container container = context.f_container;
                 m_cNanosStart = container.nanoTime();
 
                 Trigger trigger = createTrigger();
@@ -312,7 +316,7 @@ public class xNanosTimer
                     }
 
                     long cDelay = (f_cNanosAlarm - m_cNanosStart - m_cNanosBurnt) / NANOS_PER_MILLI;
-                    xLocalClock.TIMER.schedule(trigger, Math.max(1, cDelay));
+                    context.scheduleTimer(trigger, Math.max(1, cDelay));
                 } catch (Throwable e) {
                     cancelTrigger();
                 }
@@ -371,7 +375,7 @@ public class xNanosTimer
                 }
 
                 ServiceContext context = f_refCallback.get();
-                if (context != null) {
+                if (context != null && !context.isTerminated()) {
                     WeakCallback.Callback callback = f_refCallback.extractCallback();
                     context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
                     if (f_fRegistered) {
@@ -456,7 +460,11 @@ public class xNanosTimer
                         alarm.run();
                     } else {
                         // reschedule
-                        xLocalClock.TIMER.schedule(alarm.createTrigger(), cExtraMillis);
+                        ServiceContext context = alarm.f_refCallback.get();
+                        if (context != null && !context.isTerminated()) {
+                            context.scheduleTimer(
+                                    alarm.createTrigger(), cExtraMillis);
+                        }
                     }
                 }
 

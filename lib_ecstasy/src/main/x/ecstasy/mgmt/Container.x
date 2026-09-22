@@ -429,6 +429,15 @@ service Container
         Tuple invoke(String methodName, Tuple args = (), Service? runWithin = Null);
 
         /**
+         * Wait for this container and its nested containers to finish their outstanding work,
+         * including asynchronous service calls, IO, and alarms that keep the container alive.
+         * Waiting does not prevent a caller from invoking new work afterwards.
+         *
+         * @throws Exception  if an unhandled application failure occurred
+         */
+        void join();
+
+        /**
          * Get the `TypeSystem` for services running inside this container.
          *
          * A `Container` is a service, and thus also has a [typeSystem](Service.typeSystem) property,

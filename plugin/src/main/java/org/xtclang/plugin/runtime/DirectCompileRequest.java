@@ -5,6 +5,8 @@ import java.util.List;
 
 public record DirectCompileRequest(
         File projectDir,
+        File stdoutFile,
+        File stderrFile,
         File outputDir,
         File resourceDir,
         List<File> modulePath,

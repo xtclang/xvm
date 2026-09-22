@@ -201,7 +201,7 @@ public class xRTConnector
             Callable<HttpResponse<byte[]>> task = () ->
                     client.send(request, HttpResponse.BodyHandlers.ofByteArray());
 
-            CompletableFuture<HttpResponse<byte[]>> cfSend = frame.f_context.f_container.scheduleIO(task);
+            CompletableFuture<HttpResponse<byte[]>> cfSend = frame.scheduleIO(task);
 
             Frame.Continuation continuation = frameCaller -> {
                 try {

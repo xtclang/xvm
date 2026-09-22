@@ -70,8 +70,12 @@ module runner.xtclang.org {
      * @return the task identifier
      */
     Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                     String? rootDir = Null) =
-            TaskRegistry.registerTask(template, repository, consoleId, rootDir=rootDir);
+                     String? rootDir = Null, String method = "run", String[] args = [],
+                     Boolean passArgs = False, Boolean hostFileSystem = False,
+                     String[] injectionNames = [], String[][] injectionValues = []) =
+            TaskRegistry.registerTask(template, repository, consoleId, rootDir=rootDir,
+                    method=method, args=args, passArgs=passArgs, hostFileSystem=hostFileSystem,
+                    injections=new ListMap(injectionNames, injectionValues));
 
     /**
      * Start the identified task.
@@ -92,6 +96,11 @@ module runner.xtclang.org {
     void killTask(Int id) = TaskRegistry.killTask(id);
 
     /**
+     * Release a native caller's task, including a container whose entry method has returned.
+     */
+    void releaseTask(Int id) = TaskRegistry.releaseTask(id);
+
+    /**
      * Delete the file-system root allocated to the identified task.
      */
     void deleteTaskDirectory(Int id, String moduleName) =
@@ -109,9 +118,12 @@ module runner.xtclang.org {
          * Implementation of the `registerTask` API.
          */
         Int registerTask(ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                         Boolean retainStore = True, String? rootDir = Null) {
+                         Boolean retainStore = True, String? rootDir = Null, String method = "run",
+                         String[] args = [], Boolean passArgs = False, Boolean hostFileSystem = False,
+                         Map<String, String[]> injections = Map:[]) {
             Int  id   = nextTaskId++;
-            Task task = new Task(id, template, repository, consoleId, retainStore, rootDir);
+            Task task = new Task(id, template, repository, consoleId, retainStore, rootDir,
+                    method, args, passArgs, hostFileSystem, injections);
             tasks[id] = task;
             return id;
         }
@@ -136,7 +148,22 @@ module runner.xtclang.org {
         /**
          * Implementation of the `killTask` API.
          */
-        void killTask(Int id) = taskFor(id).kill();
+        void killTask(Int id) {
+            if (Task task := findTask(id)) {
+                task.kill();
+            }
+        }
+
+        /**
+         * Keep the registry available while the task waits for its services to terminate.
+         */
+        @Concurrent
+        void releaseTask(Int id) {
+            if (Task task := findTask(id)) {
+                task.kill();
+                tasks.remove(id);
+            }
+        }
 
         /**
          * Remove the identified task from the registry.
@@ -204,7 +231,8 @@ module runner.xtclang.org {
      * State and control for one application container.
      */
     service Task(Int id, ModuleTemplate template, ModuleRepository repository, Int? consoleId,
-                 Boolean retainStore, String? rootDir) {
+                 Boolean retainStore, String? rootDir, String method, String[] args,
+                 Boolean passArgs, Boolean hostFileSystem, Map<String, String[]> injections) {
         private Container? container;
 
         private Time? started;
@@ -248,16 +276,28 @@ module runner.xtclang.org {
                 taskConsole = &bufferedConsole.maskAs(Console);
             }
 
-            ResourceProvider injector = new TaskResourceProvider(taskDir, taskConsole);
+            ResourceProvider injector = new TaskResourceProvider(taskDir, taskConsole, hostFileSystem,
+                    repository, injections);
 
             container = new Container(template, Lightweight, repository, injector);
             running   = True;
 
+            Tuple callArgs = ();
+            if (passArgs) {
+                callArgs = (args,);
+            }
             @Future Tuple<Int, String> completion;
-            @Future Tuple              outcome = container.as(Container).invoke("run", ());
+            @Future Tuple              outcome = container.as(Container).invoke(method, callArgs);
             &outcome.whenComplete((tuple, exception) -> {
                 Int    result  = 0;
                 String failure = "";
+                if (exception == Null) {
+                    try {
+                        container.as(Container).join();
+                    } catch (Exception e) {
+                        exception = e;
+                    }
+                }
                 if (exception == Null) {
                     if (tuple != Null && !tuple.empty && tuple[0].is(Int)) {
                         result = tuple[0].as(Int);
@@ -269,11 +309,11 @@ module runner.xtclang.org {
                 }
 
                 running    = False;
-                container  = Null;
                 completion = (result, failure);
-                TaskRegistry.unregisterTask^(id);
 
                 if (!retainStore) {
+                    kill();
+                    TaskRegistry.unregisterTask^(id);
                     TaskRegistry.deleteTaskDirectory^(id, template.name);
                 }
             });
@@ -281,8 +321,9 @@ module runner.xtclang.org {
         }
 
         void kill() {
-            if (Container container ?= this.container, running) {
+            if (Container container ?= this.container) {
                 container.kill();
+                this.container = Null;
                 running = False;
             }
         }
@@ -362,13 +403,58 @@ module runner.xtclang.org {
      * Provides the task-specific file system and console, and delegates the remaining basic
      * injections.
      */
-    service TaskResourceProvider(Directory taskDir, Console console)
+    service TaskResourceProvider(Directory taskDir, Console console, Boolean hostFileSystem,
+                                 ModuleRepository repository, Map<String, String[]> injections)
             extends BasicResourceProvider {
         @Lazy FileStore store.calc() = new ecstasy.fs.DirectoryFileStore(taskDir);
 
         @Override
         Supplier getResource(Type type, String name) {
+            Type sansNull = type.isNullable() ?: type;
+            if (String[] values := injections.get(name), !values.empty) {
+                if (sansNull == String) {
+                    return values[values.size-1];
+                }
+                if (sansNull == List<String> || sansNull == String[]) {
+                    return values;
+                }
+            }
+            if (hostFileSystem) {
+                switch (type.isNullable() ?: type, name) {
+                case (FileStore, "storage"):
+                    @Inject FileStore storage;
+                    return storage;
+                case (Directory, "curDir"):
+                    return &taskDir.maskAs(Directory);
+                case (Directory, "rootDir"):
+                    @Inject Directory rootDir;
+                    return rootDir;
+                case (Directory, "homeDir"):
+                    @Inject Directory homeDir;
+                    return homeDir;
+                case (Directory, "tmpDir"):
+                    @Inject Directory tmpDir;
+                    return tmpDir;
+                }
+            }
             switch (type.isNullable() ?: type, name) {
+            case (ecstasy.reflect.Injector, _):
+                return &this.maskAs(ecstasy.reflect.Injector);
+
+            case (ResourceProvider, _):
+                return &this.maskAs(ResourceProvider);
+
+            case (ModuleRepository, "repository"):
+                return repository;
+
+            case (Container.Linker, "linker"):
+                @Inject Container.Linker linker;
+                return linker;
+
+            case (ecstasy.lang.src.Compiler, "compiler"):
+                @Inject ecstasy.lang.src.Compiler compiler;
+                return compiler;
+
             case (Console, "console"):
                 return console;
 

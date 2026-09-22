@@ -1,13 +1,20 @@
 package org.xvm.runtime;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimerTask;
+import java.util.WeakHashMap;
 
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+
+import java.util.function.Supplier;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
@@ -28,6 +35,8 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
+
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
@@ -58,9 +67,13 @@ public abstract class Container
         f_heap     = new ConstHeap(this);
         f_idModule = idModule;
 
-        // don't register the native container
-        if (containerParent != null) {
+        if (containerParent == null) {
             f_runtime.registerContainer(this);
+        } else {
+            synchronized (containerParent) {
+                containerParent.checkActive();
+                f_runtime.registerContainer(this);
+            }
         }
     }
 
@@ -114,9 +127,7 @@ public abstract class Container
      */
     public ServiceContext createServiceContext(String sName) {
         synchronized (this) {
-            if (m_futureTermination != null) {
-                throw new IllegalStateException("Container is terminating: " + this);
-            }
+            checkActive();
 
             ServiceContext service = new ServiceContext(this, sName, f_runtime.makeUniqueId());
             f_setServices.add(service);
@@ -132,23 +143,84 @@ public abstract class Container
     }
 
     /**
-     * Terminate every service that belongs to this container.
+     * Terminate this container's services, nested containers, and scheduled alarms.
      *
      * @return a future that completes when all of the services have terminated
      */
     public CompletableFuture<Void> terminateServices() {
+        CompletableFuture<Void> termination;
+        Set<IOTask<?>> pendingIO;
+        List<Supplier<CompletableFuture<Void>>> cleanups;
+        var services = new ArrayList<ServiceContext>();
         synchronized (this) {
-            CompletableFuture<Void> future = m_futureTermination;
-            if (future == null) {
-                ServiceContext[]       services = f_setServices.toArray(ServiceContext[]::new);
-                int                    count    = services.length;
-                CompletableFuture<?>[] futures  = new CompletableFuture<?>[count];
-                for (int i = 0; i < count; i++) {
-                    futures[i] = services[i].requestShutdown();
-                }
-                m_futureTermination = future = CompletableFuture.allOf(futures);
+            if (m_futureTermination != null) {
+                return m_futureTermination;
             }
-            return future;
+            m_futureTermination = termination = new CompletableFuture<>();
+            alarms.forEach(TimerTask::cancel);
+            alarms.clear();
+            pendingIO = Set.copyOf(ioTasks);
+            cleanups = List.copyOf(terminationActions);
+            terminationActions.clear();
+            f_setServices.forEach(services::add);
+        }
+
+        // Complete callbacks outside the container monitor; they may notify a parent container.
+        signalIdle();
+        try {
+            var pending = new ArrayList<CompletableFuture<Void>>();
+            for (var cleanup : cleanups) {
+                try {
+                    pending.add(cleanup.get());
+                } catch (RuntimeException | Error e) {
+                    pending.add(CompletableFuture.failedFuture(e));
+                }
+            }
+            pendingIO.forEach(task -> pending.add(task.cancel()));
+            for (Container child : f_runtime.containers()) {
+                if (child.f_parent == this) {
+                    pending.add(child.terminateServices());
+                }
+            }
+            services.forEach(service -> pending.add(service.requestShutdown()));
+            CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
+                    .whenComplete((_, error) -> {
+                        if (error == null) {
+                            termination.complete(null);
+                        } else {
+                            termination.completeExceptionally(error);
+                        }
+                        signalIdle();
+                    });
+        } catch (RuntimeException | Error e) {
+            termination.completeExceptionally(e);
+        }
+        return termination;
+    }
+
+    /**
+     * Register cleanup for a native resource owned by this container. Termination invokes every
+     * action and waits for its completion using the runtime owner's shutdown budget.
+     *
+     * @param cleanup  an action that initiates cleanup without blocking
+     */
+    public synchronized void onTermination(Supplier<CompletableFuture<Void>> cleanup) {
+        checkActive();
+        terminationActions.add(cleanup);
+    }
+
+    /**
+     * Schedule an alarm owned by this container. Terminating the container cancels its alarms.
+     */
+    public synchronized void scheduleTimer(TimerTask task, long delayMillis) {
+        checkActive();
+        alarms.add(task);
+        f_runtime.scheduleTimer(task, delayMillis);
+    }
+
+    private void checkActive() {
+        if (m_futureTermination != null) {
+            throw new IllegalStateException("Container is terminating: " + this);
         }
     }
 
@@ -174,6 +246,7 @@ public abstract class Container
                 e.printStackTrace(System.err);
             } finally {
                 f_pendingWorkCount.decrementAndGet();
+                signalIdle();
             }
         });
     }
@@ -195,15 +268,77 @@ public abstract class Container
      * @return a CompletableFuture associated with the scheduled task
      */
     public <R> CompletableFuture<R> scheduleIO(Callable<R> task) {
-        CompletableFuture<R> cf = new CompletableFuture<>();
-        f_runtime.submitIO(() -> {
+        var pending = new IOTask<>(task);
+        synchronized (this) {
+            checkActive();
+            ioTasks.add(pending);
             try {
-                cf.complete(task.call());
-            } catch (Throwable e) {
-                cf.completeExceptionally(e);
+                f_runtime.submitIO(pending);
+            } catch (RuntimeException | Error e) {
+                pending.cancel();
+                throw e;
             }
-        });
-        return cf;
+        }
+        return pending.result;
+    }
+
+    /**
+     * An IO operation remains owned until its worker exits, including after cancellation.
+     */
+    private class IOTask<R> implements Runnable {
+        IOTask(Callable<R> action) {
+            this.action = action;
+        }
+
+        @Override
+        public void run() {
+            synchronized (this) {
+                if (cancelled) {
+                    return;
+                }
+                worker = Thread.currentThread();
+            }
+            try {
+                result.complete(action.call());
+            } catch (Throwable e) {
+                result.completeExceptionally(e);
+            } finally {
+                synchronized (this) {
+                    worker = null;
+                }
+                finish();
+            }
+        }
+
+        CompletableFuture<Void> cancel() {
+            boolean notRunning;
+            synchronized (this) {
+                cancelled = true;
+                notRunning = worker == null;
+                if (!notRunning) {
+                    worker.interrupt();
+                }
+            }
+            result.cancel(false);
+            if (notRunning) {
+                finish();
+            }
+            return finished;
+        }
+
+        private void finish() {
+            synchronized (Container.this) {
+                ioTasks.remove(this);
+            }
+            finished.complete(null);
+            signalIdle();
+        }
+
+        private final Callable<R> action;
+        private final CompletableFuture<R> result = new CompletableFuture<>();
+        private final CompletableFuture<Void> finished = new CompletableFuture<>();
+        private Thread worker;
+        private boolean cancelled;
     }
 
     /**
@@ -559,6 +694,85 @@ public abstract class Container
     }
 
     /**
+     * Wait for this container and its descendants to have no fibers, scheduled work, IO, or
+     * keep-alive callbacks. Parent and sibling containers do not participate in this wait.
+     *
+     * @return a future that reports quiescence, or an unhandled application failure
+     */
+    public CompletableFuture<Void> whenIdle() {
+        synchronized (this) {
+            if (idle == null || idle.isDone()) {
+                idle = new CompletableFuture<>();
+            }
+            checkIdle();
+            return idle;
+        }
+    }
+
+    /**
+     * Record an exception for which the application did not install a handler.
+     */
+    void unhandledException(ExceptionHandle exception) {
+        synchronized (this) {
+            if (unhandled == null) {
+                unhandled = exception.getException();
+            }
+        }
+    }
+
+    /**
+     * Recheck interested containers after work completes. No polling or idle-time threshold is used.
+     */
+    void signalIdle() {
+        for (Container container = this; container != null; container = container.f_parent) {
+            container.checkIdle();
+        }
+    }
+
+    private synchronized void checkIdle() {
+        if (idle == null || idle.isDone()) {
+            return;
+        }
+        if (m_futureTermination != null) {
+            idle.completeExceptionally(new CancellationException("Container is terminating"));
+            return;
+        }
+        Throwable failure = unhandled;
+        for (Container container : f_runtime.containers()) {
+            if (container.isWithin(this)) {
+                if (container.m_futureTermination != null && container.m_futureTermination.isDone()) {
+                    continue;
+                }
+                if (container.f_pendingWorkCount.get() != 0 || container.f_callbackCount.get() != 0
+                        || !container.ioTasks.isEmpty()
+                        || container.f_setServices.stream().anyMatch(service -> !service.isIdle())) {
+                    return;
+                }
+                if (failure == null) {
+                    failure = container.unhandled;
+                }
+            }
+        }
+        if (failure == null) {
+            idle.complete(null);
+        } else {
+            idle.completeExceptionally(failure);
+        }
+    }
+
+    /**
+     * @return true if this container is the specified ancestor or one of its descendants
+     */
+    boolean isWithin(Container ancestor) {
+        for (Container container = this; container != null; container = container.f_parent) {
+            if (container == ancestor) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Ensure a TypeSystem handle for this container.
      *
      * @param frame    the current frame
@@ -691,6 +905,7 @@ public abstract class Container
     public void unregisterNativeCallback() {
         long c = f_callbackCount.getAndDecrement();
         assert c > 0;
+        signalIdle();
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -764,7 +979,17 @@ public abstract class Container
     /**
      * Completion of this container's termination.
      */
-    private CompletableFuture<Void> m_futureTermination;
+    private volatile CompletableFuture<Void> m_futureTermination;
+
+    /**
+     * Weakly track alarms without retaining completed tasks. Guarded by this container.
+     */
+    private final Set<TimerTask> alarms = Collections.newSetFromMap(new WeakHashMap<>());
+
+    private final Set<IOTask<?>> ioTasks = ConcurrentHashMap.newKeySet();
+    private final List<Supplier<CompletableFuture<Void>>> terminationActions = new ArrayList<>();
+    private CompletableFuture<Void> idle;
+    private volatile Throwable unhandled;
 
     /**
      * A cache of "instantiate-able" ClassCompositions keyed by the "inception type".

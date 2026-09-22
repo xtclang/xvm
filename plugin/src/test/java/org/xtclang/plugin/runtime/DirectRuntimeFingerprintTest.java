@@ -28,7 +28,7 @@ class DirectRuntimeFingerprintTest {
             List.of(helperJar.toFile(), launcherJar.toFile())
         );
 
-        final var pluginUrl = Path.of("/plugin.jar").toUri().toURL();
+        final var pluginUrl = createJar(tempDir.resolve("plugin.jar")).toUri().toURL();
 
         assertEquals(
             DirectRuntimeFingerprint.from(runtime, pluginUrl),
@@ -46,14 +46,34 @@ class DirectRuntimeFingerprintTest {
             List.of(helperJar.toFile(), launcherJar.toFile())
         );
 
-        final var pluginUrl = Path.of("/plugin.jar").toUri().toURL();
+        final var pluginUrl = createJar(tempDir.resolve("plugin.jar")).toUri().toURL();
         final var before = DirectRuntimeFingerprint.from(runtime, pluginUrl);
 
-        Thread.sleep(5L);
         Files.writeString(helperJar, "changed");
 
         final var after = DirectRuntimeFingerprint.from(runtime, pluginUrl);
         assertNotEquals(before, after);
+    }
+
+    @Test
+    void changedCoreAndPluginContentsInvalidateReuseWithoutTimestampChanges() throws Exception {
+        final var launcherJar = createJar(tempDir.resolve("javatools.jar"));
+        final var runtime = new XtcLauncherRuntime("test", launcherJar.toFile(), List.of(launcherJar.toFile()));
+        final var plugin = Files.writeString(tempDir.resolve("plugin.jar"), "before");
+        final var core = Files.writeString(tempDir.resolve("ecstasy.xtc"), "before");
+        final var pluginTime = Files.getLastModifiedTime(plugin);
+        final var coreTime = Files.getLastModifiedTime(core);
+        final var source = plugin.toUri().toURL();
+        final var before = DirectRuntimeFingerprint.from(runtime, source, List.of(core.toFile()));
+
+        Files.writeString(core, "after!");
+        Files.setLastModifiedTime(core, coreTime);
+        final var changedCore = DirectRuntimeFingerprint.from(runtime, source, List.of(core.toFile()));
+        assertNotEquals(before, changedCore);
+
+        Files.writeString(plugin, "after!");
+        Files.setLastModifiedTime(plugin, pluginTime);
+        assertNotEquals(changedCore, DirectRuntimeFingerprint.from(runtime, source, List.of(core.toFile())));
     }
 
     private static Path createJar(final Path path) throws IOException {

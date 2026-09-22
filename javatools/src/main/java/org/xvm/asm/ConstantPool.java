@@ -3465,9 +3465,18 @@ public class ConstantPool
      */
     public static Auto withPool(ConstantPool pool) {
         ConstantPool[] poolHolder = s_tloPool.get();
-        ConstantPool pollPrior = poolHolder[0];
+        ConstantPool poolPrior = poolHolder[0];
         poolHolder[0] = pool;
-        return () -> poolHolder[0] = pollPrior;
+        return () -> {
+            poolHolder[0] = poolPrior;
+            if (poolPrior == null) {
+                // Even an empty ConstantPool[] pins its implementation classloader on a host thread.
+                s_tloPool.remove();
+            } else {
+                // A nested null scope may have removed or replaced the holder.
+                s_tloPool.set(poolHolder);
+            }
+        };
     }
 
     /**

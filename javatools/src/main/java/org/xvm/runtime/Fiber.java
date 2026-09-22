@@ -256,6 +256,22 @@ public class Fiber
         Fiber fiberCaller = getCaller();
         return fiberCaller == null ? null : fiberCaller.f_context.f_container;
     }
+
+    /**
+     * Find the application container that owns native work on this call chain. A shared service
+     * may execute in a parent container on behalf of a child application.
+     */
+    public Container getResourceContainer() {
+        Container owner = f_context.f_container;
+        for (Fiber caller = getCaller(); caller != null; caller = caller.getCaller()) {
+            Container container = caller.f_context.f_container;
+            if (container.isWithin(owner)) {
+                owner = container;
+            }
+        }
+        return owner;
+    }
+
     /**
      * Check whether we can proceed with the frame execution.
      *

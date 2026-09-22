@@ -780,6 +780,16 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param reposLib  the repository that contains the Ecstasy library
      */
     protected void showSystemVersion(ModuleRepository reposLib) {
+        showSystemVersion(reposLib, m_console);
+    }
+
+    /**
+     * Display the XDK version without creating or running a launcher.
+     *
+     * @param reposLib  the repository that contains the Ecstasy library
+     * @param console   the destination for the version information
+     */
+    public static void showSystemVersion(ModuleRepository reposLib, Console console) {
         String sVer = null;
         try {
             sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
@@ -810,7 +820,7 @@ public abstract class Launcher<T extends LauncherOptions>
             version.append(" (").append(gitStatus).append(")");
         }
 
-        out(version.toString());
+        console.out(version.toString());
     }
 
     // ----- file management -----------------------------------------------------------------------
