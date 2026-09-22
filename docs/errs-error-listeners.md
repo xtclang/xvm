@@ -2,7 +2,8 @@
 
 This document explains why the `lagergren/errs` branch changes reporting throughout the compiler,
 and which changes an LSP host actually needs. It describes the implementation as of 2026-09-22,
-including module sessions, cross-file navigation and type hierarchy. The chronological investigation is in
+including module sessions, cross-file navigation, type hierarchy and Java parser recovery.
+The chronological investigation is in
 [errs.md](errs.md); the [integration plan](errs-integration-plan.md) records verification and
 eventual PR boundaries.
 
@@ -135,6 +136,11 @@ and discards them. Parser lookahead and resolver callbacks use a
 [Reporting](../javatools/src/main/java/org/xvm/asm/Reporting.java) scope so exceptional exits restore
 the prior destination. The module-name scan no longer replaces the parser's listener field.
 
+Declaration and statement loops now use the parser's recovery helpers. A malformed statement can
+be omitted while its enclosing method and following declarations survive; missing braces report
+EOF while retaining completed headers. Recovery is disabled inside speculation and stops for a
+host abort or exhausted error budget. The parser does not invent an expression to validate later.
+
 The new `compileModule(ModuleInfo, ...)` overload also uses CLI source discovery and parse-tree
 assembly. `ModuleInfo.Node` buffers reports and forwards them after source-tree stages. A fresh
 `ModuleInfo` is required for each attempt because it caches parsed input. Its `readSource(File)`
@@ -242,8 +248,22 @@ launcher abort remains an abort with a known diagnostic.
 [EmbeddingSupport](../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) returns a
 `Compilation` containing whatever was produced: a successful module, a file structure and its
 pool, and a parsed AST when available. Failure no longer discards every artifact by returning only
-null. These artifacts are partial compiler state, not a promise of valid semantic facts after any
-error. A member parse failure currently prevents the linked source-tree AST from being returned.
+null. `sourceTrees()` retains available per-file syntax, including recovery results. `parsed()`
+remains absent after parsing/loading errors, so a member parse failure cannot feed an incomplete
+module into semantic compilation. Structural queries can use the retained source trees; semantic
+queries remain unavailable until the whole module parses. These artifacts are partial compiler
+state, not a promise of valid semantic facts after any error.
+
+The single-source path initially passed the launcher's abort policy directly to Parser. The
+launcher stops compilation on an ordinary error, so that path could not finish recovery even when
+the host's budget allowed it. Parsing now uses a stage-local stateful collector that forwards to
+the launcher and observes the host's abort request. The launcher still stops subsequent semantic
+stages. This distinguishes recovery within a stage from permission to compile the recovered tree.
+
+That distinction exposed a pre-existing lexer loop on unterminated strings: repeated identical
+reports were deduplicated, leaving the error budget unchanged and the lexer spinning at EOF.
+The lexer now reports the missing terminator once and exits that token scan. Recovery tests cover
+ordinary/template strings with an unlimited collector and fail on a repeated report.
 
 `ErrorListener.cancellable(errs, cancelled)` combines a host cancellation request with the
 listener's normal abort policy. Branching and merging preserve the wrapper. Already-cancelled
@@ -326,27 +346,29 @@ These existing regressions exercise the contract at different boundaries:
 | Boundary | Regression coverage |
 |---|---|
 | Listener behavior | `ErrorListenerBranchTest`, `ErrorListenerAbortTest`, `ErrorListenerCancelTest`, `ErrorListenerSilenceTest`, `ErrorListenerSiteTest`, `ErrorDeduplicationTest`. |
-| Parser and compiler | `ParserAttemptTest`, `CompilerDiagnosticsTest`, `ConstantPoolDiagnosticsTest`. |
+| Parser and compiler | `ParserAttemptTest`, `ParserRecoveryTest`, `CompilerDiagnosticsTest`, `ConstantPoolDiagnosticsTest`. |
 | Repository and embedding failures | `FileRepositoryFailureTest`, `DirRepositoryFailureTest`, `EmbeddingRepositoryFailureTest`, `EmbeddingDiagnosticsTest`, `LauncherErrorHandlingTest`. |
 | TypeInfo reporting | `TypeInfoDiagnosticsTest`: real errors, the redundant-annotation warning, cached replay, generic instantiations and serialized dependencies. |
 | Final TypeInfo compositions | `TypeInfoFinalCompositionTest`: fifteen freshly deserialized final compositions, selected substituted members/inherited chains, a fresh anonymous property and an invalid-override control. |
 | Editor lifecycle | `XdkAdapterTest`, `XdkAdapterLifecycleTest` and packaged stdio tests. |
 | Source-tree API probes | `CompilerProjectTest`: member overlays, source attribution, cancellation before work, failed parsing and shared per-source semantic identities. |
 | Module sessions and publication | `XdkModuleSessionTest`, `XdkModuleServerTest` and `XdkStdioTest`: member overlays, invalidation, cancellation, per-file versions, file creation/removal, cross-file navigation and hierarchy round trips. |
+| Partial source results | `XdkRecoveryTest` and packaged stdio: recovered syntax, sibling outlines, UTF-16/CRLF ranges, unavailable semantics after parse failure and restoration after correction. |
 | Ambient-pool fallback | `MethodBodyAmbientPoolTest`, `ConstantPoolAmbientTest`, including bound-pool precedence. |
 
-The [eighth hardening pass](errs-integration-plan.md#eighth-pass-module-sessions-and-hierarchy-2026-09-22)
+The [ninth hardening pass](errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22)
 records the actual compiler, LSP and packaged-stdio test execution and existing skips.
 An extracted PR still needs its own tests and output-equivalence checks; green
 tests on this integrated branch are not evidence that every proposed subset stands alone.
 
 The three follow-ups from the API probe pass are complete: permanent TypeInfo regressions, module
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
-remaining work is narrower:
+subsequent Java-only recovery pass supplies structural source trees after parse errors. Remaining work:
 
-1. Resolve incomplete-source behavior before widening completion. A member parse failure still
-   removes the linked module AST. Compiler recovery versus a hybrid Tree-sitter/compiler adapter
-   remains a design choice; stale semantic ranges must never stand in for current facts.
+1. Extend Java compiler recovery before widening completion. Statement-boundary recovery now
+   preserves useful structural syntax, but malformed expressions have no placeholder or semantic
+   type. Compiler mode stays Java-only by explicit choice; stale semantic ranges must never stand
+   in for current facts.
 2. Add compiler facts only for a concrete consumer. Signature help needs argument/parameter mapping
    and instantiated call-site facts; method implementation lookup needs override relationships.
    Cross-module indexing, dependency source navigation and safe rename need ownership beyond this

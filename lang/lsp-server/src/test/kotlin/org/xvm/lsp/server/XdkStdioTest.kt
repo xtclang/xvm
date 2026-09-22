@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
@@ -19,6 +20,7 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -134,6 +136,41 @@ class XdkStdioTest {
             assertThat(session.await(documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)))).isEmpty()
             session.shutdownAndExit()
         }
+    }
+
+    @Test
+    fun `Java only compiler preserves structure through incomplete edits over stdio`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val text = "module Stdio {\n    void editing() {\n        /* café 😀 */ console."
+            session.change(text, 2)
+            val errors = session.diagnosticsAt(2).diagnostics
+            assertThat(errors).isNotEmpty()
+            assertThat(errors.map { it.code.left }).doesNotContain("ANALYSIS-FAILED", "EMB-5")
+            val document = TextDocumentIdentifier(URI)
+            val service = session.server.textDocumentService
+            val symbols = session.await(service.documentSymbol(DocumentSymbolParams(document)))
+            assertThat(
+                symbols
+                    .single()
+                    .right.children
+                    .map { it.name },
+            ).containsExactly("editing")
+            val folds = session.await(service.foldingRange(FoldingRangeRequestParams(document)))
+            assertThat(folds).anyMatch { it.startLine == 1 && it.endLine == 2 }
+            val cursor = Position(2, text.lines().last().length)
+            val selected = session.await(service.selectionRange(SelectionRangeParams(document, listOf(cursor)))).single()
+            assertThat(selected.range.end).isEqualTo(cursor)
+            assertThat(selected.range.start.line).isLessThan(2)
+            assertThat(session.await(service.definition(DefinitionParams(document, Position(1, 10)))).left).isEmpty()
+            session.change(REOPENED, 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            session.verifySemantics(REOPENED, "label", "String")
+            session.shutdownAndExit()
+        }
+        assertThat(Files.readString(directory.resolve("stderr.log"))).doesNotContain("loadXtcLanguage", "TreeSitterAdapter")
     }
 
     @Test

@@ -156,9 +156,9 @@ module TestModule {
 > The compiler backend does not advertise completion, rename, formatting, signature help, code
 > actions, code lenses, document links, linked editing, inlay hints or semantic tokens. Cross-module
 > navigation, go-to-type-definition, find-implementations and call hierarchy remain unavailable.
-> Completion needs incomplete-source handling: the compiler produces no AST at
-> all for a document that does not parse, and `console.` does not parse, so there is nothing to
-> complete from. See `docs/errs.md`, "What the compiler adapter can and cannot do, measured".
+> Java parser recovery preserves available structural syntax around `console.`, but that malformed
+> expression has no semantic type. Completion still needs richer recovery and call-site facts.
+> Compiler mode stays Java-only. See [the recovery pass](../../docs/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
 >
 > Sections say which adapters they apply to. §7a covers what is only testable with the compiler.
 
@@ -176,7 +176,8 @@ With the compiler backend, create `Project.x` containing `module Project { class
 | Hierarchy | Prepare hierarchy on Base and expand its subtypes; inspect Child's supertype | Child and Base point to their own files. A generic parent retains its type arguments. |
 | Close overlay | Introduce an error in Child.x, then discard and close its buffer while Project.x stays open | The disk version replaces the overlay; obsolete diagnostics clear. |
 | Membership | Create an invalid member on disk, then delete it | File notifications refresh the module and clear the deleted file's diagnostics. |
-| Broken syntax | Remove a member's closing brace, then restore it | No stale module navigation survives the parse failure; correction restores it. |
+| Broken syntax | Remove a member's closing brace, then restore it | Current outlines/folding remain available, including sibling files. Semantic navigation clears until correction. |
+| Incomplete statement | Type `console.` inside a method and remove the closing braces | The method/module outline and enclosing selection ranges survive; compiler diagnostics remain, and no semantic definition is invented for the broken expression. |
 
 These checks do not imply workspace dependency builds, library-source navigation, conditional mixin
 hierarchy or method-implementation lookup.
@@ -374,7 +375,7 @@ is observable under mock or tree-sitter.
 | 7a.11 | Definition of a method call | F12 on `p.sum()` | Jumps to `sum`'s declaration. The name in a call resolves to nothing by itself - which method it is depends on the target and the arguments - so this is the compiler's answer, not a name match |
 | 7a.12 | Definition of something from the core library | F12 on `Int` or `Console` | Nothing happens. It resolves perfectly well and this document has nowhere to point at; jumping to another mention of `Int` in the same file would be worse than doing nothing |
 | 7a.13 | Hover shows a type | Hover over a variable in an expression | The declaration, and the type the compiler decided. On a document that does not compile the type may be absent - an expression only has one once it has been validated |
-| 7a.14 | Completion is absent | Type `console.` and press Ctrl+Space | Nothing. Not a bug to file: with a trailing dot the document does not parse, and the compiler produces no tree at all for it |
+| 7a.14 | Completion is absent | Type `console.` and press Ctrl+Space | Completion remains unavailable. Java parser recovery can retain surrounding structural syntax, but the malformed expression has no semantic type or completion contract. |
 
 **7a.8 - the duplicate annotation.** This is the case worth keeping, because it is invisible
 everywhere else. No grammar can find it: it needs the compiler to lay `Derived` over `Base` and
@@ -1160,7 +1161,7 @@ Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-s
 - Direct extends/implements hierarchy between source types, including generic parents
 
 Still to come:
-- Incomplete-source recovery or a hybrid syntax/semantic adapter
+- Richer Java parser recovery and semantic facts for incomplete expressions
 - Type-aware completion, instantiated call-site signature help and inlay hints
 - Cross-module indexing, library-source navigation and method implementation lookup
 - Cross-file rename refactoring

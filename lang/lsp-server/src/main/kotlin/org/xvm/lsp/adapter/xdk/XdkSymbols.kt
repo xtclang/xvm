@@ -33,7 +33,7 @@ internal object XdkSymbols {
     fun of(
         uri: String,
         root: AstNode?,
-    ): List<SymbolInfo> = root?.let { declarationsIn(uri, it) } ?: emptyList()
+    ): List<SymbolInfo> = root?.let { declarationsIn(uri, it, it.source) } ?: emptyList()
 
     /**
      * Find the innermost declaration containing a position, which is what a request about "the
@@ -70,15 +70,18 @@ internal object XdkSymbols {
     private fun declarationsIn(
         uri: String,
         node: AstNode,
+        source: Source?,
     ): List<SymbolInfo> {
         val found = mutableListOf<SymbolInfo>()
         node.children().forEach { child ->
-            if (child.source !== node.source) return@forEach
+            // Recovered syntax has no compilation parentage yet; an absent source inherits the
+            // enclosing syntax tree's source. An explicitly different source is a module member.
+            if (child.source != null && child.source !== source) return@forEach
             val symbol = symbolOf(uri, child)
             if (symbol == null) {
-                found += declarationsIn(uri, child)
+                found += declarationsIn(uri, child, source)
             } else {
-                found += symbol.withChildren(declarationsIn(uri, child))
+                found += symbol.withChildren(declarationsIn(uri, child, source))
             }
         }
         return found
