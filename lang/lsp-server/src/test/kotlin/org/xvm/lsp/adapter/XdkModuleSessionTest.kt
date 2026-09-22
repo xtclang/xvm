@@ -143,7 +143,8 @@ class XdkModuleSessionTest {
             assertThat(adapter.findDefinition(uri, 2, call)).isNotNull()
             assertThat(adapter.compile(member.toURI().toString(), "class Child {").success).isFalse()
             assertThat(adapter.findDefinition(uri, 2, call)).isNull()
-            assertThat(adapter.findWorkspaceSymbols("")).isEmpty()
+            assertThat(adapter.findWorkspaceSymbols("answer")).isEmpty()
+            assertThat(adapter.findWorkspaceSymbols("Child")).hasSize(1)
             assertThat(adapter.compile(member.toURI().toString(), member.readText()).success).isTrue()
             assertThat(adapter.findDefinition(uri, 2, call)?.uri).isEqualTo(member.toURI().toString())
         }

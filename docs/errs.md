@@ -21,8 +21,10 @@ typed hover and navigation; it holds structured types, symbol identities, declar
 source occurrences without retaining compiler objects. Module sessions now combine disk sources and
 unsaved overlays, publish diagnostics per file and support cross-file definition/references and
 direct type hierarchy within the compiled module. Permanent TypeInfo regressions cover the fifteen
-investigated final compositions and an invalid-override control. Remaining work includes incomplete
-syntax, cross-module indexing, call-site facts and the unexamined TypeInfo families.
+investigated final compositions and an invalid-override control. Java parser recovery now retains
+per-source syntax for outlines, folding and selection around malformed statements and unfinished
+bodies. Parse errors still block semantic compilation. Remaining work includes semantic analysis of
+incomplete source, cross-module indexing, call-site facts and the unexamined TypeInfo families.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -227,6 +229,7 @@ which read like an accessor.
 | Pool and bootstrap ownership | `Compilation.pool()` is the compilation pool. `ensureRuntimePool()` explicitly initializes a runtime; deprecated `getConstantPool()` delegates to it. XDK auto-configuration includes `lib` and `javatools`. |
 | `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
 | Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
+| `Compilation.sourceTrees()` / `ModuleInfo.getParsedSources()` | Preserve per-file syntax after a loading/parsing error without presenting it as an assembled or semantically valid module. Structural queries can retain current outlines and ranges. |
 
 The source-tree API adds `compileModule(ModuleInfo, repository, errs)` and the protected
 `ModuleInfo.readSource(File)` and `sourceEntries(File)` hooks. A fresh source-tree input uses the
@@ -253,6 +256,15 @@ module together after an edit. Definitions and references span those views; dire
 edges supply type hierarchy, including generic parent arguments. Obsolete hierarchy items are
 rejected. See the [eighth pass](errs-integration-plan.md#eighth-pass-module-sessions-and-hierarchy-2026-09-22)
 for publication rules, regressions and limits.
+
+The Java-only recovery pass adds statement/declaration-boundary recovery to Parser. Recovered
+syntax omits malformed statements; missing braces retain completed headers with an EOF range.
+Speculation, cancellation and error budgets still stop recovery. The embedding parser's local
+collector forwards reports while separating parser recovery from the launcher's stage-abort policy.
+`parsed()` remains absent after parse errors, so semantic snapshots stay unavailable; `sourceTrees()`
+retains structural input for each file. The three-argument Compilation constructor is retained,
+but adding a record component requires callers using record patterns to migrate. See the
+[ninth pass](errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
 
 The listener migration is deliberately breaking: `boolean log(ErrorInfo)` becomes `void`, null
 listeners are rejected and ambient listener setters/lookups are removed. Listener implementors
@@ -1208,6 +1220,11 @@ in `Lexer`; fatal-report forwarding lives in `Launcher`. Per-source AST traversa
 tables, copied inheritance edges and the reverse subtype index live in Kotlin under `lang/lsp-server`.
 Hierarchy extraction reads existing class contributions after successful compilation; it does not
 construct TypeInfo or resume validation from an LSP request.
+
+The recovery pass also adds no AST fields or recovery-expression nodes. It wires Parser's existing
+skip helpers into its declaration/statement loops and exposes the resulting source trees through
+ModuleInfo and Compilation. This belongs in the compiler parser because it owns tokens, balanced
+delimiters and speculative rollback. LSP-specific retention and queries remain in Kotlin.
 
 #### Passive source facts on nodes
 
