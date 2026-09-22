@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileRepository;
+import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -21,6 +22,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EmbeddingRepositoryFailureTest {
     @TempDir
     Path directory;
+
+    @Test
+    void incompleteSourceDoesNotHideAnUnexpectedRepositoryFailure() throws IOException {
+        Path file = directory.resolve("broken.xtc");
+        Files.writeString(file, "not a compiled module");
+        var support = new EmbeddingSupport().configure(new FileRepository(file.toFile(), true), null);
+        var errors = new ErrorList();
+
+        var result = support.analyzeIncomplete(new Source("module Test { void run() { console."), null, errors);
+
+        assertTrue(result.pool().isEmpty());
+        assertTrue(errors.hasError(Parser.UNEXPECTED_EOF));
+        assertTrue(errors.hasError("EMB-5"));
+        assertTrue(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
+    }
 
     @Test
     void corruptRepositoryReachesTheEmbeddingListener() throws IOException {
