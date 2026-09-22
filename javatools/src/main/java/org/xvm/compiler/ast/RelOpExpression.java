@@ -51,7 +51,7 @@ import org.xvm.util.Severity;
  * Relational operator expression (with @Op support) for something that follows the pattern
  * "expression operator expression".
  *
- * <p><ul>
+ * <ul>
  * <li><code>COND_XOR:   "^^"</code> - </li>
  * <li><code>BIT_OR:     "|"</code> - </li>
  * <li><code>BIT_XOR:    "^"</code> - </li>
@@ -853,7 +853,7 @@ public class RelOpExpression
 
     /**
      * Find the best matching method from the set that has a parameter of the specified type.
-
+     *
      * @param setOps      the methods
      * @param typeActual  the actual parameter type
      *

@@ -1266,7 +1266,7 @@ public class xRTFunction
     /**
      * Create an immutable FunctionHandle for a given function.
      *
-     * The returned handle will not carry any annotations
+     * <p>The returned handle will not carry any annotations
      */
     public static FunctionHandle makeInternalHandle(Frame frame, MethodStructure function) {
         Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
@@ -1276,7 +1276,7 @@ public class xRTFunction
     /**
      * Create an immutable FunctionHandle for a given function.
      *
-     * The returned handle could be deferred.
+     * <p>The returned handle could be deferred.
      */
     public static ObjectHandle makeHandle(Frame frame, MethodStructure function) {
         Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
@@ -1303,7 +1303,8 @@ public class xRTFunction
      * Create an immutable FunctionHandle for a given constructor. Note, that the constructor
      * may be null for synthetic constructor function.
      *
-     * If the constructor is specified and has annotations, the returned handle could be deferred.
+     * <p>If the constructor is specified and has annotations, the returned handle could be
+     * deferred.
      */
     public static ObjectHandle makeConstructorHandle(Frame frame, MethodStructure constructor,
             TypeConstant typeConstructor, TypeComposition clzTarget, Parameter[] aParams, boolean fParent) {

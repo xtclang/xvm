@@ -2149,7 +2149,8 @@ public class CommonBuilder
      * <pre>{@code
      *     static <CompileType extends T> Boolean equals(T value1, T value2)
      * }</pre>
-     * Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
+     *
+     * <p>Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
      * methods do not already exist.
      */
     protected void assembleConstEquals(ClassBuilder classBuilder) {

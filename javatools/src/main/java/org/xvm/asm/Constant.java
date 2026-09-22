@@ -43,7 +43,7 @@ import org.xvm.util.PackedInteger;
  * structures within the FileStructure, and to identify dependencies on other modules located in
  * other FileStructures. Specifically:
  *
- * <p><ul>
+ * <ul>
  * <li>Each identifiable sub-structure within the FileStructure specifies the index of the constant
  *     that is the identity of that sub-structure, such as a Module, Package Class, Property,
  *     Method, or TypeDef;</li>
@@ -55,7 +55,8 @@ import org.xvm.util.PackedInteger;
  *     (fully qualifies) the particular sub-structure in the other FileStructure, such as a Class
  *     being referenced or a Method being invoked in a different Module.</li>
  * </ul>
- * There are several categories of constants:
+ *
+ * <p>There are several categories of constants:
  * <ul>
  * <li><b>{@link ValueConstant}</b> - representing "typed values", such as strings and integers, but
  *     also including composite structures such as arrays, tuples, and maps;</li>
@@ -331,7 +332,7 @@ public abstract class Constant
      * Check whether this constant and all its underlying constants are registered with
      * ConstantPools that are upstream (linked to by this constant's containing pool).
      *
-     * This method is used only as an assertion for debugging purposes.
+     * <p>This method is used only as an assertion for debugging purposes.
      */
     public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth) {
         // check this pool

@@ -115,7 +115,7 @@ public class ModuleStructure
     /**
      * Obtain all dependencies from this module.
      *
-     * Because the result from this method can differ from version to version, and based on
+     * <p>Because the result from this method can differ from version to version, and based on
      * conditional names, the module version and the conditional names must be refined before
      * using this method.
      *
@@ -480,7 +480,7 @@ public class ModuleStructure
     /**
      * Create (if necessary) a synthetic ClassStructure for the specified name.
      *
-     * This method is currently used to create a synthetic interface that represents a union
+     * <p>This method is currently used to create a synthetic interface that represents a union
      * of two types.
      *
      * @return a synthetic ClassStructure
@@ -535,11 +535,11 @@ public class ModuleStructure
     /**
      * Obtain the Version of this ModuleStructure.
      *
-     * Do not use this method with a ModuleStructure for a fingerprint module; use
+     * <p>Do not use this method with a ModuleStructure for a fingerprint module; use
      * {@link #getFingerprintOrigin} to obtain the actual ModuleStructure to examine its version, or
      * {@link #getFingerprintVersions} to obtain the version constraints for the fingerprint.
      *
-     * Do not use this method with an unresolved ModuleStructure, i.e. a ModuleStructure that may
+     * <p>Do not use this method with an unresolved ModuleStructure, i.e. a ModuleStructure that may
      * contain more than one version; use {@link #getVersions} instead.
      *
      * @return the Version of this module, or null if there is no version (or more than one version)
@@ -556,7 +556,7 @@ public class ModuleStructure
      * indicate that the name was explicitly NOT defined, and `TRUE` to indicate that the name was
      * explicitly defined.
      *
-     * Note: once the map is collected, it will be retained and allowed to be mutated by the
+     * <p>Note: once the map is collected, it will be retained and allowed to be mutated by the
      *       "refining" process.
      *
      * @return a Map containing the conditional names known within this module

@@ -143,8 +143,10 @@ public abstract class IdentityConstant
      *   <li> both A and B have the same outermost parent class, or
      *   <li> B or an ascendant of B extends (or has a contribution of) the outermost parent of A.
      * </ul>
-     * In other words, this class is a nest mate of the specified class if this class is "visible"
-     * from the context of the specified class and could be privately accessed in that context.
+     *
+     * <p>In other words, this class is a nest mate of the specified class if this class is
+     * "visible" from the context of the specified class and could be privately accessed in that
+     * context.
      *
      * <p>For example, Map.Entry is a nest mate of both HashMap and HashMap.EntrySet.
      *

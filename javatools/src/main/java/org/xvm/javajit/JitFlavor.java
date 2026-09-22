@@ -71,7 +71,7 @@ public enum JitFlavor {
     /**
      * A parameter of the {@link #NullablePrimitive} flavor with a default value.
      *
-     * Implication is that additional `int` values is used, -1 indicating that the default value
+     * <p>Implication is that additional `int` values is used, -1 indicating that the default value
      * should be used and 1 indicating Null.
      *
      * <p>Note: this flavor can only be used by the {@link JitMethodDesc}

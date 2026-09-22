@@ -27,34 +27,34 @@ import static org.xvm.util.Handy.require;
  * An implementation of an arbitrarily-sized character string data type, using a 64-bit index and
  * length, and  supporting all valid Unicode characters (21-bit codepoint values).
  *
- * A significant design question related to the `xStr` class was how to best represent its internal
- * storage. The obvious default is to hold the contents as a Java String object, or as an array
- * of Java primitive `char` values. The Java String has the benefits of (i) already existing in a
- * well-tested and well-optimized form, (ii) internally optimizing to use ISO 8859-1 for single byte
- * "compressed string" storage, and (iii) using the Java String class would make it quite easy to
- * pass instances of `xStr` to/from any Java API as a Java String, by simply wrapping and unwrapping
- * the Java String value as necessary. Java Strings are fundamentally UTF-16 strings, though, and
- * not "real" Unicode strings; Java Strings can contain UTF-16 formatted surrogate pairs -- which
- * are legal in a UTF-16 encoding, but illegal codepoints in Unicode! Java Strings can also contain
- * badly formed UTF-16, including illegal codepoints and unmatched surrogates. Because of UTF-16,
- * when a Java string has a `length()` of 16, that could mean any actual number of characters in the
- * Unicode string length is somewhere between 8 and 16 inclusive. Similarly, requesting `charAt(5)`
- * from a Java String can return the fifth character, but it can instead return either the third or
- * the fourth character -- or worse, it can return just a half of one of those characters.
- * Addressing these flaws would be a significant undertaking, with significant performance
- * penalties. Furthermore, the internal data of a Java String is not directly accessible, which
- * incurs an additional performance penalty, particularly when copies of that data are necessary.
- * Lastly, Java Strings are limited to 2GB, since the JVM is fundamentally a 32-bit design. In
- * summary, using the Java String class adds significant complexity and could negatively impact
- * performance.
+ * <p>A significant design question related to the `xStr` class was how to best represent its
+ * internal storage. The obvious default is to hold the contents as a Java String object, or as an
+ * array of Java primitive `char` values. The Java String has the benefits of (i) already existing
+ * in a well-tested and well-optimized form, (ii) internally optimizing to use ISO 8859-1 for single
+ * byte "compressed string" storage, and (iii) using the Java String class would make it quite easy
+ * to pass instances of `xStr` to/from any Java API as a Java String, by simply wrapping and
+ * unwrapping the Java String value as necessary. Java Strings are fundamentally UTF-16 strings,
+ * though, and not "real" Unicode strings; Java Strings can contain UTF-16 formatted surrogate pairs
+ * -- which are legal in a UTF-16 encoding, but illegal codepoints in Unicode! Java Strings can also
+ * contain badly formed UTF-16, including illegal codepoints and unmatched surrogates. Because of
+ * UTF-16, when a Java string has a `length()` of 16, that could mean any actual number of
+ * characters in the Unicode string length is somewhere between 8 and 16 inclusive. Similarly,
+ * requesting `charAt(5)` from a Java String can return the fifth character, but it can instead
+ * return either the third or the fourth character -- or worse, it can return just a half of one of
+ * those characters. Addressing these flaws would be a significant undertaking, with significant
+ * performance penalties. Furthermore, the internal data of a Java String is not directly
+ * accessible, which incurs an additional performance penalty, particularly when copies of that data
+ * are necessary. Lastly, Java Strings are limited to 2GB, since the JVM is fundamentally a 32-bit
+ * design. In summary, using the Java String class adds significant complexity and could negatively
+ * impact performance.
  *
- * An alternative experiment using UTF-8 data was attempted, using a read-only `byte[]` as the
+ * <p>An alternative experiment using UTF-8 data was attempted, using a read-only `byte[]` as the
  * storage, and supporting strings >2GB. The engineering concern with this approach was the cost of
  * random access (i.e. access by index). By caching the most recently accessed index and position
  * within the UTF-8 data, the cost of common (e.g. sequential) access patterns was minimized, but
  * still calculated to be significantly more costly than array-based access.
  *
- * The selected design is similar to the "compressed strings" approach in the Java String
+ * <p>The selected design is similar to the "compressed strings" approach in the Java String
  * implementation, but instead of supporting a 1-byte vs 2-byte encoding, `xStr` implements an 8-bit
  * (1-byte) vs 21-bit encoding, since Unicode codepoints are 21-bit values. The underlying data
  * structure is a Java `long` (64-bit integer) array, allowing either 8x 8-bit (ISO 8859-1) or 3x
@@ -279,7 +279,9 @@ public class String
     /**
      * Native implementation of:
      *
+     * <pre>{@code
      *     Boolean empty.get();
+     * }</pre>
      */
     public boolean empty$get$p(Ctx ctx) {
         return start == end;
@@ -288,7 +290,9 @@ public class String
     /**
      * Native implementation of:
      *
-     *      Int size.get();
+     * <pre>{@code
+     *     Int size.get();
+     * }</pre>
      */
     public long size$get$p(Ctx ctx) {
         return end - start + (next == null ? 0 : next.size$get$p(ctx));
@@ -390,7 +394,8 @@ public class String
      * <pre>{@code
      *    Appender<Char> appendTo(Appender<Char> buf)
      * }</pre>
-     * This is native as it will perform better and avoid creating a char array
+     *
+     * <p>This is native as it will perform better and avoid creating a char array
      */
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
         long size = size$get$p(ctx);
@@ -532,7 +537,9 @@ public class String
     /**
      * TEMPORARY: Native implementation of
      *
-     *      Boolean defined.get()
+     * <pre>{@code
+     *     Boolean defined.get()
+     * }</pre>
      */
     public boolean defined$get$p(Ctx ctx) {
         return ctx.container.isSpecified(toString());

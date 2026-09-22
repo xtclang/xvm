@@ -5,7 +5,7 @@ import org.xvm.javajit.Ctx;
 /**
  * Native implementation for {@code ecstasy.Range}.
  *
- * Supports the primitive form of the {@code Range<Int>} type.
+ * <p>Supports the primitive form of the {@code Range<Int>} type.
  */
 public abstract class Range extends nConst {
 

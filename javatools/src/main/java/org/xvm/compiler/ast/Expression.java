@@ -109,7 +109,7 @@ public abstract class Expression
     /**
      * Convert this expression into a TypeExpression.
      *
-     * Note: if this node is already linked (i.e. has a parent) it has a responsibility of
+     * <p>Note: if this node is already linked (i.e. has a parent) it has a responsibility of
      * connecting any newly created node to its parent.
      *
      * @return this expression, converted to a type expression
@@ -149,7 +149,7 @@ public abstract class Expression
     /**
      * Mark this expression as "possibly" asymmetrical - returning conditional "False" on some branch.
      *
-     * This method must be called *before* the validation or testFit.
+     * <p>This method must be called *before* the validation or testFit.
      */
     public void markConditional() {
     }
@@ -291,7 +291,7 @@ public abstract class Expression
     /**
      * An implementation of the "tesFit" API via the validation of the cloned expression.
      *
-     * This implementation could be computationally expensive and should be used sparingly.
+     * <p>This implementation could be computationally expensive and should be used sparingly.
      */
     protected TypeFit testFitExhaustive(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         return testFitMultiExhaustive(ctx, new TypeConstant[] {typeRequired}, errs);
@@ -300,7 +300,7 @@ public abstract class Expression
     /**
      * An implementation of the "tesFit" API via the validation of the cloned expression.
      *
-     * This implementation could be computationally expensive and should be used sparingly.
+     * <p>This implementation could be computationally expensive and should be used sparingly.
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
@@ -704,7 +704,7 @@ public abstract class Expression
     /**
      * Store the result of validating the Expression.
      *
-     * Important note: the array of actual types comes from the actual signature and
+     * <p>Important note: the array of actual types comes from the actual signature and
      * must be cloned if it's to be changed.
      *
      * @param ctx            the (optional) compiler context
@@ -1149,7 +1149,7 @@ public abstract class Expression
      * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
      * pre-/post-increment/-decrement operators.
      *
-\    * @return true iff this expression is used as an R-Value
+     * @return true iff this expression is used as an R-Value
      */
     protected boolean isRValue() {
         return getParent().isRValue(this);
@@ -1258,7 +1258,7 @@ public abstract class Expression
      * (Post-validation) Determine if the expression can generate a compact variable initialization
      * (constant, sequence or tuple).
      *
-     * This method should be overridden by any expression that can produce better code than the
+     * <p>This method should be overridden by any expression that can produce better code than the
      * default lvalue assignment code.
      *
      * @param lvalue  the lvalue declaration statement
@@ -1825,7 +1825,7 @@ public abstract class Expression
     /**
      * Obtain a TypeInfo for the specified type in the specified class context.
      *
-     * Note: unless this method returns a "private" access TypeInfo, the caller **must** always
+     * <p>Note: unless this method returns a "private" access TypeInfo, the caller **must** always
      *       check the visibility of properties or methods retrieved using that info.
      *
      * @param type  the type to get the TypeInfo for; if null - use the context's type

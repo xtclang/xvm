@@ -158,10 +158,10 @@ public abstract class ClassTemplate
     /**
      * Obtain the inception ClassConstant that is represented by this {@link ClassTemplate}.
      *
-     * Most of the time the inception class is the same as the structure's class, except
+     * <p>Most of the time the inception class is the same as the structure's class, except
      * for a number of native rebased interfaces (Ref, Var, Const, Enum).
      *
-     * Note: the following should always hold true:
+     * <p>Note: the following should always hold true:
      *      getInceptionClass().asTypeConstant().getOpSupport() == this;
      */
     protected IdentityConstant getInceptionClassConstant() {
@@ -190,7 +190,7 @@ public abstract class ClassTemplate
     /**
      * Obtain the canonical ClassComposition for this template at template's pool.
      *
-     * This method should be used with care since it may be placing the ClassComposition *not*
+     * <p>This method should be used with care since it may be placing the ClassComposition *not*
      * in the current ConstantPool (used mostly by the native container injections).
      */
     public ClassComposition getCanonicalClass() {
@@ -264,7 +264,7 @@ public abstract class ClassTemplate
      * Produce a ClassComposition for this type using the specified actual (inception) type
      * and the revealed (mask) type.
      *
-     * Note: the passed inception and mask types should be fully resolved and normalized
+     * <p>Note: the passed inception and mask types should be fully resolved and normalized
      *       (all formal parameters resolved)
      * Note2: the following should always hold true: typeInception.getOpSupport() == this;
      */
@@ -319,7 +319,7 @@ public abstract class ClassTemplate
     /**
      * Construct an {@link ObjectHandle} of the specified class with the specified constructor.
      *
-     * The following steps are to be performed:
+     * <p>The following steps are to be performed:
      * <ul>
      *   <li>Invoke the auto-generated initializer for the "inception" type;
      *   <li>Invoke the specified constructor, potentially calling some super constructors
@@ -895,7 +895,7 @@ public abstract class ClassTemplate
     /**
      * Get the injected property value.
      *
-     * Strictly speaking we would need to create an InjectedHandle, but for now just keep the
+     * <p>Strictly speaking we would need to create an InjectedHandle, but for now just keep the
      * value itself.
      */
     private int getInjectedProperty(Frame frame, GenericHandle hThis, PropertyConstant idProp,
@@ -1582,7 +1582,7 @@ public abstract class ClassTemplate
     /**
      * Compare for identity equality two object handles that both associated with this template.
      *
-     * As documented at Ref.x equals() function:
+     * <p>As documented at Ref.x equals() function:
      * <pre><quote>
      *   Specifically, two references are equal if they reference the same runtime object.
      *   Additionally, for optimization purposes, the runtime is *permitted* to indicate that two
@@ -1590,9 +1590,10 @@ public abstract class ClassTemplate
      *   are to immutable objects whose structures are identical.
      * </quote></pre>
      *
-     * Note: this method is inherently native; it must be answered without calling any natural code
+     * <p>Note: this method is inherently native; it must be answered without calling any natural
+     * code
      *
-     * Note: the caller resolves this template from {@code hValue1} alone, so {@code hValue1} is
+     * <p>Note: the caller resolves this template from {@code hValue1} alone, so {@code hValue1} is
      * always one this template produced but {@code hValue2} is arbitrary - two arrays of the same
      * element type may be backed by different delegates, and a slice or a view is not the concrete
      * handle. Implementations must therefore TEST the second argument rather than cast it; a

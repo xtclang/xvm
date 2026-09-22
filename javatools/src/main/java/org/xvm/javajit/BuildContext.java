@@ -1107,20 +1107,21 @@ public class BuildContext {
     /**
      * Obtain the type of the specified return value.
      *
-     * Note: during the {@link Op#computeTypes} cycle, the ops most commonly use the {@link
+     * <p>Note: during the {@link Op#computeTypes} cycle, the ops most commonly use the {@link
      * TypeMatrix#assign} API to assign the type of the corresponding register, which stores
      * that type for that register at the **next** op address. For example, "MOVE src, dest"
      * computes the type of "dest" to be consumed by the ops that follow the "MOVE" op. Similarly,
      * "CALL_01 function, dest" op computes the type or "dest" to be consumed by the following ops.
      *
-     * Sometimes however, there are scenarios where that computed "destination" type needs to be
+     * <p>Sometimes however, there are scenarios where that computed "destination" type needs to be
      * known during the {@link Op#build} cycle by **that same op** that has just computed it. A
      * common use case is represented by the {@link org.xvm.asm.OpInvocable}, which assigns the
      * type of the "retValue" at the end of {@link org.xvm.asm.OpInvocable#computeInvokeTypes}
      * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#buildInvoke} method
      * via the call to {@link #assignReturns}.
      *
-     * To facilitate that, all we need is to look up the computed type at the very next op address.
+     * <p>To facilitate that, all we need is to look up the computed type at the very next op
+     * address.
      */
     public TypeConstant getReturnType(int argId) {
         return getArgumentType(argId, true);
@@ -1274,7 +1275,7 @@ public class BuildContext {
      * to a constant, create a temporary Java slot for it. Otherwise, the register must have already
      * been allocated a Java slot for.
      *
-     * In either case, the corresponding value is **not** loaded on the Java stack.
+     * <p>In either case, the corresponding value is **not** loaded on the Java stack.
      */
     public RegisterInfo ensureRegister(CodeBuilder code, int argId) {
         if (argId >= 0) {
@@ -1380,7 +1381,7 @@ public class BuildContext {
     /**
      * Build the code to load a value for a constant on the Java stack.
      *
-     * We **always** load a primitive value if possible.
+     * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, int argId) {
         return loadConstant(code, getConstant(argId));
@@ -1793,7 +1794,7 @@ public class BuildContext {
      * Build the code that moves the value between the vars represented by the corresponding
      * registers.
      *
-     * Note: the value of the "regFrom" has already been loaded on Java stack.
+     * <p>Note: the value of the "regFrom" has already been loaded on Java stack.
      *
      * @param allowUpcast  if true, the destination type is allowed to be narrower and the
      *                     corresponding "checkcast" needs to be added, which can happen in some
@@ -1914,12 +1915,12 @@ public class BuildContext {
     /**
      * Build the code that allocates a Java slot for a `Ref` object of the specified type and name.
      *
-     * The "Ref" object has dual properties; it holds (boxes) the underlying referent value, while
-     * allowing the standard ops that operate on this register id use the underlying value, rather
-     * than the Ref itself. The only ops that are allowed to "see" the Ref object itself are
+     * <p>The "Ref" object has dual properties; it holds (boxes) the underlying referent value,
+     * while allowing the standard ops that operate on this register id use the underlying value,
+     * rather than the Ref itself. The only ops that are allowed to "see" the Ref object itself are
      * MOV_REF and MOV_VAR.
      *
-     * There is one notable exception: if the referent type is annotated by "Inject", this method
+     * <p>There is one notable exception: if the referent type is annotated by "Inject", this method
      * creates a regular register and loads the corresponding injection value.
      *
      * @param type  the referent type
@@ -2613,7 +2614,7 @@ public class BuildContext {
     /**
      * Load a property value directly from its backing field.
      *
-     * Before calling this method, the stack contains the target. The first value remains on the
+     * <p>Before calling this method, the stack contains the target. The first value remains on the
      * stack; any additional values are stored in the context using the getter return convention.
      */
     private void buildGetPropertyField(CodeBuilder code, RegisterInfo targetReg,
@@ -2878,8 +2879,8 @@ public class BuildContext {
     /**
      * Set a property backing field.
      *
-     * Before calling this method, the stack contains the target followed by the converted property
-     * value. The value may occupy multiple JVM stack entries.
+     * <p>Before calling this method, the stack contains the target followed by the converted
+     * property value. The value may occupy multiple JVM stack entries.
      */
     private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
                                        PropertyInfo propInfo, JitMethodDesc jmd) {
@@ -3592,7 +3593,7 @@ public class BuildContext {
     /**
      * Generate code that creates a Ref object for the specified compile-time referent type.
      *
-     * In:  the referent instance on the Java stack
+     * <p>In:  the referent instance on the Java stack<br>
      * Out: the Ref or Var object on the Java stack
      */
     public void buildCreateRef(CodeBuilder code, TypeConstant referentType, boolean isVar,

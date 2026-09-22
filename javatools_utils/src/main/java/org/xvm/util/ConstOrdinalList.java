@@ -64,7 +64,8 @@ import static org.xvm.util.PackedInteger.writeLong;
  * </li><li>The bytes necessary to hold those values (typically fewer bytes than the number of
  *          values, since only the minimum necessary LSBs for each value are stored).
  * </li></ul>
- * The header is composed of compressed integers:
+ *
+ * <p>The header is composed of compressed integers:
  * <ul><li>The array length;
  * </li><li>The default element value;
  * </li><li>The number of bits per element (for non-RLE nodes);

@@ -207,7 +207,8 @@ public abstract class FPNumber extends Number {
      * <pre>{@code
      * toInt128(Boolean checkBounds = False, Rounding direction = TowardZero)
      * }</pre>
-     * The high 64-bits of the Int128 will be stored in the {@link Ctx#i0} field, and the low
+     *
+     * <p>The high 64-bits of the Int128 will be stored in the {@link Ctx#i0} field, and the low
      * 64-bits will be returned inside a Java {@code long}.
      *
      * @param ctx              the build context
@@ -398,7 +399,8 @@ public abstract class FPNumber extends Number {
      * <pre>{@code
      * toUInt128(Boolean checkBounds = False, Rounding direction = TowardZero)
      * }</pre>
-     * The high 64-bits of the UInt128 will be stored in the {@link Ctx#i0} field, and the low
+     *
+     * <p>The high 64-bits of the UInt128 will be stored in the {@link Ctx#i0} field, and the low
      * 64-bits will be returned inside a Java {@code long}.
      *
      * @param ctx              the build context

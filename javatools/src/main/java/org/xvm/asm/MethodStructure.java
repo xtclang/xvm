@@ -1432,10 +1432,12 @@ public class MethodStructure
     /**
      * Determine if this method produces a formal type with the specified name.
      *
-     * A method _m_ "produces" type _T_ if any of the following holds true:
-     * 1. _m_ has a return type declared as _T_;
-     * 2. _m_ has a return type that _"produces T"_;
-     * 3. _m_ has a parameter type that _"consumes T"_.
+     * <p>A method _m_ "produces" type _T_ if any of the following holds true:
+     * <ol>
+     * <li>_m_ has a return type declared as _T_;</li>
+     * <li>_m_ has a return type that _"produces T"_;</li>
+     * <li>_m_ has a parameter type that _"consumes T"_.</li>
+     * </ol>
      */
     public boolean producesFormalType(String sTypeName) {
         for (Parameter param : getParams()) {
@@ -1456,10 +1458,12 @@ public class MethodStructure
     /**
      * Determine if this method consumes a formal type with the specified name.
      *
-     * A method _m_ "consumes" type _T_ if any of the following holds true:
-     * 1. _m_ has a parameter type declared as _T_;
-     * 2. _m_ has a parameter type that _"produces T"_.
-     * 3. _m_ has a return type that _"consumes T"_;
+     * <p>A method _m_ "consumes" type _T_ if any of the following holds true:
+     * <ol>
+     * <li>_m_ has a parameter type declared as _T_;</li>
+     * <li>_m_ has a parameter type that _"produces T"_.</li>
+     * <li>_m_ has a return type that _"consumes T"_;</li>
+     * </ol>
      */
     public boolean consumesFormalType(String sTypeName) {
         for (Parameter param : getParams()) {

@@ -313,7 +313,7 @@ public abstract class Decimal {
      * Apply a double-precision function to this value.
      *
      * <p>Values are approximated using double precision. Each operation supplies the result to
-     * return for a non-finite input.</p>
+     * return for a non-finite input.
      *
      * @param op            the function to apply to this value as a double
      * @param decNonFinite  what to return when this value is not finite

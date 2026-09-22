@@ -21,7 +21,7 @@ import org.xvm.javajit.Ctx;
  *
  * <p>Unlike [Float16], the value is carried as the 8-bit FP8 encoding held in a Java byte, not as a
  * Java float. An FP8 format has only 256 values, so the encoding is the natural carrier: every
- * representable value is exact by construction, and the box cache below is complete.</p>
+ * representable value is exact by construction, and the box cache below is complete.
  */
 public class Float8e4 extends BinaryFPNumber {
     /**

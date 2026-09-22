@@ -113,7 +113,7 @@ public class Nibble extends UIntNumber {
     /**
      * Native implementation of: "private static Nibble[] values = [0, ..., 15]"
      *
-     * The naturally compiled initializer currently erases the array literal's element type to
+     * <p>The naturally compiled initializer currently erases the array literal's element type to
      * Object, resulting in an invalid attempt to pass an optimized Nibble value to Array.add(Object).
      */
     public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {

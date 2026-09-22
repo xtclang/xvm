@@ -34,7 +34,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Int size;
+     * <pre>{@code
+     *     Int size;
+     * }</pre>
      */
     public long size$get$p(Ctx ctx) {
         return $values.length;
@@ -43,7 +45,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Object getElement(Int index)
+     * <pre>{@code
+     *     Object getElement(Int index)
+     * }</pre>
      */
     public Object getElement$p(Ctx ctx, long index) {
         return $values[checkIndex(ctx, index)];
@@ -123,7 +127,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple replace(Int index, Object value)
+     * <pre>{@code
+     *     Tuple replace(Int index, Object value)
+     * }</pre>
      */
     public nTuple replace$p(Ctx ctx, long index, Object value) {
         int            i     = checkIndex(ctx, index);
@@ -215,7 +221,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   immutable Tuple freeze(Boolean inPlace = False)
+     * <pre>{@code
+     *     immutable Tuple freeze(Boolean inPlace = False)
+     * }</pre>
      */
     public nTuple freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         throw Exception.$unsupported(ctx, "Tuple.freeze()");

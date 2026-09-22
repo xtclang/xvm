@@ -66,7 +66,8 @@ import static org.xvm.util.PackedInteger.writeLong;
  * node-id: 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
  * skip-to: 16 09 06 05       08       13 12       15       24 21 20       23       28 27
  * </code></pre>
- * (Note that neither the node number nor the skip-to node number are actually present in the
+ *
+ * <p>(Note that neither the node number nor the skip-to node number are actually present in the
  * encoding.)
  */
 public class ConstBitSet {

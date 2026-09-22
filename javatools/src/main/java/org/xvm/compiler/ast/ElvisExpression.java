@@ -26,10 +26,10 @@ import org.xvm.util.Severity;
  * The "Elvis" expression, which is used to optionally substitute the value of the second expression
  * iff the value of the first expression is null.
  *
- * Experimental feature: Alternatively, this expression tests a "conditional" first expression (one
- * that yields both a Boolean and at least one additional value), and substitutes the value of the
- * second expression iff that first Boolean value yielded is False, and otherwise yields the second
- * value from the first expression.
+ * <p>Experimental feature: Alternatively, this expression tests a "conditional" first expression
+ * (one that yields both a Boolean and at least one additional value), and substitutes the value of
+ * the second expression iff that first Boolean value yielded is False, and otherwise yields the
+ * second value from the first expression.
  *
  * <ul>
  * <li><code>COND_ELSE:  "?:"</code> - the "elvis" operator</li>

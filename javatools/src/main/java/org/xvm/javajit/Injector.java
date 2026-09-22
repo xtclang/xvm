@@ -13,7 +13,7 @@ import org.xvm.asm.constants.TypeConstant;
  * Represents the supplier of objects that are injected into a Container. Suppliers are
  * {@link Function}s that take an optional "opts" object and return a resource.
  *
- * Some resources have a single value, such as a constant value or a singleton service. Other
+ * <p>Some resources have a single value, such as a constant value or a singleton service. Other
  * resources may provide a different value each time the resource is requested; for these, a caller
  * may to ask for a supplier up front and hold on to it via {@link #supplierOf(Resource)}, invoking
  * it once each time that injection is required. Resources that are known not to vary can be

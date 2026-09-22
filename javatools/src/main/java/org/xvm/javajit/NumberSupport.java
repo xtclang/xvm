@@ -251,7 +251,8 @@ public interface NumberSupport
      * <pre>{@code
      *     remainder = a - (b * quotient)
      * }</pre>
-     * Nothing should be on the stack, the remainder result wil be on the stack after execution.
+     *
+     * <p>Nothing should be on the stack, the remainder result wil be on the stack after execution.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to
@@ -313,7 +314,8 @@ public interface NumberSupport
      * <pre>{@code
      *     remainder = a - (b * quotient)
      * }</pre>
-     * Nothing should be on the stack, the remainder result wil be on the stack after execution.
+     *
+     * <p>Nothing should be on the stack, the remainder result wil be on the stack after execution.
      *
      * @param bctx       the current build context
      * @param code       the code builder to add the op codes to

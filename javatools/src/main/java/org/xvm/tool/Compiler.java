@@ -41,22 +41,22 @@ import static org.xvm.util.Severity.WARNING;
 /**
  * This is the command-line Ecstasy compiler.
  *
- * <p><p>Find the root of the module containing the code in the current directory, and compile it, placing
- * the result in the default location:
+ * <p>Find the root of the module containing the code in the current directory, and compile it,
+ * placing the result in the default location:
  *
- * <p><p>{@code  xcc}
+ * <p>{@code  xcc}
  *
  * <p>Compile the specified module, placing the result in the default location:
  *
- * <p><p>{@code  xcc ./path/to/module_name.x}
+ * <p>{@code  xcc ./path/to/module_name.x}
  *
  * <p>Compile the module that the specified file belongs to:
  *
- * <p><p>{@code  xcc MyClass.x}
+ * <p>{@code  xcc MyClass.x}
  *
  * <p>Alternatively, either of the following would work:
  *
- * <p><p>{@code  xcc MyClass.xtc}
+ * <p>{@code  xcc MyClass.xtc}
  *
  * <p>{@code  xcc MyClass}
  *
@@ -74,23 +74,23 @@ import static org.xvm.util.Severity.WARNING;
  * <p>The location of additional resource files and/or directories can be specified by using the
  * {@code -r} option; for example:
  *
- * <p><p>{@code  xcc -r ~/dev/prj/otherApp/build/}
+ * <p>{@code  xcc -r ~/dev/prj/otherApp/build/}
  *
  * <p>The location of the resulting {@code .xtc} file can be specified by using the {@code -o}
  * option; for example:
  *
- * <p><p>{@code  xcc -o ~/modules/}
+ * <p>{@code  xcc -o ~/modules/}
  *
  * <p>The version of the resulting module can be specified by using the {@code -version} option;
  * for example:
  *
- * <p><p>{@code  xcc --set-version 0.4-alpha}
+ * <p>{@code  xcc --set-version 0.4-alpha}
  *
  * <p>In addition to built-in Ecstasy modules and modules located in the Ecstasy runtime library,
  * it is possible to provide a search path for modules that will be used by the compiler. The search
  * path can contain directories and/or ".xtc" files:
  *
- * <p><p>{@code  xcc -L ~/modules/:../build/:Utils.xtc}
+ * <p>{@code  xcc -L ~/modules/:../build/:Utils.xtc}
  *
  * <p>Other command line options:
  * <ul>
@@ -122,7 +122,6 @@ public class Compiler extends Launcher<CompilerOptions> {
     }
 
     /**
-     *
      * Entry point from the OS. Delegates to Launcher.
      *
      * @param args command line arguments

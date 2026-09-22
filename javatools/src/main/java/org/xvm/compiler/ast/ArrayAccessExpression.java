@@ -45,8 +45,9 @@ import org.xvm.util.Severity;
 /**
  * An array access expression is an expression followed by an array index expression.
  *
- * <p> TODO support tuple of indexes, particularly for multi-dimensional arrays
- * <p> TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
+ * <p>TODO support tuple of indexes, particularly for multi-dimensional arrays
+ *
+ * <p>TODO for multi-dimensional arrays, support partial binding? @Op("[?,_]") / @Op("[_,?]") etc.
  */
 public class ArrayAccessExpression
         extends Expression {

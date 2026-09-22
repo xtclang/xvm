@@ -20,6 +20,7 @@ import org.xvm.javajit.Ctx;
  * Array of Unicode characters, stored in an array of Java longs, either 8x per long (0x00..0xFF) or
  * 3x per long (0x00..0x10FFFF).
  *
+ * <pre>{@code
  * Object header
  * xObj - 64 bits of flags
  * ---
@@ -32,6 +33,7 @@ import org.xvm.javajit.Ctx;
  *
  * Capacity - 48 bits (pre storage)
  * Hash - 64 bits (only if mutability==Constant, requires storage != null)
+ * }</pre>
  */
 public class ArrayᐸCharᐳ
         extends nLongBasedArray<ArrayᐸCharᐳ> {

@@ -957,8 +957,8 @@ public abstract class Builder {
     /**
      * Build the code to load a local property on the Java stack.
      *
-     * This method assumes the "owner" ref is loaded on Java stack and the owner is not primitive,
-     * which means that the Ctx is always the parameter 0.
+     * <p>This method assumes the "owner" ref is loaded on Java stack and the owner is not
+     * primitive, which means that the Ctx is always the parameter 0.
      *
      * @param allowUnboxing  if true, allow property access optimization
      *
@@ -972,7 +972,7 @@ public abstract class Builder {
     /**
      * Build the code to load a local property on the Java stack.
      *
-     * This method assumes the "owner" ref is loaded on Java stack.
+     * <p>This method assumes the "owner" ref is loaded on Java stack.
      *
      * @param allowUnboxing  if true, allow property access optimization
      * @param ctxSlot        the Java slot containing the current context
@@ -1368,7 +1368,7 @@ public abstract class Builder {
      * Generate code to perform a null check and unbox the JIT primitive reference that is on
      * the top of the stack.
      *
-     * In: a boxed JIT primitive reference, or Null
+     * <p>In: a boxed JIT primitive reference, or Null<br>
      * Out: the unboxed primitive value or its null representation
      *
      * @param type  the primitive type for the boxed value
@@ -1400,7 +1400,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed Java reference
+     * <p>In: a boxed Java reference<br>
      * Out: the unboxed primitive value
      *
      * @param reg  the RegisterInfo for the unboxed value
@@ -1412,7 +1412,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed Java reference
+     * <p>In: a boxed Java reference<br>
      * Out: the unboxed primitive value
      *
      * @param type  the primitive type for the boxed value
@@ -1495,7 +1495,7 @@ public abstract class Builder {
     /**
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
-     * In: an unboxed primitive value
+     * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      *
      * @param reg  the RegisterInfo for the unboxed value
@@ -1508,7 +1508,7 @@ public abstract class Builder {
      * Generate boxing opcodes to box one or more values from the stack into a Java or XVM
      * primitive type.
      *
-     * In: an unboxed primitive value
+     * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      *
      * @param code  the {@link CodeBuilder} to use to generate byte codes
@@ -1553,7 +1553,7 @@ public abstract class Builder {
      * Generate Java boxing opcodes for a primitive value of the specified primitive class on the
      * stack.
      *
-     * In: an unboxed primitive value
+     * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      */
     public static void boxJava(CodeBuilder code, ClassDesc cd) {
@@ -2108,7 +2108,8 @@ public abstract class Builder {
      * <pre>{@code
      *     public boolean $equals(primitive p1, primitive p2 ...)
      * }</pre>
-     * Where the method returns a boolean and takes as parameters two sets of the primitive
+     *
+     * <p>Where the method returns a boolean and takes as parameters two sets of the primitive
      * types that make up the XVM primitive type.
      * For example, an Int128 type is made up of two Java long values, so its equals signature
      * would be:
@@ -2124,7 +2125,8 @@ public abstract class Builder {
      * <pre>{@code
      *     public int $compare(primitive p1, primitive p2 ...)
      * }</pre>
-     * Where the method returns an int and takes as parameters two sets of the primitive
+     *
+     * <p>Where the method returns an int and takes as parameters two sets of the primitive
      * types that make up the XVM primitive type.
      * For example, an Int128 type is made up of two Java long values, so its compare signature
      * would be:

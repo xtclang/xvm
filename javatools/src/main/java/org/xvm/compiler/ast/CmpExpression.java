@@ -67,7 +67,7 @@ import org.xvm.util.Severity;
  * <li>{@code COMP_ORD:   "<=>"} - </li>
  * </ul>
  *
- * There are special cases when the left side of a Comparison is itself a similar Comparison:
+ * <p>There are special cases when the left side of a Comparison is itself a similar Comparison:
  *
  * <pre>{@code
  *     if (a == b == c) {...}
@@ -87,9 +87,9 @@ import org.xvm.util.Severity;
  *          is greater than or equal to c, then the result is True; otherwise the result is False.
  * </li></ul>
  *
- * In all examples, the expressions a, b, and c will not be evaluated more than once.
+ * <p>In all examples, the expressions a, b, and c will not be evaluated more than once.
  *
- * The parser will not allow "==" and "!=" to be mixed. The parser will allow {@code <} and
+ * <p>The parser will not allow "==" and "!=" to be mixed. The parser will allow {@code <} and
  * {@code <=} to be mixed, and {@code >} and {@code >=} to be mixed, but will not allow
  * {@code <}/{@code <=} and {@code >}/{@code >=} to be mixed.
  *

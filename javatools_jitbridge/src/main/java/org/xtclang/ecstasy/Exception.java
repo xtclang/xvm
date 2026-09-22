@@ -34,7 +34,7 @@ public class Exception extends nConst {
      * This is a static method that will be called by the naturally constructed subclasses.
      * See {@link org.xvm.javajit.builders.CommonBuilder#assembleNew}.
      *
-     * The name is known to be "construct" since it's the very first constructor at Exception.x
+     * <p>The name is known to be "construct" since it's the very first constructor at Exception.x
      *
      * @see org.xvm.asm.constants.MethodConstant#ensureJitMethodName
      */

@@ -123,7 +123,7 @@ import static org.xvm.util.Handy.lazyAddAll;
  *     {@link UnionTypeConstant}, and {@link DifferenceTypeConstant}.</li>
  * </ul>
  *
- * There are number of TypeConstant transformation APIs. If a transformation is based only on the
+ * <p>There are number of TypeConstant transformation APIs. If a transformation is based only on the
  * state of the TypeConstant itself, it doesn't require passing a target ConstantPool, since
  * the transformed constant doesn't create any new cross-pool dependencies and can be safely placed
  * into the same constant pool.
@@ -168,7 +168,7 @@ public abstract class TypeConstant
      * Determine if the type has exactly one underlying type that it modifies the meaning of.
      * An underlying type is a type whose definition is modified by this type constant.
      *
-     * <p><ul>
+     * <ul>
      * <li>{@link ImmutableTypeConstant}</li>
      * <li>{@link AccessTypeConstant}</li>
      * <li>{@link ParameterizedTypeConstant}</li>
@@ -184,7 +184,7 @@ public abstract class TypeConstant
     /**
      * Determine if the type represents a relation between two underlying types.
      *
-     * <p><ul>
+     * <ul>
      * <li>{@link IntersectionTypeConstant}</li>
      * <li>{@link UnionTypeConstant}</li>
      * <li>{@link DifferenceTypeConstant}</li>
@@ -430,7 +430,7 @@ public abstract class TypeConstant
      * that allows a recursion, e.g. {@code Array<Doc | Array<Doc>>} or nesting
      * e.g. {@code @AutoFreezable (@AutoFreezable Element)}.
      *
-     * This method measures the overall depth of that recursion or nesting.
+     * <p>This method measures the overall depth of that recursion or nesting.
      *
      * @return the depth of this type
      */
@@ -490,10 +490,10 @@ public abstract class TypeConstant
     /**
      * Find the type of the specified formal parameter for this type.
      *
-     * Note, that this method is used to find a non-contradictory potential compile-time resolution
-     * rather than a guaranteed run time one.
+     * <p>Note, that this method is used to find a non-contradictory potential compile-time
+     * resolution rather than a guaranteed run time one.
      *
-     * For example: given a type: String[]? it's natural to decide at compile time that the type
+     * <p>For example: given a type: String[]? it's natural to decide at compile time that the type
      * for the "Element" formal name is String. However, at run time the answer may differ.
      *
      * @param sName      the formal parameter name
@@ -582,8 +582,8 @@ public abstract class TypeConstant
      *   }
      * </code></pre>
      *
-     * In this case virtual child type VCT(D, "C") is a phantom virtual child type, but VCT(B, "C")
-     * is not.
+     * <p>In this case virtual child type VCT(D, "C") is a phantom virtual child type, but VCT(B,
+     * "C") is not.
      *
      * @return true iff this type represents a phantom virtual child
      */
@@ -634,7 +634,8 @@ public abstract class TypeConstant
      *     ^
      *    B.C1 <- D.C1
      * </pre>
-     * When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
+     *
+     * <p>When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
      * resulting type need to "retain" the origin parent type. That retained parent type is then
      * used by the same logic to calculate the super type of B.C1 <b>not as </b> B.C0,  but as D.C0
      * instead!
@@ -984,7 +985,7 @@ public abstract class TypeConstant
      * If T1 == T0<E> and T2.isA(T0) then return (T1 + T2) => T2<E + EC2>, where EC2 is a constraint
      * for E on T2.
      *
-     * Note: this obviously doesn't apply to Class<T> and "into class" annotations.
+     * <p>Note: this obviously doesn't apply to Class<T> and "into class" annotations.
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
                                                         TypeConstant t1, TypeConstant t2) {
@@ -1146,7 +1147,7 @@ public abstract class TypeConstant
      * Create a semantically equivalent type that resolves the formal type parameters
      * based on the specified resolver.
      *
-     * Note: the resolved parameters could in turn also be formal parameters.
+     * <p>Note: the resolved parameters could in turn also be formal parameters.
      *
      * @param pool  the ConstantPool to place a potentially created new constant into
      *
@@ -1189,7 +1190,7 @@ public abstract class TypeConstant
      * If this type contains any dynamic formal type for the specified register, replace that
      * dynamic type with its constraint type.
      *
-     * Note: this method can be used only during the compilation.
+     * <p>Note: this method can be used only during the compilation.
      *
      * @param register  the register to resolve constraints for (null for all)
      *
@@ -1366,7 +1367,7 @@ public abstract class TypeConstant
      * If this type is auto-narrowing (or has any references to auto-narrowing types), replace any
      * auto-narrowing portion with an explicit class identity in the context of the specified target.
      *
-     * Note that the target identity must be a sub-type of this type.
+     * <p>Note that the target identity must be a sub-type of this type.
      *
      * @param pool           the ConstantPool to place a potentially created new constant into
      * @param fRetainParams  if true, don't attempt to resolve the type parameters
@@ -1417,7 +1418,8 @@ public abstract class TypeConstant
      * Create a new type by replacing the underlying type for this one according to the specified
      * function.
      *
-     * Note, that a TerminalTypeConstant doesn't have an underlying type and is not "transformable".
+     * <p>Note, that a TerminalTypeConstant doesn't have an underlying type and is not
+     * "transformable".
      *
      * @param pool         the ConstantPool to place a potentially created new constant into
      * @param transformer  the transformation function
@@ -1446,8 +1448,8 @@ public abstract class TypeConstant
     }
 
     /**
-     * Given this (formal) type A<P> that may contain a pending type "P" and an actual
-     * type B<X>, return a type that:
+     * Given this (formal) type {@code A<P>} that may contain a pending type "P" and an actual
+     * type {@code B<X>}, return a type that:
      * <ul>
      *  <li> is a semantically equivalent type with resolved {@link PendingTypeConstant} parameters
      *  <li> is known to be assignable to this type {@code B.isA(A)}
@@ -4826,11 +4828,11 @@ public abstract class TypeConstant
      * Collect all virtual constructors that may serve as a base contract for the specified
      * contributing constructor.
      *
-     * This method is very similar, but simpler then "collectPotentialSuperMethods" above.
+     * <p>This method is very similar, but simpler then "collectPotentialSuperMethods" above.
      *
      * @param infoConstruct  the contributing constructor at the "sub" level
      * @param mapMethods     the map of all super methods
-
+     *
      * @return a list of all matching constructors
      */
     protected List<MethodConstant> collectConstructors(
@@ -5878,7 +5880,7 @@ public abstract class TypeConstant
      *
      * @param typeLeft  the type to match (L-value)
      *
-     * See Type.x # isA()
+     * @see "Type.x: isA()"
      */
     public boolean isA(TypeConstant typeLeft) {
         return calculateRelation(typeLeft) != Relation.INCOMPATIBLE;
@@ -5890,7 +5892,7 @@ public abstract class TypeConstant
      *
      * @param typeLeft  the type to match (L-value)
      *
-     * See Type.x # isA()
+     * @see "Type.x: isA()"
      */
     public Relation calculateRelation(TypeConstant typeLeft) {
         ConstantPool pool = getConstantPool();
@@ -6248,7 +6250,8 @@ public abstract class TypeConstant
      *   return value of the "typeBase" (C1).
      * </li></ul>
      *
-     * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
+     * <p>Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to
+     * M1.
      *
      * @param typeBase  the type to determine the covariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
@@ -6326,7 +6329,8 @@ public abstract class TypeConstant
      *   parameter of the "typeBase" (C1).
      * </li></ul>
      *
-     * Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to M1.
+     * <p>Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to
+     * M1.
      *
      * <p>Note: despite the name this method also handling the auto-narrowing covariance.
      *
@@ -7331,8 +7335,8 @@ public abstract class TypeConstant
      * Java variables and properties that hold non-primitive instances of the corresponding type.
      * It's the minimal (the widest) type that produces the same "JIT Call Class Name' CC(T).
      *
-     * The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying class}
-     * that could parameterized by non-parameterized callable JIT types as parameters.
+     * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
+     * class} that could parameterized by non-parameterized callable JIT types as parameters.
      *
      * <p>The following should hold :
      *  <ul>

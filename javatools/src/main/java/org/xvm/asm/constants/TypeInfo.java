@@ -340,7 +340,8 @@ public abstract class TypeInfo {
      *   <li>a method;</li>
      *   <li>a child class;</li>
      * </ol>
-     * Note: if more than one method with the specified name exists, a MultiMethodConstant is
+     *
+     * <p>Note: if more than one method with the specified name exists, a MultiMethodConstant is
      *       returned.
      *
      * @param pool   the ConstantPool to use
@@ -438,7 +439,7 @@ public abstract class TypeInfo {
     /**
      * Same as the method above, but allowing for relaxed run-time matching rules.
      *
-     * Warning: Do NOT use this method to find "regular" (non-virtual) constructors.
+     * <p>Warning: Do NOT use this method to find "regular" (non-virtual) constructors.
      *
      * @param sig       a SignatureConstant to find the method for
      * @param fRuntime  true iff this method is called by the runtime chain computation logic
@@ -572,7 +573,7 @@ public abstract class TypeInfo {
     /**
      * Find a virtual constructor that best matches the specified signature.
      *
-     * Note: this method is used only by the runtime.
+     * <p>Note: this method is used only by the runtime.
      *
      * @param sig  the virtual constructor signature
      *
@@ -618,7 +619,7 @@ public abstract class TypeInfo {
      * Obtain the matching op method for the specified name and/or the operator string, that
      * take the specified number of params.
      *
-     * Note: this method is quite similar to {@link org.xvm.runtime.ClassTemplate#findOpChain}
+     * <p>Note: this method is quite similar to {@link org.xvm.runtime.ClassTemplate#findOpChain}
      *
      * @param sName    the default op name, such as "add" (optional)
      * @param sOp      the operator string, such as "+" (optional)

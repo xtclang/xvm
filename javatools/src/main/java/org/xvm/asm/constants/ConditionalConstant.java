@@ -37,7 +37,7 @@ import org.xvm.util.LongList;
  *
  * <p>Three basic conditional constants exist to test for specific conditions:
  *
- * <p><ul>
+ * <ul>
  * <li>{@link NamedCondition NamedCondition} - similar in concept to the use of {@code #ifdef} in
  *     the C/C++ pre-processor, a NamedCondition evaluates to true iff the specified name is
  *     defined;</li>

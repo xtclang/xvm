@@ -10,7 +10,7 @@ import org.xvm.javajit.Ctx;
 /**
  * All Ecstasy `enum` types must extend this class.
  *
- * Some methods here are defined by hand, even though they could be generated. This is necessary
+ * <p>Some methods here are defined by hand, even though they could be generated. This is necessary
  * because the file name implies "no modification" by the augmenting builder.
  */
 public abstract class nEnum

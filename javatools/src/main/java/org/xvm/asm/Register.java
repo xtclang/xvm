@@ -178,7 +178,7 @@ public class Register
      *   }
      *   </code></pre>
      *
-     * In the enclosed "if" context it's known that the Element is an Int, which makes
+     * <p>In the enclosed "if" context it's known that the Element is an Int, which makes
      * consumer2 not assignable to (not narrower than) consumer1, but in effect wider.
      *
      * @param typeNarrowed  the new register type
@@ -820,7 +820,7 @@ public class Register
 
     /**
      * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
-     * {@link Op#CONSTANT_OFFSET).
+     * {@link Op#CONSTANT_OFFSET}.
      */
     private int m_iArg;
 

@@ -47,11 +47,13 @@ public class ClassComposition
     /**
      * Construct the ClassComposition for a given "inception" type.
      *
-     * The guarantees for the inception type are:
-     *  - it has to be a class (TypeConstant.isClass())
-     *  - it cannot be abstract
-     *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
-     *    ParameterizedTypeConstant(s)
+     * <p>The guarantees for the inception type are:
+     * <ul>
+     * <li>it has to be a class (TypeConstant.isClass())</li>
+     * <li>it cannot be abstract</li>
+     * <li>the only modifying types that are allowed are AnnotatedTypeConstant(s) and
+     *     ParameterizedTypeConstant(s)</li>
+     * </ul>
      */
     public ClassComposition(Container container, ClassTemplate template, TypeConstant typeInception) {
         assert typeInception.isSingleDefiningConstant();
@@ -871,7 +873,7 @@ public class ClassComposition
     /**
      * The inception type - the maximum of what this type composition could be revealed as.
      *
-     * Note: the access of the inception type is always Access.PRIVATE.
+     * <p>Note: the access of the inception type is always Access.PRIVATE.
      */
     private final TypeConstant f_typeInception;
 

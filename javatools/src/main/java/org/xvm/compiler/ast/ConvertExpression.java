@@ -249,7 +249,7 @@ public class ConvertExpression
     /**
      * Unwrap multi-conversion assignment into an equivalent statement expression.
      *
-     * In a way of example, let's say we have a function:
+     * <p>In a way of example, let's say we have a function:
      * <pre>{@code
      *     (Int32, Int32) f() {...}
      * }</pre>
@@ -257,7 +257,9 @@ public class ConvertExpression
      * <pre>{@code
      *     (Int x, Int y) = f();
      * }</pre>
-     * The BAST that we are going to create will look like a standard compilation of the following:
+     *
+     * <p>The BAST that we are going to create will look like a standard compilation of the
+     * following:
      * <pre>{@code
      *     (Int32 tmpX, Int32 tmpY) = f();
      *     Int x = tmpX.toInt64();

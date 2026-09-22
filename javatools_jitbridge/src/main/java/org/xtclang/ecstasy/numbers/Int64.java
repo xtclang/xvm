@@ -67,7 +67,9 @@ public class Int64 extends IntNumber {
     /**
      * Native implementation of:
      *
-     *   construct(String text)
+     * <pre>{@code
+     *     construct(String text)
+     * }</pre>
      */
     public static Int64 $new(Ctx ctx, String text) {
         return $box(Long.parseLong(text.toString()));

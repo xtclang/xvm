@@ -156,7 +156,7 @@ public class ClassStructure
     /**
      * Check if this class is annotated as "Abstract".
      *
-     * Note: class structures are never marked with the {@link #isAbstract abstract} flag and
+     * <p>Note: class structures are never marked with the {@link #isAbstract abstract} flag and
      * can only be made abstract via the annotation.
      *
      * @return true iff this class is annotated as Abstract
@@ -765,8 +765,8 @@ public class ClassStructure
     /**
      * Resolve the formal type for this class based on the specified list of actual types.
      *
-     * Note: the specified list is allowed to skip some number of actual parameters (at the tail);
-     *       they will be replaced by the corresponding resolved canonical types
+     * <p>Note: the specified list is allowed to skip some number of actual parameters (at the
+     * tail); they will be replaced by the corresponding resolved canonical types
      *
      * @param pool        the ConstantPool to place a potentially created new constant into
      * @param listActual  the list of actual types
@@ -1070,7 +1070,7 @@ public class ClassStructure
      * Check if the specified annotation type is "into Class", meaning that the annotation applies
      * to the metadata of the class and is not actually mixed into the class functionality itself.
      *
-     * A slight complication comes from a scenario when the annotation applies to a union of
+     * <p>A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
      * <code>
      *   <pre>
@@ -1487,7 +1487,7 @@ public class ClassStructure
     /**
      * Find an index of a generic parameter with the specified name.
      *
-     * Note: this method only looks for parameters declared by this class.
+     * <p>Note: this method only looks for parameters declared by this class.
      *
      * @param sParamName  the parameter name
      *
@@ -1716,7 +1716,9 @@ public class ClassStructure
     /**
      * Calculate assignability between two parameterized types of this class.
      *
-     *  C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
+     * <pre>{@code
+     *     C<L1, L2, ...> lvalue = (C<R1, R2, ...>) rvalue;
+     * }</pre>
      */
     public Relation calculateAssignability(ConstantPool pool,
                                            List<TypeConstant> listLeft, Access accessLeft,
@@ -3146,10 +3148,10 @@ public class ClassStructure
     /**
      * Create necessary method structures for the Const interface functions and methods.
      *
-     * All the methods that are created artificially will be marked as "transient" and should not be
-     * persisted during the serialization phase.
+     * <p>All the methods that are created artificially will be marked as "transient" and should not
+     * be persisted during the serialization phase.
      *
-     * Note: we should not call "registerConstants()" for generated code when called during the
+     * <p>Note: we should not call "registerConstants()" for generated code when called during the
      *       compilation phase; it will be done by the compiler.
      *
      * @param fRuntime  if true, indicates that this method is called by the run-time "link" phase,

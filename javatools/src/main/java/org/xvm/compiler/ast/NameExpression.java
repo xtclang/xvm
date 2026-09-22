@@ -1445,7 +1445,7 @@ public class NameExpression
      * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} function for the specified
      * method.
      *
-     * Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
+     * <p>Note, that for every occurrence of an expression in the form of "T.m(a)" that requires
      * production of a function that takes an argument "t" of the target type "T" at index zero,
      * this method creates a new lambda performing the following transformation:
      *      {@code (t, a, ...) -> t.m(a, ...)}
@@ -1589,7 +1589,7 @@ public class NameExpression
      * Create a {@link MethodConstant#getBjarneLambdaType Bjarne lambda} function for the specified
      * property getter.
      *
-     * Note, that for every occurrence of an expression in the form of "T.p" that requires
+     * <p>Note, that for every occurrence of an expression in the form of "T.p" that requires
      * production of a function that takes an argument "t" of the target type "T" at index zero,
      * this method creates a new lambda performing the following transformation:
      *      t -> t.p
@@ -3321,16 +3321,18 @@ public class NameExpression
     private transient MethodConstant m_idBjarnLambda;
 
     /**
-     * There are three possible scenarios getting to a property represented by this expression:
+     * There are four possible scenarios getting to a property represented by this expression:
      *
-     * 1) the property is on a singleton parent (module, package or singleton class)
-     *    (left must be null)
-     * 2) the property is on an instance parent
-     *    (left must be null)
-     * 3) the property is on this
-     *    (left must be null)
-     * 4) the property is on "left"
-     *    (left must be not null)
+     * <ol>
+     * <li>the property is on a singleton parent (module, package or singleton class)
+     *     (left must be null)</li>
+     * <li>the property is on an instance parent
+     *     (left must be null)</li>
+     * <li>the property is on this
+     *     (left must be null)</li>
+     * <li>the property is on "left"
+     *     (left must be not null)</li>
+     * </ol>
      */
     protected enum PropertyAccess {SingletonParent, Outer, This, Left}
 

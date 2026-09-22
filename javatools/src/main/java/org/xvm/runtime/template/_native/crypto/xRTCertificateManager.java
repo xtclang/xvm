@@ -173,7 +173,8 @@ public class xRTCertificateManager
      *           -alias <name> -dname <dName> -storetype PKCS12
      *           -keystore <path> -storepass <pwd>
      * }</pre>
-     * The Java implementation uses {@link java.security.KeyPairGenerator} (RSA, 2048-bit)
+     *
+     * <p>The Java implementation uses {@link java.security.KeyPairGenerator} (RSA, 2048-bit)
      * and BouncyCastle's {@code X509v3CertificateBuilder} with SHA256WithRSA — the same
      * JDK crypto primitives that keytool uses internally. The resulting PKCS12 keystore
      * entry is interchangeable with keytool output.
@@ -186,7 +187,8 @@ public class xRTCertificateManager
      *    openssl pkcs12 -export
      *    keytool -importkeystore}
      * </pre>
-     * The Java
+     *
+     * <p>The Java
      * implementation uses acme4j to speak the ACME protocol directly, eliminating all
      * intermediate files and format conversions. Challenge files are written to the same
      * {@code .challenge/.well-known/acme-challenge/} directory that certbot's webroot
@@ -357,7 +359,8 @@ public class xRTCertificateManager
      *   certbot revoke --config-dir <certs>/config --cert-name <name> --reason unspecified
      *   keytool -delete -alias <name> -keystore <path> -storepass <pwd>
      * }</pre>
-     * The old certbot revocation used the stored account key from its config directory.
+     *
+     * <p>The old certbot revocation used the stored account key from its config directory.
      * The Java implementation uses domain-key revocation (RFC 8555 §7.6) — extracting
      * the domain keypair from the keystore, which is more robust because it doesn't
      * depend on certbot's external config state.
@@ -428,7 +431,8 @@ public class xRTCertificateManager
      *   keytool -genseckey -keyalg AES -keysize 256 -alias <name>
      *           -storetype PKCS12 -keystore <path> -storepass <pwd>
      * }</pre>
-     * Uses {@link javax.crypto.KeyGenerator#getInstance(String)} with AES/256 — the same
+     *
+     * <p>Uses {@link javax.crypto.KeyGenerator#getInstance(String)} with AES/256 — the same
      * JDK API that keytool's {@code -genseckey} uses internally. The resulting
      * {@code SecretKeyEntry} in the PKCS12 keystore is identical in format.
      */
@@ -455,7 +459,8 @@ public class xRTCertificateManager
      *   echo <pwdValue> | keytool -importpass -alias <name> -storetype PKCS12
      *           -keystore <path> -storepass <pwd>
      * }</pre>
-     * Uses {@link javax.crypto.SecretKeyFactory#getInstance(String)} with "PBE" to create
+     *
+     * <p>Uses {@link javax.crypto.SecretKeyFactory#getInstance(String)} with "PBE" to create
      * a PBE secret key from the password value, then stores it as a {@code SecretKeyEntry}
      * — the same internal representation that keytool's {@code -importpass} produces.
      */
@@ -558,7 +563,7 @@ public class xRTCertificateManager
     /**
      * Wait for an ACME resource to reach a final status.
      *
-     * This method is a compensation for a bug in acme4j's {@code waitForCompletion(Duration)},
+     * <p>This method is a compensation for a bug in acme4j's {@code waitForCompletion(Duration)},
      * which calculates its sleep delay from the absolute Retry-After timestamp returned by the ACME
      * server. When the local clock is slightly ahead, the calculated delay can be negative,
      * causing {@link Thread#sleep(long)} to throw an IllegalArgumentException

@@ -2351,7 +2351,7 @@ public class Context {
      * A delegating context that allows an expression to resolve names based on the specified type's
      * contributions.
      *
-     * As a result, it allows us to write:
+     * <p>As a result, it allows us to write:
      * <pre>{@code
      *    Color color = Red;
      * }</pre>

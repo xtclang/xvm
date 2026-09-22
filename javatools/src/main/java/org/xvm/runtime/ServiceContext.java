@@ -1091,7 +1091,7 @@ public class ServiceContext {
      * Post an asynchronous "call later" message to this context. Any exception thrown by the
      * called function will be reported as an "UnhandledExceptionNotification" (see Service.x).
      *
-     * Unlike any of the "send*" methods below, there is no "originating" fiber in this case and
+     * <p>Unlike any of the "send*" methods below, there is no "originating" fiber in this case and
      * the future registration is done by the request itself.
      *
      * @return a CompletableFuture for the call or null if the service has terminated
@@ -1114,7 +1114,7 @@ public class ServiceContext {
      * Post an asynchronous "call later" message to this context. Any exception thrown by the
      * called function will be reported as an "UnhandledExceptionNotification" (see Service.x).
      *
-     * Unlike the "callLater" methods above, there is an "originating" frame in this case that
+     * <p>Unlike the "callLater" methods above, there is an "originating" frame in this case that
      * belonged to this same service.
      *
      * @return a CompletableFuture for the call or null if the service has terminated
@@ -1136,7 +1136,7 @@ public class ServiceContext {
     /**
      * Post an asynchronous "call later" message to this context.
      *
-     * The caller is responsible for handling any potential exceptions thrown by the called
+     * <p>The caller is responsible for handling any potential exceptions thrown by the called
      * function, which would be provided via the returned CompletableFuture.
      *
      * @param frame  (optional) the caller's frame
@@ -1185,8 +1185,9 @@ public class ServiceContext {
     /**
      * Send an Op-based message to this context with multiple return values.
      *
-     * Note: at the moment, this is only called by a native (synchronous) method. If that changes,
-     *       and we need to go async here, the logic from "sendInvokeNRequest" needs to be re-used.
+     * <p>Note: at the moment, this is only called by a native (synchronous) method. If that
+     * changes, and we need to go async here, the logic from "sendInvokeNRequest" needs to be
+     * re-used.
      *
      * @param frame     the caller's frame
      * @param op        the op to execute
@@ -1415,7 +1416,7 @@ public class ServiceContext {
     /**
      * Helper method to resolve the formal type parameters in the function's return type.
      *
-     * This method is only called if the value returned by the service is not immutable and needs
+     * <p>This method is only called if the value returned by the service is not immutable and needs
      * to be proxied. In that case the actual return value type could be used to resolve generic
      * return types (see ClassTemplate.createProxyHandle), but formal type parameters can only be
      * resolved using the type parameters types that are passed in by the caller.

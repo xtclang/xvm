@@ -1063,7 +1063,7 @@ public class FileStructure
      * Change the identity of the main (versionless) module in this FileStructure and all constants
      * that refer to its id with the specified versioned module id.
      *
-     * Note: this FileStructure must be temporary as it will be rendered unusable.
+     * <p>Note: this FileStructure must be temporary as it will be rendered unusable.
      *
      * @return the new ModuleStructure that has all the child components referring to it by the
      *         new (versioned) id
@@ -1628,7 +1628,7 @@ public class FileStructure
      * modules in the FileStructure, but generally, they only represent imports (included embedded
      * modules) of the main module.
      *
-     * Note: for persistent file structures the main module id is never versioned (its version is
+     * <p>Note: for persistent file structures the main module id is never versioned (its version is
      * null).
      */
     private ModuleConstant m_idModule;

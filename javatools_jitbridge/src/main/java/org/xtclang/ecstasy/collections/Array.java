@@ -33,12 +33,16 @@ import org.xtclang.ecstasy.reflect.Var;
  * storage for elements is based on the element type, and huge and sliced arrays require a separate
  * implementation as well, so concrete subclasses will exist for each combination of these aspects.
  *
- * The expected "hot" calls, in order of importance; these are -- by far -- the calls to optimize:
- * * element get by index -- assume 85%+ of the overall array usage
- * * element set by index -- assume 10%
- * * element count (size and empty properties) -- assume 2%
- * * hash code and equals -- assume 1%
- * As a result, optimizing array element access and modification by index is pretty much the only
+ * <p>The expected "hot" calls, in order of importance; these are -- by far -- the calls to
+ * optimize:
+ * <ul>
+ * <li>element get by index -- assume 85%+ of the overall array usage</li>
+ * <li>element set by index -- assume 10%</li>
+ * <li>element count (size and empty properties) -- assume 2%</li>
+ * <li>hash code and equals -- assume 1%</li>
+ * </ul>
+ *
+ * <p>As a result, optimizing array element access and modification by index is pretty much the only
  * thing that matters from a performance perspective, and making sure that there are no virtual
  * calls involved in either of those two operations is the goal.
  */
@@ -366,7 +370,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Boolean empty;
+     * <pre>{@code
+     *     Boolean empty;
+     * }</pre>
      *
      * @return `true` iff the array contains no elements
      */
@@ -378,7 +384,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Int size;
+     * <pre>{@code
+     *     Int size;
+     * }</pre>
      *
      * @return the length of the string in characters
      */
@@ -394,7 +402,7 @@ public abstract class Array
      *     Var<Element> elementAt(Int index)
      * }</pre>
      *
-     * Obtain the Var for the specified index in the array.
+     * <p>Obtain the Var for the specified index in the array.
      *
      * @param index  the element index
      *
@@ -408,7 +416,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   immutable Array freeze(Boolean inPlace = False)
+     * <pre>{@code
+     *     immutable Array freeze(Boolean inPlace = False)
+     * }</pre>
      */
     public Array freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         throw new UnsupportedOperationException("TODO");
@@ -417,7 +427,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   immutable Array makeImmutable()
+     * <pre>{@code
+     *     immutable Array makeImmutable()
+     * }</pre>
      */
     public Array makeImmutable(Ctx ctx) {
         $mut($CONSTANT);
@@ -427,7 +439,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array add(Element element)
+     * <pre>{@code
+     *     Array add(Element element)
+     * }</pre>
      */
     public Array add(Ctx ctx, Object element) {
         throw new UnsupportedOperationException("TODO");
@@ -448,7 +462,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array insert(Int index, Element value)
+     * <pre>{@code
+     *     Array insert(Int index, Element value)
+     * }</pre>
      */
     public Array insert$p(Ctx ctx, long index, Object element) {
         throw new UnsupportedOperationException("TODO");
@@ -457,7 +473,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array delete(Int index)
+     * <pre>{@code
+     *     Array delete(Int index)
+     * }</pre>
      */
     public Array delete$p(Ctx ctx, long index) {
         throw new UnsupportedOperationException("TODO");
@@ -466,7 +484,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array clear()
+     * <pre>{@code
+     *     Array clear()
+     * }</pre>
      */
     public Array clear(Ctx ctx) {
         throw new UnsupportedOperationException("TODO");
@@ -479,7 +499,7 @@ public abstract class Array
      *     Array! reify(Mutability? mutability = Null)
      * }</pre>
      *
-     * Reify the array, i.e. make sure it's not a view of a different mutable array:
+     * <p>Reify the array, i.e. make sure it's not a view of a different mutable array:
      *
      * @param ctx         the XVM context
      * @param mutability  the requested mutability, or {@code Null} to retain the current mutability
@@ -497,7 +517,7 @@ public abstract class Array
      *     Array slice(Range<Int> indexes)
      * }</pre>
      *
-     * Obtain a slice of this array.
+     * <p>Obtain a slice of this array.
      *
      * @param ctx    the XVM context
      * @param range  the range of indexes to slice
@@ -529,7 +549,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Mutability mutability.get()
+     * <pre>{@code
+     *     Mutability mutability.get()
+     * }</pre>
      */
     public Mutability mutability$get(Ctx ctx) {
         return switch ($mut()) {
@@ -548,10 +570,10 @@ public abstract class Array
     /**
      * A delegate for handling all special situations and features.
      *
-     * Subclasses aren't intended to use this accessor. Instead, this accessor simply enables each
-     * subclass to expose its delegate to this base class, and the base class doesn't implement any
-     * of the "hot" methods using this, so the virtual cost is irrelevant. Subclasses implement the
-     * "hot" methods using that field directly, so when the array type is known at JIT time, the
+     * <p>Subclasses aren't intended to use this accessor. Instead, this accessor simply enables
+     * each subclass to expose its delegate to this base class, and the base class doesn't implement
+     * any of the "hot" methods using this, so the virtual cost is irrelevant. Subclasses implement
+     * the "hot" methods using that field directly, so when the array type is known at JIT time, the
      * code can be generated not against this Array class, but rather against a specific subclass,
      * relying on the JVM's inline cache to avoid virtual calls for the common case, and accepting
      * the virtual call cost for delegate arrays (slices and/or huge arrays).
@@ -580,7 +602,7 @@ public abstract class Array
     /**
      * Configure the size that will be pre-allocated for the array when storage is first allocated.
      *
-     * If the Array is immutable, then this method should never be called.
+     * <p>If the Array is immutable, then this method should never be called.
      *
      * @param cap the capacity value to use when storage is first allocated
      */
@@ -668,7 +690,7 @@ public abstract class Array
      * subsequent elements up by `count` indexes. The inserted elements should be assumed to be
      * unassigned, and must be assigned by the caller.
      *
-     * If the Array is immutable, then this method should never be called.
+     * <p>If the Array is immutable, then this method should never be called.
      *
      * @param ctx    the XVM context
      * @param index  the element index
@@ -680,7 +702,7 @@ public abstract class Array
      * Remove the element at the specified index, shifting all subsequent elements down by `count`
      * indexes.
      *
-     * If the Array is immutable, then this method should never be called.
+     * <p>If the Array is immutable, then this method should never be called.
      *
      * @param index  the element index
      * @param count  the number of elements to delete

@@ -74,8 +74,9 @@ public interface FPConvertible {
      * <pre>{@code
      * toDec128()
      * }</pre>
-     * The high 64-bits of the Dec128 will be set into the {@link Ctx#i0} field, and the low 64-bits
-     * will be returned.
+     *
+     * <p>The high 64-bits of the Dec128 will be set into the {@link Ctx#i0} field, and the low
+     * 64-bits will be returned.
      *
      * @param ctx the build context
      *

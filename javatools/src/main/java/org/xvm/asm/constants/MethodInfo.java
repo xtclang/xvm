@@ -380,7 +380,7 @@ public class MethodInfo
      * replace the glass plane of "that" (base), with the resulting combination of glass planes
      * returned as a MethodInfo.
      *
-     * Note, that unlike the virtual method scenario above, the contribution is going to
+     * <p>Note, that unlike the virtual method scenario above, the contribution is going to
      * completely replace the base, collecting the replaced information only in order to handle
      * (ignore) repetitive contributions.
      *
@@ -810,7 +810,7 @@ public class MethodInfo
     /**
      * Get an id of the method that this capped method is narrowed by.
      *
-     * Note: this method if very similar to {@link TypeInfo#getNarrowingMethod}, except it only
+     * <p>Note: this method if very similar to {@link TypeInfo#getNarrowingMethod}, except it only
      *       chooses the narrowing methods from the specified map.
      *
      * @param mapVirtMethods  a map of methods keyed by their nids

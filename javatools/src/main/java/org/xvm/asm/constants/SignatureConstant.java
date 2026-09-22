@@ -394,9 +394,9 @@ public class SignatureConstant
      * Check if a method with this signature could be called via the specified signature
      * (it also means that a method with this signature could "super" to the specified method).
      *
-     * In other words, check that this signature is "narrower" than the specified one.
+     * <p>In other words, check that this signature is "narrower" than the specified one.
      *
-     * Note: both "this" and "that" signatures must be resolved.
+     * <p>Note: both "this" and "that" signatures must be resolved.
      *
      * @param that     the signature of the matching method
      * @param typeCtx  the type within which "this" signature is used
@@ -459,13 +459,13 @@ public class SignatureConstant
     /**
      * Check if a method with this signature could be called via the specified signature.
      *
-     * Unlike the "isSubstitutableFor" method above, this method is called only by the run-time call
-     * chain computation logic and only if isSubstitutableFor failed. It basically tests if it's
-     * "good enough for government work", i.e. could someone have previously signed off on a method
-     * represented by this signature being callable.
+     * <p>Unlike the "isSubstitutableFor" method above, this method is called only by the run-time
+     * call chain computation logic and only if isSubstitutableFor failed. It basically tests if
+     * it's "good enough for government work", i.e. could someone have previously signed off on a
+     * method represented by this signature being callable.
      *
-     * Note, that when the "shim" of the "weak" isA() assignment is in place, including the verifier
-     * work for the variables on stack, this method is quite likely won't be needed.
+     * <p>Note, that when the "shim" of the "weak" isA() assignment is in place, including the
+     * verifier work for the variables on stack, this method is quite likely won't be needed.
      */
     public boolean isCallableAs(SignatureConstant that) {
         if (!this.getName().equals(that.getName())) {

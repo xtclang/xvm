@@ -204,7 +204,7 @@ public class Parser {
      *     "..."
      * }</pre>
      *
-     * In the above BNF, the definitions are custom to this method, except for ArgumentList,
+     * <p>In the above BNF, the definitions are custom to this method, except for ArgumentList,
      * DimIndicators, and QualifiedName
      *
      * @return the TypeExpression for the class that is parsed, or null
@@ -644,7 +644,7 @@ public class Parser {
      *     ConstantDeclaration
      * }</pre>
      *
-     * And if other statements are allowed:
+     * <p>And if other statements are allowed:
      *
      * <pre>{@code
      * VariableDeclarationStatement
@@ -4493,7 +4493,7 @@ public class Parser {
     /**
      * Parse a type expression in the form:
      *
-     *   {@code name.name.name<param, param>.name!<param, param>}
+     * <p>{@code name.name.name<param, param>.name!<param, param>}
      *
      * <pre>{@code
      * NamedTypeExpression
@@ -4626,7 +4626,7 @@ public class Parser {
      *     AccessModifier "/" AccessModifier
      * }</pre>
      *
-     * Also verifies that modifiers are not repeated or obviously conflicting.
+     * <p>Also verifies that modifiers are not repeated or obviously conflicting.
      *
      * @param couldBeProperty
      *
