@@ -4,6 +4,17 @@ Scoping document for making `ErrorListener` an always-present, non-null, immutab
 compiler's call stack, so that an embedding host — an LSP server above all — can rely on hearing
 every diagnostic the compiler produces.
 
+**Current hardening status (2026-09-22).** This document preserves the investigation's chronology;
+some later sections describe limitations that subsequent work removed. The current execution and
+integration record is [errs-integration-plan.md](errs-integration-plan.md), and the refreshed failure
+triage is at the end of [errs-audit.md](errs-audit.md). Compiler tests now require their dependencies
+and cannot silently skip. The server bundles its compiled core/bootstrap libraries, publishes
+versioned diagnostics, rejects stale work, preserves foreign-source attribution, and supports
+identity-based local/method-parameter navigation and constructor-generated properties. Stdio exit
+and repository failure reporting are covered by the latest hardening pass. Remaining work includes
+incomplete syntax, capture/type-parameter source mapping, project compilation and the unclassified
+TypeInfo suppression cases. No full semantic-model API has been implemented yet.
+
 **Status.** All seven phases are implemented on `lagergren/errs`, plus the follow-on work that
 came out of review:
 
@@ -998,7 +1009,7 @@ The compiler adapter answers two things - diagnostics and an outline - and retur
 the other eighteen capabilities the tree-sitter adapter implements. This is the ordered list of
 what it would take to close that, written after measuring rather than from the feature matrix.
 
-Two findings shape the whole list, both verified in this tree:
+Two historical findings shaped this list; both have since been addressed:
 
 1. **The XDK-backed tests never run in CI.** `XdkAdapterTest` and `TypeInfoDiagnosticsTest`
    `assumeTrue` on `XDK_HOME`, `lang/lsp-server`'s test task does not set it, and CI does not
@@ -1088,7 +1099,7 @@ keeps on the node, where nothing outside the compiler could read it:
 With those, go-to-definition and find-references work within a document for locals, properties,
 types and method calls - and references tell `Holder.x` from `Point.x`, which no text search can.
 
-**What is actually missing in xtc.** Five things, in the order they will hurt:
+**Findings from the original adapter investigation, with current status:**
 
 1. **There is no error-tolerant parse.** This is the big one. Typing `console.` and asking for
    completion produces `PARSER-03: Expected token IDENTIFIER` and **no AST at all** - not a
@@ -1096,18 +1107,18 @@ types and method calls - and references tell `Holder.x` from `Point.x`, which no
    the compiler alone there is nothing to complete from. Every other gap here is a missing
    accessor or a missing index; this one is a property of the parser. It is also the entire
    justification for a hybrid adapter, and the reason completion is not implemented.
-2. **A local has no identity that survives narrowing.** A declaration produces a `Register`; a
-   use of it is a `ShadowRegister`, and `Register.equals` deliberately answers false between the
-   two, while comparing an index and a type - so two different variables can compare equal.
-   There is no stable "this is that variable" to group uses by, and the host approximates with
-   name-within-method.
+2. **Local identity: fixed.** `Register.equals` is unsuitable for source identity, but the existing
+   `getOriginalRegister()` connects narrowed shadows to their original register. The adapter now
+   compares those objects by identity and reads the declaration register through a public accessor.
+   The earlier claim that the compiler retained no such identity was incorrect.
 3. **Nothing maps an identity back to where it was written.** A `Component` knows its name, kind
    and children and carries no source position. Cross-file definition therefore needs an index
    the host builds from documents it has compiled, and a language server cannot compile a project
    it has not been asked to open.
-4. **Not everything declared is declared by a statement.** A `const`'s constructor parameter
-   becomes a property, and there is no `PropertyDeclarationStatement` to point at. The name
-   resolves; there is simply nowhere to go.
+4. **Constructor-parameter properties: fixed.** The compiler does synthesize property declaration
+   statements with the parameter's source token. The parameter now retains the corresponding
+   identity, so navigation also works when requested at the declaration. Ordinary method parameters
+   retain their registers. Captured locals and other generated bindings remain separate work.
 5. **The same node is reachable by two paths.** A constructor parameter appears under the
    declaration and under the property it becomes, so a walk sees it twice. Harmless once known -
    the host deduplicates by span - but it is the kind of thing that silently doubles a reference
@@ -1370,10 +1381,6 @@ the code. The prior-art branch found real bugs in this category, not just untidi
   twenty points - but those points are between stages, not inside them, so a compilation is
   abandoned at the next boundary rather than promptly. Good enough while compilations take tens
   of milliseconds; the thing to watch is `waited` in the adapter's log.
-- Completion, go-to-definition and find-references in the XDK adapter are unimplemented. The
-  outline is done - symbols with real positions, walked out of the AST, and the innermost
-  declaration containing a position - but these three need *resolution* rather than syntax: what
-  a name refers to, not what was typed. The AST cannot answer that, and the resolved structures
-  that can have no positions to answer it with. Something has to bridge the two, and that is a
-  larger piece of work than the outline was.
-
+- Completion remains unavailable on incomplete source. Same-document definition and references
+  now use retained compiler identities; the earlier statement that the AST cannot expose them was
+  superseded by the public accessors and source associations described above.

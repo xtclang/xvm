@@ -25,13 +25,10 @@ This document describes how to manually test every feature implemented in the Ec
 ./gradlew :lang:lsp-server:build -Plsp.adapter=mock
 ```
 
-**The compiler adapter needs an XDK to resolve the core library against.** It finds one from
-`XDK_HOME`, and says so as a warning diagnostic rather than failing if there is none, so an editor
-with no XDK configured still opens files - it just cannot analyse them.
-
-```bash
-export XDK_HOME=/path/to/xdk          # or ./xdk/build/install/xdk from this repo
-```
+**The compiler adapter uses the core/bootstrap libraries bundled with the server.** Gradle builds
+them through the composite module dependencies and packages them as resources. No external XDK or
+`XDK_HOME` setting is required for compiler analysis. Project-specific repositories are separate,
+deferred work.
 
 It is also the slow one, deliberately: the first compilation in a session takes about a second
 (class loading, reading the XDK, a JIT still warming up) and then settles to about 60ms. If the
@@ -339,12 +336,12 @@ module TestModule {
 These are the behaviours that only exist because the adapter runs the real compiler. Nothing here
 is observable under mock or tree-sitter.
 
-**Prerequisite:** an XDK on `XDK_HOME`. Test 7a.1 is the one that deliberately does not have one.
+**Prerequisite:** a server built with `-Plsp.adapter=compiler`; its module resources must be present.
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 7a.1 | No XDK configured | Unset `XDK_HOME`, restart the server, open a `.x` file | One warning on the file: `XTC analysis unavailable: ...`, code `XDK-UNAVAILABLE`. The editor stays usable - no crash, no error dialog, no dead server |
-| 7a.2 | XDK appears later | With the server still running from 7a.1, set `XDK_HOME` and restart the server, then edit the file | The warning is replaced by real diagnostics |
+| 7a.1 | No external XDK | Unset `XDK_HOME`, restart the server, open a complete module | Real compiler diagnostics; correcting the source clears them |
+| 7a.2 | Invalid external XDK | Set `XDK_HOME` to a nonexistent directory, restart and edit the file | The bundled libraries still supply compiler analysis |
 | 7a.3 | Cold start | Watch the log on the first `.x` file opened in a session | `first compilation in this server took ... (cold)`, around a second. Slow once is expected; slow every time is not |
 | 7a.4 | Steady state | Edit the same file ten times, watching `compiled in` | Settles to tens of milliseconds. A number that keeps climbing means something is accumulating - compare `footprint` across the run |
 | 7a.5 | Queue depth | Type quickly across two or three open files | `queue=` rises above 1 and falls back. `waited` staying high is the signal that one-at-a-time has become the bottleneck |
@@ -1041,7 +1038,7 @@ This table maps every numbered feature from sections 1–19 to the exact VS Code
 | 5 | Find References | `Shift+F12` on a symbol | "References" peek view | §5 covers both same-file and cross-file expectations. |
 | 6 | Outline | View → Outline (or Cmd+Shift+O for symbols-in-file) | Outline panel populates | §6 — module / class / method hierarchy. All three adapters. |
 | 7 | Diagnostics | Save a `.x` file with a known syntax error | Problems panel (Cmd+Shift+M) + red squigglies | §7. The mock adapter reports fewer diagnostics than tree-sitter; the compiler adapter reports semantics neither can see. |
-| 7a | Compiler adapter specifics | Build with `-Plsp.adapter=compiler` and `XDK_HOME` set; watch the server output channel | Problems panel + the `compile:` lines in the log | §7a — cold vs steady timing, queue depth, superseded edits, and the `XDK-UNAVAILABLE` warning when there is no XDK. |
+| 7a | Compiler adapter specifics | Build with `-Plsp.adapter=compiler`; watch the server output channel | Problems panel + the `compile:` lines in the log | §7a — bundled-library startup without `XDK_HOME`, cold vs steady timing, queue depth and superseded edits. |
 | 8 | Document highlight | Click on an identifier | Other same-name occurrences in file get a subtle highlight box | §8. |
 | 9 | Selection ranges | Place cursor in expression → `Shift+Opt+Cmd+→` (macOS) or `Shift+Alt+→` | Selection expands outward through AST nodes | §9. |
 | 10 | Folding ranges | Click the gutter triangles or `Cmd+Opt+[` | Block / method / class folds | §10 — verify all listed scopes fold correctly. |
