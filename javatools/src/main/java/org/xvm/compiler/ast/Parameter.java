@@ -42,8 +42,8 @@ public class Parameter
     }
 
     /**
-     * @return the validated method parameter register or the property implied by a constructor
-     *         parameter, or null if that source association has not been established
+     * @return the source parameter's register, constructor-property identity or formal type
+     *         constant, or null if that source association has not been established
      */
     public Argument getResolvedTarget() {
         return m_arg;
