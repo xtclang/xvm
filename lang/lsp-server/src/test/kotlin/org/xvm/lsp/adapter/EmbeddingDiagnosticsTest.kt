@@ -9,6 +9,23 @@ import org.xvm.compiler.Source
 
 class EmbeddingDiagnosticsTest {
     @Test
+    fun `compound assignment with no operator reports an invalid operation before code generation`() {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val source =
+            Source(
+                "module MissingOperator { class Counter {} void run() { Counter value = new Counter(); value += 1; } }",
+                "file:///MissingOperator.x",
+            )
+        val result = EmbeddingSupport.instance().compileModule(source, null, errors)
+        assertThat(result.succeeded()).isFalse()
+        assertThat(errors.errors.map { it.code })
+            .describedAs(errors.errors.toString())
+            .contains("COMPILER-50")
+            .doesNotContain("COMPILER-69", "EMB-5")
+    }
+
+    @Test
     fun `unexpected compiler failures are not hidden by an earlier source error`() {
         CompilerTestSupport.configure()
         val errors = ErrorList()
