@@ -17,6 +17,9 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.io.File
+import java.net.URI
+import java.net.URISyntaxException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -47,9 +50,8 @@ import org.xvm.util.Severity as XtcSeverity
  * ## What this reports
  *
  * Everything the compiler has to say about one document: syntax and semantics both, with the
- * compiler's own error codes, messages and source spans. It needs an XDK to resolve the core
- * library against - [EmbeddingSupport] finds one from `XDK_HOME` - and says so as a diagnostic
- * rather than failing, because an editor with no XDK configured should still open files.
+ * compiler's own error codes, messages and source spans. The matching XDK libraries are bundled
+ * with the server and configured automatically; no external XDK installation is required.
  *
  * The parsed tree supplies outlines, hover, folding and selection; resolved names supply
  * definitions and references within the document. Project-wide compilation remains unsupported.
@@ -57,7 +59,10 @@ import org.xvm.util.Severity as XtcSeverity
 class XdkAdapter internal constructor(
     private val compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
 ) : AbstractAdapter() {
-    constructor() : this({ source, errs -> EmbeddingSupport.instance().compileModule(source, null, errs) })
+    constructor() : this({ source, errs ->
+        XdkLibraries.configure()
+        EmbeddingSupport.instance().compileModule(source, null, errs)
+    })
 
     override val displayName: String = "XDK"
 
@@ -73,7 +78,7 @@ class XdkAdapter internal constructor(
             AdapterCapability.WORKSPACE_SYMBOL,
         )
 
-    override fun healthCheck(): Boolean = runCatching { EmbeddingSupport.instance() }.isSuccess
+    override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
 
     override fun compile(
         uri: String,
@@ -200,41 +205,34 @@ class XdkAdapter internal constructor(
     ): Analysis {
         // Deduplicate TypeInfo replay and retain the compiler's normal error budget.
         val heard = ErrorList()
-        val compilation =
-            try {
-                compileSource(Source(content, uri), ErrorListener.cancellable(heard) { isStale(uri, request) })
-            } catch (e: IllegalStateException) {
-                logger.warn("compile: uri={} has no XDK to resolve against: {}", uri, e.message)
-                return Analysis(
-                    listOf(
-                        Diagnostic(
-                            location = wholeDocument(uri),
-                            severity = Diagnostic.Severity.WARNING,
-                            message = "XTC analysis unavailable: ${e.message}",
-                            code = NO_XDK,
-                            source = SOURCE,
-                        ),
-                    ),
-                )
-            }
+        val source = Source(content, uri)
+        val compilation = compileSource(source, ErrorListener.cancellable(heard) { isStale(uri, request) })
         if (isStale(uri, request)) throw CancellationException()
         logger.info("compile: uri={} [{}]", uri, EmbeddingSupport.instance().footprint(compilation))
         if (compiled.incrementAndGet() == 1L) {
             logger.info("compile: first compilation in this server completed (cold)")
         }
         val parsed = compilation.parsed()
-        return Analysis(heard.errors.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed), parsed)
+        return Analysis(heard.errors.map { it.toDiagnostic(source) }, XdkSymbols.of(uri, parsed), parsed)
     }
 
     /**
      * The compiler places a diagnostic in one of three ways, and Site being a closed set is what
      * lets this be exhaustive rather than a hunt for whichever field happens to be populated.
      */
-    private fun ErrorListener.ErrorInfo.toDiagnostic(uri: String): Diagnostic =
-        Diagnostic(
+    private fun ErrorListener.ErrorInfo.toDiagnostic(source: Source): Diagnostic {
+        val uri = source.fileName
+        val where = site()
+        val sourceUri =
+            if (where is ErrorListener.Site.In) {
+                if (where.source() === source) uri else where.source().diagnosticUri()
+            } else {
+                null
+            }
+        return Diagnostic(
             location =
-                when (val where = site()) {
-                    is ErrorListener.Site.In -> spanOf(uri, where)
+                when (where) {
+                    is ErrorListener.Site.In -> sourceUri?.let { spanOf(it, where) } ?: wholeDocument(uri)
 
                     // a structure has no source location of its own
                     is ErrorListener.Site.At -> wholeDocument(uri)
@@ -243,10 +241,28 @@ class XdkAdapter internal constructor(
                     else -> wholeDocument(uri)
                 },
             severity = severity.toLspSeverity(),
-            message = message,
+            message =
+                if (where is ErrorListener.Site.In && sourceUri == null) {
+                    "In ${where.source().fileName ?: "an unidentified source"}: $message"
+                } else {
+                    message
+                },
             code = code,
             source = SOURCE,
         )
+    }
+
+    /** Only absolute source identities can be published as navigable locations. */
+    private fun Source.diagnosticUri(): String? {
+        val name = fileName ?: return null
+        val file = File(name)
+        if (file.isAbsolute) return file.toURI().toString()
+        return try {
+            URI(name).takeIf { it.isAbsolute }?.toString()
+        } catch (_: URISyntaxException) {
+            null
+        }
+    }
 
     private fun spanOf(
         uri: String,
@@ -301,25 +317,15 @@ class XdkAdapter internal constructor(
         }
     }
 
-    /**
-     * Where else the name under the cursor is written in this document.
-     *
-     * By name, not by meaning: two unrelated locals called `count` highlight together. Telling
-     * them apart is a resolution question, and the answer to it is not reachable from here -
-     * see the note on [findDefinition].
-     */
+    /** Highlight only occurrences of the resolved target, including its declaration when known. */
     override fun getDocumentHighlights(
         uri: String,
         line: Int,
         column: Int,
-    ): List<DocumentHighlight> {
-        val ast = cached[uri]?.ast ?: return emptyList()
-        val under = XdkAst.nameAt(ast, line, column) ?: return emptyList()
-        return XdkAst
-            .namesIn(ast)
-            .filter { it.name == under.name }
-            .map { DocumentHighlight(XdkAst.rangeOf(it), DocumentHighlight.HighlightKind.TEXT) }
-    }
+    ): List<DocumentHighlight> =
+        XdkResolution
+            .referencesTo(cached[uri]?.ast, line, column, includeDeclaration = true)
+            .map { DocumentHighlight(it, DocumentHighlight.HighlightKind.TEXT) }
 
     /**
      * Blocks and declarations that span more than one line. An editor offers a fold per region,
@@ -386,11 +392,8 @@ class XdkAdapter internal constructor(
 
     private fun locationOf(
         uri: String,
-        node: AstNode,
-    ): Location =
-        XdkAst.rangeOf(node).let {
-            Location(uri, it.start.line, it.start.column, it.end.line, it.end.column)
-        }
+        range: Range,
+    ): Location = Location(uri, range.start.line, range.start.column, range.end.line, range.end.column)
 
     // ----- not implemented here ------------------------------------------------------------------
 
@@ -426,7 +429,6 @@ class XdkAdapter internal constructor(
 
     private companion object {
         const val SOURCE = "xtc"
-        const val NO_XDK = "XDK-UNAVAILABLE"
         const val SHUTDOWN_SECONDS = 5L
     }
 }
