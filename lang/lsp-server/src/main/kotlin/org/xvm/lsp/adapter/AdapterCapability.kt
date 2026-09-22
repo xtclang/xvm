@@ -21,4 +21,5 @@ enum class AdapterCapability {
     WORKSPACE_SYMBOL,
     CODE_LENS,
     LINKED_EDITING,
+    TYPE_HIERARCHY,
 }

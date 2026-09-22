@@ -33,7 +33,7 @@ interface Adapter : Closeable {
 
     /** Features the server may advertise for this backend. */
     val capabilities: Set<AdapterCapability>
-        get() = AdapterCapability.entries.toSet()
+        get() = AdapterCapability.entries.filterNot { it == AdapterCapability.TYPE_HIERARCHY }.toSet()
 
     /**
      * Human-readable name of this adapter for display in logs and UI.
@@ -105,6 +105,9 @@ interface Adapter : Closeable {
         } catch (e: Exception) {
             CompletableFuture.failedFuture(e)
         }
+
+    /** Documents sharing this key must be analysed and invalidated together. */
+    fun analysisScope(uri: String): String = uri
 
     /**
      * Get the cached compilation result for a document, if available.

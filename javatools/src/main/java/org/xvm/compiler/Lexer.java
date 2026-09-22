@@ -233,6 +233,10 @@ public class Lexer
 
     @Override
     public Token next() {
+        // A valid token stream may never log an error. It must still observe host cancellation.
+        if (f_errs.isAbortDesired()) {
+            throw new CompilerException("Tokenization aborted");
+        }
         boolean fWhitespaceBefore = m_fWhitespace;
         Token token = eatToken();
         boolean fWhitespaceAfter = eatWhitespace();

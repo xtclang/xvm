@@ -2,6 +2,8 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.Argument
+import org.xvm.asm.ClassStructure
+import org.xvm.asm.Component.Composition
 import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.MethodStructure
@@ -35,6 +37,7 @@ import org.xvm.lsp.adapter.xdk.SemanticModel.Position
 import org.xvm.lsp.adapter.xdk.SemanticModel.Range
 import org.xvm.lsp.adapter.xdk.SemanticModel.Role
 import org.xvm.lsp.adapter.xdk.SemanticModel.Signature
+import org.xvm.lsp.adapter.xdk.SemanticModel.SourceLocation
 import org.xvm.lsp.adapter.xdk.SemanticModel.Status
 import org.xvm.lsp.adapter.xdk.SemanticModel.Symbol
 import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolId
@@ -53,6 +56,13 @@ import java.util.List.copyOf as immutableList
  * identity domain, so a host normally keeps one snapshot per document version.
  */
 fun EmbeddingSupport.Compilation.semanticSnapshot(): SemanticModel {
+    val documents = semanticSnapshots()
+    require(documents.size == 1) { "Use semanticSnapshots() for a compilation containing multiple sources" }
+    return documents.single()
+}
+
+/** Copy all source views together, sharing symbol/type IDs within this compilation only. */
+fun EmbeddingSupport.Compilation.semanticSnapshots(): List<SemanticModel> {
     val builder = SemanticModelBuilder()
     val pool = pool() ?: return builder.build(this)
     return ConstantPool.withPool(pool).use { builder.build(this) }
@@ -68,24 +78,24 @@ private class SemanticModelBuilder {
     private val symbols = linkedMapOf<SymbolId, Symbol>()
     private val typeIds = linkedMapOf<TypeConstant, TypeId>()
     private val types = linkedMapOf<TypeId, Type>()
-    private val occurrences = linkedMapOf<Range, Occurrence>()
-    private val expressions = linkedMapOf<Range, TypeId>()
+    private val occurrences = linkedMapOf<SourceLocation, Occurrence>()
+    private val expressions = linkedMapOf<SourceLocation, TypeId>()
     private val callees = IdentityHashMap<NameExpression, Argument>()
 
-    fun build(compilation: EmbeddingSupport.Compilation): SemanticModel {
+    fun build(compilation: EmbeddingSupport.Compilation): List<SemanticModel> {
         val root =
             compilation.parsed()
-                ?: return SemanticModel(id, Status.UNAVAILABLE, null, symbols, types, emptyList(), emptyList())
+                ?: return listOf(SemanticModel(id, Status.UNAVAILABLE, null, SemanticModel.Facts(symbols, types), emptyList(), emptyList()))
         val nodes = nodesIn(root)
         nodes.filterIsInstance<NewExpression>().forEach {
             capturedProperties.putAll(it.captureOrigins)
             it.sourceBindings?.let { bindings -> captureOrigins.putAll(bindings.captureOrigins) }
         }
 
-        val bindings = nodes.filterIsInstance<LambdaExpression>().mapNotNull { it.sourceBindings }
-        bindings.forEach { captureOrigins.putAll(it.captureOrigins) }
-        bindings.forEach { lambda ->
-            lambda.parameters.forEach { declare(it.name(), it.register(), SymbolKind.PARAMETER) }
+        val lambdas = nodes.filterIsInstance<LambdaExpression>()
+        lambdas.forEach { it.sourceBindings?.let { bindings -> captureOrigins.putAll(bindings.captureOrigins) } }
+        lambdas.forEach { lambda ->
+            lambda.sourceBindings?.parameters?.forEach { declare(it.name(), it.register(), SymbolKind.PARAMETER, lambda.source) }
         }
         // Parameters precede synthetic properties that share their source tokens.
         nodes.filterIsInstance<Parameter>().forEach {
@@ -93,15 +103,16 @@ private class SemanticModelBuilder {
                 it.nameToken,
                 it.resolvedTarget,
                 if (it.resolvedTarget is Register) SymbolKind.PARAMETER else kind(it.resolvedTarget),
+                it.source,
             )
         }
         nodes.forEach { node ->
             when (node) {
-                is VariableDeclarationStatement -> declare(node.nameToken, node.register, SymbolKind.VARIABLE)
-                is MethodDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.METHOD)
-                is PropertyDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.PROPERTY)
-                is TypeCompositionStatement -> declare(node.nameToken, identity(node), kind(identity(node)))
-                is TypedefStatement -> declare(node.nameToken, identity(node), SymbolKind.TYPE)
+                is VariableDeclarationStatement -> declare(node.nameToken, node.register, SymbolKind.VARIABLE, node.source)
+                is MethodDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.METHOD, node.source)
+                is PropertyDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.PROPERTY, node.source)
+                is TypeCompositionStatement -> declare(node.nameToken, identity(node), kind(identity(node)), node.source)
+                is TypedefStatement -> declare(node.nameToken, identity(node), SymbolKind.TYPE, node.source)
             }
             if (node is InvocationExpression) {
                 val callee = node.invokedExpression
@@ -111,68 +122,106 @@ private class SemanticModelBuilder {
         }
         nodes.forEach { node ->
             val expressionType = (node as? Expression)?.takeIf { it.isValidated }?.type
-            type(expressionType)?.let { expressions[range(node.startPosition, node.endPosition)] = it }
+            type(expressionType)?.let { expressions[location(node.source, node.startPosition, node.endPosition)] = it }
             when (node) {
                 is NameExpression -> {
-                    refer(node.nameToken, callees[node] ?: node.resolvedTarget, expressionType)
+                    refer(node.nameToken, callees[node] ?: node.resolvedTarget, expressionType, node.source)
                 }
 
                 is NamedTypeExpression -> {
                     node.nameBindings.forEach {
-                        refer(it.name(), it.target(), expressionType.takeIf { _ -> it.name() === node.nameToken })
+                        refer(it.name(), it.target(), expressionType.takeIf { _ -> it.name() === node.nameToken }, node.source)
                     }
                 }
             }
         }
-        return SemanticModel(
-            id,
-            if (compilation.succeeded()) Status.COMPLETE else Status.PARTIAL,
-            root.source?.fileName,
-            symbols,
-            types,
-            occurrences.values.sortedBy { it.range.start },
-            expressions.map { (range, type) -> ExpressionType(range, type) },
+        val hierarchy = if (compilation.succeeded()) hierarchy(nodes) else emptyMap()
+        val facts = SemanticModel.Facts(symbols, types, hierarchy)
+        return immutableList(
+            nodes.map { it.source?.fileName }.distinct().map { source ->
+                SemanticModel(
+                    id,
+                    if (compilation.succeeded()) Status.COMPLETE else Status.PARTIAL,
+                    source,
+                    facts,
+                    occurrences.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
+                    expressions.filterKeys { it.sourceName == source }.map { (location, type) -> ExpressionType(location.range, type) },
+                )
+            },
         )
     }
+
+    private fun hierarchy(nodes: List<AstNode>): Map<SymbolId, SemanticModel.TypeDeclaration> =
+        buildMap {
+            for (node in nodes.filterIsInstance<TypeCompositionStatement>()) {
+                val component = node.component as? ClassStructure ?: continue
+                val id = constants[component.identityConstant] ?: continue
+                if (symbols[id]?.kind != SymbolKind.TYPE) continue
+                val parents =
+                    component.contributionsAsList
+                        .filter {
+                            it.composition == Composition.Extends || it.composition == Composition.Implements
+                        }.mapNotNull { contribution ->
+                            val type = contribution.typeConstant ?: return@mapNotNull null
+                            if (type.containsUnresolved()) return@mapNotNull null
+                            val parent = type.getSingleUnderlyingClass(true) ?: return@mapNotNull null
+                            val target = symbol(parent, parent.name, SymbolKind.TYPE) ?: return@mapNotNull null
+                            SemanticModel.Supertype(target, type(type) ?: return@mapNotNull null)
+                        }
+                put(
+                    id,
+                    SemanticModel.TypeDeclaration(
+                        id,
+                        node.category.id.TEXT
+                            .orEmpty(),
+                        location(node.source, node.startPosition, node.endPosition),
+                        immutableList(parents),
+                    ),
+                )
+            }
+        }
 
     private fun declare(
         token: Token?,
         target: Argument?,
         kind: SymbolKind,
+        source: Source?,
     ) {
         if (token == null) return
-        val range = range(token.startPosition, token.endPosition)
-        if (range in occurrences) return
-        val symbol = symbol(target, token.valueText, kind, range)
-        occurrences[range] = Occurrence(range, token.valueText, Role.DECLARATION, symbol, symbols[symbol]?.type)
+        val location = location(source, token.startPosition, token.endPosition)
+        if (location in occurrences) return
+        val symbol = symbol(target, token.valueText, kind, location)
+        occurrences[location] = Occurrence(location.range, token.valueText, Role.DECLARATION, symbol, symbols[symbol]?.type)
     }
 
     private fun refer(
         token: Token?,
         target: Argument?,
         expressionType: TypeConstant?,
+        source: Source?,
     ) {
         if (token == null) return
-        val range = range(token.startPosition, token.endPosition)
-        if (range in occurrences) return
+        val location = location(source, token.startPosition, token.endPosition)
+        if (location in occurrences) return
         val symbol = symbol(target, token.valueText, kind(target))
         // Failed name validation can leave a required/placeholder type on the expression.
         val type = if (symbol == null) null else type(expressionType) ?: symbols[symbol]?.type
-        occurrences[range] = Occurrence(range, token.valueText, Role.REFERENCE, symbol, type)
+        occurrences[location] = Occurrence(location.range, token.valueText, Role.REFERENCE, symbol, type)
     }
 
     private fun symbol(
         argument: Argument?,
         name: String,
         kind: SymbolKind,
-        declaration: Range? = null,
+        declaration: SourceLocation? = null,
     ): SymbolId? {
         val target = normalized(argument) ?: return null
         val existing = if (target is Register) registers[target] else constants[target as Constant]
         if (existing != null) return existing
         val symbol = SymbolId(id, symbols.size)
         if (target is Register) registers[target] = symbol else constants[target as Constant] = symbol
-        symbols[symbol] = Symbol(symbol, name, kind, declaration, type(declaredType(target)), signature(target))
+        symbols[symbol] =
+            Symbol(symbol, name, kind, declaration?.range, type(declaredType(target)), signature(target), declaration?.sourceName)
         return symbol
     }
 
@@ -322,12 +371,16 @@ private class SemanticModelBuilder {
         return nodes
     }
 
-    private fun range(
+    private fun location(
+        source: Source?,
         start: Long,
         end: Long,
-    ): Range =
-        Range(
-            Position(Source.calculateLine(start), Source.calculateOffset(start)),
-            Position(Source.calculateLine(end), Source.calculateOffset(end)),
+    ): SourceLocation =
+        SourceLocation(
+            source?.fileName,
+            Range(
+                Position(Source.calculateLine(start), Source.calculateOffset(start)),
+                Position(Source.calculateLine(end), Source.calculateOffset(end)),
+            ),
         )
 }

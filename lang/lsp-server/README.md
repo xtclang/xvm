@@ -63,7 +63,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 |---------|-------|-------------|
 | **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
 | **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **XDK** | `compiler` | Real compiler diagnostics and limited same-document semantic features. Core/bootstrap XDK modules are bundled. |
+| **XDK** | `compiler` | Compiler diagnostics, semantic navigation and type hierarchy across a module. Core/bootstrap XDK modules are bundled. |
 
 ### Build Commands
 
@@ -111,24 +111,26 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
 | Semantic diagnostics | None | None | Compiler errors and warnings |
 | Incomplete syntax | Limited | Error-tolerant parse | Some errors leave no AST |
-| Definition / references | By spelling | Syntax and workspace index | Resolved identities, same document |
+| Definition / references | By spelling | Syntax and workspace index | Resolved identities across a module |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, text highlights |
 | Completion | Basic | Context-aware | Unavailable |
 | Rename / code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST |
 | Signature help / document links | None / imports | Same-file / workspace index | Unavailable |
-| Workspace symbols | Limited | Workspace index | Completed analyses of open documents |
+| Workspace symbols | Limited | Workspace index | Completed module sessions, including closed members |
 | Semantic tokens | None | Syntax-based | Unavailable |
+| Type hierarchy | None | None | Source types: declared extends/implements, with generic parents |
 | Native library | Not needed | Required | Not needed |
 
-The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles one complete
-module source per document; member files and unsaved project overlays are not supported yet.
+The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
+and its member tree together, including unsaved member files and packages. Non-file URIs remain
+single-source inputs. Source roots use the normal file/same-name-directory module layout.
 
 ## Supported LSP Features
 
 The canonical feature matrix lives in
-[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md).
+[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md#adapter-capability-matrix).
 At a high level, the current tree-sitter-backed default provides:
 
 - document symbols, same-file navigation, workspace-symbol search, and best-effort cross-file navigation
@@ -138,17 +140,29 @@ At a high level, the current tree-sitter-backed default provides:
 - document/range formatting and on-type formatting
 - selection ranges, linked editing, folding ranges, document links, and signature help
 
-The XDK adapter publishes versioned diagnostics and supports hover, definition, references,
-highlights, outline, folding and selection. Semantic queries read an immutable Kotlin snapshot;
-structural queries use the retained AST. Navigation covers locals, method/lambda parameters,
-constructor properties, class/method type parameters, aliases, lambda and anonymous-class capture
-chains, and qualified type segments in the same document.
+The opt-in XDK adapter publishes versioned diagnostics and supports hover, definition, references,
+highlights, outline, folding, selection and type hierarchy. Definitions and references span the
+current module, including closed member files. Workspace-symbol search covers active module
+sessions. Immutable Kotlin snapshots supply semantic queries; structural queries use per-source
+ASTs. Member edits invalidate all sibling views, and filesystem notifications refresh disk inputs.
+Closing an overlay restores the disk version while another document keeps the module session open.
 
-The snapshot is not a member-completion engine or a project index. It exposes declared signatures,
-not instantiated overload candidates or active-argument information. A syntax error that prevents
-parsing removes semantic answers until a later edit parses; stale ranges are not reused. See the
+Type hierarchy follows direct declared `extends` and `implements` edges and retains generic parent
+arguments. It requires successful compilation and source locations in the current module. Old
+hierarchy items cannot resolve into a new compilation. Other workspace modules and library sources
+are not indexed by this backend.
+
+Completion, signature help, rename, semantic tokens, formatting, code actions, document links,
+code lenses, linked editing, inlay hints, go-to-type-definition, find-implementations and call
+hierarchy remain unsupported. The snapshot exposes declared signatures; instantiated call-site
+signatures and active-argument information are still missing. A member parse failure clears the
+module's semantic answers until a later correction; stale ranges are not reused.
+
+The adapter uses `compileModule(ModuleInfo, ...)`, with a fresh text/membership snapshot for each
+attempt, and `semanticSnapshots()` to copy per-source views sharing one identity domain. It does
+not build TypeInfo in response to editor queries. See the
 [branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
-remaining work.
+remaining limits.
 
 ## Context-Aware Completion
 

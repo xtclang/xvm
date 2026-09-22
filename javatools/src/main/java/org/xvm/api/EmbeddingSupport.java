@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import java.util.function.Function;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
@@ -40,11 +42,11 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
-import static org.xvm.util.Handy.readFileChars;
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -340,8 +342,8 @@ public class EmbeddingSupport {
      *
      * @param module  the compiled module, or null if the compilation did not get that far
      * @param file    the file structure that was built, or null if it did not get that far
-     * @param ast     the parsed source, or null if it did not parse; the structures carry no
-     *                source positions, so this is the only thing that can say where anything is
+     * @param ast     the parsed source tree, or null if loading/parsing failed; linked member
+     *                trees retain their original Sources and positions
      */
     public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
         /**
@@ -393,9 +395,36 @@ public class EmbeddingSupport {
      * @return the outcome; never null, though its parts may be
      */
     public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return compileModule(listener -> new Parser(source, listener).parseSource(), input, errs);
+    }
+
+    /**
+     * Compile a module's source tree using the same discovery, resource association and parse-tree
+     * assembly as the CLI. The returned AST includes the member files with their original Sources.
+     * Hosts may override {@link ModuleInfo#readSource(File)} and
+     * {@link ModuleInfo#sourceEntries(File)} to supply a consistent snapshot of unsaved text and
+     * source membership. The default provider discovers and reads files from disk.
+     *
+     * @param sources  a fresh ModuleInfo for this attempt; do not reuse a previously parsed tree
+     * @param input    the optional repository of compiled dependencies
+     * @param errs     the listener for this compilation
+     *
+     * @return the outcome, including the linked AST when source loading succeeded
+     */
+    public Compilation compileModule(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        return compileModule(listener -> {
+            Node root = sources.getSourceTree(listener);
+            return root == null ? null : (StatementBlock) root.ast();
+        }, input, errs);
+    }
+
+    private Compilation compileModule(Function<ErrorListener, StatementBlock> parse,
+                                      ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
+        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs);
         try {
             if (!errs.isAbortDesired()) {
                 compiler.process();
@@ -427,14 +456,14 @@ public class EmbeddingSupport {
         requireNonNull(errs, "errs");
         ModuleStructure module;
         try {
-            module = compile(new String(readFileChars(file)), input, errs);
-        } catch (IOException e) {
-            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
+            module = compileModule(new ModuleInfo(file, false), input, errs).module();
+        } catch (IllegalArgumentException e) {
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to locate module " + file);
             return false;
         }
 
         if (module == null) {
-            assert errs.hasSeriousErrors();
+            assert errs.hasSeriousErrors() || errs.isAbortDesired();
             return false;
         }
 
@@ -455,7 +484,8 @@ public class EmbeddingSupport {
      */
     private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
-        private final Source           source;
+        private final Function<ErrorListener, StatementBlock> parse;
+
         private final ModuleRepository inRepo;
         private final ModuleRepository coreRepo;
         private       ModuleStructure  module;
@@ -484,10 +514,11 @@ public class EmbeddingSupport {
             return file;
         }
 
-        protected EmbeddingCompiler(Source source, ModuleRepository input, ModuleRepository core, ErrorListener errs) {
+        protected EmbeddingCompiler(Function<ErrorListener, StatementBlock> parse,
+                                    ModuleRepository input, ModuleRepository core, ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
-            this.source   = source;
+            this.parse    = parse;
             this.inRepo   = input;
             this.coreRepo = core;
         }
@@ -502,11 +533,16 @@ public class EmbeddingSupport {
 
             StatementBlock block;
             try {
-                block = this.ast = new Parser(source, this).parseSource();
+                block = this.ast = parse.apply(this);
             } catch (CompilerException e) {
                 return 1;
             }
             if (checkErrors("source parsing") != 0) {
+                return 1;
+            }
+
+            if (block == null) {
+                log(ERROR, "Unable to load module sources");
                 return 1;
             }
 

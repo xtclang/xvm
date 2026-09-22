@@ -48,6 +48,7 @@ class XtcWorkspaceService(
         logger.info("workspace/didChangeWatchedFiles: {} changes", params.changes.size)
         for (change in params.changes) {
             adapter.didChangeWatchedFile(change.uri, change.type.value)
+            server.refreshForFile(change.uri)
         }
     }
 

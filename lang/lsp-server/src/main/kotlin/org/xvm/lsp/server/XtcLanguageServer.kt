@@ -554,7 +554,7 @@ class XtcLanguageServer(
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
             // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
-            // typeHierarchyProvider = Either.forLeft(true) // compiler(full): type tree
+            if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities) typeHierarchyProvider = Either.forLeft(true)
             // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
         }
 
@@ -665,6 +665,8 @@ class XtcLanguageServer(
     // =========================================================================
     // Helper Methods
     // =========================================================================
+
+    fun refreshForFile(uri: String) = textDocumentService.refreshForFile(uri)
 
     fun publishDiagnostics(
         uri: String,
