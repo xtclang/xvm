@@ -183,3 +183,73 @@ composition or external-library use reports correctly.
 No additional production listener migration is justified by these cases. Remaining suppression
 work needs generic/external-type source cases or instrumentation identifying a diagnostic that the
 host actually misses. The previous sample of seventy suppressed messages remains open.
+
+
+### Fresh TypeInfo capture, 2026-09-22
+
+A forced local `:xdk:installDist` build (`--rerun-tasks --no-build-cache`) was observed with a
+temporary probe in `SilentErrorListener.log`. It selected `CASCADE`, severity ERROR or worse,
+and call stacks containing `TypeConstant.ensureTypeInfo`; it recorded the rendered diagnostic
+and complete compiler stack. Deduplication by message plus stack yielded **301 observations**;
+deduplication by rendered message yielded **37 distinct messages**: `VERIFY-70` 27, `VERIFY-67` 8,
+`COMPILER-38` 1, `COMPILER-140` 1. The instrumentation was removed before normal verification.
+This is a fresh, explicitly scoped capture, not a claim that the historical 70 messages shrank
+through fixes. Those counts came from a different worktree/capture and cannot be subtracted.
+
+| Observed group | Distinct messages | Caller/stage evidence and disposition |
+|---|---:|---|
+| `ByteArray`, `BitArray`, `NibbleArray`: `appendTo`, `toString`, `estimateStringLength` | 9 × `VERIFY-70` | All three are generic mixins `into Array<Element>`. Stacks include `Expression.getTypeInfo` during invocation fit and `Expression.isAssignable`, with recursive conditional composition. Missing supers on an isolated mixin are not evidence of a missing super on the composed array. Keep quiet; no selected-use failure was demonstrated. |
+| `ListMapIndex`: `appendEntry`, `makeImmutable`, `clear`, `deleteEntryAt`, `indexOf` | 5 × `VERIFY-70` | Conditional mixin into `ListMap<Key, Value>`. Observed during type validation and later allocation/fit/assignment searches through `mergeConditionalIncorporates`. Its `into` target supplies the members. Keep provisional reporting suppressed. |
+| `Interval.adjoins`; `PeekAhead.openObject` / `peekMetadata` | 3 × `VERIFY-70` | Mixin/annotation composition into `Range` / `ObjectInputStream`. Stack paths include indexed-range inference, annotation validation and member lookup. These extend the previously sampled shapes to the other observed method. No host-facing loss established. |
+| Array translators' anonymous `Object:1.element.assigned` properties | 6 × `VERIFY-67`, 6 × `VERIFY-70` | Bit→Nibble, Bit→Byte, Byte→NumType, Nibble→Bit, Nibble→Byte and Number→Bit. The property value type and the Boolean `assigned` property appear as conflicting `Referent`s; stacks enter through `Expression.calcFit` / `NameExpression.testFit` on return validation. Classified as provisional property-explosion/type-fit results, not six invalid source declarations. A direct final-composition type-system regression remains useful; suppression alone does not prove these compositions are correct. |
+| `Client.DBObjectImpl.dbChildren.calc().Map:1.get` | 1 × `VERIFY-70` | Anonymous generic `Map` member during provisional name/type lookup while `NewExpression` catches up its `RoughDraft`. The `calc(?)` spelling is normal method-parent rendering, not evidence of an unresolved identity. Keep the provisional diagnostic suppressed; the final artifact check below verifies the instantiated member. |
+| XML `ContentList.cursor().Cursor:1` | 2 × `VERIFY-67`, 3 × `VERIFY-70` | `ContentList implements List<Content>`; its anonymous cursor overrides `value`, `insert`, and accessors. The preliminary comparison uses `List.Element` against `Content`. Stacks enter through property validation/annotation validation within method generation. This is a generic/virtual-child composition case deserving a focused final-type regression, not a blanket listener migration. |
+| `Future<PendingTypeParameter>` | 1 × `COMPILER-38` | `AstNode.calculateReturnFit` → overload search → invocation return-type fitting. The name contains the compiler's pending formal placeholder. Candidate-fit diagnostic; retain silence. |
+| `@Parsed @ContentNode Data:private` | 1 × `COMPILER-140` | `AstNode.collectMatchingMethods` → invocation validation; emission is in `TypeConstant.mixin`, where constructor lookup for annotation arguments returns no candidate. `Parsed` requires offset/length; this stack probes an annotated target without a complete applicable constructor. Keep the failed candidate quiet; this does not establish every annotation application is valid. |
+
+The top compiler stage is often `generateCode`, but its stack also contains
+`StatementBlock.compileMethod` and expression validation. It would be wrong to label all those
+observations “after validation” from the outer stage name alone. Some silences arise inside recursive
+composition even when the outer lookup has a real reporting listener. Replacing the 121 lexical
+no-argument calls therefore neither isolates nor fixes this set.
+
+The consumer regressions now cover generic `Derived<String>` and `Derived<Int>` against both a
+same-source base and a base compiled, serialized to bytes, and loaded into a fresh repository. The
+consumer's duplicate annotation still reaches its listener as `VERIFY-75`. A new concrete generic
+TypeInfo first requested silently replays its warning to a later reporting caller without rebuilding.
+The dependency's original compiler/AST/TypeInfo caches are not reused. Already rejected redundant
+annotations in a compiled dependency are a different boundary; the test puts the offending override
+in the consumer so the source diagnostic belongs to that compilation.
+
+### Final-composition follow-up, 2026-09-22
+
+A fresh JVM loaded the installed, serialized `ecstasy`, `xml` and `jsondb` modules and requested
+the final anonymous-class TypeInfo with explicit reporting listeners. All eight classes from the
+three open families produced no diagnostics:
+
+- The six Array translators have Boolean `assigned`, `Type<Boolean, Object>` for its `Referent`,
+  and an assigned-getter chain containing `NakedRef.get<Boolean>`. Element get/set retain the
+  appropriate Byte, Nibble, Bit or formal element type.
+- XODB's `dbChildren.calc().Map:1.get(String)` returns `(Boolean, DBObject)` and includes the
+  inherited `Map.get` declaration with those substitutions.
+- XML's `ContentList.cursor().Cursor:1` resolves `value`, get/set and `insert` to `Content`, with
+  the corresponding inherited method chains present.
+
+The probe also checked the Boolean Array translator and six nested XODB classes: fifteen final
+compositions in total, with no diagnostics or exceptions. A small fresh-source anonymous Byte
+property compiled cleanly and produced the correct Boolean `assigned` metadata. These were
+temporary local probes; permanent regression tests are still needed.
+
+The captured Array stacks reach the provisional lookup through `TypeConstant.getConverterTo`
+and `Expression.calcFit`. XODB/XML stacks reach it while `NewExpression` builds its `RoughDraft`.
+Actual anonymous-class construction uses a reporting listener branch and checks the selected
+TypeInfo. Also, `NamedConstant.getValueString()` deliberately renders method parents with `(?)`;
+that spelling cannot establish that a method identity is unresolved.
+
+**Disposition:** no new lost diagnostic was reproduced, so no production TypeInfo listener sweep
+was made. Every message in this capture has a classified source/caller group, and the three
+previously open families now have direct final-metadata evidence supporting provisional silence.
+Turn these artifact and fresh-source probes into durable regressions, including an invalid-override
+control. They do not establish all runtime behavior or justify every historic silence. The
+`@Parsed` constructor family was outside this deeper pass. Existing unmatched `@Override` and
+duplicate-annotation tests continue to pin real errors/warnings reaching the host.
