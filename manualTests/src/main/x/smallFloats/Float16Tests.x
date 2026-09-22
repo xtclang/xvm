@@ -1,7 +1,5 @@
 class Float16Tests {
 
-    @Inject Console console;
-
     void run() {
         testFloat16Compare();
         testFloat16AsField();

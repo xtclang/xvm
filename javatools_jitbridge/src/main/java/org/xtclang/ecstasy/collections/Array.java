@@ -261,6 +261,9 @@ public abstract class Array
             case "Dec32"    -> ArrayᐸDec32ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Dec64"    -> ArrayᐸDec64ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Dec128"   -> ArrayᐸDec128ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Float8e4" -> ArrayᐸFloat8e4ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "Float8e5" -> ArrayᐸFloat8e5ᐳ.$new$2$p(ctx, type, mutability, elements);
+            case "BFloat16" -> ArrayᐸBFloat16ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Float32"  -> ArrayᐸFloat32ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Float64"  -> ArrayᐸFloat64ᐳ.$new$2$p(ctx, type, mutability, elements);
             case "Int8"     -> ArrayᐸInt8ᐳ.$new$2$p(ctx, type, mutability, elements);

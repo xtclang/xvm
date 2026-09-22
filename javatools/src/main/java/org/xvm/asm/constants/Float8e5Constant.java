@@ -63,16 +63,17 @@ public class Float8e5Constant
 
     @Override
     protected Object getLocator() {
-        return getValue();
+        return m_nBits;
     }
 
     @Override
     protected int compareDetails(Constant that) {
         if (that instanceof Float8e5Constant thatFP8) {
-            return Float.compare(toFloat(this.m_nBits), toFloat(thatFP8.m_nBits));
-        } else {
-            return -1;
+            int result = Float.compare(toFloat(this.m_nBits), toFloat(thatFP8.m_nBits));
+            // NaN encodings retain their sign and payload in the constant pool.
+            return result == 0 ? Integer.compare(this.m_nBits, thatFP8.m_nBits) : result;
         }
+        return -1;
     }
 
     @Override

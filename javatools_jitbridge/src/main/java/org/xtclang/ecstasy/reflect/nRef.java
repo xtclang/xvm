@@ -158,6 +158,9 @@ public class nRef
                     case UInt128 n1 -> n1.$lowValue  == ((UInt128) ref2.$referent).$lowValue
                                     && n1.$highValue == ((UInt128) ref2.$referent).$highValue;
 
+                    case BFloat16 n1 -> n1.$value == ((BFloat16) ref2.$referent).$value;
+                    case Float8e4 n1 -> Float8e4.$compare(n1.$value, ((Float8e4) ref2.$referent).$value) == 0;
+                    case Float8e5 n1 -> Float8e5.$compare(n1.$value, ((Float8e5) ref2.$referent).$value) == 0;
                     case Float16 n1 -> n1.$value == ((Float16) ref2.$referent).$value;
                     case Float32 n1 -> n1.$value == ((Float32) ref2.$referent).$value;
                     case Float64 n1 -> n1.$value == ((Float64) ref2.$referent).$value;

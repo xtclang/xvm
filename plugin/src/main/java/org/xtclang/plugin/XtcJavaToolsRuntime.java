@@ -121,6 +121,9 @@ public final class XtcJavaToolsRuntime {
 
         final var classpath = files.stream()
             .filter(file -> file.getName().endsWith(".jar"))
+            // These are templates read and augmented by the JIT's own classloader. Loading them
+            // through the application classloader bypasses augmentation and omits generated methods.
+            .filter(file -> !file.getName().equals("javatools-jitbridge.jar"))
             .sorted(Comparator.comparing(File::getAbsolutePath))
             .toList();
         if (classpath.isEmpty()) {

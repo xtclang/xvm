@@ -518,6 +518,22 @@ val runSequential = tasks.register<XtcRunTask>("runSequential") {
     testModuleNames.filter { it !in excludedModules }.forEach { moduleName(it) }
 }
 
+// The same compiled module exercises the numeric subset supported by both backends.
+// runSmallFloats also accepts --jit for a direct comparison from the command line.
+val runSmallFloats = tasks.register<XtcRunTask>("runSmallFloats") {
+    group = "verification"
+    description = "Run the shared small floating-point tests."
+    moduleName("TestSmallFloats")
+}
+
+// JIT execution is opt-in; the aggregate and CI tasks retain interpreter-only execution.
+val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
+    group = "verification"
+    description = "Run the shared small floating-point tests using the JIT."
+    jit = true
+    moduleName("TestSmallFloats")
+}
+
 val runAllTestTasks = tasks.register("runAllTestTasks") {
     group = "application"
     description = "Run all test tasks."

@@ -32,9 +32,8 @@ package numbers {
                 passed &= runTest(() -> new Dec64ConvertTests().run());
                 passed &= runTest(() -> new Dec128ConvertTests().run());
 
-                passed &= runTest(() -> new Float16Tests().run());
-                passed &= runTest(() -> new Float8e4Tests().run());
-                passed &= runTest(() -> new Float8e5Tests().run());
+                // Float16, Float8e4, Float8e5 and BFloat16 run in the shared TestSmallFloats
+                // module via runSmallFloatsJit; the JIT linker does not yet load its imports.
                 passed &= runTest(() -> new Float32Tests().run());
                 passed &= runTest(() -> new Float64Tests().run());
                 passed &= runTest(() -> new Float32ConvertTests().run());

@@ -64,7 +64,7 @@ public class JitTypeDesc {
                     -> CD_int;
                 case "Int64", "UInt64"
                     -> CD_long;
-                case "Float16", "Float32"
+                case "BFloat16", "Float16", "Float32"
                      -> CD_float;
                 case "Float64"
                      -> CD_double;
@@ -149,18 +149,15 @@ public class JitTypeDesc {
         TypeConstant sansNullable = type.removeNullable();
         if (sansNullable.isJavaPrimitive()) {
             return switch (sansNullable.getSingleUnderlyingClass(false).getName()) {
-                case "Byte", "Nibble", "Int8", "UInt8"
+                case "Byte", "Nibble", "Int8", "UInt8", "Float8e4", "Float8e5"
                         -> CD_byte;
                 case "Int16", "UInt16"
                         -> CD_short;
-                case "Char", "Int32", "UInt32",
-                     // an FP8 field uses the same carrier as an FP8 value, as every other FP type
-                     // does; a narrower field would only make the two descriptors disagree
-                     "Float8e4", "Float8e5"
+                case "Char", "Int32", "UInt32"
                         -> CD_int;
                 case "Int64", "UInt64"
                         -> CD_long;
-                case "Float16", "Float32"
+                case "BFloat16", "Float16", "Float32"
                         -> CD_float;
                 case "Float64"
                         -> CD_double;

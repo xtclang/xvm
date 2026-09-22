@@ -488,7 +488,7 @@ public class ArrayᐸBitᐳ
      * The primitive implementation of:
      *     BFloat16 toBFloat16()
      */
-    public int toBFloat16$p(Ctx ctx) {
+    public float toBFloat16$p(Ctx ctx) {
         if ($delegate != null) {
             return $delegate.toBFloat16$p(ctx);
         }
@@ -496,7 +496,7 @@ public class ArrayᐸBitᐳ
         if (size != 16) {
             throw Exception.$oob(ctx, "\"size == 16\": size=" + size);
         }
-        return (int) ($storage[0] >>> 48);
+        return Float.intBitsToFloat((int) ($storage[0] >>> 32));
     }
 
     /**

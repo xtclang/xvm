@@ -352,6 +352,14 @@ public class NumberBuilder extends AugmentingBuilder {
                     .iand();
                 break;
 
+            case "BFloat16":
+                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
+                code.loadConstant(32)
+                    .lushr()
+                    .l2i()
+                    .invokestatic(CD_JavaFloat, "intBitsToFloat", md(CD_float, CD_int));
+                break;
+
             case "Float16":
                 loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
                 code.loadConstant(48)
@@ -684,7 +692,7 @@ public class NumberBuilder extends AugmentingBuilder {
                         .ireturn();
                     break;
 
-                case "Float16", "Float32":
+                case "BFloat16", "Float16", "Float32":
                     code.fload(paramSlot)
                             .invokestatic(CD_Float, "isFinite", md(CD_boolean, CD_float))
                             .ireturn();
@@ -729,7 +737,7 @@ public class NumberBuilder extends AugmentingBuilder {
                         .ireturn();
                     break;
 
-                case "Float16", "Float32":
+                case "BFloat16", "Float16", "Float32":
                     code.fload(paramSlot)
                         .invokestatic(CD_Float, "isInfinite", md(CD_boolean, CD_float))
                         .ireturn();
@@ -774,7 +782,7 @@ public class NumberBuilder extends AugmentingBuilder {
                         .ireturn();
                     break;
 
-                case "Float16", "Float32":
+                case "BFloat16", "Float16", "Float32":
                     code.fload(paramSlot)
                         .invokestatic(CD_Float, "isNaN", md(CD_boolean, CD_float))
                         .ireturn();
@@ -896,7 +904,7 @@ public class NumberBuilder extends AugmentingBuilder {
             generateMagnitudeReturn(code, jmd);
             break;
 
-        case "Float16", "Float32":
+        case "BFloat16", "Float16", "Float32":
             code.fload(paramSlot)
                 .invokestatic(cdMath, "abs", md(CD_float, CD_float));
             generateMagnitudeReturn(code, jmd);
@@ -1184,7 +1192,7 @@ public class NumberBuilder extends AugmentingBuilder {
                 code.invokestatic(CD_Float8e5, "$compare", f8e5Cmp);
                 break;
 
-            case "Float16", "Float32":
+            case "BFloat16", "Float16", "Float32":
                 MethodTypeDesc fCmp = md(CD_int, CD_float, CD_float);
                 code.invokestatic(CD_Float, "compare", fCmp);
                 break;

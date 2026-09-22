@@ -47,15 +47,16 @@ public interface NumberSupport
     }
 
     /**
-     * Float16 shares the "F" carrier with Float32, so an operation on it is performed at float
-     * precision and has to be rounded back into the format afterwards; without this, a Float16
-     * result can hold a value Float16 cannot represent. Float32 and Float64 fill their carriers
+     * Float16 and BFloat16 share the "F" carrier with Float32, so their operations are performed
+     * at float precision and must be rounded back into the respective format afterwards. Float32 and Float64 fill their carriers
      * exactly and need nothing.
      */
     private static void narrowFloat(CodeBuilder code, TypeConstant type) {
         if ("Float16".equals(type.getSingleUnderlyingClass(false).getName())) {
             code.invokestatic(Builder.CD_JavaFloat, "floatToFloat16", md(CD_short, CD_float))
                 .invokestatic(Builder.CD_JavaFloat, "float16ToFloat", md(CD_float, CD_short));
+        } else if ("BFloat16".equals(type.getSingleUnderlyingClass(false).getName())) {
+            code.invokestatic(Builder.CD_BFloat16, "$narrow", md(CD_float, CD_float));
         }
     }
 

@@ -238,6 +238,7 @@ public class ArrayBuilder extends AugmentingBuilder {
             case "Dec128"   -> Builder.N_ArrayDec128;
             case "Float8e4" -> Builder.N_ArrayFloat8e4;
             case "Float8e5" -> Builder.N_ArrayFloat8e5;
+            case "BFloat16" -> Builder.N_ArrayBFloat16;
             case "Float16"  -> Builder.N_ArrayFloat16;
             case "Float32"  -> Builder.N_ArrayFloat32;
             case "Float64"  -> Builder.N_ArrayFloat64;

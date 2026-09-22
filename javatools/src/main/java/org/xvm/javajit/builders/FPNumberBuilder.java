@@ -363,6 +363,9 @@ public class FPNumberBuilder extends NumberBuilder {
                 .invokestatic(fp8CD, "$toBits", md(CD_int, CD_float));
         } else if (valueCD.equals(CD_float)) {
             code.d2f();
+            if (thisType.equals(pool().typeBFloat16())) {
+                code.invokestatic(CD_BFloat16, "$narrow", md(CD_float, CD_float));
+            }
         } else {
             assert valueCD.equals(CD_double) : "unsupported \"double\" conversion: " + valueCD;
         }

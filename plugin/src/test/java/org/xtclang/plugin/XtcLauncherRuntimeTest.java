@@ -33,12 +33,13 @@ public class XtcLauncherRuntimeTest {
 
         final var configLauncher = createLauncherJar(configDir.resolve("javatools-1.2.3.jar"), "1.2.3");
         final var configDependency = createJar(configDir.resolve("gson.jar"));
+        final var configBridge = createJar(configDir.resolve("javatools-jitbridge.jar"));
         createLauncherJar(xdkDir.resolve("javatools.jar"), "1.2.3");
         createJar(xdkDir.resolve("commons-cli.jar"));
 
         final var runtime = XtcJavaToolsRuntime.resolveRuntime(
             project.provider(() -> "1.2.3"),
-            project.provider(() -> project.files(configLauncher, configDependency)),
+            project.provider(() -> project.files(configLauncher, configDependency, configBridge)),
             project.provider(() -> project.fileTree(xdkDir)),
             project.getLogger()
         );
@@ -57,6 +58,7 @@ public class XtcLauncherRuntimeTest {
         final var strayDependency = createJar(configDir.resolve("gson.jar"));
         final var xdkLauncher = createLauncherJar(xdkDir.resolve("javatools.jar"), "1.2.3");
         final var xdkDependency = createJar(xdkDir.resolve("commons-cli.jar"));
+        createJar(xdkDir.resolve("javatools-jitbridge.jar"));
 
         final var runtime = XtcJavaToolsRuntime.resolveRuntime(
             project.provider(() -> "1.2.3"),

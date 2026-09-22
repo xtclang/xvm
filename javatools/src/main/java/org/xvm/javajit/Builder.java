@@ -294,6 +294,10 @@ public abstract class Builder {
                             + decConstant.getFormat());
             };
 
+        case BFloat16Constant bfloatConstant:
+            code.loadConstant(bfloatConstant.getValue().floatValue());
+            return new SingleSlot(constant.getType(), Primitive, CD_float, "");
+
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
                 case Float16 -> {
@@ -354,7 +358,14 @@ public abstract class Builder {
                 }
 
                 switch (jtd.flavor) {
-                case Specific, Widened, Primitive:
+                case Primitive:
+                    code.getstatic(ensureClassDesc(ownerType),
+                            propId.ensureJitPropertyName(typeSystem),
+                            JitTypeDesc.getPrimitiveFieldClass(propType));
+                    normalizePrimitiveField(code, propType);
+                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+
+                case Specific, Widened:
                     code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
                     return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
@@ -767,6 +778,21 @@ public abstract class Builder {
                 // ArrayᐸDec128ᐳ array = ArrayᐸDec128ᐳ.$new$p(ctx, type, capacity, false);
                 cdArray = CD_ArrayDec128;
                 mdAdd   = md(cdArray, CD_Ctx, CD_long, CD_long);
+                break;
+
+            case "Float8e4":
+                cdArray = CD_ArrayFloat8e4;
+                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "Float8e5":
+                cdArray = CD_ArrayFloat8e5;
+                mdAdd   = md(cdArray, CD_Ctx, CD_int);
+                break;
+
+            case "BFloat16":
+                cdArray = CD_ArrayBFloat16;
+                mdAdd   = md(cdArray, CD_Ctx, CD_float);
                 break;
 
             case "Float32":
@@ -1413,8 +1439,9 @@ public abstract class Builder {
                 code.getfield(CD_Dec128, "$highBits", CD_long);
                 // stack is long long_2 long long_2
             }
-            case "Float8e4" -> code.getfield(CD_Float8e4, "$value", CD_int);
-            case "Float8e5" -> code.getfield(CD_Float8e5, "$value", CD_int);
+            case "Float8e4" -> code.getfield(CD_Float8e4, "$value", CD_byte).ldc(0xFF).iand();
+            case "Float8e5" -> code.getfield(CD_Float8e5, "$value", CD_byte).ldc(0xFF).iand();
+            case "BFloat16" -> code.getfield(CD_BFloat16, "$value", CD_float);
             case "Float16" -> code.getfield(CD_Float16, "$value", CD_float);
             case "Float32" -> code.getfield(CD_Float32, "$value", CD_float);
             case "Float64" -> code.getfield(CD_Float64, "$value", CD_double);
@@ -1501,6 +1528,7 @@ public abstract class Builder {
             case "Dec128"  -> code.invokestatic(CD_Dec128,    "$box", MD_Dec128_box);
             case "Float8e4" -> code.invokestatic(CD_Float8e4, "$box", MD_Float8e4_box);
             case "Float8e5" -> code.invokestatic(CD_Float8e5, "$box", MD_Float8e5_box);
+            case "BFloat16" -> code.invokestatic(CD_BFloat16, "$box", MD_BFloat16_box);
             case "Float16" -> code.invokestatic(CD_Float16,   "$box", MD_Float16_box);
             case "Float32" -> code.invokestatic(CD_Float32,   "$box", MD_Float32_box);
             case "Float64" -> code.invokestatic(CD_Float64,   "$box", MD_Float64_box);
@@ -1935,6 +1963,18 @@ public abstract class Builder {
         }
     }
 
+    /**
+     * Recover the unsigned FP8 encoding after a byte field load sign-extends it to an int.
+     */
+    public static void normalizePrimitiveField(CodeBuilder code, TypeConstant type) {
+        TypeConstant baseType = type.removeNullable();
+        if (baseType.isJavaPrimitive()) {
+            switch (baseType.getSingleUnderlyingClass(false).getName()) {
+                case "Float8e4", "Float8e5" -> code.ldc(0xFF).iand();
+            }
+        }
+    }
+
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
 
     /**
@@ -1979,6 +2019,7 @@ public abstract class Builder {
     public static final String N_ArrayDec128  = "org.xtclang.ecstasy.collections.ArrayᐸDec128ᐳ";
     public static final String N_ArrayFloat8e4 = "org.xtclang.ecstasy.collections.ArrayᐸFloat8e4ᐳ";
     public static final String N_ArrayFloat8e5 = "org.xtclang.ecstasy.collections.ArrayᐸFloat8e5ᐳ";
+    public static final String N_ArrayBFloat16 = "org.xtclang.ecstasy.collections.ArrayᐸBFloat16ᐳ";
     public static final String N_ArrayFloat16 = "org.xtclang.ecstasy.collections.ArrayᐸFloat16ᐳ";
     public static final String N_ArrayFloat32 = "org.xtclang.ecstasy.collections.ArrayᐸFloat32ᐳ";
     public static final String N_ArrayFloat64 = "org.xtclang.ecstasy.collections.ArrayᐸFloat64ᐳ";
@@ -2011,6 +2052,7 @@ public abstract class Builder {
     public static final String N_FPLiteral    = "org.xtclang.ecstasy.numbers.FPLiteral";
     public static final String N_Float8e4     = "org.xtclang.ecstasy.numbers.Float8e4";
     public static final String N_Float8e5     = "org.xtclang.ecstasy.numbers.Float8e5";
+    public static final String N_BFloat16     = "org.xtclang.ecstasy.numbers.BFloat16";
     public static final String N_Float16      = "org.xtclang.ecstasy.numbers.Float16";
     public static final String N_Float32      = "org.xtclang.ecstasy.numbers.Float32";
     public static final String N_Float64      = "org.xtclang.ecstasy.numbers.Float64";
@@ -2111,6 +2153,9 @@ public abstract class Builder {
     public static final ClassDesc CD_ArrayDec32          = ClassDesc.of(N_ArrayDec32);
     public static final ClassDesc CD_ArrayDec64          = ClassDesc.of(N_ArrayDec64);
     public static final ClassDesc CD_ArrayDec128         = ClassDesc.of(N_ArrayDec128);
+    public static final ClassDesc CD_ArrayFloat8e4        = ClassDesc.of(N_ArrayFloat8e4);
+    public static final ClassDesc CD_ArrayFloat8e5        = ClassDesc.of(N_ArrayFloat8e5);
+    public static final ClassDesc CD_ArrayBFloat16        = ClassDesc.of(N_ArrayBFloat16);
     public static final ClassDesc CD_ArrayFloat32        = ClassDesc.of(N_ArrayFloat32);
     public static final ClassDesc CD_ArrayFloat64        = ClassDesc.of(N_ArrayFloat64);
     public static final ClassDesc CD_ArrayInt8           = ClassDesc.of(N_ArrayInt8);
@@ -2153,6 +2198,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Dec128              = ClassDesc.of(N_Dec128);
     public static final ClassDesc CD_Float8e4            = ClassDesc.of(N_Float8e4);
     public static final ClassDesc CD_Float8e5            = ClassDesc.of(N_Float8e5);
+    public static final ClassDesc CD_BFloat16            = ClassDesc.of(N_BFloat16);
     public static final ClassDesc CD_Float16             = ClassDesc.of(N_Float16);
     public static final ClassDesc CD_Float32             = ClassDesc.of(N_Float32);
     public static final ClassDesc CD_Float64             = ClassDesc.of(N_Float64);
@@ -2230,6 +2276,7 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_Dec128_box   = md(CD_Dec128, CD_long, CD_long);
     public static final MethodTypeDesc MD_Float8e4_box = md(CD_Float8e4, CD_int);
     public static final MethodTypeDesc MD_Float8e5_box = md(CD_Float8e5, CD_int);
+    public static final MethodTypeDesc MD_BFloat16_box = md(CD_BFloat16, CD_float);
     public static final MethodTypeDesc MD_Float16_box  = md(CD_Float16, CD_float);
     public static final MethodTypeDesc MD_Float32_box  = md(CD_Float32, CD_float);
     public static final MethodTypeDesc MD_Float64_box  = md(CD_Float64, CD_double);

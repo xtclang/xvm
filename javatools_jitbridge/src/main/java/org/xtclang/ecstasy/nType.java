@@ -145,6 +145,9 @@ public class nType
                 case UInt128 n1 -> UInt128.$equals(n1.$lowValue, n1.$highValue,
                         ((UInt128) value2).$lowValue, ((UInt128) value2).$highValue);
 
+                case BFloat16 n1 -> Float.compare(n1.$value, ((BFloat16) value2).$value) == 0;
+                case Float8e4 n1 -> Float8e4.$compare(n1.$value, ((Float8e4) value2).$value) == 0;
+                case Float8e5 n1 -> Float8e5.$compare(n1.$value, ((Float8e5) value2).$value) == 0;
                 case Float16 n1 -> Float.compare(n1.$value, ((Float16) value2).$value) == 0;
                 case Float32 n1 -> Float.compare(n1.$value, ((Float32) value2).$value) == 0;
                 case Float64 n1 -> Double.compare(n1.$value, ((Float64) value2).$value) == 0;
@@ -204,6 +207,9 @@ public class nType
                 case UInt128 n1 -> UInt128.$compare(n1.$lowValue, n1.$highValue,
                         ((UInt128) value2).$lowValue, ((UInt128) value2).$highValue);
 
+                case BFloat16 n1 -> Float.compare(n1.$value, ((BFloat16) value2).$value);
+                case Float8e4 n1 -> Float8e4.$compare(n1.$value, ((Float8e4) value2).$value);
+                case Float8e5 n1 -> Float8e5.$compare(n1.$value, ((Float8e5) value2).$value);
                 case Float16 n1 -> Float.compare(n1.$value, ((Float16) value2).$value);
                 case Float32 n1 -> Float.compare(n1.$value, ((Float32) value2).$value);
                 case Float64 n1 -> Double.compare(n1.$value, ((Float64) value2).$value);
@@ -257,6 +263,9 @@ public class nType
                 case Int128 n1  -> collector.addLong(n1.$lowValue).addLong(n1.$highValue);
                 case UInt128 n1 -> collector.addLong(n1.$lowValue).addLong(n1.$highValue);
 
+                case BFloat16 n1 -> collector.addInt16(Float.floatToIntBits(n1.$value) >>> 16);
+                case Float8e4 n1 -> collector.addInt8(Float8e4.$NaN(n1.$value) ? 0x7F : n1.$value);
+                case Float8e5 n1 -> collector.addInt8(Float8e5.$NaN(n1.$value) ? 0x7F : n1.$value);
                 case Float32 n1 -> collector.addInt32(Float.floatToRawIntBits(n1.$value));
                 case Float64 n1 -> collector.addLong(Double.doubleToRawLongBits(n1.$value));
 

@@ -589,7 +589,8 @@ public class ConstantPool
      * @return a Float8e4Constant for the passed floating point value
      */
     public Float8e4Constant ensureFloat8e4Constant(float flVal) {
-        Float8e4Constant constant = (Float8e4Constant) ensureLocatorLookup(Format.Float8e4).get(flVal);
+        Float8e4Constant constant = (Float8e4Constant) ensureLocatorLookup(Format.Float8e4)
+                .get(Float8e4Constant.toBits(flVal));
         if (constant == null) {
             constant = register(new Float8e4Constant(this, flVal));
         }
@@ -604,7 +605,8 @@ public class ConstantPool
      * @return a Float8e5Constant for the passed floating point value
      */
     public Float8e5Constant ensureFloat8e5Constant(float flVal) {
-        Float8e5Constant constant = (Float8e5Constant) ensureLocatorLookup(Format.Float8e5).get(flVal);
+        Float8e5Constant constant = (Float8e5Constant) ensureLocatorLookup(Format.Float8e5)
+                .get(Float8e5Constant.toBits(flVal));
         if (constant == null) {
             constant = register(new Float8e5Constant(this, flVal));
         }
@@ -2139,6 +2141,7 @@ public class ConstantPool
                         typeUInt128(),
                         typeFloat8e4(),
                         typeFloat8e5(),
+                        typeBFloat16(),
                         typeFloat16(),
                         typeFloat32(),
                         typeFloat64(),
@@ -2277,6 +2280,7 @@ public class ConstantPool
     public TypeConstant      typeDec128()        {TypeConstant      c = m_typeDec128;        if (c == null) {m_typeDec128        = c = ensureTerminalTypeConstant(clzDec128()                          );} return c;}
     public TypeConstant      typeFloat8e4()      {TypeConstant      c = m_typeFloat8e4;      if (c == null) {m_typeFloat8e4      = c = ensureTerminalTypeConstant(clzFloat8e4()                        );} return c;}
     public TypeConstant      typeFloat8e5()      {TypeConstant      c = m_typeFloat8e5;      if (c == null) {m_typeFloat8e5      = c = ensureTerminalTypeConstant(clzFloat8e5()                        );} return c;}
+    public TypeConstant      typeBFloat16()      {TypeConstant      c = m_typeBFloat16;      if (c == null) {m_typeBFloat16      = c = ensureTerminalTypeConstant(clzBFloat16()                        );} return c;}
     public TypeConstant      typeFloat16()       {TypeConstant      c = m_typeFloat16;       if (c == null) {m_typeFloat16       = c = ensureTerminalTypeConstant(clzFloat16()                         );} return c;}
     public TypeConstant      typeFloat32()       {TypeConstant      c = m_typeFloat32;       if (c == null) {m_typeFloat32       = c = ensureTerminalTypeConstant(clzFloat32()                         );} return c;}
     public TypeConstant      typeFloat64()       {TypeConstant      c = m_typeFloat64;       if (c == null) {m_typeFloat64       = c = ensureTerminalTypeConstant(clzFloat64()                         );} return c;}
@@ -2391,6 +2395,7 @@ public class ConstantPool
     protected ClassConstant  clzDec128()        {return (ClassConstant) getImplicitlyImportedIdentity("Dec128"                   );}
     protected ClassConstant  clzFloat8e4()      {return (ClassConstant) getImplicitlyImportedIdentity("Float8e4"                 );}
     protected ClassConstant  clzFloat8e5()      {return (ClassConstant) getImplicitlyImportedIdentity("Float8e5"                 );}
+    protected ClassConstant  clzBFloat16()      {return (ClassConstant) getImplicitlyImportedIdentity("BFloat16"                 );}
     protected ClassConstant  clzFloat16()       {return (ClassConstant) getImplicitlyImportedIdentity("Float16"                  );}
     protected ClassConstant  clzFloat32()       {return (ClassConstant) getImplicitlyImportedIdentity("Float32"                  );}
     protected ClassConstant  clzFloat64()       {return (ClassConstant) getImplicitlyImportedIdentity("Float64"                  );}
@@ -3833,6 +3838,7 @@ public class ConstantPool
         m_typeDec128        = null;
         m_typeFloat8e4      = null;
         m_typeFloat8e5      = null;
+        m_typeBFloat16      = null;
         m_typeFloat16       = null;
         m_typeFloat32       = null;
         m_typeFloat64       = null;
@@ -4152,6 +4158,7 @@ public class ConstantPool
     private transient TypeConstant      m_typeDec128;
     private transient TypeConstant      m_typeFloat8e4;
     private transient TypeConstant      m_typeFloat8e5;
+    private transient TypeConstant      m_typeBFloat16;
     private transient TypeConstant      m_typeFloat16;
     private transient TypeConstant      m_typeFloat32;
     private transient TypeConstant      m_typeFloat64;

@@ -1,7 +1,5 @@
 class Float8e5Tests {
 
-    @Inject Console console;
-
     void run() {
         // Comparison tests
         testFloat8e5CompareEq();
@@ -35,6 +33,11 @@ class Float8e5Tests {
 
         // Number tests
         testFloat8e5toArray();
+        testArrays();
+        testArrayInitializer();
+        testBoxedArrayInitializer();
+        testFailingArrayInitializer();
+        testNegativeFields();
         testFloat8e5Rounding();
         testFloat8e5Negate();
         testFloat8e5Arithmetic();
@@ -352,4 +355,118 @@ class Float8e5Tests {
         n = -10;
         assert n.estimateStringLength() == 5; // "-10.0"
     }
+
+    void testNegativeFields() {
+        Float8e5AsField holder = new Float8e5AsField();
+        holder.field = -4.0;
+        assert holder.field == -4.0;
+        assert holder.field.toFloat32() == -4.0;
+        assert holder.field.toByteArray()[0] == 0xC4;
+
+        Float8e5AsNullableField nullable = new Float8e5AsNullableField();
+        nullable.field = -4.0;
+        assert nullable.field == -4.0;
+        nullable.field = Null;
+        assert nullable.field == Null;
+    }
+
+    void testArrays() {
+        Float8e5[] literal = [1.0, -2.0, 4.0];
+        assert literal.size == 3;
+        assert literal[0] == 1.0 && literal[1] == -2.0 && literal[2] == 4.0;
+
+        Float8e5[] fixed = new Float8e5[17](-4.0);
+        assert fixed.mutability == Fixed;
+        assert fixed[0] == -4.0 && fixed[7] == -4.0 && fixed[8] == -4.0 && fixed[16] == -4.0;
+        fixed[8] = 2.0;
+        fixed[8] += 1.0;
+        assert fixed[7] == -4.0 && fixed[8] == 3.0 && fixed[9] == -4.0;
+
+        Float8e5[] values = new Array(1);
+        for (Int i : 0..<17) {
+            values.add(i % 2 == 0 ? Float8e5:1.0 : Float8e5:-2.0);
+        }
+        assert values.size == 17;
+        assert values[7] == -2.0 && values[8] == 1.0 && values[16] == 1.0;
+        Int count = 0;
+        for (Float8e5 value : values) {
+            assert value == (count % 2 == 0 ? Float8e5:1.0 : Float8e5:-2.0);
+            ++count;
+        }
+        assert count == 17;
+
+        values.insert(8, -4.0);
+        assert values.size == 18 && values[7] == -2.0 && values[8] == -4.0 && values[9] == 1.0;
+        values.delete(8);
+        assert values.size == 17 && values[7] == -2.0 && values[8] == 1.0;
+
+        Float8e5[] copy = new Array(Fixed, values);
+        assert copy.size == values.size;
+        assert copy[7] == -2.0 && copy[8] == 1.0 && copy[16] == 1.0;
+        Float8e5[] duplicate = new Array(values);
+        assert duplicate.size == values.size && duplicate[7] == -2.0;
+        values[7] = 4.0;
+        assert duplicate[7] == -2.0 && copy[7] == -2.0;
+    }
+
+    void testArrayInitializer() {
+        InitializerState state = new InitializerState();
+        Float8e5 negative = -4.0;
+        function Float8e5(Int) supply = i -> {
+            assert i == state.calls;
+            ++state.calls;
+            return i % 2 == 0 ? Float8e5:2.0 : negative;
+        };
+
+        // Cross two packed-long boundaries and check call order and captured values.
+        Float8e5[] values = new Float8e5[17](supply);
+        assert values.mutability == Fixed && values.size == 17;
+        assert state.calls == 17;
+        for (Int i : 0..<values.size) {
+            Float8e5 expected = i % 2 == 0 ? Float8e5:2.0 : negative;
+            assert values[i] == expected;
+        }
+        values[8] = -1.0;
+        assert values[7] == negative && values[8] == -1.0 && values[9] == negative;
+
+        Float8e5[] empty = new Float8e5[0](supply);
+        assert empty.empty && empty.mutability == Fixed;
+        assert state.calls == 17;
+    }
+
+    void testBoxedArrayInitializer() {
+        // A generic return type requires the boxed calling convention in the JIT.
+        function Float8e5(Int) boxedSupply = alternatingInitializer(Float8e5:-2.0, Float8e5:4.0);
+        Float8e5[] boxed = new Float8e5[17](boxedSupply);
+        for (Int i : 0..<boxed.size) {
+            Float8e5 expected = i % 2 == 0 ? Float8e5:-2.0 : Float8e5:4.0;
+            assert boxed[i] == expected;
+        }
+    }
+
+    void testFailingArrayInitializer() {
+        InitializerState state = new InitializerState();
+        try {
+            Float8e5[] failed = new Float8e5[17](i -> {
+                ++state.calls;
+                if (i == 3) {
+                    throw new IllegalState("initializer failed");
+                }
+                return Float8e5:1.0;
+            });
+            assert False;
+        } catch (IllegalState e) {
+            assert e.text == "initializer failed";
+        }
+        assert state.calls == 4;
+    }
+
+    static <Element> function Element(Int) alternatingInitializer(Element even, Element odd) {
+        return i -> i % 2 == 0 ? even : odd;
+    }
+
+    static class InitializerState {
+        Int calls = 0;
+    }
+
 }

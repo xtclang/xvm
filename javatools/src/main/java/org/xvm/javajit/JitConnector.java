@@ -93,9 +93,12 @@ public class JitConnector
             Ctx    ctx       = xvm.getCtx();
             Object module    = mainClass.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
+            // Reflection boxes the optimized Java long as Long, which join() uses as the exit code.
+            String runName = methodStructure.getReturnCount() == 1 &&
+                    methodStructure.getReturn(0).getType().equals(pool.typeInt64()) ? "run$p" : "run";
             Object result;
             if (methodStructure.getParamCount() == 0) {
-                Method runMethod = mainClass.getMethod("run", Ctx.class);
+                Method runMethod = mainClass.getMethod(runName, Ctx.class);
                 result = runMethod.invoke(module, ctx);
             } else {
                 TypeConstant stringArrayType = pool.ensureArrayType(pool.typeString());
@@ -122,9 +125,7 @@ public class JitConnector
                 stringArray = makeImmutMethod.invoke(stringArray, ctx);
 
                 // run(stringArray);
-                Method runMethod = mainClass.getMethod(
-                    methodStructure.getReturnCount() == 0 ? "run" : "run$p",
-                    Ctx.class, arrayClass);
+                Method runMethod = mainClass.getMethod(runName, Ctx.class, arrayClass);
                 result = runMethod.invoke(module, ctx, stringArray);
             }
             switch (result) {
@@ -144,6 +145,7 @@ public class JitConnector
             if (name.startsWith(TypeSystem.ClassfileShape.Exception.prefix) ||
                 name.charAt(0) == TypeSystem.NO_MOD) {
 
+                this.result = 1;
                 try {
                     // TODO: add the service info; see Utils.log()
                     System.out.println("\nUnhandled exception: " +

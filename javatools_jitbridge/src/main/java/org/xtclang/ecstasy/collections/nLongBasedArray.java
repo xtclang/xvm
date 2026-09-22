@@ -1,13 +1,22 @@
 package org.xtclang.ecstasy.collections;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+
 import java.util.Arrays;
+
+import java.util.function.BiFunction;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nException;
+import org.xtclang.ecstasy.nFunction;
 import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
+
+import org.xtclang.ecstasy.numbers.Int64;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -37,6 +46,13 @@ import static java.lang.System.arraycopy;
 public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayType>>
         extends Array
         implements Cloneable {
+
+    private static final MethodType INITIALIZER_SIGNATURE =
+            MethodType.methodType(int.class, Ctx.class, long.class);
+    private static final MethodType BOXED_INITIALIZER_SIGNATURE =
+            MethodType.methodType(Object.class, Ctx.class, Int64.class);
+    private static final MethodType UNBOX_SIGNATURE =
+            MethodType.methodType(int.class, Object.class);
 
     protected nLongBasedArray(Ctx ctx, TypeConstant type) {
         super(ctx, type);
@@ -94,6 +110,57 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     protected abstract java.lang.String $elementToString(Ctx ctx, long index);
 
     // ----- Array API -----------------------------------------------------------------------------
+
+    /**
+     * Construct a fixed-size 8-bit array filled with one encoded value.
+     *
+     * @param value    the encoded 8-bit element value
+     * @param factory  the constructor for the concrete array type
+     */
+    protected static <A extends nLongBasedArray<A>> A $new8Bit(
+            Ctx ctx, TypeConstant type, long size, int value,
+            BiFunction<Ctx, TypeConstant, A> factory) {
+        ctx.alloc(size); // REVIEW + HEADER_SIZE?
+        A array = factory.apply(ctx, type);
+        array.$mut($FIXED);
+
+        long bits = value & 0xFFL;
+        long fill = bits | (bits << 8) | (bits << 16) | (bits << 24);
+        fill |= (fill << 32);
+
+        if (!array.$growInPlace(ctx, size)) {
+            throw array.$oob(ctx, size);
+        }
+
+        Arrays.fill(array.$storage, fill);
+        array.$size((int) size);
+        return array;
+    }
+
+    /**
+     * Construct a fixed-size 8-bit array initialized by an index function.
+     *
+     * @param unboxValue  the element unboxer, with signature {@code (Object)int}
+     * @param factory     the constructor for the concrete array type
+     */
+    protected static <A extends nLongBasedArray<A>> A $new8Bit(
+            Ctx ctx, TypeConstant type, long size, nFunction fn, MethodHandle unboxValue,
+            BiFunction<Ctx, TypeConstant, A> factory) {
+        if (size < 0) {
+            throw Exception.$illegalArg(ctx, "Invalid array size: " + size);
+        }
+        ctx.alloc(size); // REVIEW + HEADER_SIZE?
+        A array = factory.apply(ctx, type);
+        array.$mut($FIXED);
+
+        if (size > 0 && !array.$growInPlace(ctx, size)) {
+            throw array.$oob(ctx, size);
+        }
+
+        array.$fill8Bit(ctx, size, fn, unboxValue);
+        array.$size((int) size);
+        return array;
+    }
 
     @Override public long capacity$get$p(Ctx ctx) {
         return $delegate == null
@@ -560,6 +627,51 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         int i = idx >>> 3;
         int s = (7 - (idx & 0x7)) << 3;
         $storage[i] = $storage[i] & ~(0xFFL << s) | ((value & 0xFFL) << s);
+    }
+
+    /**
+     * Initialize allocated 8-bit storage from an index function. Select the primitive calling
+     * convention once, retaining direct calls in both loops without composing adapter chains.
+     *
+     * @param unboxValue  the element unboxer, with signature {@code (Object)int}
+     */
+    protected void $fill8Bit(Ctx ctx, long size, nFunction fn, MethodHandle unboxValue) {
+        if (size == 0) {
+            return;
+        }
+
+        try {
+            if (fn.$hasOptMethod(INITIALIZER_SIGNATURE)) {
+                MethodHandle initializer = fn.optMethod;
+                for (long i = 0; i < size; i++) {
+                    $set8bitElement(i, (int) initializer.invokeExact(ctx, i));
+                }
+                return;
+            }
+
+            MethodHandle initializer = fn.stdMethod.asType(BOXED_INITIALIZER_SIGNATURE);
+            for (long i = 0; i < size; i++) {
+                Object value = (Object) initializer.invokeExact(ctx, Int64.$box(i));
+                $set8bitElement(i, (int) unboxValue.invokeExact(value));
+            }
+        } catch (nException e) {
+            throw e;
+        } catch (Throwable e) {
+            // Method handles expose signature mismatches as Throwable; convert to an XTC exception.
+            throw Exception.$typeMismatch(ctx, e.getMessage());
+        }
+    }
+
+    /**
+     * Create a cached unboxer for an element wrapper with a byte-valued {@code $value} field.
+     */
+    protected static MethodHandle $unbox8Bit(Class<?> elementClass) {
+        try {
+            return MethodHandles.lookup().findGetter(elementClass, "$value", byte.class)
+                    .asType(UNBOX_SIGNATURE);
+        } catch (ReflectiveOperationException e) {
+            throw new ExceptionInInitializerError(e);
+        }
     }
 
     /**
