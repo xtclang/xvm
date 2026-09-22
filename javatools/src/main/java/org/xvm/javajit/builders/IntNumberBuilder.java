@@ -97,7 +97,6 @@ public class IntNumberBuilder extends NumberBuilder {
         if (thisType.isJavaPrimitive()) {
             ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
-            assert cd != null;
 
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
@@ -165,7 +164,6 @@ public class IntNumberBuilder extends NumberBuilder {
         if (thisType.isJavaPrimitive()) {
             ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
             int       slot = code.parameterSlot(0);
-            assert cd != null;
 
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
@@ -250,7 +248,6 @@ public class IntNumberBuilder extends NumberBuilder {
     protected void generateLeadingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
             ClassDesc cd = JitTypeDesc.requireJavaPrimitive(thisType);
-            assert cd != null;
 
             int slot      = code.parameterSlot(0);
             int bitLength = getBitLength();
@@ -303,7 +300,6 @@ public class IntNumberBuilder extends NumberBuilder {
     protected void generateTrailingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
             ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
-            assert cd != null;
 
             int bitLength = getBitLength();
             int slot      = code.parameterSlot(0);

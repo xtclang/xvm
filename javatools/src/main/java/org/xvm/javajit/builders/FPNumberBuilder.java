@@ -320,11 +320,10 @@ public class FPNumberBuilder extends NumberBuilder {
      */
     protected void generateBinaryRounding(CodeBuilder code, JitMethodDesc jmd, String mode) {
         ClassDesc valueCD = JitTypeDesc.requireJavaPrimitive(thisType);
-        assert valueCD != null;
 
         if (mode != null) {
-            loadBinaryValueAsDouble(code, valueCD);
-            code.invokestatic(CD_JavaMath, mode.equals("FLOOR") ? "floor" : "ceil",
+            loadBinaryValueAsDouble(code, valueCD)
+                .invokestatic(CD_JavaMath, mode.equals("FLOOR") ? "floor" : "ceil",
                     md(CD_double, CD_double));
             narrowDoubleToCarrier(code, valueCD);
             addPrimitiveReturn(code, jmd);
@@ -333,16 +332,15 @@ public class FPNumberBuilder extends NumberBuilder {
 
         Label finite = code.newLabel();
         load(code, valueCD, code.parameterSlot(0));
-        loadIsFinite(code, valueCD);
-        code.ifne(finite);
+        loadIsFinite(code, valueCD).ifne(finite);
         load(code, valueCD, code.parameterSlot(0));
         addPrimitiveReturn(code, jmd);
 
         code.labelBinding(finite)
             .new_(CD_BigDecimal)
             .dup();
-        loadBinaryValueAsDouble(code, valueCD);
-        code.invokespecial(CD_BigDecimal, INIT_NAME, md(CD_void, CD_double));
+        loadBinaryValueAsDouble(code, valueCD)
+            .invokespecial(CD_BigDecimal, INIT_NAME, md(CD_void, CD_double));
         generateSetScale(code, jmd, null);
         code.invokevirtual(CD_BigDecimal, "doubleValue", md(CD_double));
         narrowDoubleToCarrier(code, valueCD);
@@ -409,20 +407,20 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Load the primitive binary value as a double.
      */
-    protected void loadBinaryValueAsDouble(CodeBuilder code, ClassDesc valueCD) {
-        CodeBuilder loaded = load(code, valueCD, code.parameterSlot(0));
+    protected CodeBuilder loadBinaryValueAsDouble(CodeBuilder code, ClassDesc valueCD) {
+        load(code, valueCD, code.parameterSlot(0));
 
         if (valueCD.equals(CD_double)) {
-            return;                                     // nothing to widen
+            return code;
         }
         if (valueCD.equals(CD_float)) {
-            loaded.f2d();
-        } else if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
-            // an FP8 value is carried as its 8-bit encoding, so decode it before widening
-            loaded.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int)).f2d();
-        } else {
-            throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
+            return code.f2d();
         }
+        if (fp8ClassDesc() instanceof ClassDesc fp8CD && valueCD.equals(CD_int)) {
+            // an FP8 value is carried as its 8-bit encoding, so decode it before widening
+            return code.invokestatic(fp8CD, "$toFloat", md(CD_float, CD_int)).f2d();
+        }
+        throw new IllegalStateException("Unsupported binary FPNumber type " + thisType);
     }
 
     /**

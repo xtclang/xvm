@@ -45,7 +45,7 @@ public class JitTypeDesc {
      */
     public static ClassDesc getJitClass(Builder builder, TypeConstant type) {
         return type.isJavaPrimitive()
-            ? JitParamDesc.requireJavaPrimitive(type)
+            ? requireJavaPrimitive(type)
             : type.isSingleUnderlyingClass(true)
                 ? builder.ensureClassDesc(type)
                 : CD_Object;

@@ -2325,7 +2325,6 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
 
                 ClassDesc cdPrim = JitTypeDesc.requireJavaPrimitive(propType);
-                assert cdPrim != null;
                 switch (cdPrim.descriptorString()) {
                     case "I", "S", "B", "Z":
                         code.if_icmpne(returnFalse);
@@ -2549,7 +2548,6 @@ public class CommonBuilder
             if (propType.isJavaPrimitive()) {
                 // Java primitive: load both values, compare directly, convert int to Ordered
                 ClassDesc cdPrim = JitTypeDesc.requireJavaPrimitive(propType);
-                assert cdPrim != null;
 
                 code.aload(value1Slot);
                 loadProperty(code, type, propId, true);
