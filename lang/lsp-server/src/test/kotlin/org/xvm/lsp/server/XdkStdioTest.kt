@@ -23,6 +23,9 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
+import org.eclipse.lsp4j.TypeHierarchySubtypesParams
+import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
@@ -80,6 +83,55 @@ class XdkStdioTest {
             session.verifySemantics(REOPENED, "label", "String")
 
             for (version in 2..20) session.change(BROKEN, version)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `packaged module diagnostics cross file definitions and hierarchy round trip over stdio`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("Multi.x").toFile()
+        val member = directory.resolve("Multi/Child.x").toFile()
+        val source = "module Multi { class Base {} Child make() = new Child(); }"
+        root.writeText(source)
+        member.parentFile.mkdirs()
+        member.writeText("class Child extends Base {}")
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val rootId = TextDocumentIdentifier(root.toURI().toString())
+            val memberId = TextDocumentIdentifier(member.toURI().toString())
+            val documents = session.server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(rootId.uri, "xtc", 1, source)))
+            assertThat(session.diagnosticsFor(memberId.uri, null).diagnostics).isEmpty()
+            val definition =
+                session
+                    .await(
+                        documents.definition(DefinitionParams(rootId, Position(0, source.indexOf("Child")))),
+                    ).left
+                    .single()
+            assertThat(definition.uri).isEqualTo(memberId.uri)
+            val base =
+                session
+                    .await(
+                        documents.prepareTypeHierarchy(TypeHierarchyPrepareParams(rootId, Position(0, source.indexOf("Base")))),
+                    ).single()
+            val child = session.await(documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base))).single()
+            assertThat(child.uri).isEqualTo(memberId.uri)
+            assertThat(
+                session.await(documents.typeHierarchySupertypes(TypeHierarchySupertypesParams(child))).single().uri,
+            ).isEqualTo(rootId.uri)
+            documents.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(memberId.uri, "xtc", 7, "class Child extends Base { MissingType absent; }")),
+            )
+            assertThat(session.diagnosticsFor(memberId.uri, 7).diagnostics).anyMatch { it.code.left == "COMPILER-38" }
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(memberId.uri, 8),
+                    listOf(TextDocumentContentChangeEvent(member.readText())),
+                ),
+            )
+            assertThat(session.diagnosticsFor(memberId.uri, 8).diagnostics).isEmpty()
+            assertThat(session.await(documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)))).isEmpty()
             session.shutdownAndExit()
         }
     }
@@ -268,6 +320,19 @@ class XdkStdioTest {
                 assertThat(publication.uri).isEqualTo(URI)
                 assertThat(publication.version).isLessThanOrEqualTo(version)
                 if (publication.version == version) return publication
+            }
+        }
+
+        fun diagnosticsFor(
+            uri: String,
+            version: Int?,
+        ): PublishDiagnosticsParams {
+            val deadline = System.nanoTime() + SECONDS.toNanos(30)
+            while (true) {
+                val remaining = deadline - System.nanoTime()
+                val publication = if (remaining > 0) published.poll(remaining, NANOSECONDS) else null
+                checkNotNull(publication) { "No diagnostics for $uri version $version. ${log()}" }
+                if (publication.uri == uri && publication.version == version) return publication
             }
         }
 

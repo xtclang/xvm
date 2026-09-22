@@ -766,8 +766,9 @@ jobs:
                   suites = [
                       "adapter.CompilerConsumerTest",
                       "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
-                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest",
-                      "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
+                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest", "adapter.CompilerProjectTest",
+                      "adapter.TypeInfoDiagnosticsTest", "adapter.TypeInfoFinalCompositionTest", "adapter.EmbeddingDiagnosticsTest",
+                      "adapter.XdkModuleSessionTest", "server.XdkModuleServerTest",
                       "server.XdkLanguageServerTest", "server.AdapterBackendTest",
                   ]
                   for suite in suites:
