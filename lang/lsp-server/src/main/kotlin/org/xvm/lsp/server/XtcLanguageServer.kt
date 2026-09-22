@@ -139,6 +139,7 @@ import kotlin.time.measureTimedValue
 @Suppress("LoggingSimilarMessage")
 class XtcLanguageServer(
     private val adapter: Adapter,
+    private val onExit: (Int) -> Unit = {},
 ) : LanguageServer,
     LanguageClientAware {
     private var client: LanguageClient? = null
@@ -559,6 +560,7 @@ class XtcLanguageServer(
 
     override fun shutdown(): CompletableFuture<Any> {
         logger.info("shutdown: shutting down Ecstasy Language Server")
+        shutdownRequested = true
         initialized = false
         textDocumentService.close()
         adapter.close()
@@ -567,7 +569,11 @@ class XtcLanguageServer(
 
     override fun exit() {
         logger.info("exit: exiting Ecstasy Language Server")
+        onExit(if (shutdownRequested) 0 else 1)
     }
+
+    @Volatile
+    private var shutdownRequested = false
 
     override fun getTextDocumentService(): TextDocumentService = textDocumentService
 
@@ -666,7 +672,7 @@ class XtcLanguageServer(
         version: Int? = null,
     ) {
         val currentClient = client ?: return
-        val lspDiagnostics = diagnostics.map { it.toLsp() }
+        val lspDiagnostics = diagnostics.map { it.toLsp(uri) }
         currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics, version))
     }
 }

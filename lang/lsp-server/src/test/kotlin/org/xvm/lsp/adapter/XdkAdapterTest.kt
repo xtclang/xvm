@@ -257,8 +257,7 @@ class XdkAdapterTest {
     }
 
     /**
-     * Highlighting is by name, which is all the tree knows. Two unrelated things called `count`
-     * would highlight together; telling them apart is a resolution question.
+     * Highlight the declaration and both uses of the resolved local.
      */
     @Test
     fun `the other places the same name is written are highlighted`() {
@@ -313,10 +312,7 @@ class XdkAdapterTest {
     // ----- what a name resolved to ------------------------------------------------------------
 
     /**
-     * A local. Its declaration is a name in the tree, so it can be pointed at - but a use of it
-     * is a *shadow* of the register the declaration produced, deliberately not equal to it, so
-     * this is the one case that is matched by name within the enclosing method rather than by
-     * identity.
+     * Narrowed uses share the original register with the source declaration.
      */
     @Test
     fun `a local variable's declaration is found from a use of it`() {

@@ -1284,6 +1284,17 @@ public class StatementBlock
                     }
                     mapByName.put(sName, reg);
 
+                    // Retain the binding on the source parameter for hosts reading the validated
+                    // tree. Generated methods and captured parameters may have no source parameter.
+                    if (!param.isTypeParameter() &&
+                            f_stmt.getParent() instanceof MethodDeclarationStatement declaration &&
+                            declaration.getComponent() == method && declaration.params != null) {
+                        int index = i - method.getTypeParamCount();
+                        if (index < declaration.params.size()) {
+                            declaration.params.get(index).setResolvedTarget(reg);
+                        }
+                    }
+
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
                     mapAssigned.put(sName, Assignment.AssignedOnce);

@@ -14,6 +14,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
 import java.util.Properties
+import kotlin.system.exitProcess
 
 /**
  * Launcher for the Ecstasy Language Server.
@@ -25,7 +26,7 @@ import java.util.Properties
  * Adapter Selection:
  * - The adapter is selected at build time via: ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=treesitter
  * - Default is 'treesitter' (syntax-aware, requires native library bundled in JAR)
- * - Use 'compiler' for real diagnostics from the XTC compiler (needs an XDK on XDK_HOME)
+ * - Use 'compiler' for real diagnostics from the XTC compiler and its bundled XDK libraries
  * - Use 'mock' for regex-based features (no native dependencies)
  *
  * Important: This LSP server uses stdio for communication. All logging goes to stderr
@@ -127,9 +128,9 @@ fun main(
         }
 
         AdapterBackend.COMPILER -> {
-            logger.info("the compiler provides: syntax and semantic diagnostics, document symbols")
-            logger.info("not yet from the compiler: completion, go-to-definition, references, formatting")
-            logger.info("an XDK is required; without one, files open but report XDK-UNAVAILABLE")
+            logger.info("the compiler provides: diagnostics, symbols, hover, same-file navigation, highlights, folding and selection")
+            logger.info("not yet from the compiler: completion, rename, formatting or project-wide compilation")
+            logger.info("the compiler uses the XDK libraries bundled with this server")
         }
 
         AdapterBackend.MOCK -> {
@@ -141,7 +142,7 @@ fun main(
     }
 
     // Create the server
-    val server = XtcLanguageServer(adapter)
+    val server = XtcLanguageServer(adapter, ::exitProcess)
 
     // Launch with stdio
     launchStdio(server, System.`in`, System.out)

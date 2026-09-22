@@ -536,6 +536,8 @@ jobs:
                     -PincludeBuildLang=true -PincludeBuildAttachLang=true \
                     :lang:lsp-server:test \
                     --tests org.xvm.lsp.adapter.XdkAdapterTest \
+                    --tests org.xvm.lsp.adapter.XdkNavigationTest \
+                    --tests org.xvm.lsp.adapter.XdkDiagnosticTest \
                     --tests org.xvm.lsp.adapter.XdkAdapterLifecycleTest \
                     --tests org.xvm.lsp.adapter.TypeInfoDiagnosticsTest \
                     --tests org.xvm.lsp.adapter.EmbeddingDiagnosticsTest \
@@ -630,7 +632,8 @@ jobs:
                   from xml.etree import ElementTree
                   results = Path("lang/lsp-server/build/test-results/test")
                   suites = [
-                      "adapter.XdkAdapterTest", "adapter.XdkAdapterLifecycleTest",
+                      "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
+                      "adapter.XdkAdapterLifecycleTest",
                       "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
                       "server.XdkLanguageServerTest",
                   ]

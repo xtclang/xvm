@@ -1,6 +1,7 @@
 package org.xvm.lsp.model
 
 import org.eclipse.lsp4j.CodeActionKind
+import org.eclipse.lsp4j.DiagnosticRelatedInformation
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlightKind
 import org.eclipse.lsp4j.FileChangeType
@@ -87,12 +88,17 @@ fun Diagnostic.Companion.fromLsp(
         source = lspDiagnostic.source,
     )
 
-/** Convert this Diagnostic to an LSP4J Diagnostic. */
-fun Diagnostic.toLsp(): org.eclipse.lsp4j.Diagnostic {
+/** Keep foreign-source locations as related information when publishing for another document. */
+fun Diagnostic.toLsp(publicationUri: String = location.uri): org.eclipse.lsp4j.Diagnostic {
     val result = org.eclipse.lsp4j.Diagnostic()
-    result.range = location.toRange()
+    if (location.uri == publicationUri) {
+        result.range = location.toRange()
+    } else {
+        result.range = Range(Position(0, 0), Position(0, 0))
+        result.relatedInformation = listOf(DiagnosticRelatedInformation(location.toLsp(), message))
+    }
     result.severity = severity.toLsp()
-    result.message = Either.forLeft(message)
+    result.message = Either.forLeft(if (location.uri == publicationUri) message else "In ${location.uri}: $message")
     result.source = source
     if (code != null) {
         result.code = Either.forLeft(code)

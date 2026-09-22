@@ -279,6 +279,13 @@ public class InvocationExpression
     }
 
     /**
+     * @return the expression supplying the method or function to invoke, excluding call arguments
+     */
+    public Expression getInvokedExpression() {
+        return expr;
+    }
+
+    /**
      * Which method this call turned out to be a call to.
      *
      * The name in a call does not resolve to anything on its own - `print` means nothing without

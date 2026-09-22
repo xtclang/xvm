@@ -2,6 +2,7 @@ package org.xvm.asm;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -235,13 +236,10 @@ public class FileRepository
         }
 
         // cache is not up-to-date; clear whatever was cached before
-        timestamp              = file.lastModified();
-        size                   = file.length();
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
         cachedModuleStructures = null;
         cacheOk                = false;
-        lastScan               = System.currentTimeMillis();
 
         // load the cache if possible
         if (file.exists() && file.isFile() && file.canRead()) {
@@ -252,6 +250,10 @@ public class FileRepository
                 cacheOk              = true;
             }
         }
+        // A failed read must not be cached as an absent module on the next request.
+        timestamp = file.lastModified();
+        size      = file.length();
+        lastScan  = System.currentTimeMillis();
         return cacheOk;
     }
 
@@ -285,32 +287,26 @@ public class FileRepository
     }
 
     /**
-     * @return the FileInfo freshly read from the file system, or `null` on any failure
+     * @return the FileInfo freshly read from the file system
+     * @throws UncheckedIOException if the module header cannot be read
      */
     private FileInfo readFileInfo() {
         try {
             return FileStructure.readFileInfo(file);
-        } catch (Exception e) {
-            if (!reportedFileStructureError) {
-                reportedFileStructureError = true;
-                System.out.println("Error loading FileInfo from file: " + file + "; " + e.getMessage());
-            }
-            return null;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Unable to read module header: " + file, e);
         }
     }
 
     /**
-     * @return the FileStructure freshly read from the file system, or `null` on any failure
+     * @return the FileStructure freshly read from the file system
+     * @throws UncheckedIOException if the module cannot be read
      */
     private FileStructure readFileStructure() {
         try {
             return new FileStructure(file);
-        } catch (Exception e) {
-            if (!reportedFileInfoError) {
-                reportedFileInfoError = true;
-                System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
-            }
-            return null;
+        } catch (IOException e) {
+            throw new UncheckedIOException("Unable to read module: " + file, e);
         }
     }
 
@@ -356,9 +352,6 @@ public class FileRepository
     private long    size;
     private long    lastScan;
     private boolean cacheOk;
-
-    private boolean reportedFileInfoError;
-    private boolean reportedFileStructureError;
 
     /**
      * Cached file contents: module names and versions thereof.
