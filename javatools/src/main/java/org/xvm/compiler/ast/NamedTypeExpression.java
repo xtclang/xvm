@@ -158,6 +158,13 @@ public class NamedTypeExpression
         return as;
     }
 
+    /**
+     * @return the final name token, excluding qualifiers and type arguments, or null if absent
+     */
+    public Token getNameToken() {
+        return names == null || names.isEmpty() ? null : names.getLast();
+    }
+
     public Constant getIdentityConstant() {
         Constant constId = m_constId;
         if (constId == null) {

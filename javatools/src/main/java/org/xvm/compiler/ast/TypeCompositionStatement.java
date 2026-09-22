@@ -246,6 +246,13 @@ public class TypeCompositionStatement
         return category;
     }
 
+    /**
+     * @return the type's simple name token
+     */
+    public Token getNameToken() {
+        return name;
+    }
+
     public String getName() {
         if (category.getId() == Token.Id.MODULE) {
             StringBuilder sb = new StringBuilder();
@@ -1363,7 +1370,12 @@ public class TypeCompositionStatement
                     // "Registered" stage (it will create the property structure)
                     body.addStatement(prop);
                     new StageMgr(prop, Stage.Registered, errs).fastForward(1);
-                } else if (!(child instanceof PropertyStructure)) {
+                    if (prop.getComponent() != null) {
+                        param.setResolvedTarget(prop.getComponent().getIdentityConstant());
+                    }
+                } else if (child instanceof PropertyStructure prop) {
+                    param.setResolvedTarget(prop.getIdentityConstant());
+                } else {
                     // the parameter implies a property, but we found something else instead
                     param.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sParam);
                 }

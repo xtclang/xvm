@@ -684,7 +684,7 @@ class XtcLanguageServer(
         version: Int? = null,
     ) {
         val currentClient = client ?: return
-        val lspDiagnostics = diagnostics.map { it.toLsp() }
+        val lspDiagnostics = diagnostics.map { it.toLsp(uri) }
         currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics, version))
     }
 }

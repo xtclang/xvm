@@ -2,13 +2,19 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -22,11 +28,53 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.CompilationResult
+import org.xvm.lsp.model.Diagnostic
+import org.xvm.lsp.model.Location
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkLanguageServerTest {
+    @Test
+    fun `exit supplies the process status according to whether shutdown was requested`() {
+        val statuses = mutableListOf<Int>()
+        val server = XtcLanguageServer(MockAdapter(), statuses::add)
+        server.exit()
+        assertThat(statuses).containsExactly(1)
+        server.shutdown().get(10, SECONDS)
+        server.exit()
+        assertThat(statuses).containsExactly(1, 0)
+    }
+
+    @Test
+    fun `a foreign diagnostic publishes as related information and clears with its owner`() {
+        val foreign = Location("file:///Dependency.x", 4, 2, 4, 7)
+        val adapter =
+            object : Adapter by MockAdapter() {
+                override fun compileAsync(
+                    uri: String,
+                    content: String,
+                ): CompletableFuture<CompilationResult> =
+                    CompletableFuture.completedFuture(
+                        CompilationResult.failure(uri, listOf(Diagnostic.error(foreign, "dependency failure"))),
+                    )
+            }
+        Session(adapter).use { session ->
+            session.open("module Current {}")
+            val publication = session.next()
+            assertThat(publication.uri).isEqualTo(URI)
+            val diagnostic = publication.diagnostics.single()
+            assertThat(diagnostic.range).isEqualTo(Range(Position(0, 0), Position(0, 0)))
+            assertThat(diagnostic.message.left).contains(foreign.uri)
+            val related = diagnostic.relatedInformation.single()
+            assertThat(related.location.uri).isEqualTo(foreign.uri)
+            assertThat(related.location.range).isEqualTo(Range(Position(4, 2), Position(4, 7)))
+            session.closeDocument()
+            assertThat(session.next().diagnostics).isEmpty()
+            assertThat(session.published).isEmpty()
+        }
+    }
+
     private class Session(
         adapter: Adapter,
     ) : AutoCloseable {
@@ -227,6 +275,43 @@ class XdkLanguageServerTest {
             assertThat(session.next().diagnostics).isEmpty()
             session.closeDocument()
             assertThat(session.next().diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `local navigation survives protocol conversion and honors includeDeclaration`() {
+        CompilerTestSupport.configure()
+        Session(XdkAdapter()).use { session ->
+            val source = "module Navigation { Int read() { Int value; value = 1; return value; } }"
+            session.open(source)
+            assertThat(session.next().diagnostics).isEmpty()
+            val document = TextDocumentIdentifier(URI)
+            val declaration = source.indexOf("value;")
+            val write = source.indexOf("value =")
+            val read = source.lastIndexOf("value;")
+            val cursor = Position(0, read)
+
+            fun range(start: Int) = Range(Position(0, start), Position(0, start + "value".length))
+
+            val definition =
+                session.documents
+                    .definition(DefinitionParams(document, cursor))
+                    .get(10, SECONDS)
+                    .left
+                    .single()
+            assertThat(definition.uri).isEqualTo(URI)
+            assertThat(definition.range).isEqualTo(range(declaration))
+            for (includeDeclaration in listOf(false, true)) {
+                val references =
+                    session.documents
+                        .references(ReferenceParams(document, cursor, ReferenceContext(includeDeclaration)))
+                        .get(10, SECONDS)
+                assertThat(references).allMatch { it.uri == URI }
+                val expected = if (includeDeclaration) listOf(declaration, write, read) else listOf(write, read)
+                assertThat(references.map { it.range }).containsExactlyElementsOf(expected.map(::range))
+            }
+            val highlights = session.documents.documentHighlight(DocumentHighlightParams(document, cursor)).get(10, SECONDS)
+            assertThat(highlights.map { it.range }).containsExactly(range(declaration), range(write), range(read))
         }
     }
 

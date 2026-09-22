@@ -111,6 +111,13 @@ public class PropertyDeclarationStatement
         return name.getValueText();
     }
 
+    /**
+     * @return the property name token
+     */
+    public Token getNameToken() {
+        return name;
+    }
+
     public TypeExpression getType() {
         return type;
     }

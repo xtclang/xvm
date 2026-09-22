@@ -45,11 +45,8 @@ class TypeInfoDiagnosticsTest {
      * The memoized result carries what building it said. The first caller here is the compilation
      * itself; the second is a later one with a listener of its own, and must still be told.
      *
-     * This asserts that the later caller hears it, not that it heard it *from the recording*: a
-     * rebuild reporting the same thing would pass too. Distinguishing them means asking whether
-     * the same TypeInfo instance came back, and asking a third time on a type from a failed
-     * compilation throws - MethodBody.pool() is null by then. That is worth knowing on its own,
-     * and is recorded in docs/errs.md rather than asserted here.
+     * Serious errors can force a rebuild, so this case checks delivery rather than cache reuse.
+     * The warning-only test below proves replay from the same cached TypeInfo instance.
      */
     @Test
     fun `a later caller is told what building the TypeInfo said`() {
