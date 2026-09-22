@@ -34,6 +34,13 @@ public class TypedefStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /**
+     * @return the token that declares this alias
+     */
+    public Token getNameToken() {
+        return alias;
+    }
+
     @Override
     public Access getDefaultAccess() {
         if (modifier != null) {
