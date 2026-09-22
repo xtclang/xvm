@@ -750,10 +750,18 @@ jobs:
                   python3 - <<'PYTEST'
                   from pathlib import Path
                   from xml.etree import ElementTree
-                  result = ElementTree.parse(Path("lang/lsp-server/build/test-results/test/TEST-org.xvm.lsp.adapter.CompilerConsumerTest.xml")).getroot()
-                  counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
-                  assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), counts
-                  print("adapter.CompilerConsumerTest", counts)
+                  results = Path("lang/lsp-server/build/test-results/test")
+                  suites = [
+                      "adapter.CompilerConsumerTest",
+                      "adapter.XdkAdapterTest", "adapter.XdkAdapterLifecycleTest",
+                      "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
+                      "server.XdkLanguageServerTest",
+                  ]
+                  for suite in suites:
+                      result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()
+                      counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
+                      assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), (suite, counts)
+                      print(suite, counts)
                   PYTEST
 
             # The checks that lang validation ran passed; later runs of this pull request on the
