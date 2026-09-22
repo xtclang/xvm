@@ -361,7 +361,7 @@ public abstract class Builder {
                 case Primitive:
                     code.getstatic(ensureClassDesc(ownerType),
                             propId.ensureJitPropertyName(typeSystem),
-                            JitTypeDesc.getPrimitiveFieldClass(propType));
+                            JitTypeDesc.requirePrimitiveFieldClass(propType));
                     normalizePrimitiveField(code, propType);
                     return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
 

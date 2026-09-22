@@ -859,7 +859,7 @@ public class CommonBuilder
                 if (prop.getInitializer() == null) {
                     RegisterInfo reg = loadConstant(code, prop.getInitialValue());
                     ClassDesc fieldCD = prop.getType().removeNullable().isJavaPrimitive()
-                            ? JitTypeDesc.getPrimitiveFieldClass(prop.getType()) : reg.cd();
+                            ? JitTypeDesc.requirePrimitiveFieldClass(prop.getType()) : reg.cd();
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
                         // loadConstant() has already loaded the value and the boolean

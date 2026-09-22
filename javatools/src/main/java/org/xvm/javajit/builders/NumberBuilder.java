@@ -354,8 +354,8 @@ public class NumberBuilder extends AugmentingBuilder {
                 break;
 
             case "BFloat16":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(32)
+                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength)
+                    .loadConstant(32)
                     .lushr()
                     .l2i()
                     .invokestatic(CD_JavaFloat, "intBitsToFloat", md(CD_float, CD_int));
