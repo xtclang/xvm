@@ -7443,7 +7443,7 @@ public abstract class TypeConstant
         }
 
         if (isJavaPrimitive()) {
-            ClassDesc cdCommon = JitTypeDesc.getJavaPrimitive(this);
+            ClassDesc cdCommon = JitTypeDesc.requireJavaPrimitive(this);
             String    desc     = cdCommon.descriptorString();
 
             reg1.load(code);

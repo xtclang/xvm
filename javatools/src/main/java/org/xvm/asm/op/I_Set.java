@@ -161,22 +161,18 @@ public class I_Set
         boolean javaPrimitive = typeEl.isJavaPrimitive();
         boolean xvmPrimitive  = typeEl.isXvmPrimitive();
 
-        ClassDesc[] cdArgs;
-        ClassDesc   cdEl;
-        if (javaPrimitive) {
-            cdEl   = JitTypeDesc.getJavaPrimitive(typeEl);
-            cdArgs = new ClassDesc[]{CD_Ctx, CD_long, cdEl};
-        } else {
-            assert xvmPrimitive;
-            ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(typeEl);
-            cdEl   = cds[0];
-            cdArgs = prependArgs(cds, CD_Ctx, CD_long);
-        }
+        assert javaPrimitive || xvmPrimitive;
+
+        // a Java primitive occupies one slot, an XVM primitive may occupy several
+        ClassDesc[] cds = javaPrimitive
+                ? new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeEl)}
+                : JitTypeDesc.getXvmPrimitiveClasses(typeEl);
 
         bctx.loadCtx(code);
         bctx.loadArgument(code, m_nIndex);
         bctx.loadArgument(code, getValueId());
-        code.invokevirtual(regArray.cd(), "setElement$pi", md(CD_void, cdArgs));
+        code.invokevirtual(regArray.cd(), "setElement$pi",
+                md(CD_void, prependArgs(cds, CD_Ctx, CD_long)));
     }
 
     // ----- fields --------------------------------------------------------------------------------

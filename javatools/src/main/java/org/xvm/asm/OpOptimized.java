@@ -40,7 +40,7 @@ public abstract class OpOptimized
         ClassDesc    cdArg     = regArg.cd();
         if (!cdArg.isPrimitive()) {
             Builder.unbox(code, regArg);
-            cdArg = JitTypeDesc.getJavaPrimitive(regArg.type());
+            cdArg = JitTypeDesc.requireJavaPrimitive(regArg.type());
         }
         if (!cdArg.equals(regLoaded.cd())) {
             throw new UnsupportedOperationException("Convert " +

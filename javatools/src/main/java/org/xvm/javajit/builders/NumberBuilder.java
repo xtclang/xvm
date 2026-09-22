@@ -14,6 +14,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import org.xvm.asm.ConstantPool;
 
@@ -178,7 +179,19 @@ public class NumberBuilder extends AugmentingBuilder {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
         }
+        assembleGeneratedOrInherited(classBuilder, method, jitName, jmd);
+    }
 
+    /**
+     * Assemble a method by generating its code, unless it is a case that has to keep the inherited
+     * assembly: a property initializer, a natively implemented method, or one the type prefers to
+     * implement naturally. A method with no generator gets an "unsupported" body.
+     *
+     * <p>Shared with {@link IntNBuilder}, which takes this path even though IntN is not a JIT
+     * primitive and so would otherwise be turned away by {@link #assembleMethod} above.
+     */
+    protected void assembleGeneratedOrInherited(ClassBuilder classBuilder, MethodInfo method,
+                                                String jitName, JitMethodDesc jmd) {
         if (method.getHead().getMethodStructure().isPropertyInitializer()) {
             super.assembleMethod(classBuilder, method, jitName, jmd);
             return;
@@ -310,30 +323,23 @@ public class NumberBuilder extends AugmentingBuilder {
             String name = thisType.getSingleUnderlyingClass(false).getName();
             switch (name) {
             case "Bit", "Nibble", "UInt8", "UInt16", "UInt32", "Dec32", "Int32":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(64 - bitLength)
-                    .lushr()
-                    .l2i();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength).l2i();
                 break;
 
             case "Int8":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(56)
-                    .lushr()
-                    .l2i()
-                    .i2b();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .i2b();
                 break;
 
             case "Int16":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(48)
-                    .lushr()
-                    .l2i()
-                    .i2s();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .i2s();
                 break;
 
             case "Dec64", "Int64", "UInt64":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength);
                 break;
 
             case "Dec128", "Int128", "UInt128":
@@ -344,42 +350,33 @@ public class NumberBuilder extends AugmentingBuilder {
 
             case "Float8e4", "Float8e5":
                 // an FP8 value is carried as its 8-bit encoding; just extract the byte
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(56)
-                    .lushr()
-                    .l2i()
-                    .loadConstant(0xFF)
-                    .iand();
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength).l2i();
                 break;
 
             case "BFloat16":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(32)
+                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength)
+                    .loadConstant(32)
                     .lushr()
                     .l2i()
                     .invokestatic(CD_JavaFloat, "intBitsToFloat", md(CD_float, CD_int));
                 break;
 
             case "Float16":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(48)
-                    .lushr()
-                    .l2i()
-                    .i2s()
-                    .invokestatic(CD_JavaFloat, "float16ToFloat", md(CD_float, CD_short));
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .i2s()
+                        .invokestatic(CD_JavaFloat, "float16ToFloat", md(CD_float, CD_short));
                 break;
 
             case "Float32":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.loadConstant(32)
-                    .lushr()
-                    .l2i()
-                    .invokestatic(CD_JavaFloat, "intBitsToFloat", md(CD_float, CD_int));
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .l2i()
+                        .invokestatic(CD_JavaFloat, "intBitsToFloat", md(CD_float, CD_int));
                 break;
 
             case "Float64":
-                loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
-                code.invokestatic(CD_JavaDouble, "longBitsToDouble", md(CD_double, CD_long));
+                loadConstructorBits(code, ctxSlot, arraySlot, arrayCD, isBitArray, bitLength)
+                        .invokestatic(CD_JavaDouble, "longBitsToDouble", md(CD_double, CD_long));
                 break;
 
             default:
@@ -391,9 +388,24 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     /**
+     * Load a primitive Number constructor's representation with the value in the low bits.
+     *
+     * <p>{@link #loadConstructorLong} leaves the value in the high bits of the long, so a fixed-width
+     * type has to shift it down by its own width subtracted from the 64 bits of the long. A 64-bit
+     * type needs no shift.
+     */
+    private CodeBuilder loadConstructorBits(CodeBuilder code, int ctxSlot, int arraySlot,
+                                     ClassDesc arrayCD, boolean isBitArray, int bitLength) {
+        loadConstructorLong(code, ctxSlot, arraySlot, arrayCD, isBitArray, 0, bitLength);
+        return bitLength < 64
+                ? code.loadConstant(64 - bitLength).lushr()
+                : code;
+    }
+
+    /**
      * Load a 64-bit segment of the representation supplied to a primitive Number constructor.
      */
-    private void loadConstructorLong(CodeBuilder code, int ctxSlot, int arraySlot,
+    private CodeBuilder loadConstructorLong(CodeBuilder code, int ctxSlot, int arraySlot,
                                      ClassDesc arrayCD, boolean isBitArray, int index, int bitLength) {
         code.aload(arraySlot)
             .aload(ctxSlot)
@@ -406,7 +418,7 @@ public class NumberBuilder extends AugmentingBuilder {
             code.loadConstant(bitLength);
             md = md(CD_long, CD_Ctx, CD_int, CD_int);
         }
-        code.invokevirtual(arrayCD, "$toLong", md);
+        return code.invokevirtual(arrayCD, "$toLong", md);
     }
 
     /**
@@ -670,48 +682,47 @@ public class NumberBuilder extends AugmentingBuilder {
     }
 
     /**
+     * Assemble the body shared by "finite$get$p()", "infinity$get$p()" and "NaN$get$p()". The three
+     * differ only in which helper answers the question and in what the answer is for a type that is
+     * not a binary FP number.
+     *
+     * @param sFP8      the predicate on the FP8 jitbridge class, which carries its 8-bit encoding
+     * @param sJava     the corresponding java.lang.Float / java.lang.Double method
+     * @param fDefault  the answer for a type that is not a binary FP number
+     */
+    private CodeBuilder generateBinaryFPPredicate(CodeBuilder code, String sFP8, String sJava,
+                                                 boolean fDefault) {
+        if (!thisType.isA(pool().typeBinFPNumber())) {
+            return (fDefault ? code.iconst_1() : code.iconst_0()).ireturn();
+        }
+
+        String name      = thisType.getSingleUnderlyingClass(false).getName();
+        int    paramSlot = code.parameterSlot(0);
+
+        return switch (name) {
+            case "Float8e4" -> code.iload(paramSlot)
+                    .invokestatic(CD_Float8e4, sFP8, MD_FP8Predicate)
+                    .ireturn();
+            case "Float8e5" -> code.iload(paramSlot)
+                    .invokestatic(CD_Float8e5, sFP8, MD_FP8Predicate)
+                    .ireturn();
+            case "BFloat16", "Float16", "Float32" -> code.fload(paramSlot)
+                    .invokestatic(CD_Float, sJava, md(CD_boolean, CD_float))
+                    .ireturn();
+            case "Float64" -> code.dload(paramSlot)
+                    .invokestatic(CD_Double, sJava, md(CD_boolean, CD_double))
+                    .ireturn();
+            default -> throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
+        };
+    }
+
+    /**
      * Assemble an optimized static implementation of "finite$get$p()".
      *
      * <p>{@code return !isBinaryFP || Float.isFinite(value);}
      */
     protected void generateFiniteGet(CodeBuilder code, JitMethodDesc jmd) {
-        String name      = thisType.getSingleUnderlyingClass(false).getName();
-        int    paramSlot = code.parameterSlot(0);
-
-        if (thisType.isA(pool().typeBinFPNumber())) {
-            switch (name) {
-                case "Float8e4":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e4, "$finite", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float8e5":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e5, "$finite", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "BFloat16", "Float16", "Float32":
-                    code.fload(paramSlot)
-                            .invokestatic(CD_Float, "isFinite", md(CD_boolean, CD_float))
-                            .ireturn();
-                    break;
-
-                case "Float64":
-                    code.dload(paramSlot)
-                            .invokestatic(CD_Double, "isFinite", md(CD_boolean, CD_double))
-                            .ireturn();
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-            }
-        } else {
-            // must be finite
-            code.iconst_1()
-                .ireturn();
-        }
+        generateBinaryFPPredicate(code, "$finite", "isFinite", true);
     }
 
     /**
@@ -720,43 +731,7 @@ public class NumberBuilder extends AugmentingBuilder {
      * <p>{@code return isBinaryFP && Float.isInfinite(value);}
      */
     protected void generateInfinityGet(CodeBuilder code, JitMethodDesc jmd) {
-        if (thisType.isA(pool().typeBinFPNumber())) {
-            String name      = thisType.getSingleUnderlyingClass(false).getName();
-            int    paramSlot = code.parameterSlot(0);
-
-            switch (name) {
-                case "Float8e4":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e4, "$infinity", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float8e5":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e5, "$infinity", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "BFloat16", "Float16", "Float32":
-                    code.fload(paramSlot)
-                        .invokestatic(CD_Float, "isInfinite", md(CD_boolean, CD_float))
-                        .ireturn();
-                    break;
-
-                case "Float64":
-                    code.dload(paramSlot)
-                        .invokestatic(CD_Double, "isInfinite", md(CD_boolean, CD_double))
-                        .ireturn();
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-            }
-        } else {
-            // cannot be infinity
-            code.iconst_0()
-                .ireturn();
-        }
+        generateBinaryFPPredicate(code, "$infinity", "isInfinite", false);
     }
 
     /**
@@ -765,43 +740,7 @@ public class NumberBuilder extends AugmentingBuilder {
      * <p>{@code return isBinaryFP && Float.isNaN(value);}
      */
     protected void generateNaNGet(CodeBuilder code, JitMethodDesc jmd) {
-        if (thisType.isA(pool().typeBinFPNumber())) {
-            String name      = thisType.getSingleUnderlyingClass(false).getName();
-            int    paramSlot = code.parameterSlot(0);
-
-            switch (name) {
-                case "Float8e4":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e4, "$NaN", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "Float8e5":
-                    code.iload(paramSlot)
-                        .invokestatic(CD_Float8e5, "$NaN", MD_FP8Predicate)
-                        .ireturn();
-                    break;
-
-                case "BFloat16", "Float16", "Float32":
-                    code.fload(paramSlot)
-                        .invokestatic(CD_Float, "isNaN", md(CD_boolean, CD_float))
-                        .ireturn();
-                    break;
-
-                case "Float64":
-                    code.dload(paramSlot)
-                        .invokestatic(CD_Double, "isNaN", md(CD_boolean, CD_double))
-                        .ireturn();
-                    break;
-
-                default:
-                    throw new UnsupportedOperationException("Unsupported Binary FP type: " + name);
-            }
-        } else {
-            // cannot be infinity
-            code.iconst_0()
-                .ireturn();
-        }
+        generateBinaryFPPredicate(code, "$NaN", "isNaN", false);
     }
 
     /**
@@ -810,57 +749,69 @@ public class NumberBuilder extends AugmentingBuilder {
     protected void generateAbs(CodeBuilder code, JitMethodDesc jmd) {
         String name    = thisType.getSingleUnderlyingClass(false).getName();
         int    ctxSlot = code.parameterSlot(jmd.optimizedCtx());
-        Label  valid   = code.newLabel();
 
         switch (name) {
         case "Int8":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Byte.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Byte.MIN_VALUE);
             break;
 
         case "Int16":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Short.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Short.MIN_VALUE);
             break;
 
         case "Int32":
-            code.iload(code.parameterSlot(0))
-                .loadConstant(Integer.MIN_VALUE)
-                .if_icmpne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, Integer.MIN_VALUE);
             break;
 
         case "Int64":
-            code.lload(code.parameterSlot(0))
-                .loadConstant(Long.MIN_VALUE)
-                .lcmp()
-                .ifne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            guardNotMinValue(code, ctxSlot, valid ->
+                    code.lload(code.parameterSlot(0))
+                        .loadConstant(Long.MIN_VALUE)
+                        .lcmp()
+                        .ifne(valid));
             break;
 
         case "Int128":
-            code.lload(code.parameterSlot(1))
-                .loadConstant(Long.MIN_VALUE)
-                .lcmp()
-                .ifne(valid)
-                .lload(code.parameterSlot(0))
-                .lconst_0()
-                .lcmp()
-                .ifne(valid);
-            throwOutOfBounds(code, "", ctxSlot);
-            code.labelBinding(valid);
+            // the most negative Int128 is the low word zero under a most negative high word
+            guardNotMinValue(code, ctxSlot, valid ->
+                    code.lload(code.parameterSlot(1))
+                        .loadConstant(Long.MIN_VALUE)
+                        .lcmp()
+                        .ifne(valid)
+                        .lload(code.parameterSlot(0))
+                        .lconst_0()
+                        .lcmp()
+                        .ifne(valid));
             break;
         }
 
         generateMagnitudeGet(code, jmd);
+    }
+
+    /**
+     * Guard abs() against a signed type's most negative value, whose absolute value is not
+     * representable: throw "out of bounds" for it and fall through for anything else.
+     *
+     * @param minValue  the most negative value of a type carried in an int
+     */
+    private void guardNotMinValue(CodeBuilder code, int ctxSlot, int minValue) {
+        guardNotMinValue(code, ctxSlot, valid ->
+                code.iload(code.parameterSlot(0))
+                    .loadConstant(minValue)
+                    .if_icmpne(valid));
+    }
+
+    /**
+     * Guard abs() against a signed type's most negative value.
+     *
+     * @param emitCompare  emits the comparison, which must jump to the supplied label for every
+     *                     value that is not the most negative one
+     */
+    private void guardNotMinValue(CodeBuilder code, int ctxSlot, Consumer<Label> emitCompare) {
+        Label valid = code.newLabel();
+        emitCompare.accept(valid);
+        throwOutOfBounds(code, "", ctxSlot);
+        code.labelBinding(valid);
     }
 
     /**
@@ -1120,25 +1071,21 @@ public class NumberBuilder extends AugmentingBuilder {
         long      size;
         ClassDesc arrayCD;
 
-        switch (jitName) {
-        case "toBitArray":
-            arrayCD = CD_ArrayBit;
-            size    = bitLength;
-            break;
-
-        case "toNibbleArray":
-            arrayCD = CD_ArrayNibble;
-            size    = bitLength;
-            break;
-
-        case "toByteArray":
-            arrayCD = CD_ArrayUInt8;
-            size    = bitLength >>> 3;
-            break;
-
-        default:
-            throw new IllegalArgumentException(jitName);
-        }
+        size = switch (jitName) {
+            case "toBitArray" -> {
+                arrayCD = CD_ArrayBit;
+                yield bitLength;
+            }
+            case "toNibbleArray" -> {
+                arrayCD = CD_ArrayNibble;
+                yield bitLength;
+            }
+            case "toByteArray" -> {
+                arrayCD = CD_ArrayUInt8;
+                yield bitLength >>> 3;
+            }
+            default -> throw new IllegalArgumentException(jitName);
+        };
 
         int       mutabilityIndex = jmd.getOptimizedParamIndex(0);
         int       mutabilitySlot  = code.parameterSlot(jmd.getImplicitParamCount() + mutabilityIndex);
@@ -1183,33 +1130,27 @@ public class NumberBuilder extends AugmentingBuilder {
                 break;
 
             case "Float8e4":
-                MethodTypeDesc f8e4Cmp = md(CD_int, CD_int, CD_int);
-                code.invokestatic(CD_Float8e4, "$compare", f8e4Cmp);
+                code.invokestatic(CD_Float8e4, "$compare", MD_FP8Binary);
                 break;
 
             case "Float8e5":
-                MethodTypeDesc f8e5Cmp = md(CD_int, CD_int, CD_int);
-                code.invokestatic(CD_Float8e5, "$compare", f8e5Cmp);
+                code.invokestatic(CD_Float8e5, "$compare", MD_FP8Binary);
                 break;
 
             case "BFloat16", "Float16", "Float32":
-                MethodTypeDesc fCmp = md(CD_int, CD_float, CD_float);
-                code.invokestatic(CD_Float, "compare", fCmp);
+                code.invokestatic(CD_Float, "compare", md(CD_int, CD_float, CD_float));
                 break;
 
             case "Float64":
-                MethodTypeDesc dCmp = md(CD_int, CD_double, CD_double);
-                code.invokestatic(CD_Double, "compare", dCmp);
+                code.invokestatic(CD_Double, "compare", md(CD_int, CD_double, CD_double));
                 break;
 
             case "Dec32":
-                MethodTypeDesc d32Cmp = md(CD_int, CD_int, CD_int);
-                code.invokestatic(CD_Dec32, "$compare", d32Cmp);
+                code.invokestatic(CD_Dec32, "$compare", md(CD_int, CD_int, CD_int));
                 break;
 
             case "Dec64":
-                MethodTypeDesc d64Cmp = md(CD_int, CD_long, CD_long);
-                code.invokestatic(CD_Dec64, "$compare", d64Cmp);
+                code.invokestatic(CD_Dec64, "$compare", md(CD_int, CD_long, CD_long));
                 break;
 
             case "Dec128":
