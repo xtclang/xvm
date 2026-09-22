@@ -3,7 +3,6 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.Expression
-import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.Position
@@ -12,13 +11,8 @@ import org.xvm.lsp.adapter.Range
 /**
  * Reading a compiled document's AST for the questions an editor asks about a position.
  *
- * Everything here works on what [AstNode] exposes to a caller outside the compiler: a parent, its
- * children, and where it starts and ends. That is enough to say what encloses a position and how
- * far a thing extends, which covers folding, selection and - because [NameExpression] does expose
- * the name that was written - finding the other places the same name appears.
- *
- * It is not enough to say what a name *means*. That is the next wall, and it is a real one: see
- * [XdkResolution].
+ * The AST exposes children and source spans for folding, selection and expression types.
+ * [XdkResolution] uses the compiler's resolved identities for navigation and highlights.
  */
 internal object XdkAst {
     /**
@@ -46,20 +40,11 @@ internal object XdkAst {
     }
 
     /**
-     * The name the cursor is on, if it is on one.
-     */
-    fun nameAt(
-        root: AstNode?,
-        line: Int,
-        column: Int,
-    ): NameExpression? = chainAt(root, line, column).filterIsInstance<NameExpression>().lastOrNull()
-
-    /**
      * Every node under this one, itself included, in source order.
      *
      * The same node can be reached by more than one path - a constructor parameter belongs to the
      * declaration and to the property it becomes - so a caller that turns these into places in the
-     * text has to say what it means by the same place. [namesIn] does; this does not.
+     * text must deduplicate source spans.
      */
     fun nodesIn(root: AstNode?): List<AstNode> {
         val found = mutableListOf<AstNode>()
@@ -71,12 +56,6 @@ internal object XdkAst {
         root?.let(::walk)
         return found.sortedBy { it.startPosition }
     }
-
-    /** Every name written in the document, in source order, one per place in the text. */
-    fun namesIn(root: AstNode?): List<NameExpression> =
-        nodesIn(root)
-            .filterIsInstance<NameExpression>()
-            .distinctBy { it.startPosition to it.endPosition }
 
     /**
      * The regions worth collapsing: anything that spans more than one line and is a block or a

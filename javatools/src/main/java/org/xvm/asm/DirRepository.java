@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -155,6 +156,8 @@ public class DirRepository
     }
 
     private void rebuildCache(File[] files) {
+        // Do not treat a partially rebuilt cache as current after a module read fails.
+        lastScan = 0;
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
         if (oldModulesByFile.isEmpty()) {
@@ -394,11 +397,9 @@ public class DirRepository
             try {
                 FileStructure struct = new FileStructure(file);
                 return struct.getModule();
-            } catch (Exception e) {
-                System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
+            } catch (IOException e) {
+                throw new UncheckedIOException("Unable to read module: " + file, e);
             }
-
-            return null;
         }
 
         ModuleStructure ensureModule() {
@@ -434,7 +435,8 @@ public class DirRepository
             file.exists() && file.isFile() && file.canRead() && file.length() > 0;
 
     private static final int    CACHE_MAGIC           = 0xEC57CA11;
-    private static final int    CACHE_VERSION         = 1;
+    // Version 1 could permanently remember corrupt modules as silently unavailable.
+    private static final int    CACHE_VERSION         = 2;
     private static final int    MIN_CACHE_HEADER_SIZE = Integer.BYTES * 3 + Short.BYTES;
     private static final int    MIN_CACHE_ENTRY_SIZE  = Long.BYTES * 2 + Short.BYTES + Byte.BYTES;
     private static final String CACHE_DIRECTORY       = "xvm-dir-repository";
