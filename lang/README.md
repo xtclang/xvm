@@ -260,8 +260,8 @@ Generated files:
 # Mock - regex-based, for testing without native libraries
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# XDK adapter stub - placeholder for future compiler / semantic integration
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
+# XTC compiler diagnostics and same-document semantic features, with bundled XDK modules
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
 
 ## Canonical Status Documents
