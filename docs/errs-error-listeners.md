@@ -260,6 +260,20 @@ the host's budget allowed it. Parsing now uses a stage-local stateful collector 
 the launcher and observes the host's abort request. The launcher still stops subsequent semantic
 stages. This distinguishes recovery within a stage from permission to compile the recovered tree.
 
+The separate `analyzeIncomplete(Source, ...)` entry point permits one explicitly recognized
+incomplete statement at EOF to enter partial analysis. Parsing reports to a stateful host collector
+immediately; any other serious parse/lexer error prevents semantic work. The compiler starts with
+its own stage state, validates intact receiver/argument children in the real method context, and
+then encounters the retained EOF boundary during statement validation. That failure stops emission
+of the damaged method. Earlier valid methods may have been processed; `PartialAnalysis` exposes
+no module or file artifact and makes no successful-compilation claim.
+
+The EOF diagnostic is replayed to stop the compiler internally but deduplicated before the host
+callback, including for a bare non-deduplicating host. Cancellation and budgets remain shared across
+both phases. EmbeddingCompiler's abort predicate also checks the host between phases so cancellation
+cannot advance an unfinished compiler into its next stage. A corrupt-repository regression proves
+that an unexpected failure remains visible even after the source EOF diagnostic.
+
 That distinction exposed a pre-existing lexer loop on unterminated strings: repeated identical
 reports were deduplicated, leaving the error budget unchanged and the lexer spinning at EOF.
 The lexer now reports the missing terminator once and exits that token scan. Recovery tests cover
@@ -354,9 +368,10 @@ These existing regressions exercise the contract at different boundaries:
 | Source-tree API probes | `CompilerProjectTest`: member overlays, source attribution, cancellation before work, failed parsing and shared per-source semantic identities. |
 | Module sessions and publication | `XdkModuleSessionTest`, `XdkModuleServerTest` and `XdkStdioTest`: member overlays, invalidation, cancellation, per-file versions, file creation/removal, cross-file navigation and hierarchy round trips. |
 | Partial source results | `XdkRecoveryTest` and packaged stdio: recovered syntax, sibling outlines, UTF-16/CRLF ranges, unavailable semantics after parse failure and restoration after correction. |
+| Explicit incomplete analysis | `XdkPartialAnalysisTest`: real receiver/parameter identities, flow narrowing, argument spans, UTF-16/CRLF, no overload or emitted method, unsupported syntax, cancellation/budgets and exactly-once EOF delivery. |
 | Ambient-pool fallback | `MethodBodyAmbientPoolTest`, `ConstantPoolAmbientTest`, including bound-pool precedence. |
 
-The [ninth hardening pass](errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22)
+The [tenth hardening pass](errs-integration-plan.md#tenth-pass-bounded-incomplete-analysis-2026-09-22)
 records the actual compiler, LSP and packaged-stdio test execution and existing skips.
 An extracted PR still needs its own tests and output-equivalence checks; green
 tests on this integrated branch are not evidence that every proposed subset stands alone.
@@ -365,10 +380,11 @@ The three follow-ups from the API probe pass are complete: permanent TypeInfo re
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
 subsequent Java-only recovery pass supplies structural source trees after parse errors. Remaining work:
 
-1. Extend Java compiler recovery before widening completion. Statement-boundary recovery now
-   preserves useful structural syntax, but malformed expressions have no placeholder or semantic
-   type. Compiler mode stays Java-only by explicit choice; stale semantic ranges must never stand
-   in for current facts.
+1. Extend the bounded partial-analysis probe before widening completion. It now validates intact
+   receivers and complete ordinary arguments in one trailing standalone statement; it does not
+   validate the missing operation or support arbitrary malformed expressions, module member files
+   or editor requests. Compiler mode stays Java-only; stale semantic ranges must never stand in
+   for current facts.
 2. Add compiler facts only for a concrete consumer. Signature help needs argument/parameter mapping
    and instantiated call-site facts; method implementation lookup needs override relationships.
    Cross-module indexing, dependency source navigation and safe rename need ownership beyond this
