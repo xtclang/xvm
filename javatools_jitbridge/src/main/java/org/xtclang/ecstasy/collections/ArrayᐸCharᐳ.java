@@ -50,7 +50,7 @@ public class ArrayᐸCharᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸCharᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         if (type.isImmutable()) {
@@ -66,7 +66,7 @@ public class ArrayᐸCharᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Char boxed) {
@@ -96,7 +96,7 @@ public class ArrayᐸCharᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸCharᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, IterableᐸCharᐳ elements) {
         long size = elements.size$get$p(ctx);
@@ -110,7 +110,7 @@ public class ArrayᐸCharᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸCharᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸCharᐳ that) {
         // TODO

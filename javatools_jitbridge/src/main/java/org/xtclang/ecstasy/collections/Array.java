@@ -6,6 +6,7 @@ import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.nType;
 import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.ReadOnly;
 
 import org.xtclang.ecstasy.reflect.Enumeration;
@@ -245,7 +246,7 @@ public abstract class Array
     }
 
     /**
-     * Array Constructor: construct(Mutability mutability, Iterable<Element> elements = [])
+     * Array Constructor: {@code construct(Mutability mutability, Iterable<Element> elements = [])}
      */
     public static Array $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         // TODO this is temporary; review and if possible remove the overrides
@@ -293,7 +294,9 @@ public abstract class Array
     /**
      * Array Constructor:
      *
-     * protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
+     * <pre>{@code
+     *     protected construct(ArrayDelegate<Element> delegate, Mutability mutability)
+     * }</pre>
      */
     public static Array $new$4(Ctx ctx, TypeConstant type, ArrayDelegate delegate, Mutability mutability) {
         throw new UnsupportedOperationException(); // must be implemented by subclasses
@@ -387,7 +390,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Var<Element> elementAt(Int index)
+     * <pre>{@code
+     *     Var<Element> elementAt(Int index)
+     * }</pre>
      *
      * Obtain the Var for the specified index in the array.
      *
@@ -431,7 +436,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array addAll(Iterable<Element> values)
+     * <pre>{@code
+     *     Array addAll(Iterable<Element> values)
+     * }</pre>
      *
      */
     public Array addAll(Ctx ctx, Iterable values) {
@@ -468,11 +475,14 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array! reify(Mutability? mutability = Null) {
+     * <pre>{@code
+     *     Array! reify(Mutability? mutability = Null)
+     * }</pre>
      *
      * Reify the array, i.e. make sure it's not a view of a different mutable array:
      *
-     * @param mutability
+     * @param ctx         the XVM context
+     * @param mutability  the requested mutability, or {@code Null} to retain the current mutability
      *
      * @return a reified array
      */
@@ -483,7 +493,9 @@ public abstract class Array
     /**
      * Native implementation of:
      *
-     *   Array slice(Range<Int> indexes)
+     * <pre>{@code
+     *     Array slice(Range<Int> indexes)
+     * }</pre>
      *
      * Obtain a slice of this array.
      *
@@ -505,8 +517,8 @@ public abstract class Array
      * Obtain a slice of this array.
      *
      * @param ctx  the XVM context
-     * @param n1   the first part of a 128-bit primitive `Range<Int64>` representation
-     * @param n2   the second part of a 128-bit primitive `Range<Int64>` representation
+     * @param n1   the first part of a 128-bit primitive {@code Range<Int64>} representation
+     * @param n2   the second part of a 128-bit primitive {@code Range<Int64>} representation
      *
      * @return the specified array slice
      */
@@ -681,11 +693,14 @@ public abstract class Array
     // ----- exception helpers ---------------------------------------------------------------------
 
     /**
-     * @param index an illegal index
+     * Throw an exception for an invalid array index.
+     *
+     * @param ctx    the XVM context
+     * @param index  an illegal index
      *
      * @return (never returns)
      *
-     * @throws Exception
+     * @throws nException wrapping an {@link OutOfBounds}, always
      */
     protected nException $oob(Ctx ctx, long index) {
         if (index < 0) {
@@ -695,9 +710,13 @@ public abstract class Array
     }
 
     /**
+     * Throw an exception for an attempt to modify a read-only array.
+     *
+     * @param ctx  the XVM context
+     *
      * @return (never returns)
      *
-     * @throws Exception
+     * @throws nException wrapping a {@link ReadOnly}, always
      */
     protected nException $ro(Ctx ctx) {
         throw Exception.$ro(ctx, "array mutability=" + $mutDesc());

@@ -58,7 +58,7 @@ public class ArrayᐸObjectᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸObjectᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         ctx.alloc(64); // REVIEW how big?
@@ -69,7 +69,7 @@ public class ArrayᐸObjectᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸObjectᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         ctx.alloc(size * 8); // REVIEW + HEADER_SIZE?
@@ -86,7 +86,7 @@ public class ArrayᐸObjectᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸObjectᐳ $new$2(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -99,7 +99,7 @@ public class ArrayᐸObjectᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸObjectᐳ $new$3(Ctx ctx, TypeConstant type, ArrayᐸObjectᐳ that) {
         // TODO
@@ -195,9 +195,9 @@ public class ArrayᐸObjectᐳ
 
     /**
      * The native implementation of List.x
-     * <pre>
+     * <pre>{@code
      *     Iterator<Element> iterator()
-     * </pre>
+     * }</pre>
      */
     public Iterator iterator(Ctx ctx) {
         return new nIterator(ctx);

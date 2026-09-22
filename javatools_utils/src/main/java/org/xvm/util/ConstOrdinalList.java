@@ -33,7 +33,7 @@ import static org.xvm.util.PackedInteger.writeLong;
  * data structure.
  *
  * <p>Several forms of compression are used:
- * </li><li>Repetition of the same value can be represented as a "repeating node";
+ * <ul><li>Repetition of the same value can be represented as a "repeating node";
  * </li><li>The most common value can be omitted altogether, since absence of data implies that
  *          value;
  * </li><li>When values need to be stored, only the necessary significant number of bits need be
@@ -55,24 +55,24 @@ import static org.xvm.util.PackedInteger.writeLong;
  * </li></ul>
  *
  * <p>The run-length node form adds:
- * </li><li>The run length (encoded as a negative value to indicate RLE);
+ * <ul><li>The run length (encoded as a negative value to indicate RLE);
  * </li><li>The run value.
  * </li></ul>
  *
  * <p>The array node form adds:
- * </li><li>The number of values;
+ * <ul><li>The number of values;
  * </li><li>The bytes necessary to hold those values (typically fewer bytes than the number of
  *          values, since only the minimum necessary LSBs for each value are stored).
  * </li></ul>
  * The header is composed of compressed integers:
- * </li><li>The array length;
+ * <ul><li>The array length;
  * </li><li>The default element value;
  * </li><li>The number of bits per element (for non-RLE nodes);
  * </li><li>The id of the first node.
  * </li></ul>
  *
  * <p>The array node form adds:
- * </li><li>The number of values;
+ * <ul><li>The number of values;
  * </li><li>The bytes necessary to hold those values (typically fewer bytes than the number of
  *          values, since only the minimum necessary LSBs for each value are stored).
  * </li></ul>

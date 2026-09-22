@@ -10,7 +10,7 @@ import org.xvm.javajit.Ctx;
 import org.xvm.javajit.ModuleLoader;
 
 /**
- * Native Enumeration<Ordered>.
+ * Native {@code Enumeration<Ordered>}.
  */
 public class eOrdered extends Enumeration {
     private eOrdered(Ctx ctx, TypeConstant type) {

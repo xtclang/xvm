@@ -33,7 +33,7 @@ public class ArrayᐸBooleanᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸBooleanᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -46,7 +46,7 @@ public class ArrayᐸBooleanᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸBooleanᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Boolean boxed) {
@@ -69,7 +69,7 @@ public class ArrayᐸBooleanᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸBooleanᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -82,7 +82,7 @@ public class ArrayᐸBooleanᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸBooleanᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸBooleanᐳ that) {
         // TODO

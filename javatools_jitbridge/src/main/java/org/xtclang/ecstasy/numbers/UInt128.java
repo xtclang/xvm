@@ -9,6 +9,8 @@ import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -195,8 +197,8 @@ public class UInt128 extends UIntNumber {
     }
 
     /**
-     * The internal equals method for two Int128 values called by the equals methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
+     * The internal equals method for two UInt128 values called by the equals methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @param low1   the low 64 bits of the first UInt128

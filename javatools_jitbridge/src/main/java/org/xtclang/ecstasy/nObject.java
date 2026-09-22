@@ -71,7 +71,7 @@ public abstract class nObject
     /**
      * Helper method to resolve generic types.
      *
-     * @see {@link org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty}
+     * @see org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty
      */
     public nType $typeForName(Ctx ctx, java.lang.String name) {
         TypeConstant type = $xvmType(ctx).resolveGenericType(name);

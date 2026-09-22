@@ -283,7 +283,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      * Return the element from the array at the specified index.
      *
      * <p>For subclasses that are storing values that are less than 64-bits, the return value is
-     * always converted to a {@link long} value.
+     * always converted to a {@code long} value.
      *
      * @param ctx    the current context
      * @param index  the index of the element to retrieve
@@ -356,7 +356,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
      * this will have been done by the caller.
      *
      * <p>For subclasses that are storing values that are less than 64-bits, the return value should
-     * always be converted to a {@link long} value.
+     * always be converted to a {@code long} value.
      *
      * @param ctx    the current context
      * @param index  the index of the element to retrieve
@@ -1083,9 +1083,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * The native implementation of HashableArray method:
-     * <pre>
+     * <pre>{@code
      *     static <CompileType extends HashableArray> Int hashCode(CompileType array)
-     * </pre>
+     * }</pre>
      */
     static long hashCode$p(Ctx ctx, nLongBasedArray<?> array) {
         if (array.$mut() == $CONSTANT) {
@@ -1096,9 +1096,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * The native implementation of
-     * <pre>
-     *     private Int calculateHash() {
-     * </pre>
+     * <pre>{@code
+     *     private Int calculateHash()
+     * }</pre>
      */
     public long calculateHash$p(Ctx ctx) {
         if ($delegate != null) {
@@ -1225,9 +1225,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
     /**
      * The native implementation of HashableArray property getter:
-     * <pre>
-     *     private @Lazy Int cachedHash.calc() {
-     * </pre>
+     * <pre>{@code
+     *     private @Lazy Int cachedHash.calc()
+     * }</pre>
      */
     public long cachedHash$get$p(Ctx ctx) {
         if (cachedHash == 0) {
@@ -1257,9 +1257,9 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
 
         /**
          * The native implementation of {@link Iterator}
-         * <pre>
+         * <pre>{@code
          *     conditional Element next();
-         * </pre>
+         * }</pre>
          */
         public boolean next$p(Ctx ctx) {
             if (index < size$get$p(ctx)) {

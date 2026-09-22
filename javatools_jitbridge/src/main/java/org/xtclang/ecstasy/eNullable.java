@@ -10,7 +10,7 @@ import org.xvm.javajit.Ctx;
 import org.xvm.javajit.ModuleLoader;
 
 /**
- * Native Enumeration<Nullable>.
+ * Native {@code Enumeration<Nullable>}.
  */
 public class eNullable extends Enumeration {
     private eNullable(Ctx ctx, TypeConstant type) {

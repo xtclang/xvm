@@ -5,7 +5,9 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Ordered;
+import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nType;
 
@@ -167,12 +169,12 @@ public class String
      * Internal constructor.
      *
      * @param ctx      the XVM context
-     * @param data
-     * @param unicode
-     * @param hash
-     * @param start
-     * @param end
-     * @param next
+     * @param data     the packed character storage
+     * @param unicode  true for 21-bit Unicode codepoints, false for 8-bit ISO 8859-1 characters
+     * @param hash     the cached hash code, or zero if it has not been computed
+     * @param start    the index of the first character in the storage
+     * @param end      the index following the last character in the storage
+     * @param next     the continuation for a long string, or null if there is none
      */
     String(Ctx ctx, long[] data, boolean unicode, long hash, int start, int end, String next) {
         super(ctx);
@@ -191,9 +193,9 @@ public class String
 
     /**
      * Native implementation of String.x constructor:
-     * <pre>
+     * <pre>{@code
      *     construct(Char[] chars)
-     * </pre>
+     * }</pre>
      */
     public static String $new(Ctx ctx,TypeConstant type, ArrayᐸCharᐳ chars) {
         // TODO handle huge arrays
@@ -245,9 +247,9 @@ public class String
 
     /**
      * The lazily initialized String.x property:
-     * <pre>
+     * <pre>{@code
      *     Char[] chars;
-     * </pre>
+     * }</pre>
      */
     private ArrayᐸCharᐳ chars;
 
@@ -255,9 +257,9 @@ public class String
 
     /**
      * The native implementation of String.x property getter:
-     * <pre>
+     * <pre>{@code
      *     Char[] chars;
-     * </pre>
+     * }</pre>
      */
     public ArrayᐸCharᐳ chars$get(Ctx ctx) {
         if (chars == null) {
@@ -294,7 +296,10 @@ public class String
 
     /**
      * Native implementation of:
-     *   @Op("+") String! add(Object o) {
+     *
+     * <pre>{@code
+     *     @Op("+") String! add(Object o)
+     * }</pre>
      */
     public String add(Ctx ctx, Object obj) {
         // TODO CP: optimize
@@ -303,7 +308,10 @@ public class String
 
     /**
      * Native implementation of:
-     *   @Op("[]") Char getElement(Int index)
+     *
+     * <pre>{@code
+     *     @Op("[]") Char getElement(Int index)
+     * }</pre>
      */
     public int getElement$p(Ctx ctx, long index) {
         if (index < 0) {
@@ -314,7 +322,10 @@ public class String
 
     /**
      * Native implementation of:
-     *   Iterator<Char> iterator() = chars.iterator();
+     *
+     * <pre>{@code
+     *     Iterator<Char> iterator() = chars.iterator();
+     * }</pre>
      */
     public IteratorᐸCharᐳ iterator(Ctx ctx) {
         return new nIterator(ctx);
@@ -376,9 +387,9 @@ public class String
 
     /**
      * The native implementation of String.x
-     * <pre>
+     * <pre>{@code
      *    Appender<Char> appendTo(Appender<Char> buf)
-     * </pre>
+     * }</pre>
      * This is native as it will perform better and avoid creating a char array
      */
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
@@ -480,7 +491,9 @@ public class String
     /**
      * The native implementation of:
      *
-     * static <CompileType extends Hashable> Int hashCode(CompileType value);
+     * <pre>{@code
+     *     static <CompileType extends Hashable> Int hashCode(CompileType value);
+     * }</pre>
      */
     public static long hashCode$p(Ctx ctx, nType type, String value) {
         return value.toString().hashCode();
@@ -491,7 +504,9 @@ public class String
     /**
      * The native implementation of:
      *
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Ordered compare(Ctx ctx, nType type, String value1, String value2) {
         // ToDo Optimize???
@@ -504,7 +519,9 @@ public class String
     /**
      * Native implementation of:
      *
-     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType type, String value1, String value2) {
         // TODO CP: optimize
@@ -524,9 +541,14 @@ public class String
     // ----- xObj internal -------------------------------------------------------------------------
 
     /**
-     * @param index an illegal index
+     * Throw an exception for an invalid string index.
      *
-     * @throws OutOfBounds
+     * @param ctx    the XVM context
+     * @param index  an illegal index
+     *
+     * @return (never returns)
+     *
+     * @throws nException wrapping an {@link OutOfBounds}, always
      */
     private boolean oob(Ctx ctx, long index) {
         throw Exception.$oob(ctx, "String index out of range: " + index);

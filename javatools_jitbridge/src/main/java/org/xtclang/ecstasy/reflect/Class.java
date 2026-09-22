@@ -9,7 +9,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.javajit.Ctx;
 
 /**
- * All Ecstasy `Class<...>` types must extend this class.
+ * All Ecstasy {@code Class<...>} types must extend this class.
  */
 public class Class
         extends nConst {

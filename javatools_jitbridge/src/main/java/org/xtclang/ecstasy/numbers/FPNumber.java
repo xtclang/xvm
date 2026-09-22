@@ -99,9 +99,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toInt8(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -125,9 +125,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toInt16(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -151,9 +151,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toInt32(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -177,9 +177,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toInt64(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -204,9 +204,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toInt128(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      * The high 64-bits of the Int128 will be stored in the {@link Ctx#i0} field, and the low
      * 64-bits will be returned inside a Java {@code long}.
      *
@@ -235,9 +235,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toNibble(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -267,9 +267,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toUInt8(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -299,9 +299,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toUInt16(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -331,9 +331,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toUInt32(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -363,9 +363,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toUInt64(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      *
      * @param ctx              the build context
      * @param checkBounds      the check bounds flag
@@ -395,9 +395,9 @@ public abstract class FPNumber extends Number {
 
     /**
      * Implementation of the FPNumber method
-     * <pre>
+     * <pre>{@code
      * toUInt128(Boolean checkBounds = False, Rounding direction = TowardZero)
-     * </pre>
+     * }</pre>
      * The high 64-bits of the UInt128 will be stored in the {@link Ctx#i0} field, and the low
      * 64-bits will be returned inside a Java {@code long}.
      *

@@ -95,7 +95,10 @@ public class UIntN extends UIntNumber {
 
     /**
      * The native implementation of:
+     *
+     * <pre>{@code
      *     static conditional Range<Numeric> range();
+     * }</pre>
      */
     public static Boolean range(Ctx ctx) {
         return Boolean.False;
@@ -103,7 +106,10 @@ public class UIntN extends UIntNumber {
 
     /**
      * The primitive implementation of:
+     *
+     * <pre>{@code
      *     static conditional Range<Numeric> range();
+     * }</pre>
      */
     public static boolean range$p(Ctx ctx) {
         return false;

@@ -52,7 +52,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Ref<Object> elementAt(Int index)
+     * <pre>{@code
+     *     Ref<Object> elementAt(Int index)
+     * }</pre>
      */
     public nRef elementAt$p(Ctx ctx, long index) {
         int            i    = checkIndex(ctx, index);
@@ -66,7 +68,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   <Element> Tuple!<> add(Element value)
+     * <pre>{@code
+     *     <Element> Tuple!<> add(Element value)
+     * }</pre>
      */
     public nTuple add(Ctx ctx, nType elementType, Object value) {
         int       count     = $values.length;
@@ -87,7 +91,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> addAll(Tuple!<> that)
+     * <pre>{@code
+     *     Tuple!<> addAll(Tuple!<> that)
+     * }</pre>
      */
     public nTuple addAll(Ctx ctx, nTuple that) {
         int countThis = $values.length;
@@ -139,7 +145,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> slice(Range<Int> interval)
+     * <pre>{@code
+     *     Tuple!<> slice(Range<Int> interval)
+     * }</pre>
      */
     public nTuple slice(Ctx ctx, nRangeᐸInt64ᐳ interval) {
         long lower = interval.$lowerBound + (interval.$lowerExclusive ? 1 : 0);
@@ -185,7 +193,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> remove(Int index)
+     * <pre>{@code
+     *     Tuple!<> remove(Int index)
+     * }</pre>
      */
     public nTuple remove$p(Ctx ctx, long index) {
         throw Exception.$unsupported(ctx, "Tuple.remove()");
@@ -194,7 +204,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> removeAll(Interval<Int> interval)
+     * <pre>{@code
+     *     Tuple!<> removeAll(Interval<Int> interval)
+     * }</pre>
      */
     public nTuple removeAll(Ctx ctx, nRangeᐸInt64ᐳ interval) {
         throw Exception.$unsupported(ctx, "Tuple.removeAll()");
@@ -212,7 +224,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   static <CompileType extends Tuple> Boolean equals( CompileType value1, CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends Tuple> Boolean equals( CompileType value1, CompileType value2)
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType type, nTuple value1, nTuple value2) {
         return Tuple.equals$p(ctx, type, value1, value2);

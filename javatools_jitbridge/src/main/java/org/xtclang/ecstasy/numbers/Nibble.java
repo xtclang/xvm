@@ -50,7 +50,10 @@ public class Nibble extends UIntNumber {
 
     /**
      * The primitive implementation of:
+     *
+     * <pre>{@code
      *     Appender<Char> appendTo(Appender<Char> buf)
+     * }</pre>
      */
     public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
         return appender.add$p(ctx, toChar$p(thi$, ctx));

@@ -102,7 +102,7 @@ public class Bit extends nConst {
     }
 
     /**
-     * The optimized native implementation of "Appender<Char> appendTo(Appender<Char> buf)".
+     * The optimized native implementation of {@code Appender<Char> appendTo(Appender<Char> buf)}.
      */
     public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
         char c = thi$ == 0 ? '0' : '1';

@@ -99,7 +99,9 @@ public class Int64 extends IntNumber {
     /**
      * The primitive implementation of:
      *
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Ordered compare(Ctx ctx, nType type, Int64 value1, Int64 value2) {
         long l1 = value1.$value;
@@ -112,7 +114,9 @@ public class Int64 extends IntNumber {
     /**
      * The primitive implementation of:
      *
-    *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Boolean equals(Ctx ctx, nType type, Int64 value1, Int64 value2) {
         return value1.$value == value2.$value ? Boolean.TRUE : Boolean.FALSE;
@@ -121,7 +125,9 @@ public class Int64 extends IntNumber {
     /**
      * The primitive implementation of:
      *
-     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType type, long value1, long value2) {
         return value1 == value2;

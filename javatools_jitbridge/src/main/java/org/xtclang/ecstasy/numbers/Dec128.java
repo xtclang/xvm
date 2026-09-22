@@ -10,6 +10,8 @@ import org.xtclang.ecstasy.OutOfBounds;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -523,16 +525,16 @@ public class Dec128 extends DecimalFPNumber {
     }
 
     /**
-     * The internal equals method for two Int128 values called by the equals methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
+     * The internal equals method for two Dec128 values called by the equals methods generated
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals}
      * and also in {@link TypeConstant#buildCompare}
      *
-     * @param low1   the low 64 bits of the first Int128
-     * @param high1  the high 64 bits of the first Int128
-     * @param low2   the low 64 bits of the second Int128
-     * @param high2  the high 64 bits of the second Int128
+     * @param low1   the low 64 bits of the first Dec128
+     * @param high1  the high 64 bits of the first Dec128
+     * @param low2   the low 64 bits of the second Dec128
+     * @param high2  the high 64 bits of the second Dec128
      *
-     * @return {@code true} if the two Int128 values are equal, {@code false} otherwise.
+     * @return {@code true} if the two Dec128 values are equal, {@code false} otherwise.
      */
     public static boolean $equals(long low1, long high1, long low2, long high2) {
         return high1 == high2 && low1 == low2;

@@ -52,9 +52,9 @@ public abstract class nEnum
 
     /**
      * Native implementation of Enum.x
-     * <pre>
+     * <pre>{@code
      *     Int estimateStringLength() = name.size;
-     * </pre>
+     * }</pre>
      */
     public long estimateStringLength$p(Ctx ctx) {
         return name$get(ctx).size$get$p(ctx);
@@ -62,9 +62,9 @@ public abstract class nEnum
 
     /**
      * Native implementation of Enum.x
-     * <pre>
+     * <pre>{@code
      *     Appender<Char> appendTo(Appender<Char> buf) = name.appendTo(buf);
-     * </pre>
+     * }</pre>
      */
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
         return name$get(ctx).appendTo(ctx, appender);
