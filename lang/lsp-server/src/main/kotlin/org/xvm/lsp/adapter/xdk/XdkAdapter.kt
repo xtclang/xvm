@@ -6,22 +6,25 @@ import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.lsp.adapter.AbstractAdapter
+import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.time.Duration
 import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.util.Severity as XtcSeverity
 
@@ -37,10 +40,9 @@ import org.xvm.util.Severity as XtcSeverity
  * exactly the caller that would produce them - a keystroke in one file while another is still
  * being analysed. Queueing is the honest way to use it until the compiler says otherwise.
  *
- * The queue is unbounded and strictly ordered, so a request waits for those before it. That is
- * acceptable because the language server already debounces edits; if it stops being acceptable,
- * the fix is cancellation ([ErrorListener.isAbortDesired] is the hook the compiler already has),
- * not concurrency.
+ * Edits replace queued work for the same document and cooperatively cancel any older compilation.
+ * Only the current request may install an AST in the cache. Closing a document invalidates its
+ * request, including across a later reopen of the same URI.
  *
  * ## What this reports
  *
@@ -49,57 +51,100 @@ import org.xvm.util.Severity as XtcSeverity
  * library against - [EmbeddingSupport] finds one from `XDK_HOME` - and says so as a diagnostic
  * rather than failing, because an editor with no XDK configured should still open files.
  *
- * Symbols and navigation are not implemented here: those need the compiler's symbol table rather
- * than its diagnostics, and the tree-sitter adapter serves them better today.
+ * The parsed tree supplies outlines, hover, folding and selection; resolved names supply
+ * definitions and references within the document. Project-wide compilation remains unsupported.
  */
-class XdkAdapter : AbstractAdapter() {
+class XdkAdapter internal constructor(
+    private val compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
+) : AbstractAdapter() {
+    constructor() : this({ source, errs -> EmbeddingSupport.instance().compileModule(source, null, errs) })
+
     override val displayName: String = "XDK"
+
+    override val capabilities: Set<AdapterCapability> =
+        setOf(
+            AdapterCapability.HOVER,
+            AdapterCapability.DEFINITION,
+            AdapterCapability.REFERENCES,
+            AdapterCapability.DOCUMENT_SYMBOL,
+            AdapterCapability.DOCUMENT_HIGHLIGHT,
+            AdapterCapability.SELECTION_RANGE,
+            AdapterCapability.FOLDING_RANGE,
+            AdapterCapability.WORKSPACE_SYMBOL,
+        )
 
     override fun healthCheck(): Boolean = runCatching { EmbeddingSupport.instance() }.isSuccess
 
     override fun compile(
         uri: String,
         content: String,
-    ): CompilationResult {
+    ): CompilationResult = compileAsync(uri, content).join()
+
+    override fun compileAsync(
+        uri: String,
+        content: String,
+    ): CompletableFuture<CompilationResult> {
+        val request = Request()
         val queued = System.nanoTime()
-        val depth = compiles.queue.size + 1
-
-        // the edit this call is analysing is the newest one for this document, until it is not
-        val generation = edited(uri)
-        val (result, waited) =
-            compiles
-                .submit<Pair<Analysis, Duration>> {
-                    val waited = (System.nanoTime() - queued).nanoseconds
-                    if (isStale(uri, generation)) {
-                        // a newer edit arrived while this one waited; analysing the old text
-                        // would publish diagnostics for a document that no longer exists
-                        logger.info("compile: uri={} superseded before it started, skipped", uri)
-                        Analysis() to waited
-                    } else {
-                        compileNow(uri, content, generation) to waited
+        request.task =
+            Runnable {
+                try {
+                    if (isStale(uri, request)) throw CancellationException()
+                    val started = System.nanoTime()
+                    val result = compileNow(uri, content, request)
+                    synchronized(lifecycle) {
+                        if (isStale(uri, request)) throw CancellationException()
+                        cached[uri] = result
                     }
-                }.get()
-
-        // queue wait is reported separately from compile time on purpose: it is the number that
-        // says whether serialising compilations has started to hurt, and it is the one that would
-        // otherwise be invisible inside a single "how long did that take"
-        logger.info(
-            "compile: uri={}, {} bytes, {} diagnostic(s), {} symbol(s), queue={}, waited {}, compiled in {} [{}]",
-            uri,
-            content.length,
-            result.diagnostics.size,
-            result.symbols.size,
-            depth,
-            waited,
-            lastCompile,
-            footprint(),
-        )
-        cached[uri] = result
-        return CompilationResult.withDiagnostics(uri, result.diagnostics, result.symbols)
+                    logger.info(
+                        "compile: uri={}, {} bytes, {} diagnostic(s), {} symbol(s), waited {}, compiled in {}",
+                        uri,
+                        content.length,
+                        result.diagnostics.size,
+                        result.symbols.size,
+                        (started - queued).nanoseconds,
+                        (System.nanoTime() - started).nanoseconds,
+                    )
+                    // Completing a future invokes its callbacks. Never do that under our lock:
+                    // a callback can publish diagnostics while the server handles another edit.
+                    request.result.complete(CompilationResult.withDiagnostics(uri, result.diagnostics, result.symbols))
+                } catch (_: CancellationException) {
+                    request.result.cancel(false)
+                } catch (e: Exception) {
+                    request.result.completeExceptionally(e)
+                } catch (e: Error) {
+                    request.result.completeExceptionally(e)
+                    throw e
+                }
+            }
+        request.result.whenComplete { _, _ ->
+            if (request.result.isCancelled) {
+                synchronized(lifecycle) {
+                    if (requests.remove(uri, request)) cached.remove(uri)
+                    compiles.remove(request.task)
+                }
+            }
+        }
+        val previous =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                val previous = requests.put(uri, request)
+                cached.remove(uri)
+                previous?.let { compiles.remove(it.task) }
+                compiles.execute(request.task)
+                previous
+            }
+        previous?.result?.cancel(false)
+        return request.result
     }
 
     override fun getCachedResult(uri: String): CompilationResult? =
         cached[uri]?.let { CompilationResult.withDiagnostics(uri, it.diagnostics, it.symbols) }
+
+    private class Request {
+        val result = CompletableFuture<CompilationResult>()
+        lateinit var task: Runnable
+    }
 
     /**
      * What one compilation produced: the problems, the shape of what was written, and the tree
@@ -116,91 +161,68 @@ class XdkAdapter : AbstractAdapter() {
         val ast: AstNode? = null,
     )
 
+    override fun closeDocument(uri: String) {
+        val previous =
+            synchronized(lifecycle) {
+                cached.remove(uri)
+                requests.remove(uri)?.also { compiles.remove(it.task) }
+            }
+        previous?.result?.cancel(false)
+    }
+
     override fun close() {
-        compiles.shutdown()
+        val pending =
+            synchronized(lifecycle) {
+                closed = true
+                val pending = requests.values.toList()
+                requests.clear()
+                cached.clear()
+                compiles.queue.clear()
+                compiles.shutdown()
+                pending
+            }
+        pending.forEach { it.result.cancel(false) }
         if (!compiles.awaitTermination(SHUTDOWN_SECONDS, TimeUnit.SECONDS)) {
             compiles.shutdownNow()
         }
     }
 
-    /**
-     * Whether a newer edit has arrived for this document since the given one was queued.
-     *
-     * Internal rather than private so that it can be tested for what it is - a decision - rather
-     * than through a race, which is not a thing a test can make happen on demand.
-     */
-    internal fun isStale(
+    private fun isStale(
         uri: String,
-        generation: Long,
-    ): Boolean = (newest[uri] ?: generation) > generation
+        request: Request,
+    ): Boolean = requests[uri] !== request || request.result.isCancelled
 
-    /**
-     * Record an edit of the given document and answer its generation, so that anything queued for
-     * an earlier one becomes stale.
-     */
-    internal fun edited(uri: String): Long = newest.compute(uri) { _, previous -> (previous ?: 0L) + 1 }!!
-
-    /**
-     * Runs on the worker thread, one document at a time.
-     */
+    /** Runs on the single compiler worker. */
     private fun compileNow(
         uri: String,
         content: String,
-        generation: Long,
+        request: Request,
     ): Analysis {
-        // an ErrorList rather than a bare collector, because it is what the compiler's own
-        // front end collects into: it filters redundant reports by the compiler's identity rule
-        // and stops after a hundred errors. Both matter here. A type's diagnostics are reported
-        // once when its TypeInfo is built and again whenever a later stage asks for it, so a
-        // collector that keeps everything shows the same warning twice in the Problems panel
+        // Deduplicate TypeInfo replay and retain the compiler's normal error budget.
         val heard = ErrorList()
-
-        val started = System.nanoTime()
-        val parsed: org.xvm.compiler.ast.StatementBlock?
-        try {
-            // the document is named so that its diagnostics are distinguishable from another
-            // unsaved document's
-            // the compiler asks isAbortDesired at around twenty points; this is what answers yes
-            // when the user has typed again and the answer is no longer wanted, and the ErrorList
-            // underneath answers yes once the file has produced more errors than are worth reading
-            parsed =
-                EmbeddingSupport
-                    .instance()
-                    .compileModule(
-                        Source(content, uri),
-                        null,
-                        ErrorListener.cancellable(heard) { isStale(uri, generation) },
-                    ).parsed()
-        } catch (e: IllegalStateException) {
-            // no XDK to compile against: report it where the user can see it rather than throwing
-            // at the language server, and let them keep editing
-            logger.warn("compile: uri={} has no XDK to resolve against: {}", uri, e.message)
-            return Analysis(
-                listOf(
-                    Diagnostic(
-                        location = wholeDocument(uri),
-                        severity = Diagnostic.Severity.WARNING,
-                        message = "XTC analysis unavailable: ${e.message}",
-                        code = NO_XDK,
-                        source = SOURCE,
+        val compilation =
+            try {
+                compileSource(Source(content, uri), ErrorListener.cancellable(heard) { isStale(uri, request) })
+            } catch (e: IllegalStateException) {
+                logger.warn("compile: uri={} has no XDK to resolve against: {}", uri, e.message)
+                return Analysis(
+                    listOf(
+                        Diagnostic(
+                            location = wholeDocument(uri),
+                            severity = Diagnostic.Severity.WARNING,
+                            message = "XTC analysis unavailable: ${e.message}",
+                            code = NO_XDK,
+                            source = SOURCE,
+                        ),
                     ),
-                ),
-            )
-        }
-
-        lastCompile = (System.nanoTime() - started).nanoseconds
-        if (isStale(uri, generation)) {
-            // abandoned part-way: what it managed to report describes text the user has already
-            // replaced, so publishing it would put stale squiggles in the editor
-            logger.info("compile: uri={} superseded after {}, abandoned", uri, lastCompile)
-            return Analysis()
-        }
+                )
+            }
+        if (isStale(uri, request)) throw CancellationException()
+        logger.info("compile: uri={} [{}]", uri, EmbeddingSupport.instance().footprint(compilation))
         if (compiled.incrementAndGet() == 1L) {
-            // the first compilation pays for class loading, reading the XDK and an interpreter
-            // still warming up; measured over a long run it is about fourteen times the steady
-            // state, so it is worth telling apart from a slow one
-            logger.info("compile: first compilation in this server took {} (cold)", lastCompile)
+            logger.info("compile: first compilation in this server completed (cold)")
         }
+        val parsed = compilation.parsed()
         return Analysis(heard.errors.map { it.toDiagnostic(uri) }, XdkSymbols.of(uri, parsed), parsed)
     }
 
@@ -243,15 +265,6 @@ class XdkAdapter : AbstractAdapter() {
         )
 
     private fun wholeDocument(uri: String): Location = Location(uri, 0, 0, 0, 0)
-
-    /**
-     * What the compiler is holding on to. A server that stays up for a working day either
-     * accumulates or it does not, and this is the cheap way to find out which from the log rather
-     * than from a profiler.
-     */
-    private fun footprint(): String =
-        runCatching { EmbeddingSupport.instance().footprint().toString() }
-            .getOrElse { "footprint unavailable: ${it.message}" }
 
     private fun XtcSeverity.toLspSeverity(): Diagnostic.Severity =
         when (this) {
@@ -323,13 +336,13 @@ class XdkAdapter : AbstractAdapter() {
         uri: String,
         positions: List<Position>,
     ): List<SelectionRange> {
-        val ast = cached[uri]?.ast ?: return emptyList()
-        return positions.mapNotNull { position ->
+        val ast = cached[uri]?.ast
+        return positions.map { position ->
             XdkAst
                 .chainAt(ast, position.line, position.column)
                 .fold(null as SelectionRange?) { parent, node ->
                     SelectionRange(XdkAst.rangeOf(node), parent)
-                }
+                } ?: SelectionRange(Range(position, position))
         }
     }
 
@@ -388,16 +401,13 @@ class XdkAdapter : AbstractAdapter() {
         triggerCharacter: String?,
     ): List<CompletionItem> = emptyList()
 
-    /** How long the last compilation took, for the line that reports it. Worker thread only. */
-    @Volatile private var lastCompile: Duration = Duration.ZERO
-
     private val compiled = AtomicLong()
+    private val lifecycle = Any()
+    private var closed = false
 
-    /** The last analysis of each open document, for requests that should not recompile. */
+    /** Only current, completed analyses belong here; an edit drops the previous AST. */
     private val cached = ConcurrentHashMap<String, Analysis>()
-
-    /** The generation of the newest edit seen per document; older ones are stale. */
-    private val newest = ConcurrentHashMap<String, Long>()
+    private val requests = ConcurrentHashMap<String, Request>()
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
