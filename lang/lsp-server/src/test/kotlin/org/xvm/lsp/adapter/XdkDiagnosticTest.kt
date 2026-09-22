@@ -78,17 +78,17 @@ class XdkDiagnosticTest {
     fun `incomplete edits clear obsolete navigation and recover after correction`() {
         CompilerTestSupport.configure()
         XdkAdapter().use { adapter ->
-            val valid = "module Editing { Int run() { return 1; } }"
+            val valid = "module Editing { Int oldMethod() { return 1; } }"
             for (incomplete in listOf("", "module Editing {", "module Editing { void run() { console.", "module Editing { String s = \"")) {
                 assertThat(adapter.compile(URI, valid).success).isTrue()
                 val broken = adapter.compile(URI, incomplete)
                 assertThat(broken.success).isFalse()
                 assertThat(broken.diagnostics).isNotEmpty()
                 assertThat(broken.diagnostics.map { it.code }).doesNotContain("EMB-5")
-                assertThat(adapter.findWorkspaceSymbols("run")).isEmpty()
+                assertThat(adapter.findWorkspaceSymbols("oldMethod")).isEmpty()
                 val repaired = adapter.compile(URI, valid)
                 assertThat(repaired.diagnostics).isEmpty()
-                assertThat(adapter.findWorkspaceSymbols("run")).isNotEmpty()
+                assertThat(adapter.findWorkspaceSymbols("oldMethod")).isNotEmpty()
             }
         }
     }
