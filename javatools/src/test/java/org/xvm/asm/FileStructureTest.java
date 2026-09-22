@@ -24,6 +24,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.constants.NamedCondition;
 
+import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.Parser;
@@ -52,6 +53,36 @@ import static org.xvm.util.Handy.writeMagnitude;
  * Tests of XVM FileStructure.
  */
 public class FileStructureTest {
+    @Test
+    public void testRuntimeLinkUsesDefinitionsAlreadyInTheFile() {
+        var file = new FileStructure("App");
+        var library = createNestedModule("Library");
+        library.getModule().setVersion(new Version("1.0"));
+        file.merge(library.getModule(), false, false);
+        ModuleStructure embedded = file.getChild("Library");
+
+        assertNull(file.linkModules(new BuildRepository(), true));
+        assertSame(embedded, file.getChild("Library"));
+        assertTrue(file.isLinked());
+        assertTrue(file.validateModuleConstants());
+    }
+
+    @Test
+    public void testRuntimeLinkStillRequiresDependenciesOfEmbeddedModules() {
+        var file = new FileStructure("App");
+        var library = createNestedModule("Library");
+        library.ensureModule("Dependency").fingerprintRequired();
+        file.merge(library.getModule(), false, false);
+
+        var repository = new BuildRepository();
+        assertEquals("Dependency", file.linkModules(repository, true).getName());
+        repository.storeModule(new FileStructure("Dependency").getModule());
+        assertNull(file.linkModules(repository, true));
+        ModuleStructure dependency = file.getChild("Dependency");
+        assertFalse(dependency.isFingerprint());
+        assertTrue(file.validateModuleConstants());
+    }
+
     @Test
     public void testHasMultipleChildrenIgnoresFingerprints() {
         FileStructure file = new FileStructure("Test");
@@ -366,6 +397,7 @@ public class FileStructureTest {
         assertEquals(1, siblingCount(copyFirst.getChildByNameMap().get("util")));
         assertEquals(1, siblingCount(copyFirst.getChild("util").getChildByNameMap().get("Helper")));
         assertTrue(copy.validateModuleConstants());
+        assertEquals(FileStructure.FileKind.Library, copy.getFileKind());
 
         var out = new ByteArrayOutputStream();
         copy.writeTo(out);

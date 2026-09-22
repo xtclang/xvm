@@ -849,6 +849,11 @@ public class FileStructure
                 return idModule;
             }
 
+            if (fRuntime && !moduleFingerprint.isFingerprint()) {
+                // This file already owns the definition; no repository copy is needed.
+                continue;
+            }
+
             ModuleStructure moduleUnlinked = idModule.getVersion() == null
                     ? repository.loadModule(idModule.getName())
                     : repository.loadModule(idModule.getName(), idModule.getVersion(), !fRuntime);
@@ -864,12 +869,6 @@ public class FileStructure
             }
 
             if (fRuntime) {
-                if (!moduleFingerprint.isFingerprint()) {
-                    // this module is already in our FileStructure as a real, fully loaded and linked
-                    // module
-                    continue;
-                }
-
                 listReplace.add(moduleUnlinked);
                 listModulesTodo.addAll(fileUnlinked.moduleIds());
             } else { // compile-time
@@ -1107,7 +1106,9 @@ public class FileStructure
 
     @Override
     protected boolean isSiblingAllowed() {
-        return getFileKind() != FileKind.Linked;
+        ensureChildren();
+        // Inferring Single versus Library scans the module payload, but both permit siblings.
+        return m_kind != FileKind.Linked;
     }
 
     @Override
@@ -1493,7 +1494,7 @@ public class FileStructure
             // XVM structures
             return this.m_nMajorVer == that.m_nMajorVer
                     && this.m_nMinorVer == that.m_nMinorVer
-                    && this.m_kind.equals(that.m_kind)
+                    && this.getFileKind() == that.getFileKind()
                     && this.m_idModule.equals(that.m_idModule)
                     && this.getModuleByIdMap().equals(that.getModuleByIdMap());
         }
