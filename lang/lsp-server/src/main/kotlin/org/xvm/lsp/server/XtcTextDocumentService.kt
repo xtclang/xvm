@@ -74,12 +74,14 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import org.xvm.lsp.adapter.CallHierarchyIncomingCall as AdapterCallHierarchyIncomingCall
@@ -91,6 +93,7 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
 import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
+import org.xvm.lsp.model.Location as DiagnosticLocation
 
 /**
  * Text document service for Ecstasy Language Server.
@@ -104,78 +107,122 @@ class XtcTextDocumentService(
         private val logger = LoggerFactory.getLogger(XtcTextDocumentService::class.java)
     }
 
-    // ConcurrentHashMap is required because didOpen/didChange/didClose write on the LSP
-    // message thread, while documentSymbol, formatting, documentLink, etc. read from
-    // CompletableFuture.supplyAsync handlers on the ForkJoinPool.
-    private val openDocuments = ConcurrentHashMap<String, String>()
+    private class Document(
+        val content: String,
+        val version: Int,
+        val analysis: CompletableFuture<CompilationResult>,
+    )
+
+    // Completion callbacks and notifications must agree on which document may publish.
+    private val lifecycle = Any()
+    private val openDocuments = ConcurrentHashMap<String, Document>()
+    private var closed = false
 
     private fun <R> supplyAsync(
         method: String,
         logParams: String,
         logResult: (R) -> String = { "completed" },
+        uri: String? = null,
         block: () -> R,
-    ): CompletableFuture<R> = server.supplyAsync(method, logParams, logResult, block)
-
-    /**
-     * LSP: textDocument/didOpen
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didOpen
-     */
-    override fun didOpen(params: DidOpenTextDocumentParams) {
-        val uri = params.textDocument.uri
-        val content = params.textDocument.text
-
-        logger.info("textDocument/didOpen: {} ({} bytes)", uri, content.length)
-        openDocuments[uri] = content
-
-        val result = adapter.compile(uri, content)
-        logger.info("textDocument/didOpen: compiled, {} diagnostics", result.diagnostics.size)
-        server.publishDiagnostics(uri, result.diagnostics)
-    }
-
-    /**
-     * LSP: textDocument/didChange
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didChange
-     */
-    override fun didChange(params: DidChangeTextDocumentParams) {
-        val uri = params.textDocument.uri
-        val changes = params.contentChanges
-        if (changes.isNullOrEmpty()) {
-            logger.warn("textDocument/didChange: no content changes for: {}", uri)
-            return
+    ): CompletableFuture<R> {
+        val document = uri?.let { openDocuments[it] }
+        val ready = document?.analysis ?: CompletableFuture.completedFuture(null)
+        return ready.handle { _, _ -> null }.thenCompose {
+            server.supplyAsync(method, logParams, logResult) {
+                synchronized(lifecycle) {
+                    if (closed || (uri != null && openDocuments[uri] !== document)) {
+                        throw ResponseErrorException(
+                            ResponseError(ResponseErrorCode.ContentModified, "Document changed during analysis", null),
+                        )
+                    }
+                    block()
+                }
+            }
         }
-        logger.info(
-            "textDocument/didChange: {} change(s): {}",
-            changes.size,
-            changes.joinToString(" | ") { change ->
-                val rangeText = change.range?.fmt() ?: "<full>"
-                val preview =
-                    change.text
-                        .replace("\n", "\\n")
-                        .replace("\t", "\\t")
-                        .take(80)
-                "range=$rangeText len=${change.text.length} text='$preview'"
-            },
-        )
-        val content = changes.first().text
-
-        logger.info("textDocument/didChange: {} ({} bytes)", uri, content.length)
-        openDocuments[uri] = content
-
-        val result = adapter.compile(uri, content)
-        logger.info("textDocument/didChange: compiled, {} diagnostics", result.diagnostics.size)
-        server.publishDiagnostics(uri, result.diagnostics)
     }
 
-    /**
-     * LSP: textDocument/didClose
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didClose
-     */
+    override fun didOpen(params: DidOpenTextDocumentParams) {
+        synchronized(lifecycle) {
+            if (closed) return
+            analyse(params.textDocument.uri, params.textDocument.text, params.textDocument.version)
+        }
+    }
+
+    override fun didChange(params: DidChangeTextDocumentParams) {
+        synchronized(lifecycle) {
+            if (closed) return
+            val uri = params.textDocument.uri
+            val previous = openDocuments[uri] ?: return
+            val version = params.textDocument.version
+            if (version <= previous.version) return
+            val changes = params.contentChanges
+            if (changes.isNullOrEmpty()) return
+            // The server advertises full synchronization. Do not mistake an incremental patch
+            // for a complete file if a client violates that contract.
+            if (changes.any { it.range != null }) {
+                logger.warn("textDocument/didChange: ignoring incremental changes for full-sync document {}", uri)
+                return
+            }
+            analyse(uri, changes.last().text, version)
+        }
+    }
+
+    /** Called under lifecycle; registering after installation also handles completed futures. */
+    private fun analyse(
+        uri: String,
+        content: String,
+        version: Int,
+    ) {
+        val analysis = adapter.compileAsync(uri, content)
+        val document = Document(content, version, analysis)
+        val previous = openDocuments.put(uri, document)
+        previous?.analysis?.cancel(false)
+        analysis.whenComplete { result, failure ->
+            synchronized(lifecycle) {
+                if (!closed && openDocuments[uri] === document) {
+                    if (failure == null) {
+                        server.publishDiagnostics(uri, result.diagnostics, version)
+                    } else if (failure !is CancellationException) {
+                        logger.error("analysis failed: uri={}, version={}", uri, version, failure)
+                        server.publishDiagnostics(
+                            uri,
+                            listOf(
+                                Diagnostic(
+                                    location = DiagnosticLocation(uri, 0, 0, 0, 0),
+                                    severity = Diagnostic.Severity.ERROR,
+                                    message = "XTC analysis failed; see the language server log for details",
+                                    code = "ANALYSIS-FAILED",
+                                    source = "xtc",
+                                ),
+                            ),
+                            version,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     override fun didClose(params: DidCloseTextDocumentParams) {
-        val uri = params.textDocument.uri
-        logger.info("textDocument/didClose: {}", uri)
-        openDocuments.remove(uri)
-        adapter.closeDocument(uri)
-        server.publishDiagnostics(uri, emptyList())
+        synchronized(lifecycle) {
+            val uri = params.textDocument.uri
+            val document = openDocuments.remove(uri)
+            document?.analysis?.cancel(false)
+            adapter.closeDocument(uri)
+            if (!closed) server.publishDiagnostics(uri, emptyList(), document?.version)
+        }
+    }
+
+    fun close() {
+        synchronized(lifecycle) {
+            closed = true
+            val documents = openDocuments.toMap()
+            openDocuments.clear()
+            documents.forEach { (uri, document) ->
+                document.analysis.cancel(false)
+                adapter.closeDocument(uri)
+            }
+        }
     }
 
     /**
@@ -195,6 +242,7 @@ class XtcTextDocumentService(
             "textDocument/hover",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result == null) "no result" else "found symbol" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getHoverInfo(params.textDocument.uri, params.position.line, params.position.character)?.let {
                 Hover().apply {
@@ -222,6 +270,7 @@ class XtcTextDocumentService(
                 val preview = items.take(5).joinToString { it.label }
                 "${items.size} items${if (preview.isNotEmpty()) " [$preview]" else ""}"
             },
+            uri = params.textDocument.uri,
         ) {
             val trigger = params.context?.triggerCharacter
             val items =
@@ -262,6 +311,7 @@ class XtcTextDocumentService(
                     "found ${loc.uri.substringAfterLast('/')}@${loc.range.start.fmt()}"
                 }
             },
+            uri = params.textDocument.uri,
         ) {
             adapter.findDefinition(params.textDocument.uri, params.position.line, params.position.character)?.let {
                 Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
@@ -283,6 +333,7 @@ class XtcTextDocumentService(
                     }
                 "${result.size} references${if (preview.isNotEmpty()) " [$preview]" else ""}"
             },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .findReferences(
@@ -302,12 +353,10 @@ class XtcTextDocumentService(
             "textDocument/documentSymbol",
             params.textDocument.uri,
             { result -> "${result.size} symbols" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val result =
-                adapter.getCachedResult(uri) ?: openDocuments[uri]?.let { content ->
-                    adapter.compile(uri, content)
-                } ?: return@supplyAsync emptyList()
+            val result = adapter.getCachedResult(uri) ?: return@supplyAsync emptyList()
 
             result.symbols.map { symbol ->
                 Either.forRight(toDocumentSymbol(symbol))
@@ -337,6 +386,7 @@ class XtcTextDocumentService(
             "textDocument/documentHighlight",
             "${params.textDocument.uri} pos=${params.position.fmt()}",
             { result -> "${result.size} highlights" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .getDocumentHighlights(
@@ -360,6 +410,7 @@ class XtcTextDocumentService(
             "textDocument/selectionRange",
             "${params.textDocument.uri} positions=${params.positions.map { it.fmt() }}",
             { result -> "${result.size} ranges" },
+            uri = params.textDocument.uri,
         ) {
             val adapterPositions = params.positions.map { AdapterPosition(it.line, it.character) }
             adapter.getSelectionRanges(params.textDocument.uri, adapterPositions).map { toLspSelectionRange(it) }
@@ -380,6 +431,7 @@ class XtcTextDocumentService(
             "textDocument/foldingRange",
             params.textDocument.uri,
             { result -> "${result.size} ranges" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getFoldingRanges(params.textDocument.uri).map { r ->
                 FoldingRange(r.startLine, r.endLine).apply {
@@ -397,9 +449,10 @@ class XtcTextDocumentService(
             "textDocument/documentLink",
             params.textDocument.uri,
             { result -> "${result.size} links" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val content = openDocuments[uri] ?: return@supplyAsync emptyList()
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             adapter.getDocumentLinks(uri, content).map { l ->
                 DocumentLink().apply {
                     range = l.range.toLsp()
@@ -418,6 +471,7 @@ class XtcTextDocumentService(
             "textDocument/signatureHelp",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result == null) "no result" else "${result.signatures.size} signatures" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getSignatureHelp(params.textDocument.uri, params.position.line, params.position.character)?.let { help ->
                 SignatureHelp().apply {
@@ -452,6 +506,7 @@ class XtcTextDocumentService(
             "textDocument/prepareRename",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { _ -> "valid" },
+            uri = params.textDocument.uri,
         ) {
             adapter.prepareRename(params.textDocument.uri, params.position.line, params.position.character)?.let { result ->
                 Either3.forSecond<Range, PrepareRenameResult, PrepareRenameDefaultBehavior>(
@@ -478,6 +533,7 @@ class XtcTextDocumentService(
             "textDocument/rename",
             "${params.textDocument.uri} at ${params.position.fmt()} -> '${params.newName}'",
             { result -> if (result == null) "no edit" else "${result.changes?.size ?: 0} files changed" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .rename(
@@ -515,6 +571,7 @@ class XtcTextDocumentService(
                     }
                 "${result.size} actions${if (titles.isNotEmpty()) " [$titles]" else ""}"
             },
+            uri = params.textDocument.uri,
         ) {
             val adapterDiagnostics = params.context.diagnostics.map { Diagnostic.fromLsp(params.textDocument.uri, it) }
 
@@ -559,6 +616,7 @@ class XtcTextDocumentService(
             { result ->
                 if (result == null) "no tokens" else "${result.data.size} items (${result.data.size / 5} tokens)"
             },
+            uri = params.textDocument.uri,
         ) {
             adapter.getSemanticTokens(params.textDocument.uri)?.let { tokens ->
                 SemanticTokens().apply {
@@ -576,6 +634,7 @@ class XtcTextDocumentService(
             "textDocument/inlayHint",
             "${params.textDocument.uri} range=${params.range.fmt()}",
             { result -> "${result.size} hints" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getInlayHints(params.textDocument.uri, toAdapterRange(params.range)).map { h ->
                 InlayHint().apply {
@@ -597,9 +656,10 @@ class XtcTextDocumentService(
             "textDocument/formatting",
             params.textDocument.uri,
             { result -> "${result.size} edits" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val content = openDocuments[uri] ?: return@supplyAsync emptyList()
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             val options = toAdapterFormattingOptions(params.options)
             adapter.formatDocument(uri, content, options).map { e ->
                 TextEdit().apply {
@@ -618,9 +678,10 @@ class XtcTextDocumentService(
             "textDocument/rangeFormatting",
             "${params.textDocument.uri} range=${params.range.fmt()}",
             { result -> "${result.size} edits" },
+            uri = params.textDocument.uri,
         ) {
             val uri = params.textDocument.uri
-            val content = openDocuments[uri] ?: return@supplyAsync emptyList()
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
             val options = toAdapterFormattingOptions(params.options)
             adapter.formatRange(uri, content, toAdapterRange(params.range), options).map { e ->
                 TextEdit().apply {
@@ -639,6 +700,7 @@ class XtcTextDocumentService(
             "textDocument/declaration",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result.left.isEmpty()) "no result" else "found" },
+            uri = params.textDocument.uri,
         ) {
             adapter.findDeclaration(params.textDocument.uri, params.position.line, params.position.character)?.let {
                 Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
@@ -654,6 +716,7 @@ class XtcTextDocumentService(
             "textDocument/typeDefinition",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result.left.isEmpty()) "no result" else "found" },
+            uri = params.textDocument.uri,
         ) {
             adapter.findTypeDefinition(params.textDocument.uri, params.position.line, params.position.character)?.let {
                 Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
@@ -669,6 +732,7 @@ class XtcTextDocumentService(
             "textDocument/implementation",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.left.size} locations" },
+            uri = params.textDocument.uri,
         ) {
             Either.forLeft(
                 adapter.findImplementation(params.textDocument.uri, params.position.line, params.position.character).map { it.toLsp() },
@@ -684,6 +748,7 @@ class XtcTextDocumentService(
             "typeHierarchy/prepare",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.size} items" },
+            uri = params.textDocument.uri,
         ) {
             adapter.prepareTypeHierarchy(params.textDocument.uri, params.position.line, params.position.character).map {
                 it.toLsp(params.textDocument.uri)
@@ -699,6 +764,7 @@ class XtcTextDocumentService(
             "typeHierarchy/supertypes",
             params.item.name,
             { result -> "${result.size} items" },
+            uri = params.item.uri,
         ) {
             adapter.getSupertypes(params.item.toAdapter()).map { it.toLsp(params.item.uri) }
         }
@@ -712,6 +778,7 @@ class XtcTextDocumentService(
             "typeHierarchy/subtypes",
             params.item.name,
             { result -> "${result.size} items" },
+            uri = params.item.uri,
         ) {
             adapter.getSubtypes(params.item.toAdapter()).map { it.toLsp(params.item.uri) }
         }
@@ -725,6 +792,7 @@ class XtcTextDocumentService(
             "callHierarchy/prepare",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.size} items" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .prepareCallHierarchy(
@@ -743,6 +811,7 @@ class XtcTextDocumentService(
             "callHierarchy/incomingCalls",
             params.item.name,
             { result -> "${result.size} calls" },
+            uri = params.item.uri,
         ) {
             adapter.getIncomingCalls(params.item.toAdapterCallItem()).map { c ->
                 CallHierarchyIncomingCall().apply {
@@ -761,6 +830,7 @@ class XtcTextDocumentService(
             "callHierarchy/outgoingCalls",
             params.item.name,
             { result -> "${result.size} calls" },
+            uri = params.item.uri,
         ) {
             adapter.getOutgoingCalls(params.item.toAdapterCallItem()).map { c ->
                 CallHierarchyOutgoingCall().apply {
@@ -779,6 +849,7 @@ class XtcTextDocumentService(
             "textDocument/codeLens",
             params.textDocument.uri,
             { result -> "${result.size} lenses" },
+            uri = params.textDocument.uri,
         ) {
             adapter.getCodeLenses(params.textDocument.uri).map { l ->
                 CodeLens().apply {
@@ -813,6 +884,7 @@ class XtcTextDocumentService(
                     "${result.size} edits [$preview]"
                 }
             },
+            uri = params.textDocument.uri,
         ) {
             val options =
                 AdapterFormattingOptions(
@@ -843,6 +915,7 @@ class XtcTextDocumentService(
             "textDocument/linkedEditingRange",
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.ranges?.size ?: 0} ranges" },
+            uri = params.textDocument.uri,
         ) {
             adapter
                 .getLinkedEditingRanges(

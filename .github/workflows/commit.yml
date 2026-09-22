@@ -741,6 +741,28 @@ jobs:
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+            - name: Require compiler-consumer test results
+              if: |
+                  success() && matrix.os == 'ubuntu-latest' &&
+                  steps.publish-flags.outputs.validate-core == 'true'
+              shell: bash
+              run: |
+                  python3 - <<'PYTEST'
+                  from pathlib import Path
+                  from xml.etree import ElementTree
+                  results = Path("lang/lsp-server/build/test-results/test")
+                  suites = [
+                      "adapter.XdkAdapterTest", "adapter.XdkAdapterLifecycleTest",
+                      "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
+                      "server.XdkLanguageServerTest",
+                  ]
+                  for suite in suites:
+                      result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()
+                      counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
+                      assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), (suite, counts)
+                      print(suite, counts)
+                  PYTEST
+
             # The checks that lang validation ran passed; later runs of this pull request on the
             # same inputs skip them.
             - name: Record lang core checks pass

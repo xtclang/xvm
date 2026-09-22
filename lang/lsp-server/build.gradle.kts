@@ -124,6 +124,17 @@ repositories {
 // Consume the tree-sitter native libraries for all supported platforms.
 // This library is built on-demand using Zig cross-compilation.
 
+// The Java compiler is on the classpath; its tests also need the compiled XDK libraries.
+val compilerTestModules =
+    configurations.create("compilerTestModules") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc"))
+        }
+    }
+
 val treeSitterNativeLib =
     configurations.create("treeSitterNativeLib") {
         isCanBeConsumed = false
@@ -135,6 +146,8 @@ val treeSitterNativeLib =
     }
 
 dependencies {
+    compilerTestModules(libs.xdk.ecstasy)
+    compilerTestModules(libs.javatools.bridge)
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
 
@@ -197,6 +210,9 @@ tasks.withType<JavaCompile>().configureEach {
 val classes = tasks.named("classes")
 
 tasks.test {
+    inputs.files(compilerTestModules).withPropertyName("compilerTestModules")
+    val modulePath = compilerTestModules.elements.map { files -> files.joinToString(File.pathSeparator) { it.asFile.absolutePath } }
+    doFirst { systemProperty("xtc.test.modulePath", modulePath.get()) }
     useJUnitPlatform()
     testLogging {
         events("failed")

@@ -1,7 +1,6 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
@@ -9,7 +8,6 @@ import org.xvm.asm.ErrorList.UNLIMITED
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.compiler.Source
-import java.io.File
 
 /**
  * Diagnostics raised while a TypeInfo is being assembled reach the listener the caller supplied,
@@ -18,7 +16,7 @@ import java.io.File
  * These live here rather than in javatools because they need a compiled core library, and
  * javatools is what compiles it - a test there would either skip on a clean build or pass only on
  * the leftovers of a previous one. This module is downstream of the compiler and already requires
- * an installed XDK, so the dependency is honest. Without one, these skip.
+ * a built XDK, supplied by Gradle as a declared test dependency.
  *
  * The replay is the part worth pinning. A TypeInfo is built once and memoized, so which caller
  * triggers the build is an accident of order: if a speculative one did, a later caller that
@@ -84,11 +82,9 @@ class TypeInfoDiagnosticsTest {
         source: String,
         errs: ErrorList,
     ): EmbeddingSupport.Compilation {
-        assumeTrue(xdkHome() != null, "no XDK_HOME; skipping compiler-backed diagnostics")
+        CompilerTestSupport.configure()
         return EmbeddingSupport.instance().compileModule(Source(source, "file:///Test.x"), null, errs)
     }
-
-    private fun xdkHome(): String? = System.getenv("XDK_HOME")?.takeIf { File(it, "lib").isDirectory }
 
     /**
      * A warning raised while a TypeInfo is assembled reaches the caller.
@@ -136,7 +132,10 @@ class TypeInfoDiagnosticsTest {
             ) { "the class the warning was about should be in the pool" }
 
         val later = ErrorList(UNLIMITED)
-        type.ensureTypeInfo(later)
+        val cached = type.ensureTypeInfo(later)
+        val next = ErrorList(UNLIMITED)
+        assertThat(type.ensureTypeInfo(next)).isSameAs(cached)
+        assertThat(next.getErrors().map { it.code }).containsExactlyElementsOf(later.getErrors().map { it.code })
 
         assertThat(later.getErrors().map { it.code })
             .`as`("replayed to a caller that did not trigger the build: %s", later.getErrors())

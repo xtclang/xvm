@@ -67,6 +67,15 @@ GROUPS = (
         "gradle.properties",
         "version.properties",
     )),
+    ("compiler", (
+        "javatools/**",
+        "javatools_utils/**",
+        "javatools_bridge/**",
+        "javatools_turtle/**",
+        "lib_*/**",
+        "xdk/**",
+        "plugin/**",
+    )),
     ("corpus", (
         "lib_*/**.x",
         "manualTests/src/main/x/**.x",
@@ -82,9 +91,9 @@ CATALOG_USERS = {
     "build": ("lang", ":(exclude)lang/intellij-plugin", ":(exclude)lang/vscode-extension",
               "build-logic/settings-plugins", "build-logic/common-plugins"),
 }
-NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "intellij": ("intellij",), "vscode": ("vscode",),
+NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "compiler": ("core",), "intellij": ("intellij",), "vscode": ("vscode",),
          "docs": ()}
-READS = {"core": ("build", "corpus"), "intellij": ("build", "intellij"), "vscode": ("build", "vscode")}
+READS = {"core": ("build", "corpus", "compiler"), "intellij": ("build", "intellij"), "vscode": ("build", "vscode")}
 # Build sources only: docs under lang/ show catalog accessors in examples.
 SOURCES = ("**/*.kts", "**/*.kt", "**/*.gradle", "**/*.java")
 ACCESSOR = r'libs\.[A-Za-z0-9_.]+|find(Library|Version|Plugin|Bundle)\("[^"]+"\)'
