@@ -5,6 +5,7 @@ import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import java.io.Closeable
+import java.util.concurrent.CompletableFuture
 
 /**
  * Interface for adapting XTC compiler operations into clean, immutable results.
@@ -29,6 +30,10 @@ import java.io.Closeable
  */
 interface Adapter : Closeable {
     override fun close() {}
+
+    /** Features the server may advertise for this backend. */
+    val capabilities: Set<AdapterCapability>
+        get() = AdapterCapability.entries.toSet()
 
     /**
      * Human-readable name of this adapter for display in logs and UI.
@@ -86,6 +91,20 @@ interface Adapter : Closeable {
         uri: String,
         content: String,
     ): CompilationResult
+
+    /**
+     * Analyse a document without blocking the notification thread when the backend supports it.
+     * Superseded work completes with cancellation, not an empty successful analysis.
+     */
+    fun compileAsync(
+        uri: String,
+        content: String,
+    ): CompletableFuture<CompilationResult> =
+        try {
+            CompletableFuture.completedFuture(compile(uri, content))
+        } catch (e: Exception) {
+            CompletableFuture.failedFuture(e)
+        }
 
     /**
      * Get the cached compilation result for a document, if available.

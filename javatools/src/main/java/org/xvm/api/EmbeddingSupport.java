@@ -55,7 +55,8 @@ import static org.xvm.util.Severity.ERROR;
  * Ecstasy classes. Without configuration, EmbeddingSupport will attempt to locate the core Ecstasy
  * classes using the "XDK_HOME" OS property.
  *
- * The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
+ * Hosts must serialize compilations that share this instance's configured repository. Configuration
+ * must complete before compilation or execution begins.
  */
 public class EmbeddingSupport {
     // ----- internal (construction etc.) ----------------------------------------------------------
@@ -135,12 +136,24 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Take a {@link Footprint} of the compiler as it stands.
+     * Take a {@link Footprint} without selecting a compilation's pool. This does not initialize
+     * the runtime; pool counts are zero. Use {@link #footprint(Compilation)} for compiler counts.
      *
      * @return the snapshot; the counts are zero where nothing has been configured or built yet
      */
     public Footprint footprint() {
-        ConstantPool pool    = configured ? ensureRuntimePool() : null;
+        return footprint(null);
+    }
+
+    /**
+     * Take a passive snapshot of a compilation's pool and the configured repository.
+     *
+     * @param compilation  the compilation to measure, or null for repository and heap counts only
+     *
+     * @return the snapshot; pool counts are zero if no file structure was built
+     */
+    public Footprint footprint(Compilation compilation) {
+        ConstantPool pool    = compilation == null ? null : compilation.pool();
         Runtime      runtime = Runtime.getRuntime();
         return new Footprint(cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(), pool == null ? 0 : pool.size(),
                 pool == null ? 0 : pool.getInvalidationCount(),
@@ -320,6 +333,17 @@ public class EmbeddingSupport {
      */
     public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
         /**
+         * Represent file structures without a successful module or retained source tree.
+         *
+         * @param file  the file structure produced so far
+         *
+         * @return a partial compilation
+         */
+        public static Compilation forFile(FileStructure file) {
+            return new Compilation(null, requireNonNull(file, "file"), null);
+        }
+
+        /**
          * @return true iff a module came out of it
          */
         public boolean succeeded() {
@@ -361,21 +385,19 @@ public class EmbeddingSupport {
         requireNonNull(errs, "errs");
         EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
         try {
-            compiler.process();
-            return compiler.result();
-        } catch (RuntimeException | AssertionError e) {
-            // as in run(): the compiler runs over caller-supplied source, so a failure in it is
-            // reported here rather than thrown at the caller, who was promised a null instead.
-            // Aborting because the source has errors is the ordinary failure though, and those
-            // errors have already been reported through this same listener; saying "internal
-            // error" again would add a diagnostic that is not true and has no location, which a
-            // host showing a problem list puts at the top of a file whose real problems are
-            // further down
-            if (!errs.hasSeriousErrors()) {
+            if (!errs.isAbortDesired()) {
+                compiler.process();
+            }
+        } catch (LauncherException e) {
+            // Expected aborts already have diagnostics or a cancellation request.
+            if (!errs.hasSeriousErrors() && !errs.isAbortDesired()) {
                 errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
-            return compiler.result();
+        } catch (RuntimeException | AssertionError e) {
+            // An earlier source error must not hide an unexpected compiler failure.
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
         }
+        return compiler.result();
     }
 
     /**
@@ -476,6 +498,10 @@ public class EmbeddingSupport {
                 return 1;
             }
 
+            if (block.getStatements().isEmpty()) {
+                log(ERROR, "In-memory source does not contain a module");
+                return checkErrors("source parsing");
+            }
             Statement stmt = block.getStatements().getLast();
             if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
                     stmtModule.getCategory().getId() != Id.MODULE) {

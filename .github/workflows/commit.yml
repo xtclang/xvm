@@ -146,6 +146,19 @@ jobs:
               uses: dorny/paths-filter@v4
               with:
                   filters: |
+                      compiler:
+                        - 'javatools/**'
+                        - 'javatools_utils/**'
+                        - 'javatools_bridge/**'
+                        - 'javatools_turtle/**'
+                        - 'lib_*/**'
+                        - 'xdk/**'
+                        - 'plugin/**'
+                        - 'build-logic/**'
+                        - 'gradle/**'
+                        - 'gradle.properties'
+                        - 'settings.gradle.kts'
+                        - '.github/workflows/commit.yml'
                       lang:
                         - 'lang/**'
                         # Sources that live OUTSIDE lang/ but are synced or bundled INTO the
@@ -507,6 +520,27 @@ jobs:
                   echo "⏭️ Skipping Tree-sitter validation"
                   echo "Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
 
+            # Compiler-only changes must exercise the embedding API's LSP consumer too.
+            # Keep this separate from the lang publishing filter: testing does not imply republishing.
+            - name: Verify compiler diagnostics through the LSP consumer
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  steps.changes.outputs.compiler == 'true' &&
+                  steps.publish-flags.outputs.validate-lang != 'true'
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} \
+                    -PincludeBuildLang=true -PincludeBuildAttachLang=true \
+                    :lang:lsp-server:test \
+                    --tests org.xvm.lsp.adapter.XdkAdapterTest \
+                    --tests org.xvm.lsp.adapter.XdkAdapterLifecycleTest \
+                    --tests org.xvm.lsp.adapter.TypeInfoDiagnosticsTest \
+                    --tests org.xvm.lsp.adapter.EmbeddingDiagnosticsTest \
+                    --tests org.xvm.lsp.server.XdkLanguageServerTest
+
             - name: Validate lang (tree-sitter grammar, LSP adapters, VS Code extension)
               if: |
                   success() &&
@@ -584,6 +618,28 @@ jobs:
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            - name: Require compiler-consumer test results
+              if: |
+                  success() && matrix.os == 'ubuntu-latest' &&
+                  (steps.changes.outputs.compiler == 'true' || steps.publish-flags.outputs.validate-lang == 'true')
+              shell: bash
+              run: |
+                  python3 - <<'PYTEST'
+                  from pathlib import Path
+                  from xml.etree import ElementTree
+                  results = Path("lang/lsp-server/build/test-results/test")
+                  suites = [
+                      "adapter.XdkAdapterTest", "adapter.XdkAdapterLifecycleTest",
+                      "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
+                      "server.XdkLanguageServerTest",
+                  ]
+                  for suite in suites:
+                      result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()
+                      counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
+                      assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), (suite, counts)
+                      print(suite, counts)
+                  PYTEST
 
             - name: Upload Plugin Verifier reports
               if: |

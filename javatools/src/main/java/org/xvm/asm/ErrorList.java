@@ -220,6 +220,11 @@ public class ErrorList
         }
 
         @Override
+        public boolean isAbortDesired() {
+            return super.isAbortDesired() || f_listener.isAbortDesired();
+        }
+
+        @Override
         public boolean isSilent() {
             return f_listener.isSilent();
         }
