@@ -76,63 +76,56 @@ and the symbol under the cursor.
 It now also answers the position questions, within one document: hover with the type the compiler
 decided, go-to-definition and find-references by what a name *means* - two properties called `x`
 on different classes are different things - plus highlights, folding and selection expansion.
-Two accessors in the compiler made that possible (`NameExpression.getResolvedTarget`,
-`InvocationExpression.getResolvedMethod`), both exposing what it already computes.
+The Kotlin semantic snapshot now supplies types, symbol identities, declared signatures and
+source occurrences without retaining compiler objects. The compiler exposes the binding facts;
+lambda capture associations live in a helper owned by the lambda compilation context.
 
-What stops it going further is one property of the compiler rather than a missing feature: there
-is no error-tolerant parse. A document with a trailing `.` produces `PARSER-03` and no AST at
-all, and that is exactly the keystroke at which completion is wanted. That is what a hybrid
-adapter would be for.
+The compiler backend still has no completion, signature help, rename, semantic tokens, document
+links, formatting or code actions. A trailing `.` can produce `PARSER-03` with no AST, so there is
+no semantic result for the position where member completion is requested. Compiler recovery or a
+hybrid syntax/semantic adapter remains a separate decision. The bundled XDK is part of the server;
+no external installation is required.
 
-What it does not yet do is everything that needs *resolution* rather than syntax - completion,
-go-to-definition, find-references, rename, signature help, semantic tokens. The reason is
-specific and worth knowing before anyone picks this up: symbols come from the AST, because the
-compiled structures carry no source positions and an editor cannot use a symbol it cannot point
-at.
+Navigation includes type-parameter declarations and anonymous-class captures within one complete
+module source. Cross-file navigation needs project compilation,
+source ownership and unsaved overlays as well as an index; IDs from independently built snapshots
+cannot simply be joined. Workspace symbols cover completed analyses of open documents only.
 
-What an AST node knows about what it *resolved to* is the better news than it first appears. A
-`NameExpression` records its resolved target in `m_arg` while it is being validated, and still
-holds it when compilation returns - as a `private transient` field with no accessor. So the
-answer and the position are on the same object; what is missing is a way to ask. Within one
-document that makes go-to-definition and hover-with-types a small compiler API plus a walk.
-Across documents it is genuinely larger: the target is an `IdentityConstant`, and mapping one
-back to the place it was declared needs an index built from other compiled documents.
+The current verification, reporting audit and remaining work are recorded in
+[errs-integration-plan.md](../../../docs/errs-integration-plan.md).
 
-`docs/errs.md`, "Next: what the language server still needs", has the ordered list.
-
-Until then the two adapters are complementary rather than competing: tree-sitter is error-tolerant,
-incremental and fast, and is the better source for everything syntactic. The compiler is the only
-source for semantic truth.
+The adapters provide different capabilities: tree-sitter maintains error-tolerant syntax results;
+the compiler supplies validated semantic facts. A combined adapter has not been implemented.
 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
 out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 25).
 
 **What Each Adapter Provides:**
 
-In the table below the **Compiler** column is what a full compiler adapter should eventually do.
-Where it is implemented today it says so; everything else is the plan, not the state.
+The **Compiler** column below describes the current implementation. Unimplemented entries are
+follow-up work, not advertised capabilities.
 
 | Feature | Mock | Tree-sitter | Compiler |
 |---------|------|-------------|----------|
-| Syntax highlighting | - | TextMate + semantic tokens (lexer) | Full semantic tokens |
+| Syntax highlighting | - | TextMate + semantic tokens (lexer) | No compiler semantic tokens; editor TextMate remains available |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
-| Go-to-definition (cross-file) | - | Via workspace index | Needs an identity-to-position index |
+| Go-to-definition (cross-file) | - | Via workspace index | Needs project/source ownership and an index |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Blocked** - needs an error-tolerant parse |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
-| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by name; READ/WRITE not distinguished |
+| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE not distinguished |
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
-| Document links | Regex | AST nodes + best-effort import targets | Resolved URIs |
-| Signature help | - | Same-file | Cross-file |
-| Rename (same file) | Text | AST | Semantic |
-| Code actions | Organize imports | Organize imports + auto-import + doc-comments | Quick fixes |
-| Formatting | Trailing WS | Trailing WS | Full formatter |
-| Workspace symbols | - | Fuzzy search (4-tier) | Full |
-| Semantic tokens | - | Lexer-based (18 contexts) | Full semantic |
+| Document links | Regex | AST nodes + best-effort import targets | Not implemented |
+| Signature help | - | Same-file | Not implemented |
+| Rename (same file) | Text | AST | Not implemented |
+| Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
+| Formatting | Trailing WS | Trailing WS | Not implemented |
+| Workspace symbols | - | Fuzzy search (4-tier) | **Done** - completed analyses of open documents |
+| Semantic tokens | - | Lexer-based (18 contexts) | Not implemented |
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
 - `CompilationResult` - Compilation output with diagnostics and symbols
@@ -243,18 +236,15 @@ Full tree-sitter support for fast, incremental parsing:
 
 ### Medium-term (Compiler Integration)
 
-6. **Implement full compiler adapter**
-   - Replace `XdkAdapter` stub with real compiler integration
-   - Extract type information from XTC compiler
-   - Provide cross-file go-to-definition
-   - Provide semantic error reporting
-   - Provide type-aware completions
+6. **Extend the compiler adapter**
+   - Diagnostics, bundled libraries, semantic snapshots and same-document navigation are implemented
+   - Preserve regression coverage for type-parameter declarations and anonymous-class captures
+   - Design project compilation and unsaved overlays before cross-file navigation
+   - Design incomplete-source support before type-aware completion
+   - Add call-site facts before signature help; declared signatures alone are insufficient
 
-   Two approaches are documented in the research repo:
-   - **Quick Path**: State externalization (~4-6 weeks)
-   - **Parallel Path**: Modern rewrite / parallel implementation of needed components (~3 months, recommended)
-
-   See *Internal documentation* for detailed plans.
+   The selected implementation uses the existing javatools compiler. The older research-fork
+   rewrite schedules are not the current integration plan.
 
 7. **Hybrid adapter strategy**
    - Use tree-sitter for fast syntax feedback
@@ -264,7 +254,7 @@ Full tree-sitter support for fast, incremental parsing:
 ### Long-term (Advanced Features)
 
 8. **Refactoring support (cross-file)**
-   - ~~Rename symbol (same file)~~ ✅ COMPLETE (both adapters)
+   - Rename symbol (same file) is implemented by Mock and Tree-sitter; the compiler backend does not advertise it
    - Cross-file rename (requires compiler)
    - Extract method/variable
    - Safe delete

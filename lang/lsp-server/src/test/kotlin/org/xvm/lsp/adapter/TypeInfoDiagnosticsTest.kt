@@ -5,11 +5,17 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ClassStructure
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorList.UNLIMITED
+import org.xvm.asm.FileStructure
+import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
+import org.xvm.compiler.BuildRepository
 import org.xvm.compiler.Source
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 /**
  * Diagnostics raised while a TypeInfo is being assembled reach the listener the caller supplied,
@@ -25,6 +31,77 @@ import org.xvm.compiler.Source
  * actually cared would hear nothing at all unless the diagnostics were kept and replayed.
  */
 class TypeInfoDiagnosticsTest {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `generic warning survives source and serialized dependency use`(external: Boolean) {
+        val base =
+            """
+            class Base<Element> { @Atomic Int count = 1; Element echo(Element value) = value; }
+            """.trimIndent()
+        val repository = if (external) dependency("module Library { $base }") else null
+        val declarations = if (external) "package lib import Library; import lib.Base;" else base
+        val errors = ErrorList(UNLIMITED)
+        val result =
+            compile(
+                """
+                module GenericUse {
+                    $declarations
+                    class Derived<Element> extends Base<Element> { @Atomic @Override Int count = 2; }
+                    String run() {
+                        Derived<String> text = new Derived<String>();
+                        Derived<Int> number = new Derived<Int>();
+                        return text.echo("ok") + number.echo(1);
+                    }
+                }
+                """.trimIndent(),
+                errors,
+                repository,
+            )
+        assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        assertThat(errors.errors.map { it.code }).containsOnly("VERIFY-75").isNotEmpty()
+    }
+
+    @Test
+    fun `a silent generic instantiation cannot consume the warning on a dependency override`() {
+        val repository =
+            dependency(
+                """
+                module Library {
+                    class Base<Element> { @Atomic Int count = 1; }
+                }
+                """.trimIndent(),
+            )
+        val errors = ErrorList(UNLIMITED)
+        val result =
+            compile(
+                """
+                module Consumer {
+                    package lib import Library;
+                    class Derived<Element> extends lib.Base<Element> { @Atomic @Override Int count = 2; }
+                }
+                """.trimIndent(),
+                errors,
+                repository,
+            )
+        assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        val module = requireNotNull(result.module())
+        val pool = module.constantPool
+        val derived = (module.getChild("Derived") as ClassStructure).identityConstant.type
+        val concrete = pool.ensureParameterizedTypeConstant(derived, pool.typeString())
+        val cached = concrete.ensureTypeInfo()
+        val later = ErrorList(UNLIMITED)
+        assertThat(concrete.ensureTypeInfo(later)).isSameAs(cached)
+        assertThat(later.errors.map { it.code }).contains("VERIFY-75")
+    }
+
+    private fun dependency(source: String): ModuleRepository {
+        val errors = ErrorList(UNLIMITED)
+        val result = compile(source, errors)
+        assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        val bytes = ByteArrayOutputStream().also { result.file().writeTo(it) }.toByteArray()
+        return BuildRepository().apply { storeModule(FileStructure(ByteArrayInputStream(bytes)).module) }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["array", "assignment", "constructor", "property"])
     fun `validated uses retain the type warning without cascades`(operation: String) {
@@ -114,9 +191,10 @@ class TypeInfoDiagnosticsTest {
     private fun compile(
         source: String,
         errs: ErrorList,
+        repository: ModuleRepository? = null,
     ): EmbeddingSupport.Compilation {
         CompilerTestSupport.configure()
-        return EmbeddingSupport.instance().compileModule(Source(source, "file:///Test.x"), null, errs)
+        return EmbeddingSupport.instance().compileModule(Source(source, "file:///Test.x"), repository, errs)
     }
 
     /**
