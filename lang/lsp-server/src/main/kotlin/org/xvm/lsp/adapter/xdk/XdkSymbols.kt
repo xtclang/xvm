@@ -73,6 +73,7 @@ internal object XdkSymbols {
     ): List<SymbolInfo> {
         val found = mutableListOf<SymbolInfo>()
         node.children().forEach { child ->
+            if (child.source !== node.source) return@forEach
             val symbol = symbolOf(uri, child)
             if (symbol == null) {
                 found += declarationsIn(uri, child)

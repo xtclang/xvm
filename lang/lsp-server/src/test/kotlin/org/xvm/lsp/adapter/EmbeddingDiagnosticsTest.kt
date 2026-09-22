@@ -9,6 +9,26 @@ import org.xvm.compiler.Source
 
 class EmbeddingDiagnosticsTest {
     @Test
+    fun `cancellation stops a valid token stream before parsing the rest of the document`() {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        var reads = 0
+        val text = "module Cancelled { " + (1..4000).joinToString(" ") { "Int value$it = $it;" } + " }"
+        val source =
+            object : Source(text) {
+                override fun next(): Char {
+                    reads++
+                    return super.next()
+                }
+            }
+        val result = EmbeddingSupport.instance().compileModule(source, null, ErrorListener.cancellable(errors) { reads >= 80 })
+        assertThat(result.succeeded()).isFalse()
+        assertThat(result.parsed()).isNull()
+        assertThat(reads).isBetween(80, 120)
+        assertThat(errors.errors).isEmpty()
+    }
+
+    @Test
     fun `compound assignment with no operator reports an invalid operation before code generation`() {
         CompilerTestSupport.configure()
         val errors = ErrorList()
