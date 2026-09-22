@@ -264,7 +264,7 @@ class XdkNavigationTest {
     }
 
     @Test
-    fun `a captured local without a source association does not borrow an unrelated declaration`() {
+    fun `a captured local points to its enclosing source declaration`() {
         val source =
             """
             module Captures {
@@ -277,7 +277,9 @@ class XdkNavigationTest {
             """.trimIndent()
         withSource(source) { adapter ->
             val capture = position(source, "capture")
-            assertThat(adapter.findDefinition(URI, capture.line, capture.column)).isNull()
+            assertThat(adapter.findDefinition(URI, capture.line, capture.column)).isEqualTo(span(source, "declaration", "value"))
+            assertThat(adapter.findReferences(URI, capture.line, capture.column, true))
+                .containsExactly(span(source, "declaration", "value"), span(source, "capture", "value"))
         }
     }
 
@@ -286,7 +288,7 @@ class XdkNavigationTest {
         val source =
             """
             module Types {
-                class Outer { class /*declaration*/Nested {} }
+                class /*outerDeclaration*/Outer { class /*declaration*/Nested {} }
                 void use(List</*qualified*/Outer.Nested> values) {}
             }
             """.trimIndent()
@@ -295,11 +297,118 @@ class XdkNavigationTest {
             val inner = qualifier.copy(column = qualifier.column + "Outer.".length)
             val declaration = span(source, "declaration", "Nested")
             assertThat(adapter.findDefinition(URI, inner.line, inner.column)).isEqualTo(declaration)
-            assertThat(adapter.findDefinition(URI, qualifier.line, qualifier.column)).isNotEqualTo(declaration)
+            assertThat(adapter.findDefinition(URI, qualifier.line, qualifier.column)).isEqualTo(span(source, "outerDeclaration", "Outer"))
             val typeEnd = inner.column + "Nested".length
             assertThat(adapter.findDefinition(URI, inner.line, typeEnd)).isNull()
             assertThat(adapter.findReferences(URI, inner.line, inner.column, false))
                 .containsExactly(Location(URI, inner.line, inner.column, inner.line, typeEnd))
+        }
+    }
+
+    @Test
+    fun `nested lambdas retain capture origins through both generated methods`() {
+        val source =
+            """
+            module NestedCaptures {
+                Int run(Int /*declaration*/value) {
+                    function Int() outer = () -> {
+                        function Int() inner = () -> /*nested*/value;
+                        return inner() + /*outer*/value;
+                    };
+                    return outer() + /*direct*/value;
+                }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            val use = position(source, "nested")
+            assertThat(adapter.findDefinition(URI, use.line, use.column)).isEqualTo(span(source, "declaration", "value"))
+            assertThat(adapter.findReferences(URI, use.line, use.column, false))
+                .containsExactly(span(source, "nested", "value"), span(source, "outer", "value"), span(source, "direct", "value"))
+        }
+    }
+
+    @Test
+    fun `lambda parameters have source declarations for inferred and explicit parameter types`() {
+        for (parameter in listOf("", "Int ")) {
+            val source =
+                """
+                module LambdaParameters {
+                    Int run() {
+                        function Int(Int) first = ($parameter/*firstDeclaration*/value) -> /*firstUse*/value;
+                        function Int(Int) second = ($parameter/*secondDeclaration*/value) -> /*secondUse*/value;
+                        return first(1) + second(2);
+                    }
+                }
+                """.trimIndent()
+            withSource(source) { adapter ->
+                for (prefix in listOf("first", "second")) {
+                    val use = position(source, "${prefix}Use")
+                    assertThat(adapter.findDefinition(URI, use.line, use.column)).isEqualTo(span(source, "${prefix}Declaration", "value"))
+                    assertThat(adapter.findReferences(URI, use.line, use.column, true))
+                        .containsExactly(span(source, "${prefix}Declaration", "value"), span(source, "${prefix}Use", "value"))
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `mutable capture dereferencing preserves the source declaration`() {
+        val source =
+            """
+            module MutableCapture {
+                Int run() {
+                    @Volatile Int /*declaration*/value = 0;
+                    function Int() increment = () -> ++/*capture*/value;
+                    return increment() + /*direct*/value;
+                }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            val use = position(source, "capture")
+            assertThat(adapter.findDefinition(URI, use.line, use.column)).isEqualTo(span(source, "declaration", "value"))
+            assertThat(adapter.findReferences(URI, use.line, use.column, false))
+                .containsExactly(span(source, "capture", "value"), span(source, "direct", "value"))
+        }
+    }
+
+    @Test
+    fun `an inherited qualified type keeps the written qualifier and declaring member identities`() {
+        val source =
+            """
+            module InheritedTypes {
+                class Base { class /*memberDeclaration*/Nested {} }
+                class /*qualifierDeclaration*/Derived extends Base {}
+                void use(/*qualifier*/Derived. /*member*/Nested value) {}
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            val qualifier = position(source, "qualifier")
+            val member = position(source, "member")
+            assertThat(adapter.findDefinition(URI, qualifier.line, qualifier.column))
+                .isEqualTo(span(source, "qualifierDeclaration", "Derived"))
+            assertThat(adapter.findDefinition(URI, member.line, member.column))
+                .isEqualTo(span(source, "memberDeclaration", "Nested"))
+        }
+    }
+
+    @Test
+    fun `capturing a narrowed parameter retains its declaration and the narrower hover type`() {
+        val source =
+            """
+            module NarrowedCapture {
+                String text(Object /*declaration*/value) {
+                    if (value.is(String)) {
+                        function String() read = () -> /*capture*/value;
+                        return read();
+                    }
+                    return value.toString();
+                }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            val use = position(source, "capture")
+            assertThat(adapter.findDefinition(URI, use.line, use.column)).isEqualTo(span(source, "declaration", "value"))
+            assertThat(adapter.getHoverInfo(URI, use.line, use.column)).contains("String")
         }
     }
 

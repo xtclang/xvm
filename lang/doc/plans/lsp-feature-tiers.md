@@ -1,4 +1,16 @@
-# XTC LSP Feature Tiers: Tree-Sitter Now, Semantic Model Next, Full Compiler Later
+# XTC LSP Feature Tiers: Historical Research Proposal
+
+> **Status, 2026-09-22:** This document describes an earlier research-fork proposal, not the
+> implementation or agreed work queue on `lagergren/errs`. Its coverage figures, schedules and
+> named APIs are historical claims about that fork, not measurements of this branch.
+>
+> This branch uses the real javatools compiler through `EmbeddingSupport`, with an immutable
+> Kotlin semantic snapshot inside the existing LSP server module. Diagnostics, typed hover and
+> supported same-document navigation are implemented. There is no replacement XTC lexer/parser
+> or separate semantic library. The snapshot does not yet supply member enumeration, instantiated call-site
+> signatures, inheritance indexes or incremental recompilation. Use
+> [the current feature matrix](plan-ide-integration.md) and
+> [the integration plan](../../../docs/errs-integration-plan.md) for current status and priorities.
 
 ## Purpose
 
@@ -16,7 +28,7 @@ specific APIs or data structures needed.
 
 ---
 
-## Current State
+## State assumed by this proposal
 
 For the canonical current implementation matrix, use
 [`plan-ide-integration.md`](./plan-ide-integration.md).

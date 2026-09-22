@@ -3,15 +3,22 @@ package org.xvm.lsp.server
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.ConfigurationParams
+import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -64,15 +71,44 @@ class XdkStdioTest {
                     session.server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI))),
                 )
             assertThat(symbols).isNotEmpty()
+            session.verifySemantics(VALID, "value", "Int")
 
             session.server.textDocumentService.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(URI)))
             assertThat(session.diagnosticsAt(101).diagnostics).isEmpty()
-            session.open(VALID)
+            session.open(REOPENED)
             assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            session.verifySemantics(REOPENED, "label", "String")
 
             for (version in 2..20) session.change(BROKEN, version)
             session.shutdownAndExit()
         }
+    }
+
+    @Test
+    fun `an invalid packaged backend setting fails startup explicitly`() {
+        val invalid = directory.resolve("invalid-setting.jar")
+        JarFile(packagedJar().toFile()).use { original ->
+            JarOutputStream(Files.newOutputStream(invalid)).use { output ->
+                for (entry in original.entries()) {
+                    output.putNextEntry(JarEntry(entry.name))
+                    original.getInputStream(entry).use { input ->
+                        if (entry.name == "lsp-version.properties") {
+                            Properties().apply {
+                                load(input)
+                                setProperty("lsp.adapter", "compielr")
+                                store(output, null)
+                            }
+                        } else {
+                            input.copyTo(output)
+                        }
+                    }
+                    output.closeEntry()
+                }
+            }
+        }
+        Session(invalid, directory).use { it.expectExit(1) }
+        assertThat(Files.readString(directory.resolve("stderr.log")))
+            .contains("Unknown lsp.adapter 'compielr'; expected treesitter, compiler or mock")
     }
 
     @Test
@@ -178,7 +214,37 @@ class XdkStdioTest {
         fun initialize() {
             val initialized = await(server.initialize(InitializeParams().apply { capabilities = ClientCapabilities() }))
             assertThat(initialized.capabilities.definitionProvider.left).isTrue()
+            assertThat(initialized.capabilities.hoverProvider.left).isTrue()
+            assertThat(initialized.capabilities.referencesProvider.left).isTrue()
+            assertThat(initialized.capabilities.documentHighlightProvider.left).isTrue()
+            assertThat(initialized.capabilities.completionProvider).isNull()
+            assertThat(initialized.capabilities.renameProvider).isNull()
+            assertThat(initialized.capabilities.signatureHelpProvider).isNull()
             server.initialized(InitializedParams())
+        }
+
+        fun verifySemantics(
+            content: String,
+            name: String,
+            type: String,
+        ) {
+            val document = TextDocumentIdentifier(URI)
+            val declaration = content.indexOf(name)
+            val reference = content.lastIndexOf(name)
+            val cursor = Position(0, reference)
+            val declaredRange = Range(Position(0, declaration), Position(0, declaration + name.length))
+            val usedRange = Range(cursor, Position(0, reference + name.length))
+            val service = server.textDocumentService
+            val hover = await(service.hover(HoverParams(document, cursor)))
+            assertThat(hover.contents.right.value).contains(type)
+            val definitions = await(service.definition(DefinitionParams(document, cursor))).left
+            assertThat(definitions.map { it.uri }).containsExactly(URI)
+            assertThat(definitions.map { it.range }).containsExactly(declaredRange)
+            val references = await(service.references(ReferenceParams(document, cursor, ReferenceContext(true))))
+            assertThat(references.map { it.uri }).containsOnly(URI)
+            assertThat(references.map { it.range }).containsExactly(declaredRange, usedRange)
+            val highlights = await(service.documentHighlight(DocumentHighlightParams(document, cursor)))
+            assertThat(highlights.map { it.range }).containsExactly(declaredRange, usedRange)
         }
 
         fun open(content: String) = server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, content)))
@@ -241,6 +307,7 @@ class XdkStdioTest {
     private companion object {
         const val URI = "file:///Stdio.x"
         const val VALID = "module Stdio { Int run() { Int value = 1; return value; } }"
+        const val REOPENED = "module Stdio { String run() { String label = \"ok\"; return label; } }"
         const val BROKEN = "module Stdio { Int run() { return missing; } }"
         const val BOOTSTRAP = "org/xvm/lsp/xdk/javatools_turtle.xtc"
     }
