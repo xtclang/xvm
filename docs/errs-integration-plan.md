@@ -47,7 +47,7 @@ outline and semantic navigation work in later PRs, so accepting the listener cha
 require accepting a particular LSP implementation. Investigate the remaining suppressed
 diagnostics separately, with a reproducer and a decision for each source shape.
 
-Use twelve bounded PRs below. Three can start independently; the compiler changes form a short
+Use thirteen bounded PRs below. Four foundations can start independently; the compiler changes form a short
 stack; the adapter changes follow the public API they consume. The unit of review is an observable
 contract, not one historical phase or one commit. A PR that migrates an interface may legitimately
 touch many files, but should change only that interface's contract and its required consumers.
@@ -74,8 +74,8 @@ diagnostic reaches every editor request, or that arbitrary project files can be 
 
 ## First hardening pass on this branch
 
-The following working-tree changes address the initial gaps found at `a8213cf04`. They are local
-changes, not extracted PRs or remote CI results.
+Commit `9e951df3e` addresses the initial gaps found at `a8213cf04`. The user has committed and
+pushed this first pass; the results below describe local verification, not remote CI results.
 
 | Area | Behavior established in this pass | Evidence |
 |---|---|---|
@@ -91,29 +91,109 @@ changes, not extracted PRs or remote CI results.
 
 The test dependencies require neither archive unpacking in `lang`, an `installDist` prerequisite,
 nor a manually configured `XDK_HOME`. They use the compiled-module artifacts the composite already
-publishes. The production adapter continues to support the existing `XDK_HOME` configuration path.
+publishes. At that point the production adapter still used the existing `XDK_HOME` configuration
+path; the third pass below replaces that LSP dependency with bundled resources.
+
+### Second pass: local navigation identity
+
+Continue on the existing branch with local-variable definitions, references and highlights. This
+is a bounded compiler-accessor/adapter change: expose `VariableDeclarationStatement.getRegister`,
+normalize narrowed uses through the existing `Register.getOriginalRegister`, and compare those
+original registers by object identity. Register value equality and register indices are not stable
+source identities across methods. Keep constants as the identity for module members. Add name-token
+accessors for property/method/type declarations and an invoked-expression accessor so callers can
+select identifier spans and distinguish a callee from its arguments without source heuristics.
+
+Prefer this to recreating lexical scope in the adapter or adding a new compiler symbol index.
+Return the declaration name span, respect `includeDeclaration`, and use the same target matching
+for highlights. Unresolved names must not fall back to unrelated names or enclosing calls.
+Regression fixtures cover sibling scopes, separate methods, declaration-site queries, narrowed
+locals, call arguments and a local shadowing a property. Parameters and generated declarations
+remain separate source-mapping work if their identity is not retained on a source node.
+
+- [x] Demonstrate the navigation defects with source-level regressions.
+- [x] Expose the declaration register and replace spelling-based matching.
+- [x] Share semantic matching with highlights and verify exact source spans.
+- [x] Run compiler-consumer and broader LSP tests; update remaining limits.
+
+The second pass adds nine compiler-backed navigation tests and one server-service test. The latter
+checks protocol conversion and `includeDeclaration` through the real adapter. CI requires the new
+navigation suite alongside the existing compiler-consumer suites. Full forced test results for
+the second and third passes are recorded below.
+
+### Third pass: diagnostic fidelity and compiler reporting audit
+
+The approved next pass is diagnostics first, followed by the remaining declaration mapping.
+Preserve the source URI of positioned diagnostics in adapter results. When the source differs from
+the document being compiled, publish a document-level diagnostic with the original location as
+related information. This keeps publication ownership and clearing tied to the current document;
+publishing directly into other documents requires the deferred project-compilation design. Never
+reinterpret an unnamed or relative foreign source as a position in the current buffer.
+
+The packaged server must be self-contained. Consume the compiled XDK module variants as production
+resources, load them from the classpath and use the same resources in tests. The earlier fat JAR
+bundled compiler classes but zero `.xtc` libraries; the test-only dependency concealed that gap.
+No external installation, `XDK_HOME`, archive extraction or `installDist` prerequisite is needed.
+Remove the adapter's blanket `IllegalStateException` catch: a damaged package is an analysis failure,
+not an instruction to install an XDK. Validate UTF-16 positions, line endings and incomplete-edit recovery.
+Audit compiler-reachable silences and failure sinks by caller and source reproducer, preserving
+deliberate speculation. Verify the actual stdio launcher and current feature claims.
+
+- [x] Preserve diagnostic source attribution through publication and test source positions.
+- [x] Bundle compiler libraries and verify independence from external XDK configuration.
+- [x] Triage compiler reporting paths and fix reproduced repository diagnostic losses.
+- [x] Exercise the real stdio transport and repeated edit/close/shutdown behavior.
+- [x] Complete method/constructor parameter mappings and remaining type-name span accuracy.
+- [x] Reconcile historical documentation and record verification and remaining limitations.
+
+A semantic API is the follow-on design: one versioned compilation snapshot exposing resolved
+types, symbol identities, declaration/use locations and callable signatures, with explicit
+unresolved/partial results. It should present facts computed by the compiler and define their
+lifetime, rather than duplicate type checking in the LSP adapter. Completion on incomplete text,
+cross-file identities and project overlays remain separate requirements. The diagnostics pass
+precedes implementing that API.
+
+The third pass also fixes stdio `exit`: the notification previously logged and left the process
+alive even after a successful `shutdown`. The production launcher now supplies the process-exit
+callback; embedded service tests can observe the exit status without terminating their JVM.
+`FileRepository` and `DirRepository` now propagate unreadable/corrupt-module failures instead of
+printing them to stdout and returning no module. `EMB-5` includes the retained exception in its
+message. Repeated reads must not turn a failed load into a cached absence. Missing modules still
+return no result; corrupt modules in a searched repository now fail visibly.
+
+The packaged compiler was exercised with `XDK_HOME` unset, set to a nonexistent path, and with a
+bootstrap resource deliberately removed from a temporary copy of the JAR. The first two compile
+normally; the damaged package produces `ANALYSIS-FAILED`. The stdio check sends 100 rapid edits,
+waits for correction, queries symbols, closes/reopens the document and shuts down during queued
+edits. It passed after reproducing the exit hang. This is a process/transport test, not a claim of
+interactive IDE or multi-hour memory validation.
 
 ### Remaining limitations and the next hardening work
 
 Keep these explicit before deciding the branch is ready to split:
 
-1. **Navigation accuracy within one document.** Highlights still match spelling throughout the
-   document. Local definitions/references approximate identity by name within a method and can
-   confuse sibling scopes; a local definition can point at its first use. Add shadowing/sibling-scope
-   reproducers and expose the original declaration identity from the compiler before calling these
-   operations semantically complete. Constructor-generated properties also lack declaration spans.
+1. **Remaining declaration mapping.** Locals, method parameters (including narrowed uses) and
+   constructor-generated properties now have source associations. A captured local is a distinct
+   compiler binding without a retained link to its original declaration; the regression returns no
+   definition instead of guessing. Lambda parameters, capture chains, type parameters and qualified
+   type prefixes belong in the proposed semantic-model design. Final type-name tokens are precise;
+   a qualifier does not incorrectly navigate to the final type.
 2. **Incomplete source.** Some parser failures leave no AST, so outline/navigation disappear until
    the buffer parses. The selection fallback preserves protocol shape but does not recover syntax.
-   Reproduce ordinary typing states and decide compiler recovery versus a hybrid syntax adapter.
-3. **Diagnostic source attribution.** `Site.In` is currently placed at the requested document URI;
-   structure-only and nowhere diagnostics use `(0,0)`. Add foreign-source and Unicode/line-ending
-   cases before extending publication beyond the current single-module buffer.
+   Empty text, missing braces, incomplete member access and an unterminated string now have recovery
+   tests. Compiler recovery versus a hybrid syntax adapter remains an explicit design decision.
+3. **Diagnostic source attribution.** Foreign-source diagnostics retain navigable related locations;
+   unnamed/relative foreign sources use a document-level message identifying the limitation.
+   Structure-only and nowhere diagnostics still use `(0,0)`. Publishing directly into dependency
+   documents requires project ownership/versioning rules, not just URI grouping.
 4. **Compiler failures with no listener path.** Continue the suppression audit using specific source
    reproducers. This pass fixes decorator propagation and the embedding catch policy, not every
-   historical probe/silence or runtime failure sink listed in `errs.md` and `errs-audit.md`.
-5. **Operational validation.** Exercise the real editor/stdio transport, unavailable/misconfigured
-   XDK startup, long editing sessions and shutdown during slow compiler stages. The new protocol
-   tests invoke the actual server service with a captured client; they do not launch an IDE.
+   historical probe/silence or runtime failure sink listed in `errs.md` and `errs-audit.md`. The
+   refreshed audit distinguishes definite repository failures from TypeInfo sites needing source
+   reproducers; it does not claim that all suppressed diagnostics have been classified.
+5. **Operational validation.** Actual stdio transport, bundled-library startup and shutdown now have
+   successful process checks. Interactive editor usability, multi-hour memory behavior and latency
+   inside slow compiler stages remain to be measured.
 6. **Project compilation is deferred by scope.** Member files, source roots, module ownership,
    dependency repositories and unsaved overlays need a separate design. Workspace symbols currently
    cover completed analyses of open documents only. Compiler cancellation remains cooperative.
@@ -135,18 +215,19 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | I1 | Preserve distinct diagnostics and name in-memory sources | Independent |
 | I2 | Guard ambient constant-pool reads | Independent |
 | I3 | Establish compiler-consumer test wiring without requiring IDE builds | Independent foundation; activate required suites as they land |
+| R1 | Propagate repository read failures and preserve retry behavior | Independent; embedding regression joins E1 |
 | C1 | Define the host listener contract and reporting API | Independent of ownership work; coordinate public API compatibility |
 | C2 | Require explicit listeners and explicit reasons for silence | C1 |
 | C3 | Scope parser/resolver reporting and statement validation state | C2 |
-| E1 | Return useful compilation results through the embedding API | I1, C2; I3 for compiled-XDK tests |
+| E1 | Return useful compilation results through the embedding API | I1, C2, R1; I3 for compiled-XDK tests |
 | C4 | Replay TypeInfo diagnostics and remove ambient listener ownership | C2, C3; E1 and I3 for the downstream regression tests |
 | L1 | Connect the diagnostic-only XDK adapter and prove publication | I1, I3, C4, E1 |
 | L2 | Complete cancellation and document lifecycle handling | L1; includes the listener cancellation decorator |
 | L3 | Add the outline and structural AST features | E1, L2 |
 | L4 | Expose resolved targets and add limited semantic navigation | L3; I2 before testing queries with no ambient pool |
 
-Suggested landing order: I1 and I2 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
-L3 and L4 can follow without delaying the diagnostics milestone. These are twelve PRs, not twelve
+Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
+L3 and L4 can follow without delaying the diagnostics milestone. These are thirteen PRs, not thirteen
 simultaneous open branches. Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -184,8 +265,10 @@ just built, and compiler-only PRs exercise that consumer.
 
 Use IDE lifecycle separation from `7097892b6`. Reassess the default attachment change in
 `566bc0c4a` as build policy rather than importing it automatically. Include the first hardening
-pass's `compilerTestModules` configuration and shared test fixture. The javatools dependency from
-`bb3c4c62c` can enter here when the first embedding test needs it.
+pass's test dependency and shared fixture. The final branch names the configuration `compilerModules`
+and loads its classpath resources through `XdkLibraries`; those production pieces accompany L1.
+I3 can initially configure its test repository directly from the resolved module artifacts.
+The javatools dependency from `bb3c4c62c` can enter here when the first embedding test needs it.
 
 Consume the existing compiled-module variants directly; do not add packaging, extraction or
 installation tasks. The dependency direction remains compiler -> compiled XDK -> embedding tests;
@@ -196,6 +279,21 @@ not just `lang` paths. The required suite must assert that expected classes exec
 skips. Optional standalone tests can still use assumptions, but cannot satisfy the required gate.
 Test configuration-cache storage and reuse with a real task. IDE packaging and publication remain
 separate consumers with their existing explicit selection.
+
+### R1 — Propagate repository read failures
+
+**Contract:** a corrupt module produces a failure with its path and cause, including on repeated
+reads; absence remains an ordinary missing-module result.
+
+Take the third pass's `FileRepository` and `DirRepository` changes and their focused tests.
+Replace stdout-and-null handling with `UncheckedIOException`, let unexpected runtime failures
+propagate, and update cache state only after successful reads. Invalidate the old directory-cache
+format, which could remember a corrupt module as absent. Verify header and payload failures,
+repeated reads and recovery after replacing a corrupt module.
+
+This changes repository failure policy and needs its own review: a corrupt module in a searched
+directory now fails visibly. The embedding-level test and `EMB-5` message change belong to E1;
+R1 itself does not depend on the new embedding API or an LSP consumer.
 
 ### C1 — Define the host listener contract and reporting API
 
@@ -275,6 +373,8 @@ bootstrap modules, and correct named-source diagnostics. Distinguish expected co
 from internal failures: include the hardening pass's separate `LauncherException` catch and
 regression for an unexpected failure following a source diagnostic. Include the empty-buffer fix
 and the named `Compilation.forFile` factory. Test cancellation separately in L2.
+Include `EmbeddingRepositoryFailureTest` and the `EMB-5` message correction so R1's retained
+exception reaches the host's displayed diagnostic with the failing module path.
 
 Document the complete-module source requirement and the current concurrency guarantee. The class
 javadoc now requires serialization of compilations sharing the configured repository; carry that
@@ -296,8 +396,8 @@ no-argument runtime/probe calls; this is not a bulk conversion of every TypeInfo
 
 Use `TypeInfoDiagnosticsTest` through the I3 harness, and the final `FileStructureErrorListenerTest`.
 Pin `VERIFY-75` reaching a listener, reaching a later listener from a genuinely cached warning-only
-TypeInfo, and appearing once in an `ErrorList`. Strengthen the cached-path test to demonstrate no
-rebuild; the present test only checks that the later caller hears the warning. Serious-error cases
+TypeInfo, and appearing once in an `ErrorList`. Carry the first pass's assertion that successive
+requests return the same `TypeInfo` instance, proving replay without a rebuild. Serious-error cases
 rebuild by design and do not prove replay. Check behavior after invalidation and with a fresh sink.
 
 Compare compiled XDK output and classify any change in emitted diagnostics. `VERIFY-75` newly
@@ -313,16 +413,21 @@ Extract the minimal adapter from `bb3c4c62c`, use `ErrorList` immediately as in 
 include the shaded SLF4J provider fix from `535b9d80e`. Include backend selection/help and the
 matching portions of the manual test plan. Keep compilation serialized. Do not bring the later
 AST feature walk, cancellation claims or runtime-backed footprint logging into this PR.
+Include the third pass's production `compilerModules` resources, generated module index and
+`XdkLibraries` loader. Tests must use those same bundled resources. The server must not require
+`XDK_HOME`, a developer installation, archive unpacking or an `installDist` dependency.
 
-Add a compiler-backed `LanguageClient` publication test; the current `LspIntegrationTest` uses
-tree-sitter or mock, and `LspRoundTripTest` exercises the compiler/mapping rather than the server.
-Cover clean -> error -> corrected, two URIs, `VERIFY-75` exactly once, source spans, and an
-unavailable XDK. Include Unicode/line-ending span cases. Structure-only and nowhere diagnostics
+Carry the compiler-backed `LanguageClient` publication tests from `XdkLanguageServerTest`;
+`LspIntegrationTest` uses tree-sitter or mock, and `LspRoundTripTest` exercises the compiler/mapping
+rather than the server.
+Cover clean -> error -> corrected, two URIs, `VERIFY-75` exactly once, source spans, startup with
+unset/invalid `XDK_HOME`, and a damaged bundled bootstrap resource. Include Unicode/line-ending
+span cases and incomplete-edit recovery. Structure-only and nowhere diagnostics
 currently map to `(0,0)`; document that fallback rather than claiming precise locations for them.
 
-Check source attribution: `toDiagnostic` currently uses the requested URI even for `Site.In`,
-ignoring the site's source name. Prove the single-document case and define how foreign-source
-diagnostics will be represented before project compilation is added. Advertised server
+Carry the third pass's source attribution: retain the source URI for `Site.In`, and represent
+foreign-source diagnostics with a document-level message and related location. Unnamed/relative
+foreign sources must not borrow offsets in the current buffer. Verify clearing on close. Advertised server
 capabilities must reflect the selected adapter's implemented features.
 
 ### L2 — Complete cancellation and document lifecycle handling
@@ -342,6 +447,8 @@ Also cover close while queued/running, reopen at the same URI, cancellation with
 and two independent documents. An empty diagnostic list for a corrected document must still
 publish; a canceled operation must not. Avoid timing-dependent assertions about how often a race
 happens. Stage-boundary cancellation can remain coarse after these semantics are correct.
+Include the production launcher's exit callback and shutdown/exit status tests. Verify the packaged
+stdio process terminates after shutdown and exit; service-level tests alone missed this hang.
 
 ### L3 — Add the outline and structural AST features
 
@@ -349,12 +456,13 @@ happens. Stage-boundary cancellation can remain coarse after these semantics are
 recompilation, and document close releases the retained tree.
 
 Take the adapter/`XdkSymbols` portion of `91d1b08e1` and the `XdkAst`/structural portion of
-`956d56f41`: document symbols, containing declaration, folding, selection, highlights, declaration
+`956d56f41`: document symbols, containing declaration, folding, selection, declaration
 hover and symbol search over cached documents. The result API already carries the AST from E1.
 
 Tests should cover nested declarations, failed validation with a usable AST, a failed parse with
-no AST, repeated/shared nodes and cleanup. Describe highlights as text matching where that remains
-the implementation. Symbols from compiled documents are not a complete workspace index.
+no AST, repeated/shared nodes and cleanup. Keep highlights with L4's semantic matching rather than
+extracting the superseded spelling-based implementation. Symbols from compiled documents are not
+a complete workspace index.
 
 ### L4 — Expose resolved targets and add limited semantic navigation
 
@@ -362,16 +470,22 @@ the implementation. Symbols from compiled documents are not a complete workspace
 them for supported same-file targets without inventing an answer where identity is unavailable.
 
 Take the two Java accessors and `XdkResolution` from `956d56f41`, plus typed hover and their tests.
+Include this second pass's declaration-register, declaration-name and invoked-expression accessors,
+identity-based local resolution, exact identifier spans for names and semantic highlights.
+Include the third pass's method-parameter register associations, constructor-parameter property
+identities and final-name-token accessor for qualified/generic types.
 Document unresolved/unvalidated nodes and result lifetime. These accessors can be extracted as a
 smaller independent compiler PR if useful, with compiler-level tests; the Kotlin consumer still
 depends on L3.
 
 Pin property identity across classes, overload-selected calls, types, constructors and unresolved
-names. Add local declaration/use tests with sibling scopes, narrowing and shadowing: the current
-implementation groups locals by spelling inside a method and chooses the first matching name as
-the declaration. Do not call that exact resolution or reuse it for rename. Return no target for
-unsupported cases or explicitly retain the best-effort limitation. Constructor-generated
-properties and cross-file targets remain separate follow-ups.
+names. Carry `XdkNavigationTest` and the server navigation regression: declarations, sibling scopes,
+separate methods, narrowing, shadowing, call arguments, `includeDeclaration` and exact name spans.
+Original-register identity connects supported locals and narrowed method parameters to declarations;
+property identity connects constructor-generated properties to their source parameters. Return no
+definition when a source association is unavailable, including the captured-local regression.
+Capture chains, lambda/type parameters, type qualifiers and cross-file targets remain follow-ups
+before rename can be supported safely.
 
 ## Changes to hold out of the initial integration
 
@@ -391,10 +505,20 @@ acceptance criterion: deliberately deferred POCs and newly corrected integration
 
 ## Next investigations after the diagnostic milestone
 
+The next branch pass should make the packaged stdio checks permanent regression tests and select
+source reproducers for the four priority TypeInfo validation families in the audit. The stdio
+checks currently have process-level evidence but no committed CI harness. Keep that pass bounded:
+classify each chosen case as a real loss or justified silence rather than sweeping all callers.
+Then design the first compiler-owned semantic snapshot API and migrate the existing LSP queries
+to it. Start with same-document validated results and explicit partial/unresolved states; defer
+completion and project-wide compilation until their source-recovery and ownership contracts are
+defined. Continue hardening this branch before extracting the PR slices.
+
 1. **Triage suppressed TypeInfo diagnostics together with their callers.** The latest appendix
-   records 70 distinct suppressed ERROR messages, with three source shapes examined, and roughly
-   53 remaining compile-time sites needing a decision. Older sections say 126 total sites; do not
-   treat that historical total as the migration scope. Recount and instrument the chosen revision.
+   records 70 distinct suppressed ERROR messages, with only three source shapes examined. The
+   refreshed lexical count is 121 no-argument calls across compiler, asm, runtime, JIT and API
+   directories; this is not a call-graph classification. Historical totals of 124/126 and the
+   estimate of 53 compile-time sites are not a current migration scope. Instrument chosen cases.
    Group by code, type and compilation stage; retain the initiating caller and suppression reason.
    For each group, prove either a real missed diagnostic or why incomplete/provisional structures
    make it spurious. Fix real losses in small PRs with source reproducers. Never turn all no-argument
@@ -409,16 +533,17 @@ acceptance criterion: deliberately deferred POCs and newly corrected integration
    adapter using tree-sitter for current syntax and the compiler for semantic results. Prefer the
    hybrid for near-term editor usability, while recording what the compiler API still lacks.
    Never silently apply old semantic ranges to changed text. Completion follows this decision.
-4. **Extend semantic queries after identities are reliable.** Stable local declaration identity,
-   constructor-parameter source mapping and a project source index precede safe rename and
-   cross-file references. Signature help and semantic tokens can be separate earlier consumers
-   of the accessors where validated source provides enough information.
-5. **Work through the failure audit by reachable failure path.** Start with the three empty
-   `Throwable` catches and the broad compiler/tool catches, then relevant I/O failures and live
-   compiler prints. Four catches of `Exception` are broad but do not catch `Error`; the audit's
-   sentence grouping all seven as able to swallow `Error` needs correction. Its five printed-site
-   candidates also include a commented-out line and static bootstrap code without a caller sink.
-   Confirm each site before calling it a lost diagnostic. Runtime-only cases get independent fixes.
+4. **Design the semantic query model.** Supported locals, method parameters and constructor
+   properties now retain source identity. Build the follow-on API around a versioned compilation
+   snapshot with resolved types, symbol identities, declaration/use spans, callable signatures and
+   explicit partial results. Capture origins and cross-file source ownership must precede safe
+   rename. Signature help and semantic tokens can be earlier consumers where validated source
+   provides enough information; completion also depends on the incomplete-source decision.
+5. **Continue the failure audit by reachable failure path.** The refreshed audit corrects the
+   `Exception`/`Error` distinction and separates speculation, commented code and bootstrap output
+   from actual compiler sinks. Repository stdout losses now have fixes and source-level host tests.
+   Use its remaining classifications to select the next reproducer; neither broad catches nor
+   print statements alone prove a lost diagnostic. Runtime-only cases get independent fixes.
 
 ## Extraction and verification procedure
 
@@ -441,11 +566,11 @@ acceptance criterion: deliberately deferred POCs and newly corrected integration
    repository's required workflow. Each PR states its prerequisite, observable behavior, compatibility
    impact, measured verification and follow-ups. This document is a landing plan, not a set of PR bodies.
 
-Commands for the hardening pass (Gradle now supplies compiler-test module dependencies):
+Commands for the hardening pass (Gradle supplies the compiler's bundled module dependencies):
 
 ```bash
-./gradlew :lang:lsp-server:test :javatools:test \
-    -PincludeBuildLang=true -PincludeBuildAttachLang=true \
+./gradlew :lang:lsp-server:test :javatools:test :lang:lsp-server:fatJar \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
     --rerun-tasks --no-build-cache
 
 ./gradlew spotlessCheck
@@ -456,21 +581,24 @@ If a clean verification is necessary, run `./gradlew clean` alone and wait befor
 Do not combine `clean` with another task.
 
 The fresh pre-change baseline ran 26 compiler-consumer tests with zero failures/errors/skips.
-Fresh full-suite results on 2026-09-22, read from JUnit XML:
+The first pass reported 458 compiler tests, 457 LSP tests and a required compiler-consumer subset
+of 42 tests. The second pass reported 458 compiler tests, 467 LSP tests and 52 required consumer
+tests. Fresh third-pass results on 2026-09-22, read from JUnit XML:
 
 | Suite | Tests reported | Failures/errors | Skipped |
 |---|---:|---:|---:|
-| `javatools` | 458 | 0 | 40 |
-| `lang:lsp-server` | 457 | 0 | 3 |
-| Required compiler-consumer subset of the LSP suite | 42 | 0 | 0 |
+| `javatools` | 462 | 0 | 40 |
+| `lang:lsp-server` | 479 | 0 | 3 |
+| Required compiler-consumer subset of the LSP suite | 64 | 0 | 0 |
 
 The javatools skips are 36 existing disabled tests and four opt-in project-generator integration
 tests. The LSP skips are three existing disabled navigation/inlay-hint tests. They do not include
-the required compiler-consumer subset. The final forced run used `--rerun-tasks --no-build-cache --info`, completed successfully, and reported both `Reusing configuration cache` and
-`Configuration cache entry reused`. `spotlessCheck` and `git diff --check` passed. The workflow's
-XML gate passed locally; `actionlint` reported the same 89 existing shellcheck findings on HEAD
-and the modified workflow, with no new findings. Remote CI and an interactive editor session have
-not been run. No grade-based quality claims are made.
+the required compiler-consumer subset. The third pass's final run used
+`--rerun-tasks --no-build-cache`, executed all 114 tasks and stored the configuration cache. A
+subsequent `fatJar spotlessCheck` run reused it. `spotlessCheck` and `git diff --check` passed. The workflow's XML
+gate passed locally; `actionlint` reported the same 89 existing shellcheck findings on HEAD and
+the modified workflow, with no new findings. Remote CI for these changes and an interactive
+editor session have not been run. No grade-based quality claims are made.
 
 ## Completion criteria
 
