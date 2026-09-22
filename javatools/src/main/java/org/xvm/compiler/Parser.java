@@ -48,7 +48,15 @@ public class Parser {
      * @param listener the error listener
      */
     public Parser(Source source, ErrorListener listener) {
-        this(source, listener, new Lexer(source, listener));
+        this(source, listener, new Lexer(source, listener), false);
+    }
+
+    /**
+     * Create a parser that can retain a trailing incomplete expression statement for explicit
+     * partial analysis. Errors are still reported; this does not make the source compilable.
+     */
+    public static Parser forPartialAnalysis(Source source, ErrorListener listener) {
+        return new Parser(source, listener, new Lexer(source, listener), true);
     }
 
     /**
@@ -58,19 +66,20 @@ public class Parser {
      * @param atoken  the tokens to parse
      */
     protected Parser(Parser parent, Token[] atoken) {
-        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken));
+        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken), false);
     }
 
-    private Parser(Source source, ErrorListener errs, Lexer lexer) {
+    private Parser(Source source, ErrorListener errs, Lexer lexer, boolean fPartialAnalysis) {
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
 
         requireNonNull(errs, "errs");
 
-        m_source = source;
-        f_errs   = new Reporting(requireNonNull(errs, "errs"));
-        m_lexer  = lexer;
+        m_source          = source;
+        f_errs            = new Reporting(requireNonNull(errs, "errs"));
+        m_lexer           = lexer;
+        f_partialAnalysis = fPartialAnalysis;
 
         // prime the token stream
         next();
@@ -102,7 +111,7 @@ public class Parser {
             // during parsing
             m_fDone = true;
 
-            long lStart = peek().getStartPosition();
+            long lStart         = peek().getStartPosition();
             List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
             if (stmts.isEmpty() && !f_errs.get().hasSeriousErrors()) {
                 log(Severity.ERROR, NO_TYPE_FOUND, lStart, m_source.getPosition());
@@ -1224,8 +1233,16 @@ public class Parser {
         List<Statement> stmts = new ArrayList<>();
         while (!atBlockEnd(false)) {
             Mark statementStart = mark();
+            long lStart = peek().getStartPosition();
             try {
                 stmts.add(parseStatement());
+            } catch (IncompleteExpression e) {
+                // Do not reinterpret a return, assignment, condition or nested call as a
+                // standalone expression. Only the intact statement prefix is supported.
+                if (e.statement.getStartPosition() == lStart) {
+                    stmts.add(e.statement);
+                }
+                recoverStatement(statementStart, e);
             } catch (CompilerException e) {
                 recoverStatement(statementStart, e);
             }
@@ -3063,7 +3080,11 @@ public class Parser {
                 break;
 
             case DOT: {
-                expect(Id.DOT);
+                Token dot = expect(Id.DOT);
+                if (canRetainIncomplete()) {
+                    throw incomplete(new IncompleteStatement(expr, dot, List.of(), List.of(),
+                            m_source.getPosition()));
+                }
                 switch (peek().getId()) {
                 case NEW: {
                     expr = parseNewExpression(expr);
@@ -3131,8 +3152,7 @@ public class Parser {
             case L_PAREN:
             case ASYNC_PAREN:
                 // ArgumentList
-                expr = new InvocationExpression(expr, peek(Id.ASYNC_PAREN),
-                        parseArgumentList(true, true, false), prev().getEndPosition());
+                expr = parseInvocation(expr);
                 break;
 
             case L_SQUARE: {
@@ -5011,60 +5031,119 @@ public class Parser {
         List<Expression> args = new ArrayList<>();
         if (match(idClose) == null) {
             do {
-                Token label = null;
-                if (!fArray) {
-                    // special case where the parameter names are being specified with the arguments
-                    if (peek(Id.IDENTIFIER)) {
-                        Token name = expect(Id.IDENTIFIER);
-                        if (match(Id.ASN) == null) {
-                            // oops, it wasn't a "name=value" argument
-                            putBack(name);
-                        } else {
-                            label = name;
-                        }
-                    }
-                }
-
-                Expression expr;
-                if (allowCurrying && !fArray) {
-                    switch (peek().getId()) {
-                    case ANY: {
-                        // one of two cases: an unbound argument, or a lambda whose one parameter is
-                        // ignored
-                        Token tokUnbound = expect(Id.ANY);
-                        if (peek(Id.LAMBDA)) {
-                            putBack(tokUnbound);
-                            expr = parseExpression();
-                        } else {
-                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
-                                    tokUnbound.getEndPosition(), null);
-                        }
-                        break;
-                    }
-
-                    case COMP_LT: {
-                        Token          tokOpen    = expect(Id.COMP_LT);
-                        TypeExpression type       = parseTypeExpression();
-                        Token          tokClose   = expect(Id.COMP_GT);
-                        Token          tokUnbound = expect(Id.ANY);
-                        expr = new NonBindingExpression(tokOpen.getStartPosition(),
-                                tokUnbound.getEndPosition(), type);
-                        break;
-                    }
-
-                    default:
-                        expr = parseExpression();
-                        break;
-                    }
-                } else {
-                    expr = parseExpression();
-                }
-
-                args.add(label == null ? expr : new LabeledExpression(label, expr));
+                args.add(parseArgument(allowCurrying, fArray));
             } while (match(idClose, (match(Id.COMMA) == null)) == null);
         }
 
         return args;
+    }
+
+    /** Parse one argument, shared by calls, constructors and annotation argument lists. */
+    private Expression parseArgument(boolean allowCurrying, boolean fArray) {
+        Token label = null;
+        if (!fArray) {
+            // special case where the parameter names are being specified with the arguments
+            if (peek(Id.IDENTIFIER)) {
+                Token name = expect(Id.IDENTIFIER);
+                if (match(Id.ASN) == null) {
+                    // oops, it wasn't a "name=value" argument
+                    putBack(name);
+                } else {
+                    label = name;
+                }
+            }
+        }
+
+        Expression expr;
+        if (allowCurrying && !fArray) {
+            switch (peek().getId()) {
+            case ANY: {
+                // one of two cases: an unbound argument, or a lambda whose one parameter is
+                // ignored
+                Token tokUnbound = expect(Id.ANY);
+                if (peek(Id.LAMBDA)) {
+                    putBack(tokUnbound);
+                    expr = parseExpression();
+                } else {
+                    expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                            tokUnbound.getEndPosition(), null);
+                }
+                break;
+            }
+
+            case COMP_LT: {
+                Token          tokOpen    = expect(Id.COMP_LT);
+                TypeExpression type       = parseTypeExpression();
+                Token          tokClose   = expect(Id.COMP_GT);
+                Token          tokUnbound = expect(Id.ANY);
+                expr = new NonBindingExpression(tokOpen.getStartPosition(),
+                        tokUnbound.getEndPosition(), type);
+                break;
+            }
+
+            default:
+                expr = parseExpression();
+                break;
+            }
+        } else {
+            expr = parseExpression();
+        }
+
+        return label == null ? expr : new LabeledExpression(label, expr);
+    }
+
+    /** Retain the opening token and separators only for the explicit partial-analysis parser. */
+    private Expression parseInvocation(Expression callee) {
+        if (!f_partialAnalysis) {
+            return new InvocationExpression(callee, peek(Id.ASYNC_PAREN),
+                    parseArgumentList(true, true, false), prev().getEndPosition());
+        }
+
+        Token            open       = current();
+        List<Expression> args       = new ArrayList<>();
+        List<Token>      separators = new ArrayList<>();
+        if (match(Id.R_PAREN) == null) {
+            while (true) {
+                if (canRetainIncomplete()) {
+                    throw incomplete(new IncompleteStatement(callee, open, args, separators,
+                            m_source.getPosition()));
+                }
+                args.add(parseArgument(true, false));
+                Token comma = match(Id.COMMA);
+                if (comma != null) {
+                    separators.add(comma);
+                }
+                if (canRetainIncomplete()) {
+                    throw incomplete(new IncompleteStatement(callee, open, args, separators,
+                            m_source.getPosition()));
+                }
+                if (match(Id.R_PAREN, comma == null) != null) {
+                    break;
+                }
+            }
+        }
+        return new InvocationExpression(callee, open.getId() == Id.ASYNC_PAREN, args,
+                prev().getEndPosition());
+    }
+
+    private boolean canRetainIncomplete() {
+        return f_partialAnalysis && m_cSpeculating == 0 && !m_fAvoidRecovery && eof()
+                && !f_errs.get().isAbortDesired();
+    }
+
+    private IncompleteExpression incomplete(IncompleteStatement statement) {
+        log(Severity.ERROR, UNEXPECTED_EOF, m_source.getPosition(), m_source.getPosition());
+        return new IncompleteExpression(statement);
+    }
+
+    /** Unwind to the enclosing statement without pretending the unfinished expression has a value. */
+    private static class IncompleteExpression extends CompilerException {
+        private IncompleteExpression(IncompleteStatement statement) {
+            super("Incomplete expression");
+            this.statement = statement;
+        }
+
+        private final IncompleteStatement statement;
     }
 
     /**
@@ -5916,6 +5995,9 @@ public class Parser {
      * The lexical analyzer.
      */
     private final Lexer m_lexer;
+
+    /** Whether trailing incomplete expression statements may be retained for partial analysis. */
+    private final boolean f_partialAnalysis;
 
     /**
      * The "put back" token.

@@ -11,14 +11,18 @@ import java.io.PrintWriter;
 import java.time.Instant;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 
 import java.util.function.Function;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
+import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
@@ -35,6 +39,8 @@ import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token.Id;
 
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -440,6 +446,85 @@ public class EmbeddingSupport {
         }, input, errs);
     }
 
+    /**
+     * Facts retained by an explicit incomplete-source analysis, never a compiled module.
+     *
+     * The available source syntax and sites may be unvalidated. A child expression supplies a
+     * semantic fact only if validation succeeded (isValidated and a fitting TypeFit) and its
+     * resolved target/type is available. Failed validation can leave placeholder types. An absent
+     * pool means semantic analysis did not start. No overload, missing argument, or result type
+     * is inferred for the incomplete operation. Consumers must copy facts while exclusively
+     * owning the attempt, as with Compilation; ASTs and pools are not concurrent query objects.
+     */
+    public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                                  Optional<ConstantPool> pool) {
+        public PartialAnalysis {
+            sourceTrees = List.copyOf(sourceTrees);
+            sites       = List.copyOf(sites);
+            requireNonNull(pool, "pool");
+        }
+    }
+
+    /**
+     * Analyze the intact prefix of one trailing incomplete expression statement in a single
+     * source module. Supports a member-access dot or unfinished call at EOF, with complete
+     * preceding declarations/statements and arguments. Other syntax errors prevent semantic
+     * analysis; returns, assignments, incomplete nested arguments and module member files are
+     * outside this bounded contract. Complete input has no incomplete site and is not compiled.
+     *
+     * Parsing reports immediately to the host and respects its budget/cancellation. Only the
+     * recognized EOF boundary may enter compiler passes. The incomplete statement validates its
+     * intact children in the real method context, then fails validation before method emission.
+     * Its repeated EOF diagnostic stops the compiler internally without being delivered twice
+     * to the host. Other diagnostics and unexpected failures remain visible.
+     *
+     * @param source  a fresh named source for this attempt
+     * @param input   the optional repository of compiled dependencies
+     * @param errs    the host's diagnostic listener
+     *
+     * @return partial facts with no success/module artifact contract
+     */
+    public PartialAnalysis analyzeIncomplete(Source source, ModuleRepository input,
+                                            @NotNull ErrorListener errs) {
+        verifyConfigured();
+        requireNonNull(source, "source");
+        requireNonNull(errs, "errs");
+        Set<String> delivered = new HashSet<>();
+        ErrorListener host = ErrorListener.cancellable(ErrorListener.collecting(error -> {
+            if (delivered.add(error.genUID())) {
+                errs.log(error);
+            }
+        }), errs::isAbortDesired);
+        ErrorList syntaxErrors = new ErrorList(ErrorList.UNLIMITED);
+        StatementBlock tree;
+        try {
+            if (host.isAbortDesired()) {
+                return new PartialAnalysis(List.of(), List.of(), Optional.empty());
+            }
+            tree = Parser.forPartialAnalysis(source, ErrorListener.tee(syntaxErrors, host)).parseSource();
+        } catch (CompilerException e) {
+            return new PartialAnalysis(List.of(), List.of(), Optional.empty());
+        } catch (RuntimeException | AssertionError e) {
+            host.error(ERR_INTERNAL, NOWHERE, e, "Incomplete-source parsing failed");
+            return new PartialAnalysis(List.of(), List.of(), Optional.empty());
+        }
+
+        List<AstNode> nodes = new ArrayList<>(List.of(tree));
+        for (int i = 0; i < nodes.size(); ++i) {
+            nodes.get(i).children().forEachRemaining(nodes::add);
+        }
+        List<IncompleteStatement> sites = nodes.stream()
+                .filter(IncompleteStatement.class::isInstance)
+                .map(IncompleteStatement.class::cast).toList();
+        if (sites.size() != 1 || syntaxErrors.getErrors().stream().anyMatch(error ->
+                error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(Parser.UNEXPECTED_EOF))) {
+            return new PartialAnalysis(List.of(tree), List.of(), Optional.empty());
+        }
+
+        Compilation attempt = compileModule(listener -> new ParsedSources(tree, List.of(tree)), input, host);
+        return new PartialAnalysis(List.of(tree), sites, Optional.ofNullable(attempt.pool()));
+    }
+
     /** An assembled tree is available only when parsing/loading succeeded. */
     private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {}
 
@@ -536,6 +621,13 @@ public class EmbeddingSupport {
          */
         FileStructure getFileStructure() {
             return file;
+        }
+
+        @Override
+        public boolean isAbortDesired() {
+            // Cancellation must also stop between phases; stopping only an individual compiler
+            // loop would let the following phase run against an unfinished predecessor.
+            return super.isAbortDesired() || f_errs.isAbortDesired();
         }
 
         protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
