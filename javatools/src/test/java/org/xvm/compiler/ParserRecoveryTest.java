@@ -13,6 +13,7 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.StatementBlock;
@@ -22,6 +23,7 @@ import org.xvm.compiler.ast.VariableDeclarationStatement;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -140,6 +142,47 @@ public class ParserRecoveryTest {
             assertTrue(errs.hasError(Lexer.STRING_NO_TERM));
             assertEquals(1, reports.get());
         }
+    }
+
+    @Test
+    public void partialParsingIsOptInAndClonesOwnTheirIncompleteChildren() {
+        String text = "module Recovery { void run() { console.print(1, ";
+        StatementBlock ordinary = parse(text, new ErrorList());
+        assertTrue(nodes(ordinary).stream().noneMatch(IncompleteStatement.class::isInstance));
+
+        ErrorList errs = new ErrorList();
+        StatementBlock partial = Parser.forPartialAnalysis(new Source(text), errs).parseSource();
+        assertEquals(List.of(Parser.UNEXPECTED_EOF), errs.getErrors().stream().map(ErrorListener.ErrorInfo::getCode).toList());
+        IncompleteStatement site = nodes(partial).stream().filter(IncompleteStatement.class::isInstance)
+                .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+        IncompleteStatement clone = (IncompleteStatement) site.clone();
+        assertNotSame(site.getTarget(), clone.getTarget());
+        assertNotSame(site.getReceiver().orElseThrow(), clone.getReceiver().orElseThrow());
+        assertNotSame(site.getArguments().getFirst(), clone.getArguments().getFirst());
+        assertEquals(site.getEndPosition(), clone.getEndPosition());
+        assertEquals(site.getSeparators(), clone.getSeparators());
+        assertFalse(clone.getReceiver().orElseThrow().isValidated());
+    }
+
+    @Test
+    public void partialParserSpeculationCannotPublishAnIncompleteSite() {
+        ErrorList errs = new ErrorList();
+        Parser parser = Parser.forPartialAnalysis(new Source("module Recovery { void run() { console."), errs);
+        assertThrows(CompilerException.class, () -> {
+            try (Parser.Attempt ignored = parser.attempt()) {
+                parser.parseTypeCompositionStatement();
+            }
+        });
+        assertFalse(errs.hasSeriousErrors());
+        assertEquals(1, nodes(parser.parseSource()).stream().filter(IncompleteStatement.class::isInstance).count());
+    }
+
+    private List<AstNode> nodes(AstNode root) {
+        List<AstNode> nodes = new ArrayList<>(List.of(root));
+        for (int i = 0; i < nodes.size(); ++i) {
+            nodes.get(i).children().forEachRemaining(nodes::add);
+        }
+        return nodes;
     }
 
     private StatementBlock parse(String text, ErrorList errs) {

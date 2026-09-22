@@ -154,6 +154,12 @@ leave gaps. Selection ranges retain one response per cursor, with a cursor-only 
 syntax covers that position. An edit invalidates the old analysis; queries do not reuse semantic
 positions from an older document version. No Tree-sitter fallback is used in compiler mode.
 
+The separate embedding `analyzeIncomplete` probe can validate intact receivers and ordinary
+arguments in a single trailing standalone statement at EOF. Consumer tests verify real method
+scope, flow narrowing and source positions without selecting an overload or emitting the damaged
+method. XdkAdapter does not yet invoke this probe; it does not change the capabilities above.
+Module integration, accessible member enumeration and expected argument types remain follow-ups.
+
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared callable signatures and direct inheritance edges. The compiler adapter compiles a module
 root and its member tree together, taking unsaved source overlays ahead of disk. New unsaved member
