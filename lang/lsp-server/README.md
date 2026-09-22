@@ -110,7 +110,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Symbol detection | Regex | Syntax AST | Compiler AST |
 | Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
 | Semantic diagnostics | None | None | Compiler errors and warnings |
-| Incomplete syntax | Limited | Error-tolerant parse | Some errors leave no AST |
+| Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
 | Definition / references | By spelling | Syntax and workspace index | Resolved identities across a module |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, text highlights |
@@ -156,11 +156,15 @@ Completion, signature help, rename, semantic tokens, formatting, code actions, d
 code lenses, linked editing, inlay hints, go-to-type-definition, find-implementations and call
 hierarchy remain unsupported. The snapshot exposes declared signatures; instantiated call-site
 signatures and active-argument information are still missing. A member parse failure clears the
-module's semantic answers until a later correction; stale ranges are not reused.
+module's semantic answers until a later correction; stale ranges are not reused. Java parser
+recovery retains available per-source syntax for outline, folding and selection, including valid
+sibling files. Malformed statements may be omitted; their surrounding declarations can survive.
+Compiler mode uses no Tree-sitter fallback or native parser.
 
 The adapter uses `compileModule(ModuleInfo, ...)`, with a fresh text/membership snapshot for each
 attempt, and `semanticSnapshots()` to copy per-source views sharing one identity domain. It does
-not build TypeInfo in response to editor queries. See the
+not build TypeInfo in response to editor queries. `Compilation.sourceTrees()` supplies structural
+views even when parsing errors prevent an assembled `parsed()` tree. See the
 [branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
 remaining limits.
 
