@@ -505,14 +505,48 @@ acceptance criterion: deliberately deferred POCs and newly corrected integration
 
 ## Next investigations after the diagnostic milestone
 
-The next branch pass should make the packaged stdio checks permanent regression tests and select
-source reproducers for the four priority TypeInfo validation families in the audit. The stdio
-checks currently have process-level evidence but no committed CI harness. Keep that pass bounded:
-classify each chosen case as a real loss or justified silence rather than sweeping all callers.
-Then design the first compiler-owned semantic snapshot API and migrate the existing LSP queries
+The fourth branch pass makes the packaged stdio checks permanent regression tests and adds
+source cases for the four priority TypeInfo families in the audit. All four preserve the expected
+warning once; the missing-assignment-operator case reports an invalid operation during validation.
+Caller tracing identifies the later assignment lookup as code generation and the superclass
+constructor lookup as following an explicit reporting call. No production listener migration is
+justified by these examples; generic/external-type cases and the broader suppression survey remain.
+Next, design the first compiler-owned semantic snapshot API and migrate the existing LSP queries
 to it. Start with same-document validated results and explicit partial/unresolved states; defer
 completion and project-wide compilation until their source-recovery and ownership contracts are
 defined. Continue hardening this branch before extracting the PR slices.
+
+The stdio harness is a separate JUnit/Gradle task consuming `fatJar` as a declared input. It
+launches the production main in a child JVM and talks through an LSP4J client. Keep the existing
+build-time backend selection: run this task with `-Plsp.adapter=compiler`, without a test-only
+launcher or runtime override. Unit tests exclude its tag; compiler/LSP validation runs the task
+explicitly and checks its XML for zero skips. Cover unset/invalid `XDK_HOME`, rapid edits,
+correction, close/reopen, missing bootstrap resources and exit with/without shutdown. Use bounded
+waits, capture stderr in the test directory and always terminate child processes on failure.
+
+Run it locally with:
+
+```bash
+./gradlew :lang:lsp-server:compilerStdioTest \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+The first semantic slice should expose immutable facts from one compilation: source spans,
+resolved types, symbol identities, declaration/use relationships and callable signatures. Symbol
+identities belong to that snapshot; the LSP associates it with a document version and rejects stale
+queries. Extract facts while compiler state is owned by the serialized worker, so ordinary queries
+do not build TypeInfo or mutate a retained AST on request threads. Start by replacing the current
+same-file navigation and typed-hover plumbing, with explicit unresolved/partial results. Capture
+origins and qualified-name segments are the next source associations to add. Completion, rename
+and project indexing are consumers with further requirements, not capabilities implied by merely
+introducing a model. This API is proposed, not implemented in the fourth pass.
+
+Fourth-pass verification on 2026-09-22: a forced run of `test compilerStdioTest` executed all
+113 tasks. XML reports 484 LSP tests (zero failures/errors, three existing skips) and four stdio
+tests (zero failures/errors/skips). The required gate covers 69 in-process compiler-consumer tests
+plus those four process tests. Configuration-cache storage and reuse passed. The workflow XML
+gate was exercised locally, and actionlint has the same 89 existing findings as the parent commit.
+These follow-up changes are local; remote CI was not inspected.
 
 1. **Triage suppressed TypeInfo diagnostics together with their callers.** The latest appendix
    records 70 distinct suppressed ERROR messages, with only three source shapes examined. The

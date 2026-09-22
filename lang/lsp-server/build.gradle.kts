@@ -230,7 +230,7 @@ val compileKotlin =
 val classes = tasks.named("classes")
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform { excludeTags("compiler-stdio") }
     testLogging {
         events("failed")
     }
@@ -301,6 +301,31 @@ val fatJar =
             attributes("Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt")
         }
     }
+
+// Exercise the distributed artifact through the production launcher, separately from unit tests.
+val compilerStdioTest =
+    tasks.register<Test>("compilerStdioTest") {
+        group = "verification"
+        description = "Test the packaged compiler LSP over stdio (requires -Plsp.adapter=compiler)"
+        testClassesDirs =
+            sourceSets.test
+                .get()
+                .output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        useJUnitPlatform { includeTags("compiler-stdio") }
+
+        val serverJar = fatJar.flatMap { it.archiveFile }
+        inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
+        dependsOn(fatJar)
+        systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
+        testLogging { events("failed") }
+    }
+
+tasks.check {
+    if (lspAdapter in listOf("compiler", "xtc", "full")) {
+        dependsOn(compilerStdioTest)
+    }
+}
 
 // =============================================================================
 // Consumable configuration for IDE plugins

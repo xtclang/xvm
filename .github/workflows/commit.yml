@@ -621,6 +621,18 @@ jobs:
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+            - name: Verify the packaged compiler LSP over stdio
+              if: |
+                  success() && matrix.os == 'ubuntu-latest' &&
+                  (steps.changes.outputs.compiler == 'true' || steps.publish-flags.outputs.validate-lang == 'true')
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} \
+                    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+                    :lang:lsp-server:compilerStdioTest
+
             - name: Require compiler-consumer test results
               if: |
                   success() && matrix.os == 'ubuntu-latest' &&
@@ -642,6 +654,10 @@ jobs:
                       counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
                       assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), (suite, counts)
                       print(suite, counts)
+                  stdio = ElementTree.parse("lang/lsp-server/build/test-results/compilerStdioTest/TEST-org.xvm.lsp.server.XdkStdioTest.xml").getroot()
+                  counts = {key: int(stdio.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
+                  assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), ("server.XdkStdioTest", counts)
+                  print("server.XdkStdioTest", counts)
                   PYTEST
 
             - name: Upload Plugin Verifier reports
