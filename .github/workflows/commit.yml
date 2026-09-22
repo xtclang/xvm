@@ -765,9 +765,9 @@ jobs:
                   results = Path("lang/lsp-server/build/test-results/test")
                   suites = [
                       "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
-                      "adapter.XdkAdapterLifecycleTest",
+                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest",
                       "adapter.TypeInfoDiagnosticsTest", "adapter.EmbeddingDiagnosticsTest",
-                      "server.XdkLanguageServerTest",
+                      "server.XdkLanguageServerTest", "server.AdapterBackendTest",
                   ]
                   for suite in suites:
                       result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()

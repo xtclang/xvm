@@ -46,9 +46,9 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
 │ MockAdapter   │   │ TreeSitter-   │   │ XdkAdapter    │
 │               │   │ Adapter       │   │               │
 │               │   │               │   │               │
-│ - Regex-based │   │ - Tree-sitter │   │ - Stub for    │
-│ - For testing │   │ - Syntax AST  │   │   future      │
-│               │   │ - Default     │   │   semantic    │
+│ - Regex-based │   │ - Tree-sitter │   │ - Compiler    │
+│ - For testing │   │ - Syntax AST  │   │ - Diagnostics │
+│               │   │ - Default     │   │ - Semantics   │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
@@ -63,7 +63,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 |---------|-------|-------------|
 | **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
 | **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **XDK** | `xdk` | Stub adapter. All methods logged but return empty. Placeholder for future semantic integration. |
+| **XDK** | `compiler` | Real compiler diagnostics and limited same-document semantic features. Core/bootstrap XDK modules are bundled. |
 
 ### Build Commands
 
@@ -74,8 +74,8 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 # Build with Mock adapter (no native dependencies)
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# Build with XDK stub (all calls logged)
-./gradlew :lang:lsp-server:fatJar -Plsp.adapter=xdk
+# Build with the XTC compiler and bundled XDK modules
+./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 
 # Run IntelliJ with specific adapter
 ./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
@@ -105,20 +105,25 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 ### Backend Comparison
 
-| Feature | Mock | Tree-sitter | Compiler Stub |
-|---------|:----:|:-----------:|:-------------:|
-| Symbol detection | Regex (basic) | AST-based (accurate) | None (logged) |
-| Nested symbols | ❌ Limited | ✅ Full hierarchy | ❌ None |
-| Syntax errors | ❌ Basic patterns | ✅ Precise location | ❌ None |
-| Error recovery | ❌ None | ✅ Continues parsing | ❌ None |
-| Rename | ✅ Same-file (text) | ✅ Same-file (AST) | ❌ None |
-| Code actions | ✅ Organize imports | ✅ Organize/remove imports + doc comment + auto-import | ❌ None |
-| Formatting | ✅ Trailing WS | ✅ Trailing WS + auto-indent | ❌ None |
-| Folding ranges | ✅ Brace matching | ✅ AST node boundaries | ❌ None |
-| Signature help | ❌ None | ✅ Same-file methods | ❌ None |
-| Document links | ✅ Import regex | ✅ Import AST + workspace index navigation | ❌ None |
+| Feature | Mock | Tree-sitter | XDK compiler |
+|---------|------|-------------|--------------|
+| Symbol detection | Regex | Syntax AST | Compiler AST |
+| Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
+| Semantic diagnostics | None | None | Compiler errors and warnings |
+| Incomplete syntax | Limited | Error-tolerant parse | Some errors leave no AST |
+| Definition / references | By spelling | Syntax and workspace index | Resolved identities, same document |
+| Hover | Declaration | Declaration | Declaration and validated type |
+| Highlights | By spelling | Syntax, read/write distinction | Resolved identities, text highlights |
+| Completion | Basic | Context-aware | Unavailable |
+| Rename / code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
+| Folding / selection | Basic / none | Syntax AST | Compiler AST |
+| Signature help / document links | None / imports | Same-file / workspace index | Unavailable |
+| Workspace symbols | Limited | Workspace index | Completed analyses of open documents |
+| Semantic tokens | None | Syntax-based | Unavailable |
 | Native library | Not needed | Required | Not needed |
-| All LSP calls logged | ✅ | ✅ | ✅ |
+
+The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles one complete
+module source per document; member files and unsaved project overlays are not supported yet.
 
 ## Supported LSP Features
 
@@ -133,7 +138,17 @@ At a high level, the current tree-sitter-backed default provides:
 - document/range formatting and on-type formatting
 - selection ranges, linked editing, folding ranges, document links, and signature help
 
-The XDK adapter remains a placeholder for future semantic/compiler-backed behavior.
+The XDK adapter publishes versioned diagnostics and supports hover, definition, references,
+highlights, outline, folding and selection. Semantic queries read an immutable Kotlin snapshot;
+structural queries use the retained AST. Navigation covers locals, method/lambda parameters,
+constructor properties, class/method type parameters, aliases, lambda and anonymous-class capture
+chains, and qualified type segments in the same document.
+
+The snapshot is not a member-completion engine or a project index. It exposes declared signatures,
+not instantiated overload candidates or active-argument information. A syntax error that prevents
+parsing removes semantic answers until a later edit parses; stale ranges are not reused. See the
+[branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
+remaining work.
 
 ## Context-Aware Completion
 
@@ -164,9 +179,10 @@ is limited to the current class body's declarations. It cannot resolve:
 - Method overloads or return type narrowing
 - Conditional mixins or generic type parameters
 
-### What a semantic compiler adapter would add
+### Further compiler-backed completion work
 
-A future compiler adapter with full type resolution would enable:
+The current snapshot supplies resolved types and identities. Completion still needs incomplete-source
+support, accessible member enumeration and call-site substitution before it can offer:
 - **Type-resolved member access**: `person.` would show all members of `Person`,
   including inherited ones from `Object`, `Hashable`, etc.
 - **Overload-aware signatures**: Show all applicable overloads ranked by match quality
@@ -189,7 +205,8 @@ A future compiler adapter with full type resolution would enable:
 | `XtcLanguageConstants` | Shared keywords, built-in types, symbol mappings |
 | `MockAdapter` | Regex-based implementation for testing |
 | `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
-| `XdkAdapter` | Minimal placeholder for future compiler / semantic integration |
+| `XdkAdapter` | Serialized compiler worker, bundled XDK, diagnostics and document lifecycle |
+| `SemanticModel` / builder | Immutable per-analysis semantic facts and queries; no retained compiler objects |
 
 ## Building
 

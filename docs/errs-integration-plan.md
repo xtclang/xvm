@@ -47,7 +47,7 @@ outline and semantic navigation work in later PRs, so accepting the listener cha
 require accepting a particular LSP implementation. Investigate the remaining suppressed
 diagnostics separately, with a reproducer and a decision for each source shape.
 
-Use thirteen bounded PRs below. Four foundations can start independently; the compiler changes form a short
+Use fourteen bounded PRs below. Four foundations can start independently; the compiler changes form a short
 stack; the adapter changes follow the public API they consume. The unit of review is an observable
 contract, not one historical phase or one commit. A PR that migrates an interface may legitimately
 touch many files, but should change only that interface's contract and its required consumers.
@@ -172,12 +172,12 @@ interactive IDE or multi-hour memory validation.
 
 Keep these explicit before deciding the branch is ready to split:
 
-1. **Remaining declaration mapping.** Locals, method parameters (including narrowed uses) and
-   constructor-generated properties now have source associations. A captured local is a distinct
-   compiler binding without a retained link to its original declaration; the regression returns no
-   definition instead of guessing. Lambda parameters, capture chains, type parameters and qualified
-   type prefixes belong in the proposed semantic-model design. Final type-name tokens are precise;
-   a qualifier does not incorrectly navigate to the final type.
+1. **Remaining declaration mapping.** Locals, method parameters, constructor-generated properties,
+   lambda parameters and lambda capture chains now have source associations, including narrowing
+   and mutable capture dereferencing. Qualified type segments retain their individual identities.
+   Type-parameter declarations and anonymous-class capture origins now have focused coverage,
+   including mutable/nested captures and shadowing. Cross-file targets remain unavailable; the
+   snapshot leaves unsupported associations unresolved rather than guessing.
 2. **Incomplete source.** Some parser failures leave no AST, so outline/navigation disappear until
    the buffer parses. The selection fallback preserves protocol shape but does not recover syntax.
    Empty text, missing braces, incomplete member access and an unterminated string now have recovery
@@ -189,11 +189,13 @@ Keep these explicit before deciding the branch is ready to split:
 4. **Compiler failures with no listener path.** Continue the suppression audit using specific source
    reproducers. This pass fixes decorator propagation and the embedding catch policy, not every
    historical probe/silence or runtime failure sink listed in `errs.md` and `errs-audit.md`. The
-   refreshed audit distinguishes definite repository failures from TypeInfo sites needing source
-   reproducers; it does not claim that all suppressed diagnostics have been classified.
+   fresh audit classifies 37 distinct messages from the measured XDK build and adds generic and
+   serialized-dependency regressions. No new lost diagnostic was reproduced. Selected final-type
+   checks remain open; the historical set of 70 is not claimed to be closed.
 5. **Operational validation.** Actual stdio transport, bundled-library startup and shutdown now have
-   successful process checks. Interactive editor usability, multi-hour memory behavior and latency
-   inside slow compiler stages remain to be measured.
+   successful process checks, and the VS Code extension-host smoke test passes with the compiler
+   backend. A bounded 180-analysis workload released all tracked ASTs, pools and snapshots. Visual
+   editor review, multi-hour behavior and latency inside slow compiler stages remain unmeasured.
 6. **Project compilation is deferred by scope.** Member files, source roots, module ownership,
    dependency repositories and unsaved overlays need a separate design. Workspace symbols currently
    cover completed analyses of open documents only. Compiler cancellation remains cooperative.
@@ -203,6 +205,52 @@ The implementation is in [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm
 and [EmbeddingSupport](../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java).
 The build/CI contract is in [the test task](../lang/lsp-server/build.gradle.kts) and
 [the commit workflow](../.github/workflows/commit.yml).
+
+### Readiness review before extracting PRs, 2026-09-22
+
+The diagnostic/lifecycle gate passes, including the fifth pass's semantic consumer. This is evidence
+for the integrated branch, not proof that every extracted intermediate PR works. No new compiler
+diagnostic loss was demonstrated by this documentation review. The following work remains bounded
+enough to do here before extraction; full project support and completion remain separate milestones.
+
+| Priority | Work | Evidence and completion condition |
+|---|---|---|
+| Done; carry into L1 | Reject unintended backend fallback | Tree-sitter remains the shipped/default backend, including when the embedded setting is absent. Compiler selection is opt-in. Unknown settings now fail explicitly instead of silently selecting Mock; explicit Mock and existing compiler aliases remain supported. Unit and packaged-startup regressions pass. |
+| Bounded investigation complete; retain regressions in C4 | Generic/external-type diagnostic ownership | Generic instantiations and a serialized external base preserve `VERIFY-75`; silent first lookup preserves replay. The fresh TypeInfo capture classifies 37 distinct messages by source shape and caller. Final artifact probes verify the six Array translators, XODB anonymous map and XML cursor with correct member types/inheritance and no diagnostics. No new host diagnostic loss was reproduced. Convert the probes into permanent tests; the historical 70-message survey remains open. See `errs-audit.md`. |
+| Done for the selected same-file scope; carry into E2/L4 | Remaining source bindings and snapshot boundaries | Type-parameter declarations, aliases, overloads, nested generic types, anonymous captures, mutable/nested capture chains and shadowing have regressions. Cloned lambdas and anonymous classes cannot expose the original helper maps. The AST inventory in `errs.md` explains placement and lifecycle. Cross-file source ownership remains deferred. |
+| Done; carry into L1/L4 | Semantic queries through the packaged server | The real stdio tests now assert hover, definition, references, highlights and advertised capabilities after correction and close/reopen with changed names/types. They also cover diagnostics, resources, invalid backend selection and shutdown. |
+| Bounded checks complete; longer/manual checks open | Interactive use, latency and retention | Seven VS Code extension-host checks pass with the compiler backend, including hover. The 180-analysis workload retained 0/180 ASTs, pools and snapshots after close/shutdown/GC; warmed median was 58.6 ms and p95 78.1 ms. One editor compilation logged 2.1 ms queue wait and 360.5 ms compilation. These are local samples, not latency guarantees or multi-hour/visual validation. |
+
+Agreed API compatibility policy (2026-09-22): `log(ErrorInfo)`
+changes from `boolean` to `void`, null listeners are rejected, and ambient listener setters/lookups
+are removed. These are deliberate compatibility changes, not additive APIs. The
+`getConstantPool()` to `ensureRuntimePool()` rename retains a deprecated delegating alias with
+the same runtime-initialization behavior. The return-type change cannot preserve compatibility
+through an ordinary overload: C1 must be released as an explicitly breaking change, with callers
+and implementors recompiled and migrated to separate reporting from cancellation. Do not claim
+source or binary compatibility for C1/C2. Each slice must state its policy and pass tests on its own
+intermediate state; the integrated branch passing does not satisfy that gate. Compiled-XDK output equivalence, with
+only the known timestamp normalized, also remains a per-slice gate where compiler behavior is touched.
+
+Documentation was reconciled in this review: the LSP and lang READMEs now select `compiler` and
+describe the bundled XDK; the IDE matrix reflects snapshot-backed queries and their limits;
+`errs.md` distinguishes old work lists from completed hardening; and the research-fork tier document
+is explicitly historical. Its Kotlin lexer/parser, member index, flow-analysis APIs, coverage numbers
+and schedules do not describe the current snapshot. `errs-audit.md` remains the classified failure
+backlog; its historical counts are not fresh measurements of this worktree.
+
+Deferred capabilities are still visible outages when choosing the compiler backend: incomplete
+syntax can remove the AST, individual project member files cannot be compiled independently,
+navigation has no cross-file source ownership, and completion, signature help, rename, semantic
+tokens, formatting, code actions, document links and hierarchy features are unavailable. The current
+snapshot has declared signatures and structural type relationships; it has no member index,
+instantiated call-site model, project identity scheme or incremental compiler. These are feature
+boundaries, not reasons to delay the listener foundation indefinitely.
+
+Runtime/Container failure listeners, JIT/debugger sinks, diagnostic thread/fiber origins, SLF4J/JFR
+listener sinks and a concurrent `ErrorList` remain outside the compile-only scope. Filing the
+historical upstream `VERIFY-75` issue is optional publication work; the branch already fixes and
+tests that warning loss.
 
 ## Proposed PRs and dependencies
 
@@ -220,14 +268,15 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | C2 | Require explicit listeners and explicit reasons for silence | C1 |
 | C3 | Scope parser/resolver reporting and statement validation state | C2 |
 | E1 | Return useful compilation results through the embedding API | I1, C2, R1; I3 for compiled-XDK tests |
+| E2 | Expose resolved source bindings, lambda origins and qualified segments | E1; I3 for direct compiler-consumer tests |
 | C4 | Replay TypeInfo diagnostics and remove ambient listener ownership | C2, C3; E1 and I3 for the downstream regression tests |
 | L1 | Connect the diagnostic-only XDK adapter and prove publication | I1, I3, C4, E1 |
 | L2 | Complete cancellation and document lifecycle handling | L1; includes the listener cancellation decorator |
 | L3 | Add the outline and structural AST features | E1, L2 |
-| L4 | Expose resolved targets and add limited semantic navigation | L3; I2 before testing queries with no ambient pool |
+| L4 | Snapshot semantic facts in Kotlin and use them for navigation and hover | E2, L3; I2 for ambient-pool handling |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
-L3 and L4 can follow without delaying the diagnostics milestone. These are thirteen PRs, not thirteen
+E2, L3 and L4 can follow without delaying the diagnostics milestone. These are fourteen PRs, not fourteen
 simultaneous open branches. Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -313,9 +362,9 @@ insufficient. Document that `collecting` does not deduplicate, while `ErrorList`
 
 This PR has an intentional public API break: `boolean log(ErrorInfo)` becomes `void`, and `RUNTIME`
 stops throwing from inside reporting. Java cannot preserve the old method using an overload that
-differs only by return type. Decide the compatible release boundary before extraction; if the
-current release requires binary compatibility, defer this breaking slice or design an explicit
-versioned bridge. Do not describe the branch as wholly additive.
+differs only by return type. The agreed policy is an explicitly breaking release boundary for
+C1/C2; its release notes must list the migration and recompilation requirements. Selecting the
+release/version remains a submission decision. Do not describe the branch as wholly additive.
 
 ### C2 — Require explicit listeners and explicit reasons for silence
 
@@ -363,8 +412,8 @@ Take `53b13d7a4`, the embedding bootstrap configuration from `bb3c4c62c`, `60a45
 entry points as delegating APIs. Add the new `Source` overload and result API without moving LSP
 types into javatools.
 
-Preserve a deprecated delegating `getConstantPool()` alias if compatibility is required when adding
-the clearer `ensureRuntimePool()` name. The absence of in-tree callers does not establish that a
+Preserve the deprecated delegating `getConstantPool()` alias when adding the clearer
+`ensureRuntimePool()` name, as agreed for this slice. The absence of in-tree callers does not establish that a
 public method has no external callers. Document the runtime initialization side effect explicitly.
 Do not bring `footprint()` across unchanged.
 
@@ -464,28 +513,38 @@ no AST, repeated/shared nodes and cleanup. Keep highlights with L4's semantic ma
 extracting the superseded spelling-based implementation. Symbols from compiled documents are not
 a complete workspace index.
 
-### L4 — Expose resolved targets and add limited semantic navigation
+### E2 — Retain compiler source bindings
 
-**Contract:** read-only compiler accessors expose existing resolution results, and the adapter uses
-them for supported same-file targets without inventing an answer where identity is unavailable.
+**Contract:** compiler consumers can read resolved targets and their source associations without
+restarting resolution or changing runtime register identity.
 
-Take the two Java accessors and `XdkResolution` from `956d56f41`, plus typed hover and their tests.
-Include this second pass's declaration-register, declaration-name and invoked-expression accessors,
-identity-based local resolution, exact identifier spans for names and semantic highlights.
-Include the third pass's method-parameter register associations, constructor-parameter property
-identities and final-name-token accessor for qualified/generic types.
-Document unresolved/unvalidated nodes and result lifetime. These accessors can be extracted as a
-smaller independent compiler PR if useful, with compiler-level tests; the Kotlin consumer still
-depends on L3.
+Take the Java accessors from `956d56f41` and the later declaration-register/name, invocation and
+method-parameter associations. Include constructor-generated property identities, the final-name
+token accessor, and the fifth pass's qualified segment recording and context-owned `LambdaBindings`.
+Keep snapshot/query logic out of javatools. Direct binding tests through I3 must cover nested and
+mutable captures, inferred/typed parameters, narrowing, unresolved prefixes and clone ownership;
+extract these from the consumer cases without requiring the L4 snapshot implementation.
+
+### L4 — Snapshot semantic facts and add limited navigation
+
+**Contract:** an immutable Kotlin snapshot supplies supported same-file semantic answers without
+touching compiler objects on request threads or matching names by spelling.
+
+Use the final `SemanticModel`, builder and `XdkAdapter` consumer in the existing LSP module.
+Do not introduce a separate library, add Kotlin to javatools, or land the superseded
+`XdkResolution` walker. Build the snapshot on the compiler worker and preserve L2's document/version
+ownership. It exposes structural types, declared signatures, symbol identities and source spans,
+with explicit partial/unresolved results and IDs scoped to one snapshot. Keep structural AST
+features with L3.
 
 Pin property identity across classes, overload-selected calls, types, constructors and unresolved
 names. Carry `XdkNavigationTest` and the server navigation regression: declarations, sibling scopes,
 separate methods, narrowing, shadowing, call arguments, `includeDeclaration` and exact name spans.
 Original-register identity connects supported locals and narrowed method parameters to declarations;
 property identity connects constructor-generated properties to their source parameters. Return no
-definition when a source association is unavailable, including the captured-local regression.
-Capture chains, lambda/type parameters, type qualifiers and cross-file targets remain follow-ups
-before rename can be supported safely.
+definition when a source association is unavailable. Include `SemanticModelTest` in the required
+zero-skip gate. Type-parameter declarations and anonymous-class captures now have regressions.
+Cross-file targets remain follow-ups before rename can be supported safely.
 
 ## Changes to hold out of the initial integration
 
@@ -511,10 +570,9 @@ warning once; the missing-assignment-operator case reports an invalid operation 
 Caller tracing identifies the later assignment lookup as code generation and the superclass
 constructor lookup as following an explicit reporting call. No production listener migration is
 justified by these examples; generic/external-type cases and the broader suppression survey remain.
-Next, design the first compiler-owned semantic snapshot API and migrate the existing LSP queries
-to it. Start with same-document validated results and explicit partial/unresolved states; defer
-completion and project-wide compilation until their source-recovery and ownership contracts are
-defined. Continue hardening this branch before extracting the PR slices.
+The fifth pass below implements the first semantic snapshot from compiler-owned facts and migrates
+the existing LSP queries to it. Completion and project-wide compilation still need source-recovery
+and ownership contracts. Continue hardening this branch before extracting the PR slices.
 
 The stdio harness is a separate JUnit/Gradle task consuming `fatJar` as a declared input. It
 launches the production main in a child JVM and talks through an LSP4J client. Keep the existing
@@ -546,10 +604,44 @@ Fourth-pass verification on 2026-09-22: a forced run of `test compilerStdioTest`
 tests (zero failures/errors/skips). The required gate covers 69 in-process compiler-consumer tests
 plus those four process tests. Configuration-cache storage and reuse passed. The workflow XML
 gate was exercised locally, and actionlint has the same 89 existing findings as the parent commit.
-These follow-up changes are local; remote CI was not inspected.
+The fourth pass was committed and pushed as `45fa0ab13`; remote CI was not inspected.
 
-1. **Triage suppressed TypeInfo diagnostics together with their callers.** The latest appendix
-   records 70 distinct suppressed ERROR messages, with only three source shapes examined. The
+### Fifth pass: semantic snapshots and their LSP consumer
+
+The semantic model and builder live in Kotlin in the existing LSP server module, independent of LSP
+protocol types. There is no new library or Gradle dependency, and javatools remains Java-only.
+The `Compilation.semanticSnapshot()` Kotlin extension copies facts on the compiler worker after
+compilation; the Java embedding API and three-part compilation result stay compatible. Each snapshot
+has its own identity and immutable type, symbol, signature and occurrence data; it retains no AST,
+pool, register or TypeConstant. Types include their displayed form and structural relationships.
+Source names and unresolved facts are explicit nullable values.
+Complete, partial and unavailable snapshots distinguish successful compilation from usable partial
+analysis and a missing parse. Snapshot queries never compile or build TypeInfo.
+
+The adapter creates one snapshot per analysis and uses it for hover, definition, references and
+highlights; existing request/version ownership still rejects stale analyses. Structural outline,
+folding and selection retain the AST in this pass. The duplicate `XdkResolution` walker is removed.
+Capture associations live in a `LambdaBindings` helper owned by the existing lambda compilation
+context; AST cloning has no new state to copy or reset. Small AST accessors expose these bindings
+and qualified-type segment identities retained during resolution. Runtime register identity is
+unchanged, and no source association is reconstructed by matching spellings. Coverage includes
+nested/mutable captures, lambda parameters, qualified and inherited type names, unresolved names,
+distinct compilation identities and concurrent snapshot queries. Completion and project compilation
+remain outside this pass.
+
+Fifth-pass verification on 2026-09-22 used `--rerun-tasks --no-build-cache` for compiler, LSP and
+packaged-server tests. JUnit XML reports 462 compiler tests (zero failures/errors, 40 existing
+skips), 497 LSP tests (zero failures/errors, three existing skips), and four packaged-server tests
+(zero failures/errors/skips). The required compiler-consumer subset contains 82 in-process tests
+plus those four process tests, all with zero skips. `spotlessCheck` and `git diff --check` pass.
+This pass's changes remain local; remote CI was not inspected.
+
+1. **Make the selected final-type checks permanent regressions.** The latest capture classifies
+   37 distinct messages; the historical 70-message survey remains separate. Fresh-JVM probes of
+   serialized modules now verify the array assigned-properties, XODB anonymous map overrides and
+   XML virtual cursor metadata with reporting listeners and no diagnostics. Preserve those member
+   types and inherited chains in tests, plus the fresh-source property case and an invalid-override
+   control. The
    refreshed lexical count is 121 no-argument calls across compiler, asm, runtime, JIT and API
    directories; this is not a call-graph classification. Historical totals of 124/126 and the
    estimate of 53 compile-time sites are not a current migration scope. Instrument chosen cases.
@@ -567,17 +659,62 @@ These follow-up changes are local; remote CI was not inspected.
    adapter using tree-sitter for current syntax and the compiler for semantic results. Prefer the
    hybrid for near-term editor usability, while recording what the compiler API still lacks.
    Never silently apply old semantic ranges to changed text. Completion follows this decision.
-4. **Design the semantic query model.** Supported locals, method parameters and constructor
-   properties now retain source identity. Build the follow-on API around a versioned compilation
-   snapshot with resolved types, symbol identities, declaration/use spans, callable signatures and
-   explicit partial results. Capture origins and cross-file source ownership must precede safe
-   rename. Signature help and semantic tokens can be earlier consumers where validated source
-   provides enough information; completion also depends on the incomplete-source decision.
+4. **Extend the semantic model where a consumer needs it.** The first snapshot now supplies
+   resolved types, symbol identities, declaration/use spans, declared signatures and explicit
+   partial results. Type-parameter declarations and anonymous-class captures are now covered.
+   Add project compilation, cross-file source ownership and identities stable across snapshots
+   before claiming safe rename. Build cross-file definitions/references and a workspace index on
+   that foundation. Type hierarchy and find-implementations then need copied resolved supertype
+   relationships and a reverse index for subtypes; call hierarchy needs resolved call edges.
+   Signature help and semantic tokens can be earlier consumers where validated source provides
+   enough information; completion still depends on the incomplete-source decision and resolved
+   member/call-site facts. Keep model/query code in the existing Kotlin LSP module until a separate
+   consumer justifies extracting a library.
 5. **Continue the failure audit by reachable failure path.** The refreshed audit corrects the
    `Exception`/`Error` distinction and separates speculation, commented code and bootstrap output
    from actual compiler sinks. Repository stdout losses now have fixes and source-level host tests.
    Use its remaining classifications to select the next reproducer; neither broad catches nor
    print statements alone prove a lost diagnostic. Runtime-only cases get independent fixes.
+
+### Sixth pass: readiness work, 2026-09-22
+
+The compiler remains opt-in; Tree-sitter is the shipped default. The launcher rejects unknown
+backend settings and its missing-property fallback now agrees with the build default. The old
+`getConstantPool()` name delegates to `ensureRuntimePool()` with deprecation documentation.
+The agreed breaking listener policy and each-PR verification gate appear above.
+
+Source bindings now include class/method formals (including abstract methods), typedef aliases,
+anonymous-class captures, nested lambdas inside anonymous classes, mutable captures and shadowing.
+The [AST inventory](errs.md#ast-changes-for-embedding-and-lsp-ownership-and-placement) records every
+affected AST-package class and separates passive node facts, helper ownership and reporting changes.
+`AnonymousClassBindings` replaces the existing captured-register map with a result whose fields
+are final; it adds no separate nullable helper cache or clone reset logic.
+
+A temporary workload ran 30 successive versions of six small complete modules (180 analyses) in a
+warmed test JVM. It weakly tracked each AST, pool and copied semantic snapshot, closed the six
+documents, shut down the adapter and requested GC ten times, 100 ms apart. All 180 of each became
+collectible. End-to-end `compileAsync(...).join()` latency was median 58.6 ms, p95 78.1 ms, maximum
+95.5 ms; this includes snapshot copying and queue wait. The measurement helper was removed from
+the ordinary test suite: GC timing and machine speed are observations, not stable CI assertions.
+This does not measure large-module cancellation, multiple clients or hours of editing.
+
+The real VS Code extension-host harness ran against the compiler package and passed seven checks,
+including file association, activation, packaged JARs and hover in `hello.x`. Its server log confirms
+the compiler backend, zero diagnostics, 2.1 ms queue wait and 360.5 ms compilation for that fixture.
+The extension host and test editor exited successfully. No visual inspection is claimed: UI
+automation was unavailable. The packaged stdio suite separately tests edits, correction,
+close/reopen and semantic queries; the editor smoke test is narrower.
+
+Sixth-pass verification used a forced run of `:javatools:test`, `:lang:lsp-server:test` and
+`:lang:lsp-server:compilerStdioTest` with `--rerun-tasks --no-build-cache`. JUnit XML reported
+462 compiler cases (0 failures/errors, 40 existing skips), 508 LSP cases (0 failures/errors,
+3 existing skips) and 5 packaged-server cases (0 failures/errors/skips). The required subset is
+93 in-process cases plus those 5 process cases, all with zero skips. Backend selection is included
+in the workflow's required class list and XML gate. The final launcher default-selection cleanup
+was checked again with its unit tests and the packaged suite (8 cases, zero failures/skips).
+The final `:xdk:installDist`, `spotlessCheck` and `git diff --check` also passed. Documentation
+checks found no missing local targets across 57 links; the AST inventory covers all 50 changed
+AST-package files, including the new helpers. No remote CI results were consulted.
 
 ## Extraction and verification procedure
 

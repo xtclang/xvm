@@ -819,7 +819,8 @@ public class TypeCompositionStatement
                         TypeConstant   constType = exprType == null
                                 ? pool.typeObject()
                                 : exprType.ensureTypeConstant();
-                        component.addTypeParam(sParam, constType);
+                        param.setResolvedTarget(component.addTypeParam(sParam, constType)
+                                .getIdentityConstant());
                     } else {
                         log(errs, Severity.ERROR, Compiler.DUPLICATE_TYPE_PARAM, sName);
                     }

@@ -165,6 +165,34 @@ public class NamedTypeExpression
         return names == null || names.isEmpty() ? null : names.getLast();
     }
 
+    /** A written segment and its resolved target, or null when resolution did not reach it. */
+    public record NameBinding(Token name, Constant target) {}
+
+    /**
+     * @return each written name's binding, without initiating or resuming name resolution
+     */
+    public List<NameBinding> getNameBindings() {
+        var tokens = new ArrayList<Token>();
+        collectNameTokens(tokens);
+        List<Constant> resolved = m_resolver == null ? List.of() : m_resolver.getResolvedNames();
+        var bindings = new ArrayList<NameBinding>(tokens.size());
+        for (int i = 0; i < tokens.size(); ++i) {
+            Constant target = i < resolved.size() ? resolved.get(i)
+                    : i == tokens.size() - 1 ? m_constId : null;
+            bindings.add(new NameBinding(tokens.get(i), target));
+        }
+        return List.copyOf(bindings);
+    }
+
+    private void collectNameTokens(List<Token> tokens) {
+        if (left instanceof NamedTypeExpression expression) {
+            expression.collectNameTokens(tokens);
+        }
+        if (names != null) {
+            tokens.addAll(names);
+        }
+    }
+
     public Constant getIdentityConstant() {
         Constant constId = m_constId;
         if (constId == null) {

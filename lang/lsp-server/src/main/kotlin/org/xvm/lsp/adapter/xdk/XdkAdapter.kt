@@ -53,8 +53,8 @@ import org.xvm.util.Severity as XtcSeverity
  * compiler's own error codes, messages and source spans. The matching XDK libraries are bundled
  * with the server and configured automatically; no external XDK installation is required.
  *
- * The parsed tree supplies outlines, hover, folding and selection; resolved names supply
- * definitions and references within the document. Project-wide compilation remains unsupported.
+ * The immutable semantic snapshot supplies types and resolved navigation within the document.
+ * The parsed tree supplies outlines, folding and selection. Project-wide compilation remains unsupported.
  */
 class XdkAdapter internal constructor(
     private val compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
@@ -151,19 +151,12 @@ class XdkAdapter internal constructor(
         lateinit var task: Runnable
     }
 
-    /**
-     * What one compilation produced: the problems, the shape of what was written, and the tree
-     * itself.
-     *
-     * The tree is kept because every question about a position needs it, and re-parsing to answer
-     * one would mean a compilation per keystroke of hovering. It is the largest thing the adapter
-     * holds - one validated AST per open document - so it is worth watching `heap` in the
-     * footprint line if a lot of documents are open at once.
-     */
+    /** One document version's diagnostics, immutable semantic facts and structural AST. */
     private data class Analysis(
         val diagnostics: List<Diagnostic> = emptyList(),
         val symbols: List<SymbolInfo> = emptyList(),
         val ast: AstNode? = null,
+        val semantics: SemanticModel? = null,
     )
 
     override fun closeDocument(uri: String) {
@@ -213,7 +206,12 @@ class XdkAdapter internal constructor(
             logger.info("compile: first compilation in this server completed (cold)")
         }
         val parsed = compilation.parsed()
-        return Analysis(heard.errors.map { it.toDiagnostic(source) }, XdkSymbols.of(uri, parsed), parsed)
+        return Analysis(
+            diagnostics = heard.errors.map { it.toDiagnostic(source) },
+            symbols = XdkSymbols.of(uri, parsed),
+            ast = parsed,
+            semantics = compilation.semanticSnapshot(),
+        )
     }
 
     /**
@@ -309,7 +307,11 @@ class XdkAdapter internal constructor(
         column: Int,
     ): String? {
         val declared = super.getHoverInfo(uri, line, column)
-        val type = XdkAst.typeAt(cached[uri]?.ast, line, column)
+        val type =
+            cached[uri]
+                ?.semantics
+                ?.typeAt(line, column)
+                ?.displayName
         return when {
             type == null -> declared
             declared == null -> "```xtc\n$type\n```"
@@ -323,9 +325,11 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
     ): List<DocumentHighlight> =
-        XdkResolution
-            .referencesTo(cached[uri]?.ast, line, column, includeDeclaration = true)
-            .map { DocumentHighlight(it, DocumentHighlight.HighlightKind.TEXT) }
+        cached[uri]
+            ?.semantics
+            ?.referencesAt(line, column, true)
+            ?.map { DocumentHighlight(it.toRange(), DocumentHighlight.HighlightKind.TEXT) }
+            .orEmpty()
 
     /**
      * Blocks and declarations that span more than one line. An editor offers a fold per region,
@@ -376,9 +380,10 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
     ): Location? =
-        XdkResolution
-            .declarationOf(cached[uri]?.ast, line, column)
-            ?.let { locationOf(uri, it) }
+        cached[uri]
+            ?.semantics
+            ?.definitionAt(line, column)
+            ?.let { locationOf(uri, it.toRange()) }
 
     override fun findReferences(
         uri: String,
@@ -386,9 +391,13 @@ class XdkAdapter internal constructor(
         column: Int,
         includeDeclaration: Boolean,
     ): List<Location> =
-        XdkResolution
-            .referencesTo(cached[uri]?.ast, line, column, includeDeclaration)
-            .map { locationOf(uri, it) }
+        cached[uri]
+            ?.semantics
+            ?.referencesAt(line, column, includeDeclaration)
+            ?.map { locationOf(uri, it.toRange()) }
+            .orEmpty()
+
+    private fun SemanticModel.Range.toRange(): Range = Range(Position(start.line, start.column), Position(end.line, end.column))
 
     private fun locationOf(
         uri: String,

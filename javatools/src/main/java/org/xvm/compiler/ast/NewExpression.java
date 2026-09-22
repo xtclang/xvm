@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -182,6 +183,38 @@ public class NewExpression
      */
     public AnonInnerClassContext getCaptureContext() {
         return m_ctxCapture;
+    }
+
+    /**
+     * @return source bindings collected by capture analysis, or null before it completes
+     */
+    public AnonymousClassBindings getSourceBindings() {
+        return m_captureBindings != null && m_captureBindings.isFor(this) ? m_captureBindings : null;
+    }
+
+    void bindSourceCapture(String name, Register captured) {
+        m_captureBindings.bind(name, captured);
+    }
+
+    /**
+     * Obtain source origins for the generated properties of a validated anonymous class.
+     * This reads existing capture data; it does not resume compilation or retain another cache.
+     *
+     * @return a snapshot of captured properties and their enclosing source registers
+     */
+    public Map<PropertyConstant, Register> getCaptureOrigins() {
+        if (!isValidated() || anon == null || anon.getComponent() == null || getSourceBindings() == null) {
+            return Map.of();
+        }
+
+        var origins = new HashMap<PropertyConstant, Register>();
+        m_captureBindings.registers().forEach((name, register) -> {
+            if (anon.getComponent().getChild(name) instanceof PropertyStructure property &&
+                    property.isSynthetic()) {
+                origins.put(property.getIdentityConstant(), register.getOriginalRegister());
+            }
+        });
+        return Map.copyOf(origins);
     }
 
     // ----- compilation (Expression) --------------------------------------------------------------
@@ -718,10 +751,10 @@ public class NewExpression
             // nested contexts in which the captured variables were declared go through their exit()
             // logic (as the variables go out of scope in the method body that contains this
             // NewExpression); for now, store off the data from the capture context
-            m_mapCapture     = ctxAnon.getCaptureMap();
-            m_mapRegisters   = ctxAnon.ensureRegisterMap();
-            m_fInstanceChild = ctxAnon.isInstanceChild();
-            m_ctxCapture     = null;
+            m_mapCapture      = ctxAnon.getCaptureMap();
+            m_captureBindings = new AnonymousClassBindings(this, ctxAnon.ensureRegisterMap());
+            m_fInstanceChild  = ctxAnon.isInstanceChild();
+            m_ctxCapture      = null;
 
             // make sure the capture names don't collide
             ClassStructure clzAnon = ctxAnon.getThisClass();
@@ -1303,11 +1336,11 @@ public class NewExpression
         anon.getComponent().setStatic(!m_fInstanceChild);
 
         // if nothing else is captured, then we're done
-        Map<String, Boolean>  mapCapture   = m_mapCapture;
-        Map<String, Register> mapRegisters = m_mapRegisters;
+        Map<String, Boolean> mapCapture = m_mapCapture;
         if (mapCapture == null || mapCapture.isEmpty()) {
             return aOldArgs;
         }
+        Map<String, Register> mapRegisters = m_captureBindings.registers();
 
         // we're going to replace the constructor by creating a new constructor that calls the old
         // one, but that first stores off all the passed-in binding values
@@ -1459,18 +1492,18 @@ public class NewExpression
      * @return the type of the value (not the Ref or Var, if implicit deref is used)
      */
     protected TypeConstant getCaptureType(String sCaptureName) {
-        assert m_mapRegisters.containsKey(sCaptureName);
+        assert m_captureBindings.registers().containsKey(sCaptureName);
 
-        return m_mapRegisters.get(sCaptureName).getType();
+        return m_captureBindings.registers().get(sCaptureName).getType();
     }
 
     /**
      * @return true iff the captured variable has been marked as being effectively final
      */
     protected boolean isCaptureFinal(String sCaptureName) {
-        assert m_mapRegisters.containsKey(sCaptureName);
+        assert m_captureBindings.registers().containsKey(sCaptureName);
 
-        return m_mapRegisters.get(sCaptureName).isEffectivelyFinal();
+        return m_captureBindings.registers().get(sCaptureName).isEffectivelyFinal();
     }
 
     /**
@@ -1479,7 +1512,7 @@ public class NewExpression
     protected boolean isImplicitDeref(String sCaptureName) {
         assert m_mapCapture.containsKey(sCaptureName);
 
-        Register reg    = m_mapRegisters.get(sCaptureName);
+        Register reg    = m_captureBindings.registers().get(sCaptureName);
         Boolean  FVar   = m_mapCapture  .get(sCaptureName);
         return FVar || !reg.isEffectivelyFinal();
     }
@@ -1640,9 +1673,10 @@ public class NewExpression
      */
     private transient Map<String, Boolean>  m_mapCapture;
     /**
-     * A map from variable name to register, built by the anonymous inner class context.
+     * The capture-analysis result: enclosing registers and source origins for their local reads.
+     * Replaces the former name-to-register map; created when capture analysis completes.
      */
-    private transient Map<String, Register> m_mapRegisters;
+    private transient AnonymousClassBindings m_captureBindings;
 
     /**
      * The construction plan:
