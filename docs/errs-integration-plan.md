@@ -16,7 +16,9 @@ the two Markdown files above.
 was reliable compiler diagnostics and existing LSP features. The subsequently approved
 [eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) now adds permanent final-TypeInfo
 regressions, module sessions with overlays, cross-file navigation and direct type hierarchy.
-Incomplete syntax, cross-module indexing and richer call-site features remain open. The numbered
+The [ninth pass](#ninth-pass-java-parser-recovery-2026-09-22) keeps compiler mode Java-only and retains
+recovered syntax for structural features. Semantic analysis of incomplete source, cross-module
+indexing and richer call-site features remain open. The numbered
 passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
 
 ### Branch hardening design
@@ -50,7 +52,7 @@ outline and semantic navigation work in later PRs, so accepting the listener cha
 require accepting a particular LSP implementation. Investigate the remaining suppressed
 diagnostics separately, with a reproducer and a decision for each source shape.
 
-Use the seventeen bounded PRs below, including three additive slices for module support and hierarchy.
+Use the eighteen bounded PRs below, including module support, hierarchy and a later parser-recovery slice.
 Four foundations can start independently; the compiler changes form a short
 stack; the adapter changes follow the public API they consume. The unit of review is an observable
 contract, not one historical phase or one commit. A PR that migrates an interface may legitimately
@@ -249,7 +251,8 @@ and schedules do not describe the current snapshot. `errs-audit.md` remains the 
 backlog; its historical counts are not fresh measurements of this worktree.
 
 Deferred capabilities are still visible outages when choosing the compiler backend: incomplete
-syntax can remove the module AST; navigation covers the current module's source files, with no
+syntax can prevent an assembled module AST; recovered per-file syntax supports structural features,
+while navigation requires semantic results for the current module's source files, with no
 cross-module index or library-source lookup. Completion, signature help, rename, semantic tokens,
 formatting, code actions, document links and method implementation lookup remain unavailable.
 The snapshot has declared signatures and direct type hierarchy; it has no completion member index,
@@ -286,10 +289,12 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | E3 | Compile source trees with host text/membership and member cancellation | E1, C3; L2's listener decorator for cancellation; I3 for compiled-XDK tests |
 | L5 | Add module sessions, per-file publication and cross-file navigation | E3, L2, L4 |
 | L6 | Copy direct inheritance edges and support source type hierarchy | L5 |
+| C5 | Recover syntax and expose per-file partial source results | E3; L5 for the structural LSP consumer |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
-additively. These are seventeen PRs, not seventeen simultaneous open branches.
+additively. C5 follows with parser recovery and its partial-result contract. These are eighteen PRs,
+not eighteen simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -612,6 +617,23 @@ JSON-RPC. Test generic parents, interfaces, cross-file source locations and stal
 reads existing class contributions; it must not build TypeInfo or validate from request threads.
 External library source, conditional mixins and method implementation lookup remain explicit limits.
 
+### C5 — Retain recovered syntax without semantic compilation
+
+**Contract:** malformed statements and unfinished bodies can retain surrounding syntax while
+parsing errors still prevent semantic compilation. Cancellation, budgets and speculative rollback
+keep their existing control-flow meaning.
+
+Extract the ninth pass's parser boundary recovery, `ModuleInfo.getParsedSources()` and
+`Compilation.sourceTrees()`. Keep the three-argument construction API, and document the additional
+record component's effect on record-pattern consumers. The embedding parser uses a stage-local
+collector: the launcher's decision to stop subsequent compilation stages must not stop recovery
+after the first ordinary error. The host's budget and cancellation still stop parsing.
+
+Carry `ParserRecoveryTest`, `XdkRecoveryTest` and the packaged structural-query regression. The
+small adapter change reads per-source trees for outlines/folding/selection only; it does not infer
+semantic facts from omitted statements or reuse an earlier version's types. Compare valid compiler
+outputs and preserve exact ranges around real closing braces. No Tree-sitter fallback is included.
+
 ## Changes to hold out of the initial integration
 
 | Change | Disposition |
@@ -883,6 +905,54 @@ local; remote CI was not inspected. No new output-equivalence or long-running ed
 is claimed; these remain independent extraction/operational gates.
 Final documentation checks resolved all 61 local links and heading anchors across the seven
 updated Markdown files; `git diff --check` passed.
+
+### Ninth pass: Java parser recovery, 2026-09-22
+
+Compiler mode stays Java-only, as requested. This pass uses the compiler parser's existing
+statement-boundary recovery helpers instead of introducing a Tree-sitter fallback.
+
+Declaration and statement loops retain completed syntax around malformed input. Recovery rewinds
+the failed statement before scanning balanced delimiters, always consumes input, and stops at a
+statement/block boundary. Missing closing braces report an error while preserving completed module
+and method headers. Speculation still abandons its branch immediately; cancellation and error
+budgets stop recovery. Malformed expressions are omitted rather than replaced by invented values.
+
+`Compilation.sourceTrees()` exposes the available per-file syntax, including recovered trees.
+`parsed()` remains the assembled tree and is absent after source-loading/parsing errors. No file
+structure, pool or semantic compilation is created from such a result. ModuleInfo's passive
+`getParsedSources()` accessor reads what its loading attempt retained without parsing or linking
+again. The adapter uses these trees for current outlines, folding and selection; semantic snapshots
+still require the assembled tree. A broken member therefore need not erase its siblings' outlines.
+These changes add no AST fields or Kotlin dependency to javatools.
+
+The original three-argument Compilation constructor is retained. Adding the `sourceTrees` record
+component changes the record shape: consumers using three-component record patterns must migrate.
+This compatibility detail must accompany the extracted API change.
+
+The single-source embedding regression also exposed a listener-policy mismatch. Feeding the
+launcher's abort state directly into the parser stopped at its first ordinary error, before it
+could return recovered syntax. A stage-local stateful collector forwards diagnostics to the
+launcher and observes the host's cancellation/budget. The launcher still rejects the next stage.
+
+This uncovered an unterminated-string loop already present at base `4a1eae6f7`: the lexer repeatedly
+reported the same missing-terminator error at EOF. Deduplication could prevent the error budget
+from ever advancing. The lexer now reports once and exits that scan. The regression uses an
+unlimited listener and an observer that fails on repetition. Structural traversal also carries
+the source root explicitly: recovered syntax has not acquired compilation parent pointers yet.
+
+This is bounded syntax recovery, not completion or semantic analysis of invalid source. A malformed
+declaration header may be omitted; unmatched nested delimiters and lexer failures can still limit
+what is retained. The invalid statement has no placeholder expression or inferred type. Richer
+recovery nodes and call-site facts remain separate work.
+
+The complete local run forced all three test tasks with task-specific `--rerun` and
+`--no-build-cache`, reusing unchanged build dependencies. JUnit XML reports 471 compiler cases
+(40 existing skips), 537 LSP cases (3 existing skips) and 7 packaged-server cases (zero skips), all
+with zero failures/errors: 972 executed cases passed. All 8 parser/lexer recovery cases, 3 new
+embedding/adapter recovery cases and the packaged recovery case executed without skips. The
+workflow requires `XdkRecoveryTest` in its compiler-consumer lane. The final XDK distribution build
+and `spotlessCheck` passed. This local verification followed the preceding module work pushed as
+`c33b013eb`. No remote CI was inspected.
 
 ## Extraction and verification procedure
 
