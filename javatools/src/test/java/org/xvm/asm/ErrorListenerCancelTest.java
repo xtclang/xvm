@@ -91,7 +91,6 @@ public class ErrorListenerCancelTest {
      */
     @Test
     public void testCancellingDoesNotChangeWhereABranchReports() {
-        ErrorList     errs   = new ErrorList(UNLIMITED);
         List<String>  seen   = new ArrayList<>();
         ErrorListener quits  = cancellable(ErrorListener.collecting(err -> seen.add(err.getCode())), () -> false);
         ErrorListener branch = quits.branch(null);
@@ -101,7 +100,54 @@ public class ErrorListenerCancelTest {
 
         branch.merge();
         assertEquals(List.of(CODE), seen);
-        assertEquals(0, errs.getErrors().size(), "and it merged into the listener it branched from");
+    }
+
+    @Test
+    public void testTeeRetainsCodesFromEitherListener() {
+        ErrorList first  = new ErrorList(UNLIMITED);
+        ErrorList second = new ErrorList(UNLIMITED);
+        first.error(CODE, in(new Source(SOURCE), 0, 1), "a");
+        second.error("PARSER-04", in(new Source(SOURCE), 0, 1), "b");
+
+        ErrorListener tee = ErrorListener.tee(first, second);
+        assertTrue(tee.hasError(CODE));
+        assertTrue(tee.hasError("PARSER-04"));
+        assertFalse(tee.hasError("unreported"));
+    }
+
+    @Test
+    public void testCancellationSurvivesTeeAndNestedBranches() {
+        ErrorList     errs   = new ErrorList(UNLIMITED);
+        ErrorList     copy   = new ErrorList(UNLIMITED);
+        AtomicBoolean stop   = new AtomicBoolean();
+        ErrorListener tee    = ErrorListener.tee(cancellable(errs, stop::get), copy);
+        ErrorListener branch = tee.branch(null).branch(null);
+
+        branch.error(CODE, in(new Source(SOURCE), 0, 1), "a");
+        assertFalse(branch.isAbortDesired());
+        assertTrue(errs.getErrors().isEmpty());
+        assertTrue(copy.getErrors().isEmpty());
+        stop.set(true);
+        assertTrue(branch.isAbortDesired());
+        branch.merge().merge();
+        assertEquals(1, errs.getErrors().size());
+        assertEquals(1, copy.getErrors().size());
+    }
+
+    @Test
+    public void testSilencingReportsPreservesCancellation() {
+        for (ErrorListener.Silence why : ErrorListener.Silence.values()) {
+            ErrorList     errs  = new ErrorList(UNLIMITED);
+            AtomicBoolean stop  = new AtomicBoolean();
+            ErrorListener quiet = cancellable(errs, stop::get).silence(why);
+            quiet.error(CODE, in(new Source(SOURCE), 0, 1), "a");
+            assertTrue(errs.getErrors().isEmpty());
+            assertFalse(quiet.hasSeriousErrors());
+            assertFalse(quiet.isAbortDesired());
+            stop.set(true);
+            assertTrue(quiet.isAbortDesired());
+            assertTrue(quiet.branch(null).isAbortDesired());
+        }
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";

@@ -101,6 +101,7 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
@@ -489,7 +490,7 @@ class XtcLanguageServer(
             signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
 
             // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if needed.
-            if (semanticTokensEnabled) {
+            if (semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities) {
                 logger.info(
                     "semantic tokens ENABLED via {} ({} types, {} modifiers)",
                     System
@@ -533,6 +534,26 @@ class XtcLanguageServer(
             // Linked editing: rename-on-type for same-name identifiers (same-file, TreeSitterAdapter)
             linkedEditingRangeProvider = Either.forLeft(true)
 
+            // Advertise only operations implemented by the selected backend.
+            if (AdapterCapability.HOVER !in adapter.capabilities) hoverProvider = null
+            if (AdapterCapability.COMPLETION !in adapter.capabilities) completionProvider = null
+            if (AdapterCapability.DEFINITION !in adapter.capabilities) definitionProvider = null
+            if (AdapterCapability.REFERENCES !in adapter.capabilities) referencesProvider = null
+            if (AdapterCapability.DOCUMENT_SYMBOL !in adapter.capabilities) documentSymbolProvider = null
+            if (AdapterCapability.DOCUMENT_HIGHLIGHT !in adapter.capabilities) documentHighlightProvider = null
+            if (AdapterCapability.SELECTION_RANGE !in adapter.capabilities) selectionRangeProvider = null
+            if (AdapterCapability.FOLDING_RANGE !in adapter.capabilities) foldingRangeProvider = null
+            if (AdapterCapability.RENAME !in adapter.capabilities) renameProvider = null
+            if (AdapterCapability.CODE_ACTION !in adapter.capabilities) codeActionProvider = null
+            if (AdapterCapability.FORMATTING !in adapter.capabilities) documentFormattingProvider = null
+            if (AdapterCapability.RANGE_FORMATTING !in adapter.capabilities) documentRangeFormattingProvider = null
+            if (AdapterCapability.ON_TYPE_FORMATTING !in adapter.capabilities) documentOnTypeFormattingProvider = null
+            if (AdapterCapability.DOCUMENT_LINK !in adapter.capabilities) documentLinkProvider = null
+            if (AdapterCapability.SIGNATURE_HELP !in adapter.capabilities) signatureHelpProvider = null
+            if (AdapterCapability.WORKSPACE_SYMBOL !in adapter.capabilities) workspaceSymbolProvider = null
+            if (AdapterCapability.CODE_LENS !in adapter.capabilities) codeLensProvider = null
+            if (AdapterCapability.LINKED_EDITING !in adapter.capabilities) linkedEditingRangeProvider = null
+
             // Not yet advertised (enable when implemented)
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
@@ -552,6 +573,7 @@ class XtcLanguageServer(
     override fun close() {
         if (closed.compareAndSet(false, true)) {
             initialized = false
+            textDocumentService.close()
             adapter.close()
         }
     }
@@ -659,9 +681,10 @@ class XtcLanguageServer(
     fun publishDiagnostics(
         uri: String,
         diagnostics: List<Diagnostic>,
+        version: Int? = null,
     ) {
         val currentClient = client ?: return
         val lspDiagnostics = diagnostics.map { it.toLsp() }
-        currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics))
+        currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics, version))
     }
 }
