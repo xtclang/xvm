@@ -17,8 +17,10 @@ was reliable compiler diagnostics and existing LSP features. The subsequently ap
 [eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) now adds permanent final-TypeInfo
 regressions, module sessions with overlays, cross-file navigation and direct type hierarchy.
 The [ninth pass](#ninth-pass-java-parser-recovery-2026-09-22) keeps compiler mode Java-only and retains
-recovered syntax for structural features. Semantic analysis of incomplete source, cross-module
-indexing and richer call-site features remain open. The numbered
+recovered syntax for structural features. The [tenth pass](#tenth-pass-bounded-incomplete-analysis-2026-09-22)
+adds a separate compiler-only probe for intact receivers and arguments in one trailing incomplete
+statement. Broader incomplete-source analysis, cross-module indexing and richer call-site features
+remain open. The numbered
 passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
 
 ### Branch hardening design
@@ -290,11 +292,12 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L5 | Add module sessions, per-file publication and cross-file navigation | E3, L2, L4 |
 | L6 | Copy direct inheritance edges and support source type hierarchy | L5 |
 | C5 | Recover syntax and expose per-file partial source results | E3; L5 for the structural LSP consumer |
+| C6 | Analyze a bounded incomplete statement through an explicit API | C5 and E2; I3 for compiler-consumer tests; no new LSP capability |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
-additively. C5 follows with parser recovery and its partial-result contract. These are eighteen PRs,
-not eighteen simultaneous open branches.
+additively. C5 follows with structural recovery; C6 isolates the explicit partial-semantic probe.
+These are nineteen eventual PRs, not nineteen simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -634,6 +637,21 @@ small adapter change reads per-source trees for outlines/folding/selection only;
 semantic facts from omitted statements or reuse an earlier version's types. Compare valid compiler
 outputs and preserve exact ranges around real closing braces. No Tree-sitter fallback is included.
 
+### C6 — Analyze a bounded incomplete statement explicitly
+
+**Contract:** an opt-in, single-source partial-analysis attempt may validate intact receiver and
+argument expressions in one trailing standalone statement at EOF. It exposes no compiled module
+and does not select an unfinished call's overload or invent its result/arguments.
+
+Extract `Parser.forPartialAnalysis`, `IncompleteStatement` and
+`EmbeddingSupport.analyzeIncomplete`/`PartialAnalysis`. Keep normal compilation's parse-error gate.
+The statement must fail method-body validation before emission. Retain the parser's rollback,
+ordinary invocation parsing and source positions, and the host's cancellation/error budget across
+phase boundaries. Replay the EOF internally without delivering it twice to the host. Include the
+receiver/flow/argument consumer tests, clone/speculation regressions and repository-failure control.
+This API is additive and does not change the `Compilation` record shape. Integrating a richer
+copied model or advertising completion/signature help belongs to subsequent consumer work.
+
 ## Changes to hold out of the initial integration
 
 | Change | Disposition |
@@ -953,6 +971,58 @@ embedding/adapter recovery cases and the packaged recovery case executed without
 workflow requires `XdkRecoveryTest` in its compiler-consumer lane. The final XDK distribution build
 and `spotlessCheck` passed. This local verification followed the preceding module work pushed as
 `c33b013eb`. No remote CI was inspected.
+
+### Tenth pass: bounded incomplete analysis, 2026-09-22
+
+The approved first step is a narrow Java-only proof of incomplete-expression analysis. It adds
+`analyzeIncomplete(Source, input, errs)`, returning a distinct `PartialAnalysis` with per-source
+syntax, incomplete sites and an optional owning pool. It has no module/file output or successful
+compilation claim; the existing compilation API still rejects parse errors.
+
+The parser's explicit partial mode retains a standalone trailing `receiver.` or unfinished call
+at EOF. The opening token, intact callee/receiver, complete arguments, top-level commas and actual
+source end are retained without rewriting the source. The ordinary parser keeps its existing
+argument-list path; single-argument parsing is shared. Speculation cannot keep partial sites.
+Returns, assignments and incomplete nested arguments are not reinterpreted as standalone calls.
+Other serious syntax/lexer errors prevent semantic analysis, and complete input has no probe site.
+
+Method-body validation actually runs inside the compiler's code-generation phase. The new
+`IncompleteStatement` therefore validates its intact children in the real method context and then
+fails validation at the retained EOF boundary. The damaged method is not emitted. Earlier valid
+methods may have been processed, but the partial result exposes no compiled artifact. The incomplete
+operation has no value or type; overload selection, expected parameter types, active-parameter
+mapping and member enumeration are not attempted. Lambda/unbound arguments remain syntax-only.
+
+This syntax node belongs in the AST because the real lexical/flow context exists at statement
+validation. Its mutable fields are normal child references that validation may replace. Existing
+AST adoption/cloning handles them, with a clone-isolation regression; no Context, callback, lookup
+map or separate semantic cache is retained. See the [AST placement inventory](errs.md#incomplete-statements-for-explicit-partial-analysis).
+
+Parser diagnostics reach the host immediately. Only the recognized EOF boundary is allowed through
+to the isolated compiler stage state. Validation replays EOF internally to stop progress, while a
+per-attempt UID set prevents duplicate host delivery even to a bare callback. EmbeddingCompiler
+checks host cancellation between phases as well as inside compiler work. Unexpected repository
+failures still report EMB-5 after the original parse diagnostic.
+
+The consumer tests exercise injected Console, parameter identity, flow-narrowed receiver types,
+ordinary/named arguments, nested-call commas, UTF-16/CRLF positions, empty/unfinished argument lists,
+unknown receivers, unsupported syntax, fresh attempts, cancellation, budgets and exactly-once
+diagnostic delivery. The damaged method has no binary AST. These tests invoke the embedding API
+from the existing Kotlin LSP test module using its normal compiler dependencies.
+
+XdkAdapter does not yet call this probe and advertises no additional capabilities. Integrating
+copied partial facts, widening beyond a single-source EOF statement, and implementing completion
+or signature help remain separate work. No Tree-sitter fallback or Kotlin dependency in javatools
+was added. This pass does not extend the TypeInfo audit or start cross-module indexing.
+
+Verification forced all three test tasks with task-specific `--rerun` and `--no-build-cache`.
+JUnit XML reports 474 compiler cases (40 existing skips), 547 LSP cases (3 existing skips) and
+7 packaged-server cases (zero skips), with zero failures/errors: 985 executed cases passed.
+All 10 partial-analysis consumer tests, 10 parser-recovery tests and 2 embedding repository-failure
+tests executed without skips. The same successful run built the XDK distribution and passed
+`spotlessCheck`; Gradle stored its configuration cache. The workflow's compiler-consumer lane
+requires the new suite with nonzero execution and zero skips. No remote CI or output-equivalence
+comparison was run. Changes were verified locally after the structural recovery commit `60054eb4c`.
 
 ## Extraction and verification procedure
 
