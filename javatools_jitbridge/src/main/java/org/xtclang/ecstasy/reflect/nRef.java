@@ -136,7 +136,9 @@ public class nRef
     /**
      * Native implementation of:
      *
-     *  static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType CompileType, nRef ref1, nRef ref2) {
         if (ref1.$referentType.isJitPrimitive() && ref2.$referentType.equals(ref1.$referentType)) {

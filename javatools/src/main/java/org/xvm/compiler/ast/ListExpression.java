@@ -34,15 +34,15 @@ import org.xvm.util.Severity;
 /**
  * A list expression is an expression containing some number (0 or more) expressions of some common
  * type.
- * <p/>
- * <pre>
+ *
+ * <pre>{@code
  * ListLiteral
  *     "[" ExpressionList-opt "]"
  *     "Collection:" "[" ExpressionList-opt "]"
  *     "List:" "[" ExpressionList-opt "]"
  *     "Array:" "[" ExpressionList-opt "]"
  *     "Set:" "[" ExpressionList-opt "]"
- * </pre>
+ * }</pre>
  */
 public class ListExpression
         extends Expression {

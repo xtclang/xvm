@@ -71,7 +71,9 @@ public class BFloat16 extends BinaryFPNumber {
     /**
      * The primitive implementation of:
      *
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
         float l1 = ((BFloat16) value1).$value;
@@ -84,7 +86,9 @@ public class BFloat16 extends BinaryFPNumber {
     /**
      * The primitive implementation of:
      *
-     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
         float l1 = ((BFloat16) value1).$value;

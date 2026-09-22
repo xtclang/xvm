@@ -8,7 +8,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 
 /**
- * The native RTViewToBit<Nibble> implementation.
+ * The native {@code RTViewToBit<Nibble>} implementation.
  */
 public class xRTViewToBitFromNibble
         extends LongBasedBitView {

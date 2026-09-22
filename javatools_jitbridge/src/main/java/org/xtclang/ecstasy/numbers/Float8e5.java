@@ -21,7 +21,7 @@ import org.xvm.javajit.Ctx;
  *
  * <p>Unlike [Float16], the value is carried as the 8-bit FP8 encoding held in a Java byte, not as a
  * Java float. An FP8 format has only 256 values, so the encoding is the natural carrier: every
- * representable value is exact by construction, and the box cache below is complete.</p>
+ * representable value is exact by construction, and the box cache below is complete.
  */
 public class Float8e5 extends BinaryFPNumber {
     /**
@@ -175,7 +175,9 @@ public class Float8e5 extends BinaryFPNumber {
     /**
      * The primitive implementation of:
      *
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Ordered compare(Ctx ctx, nType type, Orderable value1, Orderable value2) {
         float l1 = $toFloat(((Float8e5) value1).$value);
@@ -188,7 +190,9 @@ public class Float8e5 extends BinaryFPNumber {
     /**
      * The primitive implementation of:
      *
-     *  static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Boolean equals(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Boolean equals(Ctx ctx, nType type, Object value1, Object value2) {
         float l1 = $toFloat(((Float8e5) value1).$value);

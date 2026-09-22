@@ -34,9 +34,9 @@ public class Exception extends nConst {
      * This is a static method that will be called by the naturally constructed subclasses.
      * See {@link org.xvm.javajit.builders.CommonBuilder#assembleNew}.
      *
-     * The name is known to be "construct" since it's the very first constructor at Exception.x
+     * <p>The name is known to be "construct" since it's the very first constructor at Exception.x
      *
-     * @see {@link org.xvm.asm.constants.MethodConstant#ensureJitMethodName}
+     * @see org.xvm.asm.constants.MethodConstant#ensureJitMethodName
      */
     public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, Object message, Object cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null;
@@ -127,8 +127,10 @@ public class Exception extends nConst {
     /**
      * Native implementation of:
      *
-     *      static <CompileType extends Exception> Boolean equals(CompileType value1,
-     *                                                            CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends Exception> Boolean equals(CompileType value1,
+     *                                                           CompileType value2)
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType type, Exception value1, Exception value2) {
         return value1 == value2;
@@ -137,8 +139,10 @@ public class Exception extends nConst {
     /**
      * Native implementation of:
      *
-     *      static <CompileType extends Exception> Ordered compare(CompileType value1,
-     *                                                             CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends Exception> Ordered compare(CompileType value1,
+     *                                                            CompileType value2)
+     * }</pre>
      */
     public static Ordered compare(Ctx ctx, nType type, Exception value1, Exception value2) {
         int result = Integer.compare(
@@ -151,7 +155,9 @@ public class Exception extends nConst {
     /**
      * Native implementation of:
      *
-     *      static <CompileType extends Exception> Int64 hashCode(CompileType value)
+     * <pre>{@code
+     *     static <CompileType extends Exception> Int64 hashCode(CompileType value)
+     * }</pre>
      */
     public static long hashCode$p(Ctx ctx, nType type, Exception value) {
         return System.identityHashCode(value);

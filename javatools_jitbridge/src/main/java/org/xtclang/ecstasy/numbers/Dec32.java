@@ -7,8 +7,11 @@ import java.math.RoundingMode;
 
 import org.xtclang.ecstasy.AppenderᐸCharᐳ;
 import org.xtclang.ecstasy.OutOfBounds;
+import org.xtclang.ecstasy.nException;
 
 import org.xtclang.ecstasy.text.String;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
@@ -85,10 +88,10 @@ public class Dec32 extends DecimalFPNumber {
     public final int $bits;
 
     /**
-     * Construct a decimal value from a Java <tt>int</tt> whose format is that of an IEEE-754-2008
+     * Construct a decimal value from a Java <code>int</code> whose format is that of an IEEE-754-2008
      * 32-bit decimal.
      *
-     * @param bits  a 32-bit Java <tt>int</tt> containing the bits of an IEEE-754-2008 decimal
+     * @param bits  a 32-bit Java <code>int</code> containing the bits of an IEEE-754-2008 decimal
      */
     public Dec32(int bits) {
         $bits = bits;
@@ -420,7 +423,7 @@ public class Dec32 extends DecimalFPNumber {
 
     /**
      * The internal equals method for two Dec32 values called by the equals methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @return {@code true} if the two Dec32 values are equal, {@code false} otherwise.
@@ -558,7 +561,7 @@ public class Dec32 extends DecimalFPNumber {
      *
      * @return a Java {@code int} that contains a 32-bit IEEE 754 decimal value
      *
-     * @throws OutOfBounds if the value is out of range
+     * @throws nException wrapping an {@link OutOfBounds} if the value is out of range
      */
     public static int $toIntBits(Ctx ctx, BigDecimal dec) {
         dec = dec.round(MathContext.DECIMAL32);

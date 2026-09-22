@@ -18,8 +18,8 @@ import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * The builder for Exception types.
- * <p/>
- * For every natural subtype "XYZ" of "ecstasy.Exception" this builder creates a method that
+ *
+ * <p>For every natural subtype "XYZ" of "ecstasy.Exception" this builder creates a method that
  * overrides the {@code $createJavaException(Throwable cause)} method at
  * "org.xtclang.ecstasy.Exception" class.
  * <br>
@@ -66,12 +66,12 @@ public class ExceptionBuilder extends CommonBuilder {
 
     /**
      * The class for e$XYZ (this class name) should look like this:
-     * <code><pre>
+     * <pre><code>
      * public class e$XYZ extends xException {
      *     public e$XYZ(Throwable cause, XYZ exception) {
      *         super(cause, exception);
      *     }
-     *</pre></code>
+     *</code></pre>
      */
     public void assembleJavaException(String className, ClassBuilder classBuilder) {
         TypeConstant superType = typeInfo.getExtends();

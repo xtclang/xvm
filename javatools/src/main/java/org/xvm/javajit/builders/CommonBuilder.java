@@ -125,14 +125,14 @@ public class CommonBuilder
     /**
      * List of constant properties for every class name this builder assembles.
      *
-     * Note: a vast majority of builders assemble one and only one class.
+     * <p>Note: a vast majority of builders assemble one and only one class.
      */
     protected List<PropertyInfo> constProperties;
 
     /**
      * Registry of Constant objects used by the code generator. For each, the key represents the
-     * Constant whose Java value will be initialized by "<clinit>()", and the Integer is the suffix
-     * that will be added to "$sc" (static constant prefix).
+     * Constant whose Java value will be initialized by {@code <clinit>()}, and the Integer is the
+     * suffix that will be added to "$sc" (static constant prefix).
      */
     protected Map<Constant, Integer> constants = new HashMap<>();
 
@@ -1606,7 +1606,7 @@ public class CommonBuilder
     /**
      * Assemble the "public TypeConstant $xvmType()" method.
      *
-     * TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
+     * <p>TODO: consider using a couple of bits of $meta value to indicate the ACCESS trait
      *       of the type (or at least a bit for STRUCT); it would be used by this method
      *       to at least answer "is(struct)" question
      */
@@ -2146,10 +2146,11 @@ public class CommonBuilder
 
     /**
      * Generate the const implementation of:
-     * <pre>
+     * <pre>{@code
      *     static <CompileType extends T> Boolean equals(T value1, T value2)
-     * </pre>
-     * Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
+     * }</pre>
+     *
+     * <p>Generate the "equals", "equals$p" and possibly "$equals" methods for a const type if the
      * methods do not already exist.
      */
     protected void assembleConstEquals(ClassBuilder classBuilder) {
@@ -2192,14 +2193,14 @@ public class CommonBuilder
 
     /**
      * Generate the body of the "equals$p" method for a const type.
-     * <p>
-     * The generated method signature is:
-     * <pre>
+     *
+     * <p>The generated method signature is:
+     * <pre>{@code
      *     public static boolean equals$p(Ctx ctx, nType type, T value1, T value2)
-     * </pre>
+     * }</pre>
      * where T is the const type being built.
-     * <p>
-     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
+     *
+     * <p>Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
     private void assembleConstEquals(CodeBuilder code, TypeConstant type, SignatureConstant eqSig) {
         // all primitives must have a manually coded native implementation
@@ -2392,9 +2393,9 @@ public class CommonBuilder
 
     /**
      * Generate the "compare" method if it does not already exist.
-     * <pre>
+     * <pre>{@code
      *     static <CompileType extends T> Ordered compare(T value1, T value2)
-     * </pre>
+     * }</pre>
      */
     protected void assembleConstCompare(ClassBuilder classBuilder) {
         SignatureConstant cmpSig    = pool().sigCompare();
@@ -2420,14 +2421,14 @@ public class CommonBuilder
 
     /**
      * Generate the body of the "compare" method for a const type.
-     * <p>
-     * The generated method signature is:
-     * <pre>
+     *
+     * <p>The generated method signature is:
+     * <pre>{@code
      *     public static Ordered compare(Ctx ctx, nType CompileType, T value1, T value2)
-     * </pre>
+     * }</pre>
      * where T is the const type being built.
-     * <p>
-     * Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
+     *
+     * <p>Slot 0 = Ctx, Slot 1 = nType, Slot 2 = value1, Slot 3 = value2
      */
     private void assembleConstCompare(CodeBuilder code, TypeConstant type, SignatureConstant cmpSig) {
         // all primitives must have a manually coded native implementation
@@ -2639,9 +2640,9 @@ public class CommonBuilder
 
     /**
      * Generate the "hashCode", "hashCode$p" if the methods do not already exist.
-     * <pre>
+     * <pre>{@code
      *     static <CompileType extends T> Int hashCode(T value)
-     * </pre>
+     * }</pre>
      */
     protected void assembleConstHashCode(ClassBuilder classBuilder) {
         SignatureConstant hashSig    = pool().sigHashCode();
@@ -2698,11 +2699,11 @@ public class CommonBuilder
 
     /**
      * Generate the body of the "hashCode$p" method for a const type.
-     * <p>
-     * The generated method signature is:
-     * <pre>
+     *
+     * <p>The generated method signature is:
+     * <pre>{@code
      *     public static long hashCode$p(Ctx ctx, nType CompileType, T value)
-     * </pre>
+     * }</pre>
      * Slot 0 = Ctx, Slot 1 = nType, Slot 2+ = value
      */
     private void assembleConstHashCode(
@@ -2892,9 +2893,9 @@ public class CommonBuilder
     /**
      * Generate the "Stringable" method "estimateStringLength" and "estimateStringLength$p" if
      * they do not already exist.
-     * <pre>
+     * <pre>{@code
      *     Int estimateStringLength();
-     * </pre>
+     * }</pre>
      */
     protected void assembleConstEstimateStringLength(ClassBuilder classBuilder) {
         SignatureConstant signature = pool().sigEstimateStrLen();
@@ -2937,9 +2938,9 @@ public class CommonBuilder
 
     /**
      * Generate the optimized "Stringable" method "estimateStringLength$p" method
-     * <pre>
+     * <pre>{@code
      *     long estimateStringLength$p(Ctx);
-     * </pre>
+     * }</pre>
      */
     protected void assembleConstEstimateStringLength(CodeBuilder code, TypeConstant type) {
         ConstantPool      pool            = pool();
@@ -3052,9 +3053,9 @@ public class CommonBuilder
 
     /**
      * Generate the "appendTo" method if it does not already exist.
-     * <pre>
+     * <pre>{@code
      *     Appender<Char> appendTo(Appender<Char> buf);
-     * </pre>
+     * }</pre>
      */
     protected void assembleConstAppendTo(ClassBuilder classBuilder) {
         SignatureConstant appendSig    = pool().sigAppendTo();
@@ -3081,9 +3082,9 @@ public class CommonBuilder
 
     /**
      * Generate the native "appendTo" method.
-     * <pre>
+     * <pre>{@code
      *     Appender<Char> appendTo(Appender<Char> buf);
-     * </pre>
+     * }</pre>
      */
     private void assembleConstAppendTo(CodeBuilder code, TypeConstant type) {
         ConstantPool      pool           = pool();
@@ -3798,7 +3799,7 @@ public class CommonBuilder
     /**
      * Assemble the "$new" method.
      *
-     * <code><pre>
+     * <pre><code>
      * Ecstasy:
      *      class C {...}
      *      val o = new C(x, y, z);
@@ -3807,11 +3808,11 @@ public class CommonBuilder
      *
      * For generic types:
      * Ecstasy:
-     *      class C<Element> {...}
-     *      val o = new C<A>(x, y, z);
+     *      class C&lt;Element&gt; {...}
+     *      val o = new C&lt;A&gt;(x, y, z);
      * Java:
      *      C o = C.$new$17($ctx, $type, x, y, z);
-     * where TC is a TypeConstant for the actual type C<A>.
+     * where TC is a TypeConstant for the actual type C&lt;A&gt;.
      *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
      * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
@@ -3914,7 +3915,7 @@ public class CommonBuilder
      *    // user logic from C.finally goes here
      *    // ...
      * }
-     * </pre></code>
+     * </code></pre>
      */
     protected void assembleNew(
             ClassBuilder  classBuilder,

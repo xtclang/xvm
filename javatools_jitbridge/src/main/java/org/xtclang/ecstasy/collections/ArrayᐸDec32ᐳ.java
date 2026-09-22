@@ -16,8 +16,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Dec32, stored in an array of Java longs, two Dec32 per long.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -33,7 +33,7 @@ public class ArrayᐸDec32ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸDec32ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -46,7 +46,7 @@ public class ArrayᐸDec32ᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸDec32ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Dec32 boxed) {
@@ -70,7 +70,7 @@ public class ArrayᐸDec32ᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸDec32ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -83,7 +83,7 @@ public class ArrayᐸDec32ᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸDec32ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸDec32ᐳ that) {
         // TODO

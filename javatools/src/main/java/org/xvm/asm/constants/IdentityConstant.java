@@ -143,10 +143,12 @@ public abstract class IdentityConstant
      *   <li> both A and B have the same outermost parent class, or
      *   <li> B or an ascendant of B extends (or has a contribution of) the outermost parent of A.
      * </ul>
-     * In other words, this class is a nest mate of the specified class if this class is "visible"
-     * from the context of the specified class and could be privately accessed in that context.
-     * <p/>
-     * For example, Map.Entry is a nest mate of both HashMap and HashMap.EntrySet.
+     *
+     * <p>In other words, this class is a nest mate of the specified class if this class is
+     * "visible" from the context of the specified class and could be privately accessed in that
+     * context.
+     *
+     * <p>For example, Map.Entry is a nest mate of both HashMap and HashMap.EntrySet.
      *
      * @param idClass  the class to test nest the visibility from; note that it can represent
      *                 a non-virtual (e.g. anonymous) inner class
@@ -302,8 +304,8 @@ public abstract class IdentityConstant
     /**
      * Determine if two nested identities refer to members that are nested within the same
      * component container.
-     * <p/>
-     * Note: Makes some big assumptions, e.g. like that the two nids both refer to methods (since
+     *
+     * <p>Note: Makes some big assumptions, e.g. like that the two nids both refer to methods (since
      * depths for methods are +1 compared to properties).
      *
      * @param oid1  the first nested identity

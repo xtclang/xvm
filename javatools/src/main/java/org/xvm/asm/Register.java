@@ -166,8 +166,8 @@ public class Register
 
     /**
      * Create a register that is collocated with this register, but narrows its type.
-     * <p/>
-     * To be technically correct, there are scenarios when typeNarrowed is actually wider than
+     *
+     * <p>To be technically correct, there are scenarios when typeNarrowed is actually wider than
      * the original type. Imagine a following Ecstasy code:
      *   <pre><code>
      *   Element el = ...;
@@ -178,7 +178,7 @@ public class Register
      *   }
      *   </code></pre>
      *
-     * In the enclosed "if" context it's known that the Element is an Int, which makes
+     * <p>In the enclosed "if" context it's known that the Element is an Int, which makes
      * consumer2 not assignable to (not narrower than) consumer1, but in effect wider.
      *
      * @param typeNarrowed  the new register type
@@ -820,7 +820,7 @@ public class Register
 
     /**
      * The register ID (>=0), or the pre-defined argument identifier in the range -1 to
-     * {@link Op#CONSTANT_OFFSET).
+     * {@link Op#CONSTANT_OFFSET}.
      */
     private int m_iArg;
 

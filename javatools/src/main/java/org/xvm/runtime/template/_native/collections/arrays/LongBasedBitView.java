@@ -18,7 +18,8 @@ import org.xvm.runtime.template._native.collections.arrays.LongBasedDelegate.Lon
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 /**
- * A base class for native ArrayDelegate<ViewType> views that point to delegates holding long arrays.
+ * A base class for native {@code ArrayDelegate<ViewType>} views that point to delegates holding
+ * long arrays.
  */
 public abstract class LongBasedBitView
         extends xRTViewToBit
@@ -141,7 +142,7 @@ public abstract class LongBasedBitView
     // ----- handle --------------------------------------------------------------------------------
 
     /**
-     * DelegateArray<Bit> view delegate.
+     * {@code DelegateArray<Bit>} view delegate.
      */
     protected static class ViewHandle
             extends xRTView.ViewHandle {

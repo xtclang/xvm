@@ -47,11 +47,13 @@ public class ClassComposition
     /**
      * Construct the ClassComposition for a given "inception" type.
      *
-     * The guarantees for the inception type are:
-     *  - it has to be a class (TypeConstant.isClass())
-     *  - it cannot be abstract
-     *  - the only modifying types that are allowed are AnnotatedTypeConstant(s) and
-     *    ParameterizedTypeConstant(s)
+     * <p>The guarantees for the inception type are:
+     * <ul>
+     * <li>it has to be a class (TypeConstant.isClass())</li>
+     * <li>it cannot be abstract</li>
+     * <li>the only modifying types that are allowed are AnnotatedTypeConstant(s) and
+     *     ParameterizedTypeConstant(s)</li>
+     * </ul>
      */
     public ClassComposition(Container container, ClassTemplate template, TypeConstant typeInception) {
         assert typeInception.isSingleDefiningConstant();
@@ -871,7 +873,7 @@ public class ClassComposition
     /**
      * The inception type - the maximum of what this type composition could be revealed as.
      *
-     * Note: the access of the inception type is always Access.PRIVATE.
+     * <p>Note: the access of the inception type is always Access.PRIVATE.
      */
     private final TypeConstant f_typeInception;
 
@@ -912,12 +914,12 @@ public class ClassComposition
 
     /**
      * A cache of derivative TypeCompositions keyed by the "revealed type".
-     * <p/>
-     * We assume that there will never be two instantiate-able classes with the same inception type,
+     *
+     * <p>We assume that there will never be two instantiate-able classes with the same inception type,
      * but different revealed type. The ClassComposition may hide (or mask) its original identity
      * via the {@link #maskAs(TypeConstant)} operation and later reveal it back.
-     * <p/>
-     * Most of the time the revealed type is identical to the inception type so this map is going
+     *
+     * <p>Most of the time the revealed type is identical to the inception type so this map is going
      * to be empty. One exception is the native types (e.g. Ref, Service), for which the inception
      * type is defined by a {@link NativeRebaseConstant} class constant and the revealed type refers
      * to the corresponding natural interface.

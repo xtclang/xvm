@@ -17,7 +17,9 @@ public interface Tuple {
     /**
      * Native implementation of:
      *
-     *   static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends Tuple> Boolean equals(CompileType value1, CompileType value2)
+     * }</pre>
      */
     static boolean equals$p(Ctx ctx, nType type, nTuple value1, nTuple value2) {
         if (value1 == value2) {

@@ -282,8 +282,8 @@ public class MethodStructure
     /**
      * Check if all annotations are resolved; move those that don't apply to the method to the
      * return value type.
-     * <p/>
-     * Important note: this method is called during the "resolve name" compilation phase, so
+     *
+     * <p>Important note: this method is called during the "resolve name" compilation phase, so
      *      while the annotation names must have already bee resolved, the annotation arguments
      *      may not yet. It doesn't present any problem, since the argument values don't affect
      *      which "bucket" they belong to
@@ -858,8 +858,8 @@ public class MethodStructure
     /**
      * Given arrays of actual argument types and return types, return a ListMap with the actual
      * (resolved) type parameters types.
-     * <p/>
-     * For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
+     *
+     * <p>For example: given a method: <T, U> T foo(U u, T t) actual argument types: String, Int and
      * actual return type: Number this method would return a map {"T":Number, "U":String}
      *
      * @param pool           the ConstantPool to use
@@ -1227,14 +1227,14 @@ public class MethodStructure
     /**
      * Determine if this method might act as a property initializer. For example, in the property
      * declaration:
-     * <p/>
-     * <code><pre>
+     *
+     * <p><code><pre>
      *     Int MB = KB * KB;
      * </pre></code>
-     * <p/>
-     * ... the value of the property could be compiled as an initializer function named "=":
-     * <p/>
-     * <code><pre>
+     *
+     * <p>... the value of the property could be compiled as an initializer function named "=":
+     *
+     * <p><code><pre>
      *     Int MB
      *       {
      *       Int "="()
@@ -1432,10 +1432,12 @@ public class MethodStructure
     /**
      * Determine if this method produces a formal type with the specified name.
      *
-     * A method _m_ "produces" type _T_ if any of the following holds true:
-     * 1. _m_ has a return type declared as _T_;
-     * 2. _m_ has a return type that _"produces T"_;
-     * 3. _m_ has a parameter type that _"consumes T"_.
+     * <p>A method _m_ "produces" type _T_ if any of the following holds true:
+     * <ol>
+     * <li>_m_ has a return type declared as _T_;</li>
+     * <li>_m_ has a return type that _"produces T"_;</li>
+     * <li>_m_ has a parameter type that _"consumes T"_.</li>
+     * </ol>
      */
     public boolean producesFormalType(String sTypeName) {
         for (Parameter param : getParams()) {
@@ -1456,10 +1458,12 @@ public class MethodStructure
     /**
      * Determine if this method consumes a formal type with the specified name.
      *
-     * A method _m_ "consumes" type _T_ if any of the following holds true:
-     * 1. _m_ has a parameter type declared as _T_;
-     * 2. _m_ has a parameter type that _"produces T"_.
-     * 3. _m_ has a return type that _"consumes T"_;
+     * <p>A method _m_ "consumes" type _T_ if any of the following holds true:
+     * <ol>
+     * <li>_m_ has a parameter type declared as _T_;</li>
+     * <li>_m_ has a parameter type that _"produces T"_.</li>
+     * <li>_m_ has a return type that _"consumes T"_;</li>
+     * </ol>
      */
     public boolean consumesFormalType(String sTypeName) {
         for (Parameter param : getParams()) {
@@ -2307,8 +2311,8 @@ public class MethodStructure
 
         /**
          * Obtain the op at the specified index.
-         * <p/>
-         * This method is intended to support implementation of the {@link Op#resolveCode
+         *
+         * <p>This method is intended to support implementation of the {@link Op#resolveCode
          * Op.resolveCode()} method.
          *
          * @param i  the index (absolute address) of the Op to obtain

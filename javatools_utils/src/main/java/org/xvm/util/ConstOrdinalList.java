@@ -25,22 +25,22 @@ import static org.xvm.util.PackedInteger.writeLong;
 /**
  * An immutable List of Integer implementation that stores a compressed form of an {@code int[]} or
  * a {@code List<Integer>} in a byte array.
- * <p/>
- * This is not intended to be a general purpose compressor; it is designed for a small set of use
+ *
+ * <p>This is not intended to be a general purpose compressor; it is designed for a small set of use
  * cases, such as compressing a list of enumeration ordinals.
- * <p/>
- * See the notes on {@link ConstBitSet} for some background on the high-level design goals for the
+ *
+ * <p>See the notes on {@link ConstBitSet} for some background on the high-level design goals for the
  * data structure.
- * <p/>
- * Several forms of compression are used:
- * </li><li>Repetition of the same value can be represented as a "repeating node";
+ *
+ * <p>Several forms of compression are used:
+ * <ul><li>Repetition of the same value can be represented as a "repeating node";
  * </li><li>The most common value can be omitted altogether, since absence of data implies that
  *          value;
  * </li><li>When values need to be stored, only the necessary significant number of bits need be
  *          used.
  * </li></ul>
- * <p/>
- * The format is a sequence of variable-length nodes, of several different forms. Each form of node
+ *
+ * <p>The format is a sequence of variable-length nodes, of several different forms. Each form of node
  * is composed of:
  * <ul><li>An <i>implicit</i> byte id for the node (a byte id is the index into a <i>conceptual</i>
  *         byte array that backs the bit set);
@@ -53,31 +53,32 @@ import static org.xvm.util.PackedInteger.writeLong;
  *          the node that immediately follows the current node, or zero to indicate that this is the
  *          last node in the bit set (i.e. EOF).
  * </li></ul>
- * <p/>
- * The run-length node form adds:
- * </li><li>The run length (encoded as a negative value to indicate RLE);
+ *
+ * <p>The run-length node form adds:
+ * <ul><li>The run length (encoded as a negative value to indicate RLE);
  * </li><li>The run value.
  * </li></ul>
- * <p/>
- * The array node form adds:
- * </li><li>The number of values;
+ *
+ * <p>The array node form adds:
+ * <ul><li>The number of values;
  * </li><li>The bytes necessary to hold those values (typically fewer bytes than the number of
  *          values, since only the minimum necessary LSBs for each value are stored).
  * </li></ul>
- * The header is composed of compressed integers:
- * </li><li>The array length;
+ *
+ * <p>The header is composed of compressed integers:
+ * <ul><li>The array length;
  * </li><li>The default element value;
  * </li><li>The number of bits per element (for non-RLE nodes);
  * </li><li>The id of the first node.
  * </li></ul>
- * <p/>
- * The array node form adds:
- * </li><li>The number of values;
+ *
+ * <p>The array node form adds:
+ * <ul><li>The number of values;
  * </li><li>The bytes necessary to hold those values (typically fewer bytes than the number of
  *          values, since only the minimum necessary LSBs for each value are stored).
  * </li></ul>
- * <p/>
- * Considered and rejected: The values in the list may be representable with smaller values by
+ *
+ * <p>Considered and rejected: The values in the list may be representable with smaller values by
  * replacing frequently encountered large values with smaller identity values that represent the
  * original values, with the array of original values indexed by the identity values (and likely
  * stored at the end of the data structure). This capability was omitted because it is compositional
@@ -417,11 +418,11 @@ public class ConstOrdinalList
     }
 
     /**
-     * Decompress a ConstIntList's compressed data in its binary form into a Java <tt>int[]</tt>.
+     * Decompress a ConstIntList's compressed data in its binary form into a Java <code>int[]</code>.
      *
      * @param ab  the ConstIntList's compressed data in its binary form
      *
-     * @return the corresponding Java <tt>int[]</tt>
+     * @return the corresponding Java <code>int[]</code>
      */
     public static int[] decompress(byte[] ab) {
         try {

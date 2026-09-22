@@ -67,8 +67,8 @@ import org.xvm.util.Severity;
 
 /**
  * A block statement specifies a series of statements.
- * <p/>
- * A block statement holds a special role in compilation, in that the four forms of "compilation
+ *
+ * <p>A block statement holds a special role in compilation, in that the four forms of "compilation
  * container" all rely on the block statement as the representation of the code being compiled:
  * <ol>
  * <li>MethodDeclarationStatement - represents a method or function, with a body defined by a
@@ -193,8 +193,8 @@ public class StatementBlock
      * are not visible outside a file, and furthermore, because they can occur at any point within
      * the file, only those encountered "above" some current point in that file are considered to be
      * visible at that point.
-     * <p/>
-     * Naturally, if a Token `name` is specified, the import statement must precede (source position
+     *
+     * <p>Naturally, if a Token `name` is specified, the import statement must precede (source position
      * wise) that token.
      *
      * @param sName  the import alias

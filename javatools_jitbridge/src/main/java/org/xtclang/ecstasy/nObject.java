@@ -30,10 +30,12 @@ public abstract class nObject
     /**
      * A bunch of "header bits" used to encode information about this object, including:
      *
-     * * Container ID
-     * * immutability flag
-     * * construction state
-     * * some bits available to native subclasses
+     * <ul>
+     * <li>Container ID</li>
+     * <li>immutability flag</li>
+     * <li>construction state</li>
+     * <li>some bits available to native subclasses</li>
+     * </ul>
      */
     public long $meta;
 
@@ -71,7 +73,7 @@ public abstract class nObject
     /**
      * Helper method to resolve generic types.
      *
-     * @see {@link org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty}
+     * @see org.xvm.javajit.builders.CommonBuilder#assembleGenericProperty
      */
     public nType $typeForName(Ctx ctx, java.lang.String name) {
         TypeConstant type = $xvmType(ctx).resolveGenericType(name);

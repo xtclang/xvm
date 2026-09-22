@@ -11,7 +11,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.numbers.xUInt64;
 
 /**
- * Native RTDelegate<UInt64> implementation.
+ * Native {@code RTDelegate<UInt64>} implementation.
  */
 public class xRTUInt64Delegate
         extends LongDelegate {

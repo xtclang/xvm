@@ -50,7 +50,10 @@ public class Nibble extends UIntNumber {
 
     /**
      * The primitive implementation of:
+     *
+     * <pre>{@code
      *     Appender<Char> appendTo(Appender<Char> buf)
+     * }</pre>
      */
     public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
         return appender.add$p(ctx, toChar$p(thi$, ctx));
@@ -110,7 +113,7 @@ public class Nibble extends UIntNumber {
     /**
      * Native implementation of: "private static Nibble[] values = [0, ..., 15]"
      *
-     * The naturally compiled initializer currently erases the array literal's element type to
+     * <p>The naturally compiled initializer currently erases the array literal's element type to
      * Object, resulting in an invalid attempt to pass an optimized Nibble value to Array.add(Object).
      */
     public static ArrayᐸNibbleᐳ values$init(Ctx ctx) {

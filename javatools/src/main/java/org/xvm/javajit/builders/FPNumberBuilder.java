@@ -95,7 +95,7 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Assemble an optimized static implementation of "exponent$get$p()".
      *
-     * {@code return Int64.valueOf((rawBits & exponentMask) >>> significandBitLength);}
+     * <p>{@code return Int64.valueOf((rawBits & exponentMask) >>> significandBitLength);}
      */
     protected void generateExponentGet(CodeBuilder code, JitMethodDesc jmd) {
         generateGetExponent(code, jmd);
@@ -105,7 +105,7 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Assemble an optimized static implementation of "significand$get$p()".
      *
-     * {@code return Int64.valueOf(rawBits & significandMask);}
+     * <p>{@code return Int64.valueOf(rawBits & significandMask);}
      */
     protected void generateSignificandGet(CodeBuilder code, JitMethodDesc jmd) {
         generateGetSignificand(code, jmd);
@@ -279,7 +279,7 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Assemble an optimized static implementation of "round$p()".
      *
-     * {@code return finite ? bigDecimal.setScale(0, direction).toFPNumber() : this;}
+     * <p>{@code return finite ? bigDecimal.setScale(0, direction).toFPNumber() : this;}
      */
     protected void generateRound(CodeBuilder code, JitMethodDesc jmd) {
         generateRounding(code, jmd, null);
@@ -288,7 +288,7 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Assemble an optimized static implementation of "floor$p()".
      *
-     * {@code return finite ? bigDecimal.setScale(0, FLOOR).toFPNumber() : this;}
+     * <p>{@code return finite ? bigDecimal.setScale(0, FLOOR).toFPNumber() : this;}
      */
     protected void generateFloor(CodeBuilder code, JitMethodDesc jmd) {
         generateRounding(code, jmd, "FLOOR");
@@ -297,7 +297,7 @@ public class FPNumberBuilder extends NumberBuilder {
     /**
      * Assemble an optimized static implementation of "ceil$p()".
      *
-     * {@code return finite ? bigDecimal.setScale(0, CEILING).toFPNumber() : this;}
+     * <p>{@code return finite ? bigDecimal.setScale(0, CEILING).toFPNumber() : this;}
      */
     protected void generateCeil(CodeBuilder code, JitMethodDesc jmd) {
         generateRounding(code, jmd, "CEILING");

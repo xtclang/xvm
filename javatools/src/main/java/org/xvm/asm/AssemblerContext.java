@@ -17,8 +17,8 @@ import org.xvm.asm.constants.VersionMatchesCondition;
  * during the assembly process. For example, when a compiler is emitting XVM structures, it will
  * modify the assembler context to notify the assembler each time it enters or leaves a conditional
  * scope of code.
- * <p/>
- * The challenge is to factor out redundancy
+ *
+ * <p>The challenge is to factor out redundancy
  */
 public class AssemblerContext {
     // ----- constructors --------------------------------------------------------------------------
@@ -219,8 +219,8 @@ public class AssemblerContext {
 
     /**
      * Start a section of the assembly that applies only if the specified name is <i>defined</i>.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     *
+     * <p>This method is NOT idempotent; each call to "begin" must be matched with a call to the
      * corresponding "end".
      *
      * @param sName  the name that must be <i>defined</i>
@@ -232,8 +232,8 @@ public class AssemblerContext {
     /**
      * End a section of the assembly that applies only if the specified name is <i>defined</i>. This
      * call must correspond to a previous call to {@link #beginIfSpecified}.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     *
+     * <p>This method is NOT idempotent; each call to "begin" must be matched with a call to the
      * corresponding "end".
      *
      * @param sName  the name previously passed to {@link #beginIfSpecified}
@@ -248,8 +248,8 @@ public class AssemblerContext {
     /**
      * Start a section of the assembly that applies only if the specified XVM Constant is visible
      * (available to be used).
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     *
+     * <p>This method is NOT idempotent; each call to "begin" must be matched with a call to the
      * corresponding "end".
      *
      * @param constId  the identity of the XVM Structure that must be visible
@@ -262,8 +262,8 @@ public class AssemblerContext {
      * End a section of the assembly that applies only if the specified XVM Constant is visible
      * (available to be used). This call must correspond to a previous call to
      * {@link #beginIfVisible}.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     *
+     * <p>This method is NOT idempotent; each call to "begin" must be matched with a call to the
      * corresponding "end".
      *
      * @param constId  the identity of the XVM Structure previously passed to
@@ -281,8 +281,8 @@ public class AssemblerContext {
     /**
      * Start a section of the assembly that applies only if the specified version of the specified
      * module is visible (available to be used).
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     *
+     * <p>This method is NOT idempotent; each call to "begin" must be matched with a call to the
      * corresponding "end".
      *
      * @param constModule  the identity of the required module
@@ -296,8 +296,8 @@ public class AssemblerContext {
      * End a section of the assembly that applies only if the specified version of the specified
      * module is visible (available to be used). This call must correspond to a previous call to
      * {@link #beginIfVersion}.
-     * <p/>
-     * This method is NOT idempotent; each call to "begin" must be matched with a call to the
+     *
+     * <p>This method is NOT idempotent; each call to "begin" must be matched with a call to the
      * corresponding "end".
      *
      * @param constModule  the identity of the module previously passed to {@link #beginIfVersion}

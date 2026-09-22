@@ -27,16 +27,16 @@ import org.xvm.util.LongList;
  * present. Additionally, multiple versions of VM structures can be combined into a single VM
  * structure (for example, multiple versions of a module can be combined into a single module), by
  * using version conditions to delineate the differences among versions.
- * <p/>
- * Structural inclusion/exclusion occurs when a conditional constant is referenced by another VM
+ *
+ * <p>Structural inclusion/exclusion occurs when a conditional constant is referenced by another VM
  * structure, indicating that the presence at runtime of the VM structure depends on the result of
  * the evaluation of the conditional constant. Similarly, logical inclusion/exclusion occurs when a
  * conditional constant is referenced by an Ecstasy op-code, indicating that the presence at runtime of
  * that particular block of code depends on the result of the evaluation of the conditional
  * constant.
- * <p/>
- * Three basic conditional constants exist to test for specific conditions:
- * <p/>
+ *
+ * <p>Three basic conditional constants exist to test for specific conditions:
+ *
  * <ul>
  * <li>{@link NamedCondition NamedCondition} - similar in concept to the use of {@code #ifdef} in
  *     the C/C++ pre-processor, a NamedCondition evaluates to true iff the specified name is
@@ -47,8 +47,8 @@ import org.xvm.util.LongList;
  * <li>{@link VersionedCondition VersionedCondition} - evaluates to true iff the version of this
  *     module is of a specified version.</li>
  * </ul>
- * <p/>
- * Three additional conditional constants support the composition of other conditions:
+ *
+ * <p>Three additional conditional constants support the composition of other conditions:
  * <ul>
  * <li>{@link NotCondition NotCondition} - evaluates to true iff the specified condition evaluates
  *     to false, i.e. a "not" condition;</li>
@@ -153,8 +153,8 @@ public abstract class ConditionalConstant
 
     /**
      * Determine the versions specified for the ConditionalConstant, if any.
-     * <p>
-     * A conditional can include a version in one of three ways:
+     *
+     * <p>A conditional can include a version in one of three ways:
      * <ul>
      * <li>A VersionedCondition;</li>
      * <li>An AnyCondition that contains one or more VersionConditions; or</li>
@@ -332,8 +332,8 @@ public abstract class ConditionalConstant
 
     /**
      * Calculate the influence of each terminal condition on the result of the conditional.
-     * <p/>
-     * This is the <a href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">Boolean
+     *
+     * <p>This is the <a href="https://en.wikipedia.org/wiki/Boolean_satisfiability_problem">Boolean
      * Satisfiability Problem</a>.
      *
      * @return a map from each terminal condition to its corresponding Influence
@@ -438,8 +438,8 @@ public abstract class ConditionalConstant
 
     /**
      * Brute force test every single possible input on this condition.
-     * <p/>
-     * This is broken out in a hope that it will be easier for the JVM to optimize.
+     *
+     * <p>This is broken out in a hope that it will be easier for the JVM to optimize.
      *
      * @param cConds     the number of input conditions being tested
      * @param amaskSkip  the masks to check for skipping specific tests
@@ -723,8 +723,8 @@ public abstract class ConditionalConstant
 
     /**
      * Represents a 3x3 truth table:
-     * <p/>
-     * <code><pre>
+     *
+     * <p><code><pre>
      *                          Input of True
      *                          Result is ...
      *
@@ -737,8 +737,8 @@ public abstract class ConditionalConstant
      *                  True   | INVERSE  │ INV_OR   │ ALWAYS_T |
      *                         +==========+==========+==========+
      * </pre></code>
-     * <p/>
-     * The NONE influence is used to indicate that an input is not related to, and thus does not
+     *
+     * <p>The NONE influence is used to indicate that an input is not related to, and thus does not
      * influence, the result of a condition.
      */
     public enum Influence {

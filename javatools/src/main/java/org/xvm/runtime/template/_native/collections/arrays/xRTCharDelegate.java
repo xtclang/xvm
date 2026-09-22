@@ -24,7 +24,7 @@ import org.xvm.runtime.template.numbers.xInt64;
 import org.xvm.runtime.template.text.xChar;
 
 /**
- * Native RTDelegate<Char> implementation.
+ * Native {@code RTDelegate<Char>} implementation.
  */
 public class xRTCharDelegate
         extends xRTDelegate {

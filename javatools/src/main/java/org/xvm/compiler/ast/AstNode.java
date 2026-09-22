@@ -500,8 +500,8 @@ public abstract class AstNode
 
     /**
      * Test if the specified child is used as an R-Value, which is something that yields a value.
-     * <p/>
-     * In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
+     *
+     * <p>In most cases, an expression is used as an R-Value (i.e. it has a value), but an expression
      * can be used as a left side of an assignment, for example, which makes it an L-Value. In a
      * few cases, an expression can be used as both an R-Value and an L-Value, such as with the
      * pre-/post-increment/-decrement operators.
@@ -580,8 +580,8 @@ public abstract class AstNode
 
     /**
      * (Post-validation) Determine if the statement or expression is able to complete normally.
-     * <p/>
-     * This method must be overridden by any statement or expression that may not complete, either
+     *
+     * <p>This method must be overridden by any statement or expression that may not complete, either
      * due to its own implementation or that of another AST node that is delegated to.
      *
      * @return true iff the AST node is able to complete
@@ -658,7 +658,7 @@ public abstract class AstNode
 
     /**
      * First logical compiler pass.
-     * <p/>
+     *
      * <ul>
      * <li>At this point, names are NOT resolvable; we're really just organizing the tree and
      * checking for errors that are obvious from "this point down" (no lateral evaluation of
@@ -681,16 +681,16 @@ public abstract class AstNode
     /**
      * Second logical compiler pass. This pass has access to imported modules, and is responsible
      * for resolving names.
-     * <p/>
-     * The rule of thumb is that no questions should be asked of other modules that could not have
+     *
+     * <p>The rule of thumb is that no questions should be asked of other modules that could not have
      * been answered by this module before this call; in other words, the order of the module
      * compilation is not only unpredictable, but the potential exists for dependencies in either
      * direction (first to last and/or vice versa).
-     * <p/>
-     * As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
+     *
+     * <p>As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
      * resolve, in which case the caller (another AstNode) has to add itself to the list of nodes
      * that require another pass.
-     * <p/>
+     *
      * <ul>
      * <li>Packages that import modules are able to verify that those modules are available to
      * compile against;</li>
@@ -901,16 +901,15 @@ public abstract class AstNode
      * Given an array of expressions representing actual parameters and the TypeInfo of the target,
      * find the best matching method.
      *
-     * There is a difference in the way the default method parameters are handled depending on the
-     * value of the "fCall" argument. In the case of a call, all the default method parameters that
-     * are not explicitly specified are considered to be assigned to their default values. In the
-     * case of a non-call, the default method parameters are treated in the same manner as others,
-     * and any parameter that is not explicitly specified remains un-bound.
-     * For example, having a function
-     *      void foo(Int a, Int b = 0, Boolean c = False, Int d = 1)
-     * a [call] expression "foo(1, c=True)" will result into a function call "foo(1, 0, True, 1)",
-     * while the equivalent [bind] expression "&foo(1, c=True)" will result into a function of
-     * type "function void (Int, Int)", where parameters "b" and "d" remain unbound.
+     * <p>There is a difference in the way the default method parameters are handled depending on
+     * the value of the "fCall" argument. In the case of a call, all the default method parameters
+     * that are not explicitly specified are considered to be assigned to their default values. In
+     * the case of a non-call, the default method parameters are treated in the same manner as
+     * others, and any parameter that is not explicitly specified remains un-bound. For example,
+     * having a function void foo(Int a, Int b = 0, Boolean c = False, Int d = 1) a [call]
+     * expression "foo(1, c=True)" will result into a function call "foo(1, 0, True, 1)", while the
+     * equivalent [bind] expression {@code &foo(1, c=True)} will result into a function of type
+     * "function void (Int, Int)", where parameters "b" and "d" remain unbound.
      *
      * @param ctx           the compilation context
      * @param typeTarget    the type to search the method or function for
@@ -1301,7 +1300,7 @@ public abstract class AstNode
     }
 
     /**
-     * Iterate over the specified argument list, and transform all canonical <code>Type<></code>
+     * Iterate over the specified argument list, and transform all canonical {@code Type<>}
      * types to the corresponding dynamic types.
      */
     protected TypeConstant[] transformTypeArguments(Context ctx,
@@ -1323,8 +1322,8 @@ public abstract class AstNode
     }
 
     /**
-     * Given a NameExpression whose type is <code>Type<></code>, transform it to a dynamic type
-     * constant <code>Type<[name].DataType></code>.
+     * Given a NameExpression whose type is {@code Type<>}, transform it to a dynamic type
+     * constant {@code Type<[name].DataType>}.
      */
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
@@ -1808,8 +1807,8 @@ public abstract class AstNode
 
     /**
      * Build and return a map that allows the caller to navigate the children of this node.
-     * <p/>
-     * Assume some type T which represents either an AstNode instance, or an object that implements
+     *
+     * <p>Assume some type T which represents either an AstNode instance, or an object that implements
      * toString(). The keys of the map should be strings that describe the categories of the
      * children, while the values should provide the info about the children of this AstNode,
      * either as an object of type T, a Collection of type T, an array of type T, or a Map whose

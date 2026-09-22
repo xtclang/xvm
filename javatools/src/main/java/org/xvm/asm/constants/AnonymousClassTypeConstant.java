@@ -35,7 +35,7 @@ import static org.xvm.util.Handy.writeMagnitude;
  *    }
  * </code></pre>
  *
- * During validation we create a synthetic (anonymous) TypeCompositionStatement
+ * <p>During validation we create a synthetic (anonymous) TypeCompositionStatement
  *
  * <pre><code>
  *  class Iterator:1&lt;Iterator:1.Key>
@@ -45,13 +45,13 @@ import static org.xvm.util.Handy.writeMagnitude;
  *  }
  * </code></pre>
  *
- * and the compile time type of the returned Iterator is Iterator:1&lt;Map.Key>.
- * <p/>
- * However, that information is insufficient to resolve the runtime type of the "entryIterator"
+ * <p>and the compile time type of the returned Iterator is Iterator:1&lt;Map.Key>.
+ *
+ * <p>However, that information is insufficient to resolve the runtime type of the "entryIterator"
  * property inside Iterator:1, because doing so requires knowledge of the parent's (the Map's)
  * formal type values.
- * <p/>
- * The {@link AnonymousClassTypeConstant} represents a type assigned to the anonymous class itself,
+ *
+ * <p>The {@link AnonymousClassTypeConstant} represents a type assigned to the anonymous class itself,
  * carrying the "parent" type information. In the example above, it would be
  * {@code Map<Key, Value>.iterator().Iterator:1<Map.Key>}.
  */

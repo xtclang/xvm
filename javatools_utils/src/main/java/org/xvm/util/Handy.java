@@ -146,7 +146,7 @@ public final class Handy {
     }
 
     /**
-     * Convert a String of hex digits into a <tt>byte[]</tt>.
+     * Convert a String of hex digits into a <code>byte[]</code>.
      *
      * @param s  a String of hexadecimal digits; the leading "0x" is optional
      *
@@ -316,7 +316,7 @@ public final class Handy {
     }
 
     /**
-     * Determine how many hex digits it will take to render the passed <tt>int</tt> value as an
+     * Determine how many hex digits it will take to render the passed <code>int</code> value as an
      * <b>unsigned</b> hex value.
      *
      * @param n  the int value, which is treated as an unsigned 32-bit value
@@ -328,7 +328,7 @@ public final class Handy {
     }
 
     /**
-     * Render the passed <tt>int</tt> into the passed StringBuilder as the specified number of hex
+     * Render the passed <code>int</code> into the passed StringBuilder as the specified number of hex
      * digits.
      *
      * @param sb  the StringBuilder to append to
@@ -346,7 +346,7 @@ public final class Handy {
     }
 
     /**
-     * Render the passed <tt>int</tt> into the passed StringBuilder as 8 hexadecimal digits.
+     * Render the passed <code>int</code> into the passed StringBuilder as 8 hexadecimal digits.
      *
      * @param sb  the StringBuilder to append to
      * @param n   the int value
@@ -358,7 +358,7 @@ public final class Handy {
     }
 
     /**
-     * Format the passed <tt>int</tt> into a String of the form "0x12345678".
+     * Format the passed <code>int</code> into a String of the form "0x12345678".
      *
      * @param n  the byte value
      *
@@ -369,7 +369,7 @@ public final class Handy {
     }
 
     /**
-     * Determine how many hex digits it will take to render the passed <tt>long</tt> value as an
+     * Determine how many hex digits it will take to render the passed <code>long</code> value as an
      * <b>unsigned</b> hex value.
      *
      * @param n  the long value, which is treated as an unsigned 64-bit value
@@ -381,7 +381,7 @@ public final class Handy {
     }
 
     /**
-     * Render the passed <tt>long</tt> into the passed StringBuilder as the specified number of hex
+     * Render the passed <code>long</code> into the passed StringBuilder as the specified number of hex
      * digits.
      *
      * @param sb   the StringBuilder to append to
@@ -399,7 +399,7 @@ public final class Handy {
     }
 
     /**
-     * Render the passed <tt>long</tt> into the passed StringBuilder as 16 hexadecimal digits.
+     * Render the passed <code>long</code> into the passed StringBuilder as 16 hexadecimal digits.
      *
      * @param sb  the StringBuilder to append to
      * @param n   the long value
@@ -411,7 +411,7 @@ public final class Handy {
     }
 
     /**
-     * Format the passed <tt>int</tt> into a String of the form "0x12345678".
+     * Format the passed <code>int</code> into a String of the form "0x12345678".
      *
      * @param n  the byte value
      *
@@ -936,13 +936,13 @@ public final class Handy {
     /**
      * Read a variable-length encoded integer value from a stream.
      *
-     * @param in  a <tt>DataInput</tt> stream to read from
+     * @param in  a <code>DataInput</code> stream to read from
      *
-     * @return a <tt>long</tt> value
+     * @return a <code>long</code> value
      *
      * @throws IOException  if an I/O exception occurred
      * @throws NumberFormatException  if the integer does not fit into
-     *         a <tt>long</tt> value
+     *         a <code>long</code> value
      */
     public static long readPackedLong(DataInput in)
             throws IOException {
@@ -952,8 +952,8 @@ public final class Handy {
     /**
      * Write a signed 64-bit integer to a stream using variable-length encoding.
      *
-     * @param out  the <tt>DataOutput</tt> stream to write to
-     * @param n    the <tt>long</tt> value to write
+     * @param out  the <code>DataOutput</code> stream to write to
+     * @param n    the <code>long</code> value to write
      *
      * @throws IOException  if an I/O exception occurs
      */
@@ -965,9 +965,9 @@ public final class Handy {
     /**
      * Read a variable-length encoded 32-bit integer from a stream.
      *
-     * @param in  a <tt>DataInput</tt> stream to read from
+     * @param in  a <code>DataInput</code> stream to read from
      *
-     * @return an <tt>int</tt> value in the range <tt>Integer.MIN_VALUE..Integer.MAX_VALUE</tt>
+     * @return an <code>int</code> value in the range <code>Integer.MIN_VALUE..Integer.MAX_VALUE</code>
      *
      * @throws java.io.IOException  if an I/O exception occurs
      */
@@ -984,8 +984,8 @@ public final class Handy {
     /**
      * Write a variable-length encoded integer magnitude from a stream.
      *
-     * @param out  the <tt>DataOutput</tt> stream to write to
-     * @param n    the <tt>long</tt> value to write
+     * @param out  the <code>DataOutput</code> stream to write to
+     * @param n    the <code>long</code> value to write
      *
      * @throws IOException  if an I/O exception occurs
      */
@@ -999,14 +999,14 @@ public final class Handy {
 
     /**
      * Read a variable-length encoded 32-bit integer magnitude from a stream.
-     * <p>
-     * Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
+     *
+     * <p>Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
      * unsigned 32-bit) magnitudes. This method is a convenience method that verifies that the
      * magnitude is within a range supported by Java.
      *
-     * @param in  a <tt>DataInput</tt> stream to read from
+     * @param in  a <code>DataInput</code> stream to read from
      *
-     * @return an <tt>int</tt> value in the range <tt>0..Integer.MAX_VALUE</tt>
+     * @return an <code>int</code> value in the range <code>0..Integer.MAX_VALUE</code>
      *
      * @throws java.io.IOException  if an I/O exception occurs
      */
@@ -1026,15 +1026,15 @@ public final class Handy {
 
     /**
      * Read a variable-length encoded 32-bit integer index from a stream.
-     * <p>
-     * Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
+     *
+     * <p>Note that while the XVM itself is a 64-bit machine, Java does not support 64-bit (or even
      * unsigned 32-bit) indexes. This method is a convenience method that verifies that the index is
      * within a range supported by Java.
      *
-     * @param in  a <tt>DataInput</tt> stream to read from
+     * @param in  a <code>DataInput</code> stream to read from
      *
-     * @return an <tt>int</tt> value in the range <tt>0..Integer.MAX_VALUE</tt>,
-     *         or <tt>-1</tt>
+     * @return an <code>int</code> value in the range <code>0..Integer.MAX_VALUE</code>,
+     *         or <code>-1</code>
      *
      * @throws java.io.IOException  if an I/O exception occurs
      */
@@ -1060,7 +1060,7 @@ public final class Handy {
      *
      * @param in  the DataInput to read from
      *
-     * @return a Unicode code-point (which can exceed the 16-bit <tt>char</tt>
+     * @return a Unicode code-point (which can exceed the 16-bit <code>char</code>
      *         type in Java)
      *
      * @throws IOException  if an I/O exception occurs while reading the data,
@@ -1181,7 +1181,7 @@ public final class Handy {
      *
      * @param in  the DataInput to read from
      *
-     * @return a Unicode code-point (which can exceed the 16-bit <tt>char</tt>
+     * @return a Unicode code-point (which can exceed the 16-bit <code>char</code>
      *         type in Java)
      *
      * @throws IOException  if an I/O exception occurs while reading the data,
@@ -2309,7 +2309,7 @@ public final class Handy {
      * @param o1  any object, or null
      * @param o2  any object, or null
      *
-     * @return true iff <tt>o1</tt> is equals to <tt>o2</tt>
+     * @return true iff <code>o1</code> is equals to <code>o2</code>
      */
     public static boolean equals(Object o1, Object o2) {
         if (o1 == null) {
@@ -2347,8 +2347,8 @@ public final class Handy {
      * @param ao1  an array of Comparable, or null
      * @param ao2  an array of Comparable, or null
      *
-     * @return negative, zero, or positive iff <tt>ao1</tt> is less than, equal
-     *         to, or greater than <tt>ao2</tt>
+     * @return negative, zero, or positive iff <code>ao1</code> is less than, equal
+     *         to, or greater than <code>ao2</code>
      */
     public static <T extends Comparable<? super T>> int compareArrays(T[] ao1, T[] ao2) {
         return Arrays.compare(ao1, ao2);
@@ -2421,17 +2421,17 @@ public final class Handy {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
     /**
-     * A constant empty array of <tt>byte</tt>.
+     * A constant empty array of <code>byte</code>.
      */
     public static final byte[] EMPTY_BYTE_ARRAY = new byte[0];
 
     /**
-     * A constant empty array of <tt>char</tt>.
+     * A constant empty array of <code>char</code>.
      */
     public static final char[] EMPTY_CHAR_ARRAY = new char[0];
 
     /**
-     * A constant empty array of <tt>String</tt>.
+     * A constant empty array of <code>String</code>.
      */
     public static final String[] NO_ARGS = new String[0];
 }

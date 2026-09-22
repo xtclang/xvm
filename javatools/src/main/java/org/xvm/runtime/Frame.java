@@ -191,7 +191,7 @@ public class Frame
     /**
      * Create a new frame that returns zero or one value into the specified slot.
      *
-     * Note: the returned frame needs to be "initialized" before called.
+     * <p>Note: the returned frame needs to be "initialized" before called.
      */
     public Frame createFrame1(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
@@ -201,7 +201,7 @@ public class Frame
     /**
      * Create a new frame that returns a Tuple value into the specified slot.
      *
-     * Note: the returned frame needs to be "initialized" before called.
+     * <p>Note: the returned frame needs to be "initialized" before called.
      */
     public Frame createFrameT(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
@@ -211,7 +211,7 @@ public class Frame
     /**
      * Create a new frame that returns multiple values into the specified slots.
      *
-     * Note: the returned frame needs to be "initialized" before called.
+     * <p>Note: the returned frame needs to be "initialized" before called.
      */
     public Frame createFrameN(MethodStructure method,
                               ObjectHandle hTarget, ObjectHandle[] ahVar, int[] aiReturn) {
@@ -1588,8 +1588,8 @@ public class Frame
 
     /**
      * Create an array of ObjectHandles holding the specified arguments.
-     * <p/>
-     * Note, that the arguments are retrieved in the inverse order, to allow the
+     *
+     * <p>Note, that the arguments are retrieved in the inverse order, to allow the
      * {@link org.xvm.compiler.ast.InvocationExpression}, {@link org.xvm.compiler.ast.NewExpression}
      * and {@link org.xvm.compiler.ast.RelOpExpression} to use stack collecting the arguments.
      *
@@ -1634,7 +1634,7 @@ public class Frame
     /**
      * Introduce a new unnamed standard variable for the specified type.
      *
-     * Note: this method increments up the "nextVar" index
+     * <p>Note: this method increments up the "nextVar" index
      *
      * @param nVar  the variable index
      * @param type  the variable type
@@ -1646,7 +1646,7 @@ public class Frame
     /**
      * Introduce a new variable for the specified type id, name id style and an optional value.
      *
-     * Note: this method increments the "nextVar" index.
+     * <p>Note: this method increments the "nextVar" index.
      *
      * @param nVar     the variable index
      * @param nTypeId  an "absolute" (positive, local constants based) number (see Op.convertId())
@@ -1667,7 +1667,7 @@ public class Frame
     /**
      * Introduce a new standard unnamed variable by copying the type from the specified argument.
      *
-     * Note: this method increments the "nextVar" index.
+     * <p>Note: this method increments the "nextVar" index.
      *
      * @param nVar      the variable index
      * @param nVarFrom  if positive, the register number; otherwise a constant id
@@ -1685,7 +1685,7 @@ public class Frame
      * Introduce a new standard variable that has a type of the specified property in the context
      * of the specified target.
      *
-     * Note: this method increments the "nextVar" index.
+     * <p>Note: this method increments the "nextVar" index.
      *
      * @param nVar       the variable index
      * @param nTargetId  if positive, the register number holding a target (handle);
@@ -1701,7 +1701,7 @@ public class Frame
     /**
      * Introduce a new standard variable that has a type of the method return value.
      *
-     * Note: this method increments the "nextVar" index.
+     * <p>Note: this method increments the "nextVar" index.
      *
      * @param nVar       the variable index
      * @param nMethodId  the method id (if negative - frame specific; otherwise - a register)
@@ -1716,7 +1716,7 @@ public class Frame
     /**
      * Introduce a new standard variable of the "Element" for the specified array variable.
      *
-     * Note: this method increments the "nextVar" index.
+     * <p>Note: this method increments the "nextVar" index.
      *
      * @param nArrayReg  if positive, the register number holding an array handle;
      *                   otherwise a constant id pointing to an array type
@@ -1731,7 +1731,7 @@ public class Frame
     /**
      * Introduce a new standard variable of the "Referent" type for the specified dynamic var.
      *
-     * Note: this method increments the "nextVar" index.
+     * <p>Note: this method increments the "nextVar" index.
      *
      * @param nVarReg  the register number holding a dynamic var handle
      */

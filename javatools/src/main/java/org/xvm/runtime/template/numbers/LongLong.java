@@ -5,7 +5,7 @@ import java.math.BigInteger;
 /**
  * 128 bit long implementation used by both Int128 and UInt128.
  *
- * TODO: optimize out BigInteger use for multiplication and division
+ * <p>TODO: optimize out BigInteger use for multiplication and division
  * @see <a href="https://mrob.com/pub/math/int128.c.txt">int128.c</a>
  */
 public class LongLong {
@@ -32,7 +32,7 @@ public class LongLong {
     }
 
     /**
-     * @return true iff the value is small enough to fit into a <tt>long</tt>
+     * @return true iff the value is small enough to fit into a <code>long</code>
      */
     public boolean isSmall(boolean fSigned) {
         return fSigned
@@ -589,7 +589,7 @@ public class LongLong {
     /**
      * Create a LongLong from a 128 bit BigInteger.
      *
-     * This algorithm works for both signed and unsigned values.
+     * <p>This algorithm works for both signed and unsigned values.
      *
      * @param bi  the big integer to convert
      *

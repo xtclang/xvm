@@ -4,8 +4,8 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
  * A pooled {@link HasherReference} intended for use in short-lived operations.
- * <p>
- * {@link TransientHasherReference} are obtained from the pool via {@link #of} and returned to the pool via
+ *
+ * <p>{@link TransientHasherReference} are obtained from the pool via {@link #of} and returned to the pool via
  * {@link #close}.
  */
 public class TransientHasherReference<T>

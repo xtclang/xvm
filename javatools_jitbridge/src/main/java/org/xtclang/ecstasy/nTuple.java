@@ -34,7 +34,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Int size;
+     * <pre>{@code
+     *     Int size;
+     * }</pre>
      */
     public long size$get$p(Ctx ctx) {
         return $values.length;
@@ -43,7 +45,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Object getElement(Int index)
+     * <pre>{@code
+     *     Object getElement(Int index)
+     * }</pre>
      */
     public Object getElement$p(Ctx ctx, long index) {
         return $values[checkIndex(ctx, index)];
@@ -52,7 +56,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Ref<Object> elementAt(Int index)
+     * <pre>{@code
+     *     Ref<Object> elementAt(Int index)
+     * }</pre>
      */
     public nRef elementAt$p(Ctx ctx, long index) {
         int            i    = checkIndex(ctx, index);
@@ -66,7 +72,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   <Element> Tuple!<> add(Element value)
+     * <pre>{@code
+     *     <Element> Tuple!<> add(Element value)
+     * }</pre>
      */
     public nTuple add(Ctx ctx, nType elementType, Object value) {
         int       count     = $values.length;
@@ -87,7 +95,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> addAll(Tuple!<> that)
+     * <pre>{@code
+     *     Tuple!<> addAll(Tuple!<> that)
+     * }</pre>
      */
     public nTuple addAll(Ctx ctx, nTuple that) {
         int countThis = $values.length;
@@ -117,7 +127,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple replace(Int index, Object value)
+     * <pre>{@code
+     *     Tuple replace(Int index, Object value)
+     * }</pre>
      */
     public nTuple replace$p(Ctx ctx, long index, Object value) {
         int            i     = checkIndex(ctx, index);
@@ -139,7 +151,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> slice(Range<Int> interval)
+     * <pre>{@code
+     *     Tuple!<> slice(Range<Int> interval)
+     * }</pre>
      */
     public nTuple slice(Ctx ctx, nRangeᐸInt64ᐳ interval) {
         long lower = interval.$lowerBound + (interval.$lowerExclusive ? 1 : 0);
@@ -185,7 +199,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> remove(Int index)
+     * <pre>{@code
+     *     Tuple!<> remove(Int index)
+     * }</pre>
      */
     public nTuple remove$p(Ctx ctx, long index) {
         throw Exception.$unsupported(ctx, "Tuple.remove()");
@@ -194,7 +210,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   Tuple!<> removeAll(Interval<Int> interval)
+     * <pre>{@code
+     *     Tuple!<> removeAll(Interval<Int> interval)
+     * }</pre>
      */
     public nTuple removeAll(Ctx ctx, nRangeᐸInt64ᐳ interval) {
         throw Exception.$unsupported(ctx, "Tuple.removeAll()");
@@ -203,7 +221,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   immutable Tuple freeze(Boolean inPlace = False)
+     * <pre>{@code
+     *     immutable Tuple freeze(Boolean inPlace = False)
+     * }</pre>
      */
     public nTuple freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         throw Exception.$unsupported(ctx, "Tuple.freeze()");
@@ -212,7 +232,9 @@ public class nTuple
     /**
      * Native implementation of:
      *
-     *   static <CompileType extends Tuple> Boolean equals( CompileType value1, CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends Tuple> Boolean equals( CompileType value1, CompileType value2)
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType type, nTuple value1, nTuple value2) {
         return Tuple.equals$p(ctx, type, value1, value2);

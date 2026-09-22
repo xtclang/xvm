@@ -16,8 +16,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of UInt64, stored in an array of Java longs.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -33,7 +33,7 @@ public class ArrayᐸUInt64ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸUInt64ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -46,7 +46,7 @@ public class ArrayᐸUInt64ᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸUInt64ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof UInt64 boxed) {
@@ -69,7 +69,7 @@ public class ArrayᐸUInt64ᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸUInt64ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -82,7 +82,7 @@ public class ArrayᐸUInt64ᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸUInt64ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸUInt64ᐳ that) {
         // TODO

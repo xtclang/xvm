@@ -358,11 +358,11 @@ public class xRTFunction
 
     /**
      * Function handle.
-     * <p>
-     * Function types have quite specialized "isA" rules mostly due to the fact that functions
+     *
+     * <p>Function types have quite specialized "isA" rules mostly due to the fact that functions
      * may allow default parameters, but the type itself has no knowledge about that.
-     * <p>
-     * As a result, all Function handles are based on a "fully bound" type, but carry the actual
+     *
+     * <p>As a result, all Function handles are based on a "fully bound" type, but carry the actual
      * type as a part of their state,
      */
     public static class FunctionHandle
@@ -502,8 +502,8 @@ public class xRTFunction
          * Calculate a shift for a given argument index indicating the difference between
          * the specified argument index and the actual index of the function parameter that
          * corresponds to this argument. This allows to retrieve the parameter info as follows:
-         * <p/>
-         * {@code Parameter param = getMethod().getParam(iArg + calculateShift(iArg));}
+         *
+         * <p>{@code Parameter param = getMethod().getParam(iArg + calculateShift(iArg));}
          *
          * @param iArg the argument to calculate the shift of
          *
@@ -1266,7 +1266,7 @@ public class xRTFunction
     /**
      * Create an immutable FunctionHandle for a given function.
      *
-     * The returned handle will not carry any annotations
+     * <p>The returned handle will not carry any annotations
      */
     public static FunctionHandle makeInternalHandle(Frame frame, MethodStructure function) {
         Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
@@ -1276,7 +1276,7 @@ public class xRTFunction
     /**
      * Create an immutable FunctionHandle for a given function.
      *
-     * The returned handle could be deferred.
+     * <p>The returned handle could be deferred.
      */
     public static ObjectHandle makeHandle(Frame frame, MethodStructure function) {
         Container container = frame == null ? INSTANCE.f_container : frame.f_context.f_container;
@@ -1303,7 +1303,8 @@ public class xRTFunction
      * Create an immutable FunctionHandle for a given constructor. Note, that the constructor
      * may be null for synthetic constructor function.
      *
-     * If the constructor is specified and has annotations, the returned handle could be deferred.
+     * <p>If the constructor is specified and has annotations, the returned handle could be
+     * deferred.
      */
     public static ObjectHandle makeConstructorHandle(Frame frame, MethodStructure constructor,
             TypeConstant typeConstructor, TypeComposition clzTarget, Parameter[] aParams, boolean fParent) {

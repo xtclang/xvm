@@ -8,7 +8,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 
 /**
- * The native RTViewToBit<Int8> implementation.
+ * The native {@code RTViewToBit<Int8>} implementation.
  */
 public class xRTViewToBitFromInt8
         extends ByteBasedBitView {

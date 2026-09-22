@@ -319,10 +319,10 @@ public class BuildContext {
     /**
      * Preprocess the ops and collect all necessary information to produce the code for "finally"
      * blocks.
-     * <p>
-     * For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
+     *
+     * <p>For every GUARD_ALL - FINALLY - E_FINALLY block we create synthetic variables to generate
      * conditional jumps as necessary. As an example, for a block:
-     * <pre><code>
+     * <pre>{@code
      *  Loop:
      *    while (True) {
      *      try {
@@ -337,11 +337,11 @@ public class BuildContext {
      *          fin();
      *      }
      *   }
-     * </code></pre>
-     * <p>
-     * we produce the bytecode that look like the following pseudocode:
+     * }</pre>
      *
-     * <pre><code>
+     * <p>we produce the bytecode that look like the following pseudocode:
+     *
+     * <pre>{@code
      *     Throwable $rethrow  = null;
      *     boolean   $jump1    = false;
      *     boolean   $jump2    = false;
@@ -374,7 +374,7 @@ public class BuildContext {
      *     if ($jump1) GOTO Loop.Continue
      *     if ($jump2) GOTO Loop.Exit
      *     if ($doReturn) return $r1
-     * </code></pre>
+     * }</pre>
      *
      * @param code
      * @param ops
@@ -1107,20 +1107,21 @@ public class BuildContext {
     /**
      * Obtain the type of the specified return value.
      *
-     * Note: during the {@link Op#computeTypes} cycle, the ops most commonly use the {@link
+     * <p>Note: during the {@link Op#computeTypes} cycle, the ops most commonly use the {@link
      * TypeMatrix#assign} API to assign the type of the corresponding register, which stores
      * that type for that register at the **next** op address. For example, "MOVE src, dest"
      * computes the type of "dest" to be consumed by the ops that follow the "MOVE" op. Similarly,
      * "CALL_01 function, dest" op computes the type or "dest" to be consumed by the following ops.
      *
-     * Sometimes however, there are scenarios where that computed "destination" type needs to be
+     * <p>Sometimes however, there are scenarios where that computed "destination" type needs to be
      * known during the {@link Op#build} cycle by **that same op** that has just computed it. A
      * common use case is represented by the {@link org.xvm.asm.OpInvocable}, which assigns the
      * type of the "retValue" at the end of {@link org.xvm.asm.OpInvocable#computeInvokeTypes}
-     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#computeInvoke} method
+     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#buildInvoke} method
      * via the call to {@link #assignReturns}.
      *
-     * To facilitate that, all we need is to look up the computed type at the very next op address.
+     * <p>To facilitate that, all we need is to look up the computed type at the very next op
+     * address.
      */
     public TypeConstant getReturnType(int argId) {
         return getArgumentType(argId, true);
@@ -1274,7 +1275,7 @@ public class BuildContext {
      * to a constant, create a temporary Java slot for it. Otherwise, the register must have already
      * been allocated a Java slot for.
      *
-     * In either case, the corresponding value is **not** loaded on the Java stack.
+     * <p>In either case, the corresponding value is **not** loaded on the Java stack.
      */
     public RegisterInfo ensureRegister(CodeBuilder code, int argId) {
         if (argId >= 0) {
@@ -1380,7 +1381,7 @@ public class BuildContext {
     /**
      * Build the code to load a value for a constant on the Java stack.
      *
-     * We **always** load a primitive value if possible.
+     * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, int argId) {
         return loadConstant(code, getConstant(argId));
@@ -1388,8 +1389,8 @@ public class BuildContext {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
-     * <p/>
-     * We **always** load a primitive value if possible.
+     *
+     * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
         return builder.loadConstant(this, code, constant);
@@ -1398,8 +1399,8 @@ public class BuildContext {
     /**
      * Generate a load of the specified TypeConstant, resolving formal types against this build
      * context when possible.
-     * <p/>
-     * Out: TypeConstant on Java stack
+     *
+     * <p>Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
         builder.loadTypeConstant(this, code, type);
@@ -1407,10 +1408,10 @@ public class BuildContext {
 
     /**
      * Generate a "load" for an nType object for the specified TypeConstant.
-     * <p/>
-     * Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
-     * <p/>
-     * Out: nType object instance
+     *
+     * <p>Note: the specified type must be {@link TypeConstant#isTypeOfType() type-of-type}.
+     *
+     * <p>Out: nType object instance
      */
     public RegisterInfo loadType(CodeBuilder code, TypeConstant type) {
         TypeConstant dataType;
@@ -1449,9 +1450,9 @@ public class BuildContext {
     }
 
     /**
-     * Load the {@link nType} represented by the specified formal constant.
+     * Load the {@code nType} represented by the specified formal constant.
      *
-     * @return the register information for the loaded {@link nType}
+     * @return the register information for the loaded {@code nType}
      */
     private RegisterInfo loadFormalType(CodeBuilder code, FormalConstant formalConst) {
         if (formalConst instanceof TypeParameterConstant typeParam) {
@@ -1471,10 +1472,10 @@ public class BuildContext {
     }
 
     /**
-     * Load the {@link nType} represented by the specified formal constant from a target that is
+     * Load the {@code nType} represented by the specified formal constant from a target that is
      * already on the Java stack.
      *
-     * @return the register information for the loaded {@link nType}
+     * @return the register information for the loaded {@code nType}
      */
     private RegisterInfo loadFormalType(CodeBuilder code, RegisterInfo targetReg,
                                         FormalConstant formalConst) {
@@ -1598,8 +1599,8 @@ public class BuildContext {
 
     /**
      * Store the values on the Java stack.
-     * <p>
-     * If the register represents a property, the property value will be updated with the values
+     *
+     * <p>If the register represents a property, the property value will be updated with the values
      * on the stack, otherwise the values on the stack will be stored into the register's slots.
      *
      * @param code  the {@link CodeBuilder} to use to generate byte codes
@@ -1618,8 +1619,8 @@ public class BuildContext {
 
     /**
      * Store the values on the Java stack.
-     * <p>
-     * If the register represents a property, the property value will be updated with the values
+     *
+     * <p>If the register represents a property, the property value will be updated with the values
      * on the stack, otherwise the values on the stack will be stored into the register's slots.
      *
      * @param code   the {@link CodeBuilder} to use to generate byte codes
@@ -1793,7 +1794,7 @@ public class BuildContext {
      * Build the code that moves the value between the vars represented by the corresponding
      * registers.
      *
-     * Note: the value of the "regFrom" has already been loaded on Java stack.
+     * <p>Note: the value of the "regFrom" has already been loaded on Java stack.
      *
      * @param allowUpcast  if true, the destination type is allowed to be narrower and the
      *                     corresponding "checkcast" needs to be added, which can happen in some
@@ -1914,12 +1915,12 @@ public class BuildContext {
     /**
      * Build the code that allocates a Java slot for a `Ref` object of the specified type and name.
      *
-     * The "Ref" object has dual properties; it holds (boxes) the underlying referent value, while
-     * allowing the standard ops that operate on this register id use the underlying value, rather
-     * than the Ref itself. The only ops that are allowed to "see" the Ref object itself are
+     * <p>The "Ref" object has dual properties; it holds (boxes) the underlying referent value,
+     * while allowing the standard ops that operate on this register id use the underlying value,
+     * rather than the Ref itself. The only ops that are allowed to "see" the Ref object itself are
      * MOV_REF and MOV_VAR.
      *
-     * There is one notable exception: if the referent type is annotated by "Inject", this method
+     * <p>There is one notable exception: if the referent type is annotated by "Inject", this method
      * creates a regular register and loads the corresponding injection value.
      *
      * @param type  the referent type
@@ -2244,8 +2245,8 @@ public class BuildContext {
      * Narrow the type of the specified register in the code starting at the "from" op address.
      * Note, that passing the current address **does not** put the narrowed register into the
      * registry.
-     * <p>
-     * Note, that unlike the dead code elimination below, the narrowing could "stop" at any point an
+     *
+     * <p>Note, that unlike the dead code elimination below, the narrowing could "stop" at any point an
      * assignment is made to the register.
      *
      * @param origReg        the register to narrow
@@ -2613,7 +2614,7 @@ public class BuildContext {
     /**
      * Load a property value directly from its backing field.
      *
-     * Before calling this method, the stack contains the target. The first value remains on the
+     * <p>Before calling this method, the stack contains the target. The first value remains on the
      * stack; any additional values are stored in the context using the getter return convention.
      */
     private void buildGetPropertyField(CodeBuilder code, RegisterInfo targetReg,
@@ -2670,8 +2671,8 @@ public class BuildContext {
 
     /**
      * Set a property value using the specified register.
-     * <p>
-     * The target object that owns the property is assumed to be in this context's "this" register.
+     *
+     * <p>The target object that owns the property is assumed to be in this context's "this" register.
      *
      * @param code    the code builder
      * @param propId  the index of the property to set
@@ -2703,8 +2704,8 @@ public class BuildContext {
 
     /**
      * Set a property using the values from the stack.
-     * <p>
-     * The target object that owns the property is assumed to be in this context's "this" register.
+     *
+     * <p>The target object that owns the property is assumed to be in this context's "this" register.
      *
      * @param code       the code builder
      * @param propId     the index of the property to set
@@ -2722,7 +2723,7 @@ public class BuildContext {
 
     /**
      * Set the property value.
-     * <p>
+     *
      * @param code          the code builder
      * @param targetType    the type of the target object containing the property to be set
      * @param targetLoader  the loader for the target object
@@ -2878,8 +2879,8 @@ public class BuildContext {
     /**
      * Set a property backing field.
      *
-     * Before calling this method, the stack contains the target followed by the converted property
-     * value. The value may occupy multiple JVM stack entries.
+     * <p>Before calling this method, the stack contains the target followed by the converted
+     * property value. The value may occupy multiple JVM stack entries.
      */
     private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
                                        PropertyInfo propInfo, JitMethodDesc jmd) {
@@ -3403,8 +3404,8 @@ public class BuildContext {
 
     /**
      * Create a String and store the reference to the String on the stack.
-     * <p>
-     * The String template is formatted with values from the provided slots.
+     *
+     * <p>The String template is formatted with values from the provided slots.
      * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
      * argSlots} array.
      *
@@ -3426,8 +3427,8 @@ public class BuildContext {
 
     /**
      * Create a String and store the reference to the String in a new local variable slot.
-     * <p>
-     * The String template is formatted with values from the provided slots.
+     *
+     * <p>The String template is formatted with values from the provided slots.
      * Each occurrence of {@code "\u0001"} is replaced with the value from an entry in the {@code
      * argSlots} array.
      *
@@ -3592,7 +3593,7 @@ public class BuildContext {
     /**
      * Generate code that creates a Ref object for the specified compile-time referent type.
      *
-     * In:  the referent instance on the Java stack
+     * <p>In:  the referent instance on the Java stack<br>
      * Out: the Ref or Var object on the Java stack
      */
     public void buildCreateRef(CodeBuilder code, TypeConstant referentType, boolean isVar,

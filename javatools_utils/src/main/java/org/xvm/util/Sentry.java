@@ -15,8 +15,8 @@ public interface Sentry<T>
 
     /**
      * Return the value.
-     * <p>
-     * Calling this method or using a previously returned value after the sentry has been
+     *
+     * <p>Calling this method or using a previously returned value after the sentry has been
      * {@link #close closed} is illegal and results in undefined behavior.
      *
      * @return the value

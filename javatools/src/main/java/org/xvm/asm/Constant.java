@@ -30,19 +30,19 @@ import org.xvm.util.PackedInteger;
 
 /**
  * A Constant value stored in the ConstantPool of an XVM FileStructure.
- * <p/>
- * Constants are the immutable terminals of the XVM Structure hierarchy. For example, the string
+ *
+ * <p>Constants are the immutable terminals of the XVM Structure hierarchy. For example, the string
  * "hello world" is a constant, as is the number 42. By representing these as constant values in a
  * "pool" of constant values, it is possible for multiple uses of the same constant value to all
  * refer to one location within the assembled binary FileStructure, saving space. Furthermore, it
  * allows a reference to a particular constant to be made from anywhere within the FileStructure
  * using an integer, which identifies the ordinal position (known as the <i>index</i>) of the
  * constant within the sequence of all constants (whose order does not follow any particular rule.)
- * <p/>
- * In addition to the simple examples of constant values above, constants also serve to identify
+ *
+ * <p>In addition to the simple examples of constant values above, constants also serve to identify
  * structures within the FileStructure, and to identify dependencies on other modules located in
  * other FileStructures. Specifically:
- * <p/>
+ *
  * <ul>
  * <li>Each identifiable sub-structure within the FileStructure specifies the index of the constant
  *     that is the identity of that sub-structure, such as a Module, Package Class, Property,
@@ -55,7 +55,8 @@ import org.xvm.util.PackedInteger;
  *     (fully qualifies) the particular sub-structure in the other FileStructure, such as a Class
  *     being referenced or a Method being invoked in a different Module.</li>
  * </ul>
- * There are several categories of constants:
+ *
+ * <p>There are several categories of constants:
  * <ul>
  * <li><b>{@link ValueConstant}</b> - representing "typed values", such as strings and integers, but
  *     also including composite structures such as arrays, tuples, and maps;</li>
@@ -83,8 +84,8 @@ public abstract class Constant
     /**
      * Since the reading of the Constant information is done as part of construction, this method is
      * used to provide the Constant a chance to resolve other Constants that it knows only by index.
-     * <p/>
-     * This method must be overridden by constant types which reference other constants.
+     *
+     * <p>This method must be overridden by constant types which reference other constants.
      */
     protected void resolveConstants() {
     }
@@ -153,8 +154,8 @@ public abstract class Constant
     /**
      * Recurse through the constants that make up this constant, replacing typedefs with the types
      * that they refer to.
-     * <p/>
-     * Note: In addition to resolving typedefs, this method is also used to resolve any
+     *
+     * <p>Note: In addition to resolving typedefs, this method is also used to resolve any
      *       {@link UnresolvedNameConstant}s used by any structure during the registration phase.
      *
      * @return this same type, but without any typedefs or resolvable
@@ -331,7 +332,7 @@ public abstract class Constant
      * Check whether this constant and all its underlying constants are registered with
      * ConstantPools that are upstream (linked to by this constant's containing pool).
      *
-     * This method is used only as an assertion for debugging purposes.
+     * <p>This method is used only as an assertion for debugging purposes.
      */
     public void checkValidPools(Set<ConstantPool> setValidPools, int[] anDepth) {
         // check this pool
@@ -361,7 +362,7 @@ public abstract class Constant
      * Generally. the position only has meaning during the disassembly and assembly processes. The
      * position of all constants may be re-ordered as part of the assembly process.
      *
-     * @return the last known index of the Constant, or <tt>-1</tt> if no position has been assigned
+     * @return the last known index of the Constant, or <code>-1</code> if no position has been assigned
      *         to the constant
      */
     public int getPosition() {
@@ -507,8 +508,8 @@ public abstract class Constant
 
     /**
      * {@inheritDoc}
-     * <p/>
-     * This method must be overridden by constant types which reference other constants.
+     *
+     * <p>This method must be overridden by constant types which reference other constants.
      */
     @Override
     protected void registerConstants(ConstantPool pool) {
@@ -698,8 +699,8 @@ public abstract class Constant
 
     /**
      * Register each of the constants in the passed array.
-     * <p/>
-     * Important note: the caller may share the array with a cloned constant in a different pool;
+     *
+     * <p>Important note: the caller may share the array with a cloned constant in a different pool;
      * so we need to clone the array before changing its content.
      *
      * @param pool    the ConstantPool

@@ -24,7 +24,7 @@ import org.xvm.util.Severity;
  * The trailing "else" expression for any short-circuited expressions that precede it:
  *
  * <ul>
- * <li><tt>COLON: ":"</tt> - an "else" for nullability checks</li>
+ * <li><code>COLON: ":"</code> - an "else" for nullability checks</li>
  * </ul>
  */
 public class ElseExpression

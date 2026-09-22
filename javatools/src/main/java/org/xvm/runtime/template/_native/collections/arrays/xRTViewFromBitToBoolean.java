@@ -19,7 +19,7 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
 /**
- * The native RTViewFromBit<Boolean> implementation.
+ * The native {@code RTViewFromBit<Boolean>} implementation.
  */
 public class xRTViewFromBitToBoolean
         extends xRTViewFromBit {

@@ -31,9 +31,9 @@ public interface FPConvertible {
 
     /**
      * Implementation of the method
-     * <pre>
+     * <pre>{@code
      * toDec32()
-     * </pre>
+     * }</pre>
      *
      * @param ctx  the build context
      *
@@ -51,9 +51,9 @@ public interface FPConvertible {
 
     /**
      * Implementation of the method
-     * <pre>
+     * <pre>{@code
      * toDec64()
-     * </pre>
+     * }</pre>
      *
      * @param ctx the build context
      *
@@ -71,11 +71,12 @@ public interface FPConvertible {
 
     /**
      * Implementation of the method
-     * <pre>
+     * <pre>{@code
      * toDec128()
-     * </pre>
-     * The high 64-bits of the Dec128 will be set into the {@link Ctx#i0} field, and the low 64-bits
-     * will be returned.
+     * }</pre>
+     *
+     * <p>The high 64-bits of the Dec128 will be set into the {@link Ctx#i0} field, and the low
+     * 64-bits will be returned.
      *
      * @param ctx the build context
      *
@@ -95,9 +96,9 @@ public interface FPConvertible {
 
     /**
      * Implementation of the method
-     * <pre>
+     * <pre>{@code
      * toFloat32()
-     * </pre>
+     * }</pre>
      *
      * @param ctx the build context
      *
@@ -109,9 +110,9 @@ public interface FPConvertible {
 
     /**
      * Implementation of the method
-     * <pre>
+     * <pre>{@code
      * toFloat64()
-     * </pre>
+     * }</pre>
      *
      * @param ctx the build context
      *

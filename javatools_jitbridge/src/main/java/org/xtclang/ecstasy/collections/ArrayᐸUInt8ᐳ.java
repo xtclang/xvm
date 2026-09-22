@@ -18,8 +18,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of UInt8, stored in an array of Java longs, eight UInt8 per long.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -35,7 +35,7 @@ public class ArrayᐸUInt8ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸUInt8ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -48,7 +48,7 @@ public class ArrayᐸUInt8ᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸUInt8ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof UInt8 boxed) {
@@ -73,7 +73,7 @@ public class ArrayᐸUInt8ᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸUInt8ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -86,7 +86,7 @@ public class ArrayᐸUInt8ᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸUInt8ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸUInt8ᐳ that) {
         // TODO

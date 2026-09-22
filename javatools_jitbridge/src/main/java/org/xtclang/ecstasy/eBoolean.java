@@ -10,7 +10,7 @@ import org.xvm.javajit.Ctx;
 import org.xvm.javajit.ModuleLoader;
 
 /**
- * Native Enumeration<Boolean>.
+ * Native {@code Enumeration<Boolean>}.
  */
 public class eBoolean extends Enumeration {
     private eBoolean(Ctx ctx, TypeConstant type) {

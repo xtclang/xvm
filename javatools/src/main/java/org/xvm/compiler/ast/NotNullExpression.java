@@ -28,13 +28,13 @@ import org.xvm.util.Severity;
  * A short-circuiting expression for testing if a sub-expression is null, and yielding the non-null
  * value if the sub-expression is not null.
  *
- * Experimental feature: Alternatively, this short-circuiting expression tests a "conditional"
+ * <p>Experimental feature: Alternatively, this short-circuiting expression tests a "conditional"
  * expression (one that yields both a Boolean and at least one additional value), and short-circuits
  * iff that first Boolean value yielded is False, and otherwise yields the second value.
- * <p/>
- * <pre>
+ *
+ * <pre>{@code
  *     PostfixExpression NoWhitespace "?"
- * </pre>
+ * }</pre>
  *
  */
 public class NotNullExpression

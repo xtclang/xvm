@@ -214,8 +214,8 @@ public class Context {
 
     /**
      * Used in the validation phase to track scopes.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      */
     public Context enter() {
         return new Context(this, true);
@@ -223,8 +223,8 @@ public class Context {
 
     /**
      * Create a nested "if" of this context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new "if" context
      */
@@ -234,8 +234,8 @@ public class Context {
 
     /**
      * Create a nested "and-if" of this context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new multi-condition "and-if" context
      */
@@ -245,8 +245,8 @@ public class Context {
 
     /**
      * Create a nested fork of this context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param fWhenTrue  false iff the new context is for the "when false" fork (and thus true
      *                   iff the new context is for the "when true" fork)
@@ -260,8 +260,8 @@ public class Context {
     /**
      * Create a nested context that behaves as a "true" branch of an IfContext and automatically
      * marks the corresponding "false" branch as unreachable.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new (forked) context
      */
@@ -273,8 +273,8 @@ public class Context {
 
     /**
      * Create a short-circuiting "and" context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new "and" context
      */
@@ -284,8 +284,8 @@ public class Context {
 
     /**
      * Create a short-circuiting "or" context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new "or" context
      */
@@ -295,8 +295,8 @@ public class Context {
 
     /**
      * Create a negated form of this context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new (negating) context
      */
@@ -308,8 +308,8 @@ public class Context {
      * Create a context that tracks variable assignment data within a loop. The assignments within
      * a loop are assumed to be <i>at least once</i>; entering a forked context before or after
      * entering the loop context allows a <i>zero or more times</i> loop to be constructed.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @return the new (forked) context
      */
@@ -320,23 +320,23 @@ public class Context {
     /**
      * Create a delegating context that allows an expression to resolve names based on the
      * specified type's contributions.
-     * <p/>
-     * As a result, it allows us to write:
-     * <pre><code>
+     *
+     * <p>As a result, it allows us to write:
+     * <pre>{@code
      *    Color color = Red;
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    Color color = Color.Red;
-     * </code></pre>
+     * }</pre>
      * or
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Red)
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Color.Red)
-     * </code></pre>
+     * }</pre>
      *
      * @param typeLeft  the "infer from" type
      *
@@ -348,15 +348,15 @@ public class Context {
 
     /**
      * Create a delegating context that allows this context to resolve names for elements in a list.
-     * <p/>
-     * As a result, it allows us to write:
-     * <pre><code>
+     *
+     * <p>As a result, it allows us to write:
+     * <pre>{@code
      *    FileChannel open(ReadOption read=Read, WriteOption... write=[Write]);
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    FileChannel open(ReadOption read=Read, WriteOption... write=[WriteOption.Write]);
-     * </code></pre>
+     * }</pre>
      *
      * @return a new context
      */
@@ -384,8 +384,8 @@ public class Context {
     /**
      * Exit the scope that was created by calling {@link #enter()}. Used in the validation
      * phase to track scopes.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      */
     public Context exit() {
         Context ctxOuter = getOuterContext();
@@ -745,8 +745,8 @@ public class Context {
 
     /**
      * Register the specified variable name in this context.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param tokName  the token from the source code for the variable
      * @param reg      the register representing the variable
@@ -841,8 +841,8 @@ public class Context {
 
     /**
      * Determine if the specified variable name is already declared in the current scope.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the variable name
      *
@@ -901,8 +901,8 @@ public class Context {
     /**
      * Determine if the name refers to a readable variable. A variable is only readable if it
      * has been definitely assigned a value.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the variable name
      *
@@ -930,7 +930,7 @@ public class Context {
      *
      * @param tokName  the variable name as a token from the source code
      * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
-     *                 suppressed (e.g: &val)
+     *                 suppressed (e.g: {@code &val})
      * @param errs     the error list to log to
      */
     public final void markVarRead(Token tokName, boolean fDeref, ErrorListener errs) {
@@ -944,7 +944,7 @@ public class Context {
      * @param sName    the variable name
      * @param tokName  the variable name as a token from the source code (optional)
      * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
-     *                 suppressed (e.g: &val)
+     *                 suppressed (e.g: {@code &val})
      * @param errs     the error list to log to (optional)
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
@@ -997,8 +997,8 @@ public class Context {
 
     /**
      * Determine if the name refers to a writable variable.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the variable name
      *
@@ -1135,8 +1135,8 @@ public class Context {
 
     /**
      * Resolve the name of a variable, structure, etc.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the name to resolve
      *
@@ -1148,8 +1148,8 @@ public class Context {
 
     /**
      * Resolve the name of a variable, structure, etc.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param name  the name token to resolve
      *
@@ -1161,8 +1161,8 @@ public class Context {
 
     /**
      * Resolve the name of a variable, structure, etc.
-     * <p/>
-     * Note: This can only be used during the validate() stage.
+     *
+     * <p>Note: This can only be used during the validate() stage.
      *
      * @param sName  the name to resolve
      * @param name   the token from the source for the name to resolve (optional)
@@ -1655,7 +1655,7 @@ public class Context {
     }
 
     /**
-     * @return an array of RegisterAst<Constant> for the method parameters
+     * @return an array of {@link RegisterAST} for the method parameters
      */
     public RegisterAST[] collectParameters() {
         // create registers for the method parameters
@@ -2040,7 +2040,7 @@ public class Context {
     // ----- inner class: AndContext ---------------------------------------------------------------
 
     /**
-     * A nested context for handling "&&" expressions.
+     * A nested context for handling {@code &&} expressions.
      */
     public static class AndContext
             extends Context {
@@ -2351,22 +2351,22 @@ public class Context {
      * A delegating context that allows an expression to resolve names based on the specified type's
      * contributions.
      *
-     * As a result, it allows us to write:
-     * <pre><code>
+     * <p>As a result, it allows us to write:
+     * <pre>{@code
      *    Color color = Red;
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    Color color = Color.Red;
-     * </code></pre>
+     * }</pre>
      * or
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Red)
-     * </code></pre>
+     * }</pre>
      *  instead of
-     * <pre><code>
+     * <pre>{@code
      *    if (color == Color.Red)
-     * </code></pre>
+     * }</pre>
      */
     public static class InferringContext
             extends Context {
@@ -2575,8 +2575,8 @@ public class Context {
 
         /**
          * Obtain the map of names to the registers, if it has been built.
-         * <p/>
-         * Note: built by exit()
+         *
+         * <p>Note: built by exit()
          *
          * @return a non-null map of the variable name to a Register for all variables to capture
          */

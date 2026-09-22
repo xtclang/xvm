@@ -61,7 +61,7 @@ public class UInt8ArrayConstant
 
     /**
      * {@inheritDoc}
-     * @return  the constant's octet string value as a <tt>byte[]</tt>; the caller must treat the
+     * @return  the constant's octet string value as a <code>byte[]</code>; the caller must treat the
      *          returned value as immutable
      */
     @Override
@@ -125,7 +125,7 @@ public class UInt8ArrayConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * The constant octet string value stored as a <tt>byte[]</tt>.
+     * The constant octet string value stored as a <code>byte[]</code>.
      */
     private final byte[] m_abVal;
 }

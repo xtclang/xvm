@@ -14,7 +14,7 @@ import org.xvm.runtime.template.xBoolean.BooleanHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
 
 /**
- * Native RTDelegate<Boolean> implementation.
+ * Native {@code RTDelegate<Boolean>} implementation.
  */
 public class xRTBooleanDelegate
         extends BitBasedDelegate {

@@ -18,7 +18,7 @@ import org.xvm.runtime.template.numbers.xFloat64;
 import org.xvm.util.Handy;
 
 /**
- * The native RTViewFromByte<Float64> implementation.
+ * The native {@code RTViewFromByte<Float64>} implementation.
  */
 public class xRTViewFromByteToFloat64
         extends xRTViewFromByte {

@@ -11,7 +11,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
 
 /**
- * The abstract base for RTDelegate<Int64> and RTDelegate<UInt64> implementations.
+ * The abstract base for {@code RTDelegate<Int64>} and {@code RTDelegate<UInt64>} implementations.
  */
 public abstract class LongDelegate
         extends LongBasedDelegate {

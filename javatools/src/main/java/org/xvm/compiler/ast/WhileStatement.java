@@ -615,9 +615,6 @@ public class WhileStatement
      * @param code      the code to emit
      * @param regFirst  the (optional) register for the "first" variable
      * @param regCount  the (optional) register for the "count" variable
-     *
-     * @return a label that skips the variable update for the first iteration iff either "first" or
-     *         "count" exists, otherwise null
      */
     private void emitLabelVarCreation(Code code, Register regFirst, Register regCount) {
         ConstantPool  pool   = pool();

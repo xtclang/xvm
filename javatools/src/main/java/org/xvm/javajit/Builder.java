@@ -136,7 +136,7 @@ public abstract class Builder {
      * Ensure a unique Java class that represents a "JIT Call Class Name" for the specified type in
      * this builder's TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String ensureJitClassName(TypeConstant type) {
         return type.ensureJitClassName(typeSystem);
@@ -146,7 +146,7 @@ public abstract class Builder {
      * Ensure a unique Java class that represents a "JIT Instance Class Name" for the specified type
      * in this builder's TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String ensureJitInstanceClassName(TypeConstant type) {
         assert type.isSingleUnderlyingClass(false);
@@ -159,10 +159,10 @@ public abstract class Builder {
      * In other words, if this Builder is building {@code List<Int>} and this method is told to load
      * the TypeConstant for {@code Array<Element>}, then it will load the TypeConstant
      * {@code Array<Element>}.
-     * <p/>
-     * This method never resolves formal types.
-     * <p/>
-     * Out: TypeConstant on Java stack
+     *
+     * <p>This method never resolves formal types.
+     *
+     * <p>Out: TypeConstant on Java stack
      */
     public void loadTypeConstant(CodeBuilder code, TypeConstant type) {
         throw new UnsupportedOperationException();
@@ -173,11 +173,11 @@ public abstract class Builder {
      * build context indicates that resolution is applicable. In other words, if a method on
      * {@code List<Int>} is being compiled, and it loads the TypeConstant for
      * {@code Array<Element>}, then the TypeConstant {@code Array<Int>} will be loaded.
-     * <p/>
-     * If no build context is supplied, the TypeConstant is loaded without performing any formal
+     *
+     * <p>If no build context is supplied, the TypeConstant is loaded without performing any formal
      * type resolution.
-     * <p/>
-     * Out: TypeConstant on Java stack
+     *
+     * <p>Out: TypeConstant on Java stack
      */
     protected void loadTypeConstant(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         loadTypeConstant(code, type);
@@ -199,8 +199,8 @@ public abstract class Builder {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
-     * <p/>
-     * We **always** load a primitive value if possible.
+     *
+     * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(CodeBuilder code, Constant constant) {
         return loadConstant(null, code, constant);
@@ -208,8 +208,8 @@ public abstract class Builder {
 
     /**
      * Build the code to load a value for a constant on the Java stack.
-     * <p/>
-     * We **always** load a primitive value if possible.
+     *
+     * <p>We **always** load a primitive value if possible.
      */
     public RegisterInfo loadConstant(BuildContext bctx, CodeBuilder code, Constant constant) {
         // see NativeContainer#getConstType()
@@ -957,8 +957,8 @@ public abstract class Builder {
     /**
      * Build the code to load a local property on the Java stack.
      *
-     * This method assumes the "owner" ref is loaded on Java stack and the owner is not primitive,
-     * which means that the Ctx is always the parameter 0.
+     * <p>This method assumes the "owner" ref is loaded on Java stack and the owner is not
+     * primitive, which means that the Ctx is always the parameter 0.
      *
      * @param allowUnboxing  if true, allow property access optimization
      *
@@ -972,7 +972,7 @@ public abstract class Builder {
     /**
      * Build the code to load a local property on the Java stack.
      *
-     * This method assumes the "owner" ref is loaded on Java stack.
+     * <p>This method assumes the "owner" ref is loaded on Java stack.
      *
      * @param allowUnboxing  if true, allow property access optimization
      * @param ctxSlot        the Java slot containing the current context
@@ -1368,7 +1368,7 @@ public abstract class Builder {
      * Generate code to perform a null check and unbox the JIT primitive reference that is on
      * the top of the stack.
      *
-     * In: a boxed JIT primitive reference, or Null
+     * <p>In: a boxed JIT primitive reference, or Null<br>
      * Out: the unboxed primitive value or its null representation
      *
      * @param type  the primitive type for the boxed value
@@ -1400,7 +1400,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed Java reference
+     * <p>In: a boxed Java reference<br>
      * Out: the unboxed primitive value
      *
      * @param reg  the RegisterInfo for the unboxed value
@@ -1412,7 +1412,7 @@ public abstract class Builder {
     /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
-     * In: a boxed Java reference
+     * <p>In: a boxed Java reference<br>
      * Out: the unboxed primitive value
      *
      * @param type  the primitive type for the boxed value
@@ -1495,7 +1495,7 @@ public abstract class Builder {
     /**
      * Generate boxing opcodes for a primitive value of the specified primitive class on the stack.
      *
-     * In: an unboxed primitive value
+     * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      *
      * @param reg  the RegisterInfo for the unboxed value
@@ -1508,7 +1508,7 @@ public abstract class Builder {
      * Generate boxing opcodes to box one or more values from the stack into a Java or XVM
      * primitive type.
      *
-     * In: an unboxed primitive value
+     * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      *
      * @param code  the {@link CodeBuilder} to use to generate byte codes
@@ -1553,7 +1553,7 @@ public abstract class Builder {
      * Generate Java boxing opcodes for a primitive value of the specified primitive class on the
      * stack.
      *
-     * In: an unboxed primitive value
+     * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      */
     public static void boxJava(CodeBuilder code, ClassDesc cd) {
@@ -2105,32 +2105,34 @@ public abstract class Builder {
     /**
      * The name of the internal equals method expected to be present on XVM primitive types.
      * The signature should be:
-     * <pre>
+     * <pre>{@code
      *     public boolean $equals(primitive p1, primitive p2 ...)
-     * </pre>
-     * Where the method returns a boolean and takes as parameters two sets of the primitive
+     * }</pre>
+     *
+     * <p>Where the method returns a boolean and takes as parameters two sets of the primitive
      * types that make up the XVM primitive type.
      * For example, an Int128 type is made up of two Java long values, so its equals signature
      * would be:
-     * <pre>
+     * <pre>{@code
      *     public boolean $equals(long low1, long high1, long low2, long high2)
-     * </pre>
+     * }</pre>
      */
     public static final String XVM_PRIMITIVE_EQUALS = "$equals";
 
     /**
      * The name of the internal compare method expected to be present on XVM primitive types.
      * The signature should be:
-     * <pre>
+     * <pre>{@code
      *     public int $compare(primitive p1, primitive p2 ...)
-     * </pre>
-     * Where the method returns an int and takes as parameters two sets of the primitive
+     * }</pre>
+     *
+     * <p>Where the method returns an int and takes as parameters two sets of the primitive
      * types that make up the XVM primitive type.
      * For example, an Int128 type is made up of two Java long values, so its compare signature
      * would be:
-     * <pre>
+     * <pre>{@code
      *     public int $compare(long low1, long high1, long low2, long high2)
-     * </pre>
+     * }</pre>
      */
     public static final String XVM_PRIMITIVE_COMPARE = "$compare";
 

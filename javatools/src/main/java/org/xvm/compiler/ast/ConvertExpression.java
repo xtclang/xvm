@@ -249,20 +249,22 @@ public class ConvertExpression
     /**
      * Unwrap multi-conversion assignment into an equivalent statement expression.
      *
-     * In a way of example, let's say we have a function:
-     * <pre><code>
+     * <p>In a way of example, let's say we have a function:
+     * <pre>{@code
      *     (Int32, Int32) f() {...}
-     * </code></pre>
+     * }</pre>
      * and we call it like this:
-     * <pre><code>
+     * <pre>{@code
      *     (Int x, Int y) = f();
-     * </code></pre>
-     * The BAST that we are going to create will look like a standard compilation of the following:
-     * <pre><code>
+     * }</pre>
+     *
+     * <p>The BAST that we are going to create will look like a standard compilation of the
+     * following:
+     * <pre>{@code
      *     (Int32 tmpX, Int32 tmpY) = f();
      *     Int x = tmpX.toInt64();
      *     Int y = tmpY.toInt64();
-     * </code></pre>
+     * }</pre>
      */
     public ExprAST unwrapConvertAST(Context ctx, ExprAST astLVal) {
         ExprAST astFrom = expr.getExprAST(ctx);

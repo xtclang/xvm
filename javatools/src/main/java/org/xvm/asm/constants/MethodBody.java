@@ -744,7 +744,7 @@ public class MethodBody {
 
     /**
      * An enumeration of various forms of method body implementations.
-     * <p/>
+     *
      * <ul>
      * <li><b>FromInto</b> - the method body represents a method known to exist for compilation
      * purposes, but is otherwise not present; this is the result of the {@code into} clause, or the
@@ -787,15 +787,15 @@ public class MethodBody {
 
     /**
      * An enumeration of various forms of method existence:
-     * <p/>
+     *
      * <ul>
      * <li><b>Implicit</b> - the method exists implicitly; this is the result of the {@code into}
      * clause, or the methods of {@code Object} in the context of an interface, for example;</li>
      * <li><b>Interface</b> - the method is defined as part of an interface;</li>
      * <li><b>Class</b> - the method is defined as part of a class.</li>
      * </ul>
-     * <p/>
-     * Only the highest level of existence is used; for example, a method that exists due to an
+     *
+     * <p>Only the highest level of existence is used; for example, a method that exists due to an
      * "into type" clause, an "implements interface" clause, and is also implemented on a class, is
      * considered to have an Existence of "Class".
      */

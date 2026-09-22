@@ -14,8 +14,8 @@ import org.xvm.javajit.Ctx;
 
 /**
  * Array of Dec128, stored in an array of Java longs, two long array elements for ech Dec128.
- * <p>
- * Object header
+ *
+ * <p>Object header
  * xObj - 64 bits of flags
  * ---
  * Delegate - ref
@@ -31,7 +31,7 @@ public class ArrayᐸDec128ᐳ
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
-     * @see {@link Array#$new$p}
+     * @see Array#$new$p
      */
     public static ArrayᐸDec128ᐳ $new$p(Ctx ctx, TypeConstant type, long capacity, boolean _capacity) {
         assert !type.isImmutable();
@@ -44,7 +44,7 @@ public class ArrayᐸDec128ᐳ
     }
 
     /**
-     * @see {@link Array#$new$1$p}
+     * @see Array#$new$1$p
      */
     public static ArrayᐸDec128ᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Dec128 boxed) {
@@ -59,7 +59,7 @@ public class ArrayᐸDec128ᐳ
     }
 
     /**
-     * @see {@link Array#$new$2}
+     * @see Array#$new$2
      */
     public static ArrayᐸDec128ᐳ $new$2$p(Ctx ctx, TypeConstant type, Mutability mutability, Iterable elements) {
         long size = elements.size$get$p(ctx);
@@ -72,7 +72,7 @@ public class ArrayᐸDec128ᐳ
     }
 
     /**
-     * @see {@link Array#$new$3}
+     * @see Array#$new$3
      */
     public static ArrayᐸDec128ᐳ $new$3$p(Ctx ctx, TypeConstant type, ArrayᐸDec128ᐳ that) {
         // TODO

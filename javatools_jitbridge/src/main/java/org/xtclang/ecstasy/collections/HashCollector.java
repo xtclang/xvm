@@ -13,9 +13,9 @@ public interface HashCollector extends Object {
 
     /**
      * This is the native implementation of Const.x:
-     * <pre>
+     * <pre>{@code
      *     @Abstract Int compute();
-     * </pre>
+     * }</pre>
      *
      * @return  the computed hash code as an {@link Int64}
      */
@@ -25,9 +25,9 @@ public interface HashCollector extends Object {
 
     /**
      * This is the primitive implementation of Const.x:
-     * <pre>
+     * <pre>{@code
      *     @Abstract Int compute();
-     * </pre>
+     * }</pre>
      *
      * @return  the computed hash code
      */
@@ -35,11 +35,11 @@ public interface HashCollector extends Object {
 
     /**
      * Reset this {@link HashCollector}.
-     * <p>
-     * This is the native implementation of Const.x:
-     * <pre>
+     *
+     * <p>This is the native implementation of Const.x:
+     * <pre>{@code
      *     @Abstract HashCollector reset();
-     * </pre>
+     * }</pre>
      *
      * @return  this {@link HashCollector} instance
      */

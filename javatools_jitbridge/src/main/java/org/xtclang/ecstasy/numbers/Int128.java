@@ -5,6 +5,8 @@ import java.math.BigInteger;
 
 import org.xtclang.ecstasy.text.String;
 
+import org.xvm.asm.constants.TypeConstant;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -101,8 +103,8 @@ public class Int128 extends IntNumber {
     /**
      * This method is called at the end of a JIT primitive method to return the value of a
      * {@link BigInteger}.
-     * <p>
-     * The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64
+     *
+     * <p>The high 64 bits of the value will be set into the {@link Ctx#i0} field and the low 64
      * bits will be returned as a {@code long}.
      *
      * @param ctx  the current context
@@ -146,7 +148,7 @@ public class Int128 extends IntNumber {
      * @param low2   the low 64 bits of the second Int128
      * @param high2  the high 64 bits of the second Int128
      *
-     * @return a negative integer if the first Int28 is lower than the second, zero if both
+     * @return a negative integer if the first Int128 is lower than the second, zero if both
      * Int128 values are equal, or a positive integer if the first Int128 is greater than the
      * second.
      */
@@ -157,7 +159,7 @@ public class Int128 extends IntNumber {
 
     /**
      * The internal equals method for two Int128 values called by the equals methods generated
-     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals} Method}
+     * in {@link org.xvm.javajit.builders.CommonBuilder#assembleConstEquals}
      * and also in {@link TypeConstant#buildCompare}
      *
      * @param low1   the low 64 bits of the first Int128

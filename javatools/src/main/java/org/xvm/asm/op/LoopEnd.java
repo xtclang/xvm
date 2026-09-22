@@ -13,10 +13,10 @@ import org.xvm.runtime.Frame;
 
 /**
  * LOOP_END rel_addr        ; rel_addr must be negative, and must point to a corresponding LOOP
- * <p/>
- * Each LOOP_END op must match up with a previous LOOP op.
- * <p/>
- * The LOOP_END op exits the scope and proceeds to the instruction at the location specified by
+ *
+ * <p>Each LOOP_END op must match up with a previous LOOP op.
+ *
+ * <p>The LOOP_END op exits the scope and proceeds to the instruction at the location specified by
  * "rel_addr".
  */
 public class LoopEnd

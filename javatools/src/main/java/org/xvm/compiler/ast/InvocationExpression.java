@@ -73,27 +73,27 @@ import org.xvm.util.Severity;
  * <li><i>"Binding parameters" (aka currying)</i>: Function + Argument(s) = Function</li>
  * <li><i>"Calling a function"</i>: Function + () = Return Value(s)</li>
  * </ul>
- * <p/>
- * Most of the time, this is all accomplished in a single syntactic step, but not always:
- * <p/>
- * <pre><code>
+ *
+ * <p>Most of the time, this is all accomplished in a single syntactic step, but not always:
+ *
+ * <pre>{@code
  *   // bind target "list" to method "add", bind argument, call function
  *   list.add(item);
  *
  *   // on "List" type, find "add" method with one parameter (four alternatives shown)
  *   Method m = List.&add(?);
- *   Method m = List.&add(&lt;List.Element&gt;?);
+ *   Method m = List.&add(<List.Element>?);
  *   Method m = List.add(?);
- *   Method m = List.add(&lt;List.Element&gt;?);
+ *   Method m = List.add(<List.Element>?);
  *
  *    // bind target "list" to method "add", bind argument
  *   function void () fn = list.&add(item);
  *
  *   // call the function held in "fn"
  *   fn();
- * </code></pre>
- * <p/>
- * There are op codes for:
+ * }</pre>
+ *
+ * <p>There are op codes for:
  * <ul>
  * <li>Binding a method to its target reference to create a function;</li>
  * <li>Binding any subset (including all) parameters of a function to create a new function;</li>
@@ -103,11 +103,11 @@ import org.xvm.util.Severity;
  * <li>Instantiating a new object and invoking its constructor (16 different ops); and</li>
  * <li>Invoking another constructor from within a constructor (4 different ops);</li>
  * </ul>
- * <p/>
- * Each of these operations is type safe, requiring a provably correct target reference, arguments,
+ *
+ * <p>Each of these operations is type safe, requiring a provably correct target reference, arguments,
  * and destinations for each of the return values.
- * <p/>
- * <pre><code>
+ *
+ * <pre>{@code
  *                                            bind    bind
  *   description                              target  args    call    result
  *   ---------------------------------------  ------  ------  ------  ------------------------------
@@ -119,9 +119,9 @@ import org.xvm.util.Severity;
  *   method invocation                        X               X       result of call
  *   method and parameter binding             X       X               function from a method name
  *   method invocation                        X       X       X       result of call
- * </code></pre>
- * <p/>
- * The implementation is specialized when the method or function <b>name</b> is provided. The
+ * }</pre>
+ *
+ * <p>The implementation is specialized when the method or function <b>name</b> is provided. The
  * invocation expression knows this situation exists because its {@link #expr} refers to a {@link
  * NameExpression}. The responsibilities of the InvocationExpression are expanded as follows:
  * <ul>
@@ -147,8 +147,8 @@ import org.xvm.util.Severity;
  *     rather yields a method or function reference as its result.</li>
  * <li>...</li>
  * </ul>
- * <p/>
- * The rules for determining the method or function to call when the name is provided:
+ *
+ * <p>The rules for determining the method or function to call when the name is provided:
  * <ol>
  * <li>Validate the (optional) left expression, and all of the (optional) redundant return type
  *     {@link NameExpression#params params} expressions of the NameExpression.</li>
@@ -194,14 +194,14 @@ import org.xvm.util.Severity;
  *     If there are no more outer scopes, then it is an error. (Done.)</li>
  * <li>If one method match from steps 6 &amp; 7, then that method is selected. (Done.)</li>
  * <li>If multiple methods/functions match from steps 6 &amp; 7, then the <i>best</i> one must be
- *     selected. First, the algorithm from {@link TypeConstant#selectBest(SignatureConstant[])} is
+ *     selected. First, the algorithm from {@link TypeConstant#selectBest} is
  *     used. If that algorithm results in a single selection, then that single selection is used.
  *     Otherwise, the redundant return types are used as a tiebreaker; if that results in a single
  *     selection, then that single selection is used. Otherwise, the ambiguity is an error.
  *     (Done.)</li>
  * </ol>
- * <p/>
- * The "construct" name (which is actually a keyword) indicates a simplified set of rules;
+ *
+ * <p>The "construct" name (which is actually a keyword) indicates a simplified set of rules;
  * specifically:
  * <ul>
  * <li>It requires the name to either (i) have no <i>left</i>, or (ii) have a <i>left</i> that is
@@ -2569,9 +2569,9 @@ public class InvocationExpression
 
     /**
      * Find a named method or function that best matches the specified requirements.
-     * </p>
-     * Note: we need to pass both typeParent and infoParent, since in some context-sensitive cases
-     *  typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
+     *
+     * <p>Note: we need to pass both typeParent and infoParent, since in some context-sensitive
+     * cases typeParent.ensureTypeInfo() != infoParent and infoParent.getType() != typeParent
      *
      * @param ctx           the context
      * @param typeParent    the type to search the method or function for
@@ -2647,8 +2647,8 @@ public class InvocationExpression
     /**
      * Check the type of the thing that is either a function or needs to be converted into a
      * function.
-     * <p/>
-     * Responsible for setting the {@link #m_idConvert} field if a conversion is necessary.
+     *
+     * <p>Responsible for setting the {@link #m_idConvert} field if a conversion is necessary.
      *
      * @param ctx         the compiler context
      * @param typeFn      the type of the function (or the type of the object that should know how
@@ -2957,8 +2957,8 @@ public class InvocationExpression
      * There are scenarios, when a MethodConstant doesn't actually point to a method structure.
      * That allows the compiler to supply more specific target bound type information on the method
      * signature for the runtime.
-     * <p/>
-     * The purpose of this method is to make sure that despite that "disconnect", the identity of
+     *
+     * <p>The purpose of this method is to make sure that despite that "disconnect", the identity of
      * the "rebased" MethodConstant parent identifies the parent of the actual method structure,
      * allowing the runtime interpreter to quickly identify the topmost structure in the virtual
      * call chain that is known at compile-time.

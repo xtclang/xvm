@@ -28,10 +28,10 @@ public class Decimal64
     }
 
     /**
-     * Construct a decimal value from a Java <tt>long</tt> whose format is that of an IEEE-754-2008
+     * Construct a decimal value from a Java <code>long</code> whose format is that of an IEEE-754-2008
      * 64-bit decimal.
      *
-     * @param nBits  a 64-bit Java <tt>long</tt> containing the bits of an IEEE-754-2008 decimal
+     * @param nBits  a 64-bit Java <code>long</code> containing the bits of an IEEE-754-2008 decimal
      */
     public Decimal64(long nBits) {
         m_nBits = nBits;
@@ -116,7 +116,7 @@ public class Decimal64
     }
 
     /**
-     * @return the significand of the decimal as a Java <tt>long</tt>
+     * @return the significand of the decimal as a Java <code>long</code>
      */
     public long getSignificand() {
         long nBits = ensureFiniteBits(m_nBits);
@@ -133,7 +133,7 @@ public class Decimal64
     }
 
     /**
-     * @return the exponent of the decimal as a Java <tt>int</tt>
+     * @return the exponent of the decimal as a Java <code>int</code>
      */
     public int getExponent() {
         // combination field is 13 bits (from bit 50 to bit 62), including 8 "pure" exponent bits
@@ -150,10 +150,10 @@ public class Decimal64
     // ----- conversions ---------------------------------------------------------------------------
 
     /**
-     * Obtain the decimal value as a Java <tt>long</tt> whose format is that of an IEEE-754-2008
+     * Obtain the decimal value as a Java <code>long</code> whose format is that of an IEEE-754-2008
      * 64-bit decimal.
      *
-     * @return a 64-bit Java <tt>long</tt> containing the bits of an IEEE-754-2008 decimal
+     * @return a 64-bit Java <code>long</code> containing the bits of an IEEE-754-2008 decimal
      */
     public long toLongBits() {
         return m_nBits;
@@ -246,7 +246,7 @@ public class Decimal64
      *
      * @param dec  a Java BigDecimal value
      *
-     * @return a Java <tt>long</tt> that contains a 64-bit IEEE 754 decimal value
+     * @return a Java <code>long</code> that contains a 64-bit IEEE 754 decimal value
      *
      * @throws RangeException if the value is out of range
      */

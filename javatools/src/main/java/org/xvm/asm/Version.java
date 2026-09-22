@@ -322,33 +322,33 @@ public class Version
 
     /**
      * Determine if another version is the same version as this, or derives from this version.
-     * <p/>
-     * A version is either a base version, the subsequent version of another version, or a revision
+     *
+     * <p>A version is either a base version, the subsequent version of another version, or a revision
      * of another version. A version number is represented as a dot-delimited string of integer
      * values; for example, version "1" is a potential base version number, version "2" is a
      * subsequent version of version "1", and version "1.1" is a revision of version 1.
-     * <p/>
-     * For each integer in the version string, the first integer is considered the most significant
+     *
+     * <p>For each integer in the version string, the first integer is considered the most significant
      * version indicator, and each following integer is less significant, with the last integer
      * being the least significant version indicator. If the least significant version indicator is
      * zero, then the version is identical to a version that does not include that least significant
      * version indicator; in other words, version "1", version "1.0", and version "1.0.0" (etc.) all
      * refer to the same identical version. For purposes of comparison:
      *
-     * <ul><li>The actual versions <tt>v<sub>A</sub></tt> is <b>identical to</b> the requested
-     * version <tt>v<sub>R</sub></tt> iff after removing every trailing (least significant) "0"
+     * <ul><li>The actual versions <code>v<sub>A</sub></code> is <b>identical to</b> the requested
+     * version <code>v<sub>R</sub></code> iff after removing every trailing (least significant) "0"
      * indicator, each version indicator from the most significant to the least significant is
      * identical; in other words, version "1.2.1" is identical only to version "1.2.1" (which is
      * identical to version "1.2.1.0").</li>
-     * <li>The actual versions <tt>v<sub>A</sub></tt> is <b>substitutable for</b> the requested
-     * version <tt>v<sub>R</sub></tt> iff each version indicator of the requested version from the
+     * <li>The actual versions <code>v<sub>A</sub></code> is <b>substitutable for</b> the requested
+     * version <code>v<sub>R</sub></code> iff each version indicator of the requested version from the
      * most significant to the least significant is identical to the corresponding version indicator
      * in the actual version, or if the first different version indicator in the actual version is
      * greater than the corresponding version indicator in the requested version; in other words,
      * version "1.2", "1.2.1", and "1.2.1.7", and "1.3" are all substitutable for version "1.2", but
      *  "2.0" and "2.1" are not.</li>
      * <li>In the previous example, to use only one of the versions that begins with "1.2", the
-     * requested version <tt>v<sub>R</sub></tt> should be specified as "1.2.0"; versions "1.2",
+     * requested version <code>v<sub>R</sub></code> should be specified as "1.2.0"; versions "1.2",
      * "1.2.1", and "1.2.1.7" are substitutes for 1.2.0, but versions "1.3", "2.0", and "2.1" are
      * not.</li>
      * </ul>

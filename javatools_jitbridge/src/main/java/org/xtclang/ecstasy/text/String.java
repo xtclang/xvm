@@ -5,7 +5,9 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.Ordered;
+import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.nConst;
+import org.xtclang.ecstasy.nException;
 import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nType;
 
@@ -25,34 +27,34 @@ import static org.xvm.util.Handy.require;
  * An implementation of an arbitrarily-sized character string data type, using a 64-bit index and
  * length, and  supporting all valid Unicode characters (21-bit codepoint values).
  *
- * A significant design question related to the `xStr` class was how to best represent its internal
- * storage. The obvious default is to hold the contents as a Java String object, or as an array
- * of Java primitive `char` values. The Java String has the benefits of (i) already existing in a
- * well-tested and well-optimized form, (ii) internally optimizing to use ISO 8859-1 for single byte
- * "compressed string" storage, and (iii) using the Java String class would make it quite easy to
- * pass instances of `xStr` to/from any Java API as a Java String, by simply wrapping and unwrapping
- * the Java String value as necessary. Java Strings are fundamentally UTF-16 strings, though, and
- * not "real" Unicode strings; Java Strings can contain UTF-16 formatted surrogate pairs -- which
- * are legal in a UTF-16 encoding, but illegal codepoints in Unicode! Java Strings can also contain
- * badly formed UTF-16, including illegal codepoints and unmatched surrogates. Because of UTF-16,
- * when a Java string has a `length()` of 16, that could mean any actual number of characters in the
- * Unicode string length is somewhere between 8 and 16 inclusive. Similarly, requesting `charAt(5)`
- * from a Java String can return the fifth character, but it can instead return either the third or
- * the fourth character -- or worse, it can return just a half of one of those characters.
- * Addressing these flaws would be a significant undertaking, with significant performance
- * penalties. Furthermore, the internal data of a Java String is not directly accessible, which
- * incurs an additional performance penalty, particularly when copies of that data are necessary.
- * Lastly, Java Strings are limited to 2GB, since the JVM is fundamentally a 32-bit design. In
- * summary, using the Java String class adds significant complexity and could negatively impact
- * performance.
+ * <p>A significant design question related to the `xStr` class was how to best represent its
+ * internal storage. The obvious default is to hold the contents as a Java String object, or as an
+ * array of Java primitive `char` values. The Java String has the benefits of (i) already existing
+ * in a well-tested and well-optimized form, (ii) internally optimizing to use ISO 8859-1 for single
+ * byte "compressed string" storage, and (iii) using the Java String class would make it quite easy
+ * to pass instances of `xStr` to/from any Java API as a Java String, by simply wrapping and
+ * unwrapping the Java String value as necessary. Java Strings are fundamentally UTF-16 strings,
+ * though, and not "real" Unicode strings; Java Strings can contain UTF-16 formatted surrogate pairs
+ * -- which are legal in a UTF-16 encoding, but illegal codepoints in Unicode! Java Strings can also
+ * contain badly formed UTF-16, including illegal codepoints and unmatched surrogates. Because of
+ * UTF-16, when a Java string has a `length()` of 16, that could mean any actual number of
+ * characters in the Unicode string length is somewhere between 8 and 16 inclusive. Similarly,
+ * requesting `charAt(5)` from a Java String can return the fifth character, but it can instead
+ * return either the third or the fourth character -- or worse, it can return just a half of one of
+ * those characters. Addressing these flaws would be a significant undertaking, with significant
+ * performance penalties. Furthermore, the internal data of a Java String is not directly
+ * accessible, which incurs an additional performance penalty, particularly when copies of that data
+ * are necessary. Lastly, Java Strings are limited to 2GB, since the JVM is fundamentally a 32-bit
+ * design. In summary, using the Java String class adds significant complexity and could negatively
+ * impact performance.
  *
- * An alternative experiment using UTF-8 data was attempted, using a read-only `byte[]` as the
+ * <p>An alternative experiment using UTF-8 data was attempted, using a read-only `byte[]` as the
  * storage, and supporting strings >2GB. The engineering concern with this approach was the cost of
  * random access (i.e. access by index). By caching the most recently accessed index and position
  * within the UTF-8 data, the cost of common (e.g. sequential) access patterns was minimized, but
  * still calculated to be significantly more costly than array-based access.
  *
- * The selected design is similar to the "compressed strings" approach in the Java String
+ * <p>The selected design is similar to the "compressed strings" approach in the Java String
  * implementation, but instead of supporting a 1-byte vs 2-byte encoding, `xStr` implements an 8-bit
  * (1-byte) vs 21-bit encoding, since Unicode codepoints are 21-bit values. The underlying data
  * structure is a Java `long` (64-bit integer) array, allowing either 8x 8-bit (ISO 8859-1) or 3x
@@ -167,12 +169,12 @@ public class String
      * Internal constructor.
      *
      * @param ctx      the XVM context
-     * @param data
-     * @param unicode
-     * @param hash
-     * @param start
-     * @param end
-     * @param next
+     * @param data     the packed character storage
+     * @param unicode  true for 21-bit Unicode codepoints, false for 8-bit ISO 8859-1 characters
+     * @param hash     the cached hash code, or zero if it has not been computed
+     * @param start    the index of the first character in the storage
+     * @param end      the index following the last character in the storage
+     * @param next     the continuation for a long string, or null if there is none
      */
     String(Ctx ctx, long[] data, boolean unicode, long hash, int start, int end, String next) {
         super(ctx);
@@ -191,9 +193,9 @@ public class String
 
     /**
      * Native implementation of String.x constructor:
-     * <pre>
+     * <pre>{@code
      *     construct(Char[] chars)
-     * </pre>
+     * }</pre>
      */
     public static String $new(Ctx ctx,TypeConstant type, ArrayᐸCharᐳ chars) {
         // TODO handle huge arrays
@@ -245,9 +247,9 @@ public class String
 
     /**
      * The lazily initialized String.x property:
-     * <pre>
+     * <pre>{@code
      *     Char[] chars;
-     * </pre>
+     * }</pre>
      */
     private ArrayᐸCharᐳ chars;
 
@@ -255,9 +257,9 @@ public class String
 
     /**
      * The native implementation of String.x property getter:
-     * <pre>
+     * <pre>{@code
      *     Char[] chars;
-     * </pre>
+     * }</pre>
      */
     public ArrayᐸCharᐳ chars$get(Ctx ctx) {
         if (chars == null) {
@@ -277,7 +279,9 @@ public class String
     /**
      * Native implementation of:
      *
+     * <pre>{@code
      *     Boolean empty.get();
+     * }</pre>
      */
     public boolean empty$get$p(Ctx ctx) {
         return start == end;
@@ -286,7 +290,9 @@ public class String
     /**
      * Native implementation of:
      *
-     *      Int size.get();
+     * <pre>{@code
+     *     Int size.get();
+     * }</pre>
      */
     public long size$get$p(Ctx ctx) {
         return end - start + (next == null ? 0 : next.size$get$p(ctx));
@@ -294,7 +300,10 @@ public class String
 
     /**
      * Native implementation of:
-     *   @Op("+") String! add(Object o) {
+     *
+     * <pre>{@code
+     *     @Op("+") String! add(Object o)
+     * }</pre>
      */
     public String add(Ctx ctx, Object obj) {
         // TODO CP: optimize
@@ -303,7 +312,10 @@ public class String
 
     /**
      * Native implementation of:
-     *   @Op("[]") Char getElement(Int index)
+     *
+     * <pre>{@code
+     *     @Op("[]") Char getElement(Int index)
+     * }</pre>
      */
     public int getElement$p(Ctx ctx, long index) {
         if (index < 0) {
@@ -314,7 +326,10 @@ public class String
 
     /**
      * Native implementation of:
-     *   Iterator<Char> iterator() = chars.iterator();
+     *
+     * <pre>{@code
+     *     Iterator<Char> iterator() = chars.iterator();
+     * }</pre>
      */
     public IteratorᐸCharᐳ iterator(Ctx ctx) {
         return new nIterator(ctx);
@@ -376,10 +391,11 @@ public class String
 
     /**
      * The native implementation of String.x
-     * <pre>
+     * <pre>{@code
      *    Appender<Char> appendTo(Appender<Char> buf)
-     * </pre>
-     * This is native as it will perform better and avoid creating a char array
+     * }</pre>
+     *
+     * <p>This is native as it will perform better and avoid creating a char array
      */
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ buf) {
         long size = size$get$p(ctx);
@@ -480,7 +496,9 @@ public class String
     /**
      * The native implementation of:
      *
-     * static <CompileType extends Hashable> Int hashCode(CompileType value);
+     * <pre>{@code
+     *     static <CompileType extends Hashable> Int hashCode(CompileType value);
+     * }</pre>
      */
     public static long hashCode$p(Ctx ctx, nType type, String value) {
         return value.toString().hashCode();
@@ -491,7 +509,9 @@ public class String
     /**
      * The native implementation of:
      *
-     * static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * <pre>{@code
+     *     static <CompileType extends Orderable> Ordered compare(CompileType value1, CompileType value2);
+     * }</pre>
      */
     public static Ordered compare(Ctx ctx, nType type, String value1, String value2) {
         // ToDo Optimize???
@@ -504,7 +524,9 @@ public class String
     /**
      * Native implementation of:
      *
-     *  static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
+     * <pre>{@code
+     *     static <CompileType extends String> Boolean equals(CompileType value1, CompileType value2)
+     * }</pre>
      */
     public static boolean equals$p(Ctx ctx, nType type, String value1, String value2) {
         // TODO CP: optimize
@@ -515,7 +537,9 @@ public class String
     /**
      * TEMPORARY: Native implementation of
      *
-     *      Boolean defined.get()
+     * <pre>{@code
+     *     Boolean defined.get()
+     * }</pre>
      */
     public boolean defined$get$p(Ctx ctx) {
         return ctx.container.isSpecified(toString());
@@ -524,9 +548,14 @@ public class String
     // ----- xObj internal -------------------------------------------------------------------------
 
     /**
-     * @param index an illegal index
+     * Throw an exception for an invalid string index.
      *
-     * @throws OutOfBounds
+     * @param ctx    the XVM context
+     * @param index  an illegal index
+     *
+     * @return (never returns)
+     *
+     * @throws nException wrapping an {@link OutOfBounds}, always
      */
     private boolean oob(Ctx ctx, long index) {
         throw Exception.$oob(ctx, "String index out of range: " + index);

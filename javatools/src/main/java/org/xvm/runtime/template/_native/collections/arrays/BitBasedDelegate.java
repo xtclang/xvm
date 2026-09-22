@@ -357,7 +357,7 @@ public abstract class BitBasedDelegate
     }
 
     /**
-     * Calculate a mask of the specified bit in the byte array at {@ling #index}.
+     * Calculate a mask of the specified bit in the byte array at {@link #index(long)}.
      *
      * @param iBit  the bit index
      *
@@ -368,7 +368,7 @@ public abstract class BitBasedDelegate
     }
 
     /**
-     * Calculate a tail mask for the specified bit in the byte array at {@ling #index}.
+     * Calculate a tail mask for the specified bit in the byte array at {@link #index(long)}.
      *
      * @param iBit  the bit index
      *

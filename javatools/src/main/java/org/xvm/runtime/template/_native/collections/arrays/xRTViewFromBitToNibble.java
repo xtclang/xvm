@@ -20,7 +20,7 @@ import org.xvm.runtime.template.numbers.xInt16;
 import org.xvm.runtime.template.numbers.xNibble;
 
 /**
- * The native RTViewFromBit<Nibble> implementation.
+ * The native {@code RTViewFromBit<Nibble>} implementation.
  */
 public class xRTViewFromBitToNibble
         extends xRTViewFromBit {

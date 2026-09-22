@@ -88,8 +88,8 @@ public class MethodDeclarationStatement
     /**
      * Create a MethodDeclarationStatement that turns an expression into a MethodStructure. This is
      * used, for example, by initializers.
-     * <p/>
-     * Note: the underlying expression can be retrieved using the {@link #getInitializerExpression()}
+     *
+     * <p>Note: the underlying expression can be retrieved using the {@link #getInitializerExpression()}
      * method.
      *
      * @param struct  the MethodStructure that this MethodDeclarationStatement is intended to
@@ -854,8 +854,9 @@ public class MethodDeclarationStatement
      * Check if the specified "into" type applies to the specified "base" type and potentially
      * to the "next" annotation type.
      *
-     * Note, that the "into" for the first annotation *must* be strictly into the base type (which
-     * is either Method or Function), but the following could also apply to the previous ones.
+     * <p>Note, that the "into" for the first annotation *must* be strictly into the base type
+     * (which is either Method or Function), but the following could also apply to the previous
+     * ones.
      */
     private boolean isApplicable(TypeConstant typeInto, TypeConstant typeBase, TypeConstant typeNext) {
         if (typeInto.isIntoMetaData(typeBase, true)) {

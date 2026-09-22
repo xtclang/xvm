@@ -29,12 +29,12 @@ public class Decimal128
     }
 
     /**
-     * Construct a decimal value from two Java <tt>long</tt> value whose format is that of an
+     * Construct a decimal value from two Java <code>long</code> value whose format is that of an
      * IEEE-754-2008 128-bit decimal.
      *
-     * @param nHBits  a 64-bit Java <tt>long</tt> containing the high 64 bits of an IEEE-754-2008
+     * @param nHBits  a 64-bit Java <code>long</code> containing the high 64 bits of an IEEE-754-2008
      *                128-bit decimal
-     * @param nLBits  a 64-bit Java <tt>long</tt> containing the low 64 bits of an IEEE-754-2008
+     * @param nLBits  a 64-bit Java <code>long</code> containing the low 64 bits of an IEEE-754-2008
      *                128-bit decimal
      */
     public Decimal128(long nHBits, long nLBits) {
@@ -130,7 +130,7 @@ public class Decimal128
     }
 
     /**
-     * @return the significand of the decimal as a Java <tt>BigInteger</tt>
+     * @return the significand of the decimal as a Java <code>BigInteger</code>
      */
     public BigInteger getSignificand() {
         long nHBits = ensureFiniteHighBits(m_nHBits);
@@ -172,7 +172,7 @@ public class Decimal128
     }
 
     /**
-     * @return the exponent of the decimal as a Java <tt>int</tt>
+     * @return the exponent of the decimal as a Java <code>int</code>
      */
     public int getExponent() {
         // combination field is 17 bits (from bit 46 to bit 62), including 12 "pure" exponent bits
@@ -191,7 +191,7 @@ public class Decimal128
     /**
      * Obtain the high 64 bits of the IEEE-754-2008 128-bit decimal.
      *
-     * @return a 64-bit Java <tt>long</tt> containing the high bits of an IEEE-754-2008 decimal
+     * @return a 64-bit Java <code>long</code> containing the high bits of an IEEE-754-2008 decimal
      */
     public long getHighBits() {
         return m_nHBits;
@@ -200,7 +200,7 @@ public class Decimal128
     /**
      * Obtain the low 64 bits of the IEEE-754-2008 128-bit decimal.
      *
-     * @return a 64-bit Java <tt>long</tt> containing the low bits of an IEEE-754-2008 decimal
+     * @return a 64-bit Java <code>long</code> containing the low bits of an IEEE-754-2008 decimal
      */
     public long getLowBits() {
         return m_nLBits;
