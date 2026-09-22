@@ -155,7 +155,7 @@ and one under `api`. These are directory counts, not a compile-time call graph; 
 |---|---|
 | `RelOpExpression` inference/fit/operand selection; `ArrayAccessExpression` inference/fit/accessor selection; `Expression` assignability | Speculative candidate searches. Keep quiet; explicit `PROBE` is appropriate when a site is changed. |
 | `AstNode.transformType`, enum narrowing in `CmpExpression` / `TypeCollector`, `StatementBlock.isReservedNameReadable` | Metadata or feasibility queries. Their reporting validation callers must be tested before deciding to propagate a listener here. |
-| Array accessor validation, assignment-operator lookup, constructor-super lookup, property target metadata | Potential reporting consumers. Highest-priority source-reproducer backlog; no blanket conversion based only on listener availability. |
+| Array accessor validation, assignment-operator lookup, constructor-super lookup, property target metadata | Initially selected for source reproducers; see the bounded follow-up below. Listener availability alone does not establish that a site owns reporting. |
 | `NameExpression` bound-function/atomic BAST and `ToIntExpression` conversion metadata | Post-validation code generation. Keep failures visible at the embedding boundary; establish a missing-diagnostic reproducer before altering replay. |
 | `TypeInfoReal`, property metadata, virtual-child fallback, mixin annotations | Shared recursive metadata paths; some run during provisional composition. Need caller/stage evidence. |
 | `EvalCompiler`, initializer/delegation generation, JIT descriptors and runtime op lookups | Include debugger/runtime consumers; their location in `compiler` or `asm` does not make them LSP validation sites. |
@@ -164,3 +164,22 @@ The earlier sample of three out of seventy suppressed messages remains a sample.
 not close that survey or claim every silence is justified. It fixes the reproduced repository loss
 and makes the next TypeInfo investigation narrower: selected validation consumers first, with
 source-level evidence and explicit checks against provisional-composition cascades.
+
+### Bounded validation follow-up
+
+Four added source cases in `TypeInfoDiagnosticsTest` exercise indexed access, compound assignment,
+superclass construction and a property reference on types with the known duplicate-annotation
+warning. Each compiles successfully and reports `VERIFY-75` exactly once, without internal errors
+or extra cascades. These are examples of current reporting behavior, not proof that every generic
+composition or external-library use reports correctly.
+
+| Candidate | Caller evidence and disposition |
+|---|---|
+| `ArrayAccessExpression.validate` / `findArrayAccessor` | The accessor search is shared with inference and selection; the later validation read obtains metadata for the chosen method. The indexed-access case preserves the warning. Keep the search quiet; a loss involving a newly instantiated target type still needs a reproducer. |
+| `AssignmentStatement.findInPlaceAssignMethod` | Called during binary-AST generation, after validation of the synthesized operation. The zero-candidate branch appears to select the ambiguous-operator code, but ordinary missing-operator source never reaches it: `EmbeddingDiagnosticsTest` confirms validation reports `COMPILER-50`. This was a suspected defect, not a demonstrated user-facing loss; leave it unchanged. |
+| `TypeCompositionStatement` superclass-constructor lookup | `findSuperConstructor` immediately calls `typeSuper.ensureTypeInfo(errs)` before the no-argument read retrieves the selected method structure. The constructor case preserves the warning. No missing listener at that second read was demonstrated. |
+| `PropertyConstant.getPropertyInfo` / `getValueType` | Shared metadata APIs with compile-time and other consumers. The property-reference case preserves the warning, but does not establish reporting ownership for every caller. Keep explicit caller/stage investigation on the backlog. |
+
+No additional production listener migration is justified by these cases. Remaining suppression
+work needs generic/external-type source cases or instrumentation identifying a diagnostic that the
+host actually misses. The previous sample of seventy suppressed messages remains open.
