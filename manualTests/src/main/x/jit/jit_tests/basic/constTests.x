@@ -143,6 +143,26 @@ package constTests {
         testConstWithServiceIsStringable();
         testConstWithNullablePropIsStringable();
 
+        testConstWithUnionTypedTransientProp();
+    }
+
+    /**
+     * The generated Const methods do not support a union-typed property, but a @Transient property
+     * takes no part in them at all, so one should not stop the const from being generated.
+     */
+    void testConstWithUnionTypedTransientProp() {
+        TestUnionTransient c1 = new TestUnionTransient(1);
+        TestUnionTransient c2 = new TestUnionTransient(1);
+        TestUnionTransient c3 = new TestUnionTransient(2);
+
+        assert c1 == c2;
+        assert c1 != c3;
+        assert c1.hashCode() == c2.hashCode();
+        assert c1 <=> c3 == Lesser;
+    }
+
+    const TestUnionTransient(Int i) {
+        @Transient String|Int cached = "ignored";
     }
 
     void testEmptyConstShouldBeEqual() {
