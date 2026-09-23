@@ -1,5 +1,11 @@
 # Plan: Stabilize JavaTools Loading And XTC Task Classpaths
 
+Current status: the embedding branch uses `IsolatedRuntime` and an implementation classloader
+for DIRECT, owned by a build service. The optional PERSISTENT extension uses the same adapter in
+a separately owned worker; neither mutates the Gradle application classpath or repeatedly calls
+launchers. The historical investigation below is retained as context. Current behavior and
+limits are in the [embedding plan](embedded-runtime-plan.md#persistent-keep-the-host-warm-across-builds).
+
 ## Problem
 
 The Gradle plugin currently models JavaTools loading as a task:

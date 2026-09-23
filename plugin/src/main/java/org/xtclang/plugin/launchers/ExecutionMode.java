@@ -5,10 +5,16 @@ package org.xtclang.plugin.launchers;
  */
 public enum ExecutionMode {
     /**
-     * Direct in-process execution using ServiceLoader.
+     * Direct in-process execution using the embedding API.
      * Fastest, but shares JVM with Gradle.
      */
     DIRECT,
+
+    /**
+     * Experimental execution in a checkout-local worker reused across builds. Opt-in only;
+     * ordinary DIRECT execution retains its build-scoped lifetime.
+     */
+    PERSISTENT,
 
     /**
      * Forked JVM with inherited I/O (stdout/stderr go to parent).

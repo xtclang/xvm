@@ -2,7 +2,9 @@
 
 This is the proposed review and submission sequence for `lagergren/embedded-gradle-runtime`,
 not a set of PR descriptions or an instruction to publish branches. It records concrete scopes
-for constructing smaller branches later. No split branches have been created or validated yet.
+for constructing smaller branches later. The foundation extraction branches have not been
+created or validated. `lagergren/persistent-xtc-runtime` is a separate optional extension based
+on the completed foundation tip `766e17d51`; it does not replace that extraction plan.
 
 Source snapshot: `origin/master` at `6539aa6eb`; the original embedding implementation ends at
 `c884779d6`. The keystore correction is now commit `ca52e2aae`, followed by the common ownership
@@ -31,7 +33,7 @@ The local corrections are `0814693ae` (runtime completion), `c3bfc9582` (timer p
 `0406f3062` (deferred host cleanup and preserving queued shutdown work), and `e1eb9fb1a`
 (socket handoff). Fold them into the listed extraction scopes. The socket regression
 injects native constructor/assignment failures and observes peer EOF before owner close; the older
-blocked-read fixture still needs a native-entry barrier. The eleven-PR sequence below remains a
+blocked-read fixture still needs a native-entry barrier. The foundation sequence below remains a
 scope plan, not a readiness claim.
 
 The focused lifetime correction touches `Runtime`, `Container` and `OwnedResource`, with Java
@@ -54,7 +56,8 @@ the weak discovery registry and adds strong roots only for outstanding cleanup o
 | 6 | File compilation through the embedding API | 5b (the source-tree execution regression uses `RunRequest`) | Extract the file-compiler API and source-tree tests from `d5947a903` |
 | 7 | Reuse embedding sessions for Gradle DIRECT compile/run/xUnit | 5b and 6 | Extract plugin and bootstrap-consumer changes from `d5947a903` |
 | 8 | Experimental JIT execution through the owned embedding session | 5b; include the small plugin adapter after 7 | Extract JIT changes from `c884779d6`; exclude manual-test rollout |
-| 9 | Make manualTests use DIRECT by default | 4b, 7 and 8 | Only the manual-test convention and Gradle preview startup changes from `c884779d6` |
+| 9 | Make manualTests use DIRECT by default | 4b, 7 and 8 | Manual-test convention, preview startup and removal of automatic mode sweeps |
+| 10 | Optional PERSISTENT worker across builds | 4b, 7; 9 only for the manualTests convention hunk | Separate branch `lagergren/persistent-xtc-runtime`, diff after `766e17d51` |
 
 PRs 1 and 2 can be submitted independently. PRs 3–8 form an implementation sequence, but PR 6
 does not need JIT and PR 8 does not need the manual-test default. Keep PR 9 separate so reviewers
@@ -68,8 +71,8 @@ the split. Reconstruct the listed hunks on top of their predecessors, then run t
 
 ### Review size and readiness
 
-The recommended sequence now has **eleven PRs**: the original ten extraction scopes plus PR 4b
-for native-resource integration. Submit 4b after 5b so its real-runner regressions are available.
+The recommended sequence has **eleven foundation PRs plus one optional extension (PR 10)**.
+PR 4b contains native-resource integration. Submit 4b after 5b so its real-runner regressions are available.
 These are scope judgments from the actual diff, not quality scores or validated extraction counts.
 
 | Scope | Review assessment |
@@ -83,7 +86,8 @@ These are scope judgments from the actual diff, not quality scores or validated 
 | 6 | Small compiler adapter and file-tree regressions. |
 | 7 | Moderate plugin/service change; request dispatch and service/classloader lifetime are one unit. |
 | 8 | Moderate, independent backend review with explicit limitations and five focused regressions. |
-| 9 | Small rollout change with broad execution-mode verification, not a runtime implementation PR. |
+| 9 | Small rollout change; one opt-in smoke task replaces automatic mode sweeps. |
+| 10 | Separate worker/protocol/lifecycle review; defaults remain unchanged and heavy tests stay opt-in. |
 
 Do not describe the combined scope 5 as a small PR: it includes both lifecycle and request/xUnit
 capabilities. The 5a/5b split is recommended for submission. Combining them is a fallback only if
@@ -425,7 +429,7 @@ JVM argument string preserving the existing daemon settings and adding `--enable
 ```bash
 ./gradlew :plugin:test spotlessCheck
 ./gradlew :xdk:build :manualTests:runSequential :manualTests:runParallel \
-  :manualTests:runXunitTests :manualTests:runTestAllExecutionModes \
+  :manualTests:runXunitTests \
   -PxtcDefaultExecutionMode=DIRECT \
   -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true \
   '-Dorg.gradle.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 --enable-preview' \
@@ -484,13 +488,13 @@ root `gradle.properties`, and matching documentation of the manual-test default/
 Preserve existing heap/metaspace settings rather than making an unrelated tuning change.
 
 This changes compilation, interpreter execution and xUnit conventions in manualTests. The existing
-explicit JIT task consequently also uses DIRECT; it must wait for PR 8. Explicit execution-mode
-smoke tasks retain their own modes. Add no new JIT dependencies to build/check/CI, and do not change
+explicit JIT task consequently also uses DIRECT; it must wait for PR 8. A single explicit `runExecutionModeSmoke --mode=<mode>` replaces the all-modes tasks; remove
+their dependencies from the manual CI/full-suite aggregates. Add no new JIT dependencies to build/check/CI, and do not change
 the plugin-wide default.
 
 ```bash
 ./gradlew :manualTests:runSequential :manualTests:runParallel \
-  :manualTests:runXunitTests :manualTests:runTestAllExecutionModes \
+  :manualTests:runXunitTests \
   :manualTests:runSmallFloats :manualTests:runSmallFloatsJit spotlessCheck \
   -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true \
   --configuration-cache --info
@@ -503,6 +507,73 @@ output, not just the aggregate result. Land PR 4b and its native-disposal assert
 test-only rollout. The common mechanism alone does not establish cleanup. The JIT task still
 covers only its documented subset; interpreter native-resource tests do not establish JIT parity.
 
+## PR 10 — optional PERSISTENT execution across builds
+
+Source boundary: the changes after **`766e17d51`** on **`lagergren/persistent-xtc-runtime`**.
+The existing foundation remains independently submittable. This is a scope/extraction plan,
+not a PR body. The user authorized committing and pushing this extension; no PR has been opened.
+
+Required before merging: PR 7's embedding adapter and PR 4b's native cleanup, including the
+later completion, timer, deferred-release, socket-handoff and nested-owner corrections assigned
+above. It does not require JIT or changing any consumer's default to PERSISTENT. In the combined
+branch it preserves PR 8's DIRECT JIT support and rejects JIT only in the new mode.
+
+Exact included scope:
+
+- `RuntimeExecutor`, `RuntimeOutput` and `IsolatedRuntime`: share the existing isolated embedding
+  adapter between DIRECT and a plain Java host; refactor `DirectRuntimeBuildService` and
+  `impl/IsolatedDirectExecutor` accordingly, including the active-control cancellation bridge.
+- `runtime/persistent/{PersistentWorker,WorkerClient,WorkerProtocol,WorkerSettings,WorkerLaunch}`:
+  authenticated local protocol, private runtime images, startup/lifetime locks, serialized
+  requests, leases, cancellation, idle/explicit shutdown and failure without replay.
+- `PersistentRuntimeBuildService` and `launchers/PersistentStrategy`: Gradle client ownership,
+  content/JDK/options/environment identity and request adaptation. Retain the existing request
+  DTOs and share construction helpers from `DirectStrategy`.
+- `ExecutionMode`, `XtcLauncherTask`, `XtcCompileTask`, `XtcRunTask`, `StopXtcWorkerTask`,
+  `XtcProjectDelegate` and `DefaultXtcLauncherTaskExtension`: mode selection, configuration-cache
+  compatible providers/service registration and explicit stop task.
+- Root `gradle.properties`: default-off convenience selector and configurable timeout defaults.
+  `manualTests/build.gradle.kts`: opt-in convention override. The smoke simplification belongs
+  to PR 9; include it there when extracting, so PR 10 has no automatic test-mode dependencies.
+- `PersistentWorkerTest`: fake-runtime protocol/ownership tests in the ordinary plugin suite.
+  `manualTests/src/test/persistent/PersistentBuildTest.java`: separately invoked real-build test,
+  with its own prerequisite build and temporary consumer. Do not wire it into check/build/CI.
+- Corresponding implementation plan, plugin README, loading/test plans, JIT limitations and
+  ownership-audit notes. Preserve the distinction between completed checks and follow-ups.
+
+The extension is recorded in three commits:
+
+1. `d7cf58526` — extract the host-independent embedding adapter with DIRECT behavior preserved.
+2. `eaf40ed22` — add worker protocol/lifetime and focused unit tests.
+3. **Expose opt-in PERSISTENT execution in the Gradle plugin** — Gradle wiring, the explicit
+   integration harness, smoke-test simplification and documentation.
+
+These commit boundaries keep the extension reviewable. The checks below validate their combined
+result; the intermediate commits have not been independently rebuilt and tested.
+
+Validation gate:
+
+```bash
+./gradlew :plugin:test spotlessCheck --console=plain
+java manualTests/src/test/persistent/PersistentBuildTest.java
+./gradlew :manualTests:runSequential :manualTests:runXunitTests \
+  -PxtcDefaultExecutionMode=PERSISTENT \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true --info
+./gradlew :manualTests:stopXtcWorker \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true
+```
+
+Repeat a real task to verify configuration-cache reuse and matching worker identities. Confirm
+zero unexpected unit-test skips from XML and correct XTC output, not just a process exit code.
+DIRECT must still execute successfully after extracting the shared adapter. Verify the ordinary
+manual CI graph has no all-modes sweep or automatic PERSISTENT/JIT additions. Broader real-client
+concurrency, crashes during active execution, retained-memory limits and disk pruning remain
+explicit follow-ups. The combined optional extension has passed 26 plugin tests without skips,
+the self-provisioning consumer harness (including idle-worker crash replacement), all 21 sequential
+manual modules and 19 xUnit demo tests through PERSISTENT, a DIRECT smoke run, explicit worker
+shutdown and formatting checks. These do not
+replace validation of each reconstructed intermediate branch.
+
 ## Shared files and extraction rules
 
 | Shared file | Ownership of hunks |
@@ -514,9 +585,9 @@ covers only its documented subset; interpreter native-resource tests do not esta
 | `JitControl.java` | PR 5 interface-signature compatibility, then PR 8 real embedded implementation |
 | `ServiceContext.java` | Generic lifecycle/thread-local changes in PR 3; concurrent callback map and exception-continuation dispatch in PR 4b |
 | `xCoreRepository.java` / `xRTFileTemplate.java` | PR 5 interpreter request-repository correctness |
-| `IsolatedDirectExecutor.java` | PR 7 interpreter compile/run/xUnit; PR 8 JIT selection and limitation message |
+| `IsolatedDirectExecutor.java` | PR 7 interpreter compile/run/xUnit; PR 8 JIT selection; PR 10 host-independent output/dispatch and cancellation |
 | `EmbeddingLifecycleTest.java` | PR 5 interpreter/audit cases; PR 6 file compilation; PR 8 five JIT cases |
-| `embedded-runtime-plan.md` | PR 5 API design; PR 6 compilation; PR 7 plugin/measurements; PR 8 JIT; PR 9 defaults |
+| `embedded-runtime-plan.md` | PR 5 API design; PR 6 compilation; PR 7 plugin/measurements; PR 8 JIT; PR 9 defaults; PR 10 worker lifetime |
 
 Imports, overloads, helpers and Javadocs must follow their owning code. Taking whole current files
 from the branch is unsafe for these shared files. A test may be moved to a focused class during
@@ -539,8 +610,9 @@ permission to silently add or enable tests that substantially expand automatic J
 - **Further metadata reuse:** explicit constant-pool ownership, immutable definition generations
   and measured compiler/application preparation caches. Coordinate with the `lagergren/errs`
   work; do not import that redesign while extracting these PRs.
-- **A host warm across builds:** the build-scoped service already exists in PR 7. A daemon-wide
-  or worker-process lifetime needs its own ownership, invalidation and shutdown design.
+- **Broader persistent-host policy:** PR 10 implements the first worker lifetime. Cross-root
+  sharing, bounded retained memory, disk quotas and broad concurrency/platform validation remain
+  outside this sequence.
 - **Broader execution policy:** concurrent DIRECT requests, custom injectors, plugin-wide DIRECT
   default and broader JIT capability/strict-placeholder reporting.
 

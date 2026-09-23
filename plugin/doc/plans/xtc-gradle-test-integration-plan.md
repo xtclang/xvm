@@ -39,7 +39,9 @@ The plugin itself already acknowledges this gap in:
 Any design has to respect these realities:
 
 1. XTC tests are not JVM/JUnit tests.
-2. The current execution model uses `javatools` / `TestRunner`, often in a forked process.
+2. ATTACHED uses `javatools` / `TestRunner` in a forked process. DIRECT and the opt-in PERSISTENT
+   extension execute interpreter xUnit through the embedding API. This result-reporting proposal
+   is independent of the host lifetime; PERSISTENT adds no automatic mode sweep to CI.
 3. The plugin must continue to work both:
    - inside this monorepo while self-hosting the XDK
    - as a published third-party Gradle plugin

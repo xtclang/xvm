@@ -29,6 +29,7 @@ import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
 import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
+import org.xtclang.plugin.runtime.PersistentRuntimeBuildService;
 
 import java.io.File;
 import java.util.Collections;
@@ -81,6 +82,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected final Provider<@NotNull String> toolchainExecutable;
     protected final Provider<@NotNull String> projectVersion;
     protected final Provider<DirectRuntimeBuildService> directRuntimeService;
+    protected final Provider<PersistentRuntimeBuildService> persistentRuntimeService;
 
     // Captured at configuration time to support xtcPluginOverrideVerboseLogging property
     private final boolean overrideVerboseLogging;
@@ -162,6 +164,16 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             });
         // Requests are serialized by the service. Attached tasks can still execute in parallel.
         usesService(directRuntimeService);
+        final var providers = project.getProviders();
+        final var workerDirectory = project.getRootProject().getLayout().getProjectDirectory().dir(".gradle/xtc-workers");
+        this.persistentRuntimeService = project.getGradle().getSharedServices()
+            .registerIfAbsent("xtcPersistentRuntime", PersistentRuntimeBuildService.class, spec -> {
+                spec.getParameters().getWorkerDirectory().set(workerDirectory);
+                spec.getParameters().getStartupTimeout().set(providers.gradleProperty("xtcPersistentStartupTimeout").orElse("PT30S"));
+                spec.getParameters().getIdleTimeout().set(providers.gradleProperty("xtcPersistentIdleTimeout").orElse("PT10M"));
+                spec.getParameters().getShutdownTimeout().set(providers.gradleProperty("xtcPersistentShutdownTimeout").orElse("PT30S"));
+            });
+        usesService(persistentRuntimeService);
 
         // Validate configuration-time captures for configuration cache compatibility
         validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
@@ -313,7 +325,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
      * Set execution mode from command line.
      * Example: ./gradlew runXtc --mode=DETACHED
      */
-    @Option(option = "mode", description = "Execution mode: DIRECT, ATTACHED, or DETACHED")
+    @Option(option = "mode", description = "Execution mode: DIRECT, PERSISTENT (opt-in), ATTACHED, or DETACHED")
     public void setExecutionModeOption(final ExecutionMode mode) {
         this.executionMode.set(mode);
     }
@@ -404,6 +416,11 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     @Internal
     protected Provider<@NotNull String> getProjectVersion() {
         return projectVersion;
+    }
+
+    @Internal
+    protected Provider<PersistentRuntimeBuildService> getPersistentRuntimeService() {
+        return persistentRuntimeService;
     }
 
     @Internal

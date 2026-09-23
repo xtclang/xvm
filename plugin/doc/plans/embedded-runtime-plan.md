@@ -1,16 +1,17 @@
 # Reusable compiler and runtime for Gradle
 
 Investigation baseline: `master` at `c3e9d641808091910abb018cb40885300ee08001`.
-Working branch: `lagergren/embedded-gradle-runtime`.
+Within-build branch: `lagergren/embedded-gradle-runtime`.
+Opt-in across-build extension: `lagergren/persistent-xtc-runtime`, based on `766e17d51`.
 
 The [PR submission plan](embedded-runtime-pr-plan.md) defines exact change scopes, dependencies,
-extraction steps and validation for eleven proposed PRs. The native-resource integrations are a
+extraction steps and validation for eleven foundation PRs and one optional PERSISTENT PR. The native-resource integrations are a
 separate commit and review scope from the common mechanism, embedding API and Gradle adapter.
 
 The within-build implementation is on this branch and `DIRECT` execution has passed all
 21 existing sequential manual-test modules. Five measured runs per mode reduced median elapsed
-time from 67.08 seconds ATTACHED to 43.47 seconds DIRECT. A later milestone extends the same
-ownership design to keep the host warm across builds.
+time from 67.08 seconds ATTACHED to 43.47 seconds DIRECT. The separate PERSISTENT extension now applies the same
+ownership design across builds. The measurements above concern DIRECT only.
 
 ## Recommendation
 
@@ -32,8 +33,8 @@ Missing capabilities must be implemented in embedding, with no fallback to repea
 Embedding owns runtime reuse, request isolation, completion, cancellation, and cleanup. The plugin
 owns the session's build lifetime and maps Gradle inputs and results to that API. Keep `ATTACHED`
 as the plugin default while proving the new `DIRECT` implementation. The `manualTests` build now
-defaults compilation, interpreter execution, and xUnit to `DIRECT`. Its explicit mode smoke tests
-retain their selected modes. `runSmallFloatsJit` now also uses DIRECT through the experimental JIT
+defaults compilation, interpreter execution, and xUnit to `DIRECT`. A single opt-in `runExecutionModeSmoke` task accepts `--mode`; it is not a dependency of
+build/check or the manual CI aggregates. `runSmallFloatsJit` now also uses DIRECT through the experimental JIT
 embedding backend. Use `-PxtcDefaultExecutionMode=ATTACHED` to override the manual-test default, or
 `--mode=ATTACHED` on an individual task (including a run task given `--jit`). The root Gradle daemon
 enables preview at startup to satisfy the manual tests' existing JVM option.
@@ -93,7 +94,7 @@ the execution runtime only on the first run avoids that dependency cycle.
   installed XDK is present. The JSON and metrics tests declare the runner module needed by the
   embedding host. Compilation itself still starts no runtime and needs no runner. Bootstrap
   dependency sets have separate runtime fingerprints; installed-XDK consumers share the same
-core-module fingerprint across their requests.
+  core-module fingerprint across their requests.
 - The build service now owns an executor instance with an embedding session. DIRECT calls are
   serialized inside the service, without imposing that limit on ATTACHED tasks. Runtime identity
   includes jar, core-module and plugin contents; application repositories are fresh per request.
@@ -138,7 +139,7 @@ xUnit demo tests also passed. Formatting and whitespace checks passed.
 ### Follow-up work after this branch
 
 The reusable Gradle build service within one build is implemented. The work below is separate
-from [keeping the host warm across builds](#later-keep-the-host-warm-across-builds). These are
+from [keeping the host warm across builds](#persistent-keep-the-host-warm-across-builds). These are
 follow-ups to the validated sequential execution model, not claims that the capabilities already
 exist. Prioritize the remaining resource ownership validation, then the constant-pool
 and metadata project.
@@ -631,7 +632,7 @@ from requiring another implementation of compiler or runner semantics.
 | Embedding backend using successive main containers | `InterpreterConnector.join()` clears the main-container field, suggesting a smaller sequential prototype; avoids the runner web module. | An internal embedding implementation option if child-container semantics cause incompatibilities. It still needs shutdown, output/context isolation, fresh repositories, and reliable completion. The plugin must use the same embedding API in either case. |
 | One isolated Gradle worker action for the whole sequential batch | Shares a JVM/runtime across the batch while keeping failures outside the Gradle daemon. | Useful fallback/comparison. A single action can own and close one session; separate work items must not assume they share a live Java object. |
 | Classloader-isolated action per module | Keeps implementation dependencies apart. | Classloader isolation alone does not supply runtime reuse or resource shutdown. |
-| Persistent XVM worker shared across builds | Amortizes initialization across separate invocations and allows a separate JDK/heap. | Recommended direction for the later milestone; needs a host protocol and lifecycle. |
+| Persistent XVM worker shared across builds | Amortizes initialization across separate invocations and allows a separate JDK/heap. | Implemented as opt-in PERSISTENT; validation and remaining limits below. |
 | Static runtime map in the plugin | Appears simple. | Ties live runtime state to Gradle/plugin classloader accidents and bypasses build ownership. Do not use as the cross-build solution. |
 
 Gradle's Worker API can reuse compatible worker JVMs and select separate JVM settings. It is an
@@ -760,13 +761,14 @@ creation. Separate the gain from eliminating coarse polling from the gain due to
 if needed, include a fresh-runtime baseline with corrected completion/shutdown. Record an
 unsuccessful or noisy speed comparison honestly rather than adding a timing assertion to CI.
 
-## Later: keep the host warm across builds
+## PERSISTENT: keep the host warm across builds
 
-The first milestone's embedding session API remains the only in-process entry point. The next stage moves its owner into
-a small, headless Java worker process and makes the per-build Gradle service a client/lease owner.
-The same worker JVM can then handle requests from successive builds; it need not be the Gradle
-daemon JVM. Introduce an explicitly named persistent-worker mode rather than making `DIRECT`
-secretly fork a process.
+Implemented on `lagergren/persistent-xtc-runtime`, as a separately reviewable extension after
+`766e17d51`. `DIRECT` still owns its session within one Gradle build. `PERSISTENT` starts or
+connects to a headless Java worker that survives build completion. Both use the same isolated
+embedding adapter for compilation, interpreter execution and xUnit. There is no repeated-launcher
+fallback and no application-container reuse. PERSISTENT currently rejects experimental JIT runs;
+use DIRECT or ATTACHED for the documented JIT subset.
 
 ```text
 Build A service ---- lease A ----\
@@ -775,39 +777,106 @@ Build B service ---- lease B ----/  implementation loader + warm XVM per runtime
                                     fresh request/compiler/container state each time
 ```
 
-1. **Host and discovery.** Start or connect to a compatible local worker on demand. Key discovery
-   by host protocol/API version, Java executable and required flags, and XDK/plugin runtime
-   contents. Use an atomic startup/discovery mechanism and handshake so simultaneous builds do
-   not accidentally attach to an incompatible or half-started process. Use local IPC with explicit
-   ownership; the current runner's web server is not the Gradle worker protocol.
+### Selection and defaults
 
-2. **Build leases and request isolation.** Each build obtains a lease; every request identifies
-   its build/project, module-path generation, working directory, output targets, and resource
-   context. Initially queue requests serially per runtime. Build completion releases the lease
-   and all build-owned controls, streams, and temporary state while retaining the healthy host
-   and reusable core runtime. A disconnected/cancelled client must cancel its work and release
-   its lease without stopping another build's work.
+The plugin default remains ATTACHED; manualTests remains DIRECT. Root `gradle.properties`
+contains `xtcPersistentRuntime=false`. This is a convenience default selector, not a second gate:
+any of these selects PERSISTENT without requiring another switch:
 
-3. **Versioning and invalidation.** Never key reuse only by a version string or path. Changed
-   runtime jars, bootstrap modules, JVM requirements, or protocol require a new compatible owner;
-   retire old owners after active leases finish. Project outputs and dependency changes must
-   refresh request repositories immediately. Keep compiler ASTs, diagnostics, application
-   singletons, and failed results out of cross-build caches. Gradle remains authoritative for
-   task inputs, outputs, up-to-date checks, and build-cache correctness.
+```bash
+./gradlew runXtc --mode=PERSISTENT
+./gradlew build -PxtcDefaultExecutionMode=PERSISTENT
+XTC_EXECUTION_MODE=PERSISTENT ./gradlew runXtc
+./gradlew build -PxtcPersistentRuntime=true
+```
 
-4. **Bounded lifetime and recovery.** Define idle timeout, memory/runtime-count limits, an explicit
-   stop command, and cleanup of stale discovery records. Rotate idle runtimes when retained
-   metadata exceeds a measured budget. Detect a dead/unhealthy worker and start a replacement
-   for subsequent requests. Do not automatically replay a run whose side effects may already
-   have happened. Shutdown must close all sessions and await threads before process exit.
+An explicit task mode wins over the convention. The mode property wins over the environment
+variable, which wins over the boolean convenience selector. Task `--mode` only affects that task;
+use the property to select persistent compilation as well as execution.
 
-5. **Extend the evidence.** Benchmark first build, immediate second build, changed-source build,
-   and changed-XDK build; show the same worker/runtime IDs for compatible requests and new IDs
-   after invalidation. Test different projects, two simultaneous Gradle invocations, interrupted
-   clients, worker crashes, and stale module replacements. Measure IPC and retained-memory costs
-   as well as time saved. This stage succeeds only if later builds stay correct and measurably
-   benefit, not merely because a process remains alive.
+Configurable ISO-8601 duration properties have named defaults:
 
-A Gradle process-isolated worker is worth comparing for within-build isolation, but do not base
-cross-build ownership on undocumented worker/classloader retention. A dedicated host makes the
-cross-build lifecycle explicit and also supports reuse by other Java/tooling clients later.
+| Property | Default | Meaning |
+|---|---|---|
+| `xtcPersistentStartupTimeout` | `PT30S` | Starting, discovering and authenticating a compatible worker |
+| `xtcPersistentIdleTimeout` | `PT10M` | Idle lifetime after the last build lease and request are released |
+| `xtcPersistentShutdownTimeout` | `PT30S` | Bounded request cancellation and worker shutdown |
+
+Run `stopXtcWorker` in the consumer build to stop its idle workers. It refuses to stop a worker
+leased by another build. Each included build has its own directory under its root's
+`.gradle/xtc-workers`; use `:manualTests:stopXtcWorker` for manualTests. A worker uses the selected
+Java toolchain and task JVM arguments. No new heap/metaspace flags or cache disabling are added.
+
+### Ownership and compatibility
+
+- The Gradle build service owns only connections and request output sinks. The worker owns the
+  embedding session and its implementation loader. Closing the service releases its leases;
+  normal worker idle/explicit shutdown closes execution and native resources before the loader.
+- A versioned binary protocol uses authenticated loopback connections and bounded text/list
+  messages. Discovery is published atomically. Startup and lifetime file locks prevent duplicate
+  owners and replacement while an old owner still uses its image. Private discovery directories
+  have owner-only POSIX permissions where supported; inherited ACLs apply on other platforms.
+- Identity includes plugin/runtime/core-module contents, the resolved Java executable and release
+  metadata, JVM arguments, idle/shutdown settings and inherited environment. Environment values
+  are hashed and are not logged or stored in discovery. Workers load private artifact copies,
+  so a rebuild cannot overwrite classes underneath a running worker.
+- Every request carries its own project directory, repository paths, arguments and output targets.
+  Application state, compilation state and diagnostics are fresh. Changed source or application
+  binaries are read for the next request; changed runtime inputs select another identity.
+- Requests serialize per worker. Disconnect cancels that lease's queued/active work. A request
+  that may have started is never replayed automatically. An infrastructure or cleanup failure
+  retires the host; an ordinary compilation/application failure can return a nonzero result while
+  preserving a healthy session. A later build may start a replacement.
+- Old identities expire after their leases are released and their idle budget elapses. Stale
+  discovery is replaced under the lifetime lock, and a replacement removes that identity's old
+  private images. Images for identities that are never reused remain on disk; a cross-identity
+  disk quota/pruning policy is still a follow-up. Do not remove worker directories while active.
+
+### Verification and CI cost
+
+The inexpensive protocol/host unit tests use a fake runtime, loopback sockets, explicit completion
+signals and a controlled idle clock. They require no installed XDK and no sleeps/GC/timing assertions.
+The heavier real-Gradle test is deliberately opt-in and builds its own prerequisites:
+
+```bash
+java manualTests/src/test/persistent/PersistentBuildTest.java
+```
+
+It creates an isolated consumer and checks actual XTC output across separate Gradle invocations,
+configuration-cache reuse, fresh singleton state, source replacement, failure recovery, changed
+runtime artifacts, explicit stop/restart and replacement after an idle worker process is killed.
+Its elapsed-time output is observational, not a speed assertion. Run a chosen manual smoke mode
+explicitly when needed:
+
+```bash
+./gradlew :manualTests:runExecutionModeSmoke --mode=PERSISTENT \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true --info
+```
+
+The old all-modes tasks and their automatic aggregate dependencies are removed. PERSISTENT adds
+no automatic XDK rebuild, multi-invocation integration run or JIT execution to CI. Configuration
+and build caches retain their normal behavior.
+
+### Completed checks (2026-09-23)
+
+- All 26 plugin tests passed with zero failures/errors/skips, including six worker tests.
+- The opt-in consumer harness passed all checks, including replacement after a killed idle
+  worker. The immediate second build reused both the worker identity and configuration cache.
+- All 21 existing sequential manual modules and all 19 xUnit demo tests passed with
+  `-PxtcDefaultExecutionMode=PERSISTENT`.
+- The explicit DIRECT smoke task passed after the shared-adapter refactor. Validation workers
+  were stopped through the manualTests and XDK stop tasks.
+- The normal `runCiTestTasks` graph contains the existing sequential suite and no mode smoke,
+  all-modes sweep, PERSISTENT-only task or additional JIT execution.
+- Formatting and whitespace checks passed. Timing observations from the consumer harness are
+  not a controlled PERSISTENT-versus-DIRECT benchmark; no new speedup figure is claimed.
+
+### Remaining boundary
+
+This first extension is interpreter-only and serial. Separate consumer roots do not share hosts.
+Further work includes simultaneous real Gradle clients, crashes during active execution, sustained
+retained-memory measurements, a runtime-count/memory budget, cross-identity disk pruning and
+platform coverage. Idle expiry is bounded in time, not a demonstrated memory ceiling. Broader
+metadata reuse still requires explicit constant-pool ownership. A persistent process alone does
+not establish a performance win; compare repeat builds doing actual work against DIRECT, including
+IPC, teardown and memory costs. Do not attribute the earlier DIRECT benchmarks to PERSISTENT.

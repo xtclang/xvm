@@ -40,7 +40,8 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
 
     protected DefaultXtcLauncherTaskExtension(final ObjectFactory objects, final ProviderFactory providers) {
         final var executionModeProperty =
-            providers.gradleProperty(XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE);
+            providers.gradleProperty(XtcPluginConstants.PROPERTY_DEFAULT_EXECUTION_MODE)
+                .orElse(providers.environmentVariable("XTC_EXECUTION_MODE"));
 
         this.objects = objects;
         this.providers = providers;
@@ -52,7 +53,9 @@ public abstract class DefaultXtcLauncherTaskExtension implements XtcLauncherTask
         this.executionMode = objects.property(ExecutionMode.class).convention(
             executionModeProperty
                 .map(DefaultXtcLauncherTaskExtension::parseExecutionMode)
-                .orElse(XtcPluginConstants.DEFAULT_EXECUTION_MODE)
+                .orElse(providers.gradleProperty("xtcPersistentRuntime")
+                    .map(value -> Boolean.parseBoolean(value) ? ExecutionMode.PERSISTENT : XtcPluginConstants.DEFAULT_EXECUTION_MODE)
+                    .orElse(XtcPluginConstants.DEFAULT_EXECUTION_MODE))
         );
         this.defaultJvmArgs = loadDefaultJvmArgs();
         this.jvmArgs = objects.listProperty(String.class).convention(defaultJvmArgs);

@@ -30,8 +30,8 @@ The Ecstasy Gradle Plugin integrates the Ecstasy language into Gradle's build ec
 
 - **Source Set Integration**: XTC source directories alongside Java/Kotlin code
 - **Dependency Management**: Transitive dependencies between XTC modules
-- **Multiple Launchers**: Native binaries, forked JVMs, or in-process execution
-- **Programmatic API Access**: Direct method calls to compiler without reflection
+- **Execution Modes**: Attached/detached child processes, build-scoped embedding or an opt-in persistent worker
+- **Embedding API**: Owned compiler/runtime sessions with request isolation and shutdown
 - **Configuration Cache**: Full support for Gradle's configuration cache
 - **Incremental Compilation**: Smart up-to-date checking for fast rebuilds
 - **Flexible Module Path**: Custom module path resolution for complex project structures
@@ -65,78 +65,63 @@ Key task types:
 
 ### Launcher System
 
-The plugin uses **JavaClasspathLauncher** for all XTC tool execution, providing optimal performance and flexibility.
+Select `ExecutionMode` through the `executionMode` property or a task's `--mode` option.
+The plugin default is ATTACHED; this repository's manualTests build defaults to DIRECT.
 
-#### JavaClasspathLauncher
-**File**: `org.xtclang.plugin.launchers.JavaClasspathLauncher`
+| Mode | Host and lifetime | Supported use |
+|---|---|---|
+| `ATTACHED` | A child JVM per launch; Gradle waits for completion | Default isolated compile/run/test execution |
+| `DETACHED` | A background child process | Long-running applications; output goes to configured files |
+| `DIRECT` | An isolated embedding session in the Gradle JVM, closed at build completion | Reuse for compile, interpreter run/xUnit and the experimental JIT subset |
+| `PERSISTENT` | A separate Java worker reused by successive builds | Opt-in compile and interpreter run/xUnit; JIT is currently rejected |
 
-Invokes javatools classes directly, either in-process or in a forked JVM based on the `fork` setting. Supports detached background processes for long-running applications.
+DIRECT and PERSISTENT submit requests through the embedding API. They retain the runtime host,
+while each compilation and application gets fresh mutable state, diagnostics, repository context
+and output destinations. Requests serialize within each host. They do not repeatedly invoke
+compiler/runner launchers or reuse application containers.
 
-**Execution Modes:**
-
-1. **In-Process (fork=false)** - Default for compilation
-   - Instant startup (~0ms)
-   - Shares Gradle daemon JVM
-   - Full IDE debugging support
-   - Configuration cache compatible
-
-2. **Forked Process (fork=true)** - For runtime isolation
-   - Complete isolation from Gradle JVM
-   - Independent JVM arguments
-   - ~1-2s JVM startup time
-   - Supports JDWP remote debugging
-
-3. **Detached Process (detach=true)** - For background services
-   - Automatically enables forking
-   - Process continues after Gradle exits
-   - Output redirected to timestamped log file
-   - Returns immediately without waiting
-
-**Implementation Details:**
-The plugin has compile-time access to javatools types through a `compileOnly` dependency:
 ```kotlin
-// plugin/build.gradle.kts
-dependencies {
-    compileOnly(libs.javatools)  // Type information only, not bundled
-}
-```
+import org.xtclang.plugin.launchers.ExecutionMode
 
-At runtime, the plugin loads javatools.jar dynamically:
-```java
-// Direct invocation with full type safety
-XtcJavaToolsRuntime.withJavaTools(javaToolsJar, logger, () -> {
-    Compiler.launch(args);  // No reflection!
-    return result;
-});
-```
-
-**Configuration:**
-```kotlin
 xtcCompile {
-    fork.set(false)  // In-process (fast, default)
+    executionMode.set(ExecutionMode.DIRECT)
 }
-
 xtcRun {
-    fork.set(true)    // Separate process (isolation)
-    // OR
-    detach.set(true)  // Background process (fork automatically enabled)
+    executionMode.set(ExecutionMode.PERSISTENT)
 }
 ```
 
-**Benefits:**
-- Direct type-safe calls (`Compiler.launch(args)`) - no reflection
-- Full IDE debugging support (fork=false)
-- JDWP remote debugging support (fork=true)
-- Configuration cache compatible
-- Single launcher for all scenarios
+PERSISTENT is off by default. Select it for one task with `runXtc --mode=PERSISTENT`, or for the
+build's task conventions with `-PxtcDefaultExecutionMode=PERSISTENT`,
+`XTC_EXECUTION_MODE=PERSISTENT`, or `-PxtcPersistentRuntime=true`. The mode property takes
+precedence over the environment variable; either takes precedence over the boolean convenience
+selector. Explicit task configuration overrides these conventions. `xtcPersistentRuntime=false`
+does not prohibit an explicit PERSISTENT mode selection.
+
+Workers live under the consumer root's `.gradle/xtc-workers`. They use the selected Java toolchain
+and task JVM arguments. Runtime/plugin/core-module content, Java identity, JVM options and
+inherited environment determine compatibility. Each worker loads private runtime copies; project
+outputs are read afresh per request. A lost execution is reported without automatic replay.
+
+`stopXtcWorker` stops idle workers for that consumer root, refusing to interrupt another build's
+lease. Defaults are `xtcPersistentStartupTimeout=PT30S`, `xtcPersistentIdleTimeout=PT10M` and
+`xtcPersistentShutdownTimeout=PT30S`; override these with ISO-8601 durations. DIRECT instead
+requires compatible JVM startup options on the Gradle JVM itself. Configuration/build caches
+remain enabled normally; persistence adds no mandatory heap flags.
+
+See the [implementation and verification plan](doc/plans/embedded-runtime-plan.md#persistent-keep-the-host-warm-across-builds)
+for ownership, opt-in integration testing and remaining memory/platform/concurrency work, and the
+[merge plan](doc/plans/embedded-runtime-pr-plan.md#pr-10--optional-persistent-execution-across-builds)
+for the independently reviewable scope. There is no automatic all-modes or persistent-worker
+integration sweep in the manual CI aggregates.
 
 ### Debugging
 
 The plugin supports debugging XTC code through standard Java debugging tools.
 
-#### In-Process Debugging (fork=false)
+#### In-Process Debugging (DIRECT)
 
-When using `fork=false` (default for compilation), you can debug directly in your IDE by attaching to the Gradle daemon:
+When using `DIRECT`, you can debug directly in your IDE by attaching to the Gradle daemon:
 
 1. Start Gradle with debug enabled:
    ```bash
@@ -149,13 +134,13 @@ When using `fork=false` (default for compilation), you can debug directly in you
 
 This allows stepping through both plugin code and javatools (compiler/runtime) code.
 
-#### Remote Debugging (fork=true)
+#### Remote Debugging (ATTACHED)
 
 For forked processes, use standard JDWP arguments with `jvmArgs`:
 
 ```kotlin
 xtcRun {
-    fork.set(true)
+    executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.ATTACHED)
     jvmArgs(
         "-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005"
     )
@@ -181,64 +166,29 @@ xtcRun {
 **Example with Different Port:**
 ```kotlin
 xtcCompile {
-    fork.set(true)
+    executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.ATTACHED)
     jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=8000")
 }
 ```
 
 #### Debugging Tips
 
-- **In-Process (fork=false)**: Best for debugging plugin code and compiler internals
-- **Forked (fork=true)**: Best for debugging XTC application code in isolation
+- **In-Process (DIRECT)**: Best for debugging plugin code and compiler internals
+- **Forked (ATTACHED)**: Best for debugging XTC application code in isolation
 - **Detached Mode**: Not recommended for debugging (process runs in background)
 - **Multiple Modules**: When running multiple modules sequentially, debugger will attach to each execution
 
 ### Programmatic API Access
 
-The plugin can directly call javatools methods without reflection, providing significant benefits:
+`DirectRuntimeBuildService` owns an `IsolatedRuntime` for the build. The PERSISTENT build service
+owns a worker connection, and that worker owns the same `IsolatedRuntime` adapter. Its implementation
+loader reads the selected XDK and exposes the shared `RuntimeExecutor`/`RuntimeOutput` boundary.
+Gradle objects and loggers never enter the worker protocol or remain in its runtime session.
 
-#### Architecture
-
-**Compile-Time Types**:
-```kotlin
-// Plugin declares compile-only dependency
-dependencies {
-    compileOnly(libs.javatools)  // Provides types at compile time
-}
-```
-
-**Runtime Loading**:
-```java
-// Plugin loads javatools.jar dynamically at runtime
-XtcJavaToolsRuntime.ensureJavaToolsInClasspath(
-    projectVersion, javaToolsConfig, xdkFileTree, logger);
-```
-
-**Direct Invocation**:
-```java
-// Call compiler directly - no reflection!
-Compiler.launch(args);
-Runner.launch(args);
-Disassembler.launch(args);
-```
-
-#### Benefits
-
-**Developer Experience**:
-- **IDE Integration**: Full autocomplete and type checking for javatools APIs
-- **Compile-Time Safety**: Catches API misuse at compile time
-- **Refactoring**: Safe renames across plugin and javatools
-- **Debugging**: Step through compiler code directly in IDE
-
-**Performance**:
-- **No Reflection Overhead**: Direct method calls
-- **JIT Optimization**: HotSpot can inline across plugin/javatools boundary
-- **In-Process Execution**: Zero overhead when fork=false
-
-**Maintainability**:
-- **Clear API Surface**: Explicit dependencies make architecture obvious
-- **Type Safety**: Compiler verifies all javatools calls
-- **Easy Testing**: Direct method calls simplify unit tests
+The implementation calls `EmbeddingSupport.compile(...)` and `EmbeddingSupport.run(...)` with
+request-specific inputs. Close request controls after execution; close the session before closing
+its implementation loader. The [embedding plan](doc/plans/embedded-runtime-plan.md) describes the
+public API, isolation, shutdown and measured within-build performance.
 
 ## Configuration
 
@@ -254,7 +204,7 @@ plugins {
 // Optional: Configure compilation
 xtcCompile {
     verbose.set(true)
-    fork.set(false)  // In-process execution (default)
+    executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.DIRECT)
 }
 ```
 
@@ -273,10 +223,9 @@ xtcCompile {
     showVersion.set(true)
 
     // Launcher configuration
-    fork.set(false)  // In-process execution (default)
+    executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.DIRECT)
 
-    // JVM arguments (only used when fork=true)
-    jvmArgs("-Xmx2g", "-Xms512m")
+    // DIRECT requires any JVM startup options to be set on the Gradle JVM itself.
 }
 
 // Advanced: Custom module path (overrides automatic resolution)
@@ -288,7 +237,7 @@ xtcCompile {
 
 ### Runtime Configuration
 
-**Extension**: `XtcRunExtension`
+**Extension**: `XtcRuntimeExtension`
 
 **Note**: In most cases, you don't need to configure the module path manually. The plugin automatically resolves:
 - All dependencies declared with `xtcModule(...)` in your build file
@@ -298,33 +247,28 @@ xtcCompile {
 **Minimal Configuration** (recommended for most projects):
 ```kotlin
 xtcRun {
-    // Main module and method - this is usually all you need!
-    module.set("myapp.xtc")
-    method.set("run")
-
-    // Optional: Program arguments
-    programArgs("arg1", "arg2")
+    module {
+        moduleName.set("myapp.xtc")
+        methodName.set("run")
+        moduleArgs("arg1", "arg2")
+    }
 }
 ```
 
 **Full Configuration** (for advanced scenarios):
 ```kotlin
 xtcRun {
-    // Main module and method
-    module.set("myapp.xtc")
-    method.set("run")
-
-    // Program arguments
-    programArgs("arg1", "arg2")
+    module {
+        moduleName.set("myapp.xtc")
+        methodName.set("run")
+        moduleArgs("arg1", "arg2")
+    }
 
     // Custom module path (only if you need to override automatic resolution)
     modulePath.from(files("runtime/modules"))
 
-    // JVM arguments (only used when fork=true)
-    jvmArgs("-Xmx1g")
-
     // Execution mode
-    fork.set(false)  // In-process (default)
+    executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.DIRECT)
 }
 ```
 
@@ -341,7 +285,7 @@ xtcRun {
 ```kotlin
 xtcTest {
     // Test module - this is usually all you need!
-    module.set("myapp.xtc")
+    moduleName("myapp.xtc")
 }
 ```
 
@@ -373,24 +317,13 @@ The plugin supports standard Gradle/Maven conventions for skipping tests during 
 
 ### Launcher Configuration
 
-**Common Scenarios**:
-
-| Scenario | Configuration | Description |
-|----------|---------------|-------------|
-| Fast development builds | `fork=false` (default) | In-process, instant startup |
-| Debugging compiler/plugin | `fork=false` | Attach to Gradle daemon |
-| Debugging XTC code | `fork=true` + jvmArgs | JDWP remote debugging |
-| Memory isolation | `fork=true` | Separate JVM process |
-| Background services | `detach=true` | Runs after Gradle exits |
-| CI/CD builds | `fork=false` | Fastest for compilation |
-
-**Execution Flow**:
-```
-JavaClasspathLauncher
-  ├─ if (fork=false) → In-process execution (DEFAULT)
-  ├─ if (fork=true, detach=false) → Forked process, wait for completion
-  └─ if (detach=true) → Forked process, background execution
-```
+| Scenario | Mode | Notes |
+|---|---|---|
+| Isolated execution | ATTACHED | Plugin default; a child JVM per launch |
+| Reuse within a build | DIRECT | Attach a debugger to the Gradle JVM |
+| Reuse across builds | PERSISTENT | Opt-in worker; separate JVM options and idle/explicit shutdown |
+| Debug XTC in a child JVM | ATTACHED | Supply JDWP options through `jvmArgs` |
+| Background application | DETACHED | Continues independently of the build |
 
 ## Build Lifecycle
 
@@ -575,7 +508,7 @@ The Ecstasy Gradle Plugin is fully compatible with Gradle's standard performance
 
 - **Configuration Cache**: Dramatically speeds up subsequent builds by caching configuration phase
 - **Build Cache**: Reuses outputs from previous builds or shared across machines
-- **Parallel Execution**: Compiles multiple modules concurrently
+- **Parallel Execution**: Allows independent tasks to run concurrently; DIRECT/PERSISTENT serialize requests per host
 
 These features are fully supported and should be enabled in your `gradle.properties`:
 ```properties
@@ -586,21 +519,11 @@ org.gradle.parallel=true
 
 ### XTC-Specific Optimizations
 
-**Use In-Process Execution** (default):
-```kotlin
-xtcCompile {
-    fork.set(false)  // In-process execution - instant startup
-}
-```
-
-**Optimize for CI Builds**:
-```kotlin
-// CI/CD builds work best with default settings (fork=false)
-xtcCompile {
-    fork.set(false)  // In-process, fastest compilation
-    verbose.set(false)  // Reduce log noise
-}
-```
+Measure DIRECT for builds that perform many compile/run requests. PERSISTENT additionally retains
+its host across builds; it is experimental and opt-in. Neither mode avoids work that is still
+request-specific, such as application linking and metadata construction. Up-to-date/cache hits
+can dominate builds that have no XTC work to perform. See the measured results and boundaries in
+the [embedding plan](doc/plans/embedded-runtime-plan.md).
 
 **Adjust Memory for Large Projects**:
 ```properties
@@ -643,14 +566,14 @@ org.gradle.jvmargs=-Xmx4g
 1. Check JVM arguments are valid:
    ```kotlin
    xtcRun {
-       fork.set(true)
+       executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.ATTACHED)
        jvmArgs("-Xmx1g")  // Verify memory settings
    }
    ```
 2. Enable verbose logging to see process output
 3. Try in-process mode first to isolate the issue:
    ```kotlin
-   fork.set(false)
+   executionMode.set(org.xtclang.plugin.launchers.ExecutionMode.DIRECT)
    ```
 4. For debugging, add JDWP args and attach debugger
 

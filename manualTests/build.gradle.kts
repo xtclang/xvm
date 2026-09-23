@@ -8,8 +8,11 @@ val ciBuild: Provider<Boolean> = providers.environmentVariable("CI")
 
 // Exercise the reusable embedding session by default; retain the standard plugin override.
 val manualExecutionMode = providers.gradleProperty("xtcDefaultExecutionMode")
+    .orElse(providers.environmentVariable("XTC_EXECUTION_MODE"))
     .map { ExecutionMode.valueOf(it.trim().uppercase()) }
-    .orElse(ExecutionMode.DIRECT)
+    .orElse(providers.gradleProperty("xtcPersistentRuntime")
+        .map { if (it.toBoolean()) ExecutionMode.PERSISTENT else ExecutionMode.DIRECT }
+        .orElse(ExecutionMode.DIRECT))
 
 tasks.withType<XtcRunTask>().configureEach {
     if (ciBuild.get()) {
@@ -416,37 +419,13 @@ val runTwoTestsInSequence = tasks.register<XtcRunTask>("runTwoTestsInSequence") 
     moduleName("TestArray")
 }
 
-// Generate map of execution modes to task names
-val executionModeTasks = ExecutionMode.entries.associateWith { mode ->
-    val taskName = "runTestWith${mode.name.lowercase().replaceFirstChar { it.uppercase() }}"
-    tasks.register<XtcRunTask>(taskName) {
-        group = "application"
-        executionMode = mode
-        verbose = true
-        if (mode == ExecutionMode.DETACHED) {
-            logger.lifecycle("Running $taskName (detached), will redirect output.")
-        }
-        module {
-            // TODO: We may want sugar for parallel flag and execution mode specialization in individual modules later.
-            moduleName = "EchoTest"
-            moduleArg("Testing Execution Mode:")
-            moduleArg("  $mode")
-        }
-        // TODO: POC and make this work
-        // TODO: commit.yml test for running the xtc-app-template
-        //val redirect = stdoutPath.getOrElse("stdout")
-        //println("REDIRECTED: $redirect")
-        //stdoutPath.set(layout.buildDirectory.file("logs/runOne-stdout-%TIMESTAMP%.log").map { it.asFile.absolutePath })
-        //stderrPath.set(layout.buildDirectory.file("logs/runOne-stderr-%TIMESTAMP%.log").map { it.asFile.absolutePath })
-    }
-}
-
-val runTestAllExecutionModes = tasks.register("runTestAllExecutionModes") {
-    group = "application"
-    description = "Run EchoTest in all execution modes to verify that they work."
-    dependsOn(executionModeTasks.values)
-    doLastTask {
-        logger.lifecycle("Finished testing all execution modes.")
+// Explicit smoke test only: compare modes using --mode, without adding extra CI executions.
+val runExecutionModeSmoke = tasks.register<XtcRunTask>("runExecutionModeSmoke") {
+    group = "verification"
+    description = "Run EchoTest in the selected execution mode (opt-in)."
+    module {
+        moduleName = "EchoTest"
+        moduleArg("Execution mode smoke test")
     }
 }
 
@@ -549,25 +528,25 @@ val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
 val runAllTestTasks = tasks.register("runAllTestTasks") {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runSequential)
+    dependsOn(runOne, runTwoTestsInSequence, runSequential)
 }
 
 val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
     group = "application"
     description = "Run all test tasks."
-    dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel)
+    dependsOn(runOne, runTwoTestsInSequence, runParallel)
 }
 
 val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runSequential)
+    dependsOn(runSequential)
 }
 
 val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runParallel)
+    dependsOn(runParallel)
 }
 
 /**

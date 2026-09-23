@@ -42,6 +42,7 @@ import org.xtclang.plugin.launchers.AttachedStrategy;
 import org.xtclang.plugin.launchers.DirectStrategy;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ExecutionStrategy;
+import org.xtclang.plugin.launchers.PersistentStrategy;
 
 @CacheableTask
 public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompilerExtension {
@@ -319,6 +320,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         final ExecutionMode mode = getExecutionMode().get();
         return switch (mode) {
             case DIRECT -> new DirectStrategy(logger, getDirectRuntimeService());
+            case PERSISTENT -> new PersistentStrategy(logger, resolveJavaExecutable(), getPersistentRuntimeService());
             case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
             case DETACHED -> throw new UnsupportedOperationException("DETACHED mode not supported for compile tasks");
         };

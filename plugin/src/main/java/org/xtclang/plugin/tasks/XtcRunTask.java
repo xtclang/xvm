@@ -55,6 +55,7 @@ import org.xtclang.plugin.launchers.DetachedStrategy;
 import org.xtclang.plugin.launchers.DirectStrategy;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ExecutionStrategy;
+import org.xtclang.plugin.launchers.PersistentStrategy;
 
 /**
  * Task that runs and XTC module, given at least its name, using the module path from
@@ -189,6 +190,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         final ExecutionMode mode = getExecutionMode().get();
         return switch (mode) {
             case DIRECT -> new DirectStrategy(logger, getDirectRuntimeService());
+            case PERSISTENT -> new PersistentStrategy(logger, resolveJavaExecutable(), getPersistentRuntimeService());
             case ATTACHED -> new AttachedStrategy<>(logger, resolveJavaExecutable());
             case DETACHED -> new DetachedStrategy<>(logger, resolveJavaExecutable());
         };

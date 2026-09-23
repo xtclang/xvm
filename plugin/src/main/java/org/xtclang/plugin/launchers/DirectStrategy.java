@@ -79,7 +79,7 @@ public class DirectStrategy implements ExecutionStrategy {
         }
     }
 
-    private static List<File> executionModules(final XtcLauncherTask<?> task) {
+    static List<File> executionModules(final XtcLauncherTask<?> task) {
         final var xdkModules = task.getInputXdkContents().getFiles();
         // Bootstrap consumers use declared module dependencies instead of an installed XDK.
         return List.copyOf(xdkModules.isEmpty()
@@ -87,7 +87,7 @@ public class DirectStrategy implements ExecutionStrategy {
             : xdkModules);
     }
 
-    private static DirectCompileRequest createCompileRequest(final XtcCompileTask task) {
+    static DirectCompileRequest createCompileRequest(final XtcCompileTask task) {
         final var rawVersion = task.getXtcVersion().getOrNull();
         final String semanticVersion = rawVersion == null || rawVersion.isBlank()
             ? null
@@ -126,7 +126,7 @@ public class DirectStrategy implements ExecutionStrategy {
         }
     }
 
-    private static DirectRunRequest createRunRequest(final XtcRunTask task, final XtcRunModule runConfig) {
+    static DirectRunRequest createRunRequest(final XtcRunTask task, final XtcRunModule runConfig) {
         return new DirectRunRequest(
             task.getProjectDirectory().get().getAsFile(),
             task.hasStdoutRedirect() ? ForkedStrategy.configuredRedirectFile(task, true) : null,
@@ -141,7 +141,7 @@ public class DirectStrategy implements ExecutionStrategy {
         );
     }
 
-    private static DirectTestRequest createTestRequest(final XtcTestTask task, final XtcRunModule runConfig) {
+    static DirectTestRequest createTestRequest(final XtcTestTask task, final XtcRunModule runConfig) {
         return new DirectTestRequest(
             task.getProjectDirectory().get().getAsFile(),
             task.hasStdoutRedirect() ? ForkedStrategy.configuredRedirectFile(task, true) : null,

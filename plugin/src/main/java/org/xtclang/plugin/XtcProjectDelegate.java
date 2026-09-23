@@ -83,6 +83,7 @@ import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
 import org.xtclang.plugin.internal.DefaultXtcTestExtension;
 import org.xtclang.plugin.internal.GradlePhaseAssertions;
+import org.xtclang.plugin.tasks.StopXtcWorkerTask;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
@@ -301,6 +302,13 @@ public class XtcProjectDelegate {
      * This method, "apply", is a delegate target call for an XTC project delegating plugin
      */
     public void apply(final Project project) {
+        project.getTasks().register("stopXtcWorker", StopXtcWorkerTask.class, task -> {
+            task.setGroup("application");
+            task.setDescription("Stop this checkout's idle persistent XTC workers.");
+            task.getWorkerDirectory().set(project.getRootProject().getLayout().getProjectDirectory().dir(".gradle/xtc-workers"));
+            task.getShutdownTimeout().set(project.getProviders().gradleProperty("xtcPersistentShutdownTimeout").orElse("PT30S"));
+        });
+
         // Assert that we're in configuration phase - all XTC plugin setup happens during configuration
         GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcProjectDelegate.apply()");
 

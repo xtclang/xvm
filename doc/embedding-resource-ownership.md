@@ -19,6 +19,13 @@ acquisition, native cleanup and termination, with deterministic Java and `.x` re
 [Follow-up findings after the native migrations](#follow-up-findings-after-the-native-migrations)
 for the historical evidence, corrections and remaining boundaries.
 
+The optional `lagergren/persistent-xtc-runtime` extension uses these same per-control cleanup
+boundaries across separate Gradle builds. Its build services own client leases; the worker owns
+the embedding session. Idle/explicit worker shutdown adds a host lifetime boundary and does not
+replace request cleanup. Protocol/fake-runtime tests and the opt-in real-build harness are described
+in the [persistent plan](../plugin/doc/plans/embedded-runtime-plan.md#persistent-keep-the-host-warm-across-builds).
+These checks do not establish JIT resource parity or long-run retained-memory bounds.
+
 ## Follow-up implementation
 
 [`OwnedResource`](../javatools/src/main/java/org/xvm/runtime/OwnedResource.java) and

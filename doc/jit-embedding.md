@@ -15,8 +15,9 @@ caller's module. Recompiling the same module name can therefore supply a new def
 
 Compilation, interpreter execution and JIT execution use the same session API. Compilation does
 not start either execution runtime. The Gradle DIRECT build service owns the session for one
-build and closes it at the end. Keeping it warm across builds is a separate milestone described
-in the [embedding plan](../plugin/doc/plans/embedded-runtime-plan.md#later-keep-the-host-warm-across-builds).
+build and closes it at the end. The separate opt-in PERSISTENT mode keeps an interpreter host warm across builds; it currently
+rejects JIT requests. Use DIRECT or ATTACHED for the supported JIT subset. See the
+[embedding plan](../plugin/doc/plans/embedded-runtime-plan.md#persistent-keep-the-host-warm-across-builds).
 
 For a JIT request, set the final `RunRequest` argument to `RunRequest.Backend.JIT`; existing
 constructors retain interpreter behavior. Entry methods may accept no parameters or `String[]`,
