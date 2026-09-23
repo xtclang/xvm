@@ -6,7 +6,7 @@ to whoever owns the code.
 
 Measured on `lagergren/errs`. First taken against `origin/master` at `fbdeb86c7`; re-checked
 after the branch was rebased onto `4a1eae6f7`, and the counts are unchanged - this branch
-had deliberately fixed none of them. The 2026-09-22 follow-up at the end records the subsequent
+had deliberately fixed none of them. The 2026-09-22/23 follow-ups at the end record the subsequent
 compiler/embedding triage and fixes; the original totals are historical.
 
 ## What was counted
@@ -325,3 +325,23 @@ every historical silence. The original seventy-message survey is not the same da
 binary-AST TODO still needs a reproducer; simple bound-function probes report normal type errors
 and do not reproduce it. Track that with the call-consumer work. Debug formatting, runtime/JIT
 ownership and optional CLI display fallbacks remain separate follow-ups as classified above.
+
+### Dependency source ownership follow-up, 2026-09-23
+
+The new Kotlin dependency copier initially read signature metadata from constants deserialized in
+an unlinked dependency artifact. A consumer then failed while resolving the core `Int` class during
+type inspection. This was a new copier ownership error, not evidence of another pre-existing
+ambient-pool or error-listener defect. Selecting a thread-local pool alone did not link the artifact.
+
+The copier now uses artifact constants only for identity equality/source association and reads
+semantic metadata through the matching constant in the linked consumer pool. Every attempt opens
+fresh dependency structures; retained `XdkDependency` values contain only immutable bytes, copied
+source locations and revisioned symbol keys. No new Java fallback, AST state or listener policy was
+needed. The index covers the exact emitted artifact and source revision, not independently edited
+library sources.
+
+`XdkDependencyTest` covers serialization, overload/module separation, inherited generic bodies,
+source-module precedence, transitive replacement and compile/cursor cancellation. The server
+regression verifies that replacing a dependency return type produces an ordinary consumer diagnostic
+at the unchanged document version and that restoring the artifact clears it. This follow-up audits
+the new host boundary; it does not broaden the historical diagnostic-suppression survey.

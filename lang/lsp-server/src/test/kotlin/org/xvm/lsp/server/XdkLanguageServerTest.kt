@@ -23,10 +23,15 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -35,6 +40,49 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkLanguageServerTest {
+    @Test
+    fun `host dependency replacement republishes diagnostics for unchanged consumer versions`() {
+        CompilerTestSupport.configure()
+
+        fun dependency(type: String): XdkDependency {
+            val value = if (type == "Int") "1" else "\"text\""
+            val errors = ErrorList()
+            val result =
+                EmbeddingSupport.instance().compileModule(
+                    Source("module Library { static $type value()=$value; }", "file:///Library.x"),
+                    null,
+                    errors,
+                )
+            assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
+            return result.toDependency()
+        }
+        val first = dependency("Int")
+        val incompatible = dependency("String")
+        val source = "module Protocol { package lib import Library; Int run()=lib.value(); }"
+        Session(XdkAdapter()).use { session ->
+            session.server.replaceCompilerDependencies(listOf(first))
+            session.open(source, 7)
+            assertThat(session.next().diagnostics).isEmpty()
+            session.server.replaceCompilerDependencies(listOf(incompatible))
+            val failed = session.next()
+            assertThat(failed.version).isEqualTo(7)
+            assertThat(failed.diagnostics).isNotEmpty()
+            assertThat(failed.diagnostics.map { it.code.left }).doesNotContain("ANALYSIS-FAILED")
+            session.server.replaceCompilerDependencies(listOf(first))
+            val restored = session.next()
+            assertThat(restored.version).isEqualTo(7)
+            assertThat(restored.diagnostics).isEmpty()
+            val target =
+                session.documents
+                    .definition(
+                        DefinitionParams(TextDocumentIdentifier(URI), Position(0, source.indexOf("value"))),
+                    ).get(10, SECONDS)
+                    .left
+                    .single()
+            assertThat(target.uri).isEqualTo("file:///Library.x")
+        }
+    }
+
     @Test
     fun `exit supplies the process status according to whether shutdown was requested`() {
         val statuses = mutableListOf<Int>()

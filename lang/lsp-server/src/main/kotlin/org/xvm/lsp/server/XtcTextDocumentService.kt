@@ -359,6 +359,18 @@ class XtcTextDocumentService(
         }
     }
 
+    /** Dependency replacement and versioned reanalysis share the diagnostic publication lock. */
+    internal fun refreshDependencies(replace: () -> Set<String>) {
+        synchronized(lifecycle) {
+            if (closed) return
+            val affected = replace()
+            affected.forEach { scope ->
+                val document = openDocuments.entries.firstOrNull { it.value.scope == scope }
+                document?.let { analyse(it.key, it.value.content, it.value.version) }
+            }
+        }
+    }
+
     fun close() {
         synchronized(lifecycle) {
             closed = true

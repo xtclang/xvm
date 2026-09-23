@@ -4,6 +4,13 @@
 > **Status**: Planning
 > **Scope**: Features that require IntelliJ plugin code (not just LSP server changes)
 
+> **Compiler review, 2026-09-23:** This April plan retains proposed native IDE work. XdkAdapter now
+> has bounded completion/signatures, semantic navigation, type/implementation lookup, hierarchy,
+> tokens and hints, plus an explicit dependency artifact/source host API. Those server capabilities
+> do not establish native gutter integration or editor project/build configuration. Consult the
+> [current capability matrix](plan-ide-integration.md#adapter-capability-matrix) and
+> [manual playbook](../manual-test-plan.md#xdkadapter-playbook) for supported behavior.
+
 ## Context
 
 The XTC IntelliJ plugin currently delegates most intelligence to the out-of-process
@@ -25,8 +32,7 @@ The goal is to reach parity with the Java development experience in IntelliJ.
 
 ## What Tree-Sitter + Semantic Tokens Give Us (No Compiler Needed)
 
-The current tree-sitter adapter provides ~80% of a Java-like IDE experience
-without any compiler integration:
+The tree-sitter adapter provides the following syntax-based features without compiler integration:
 
 **Syntax-level intelligence (tree-sitter AST):**
 - Document symbols / outline / breadcrumbs
@@ -51,7 +57,7 @@ without any compiler integration:
 - Enum members distinguished from regular properties
 - Declaration-site vs usage-site distinction
 
-**What still requires the XDK compiler adapter:**
+**Features that require compiler facts:**
 - Type inference (inlay hints showing inferred types)
 - Cross-file semantic references (accurate find-all-usages)
 - Cross-file rename (semantic, not text-based)
@@ -59,6 +65,10 @@ without any compiler integration:
 - Override/implements gutter markers (needs type hierarchy)
 - Smart completion (type-aware member suggestions)
 - Call hierarchy / type hierarchy views
+
+The compiler now supplies bounded type hints, module references, diagnostics, member completion,
+static call hierarchy and direct source type hierarchy. Safe rename and native override gutter
+markers remain work; workspace-wide references and external hierarchy are not implemented.
 
 ---
 
@@ -156,8 +166,12 @@ server to implement them (most already done):
 | `textDocument/documentLink` | Clickable import paths | Done |
 | `textDocument/semanticTokens` | Semantic highlighting | Done |
 | `textDocument/publishDiagnostics` | Error/warning annotations | Done |
-| `textDocument/codeLens` | Inline annotations above code | Stub |
-| `textDocument/inlayHint` | Type/param hints inline | Stub |
+| `textDocument/codeLens` | Inline annotations above code | Tree-sitter Run lenses; unavailable in compiler mode |
+| `textDocument/inlayHint` | Type/param hints inline | Bounded inferred-local and selected-parameter hints in compiler mode |
+
+Capabilities depend on the selected adapter: the rows marked Done are the original shared/default
+surface, not a claim that compiler mode supports formatting, rename, code actions or document links.
+Use the canonical matrix for that distinction.
 
 ### What we should configure in LSP4IJ
 
@@ -317,7 +331,8 @@ use TextMate (flat PSI with no declaration nodes). Instead, the LSP server now
 provides `textDocument/codeLens` with "Run" actions on module declarations. LSP4IJ
 and VS Code render these automatically as inline annotations — no plugin code needed.
 
-Override/implements arrows still require the compiler adapter (type hierarchy).
+Native override/implements arrows still need plugin integration. Compiler type hierarchy and
+type/method implementation lookup now provide bounded server-side relationships.
 
 **Done** (2026-04-03): `TreeSitterAdapter.getCodeLenses()` returns Run lens for
 every `module_declaration`.
@@ -399,14 +414,15 @@ Show inferred types inline:
 val x = getValue()  // shows `: String` after `x` as gray inline text
 ```
 
-Requires the XDK compiler adapter to provide type information. The LSP
-`textDocument/inlayHint` protocol is already stubbed in the server.
+The opt-in XDK adapter now implements `textDocument/inlayHint` for inferred local types and selected
+positional parameter names. Broader hints and any custom native rendering remain follow-ups.
 
 ### 6b. Call Hierarchy / Type Hierarchy
 
 IntelliJ's Ctrl+Alt+H (call hierarchy) and Ctrl+H (type hierarchy) windows.
-LSP protocols `callHierarchy/*` and `typeHierarchy/*` are stubbed in the server.
-Requires workspace-wide semantic analysis.
+The server now implements static selected-call hierarchy and direct declared source type hierarchy
+within a module. Verify how the installed LSP4IJ version exposes these requests; native IDE window
+integration is a separate concern. Workspace-wide and external hierarchy remain open.
 
 ### 6c. Postfix Completion
 
@@ -537,9 +553,10 @@ LSP custom request: xtc/compile
   Response: { success: true, diagnostics: [...] }
 ```
 
-This is where the XDK adapter (`adapter.xdk.XdkAdapter`) would gain real
-functionality -- it would wrap the XTC compiler for on-demand compilation,
-producing both diagnostics and compiled `.xtc` output.
+This remains a proposed project/build command. XdkAdapter already compiles editor module snapshots
+through `EmbeddingSupport` and publishes compiler diagnostics; it does not need a Launcher wrapper
+to become functional. The proposed `xtc/compile` endpoint and persisted build-output workflow are
+not implemented by that analysis path.
 
 ### 7d. Module-Aware Navigation
 
@@ -549,9 +566,11 @@ Once the LSP server knows the module path, it can:
 - Show module dependencies in document symbols
 - Validate that imported types actually exist in the module path
 
-This requires the `WorkspaceIndex` to scan not just the project's `.x` files
-but also the `.xtc` compiled modules on the module path (reading their symbol
-tables).
+The compiler host API now accepts compiled dependencies with optional detached source indices via
+`XtcLanguageServer.replaceCompilerDependencies(...)`. Definition/type-definition and inherited
+implementation-body links can use those indices. Binary symbol tables alone do not supply source
+locations. Editor project discovery, dependency builds and module-path configuration still need an
+integration; a persistent cross-module reference index is separate work.
 
 #### Priority: **High** (resolution) → **Medium** (recompilation) → **Medium** (navigation)
 
@@ -571,7 +590,7 @@ Features available in IntelliJ/LSP4IJ that we should evaluate:
 | `codeActionProvider` | Customize quick-fix rendering | No -- LSP code actions work fine |
 | `documentHighlightProvider` | Customize highlight colors | No -- defaults are fine |
 | `workspaceSymbolProvider` | Customize workspace search | No -- LSP provides this |
-| `inlayHintProvider` | Customize inlay hint rendering | Later -- when XDK adapter provides types |
+| `inlayHintProvider` | Customize inlay hint rendering | Evaluate only if default rendering of the implemented compiler hints is insufficient |
 | `fileTypeMappingProvider` | Dynamic file type detection | No -- `*.x` mapping is static |
 | `workspaceFolderProvider` | Customize workspace folders | Maybe -- for multi-module XTC projects |
 
@@ -628,7 +647,7 @@ formatting, folding, references, etc.).
 | **Phase 4: Visual** | 2a SemanticTokenColors, 4b ColorScheme | Medium | High -- professional look |
 | **Phase 5: XDK/Module** | 7a XDK SDK Type, 7b Module Path, 4a Settings | Medium-Large | High -- foundational |
 | **Phase 6: Navigation** | 3e LineMarkers (run), 7d Module Navigation | Medium | Medium |
-| **Phase 7: Compiler** | 7c Recompilation, XDK adapter integration | Large | High |
+| **Phase 7: Project builds** | 7c Build commands, dependency discovery and configuration | Large | High |
 | **Phase 8: Advanced** | 6a-d InlayHints, Hierarchy, Postfix, SmartEnter | Large | Medium |
 
 | Phase | Items | Effort | Impact |
