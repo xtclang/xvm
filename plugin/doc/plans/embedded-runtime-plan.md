@@ -157,11 +157,11 @@ and metadata project.
    production network injection policy and incomplete JIT resource support are unchanged.
    The [six integration scopes](embedded-runtime-pr-plan.md#native-resource-integration-scopes)
    identify the exact PR 4b boundary. A
-   [second audit](../../../doc/embedding-resource-ownership.md#open-findings-after-the-native-migrations)
+   [second audit](../../../doc/embedding-resource-ownership.md#follow-up-findings-after-the-native-migrations)
    reproduced premature runtime termination status and cancelled tasks retained in the Java timer
-   queue. Failed control release also skips host-side cleanup; nested-owner retention and socket
-   handoff need completion. These corrections are explicitly mapped to the existing PR scopes and
-   remain unimplemented. Longer retained-handle, heap and classloader measurements, watcher
+   queue. Four subsequent corrections cover those failures, deferred host cleanup and failed/ignored
+   native socket handoff, with regressions mapped to the existing PR scopes. Nested-owner retention
+   remains open. Longer retained-handle, heap and classloader measurements, watcher
    directory/overflow semantics and broader platform coverage remain follow-ups too.
 
 2. **Explicit constant-pool ownership and metadata reuse — next performance project.** Coordinate

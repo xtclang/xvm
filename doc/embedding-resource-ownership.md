@@ -12,10 +12,11 @@ is each application's `Control.close()` while its runner host remains alive. Val
 identifies what is exercised; this is not a claim of JIT resource parity or arbitrary native-code
 termination.
 
-The follow-up audit of `6fea82130` found additional gaps. Two host probes reproduce premature
-runtime termination status and cancelled tasks retained in the Java timer queue. Failed control
-release, nested-container reachability and socket handoff also need the work recorded under
-[Open findings after the native migrations](#open-findings-after-the-native-migrations).
+The follow-up audit of `6fea82130` found additional gaps. The four requested corrections now cover
+runtime termination status, cancelled timer queue entries, deferred host cleanup and failed/ignored
+native socket handoff. Nested-container reachability remains an open source-level concern. See
+[Follow-up findings after the native migrations](#follow-up-findings-after-the-native-migrations)
+for the historical evidence, corrections and remaining boundaries.
 
 ## Follow-up implementation
 
@@ -336,27 +337,26 @@ no automatic JIT tasks and does not change the plugin default. The
 places it after the common mechanism and interpreter request API; its six resource scopes remain
 explicit if reviewers prefer further extraction.
 
-Remaining implementation work includes the findings below. Broader validation and capability
-growth also remain: retained heap/classloader measurements under long workloads, directory/overflow
+Remaining implementation work includes nested-owner retention, described below. Broader validation
+and capability growth also remain: retained heap/classloader measurements under long workloads, directory/overflow
 watcher event semantics, general custom injectors and JIT resource support. TCP listen/accept is
 still a pre-existing unimplemented native capability; this change owns existing connected TCP
-sockets and HTTP/HTTPS listeners, not a new TCP server API. The intended bounded-shutdown failure
-contract needs the termination-status correction below. Do not turn these targeted disposal
-assertions into a claim that all possible resources or platform failures have been proven safe.
+sockets and HTTP/HTTPS listeners, not a new TCP server API. The bounded-shutdown failure contract
+now includes native cleanup completion and retryable closing; cleanup failures remain visible.
+These targeted disposal assertions do not prove every resource or platform failure safe.
 
-## Open findings after the native migrations
+## Follow-up findings after the native migrations
 
-This second pass inspected allocation, handoff and shutdown paths at `6fea82130`. It changed no
-production code. The two Java host probes used the built runtime classes and controlled state,
-without an installed XDK, sleeps, GC assertions or timing thresholds. They are audit reproductions,
-not passing regression tests committed to the suite. The previously reported 48 passing tests do
-not cover these properties.
+The second audit inspected allocation, handoff and shutdown paths at `6fea82130`. Its two Java
+host probes used controlled state without sleeps, GC assertions or timing thresholds. The
+reproductions below describe that snapshot. The subsequent corrections add committed regressions;
+the earlier 48-test result alone did not cover these properties.
 
-### 1. Executor termination can precede native cleanup — reproduced
+### 1. Executor termination can precede native cleanup — corrected
 
-[`Runtime.close()` and `isTerminated()`](../javatools/src/main/java/org/xvm/runtime/Runtime.java)
-only use the two executors to determine whether shutdown has finished. An owned asynchronous
-cleanup can still be pending after both executors stop; HTTP cleanup workers run separately.
+At the audited snapshot, [`Runtime.close()` and `isTerminated()`](../javatools/src/main/java/org/xvm/runtime/Runtime.java)
+only used the two executors to determine whether shutdown had finished. Owned asynchronous
+cleanup could still be pending after both executors stopped; HTTP cleanup workers run separately.
 
 The probe registered a resource whose cleanup returns an explicitly incomplete future, then
 closed the runtime with a zero budget. The first close correctly failed. While that same future
@@ -366,20 +366,25 @@ probe cleanly. No worker scheduling or elapsed-time comparison determines this r
 
 [`InterpreterConnector.isClosed()`](../javatools/src/main/java/org/xvm/api/InterpreterConnector.java)
 delegates to this status. [`EmbeddingSupport.close()`](../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java)
-uses it to release the implementation-classloader's runtime ownership slot, so the slot can be
-released while native cleanup remains pending. The original session still reports its close
-failure; that does not make releasing the slot safe.
+uses it to release the implementation-classloader's runtime ownership slot, so the slot could be
+released while native cleanup remained pending. The original session still reported its close
+failure; that did not make releasing the slot safe.
 
-Required correction: keep lifecycle completion distinct from executor termination, preserve
-cleanup failures on repeated close, and retain session ownership until pending cleanup really
-finishes. Add controlled-future tests for late cleanup, failed cleanup, repeated close and runtime
-replacement. Submission scope: runtime completion in PR 3/4, with the session gate in PR 5a.
+Correction: runtime termination now requires successful container/native cleanup as well as both
+executors stopping. The first cleanup future is retained across close attempts, preserving failures.
+A caller timeout does not discard queued service shutdown work: active service work is interrupted,
+and the service executor closes when container cleanup finishes. Dropping queued work had left
+termination futures permanently incomplete in the zero-budget integration regression.
 
-### 2. Cancelled timer tasks remain queued across request close — reproduced
+`RuntimeShutdownTest` uses controlled futures to verify pending cleanup, repeated close and lasting
+cleanup failure. The embedding regression verifies that a failed close blocks another session,
+then allows replacement after cleanup and a successful retry. Submission scope: PR 3/4 and PR 5a.
+
+### 2. Cancelled timer tasks remain queued across request close — corrected
 
 The container's alarm index is a **weak** set; it is not the retaining root. The runtime's
 `java.util.Timer` queue strongly retains cancelled tasks until they are removed from that queue.
-Current cancellation paths call `TimerTask.cancel()` but do not explicitly remove queued tasks.
+The audited cancellation paths called `TimerTask.cancel()` without explicitly removing queued tasks.
 
 The probe scheduled one future live alarm for a surviving owner and 100 later alarms for another
 owner, cancelled those 100 and terminated their owner. Inspection under the queue monitor showed:
@@ -395,25 +400,38 @@ inspection used a test-only `--add-opens java.base/java.util=ALL-UNNAMED`. Clear
 and paused-alarm sets, as existing regressions verify, does not establish queue removal. Retained
 triggers can retain alarm/timer objects; retained-heap size has not been measured.
 
-Required correction: provide cancellation that removes or purges cancelled queue entries at the
-appropriate runtime boundary, including request termination, without introducing a full queue
-scan for every cancellation unnecessarily. Keep another owner's live timer working. Submission
-scope: PR 3 timer lifecycle and PR 4b/R6 alarm integration.
+Correction: container termination purges cancelled entries after all of its resource cancellation
+hooks finish, including hooks completed asynchronously. This scans the shared queue once per owner
+termination rather than once per alarm. Tests cover 100 explicitly cancelled alarms, cancellation
+by termination itself and asynchronous cancellation of a task scheduled in another container;
+another owner's live alarm stays scheduled. The committed tests use the purge count and task state,
+without JDK reflection or `--add-opens`.
 
-### 3. Failed control release strands host-side cleanup — source-confirmed
+Cancellation during a still-running request can retain queue entries until the next purge or normal
+queue removal. This correction establishes the requested owner-shutdown boundary. Submission scope:
+PR 3 timer lifecycle and PR 4b/R6 alarm integration.
 
-In [`InterpreterControl.close()`](../javatools/src/main/java/org/xvm/api/InterpreterControl.java),
-the console unregister and temporary-root deletion are inside the block reached **after** awaiting
-`releaseTask`. If that await fails or times out, neither action runs. The control is marked closed
-and its release future permanently records failure; later close calls do not attempt these
-actions again, even if the application eventually stops. Session close clears its control set
+### 3. Failed control release strands host-side cleanup — corrected
+
+In the audited [`InterpreterControl.close()`](../javatools/src/main/java/org/xvm/api/InterpreterControl.java),
+console unregister and temporary-root deletion were inside the block reached **after** awaiting
+`releaseTask`. If that await failed or timed out, neither action ran. The control was marked closed
+and its release future permanently recorded failure; later close calls did not attempt these
+actions again, even if the application eventually stopped. Session close cleared its control set
 after runtime shutdown without completing this deferred host cleanup.
 
-Required correction: retain responsibility for cleanup after a failed close and perform it once
-application termination is known. Do not delete a directory while its application may still be
-using it, or close a caller-owned writer. Add a latch-controlled integration case that exceeds a
-zero close budget, completes termination afterwards, and verifies console-registration and owned
-temporary-root release. Submission scope: PR 5a, with PR 5b resource-context coverage.
+Correction: the release operation outlives a caller's deadline. Once the runner acknowledges
+termination, host cleanup runs once on a tracked cleanup worker even if the caller has already
+returned. A failed protocol attempt can be retried. If the runner cannot acknowledge release,
+successful runtime termination provides the fallback boundary for host cleanup. Session close
+retains unfinished controls/runtimes and supports another bounded close attempt; it keeps the
+implementation-classloader ownership slot until native and host cleanup have completed.
+
+The integration tests hold native cleanup behind a future, verify that the temporary directory and
+console registration survive a zero-budget close, and then check their removal without calling
+close again to trigger it. Separate cases cover a stopped runner and session-close retry. Existing
+caller-owned directory/writer assertions remain in the lifecycle suite. Submission scope: PR 5a,
+with PR 5b resource-context coverage.
 
 ### 4. Weak container discovery is not a lifetime owner — source risk requiring a regression
 
@@ -428,20 +446,65 @@ release that retention when ownership ends. This is a source-level lifetime conc
 reproduced GC-dependent leak. A regression should inspect explicit ownership registration and
 release deterministically, rather than wait for GC. Submission scope: PR 3/4.
 
-### 5. Failed socket handoff can postpone disposal until owner close — source-confirmed
+### 5. Failed socket handoff can postpone disposal until owner close — corrected
 
-[`xRTSocket.constructSocket()`](../javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java)
-closes on immediate construction failure. Its `R_CALL` continuation only finishes a successful
-construction; asynchronous failure has no corresponding disposal continuation. `finishConnect()`
-also does not close when its result is ignored or assignment fails. Ownership still guarantees
-release at successful owner termination, but a long-running application can retain these
+The audited [`xRTSocket.constructSocket()`](../javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java)
+closed on immediate construction failure. Its `R_CALL` continuation only finished a successful
+construction; asynchronous failure had no corresponding disposal continuation. `finishConnect()`
+also did not close when its result was ignored or assignment failed. Ownership still guaranteed
+release at successful owner termination, but a long-running application could retain these
 undelivered sockets until then.
 
-Add cleanup to every failed/ignored handoff and a regression that checks peer EOF while the owner
-is still live. Separately, the integration fixture's read scenario signals readiness before
-entering the read, so it does not deterministically prove shutdown of an already-blocked native
-read; add a native-entry barrier for that assertion. Submission scope: PR 4b/R2.
+Correction: the native connect continuation carries an exception cleanup through asynchronous
+construction and result assignment. Interpreter exception unwinding invokes it; successful handoff
+disarms it. Ignored native results close the connected socket immediately. The loopback regression
+uses the real interpreter with injected construction/assignment failures and checks peer EOF and
+an empty socket ownership set while the application remains running. It covers ignored results,
+asynchronous construction failure and both synchronous and asynchronous assignment failure.
 
-These findings should be resolved or explicitly scoped before calling shutdown ownership
-complete. DNS interruption, custom injectors, JIT native resources, watcher event semantics and
-broader platform/retention measurements remain the previously documented boundaries.
+The existing integration fixture's read scenario still signals readiness before entering the read,
+so it does not deterministically establish an already-blocked native read; a native-entry barrier
+remains a coverage follow-up. Submission scope: PR 4b/R2, including the frame/continuation support.
+
+Nested-owner retention and the stated coverage boundaries remain open. These four corrections do
+not establish exhaustive shutdown ownership. DNS interruption, custom injectors, JIT native
+resources, watcher event semantics and broader platform/retention measurements remain the
+previously documented boundaries.
+
+### Validation of the four corrections
+
+The combined run on 2026-09-23 passed **76 Java tests with zero failures, errors or skips** in
+JUnit XML: 32 focused runtime/native tests, 24 embedding integration tests and 20 plugin tests.
+All **21 sequential manual modules passed in DIRECT mode**. `spotlessCheck`, `git diff --check`
+and relative documentation-link/anchor checks passed. The focused socket regression also reused
+the Gradle configuration cache while actually rerunning its changed Java test.
+
+The four new runtime tests cover pending native cleanup, persistent cleanup failure, cancellation
+by explicit close/owner termination and asynchronous timer cancellation. The four new embedding
+tests cover late request release, fallback after the runner stops, bounded session-close retry
+and the four socket-handoff outcomes. They reuse the existing `.x` application fixture; the
+installed XDK remains a declared dependency of the XDK integration test task. Runtime unit tests
+need no compiled XDK and no test silently assumes one exists.
+
+The socket failure fixture uses native operations with descriptive stack-trace names. It replaces
+the socket template only within that test and restores it in `finally`; no failure switch is added
+to production constructors. It asserts the expected exception as well as peer EOF while the owner
+remains alive. Existing successful socket scenarios cover normal handoff and owner close.
+
+Validation command:
+
+```bash
+./gradlew :javatools:test \
+  --tests org.xvm.runtime.OwnedResourceTest \
+  --tests org.xvm.runtime.ContainerActivityTest \
+  --tests org.xvm.runtime.RuntimeShutdownTest \
+  --tests org.xvm.runtime.ExternalCompletionTest \
+  --tests org.xvm.runtime.template._native.web.HttpResourceOwnershipTest \
+  :xdk:test --tests org.xvm.xdk.EmbeddingResourceOwnershipTest \
+  --tests org.xvm.xdk.EmbeddingLifecycleTest \
+  :plugin:test :manualTests:runSequential spotlessCheck \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true
+```
+
+Local correction commits are `0814693ae`, `c3bfc9582`, `0406f3062` and `e1eb9fb1a`.
+Their mapping to PR 3/4, PR 5a/5b and PR 4b/R2/R6 is recorded in the submission plan.

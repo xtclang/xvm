@@ -12,12 +12,14 @@ working diff before extraction. The [implementation plan](embedded-runtime-plan.
 design and measurements; the [resource audit](../../../doc/embedding-resource-ownership.md)
 records historical leaks, their corrections and current validation.
 
-### Open corrections before submission
+### Follow-up corrections and remaining work
 
-The [second ownership audit](../../../doc/embedding-resource-ownership.md#open-findings-after-the-native-migrations)
-at `6fea82130` found gaps beyond the passing native regressions. They are not implemented yet:
+The [second ownership audit](../../../doc/embedding-resource-ownership.md#follow-up-findings-after-the-native-migrations)
+at `6fea82130` found gaps beyond the initial passing native regressions. Runtime completion, timer
+queue cleanup, deferred host cleanup and socket handoff are now corrected. Nested-owner retention
+remains open. Keep their extraction boundaries explicit:
 
-| Correction | Intended scope | Required regression |
+| Correction | Intended scope | Verification or remaining work |
 |---|---|---|
 | Include asynchronous native cleanup in runtime termination status; preserve failure and prevent premature replacement | PR 3/4 plus the PR 5a session gate | Controlled pending/failed cleanup, repeated close and replacement attempt |
 | Remove cancelled tasks from the shared Java timer queue | PR 3 plus PR 4b/R6 | Request close removes cancelled entries while another owner's live timer survives |
@@ -25,8 +27,12 @@ at `6fea82130` found gaps beyond the passing native regressions. They are not im
 | Establish retention of nested owners while resources/acquisitions/cleanup remain | PR 3/4; source-level concern pending deterministic regression | Explicit ownership registration/release, with no GC-based assertion |
 | Dispose of sockets on asynchronous construction failure and ignored/failed handoff | PR 4b/R2 | Undelivered socket closes before owner termination; use a native barrier for blocked-read coverage |
 
-Keep these corrections in separate commits on the working branch, then fold them into the listed
-extraction scopes. The eleven-PR sequence below remains a scope plan, not a readiness claim.
+The local corrections are `0814693ae` (runtime completion), `c3bfc9582` (timer purge),
+`0406f3062` (deferred host cleanup and preserving queued shutdown work), and `e1eb9fb1a`
+(socket handoff). Fold them into the listed extraction scopes. The socket regression
+injects native constructor/assignment failures and observes peer EOF before owner close; the older
+blocked-read fixture still needs a native-entry barrier. The eleven-PR sequence below remains a
+scope plan, not a readiness claim.
 
 ## Recommended sequence
 
@@ -496,11 +502,11 @@ covers only its documented subset; interpreter native-resource tests do not esta
 | Shared file | Ownership of hunks |
 |---|---|
 | `xRTCertificateManager.java` | PR 1 keystore delegation; PR 3 IO scheduling |
-| `Container.java` / `Frame.java` | PR 3 activity/IO/termination foundation; PR 4 resource registry/helpers; PR 4b cancellation outside the owner monitor and resource-owner accessor |
+| `Container.java` / `Frame.java` | PR 3 activity/IO/termination foundation; PR 4 resource registry/helpers; PR 4b cancellation outside the owner monitor, resource-owner accessor and native handoff exception continuation |
 | `EmbeddingSupport.java` | PR 5 session/interpreter/in-memory compilation; PR 6 file compilation; PR 8 JIT |
 | `RunRequest.java` | PR 5 interpreter request, then PR 8 backend field and constructors |
 | `JitControl.java` | PR 5 interface-signature compatibility, then PR 8 real embedded implementation |
-| `ServiceContext.java` | Generic lifecycle/thread-local changes in PR 3; concurrent callback map in PR 4b |
+| `ServiceContext.java` | Generic lifecycle/thread-local changes in PR 3; concurrent callback map and exception-continuation dispatch in PR 4b |
 | `xCoreRepository.java` / `xRTFileTemplate.java` | PR 5 interpreter request-repository correctness |
 | `IsolatedDirectExecutor.java` | PR 7 interpreter compile/run/xUnit; PR 8 JIT selection and limitation message |
 | `EmbeddingLifecycleTest.java` | PR 5 interpreter/audit cases; PR 6 file compilation; PR 8 five JIT cases |
@@ -557,7 +563,7 @@ must supply their own resource provider without silently expanding default embed
 | Scope | Exact production boundary | Required evidence |
 |---|---|---|
 | R1: file channels | `template/_native/fs/xOSFile.java` acquisition and `xRawOSFileChannel.java` handle transfer/close, including ignored results and failed delivery | The same native channel closes after explicit close or request success/failure/cancellation; caller files survive; repeated requests do not retain registrations |
-| R2: sockets | `template/_native/net/xRTSocket.java` connection acquisition, asynchronous transfer and close | Loopback connect/transfer races and blocked reads terminate; idle sockets close with their owner; subsequent requests still work |
+| R2: sockets | `template/_native/net/xRTSocket.java` connection acquisition, asynchronous transfer and close; `Frame.java` and `ServiceContext.java` exception cleanup across continuations | Peer EOF after failed/ignored native handoff while the owner lives; idle sockets close with their owner; the read scenario still needs a native-entry barrier to establish an already-blocked read |
 | R3: watcher subscriptions | `javatools_bridge/src/main/x/_native/fs/OSStorage.x` listener identity/cancellation and `template/_native/fs/xOSStorage.java` registration/unwatch | Last listener releases its native key, one owner cannot cancel another's subscription, abandoned listeners disappear after control close, and sequential requests do not grow the maps |
 | R4: HTTP clients | `template/_native/web/xRTConnector.java` connector/client-pool ownership and active-send cancellation | Owned clients shut down, cookie state does not cross unrelated owners, cancelled sends release resources, and the next sequential request succeeds |
 | R5: HTTP servers and exchanges | `template/_native/web/xRTServer.java` HTTP/HTTPS setup, partial-failure disposal, close, exchange lifetime and handler executor | Listeners, active exchanges, executor and keep-alive registration are released on explicit/owner close and every partial-startup failure; test missing second listener and unfinished requests |
