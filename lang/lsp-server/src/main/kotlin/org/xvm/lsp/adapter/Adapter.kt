@@ -120,6 +120,9 @@ interface Adapter : Closeable {
     /** Documents sharing this key must be analysed and invalidated together. */
     fun analysisScope(uri: String): String = uri
 
+    /** Scopes to refresh after an edit/close/filesystem event, in dependency order. */
+    fun affectedAnalysisScopes(uri: String): Set<String> = setOf(analysisScope(uri))
+
     /**
      * Get the cached compilation result for a document, if available.
      *

@@ -254,8 +254,28 @@ class XtcTextDocumentService(
         }
     }
 
-    /** A member edit replaces the analysis future for every open document in that module. */
+    /** Refresh the changed module, then open source consumers in dependency order. */
     private fun analyse(
+        uri: String,
+        content: String,
+        version: Int,
+    ) {
+        analyseOne(uri, content, version)
+        refreshScopes(adapter.affectedAnalysisScopes(uri) - adapter.analysisScope(uri))
+    }
+
+    private fun refreshScopes(scopes: Set<String>) {
+        scopes
+            .mapNotNull { scope ->
+                openDocuments.entries.firstOrNull { it.value.scope == scope || adapter.analysisScope(it.key) == scope }
+            }.distinctBy { adapter.analysisScope(it.key) }
+            .forEach { (uri, document) ->
+                analyseOne(uri, document.content, document.version)
+            }
+    }
+
+    /** A member edit replaces the analysis future for every open document in that module. */
+    private fun analyseOne(
         uri: String,
         content: String,
         version: Int,
@@ -303,13 +323,13 @@ class XtcTextDocumentService(
         }
     }
 
-    /** All source documents in a module publish together; foreign dependencies remain related info. */
+    /** A source closure publishes together; artifact-only foreign sources remain related info. */
     private fun publish(
         scope: String,
         result: CompilationResult,
     ) {
         val previous = publishedByScope.put(scope, result.documentUris).orEmpty()
-        (previous - result.documentUris).forEach { server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version) }
+        clearUnowned(previous - result.documentUris)
         result.documentUris.forEach { uri ->
             val diagnostics =
                 result.diagnostics.filter {
@@ -320,28 +340,29 @@ class XtcTextDocumentService(
         // Root discovery can change after file creation/removal; release publications of old scopes.
         val inactive = publishedByScope.keys.filter { key -> openDocuments.values.none { it.scope == key } }
         inactive.forEach { key ->
-            publishedByScope.remove(key).orEmpty().filter { it !in result.documentUris }.forEach {
-                server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
-            }
+            clearUnowned(publishedByScope.remove(key).orEmpty() - result.documentUris)
+        }
+    }
+
+    private fun clearUnowned(uris: Set<String>) {
+        uris.filter { uri -> publishedByScope.values.none { uri in it } }.forEach {
+            server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
         }
     }
 
     override fun didClose(params: DidCloseTextDocumentParams) {
         synchronized(lifecycle) {
             val uri = params.textDocument.uri
+            val affected = adapter.affectedAnalysisScopes(uri)
             val document = openDocuments.remove(uri)
             invalidateQueries(setOf(uri))
             document?.analysis?.cancel(false)
             adapter.closeDocument(uri)
             if (closed) return
             server.publishDiagnostics(uri, emptyList(), document?.version)
-            val remaining = openDocuments.entries.firstOrNull { it.value.scope == document?.scope }
-            if (remaining != null) {
-                analyse(remaining.key, remaining.value.content, remaining.value.version)
-            } else {
-                publishedByScope.remove(document?.scope).orEmpty().filter { it != uri }.forEach {
-                    server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
-                }
+            refreshScopes(affected)
+            if (openDocuments.values.none { it.scope == document?.scope }) {
+                clearUnowned(publishedByScope.remove(document?.scope).orEmpty() - uri)
             }
         }
     }
@@ -350,12 +371,7 @@ class XtcTextDocumentService(
     fun refreshForFile(uri: String) {
         synchronized(lifecycle) {
             if (closed) return
-            val scope = adapter.analysisScope(uri)
-            val document =
-                openDocuments.entries.firstOrNull {
-                    it.value.scope == scope || uri in publishedByScope[it.value.scope].orEmpty()
-                } ?: return
-            analyse(document.key, document.value.content, document.value.version)
+            refreshScopes(adapter.affectedAnalysisScopes(uri) + publishedByScope.filterValues { uri in it }.keys)
         }
     }
 
@@ -363,11 +379,7 @@ class XtcTextDocumentService(
     internal fun refreshDependencies(replace: () -> Set<String>) {
         synchronized(lifecycle) {
             if (closed) return
-            val affected = replace()
-            affected.forEach { scope ->
-                val document = openDocuments.entries.firstOrNull { it.value.scope == scope }
-                document?.let { analyse(it.key, it.value.content, it.value.version) }
-            }
+            refreshScopes(replace())
         }
     }
 
