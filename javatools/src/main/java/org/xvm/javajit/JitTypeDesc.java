@@ -164,7 +164,7 @@ public class JitTypeDesc {
 
     /**
      * @return the ClassDesc to use for a primitive field if the specified type is optimizable to a
-     * single Java primitive ClassDesc; null otherwise
+     *         single Java primitive ClassDesc; null otherwise
      */
     public static ClassDesc getPrimitiveFieldClass(TypeConstant type) {
         TypeConstant sansNullable = type.removeNullable();
