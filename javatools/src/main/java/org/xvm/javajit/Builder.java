@@ -300,11 +300,7 @@ public abstract class Builder {
 
         case FloatConstant floatConstant:
             return switch (floatConstant.getFormat()) {
-                case Float16 -> {
-                    code.loadConstant(floatConstant.getValue().floatValue());
-                    yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
-                }
-                case Float32 -> {
+                case Float16, Float32 -> {
                     code.loadConstant(floatConstant.getValue().floatValue());
                     yield new SingleSlot(constant.getType(), Primitive, CD_float, "");
                 }
