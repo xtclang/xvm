@@ -2,12 +2,64 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
+import org.xvm.tool.ModuleInfo
+import java.nio.file.Path
 
 class EmbeddingDiagnosticsTest {
+    @TempDir
+    lateinit var directory: Path
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `a non-module root reports its source diagnostic instead of an internal failure`(fileInput: Boolean) {
+        CompilerTestSupport.configure()
+        val text = "class NotModule {}"
+        val file = directory.resolve("NotModule.x").toFile().canonicalFile
+        val errors = ErrorList()
+        val support = EmbeddingSupport.instance()
+        val result =
+            if (fileInput) {
+                file.writeText(text)
+                support.compileModule(ModuleInfo(file, false), null, errors)
+            } else {
+                support.compileModule(Source(text, file.path), null, errors)
+            }
+        assertThat(result.succeeded()).isFalse()
+        assertThat(errors.errors.map { it.code }).containsExactly(EmbeddingSupport.ERR_MODULE_SOURCE)
+        val site = errors.errors.single().site() as ErrorListener.Site.In
+        assertThat(site.source().fileName).isEqualTo(file.path)
+        assertThat(site.source().toString(site.lPosStart(), site.lPosEnd())).isEqualTo(text)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["module FileAudit {}", "module FileAudit { void broken( { }"])
+    fun `discovery with an unreadable adjacent binary preserves source compilation diagnostics`(text: String) {
+        CompilerTestSupport.configure()
+        val file = directory.resolve("FileAudit.x").toFile().canonicalFile
+        file.writeText(text)
+        directory.resolve("FileAudit.xtc").toFile().writeText("corrupt")
+        val sources = ModuleInfo(file, false)
+        assertThat(sources.qualifiedModuleName).isEqualTo("FileAudit")
+        assertThat(sources.moduleVersion).isNull()
+        val errors = ErrorList()
+        val result = EmbeddingSupport.instance().compileModule(sources, null, errors)
+        val valid = text == "module FileAudit {}"
+        assertThat(result.succeeded()).isEqualTo(valid)
+        assertThat(errors.hasSeriousErrors()).isEqualTo(!valid)
+        assertThat(errors.errors).noneMatch { it.code == "EMB-5" }
+        errors.errors.forEach {
+            assertThat(it.code).startsWith("PARSER-")
+            assertThat((it.site() as ErrorListener.Site.In).source().fileName).isEqualTo(file.path)
+        }
+    }
+
     @Test
     fun `cancellation stops a valid token stream before parsing the rest of the document`() {
         CompilerTestSupport.configure()
