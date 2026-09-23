@@ -189,6 +189,7 @@ public abstract class Container
             services.forEach(service -> pending.add(service.requestShutdown()));
             CompletableFuture.allOf(pending.toArray(CompletableFuture[]::new))
                     .whenComplete((_, error) -> {
+                        f_runtime.purgeCancelledTimers();
                         if (error == null) {
                             termination.complete(null);
                         } else {
@@ -197,6 +198,7 @@ public abstract class Container
                         signalIdle();
                     });
         } catch (RuntimeException | Error e) {
+            f_runtime.purgeCancelledTimers();
             termination.completeExceptionally(e);
         }
         return termination;

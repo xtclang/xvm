@@ -212,7 +212,8 @@ class OwnedResourceTest {
 
     @Test
     void shutdownStillRunsAndAwaitsOtherCleanupAfterOneActionThrows() {
-        try (var runtime = new Runtime()) {
+        var runtime = new Runtime();
+        try {
             var owner = container(runtime, null);
             var expected = new IllegalStateException("cleanup failed");
             var cleaned = new CompletableFuture<Void>();
@@ -229,13 +230,17 @@ class OwnedResourceTest {
             assertSame(expected, assertThrows(CompletionException.class, stopped::join).getCause());
             assertEquals(0, owner.ownedResourceCount());
             assertThrows(IllegalStateException.class, runtime::close);
-            assertTrue(runtime.isTerminated());
+            assertFalse(runtime.isTerminated());
+        } finally {
+            assertThrows(IllegalStateException.class, runtime::close);
+            assertFalse(runtime.isTerminated());
         }
     }
 
     @Test
     void asynchronousExplicitCloseFailureAlsoReachesLaterShutdown() {
-        try (var runtime = new Runtime()) {
+        var runtime = new Runtime();
+        try {
             var owner = container(runtime, null);
             var expected = new IOException("async cleanup failed");
             var cleaned = new CompletableFuture<Void>();
@@ -247,12 +252,16 @@ class OwnedResourceTest {
             assertSame(expected, assertThrows(CompletionException.class,
                     () -> owner.terminateServices().join()).getCause());
             assertThrows(IllegalStateException.class, runtime::close);
+        } finally {
+            assertThrows(IllegalStateException.class, runtime::close);
+            assertFalse(runtime.isTerminated());
         }
     }
 
     @Test
     void checkedCloseFailureIsPreserved() {
-        try (var runtime = new Runtime()) {
+        var runtime = new Runtime();
+        try {
             var owner = container(runtime, null);
             var expected = new IOException("close failed");
             AutoCloseable value = () -> { throw expected; };
@@ -260,18 +269,25 @@ class OwnedResourceTest {
             assertSame(expected, assertThrows(CompletionException.class,
                     () -> resource.closeAsync().join()).getCause());
             assertThrows(IllegalStateException.class, runtime::close);
+        } finally {
+            assertThrows(IllegalStateException.class, runtime::close);
+            assertFalse(runtime.isTerminated());
         }
     }
 
     @Test
     void missingCleanupCompletionFailsShutdown() {
-        try (var runtime = new Runtime()) {
+        var runtime = new Runtime();
+        try {
             var owner = container(runtime, null);
             owner.acquireResource(Object::new, _ -> null);
             assertInstanceOf(NullPointerException.class, assertThrows(CompletionException.class,
                     () -> owner.terminateServices().join()).getCause());
             assertEquals(0, owner.ownedResourceCount());
             assertThrows(IllegalStateException.class, runtime::close);
+        } finally {
+            assertThrows(IllegalStateException.class, runtime::close);
+            assertFalse(runtime.isTerminated());
         }
     }
 

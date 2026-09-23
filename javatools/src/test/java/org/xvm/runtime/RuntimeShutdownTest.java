@@ -23,6 +23,52 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Timeout(30)
 class RuntimeShutdownTest {
     @Test
+    void requestTerminationPurgesCancelledTasksWithoutCancellingAnotherOwner() {
+        try (var runtime = new Runtime()) {
+            var survivor = container(runtime);
+            var live = alarm();
+            survivor.scheduleTimer(live, TimeUnit.DAYS.toMillis(1));
+            for (boolean explicitCancel : new boolean[] {false, true}) {
+                var owner = container(runtime);
+                for (int i = 0; i < 100; i++) {
+                    var task = alarm();
+                    owner.scheduleTimer(task, TimeUnit.DAYS.toMillis(2));
+                    if (explicitCancel) {
+                        assertTrue(task.cancel());
+                    }
+                }
+                owner.terminateServices().join();
+                assertEquals(0, runtime.purgeCancelledTimers(), "Owner close must already remove cancelled tasks");
+            }
+            assertTrue(live.cancel(), "Closing other owners must preserve the live alarm");
+            survivor.terminateServices().join();
+        }
+    }
+
+    @Test
+    void terminationPurgesTasksCancelledByAsynchronousResourceCleanup() {
+        var cleanup = new CompletableFuture<Void>();
+        try (var runtime = new Runtime()) {
+            var survivor = container(runtime);
+            var live = alarm();
+            var cancelled = alarm();
+            survivor.scheduleTimer(live, TimeUnit.DAYS.toMillis(1));
+            survivor.scheduleTimer(cancelled, TimeUnit.DAYS.toMillis(2));
+            var owner = container(runtime);
+            owner.acquireResource(Object::new, _ -> cleanup.thenRun(cancelled::cancel));
+            var stopped = owner.terminateServices();
+            assertFalse(stopped.isDone());
+            cleanup.complete(null);
+            stopped.join();
+            assertEquals(0, runtime.purgeCancelledTimers());
+            assertTrue(live.cancel());
+            survivor.terminateServices().join();
+        } finally {
+            cleanup.complete(null);
+        }
+    }
+
+    @Test
     void pendingNativeCleanupPreventsTerminationUntilItCompletes() {
         var cleanup = new CompletableFuture<Void>();
         try (var runtime = new Runtime()) {
@@ -113,6 +159,15 @@ class RuntimeShutdownTest {
             @Override
             public ObjectHandle getInjectable(Frame frame, String name, TypeConstant type, ObjectHandle options) {
                 throw new UnsupportedOperationException();
+            }
+        };
+    }
+
+    private static TimerTask alarm() {
+        return new TimerTask() {
+            @Override
+            public void run() {
+                throw new AssertionError("Future test alarm must not execute");
             }
         };
     }

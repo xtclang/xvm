@@ -122,6 +122,16 @@ public class Runtime
     }
 
     /**
+     * Remove cancelled tasks after an owner's cancellation hooks finish. Purge once per owner
+     * termination instead of scanning the shared queue for each cancelled alarm.
+     *
+     * @return the number of removed tasks
+     */
+    int purgeCancelledTimers() {
+        return timer.purge();
+    }
+
+    /**
      * @return a unique id
      */
     public long makeUniqueId() {
