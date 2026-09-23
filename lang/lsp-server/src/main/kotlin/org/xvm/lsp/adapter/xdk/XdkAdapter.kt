@@ -49,6 +49,7 @@ import org.xvm.util.Severity as XtcSeverity
 class XdkAdapter internal constructor(
     private val compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
     private val compileTree: (ModuleInfo, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val analyzeCursor: (Source, ModuleInfo?, Long, ErrorListener) -> EmbeddingSupport.PartialAnalysis = ::analyzeIncomplete,
 ) : AbstractAdapter() {
     internal constructor(compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation) : this(
         compileSource,
@@ -100,7 +101,7 @@ class XdkAdapter internal constructor(
         content: String,
     ): CompletableFuture<CompilationResult> {
         lateinit var request: Request
-        val previous =
+        val (previous, obsoleteCursors) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 overlays[uri] = content
@@ -110,20 +111,108 @@ class XdkAdapter internal constructor(
                 request.task = Runnable { runCompilation(request) }
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
-                        synchronized(lifecycle) {
-                            if (requests.remove(scope, request)) completed.remove(scope)
-                            compiles.remove(request.task)
-                        }
+                        val obsolete =
+                            synchronized(lifecycle) {
+                                compiles.remove(request.task)
+                                if (requests.remove(scope, request)) {
+                                    completed.remove(scope)
+                                    retireCursors(scope)
+                                } else {
+                                    emptyList()
+                                }
+                            }
+                        obsolete.forEach { it.result.cancel(false) }
                     }
                 }
                 val previous = requests.put(scope, request)
                 completed.remove(scope)
                 previous?.let { compiles.remove(it.task) }
                 compiles.execute(request.task)
-                previous
+                previous to retireCursors(scope)
+            }
+        previous?.result?.cancel(false)
+        obsoleteCursors.forEach { it.result.cancel(false) }
+        return request.result
+    }
+
+    /**
+     * Compiler-worker probe for a current open document. Results contain copied facts only; they
+     * neither replace normal diagnostics nor install another module analysis. A newer cursor in
+     * this document or any edit in its module invalidates the request. Protocol consumers must
+     * also check their captured document version before publishing the returned facts.
+     */
+    internal fun analyzeAtAsync(
+        uri: String,
+        position: Position,
+    ): CompletableFuture<PartialSemanticModel?> {
+        val (request, previous) =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
+                if (uri !in compilation.overlays) return CompletableFuture.completedFuture(null)
+                val request = CursorRequest(compilation, uri, position, ::runCursorAnalysis)
+                request.result.whenComplete { _, _ ->
+                    if (request.result.isCancelled) {
+                        synchronized(lifecycle) {
+                            cursors.remove(uri, request)
+                            compiles.remove(request.task)
+                        }
+                    }
+                }
+                val previous = cursors.put(uri, request)
+                previous?.let { compiles.remove(it.task) }
+                compiles.execute(request.task)
+                request to previous
             }
         previous?.result?.cancel(false)
         return request.result
+    }
+
+    private class CursorRequest(
+        val compilation: Request,
+        val uri: String,
+        val position: Position,
+        work: (CursorRequest) -> Unit,
+    ) {
+        val result = CompletableFuture<PartialSemanticModel?>()
+        val task = Runnable { work(this) }
+    }
+
+    /** Called under lifecycle; future callbacks must run after releasing it. */
+    private fun retireCursors(scope: String): List<CursorRequest> =
+        cursors.values.filter { it.compilation.scope == scope }.onEach {
+            cursors.remove(it.uri, it)
+            compiles.remove(it.task)
+        }
+
+    private fun isStale(request: CursorRequest): Boolean =
+        cursors[request.uri] !== request || request.result.isCancelled || isStale(request.compilation)
+
+    private fun runCursorAnalysis(request: CursorRequest) {
+        try {
+            if (isStale(request)) throw CancellationException()
+            val source = Source(request.compilation.overlays.getValue(request.uri), request.uri)
+            val errors = ErrorListener.cancellable(ErrorList()) { isStale(request) }
+            val cursor = cursorPosition(source, request.position, errors)
+            val facts =
+                cursor?.let {
+                    val sources = captureSources(request.compilation) { isStale(request) }
+                    analyzeCursor(source, sources, it, errors).semanticSnapshot(errors)
+                }
+            synchronized(lifecycle) {
+                if (isStale(request)) throw CancellationException()
+            }
+            request.result.complete(facts)
+        } catch (_: CancellationException) {
+            request.result.cancel(false)
+        } catch (e: Exception) {
+            request.result.completeExceptionally(e)
+        } catch (e: Error) {
+            request.result.completeExceptionally(e)
+            throw e
+        } finally {
+            cursors.remove(request.uri, request)
+        }
     }
 
     private fun runCompilation(request: Request) {
@@ -201,22 +290,24 @@ class XdkAdapter internal constructor(
     private fun analysis(uri: String): Analysis? = module(uri)?.document(uri)
 
     override fun closeDocument(uri: String) {
-        val previous =
+        val (previous, obsoleteCursors) =
             synchronized(lifecycle) {
                 val scope = scopes.remove(uri) ?: analysisScope(uri)
                 overlays.remove(uri)
                 completed.remove(scope)
-                requests.remove(scope)?.also { compiles.remove(it.task) }
+                requests.remove(scope)?.also { compiles.remove(it.task) } to retireCursors(scope)
             }
         previous?.result?.cancel(false)
+        obsoleteCursors.forEach { it.result.cancel(false) }
     }
 
     override fun close() {
         val pending =
             synchronized(lifecycle) {
                 closed = true
-                val pending = requests.values.toList()
+                val pending = requests.values.map { it.result } + cursors.values.map { it.result }
                 requests.clear()
+                cursors.clear()
                 overlays.clear()
                 scopes.clear()
                 completed.clear()
@@ -224,28 +315,27 @@ class XdkAdapter internal constructor(
                 compiles.shutdown()
                 pending
             }
-        pending.forEach { it.result.cancel(false) }
+        pending.forEach { it.cancel(false) }
         if (!compiles.awaitTermination(SHUTDOWN_SECONDS, TimeUnit.SECONDS)) compiles.shutdownNow()
     }
 
     private fun isStale(request: Request): Boolean = requests[request.scope] !== request || request.result.isCancelled
 
+    private fun captureSources(
+        request: Request,
+        cancelled: () -> Boolean,
+    ): XdkSources? =
+        XdkSources
+            .file(request.scope)
+            ?.takeIf { it.isFile || it != XdkSources.file(request.uri) || File(it.parentFile, it.nameWithoutExtension).isDirectory }
+            ?.let { XdkSources.capture(it, request.overlays, cancelled) }
+
     /** Capture disk and overlays, then compile and copy all source views on the single worker. */
     private fun compileNow(request: Request): ModuleAnalysis {
         val heard = ErrorList()
         val errs = ErrorListener.cancellable(heard) { isStale(request) }
-        val root = XdkSources.file(request.scope)
         val source = Source(request.overlays.getValue(request.uri), request.uri)
-        val sources =
-            root
-                ?.takeIf {
-                    it.isFile || it !=
-                        XdkSources.file(
-                            request.uri,
-                        ) || File(it.parentFile, it.nameWithoutExtension).isDirectory
-                }?.let {
-                    XdkSources.capture(it, request.overlays) { isStale(request) }
-                }
+        val sources = captureSources(request) { isStale(request) }
         val compilation = if (sources == null) compileSource(source, errs) else compileTree(sources, errs)
         if (isStale(request)) throw CancellationException()
         logger.info("compile: scope={} [{}]", request.scope, EmbeddingSupport.instance().footprint(compilation))
@@ -501,6 +591,7 @@ class XdkAdapter internal constructor(
     private val overlays = linkedMapOf<String, String>()
     private val scopes = mutableMapOf<String, String>()
     private val requests = ConcurrentHashMap<String, Request>()
+    private val cursors = ConcurrentHashMap<String, CursorRequest>()
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
@@ -520,5 +611,35 @@ class XdkAdapter internal constructor(
     private companion object {
         const val SOURCE = "xtc"
         const val SHUTDOWN_SECONDS = 5L
+
+        /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
+        fun cursorPosition(
+            source: Source,
+            position: Position,
+            errors: ErrorListener,
+        ): Long? {
+            if (position.line < 0 || position.column < 0) return null
+            val cursor = source.clone()
+            while (cursor.hasNext() && (cursor.line < position.line || (cursor.line == position.line && cursor.offset < position.column))) {
+                if (errors.isAbortDesired) throw CancellationException()
+                cursor.next()
+            }
+            return cursor.position.takeIf { cursor.line == position.line && cursor.offset == position.column }
+        }
+
+        fun analyzeIncomplete(
+            source: Source,
+            sources: ModuleInfo?,
+            cursor: Long,
+            errors: ErrorListener,
+        ): EmbeddingSupport.PartialAnalysis {
+            XdkLibraries.configure()
+            val support = EmbeddingSupport.instance()
+            return if (sources == null) {
+                support.analyzeIncomplete(source, cursor, null, errors)
+            } else {
+                support.analyzeIncomplete(sources, checkNotNull(XdkSources.file(source.fileName)), cursor, null, errors)
+            }
+        }
     }
 }
