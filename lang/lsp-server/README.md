@@ -115,7 +115,8 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope, instance-member and static completion |
-| Rename / code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
+| Rename | Basic | Implemented with syntax limits | Locals/private method parameters; compile and binding validation; versioned edits required |
+| Code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | Unavailable |
@@ -177,7 +178,13 @@ Inlay hints show inferred local types after successful compilation and selected 
 parameter names, omitting named arguments and synthetic defaults. These queries use copied facts
 and expire with the module snapshot.
 
-Rename, formatting, code actions, document links, code lenses and linked editing remain unsupported.
+Rename covers locals and private ordinary-method parameters, including captures and selected named
+argument labels. It recompiles proposed edits and compares all recorded bindings and selected calls;
+untouched names must keep their targets. The client must support versioned document edits. Source
+edits, dependency replacement, cancellation and close invalidate pending rename work. Unknown
+bindings, failed compilation, public/lambda/constructor parameters, method values and member/override/
+workspace rename remain unavailable. Formatting, code actions, document links, code lenses and linked
+editing remain unsupported.
 A member parse failure clears the module's normal semantic answers until a later correction;
 explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser
 recovery retains available per-source syntax for outline, folding and selection, including valid
