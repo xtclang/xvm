@@ -85,6 +85,24 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<
     return ConstantPool.withPool(pool).use { builder.build(this, errors) }
 }
 
+/** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
+fun EmbeddingSupport.Compilation.toDependency(): XdkDependency {
+    require(succeeded()) { "A dependency artifact requires successful compilation" }
+    return ConstantPool.withPool(pool()).use {
+        val builder = SemanticModelBuilder()
+        builder.build(this)
+        XdkDependency.capture(this, builder.declarations())
+    }
+}
+
+internal fun EmbeddingSupport.Compilation.semanticSnapshots(
+    errors: ErrorListener,
+    dependencies: XdkDependencies.Open,
+): List<SemanticModel> =
+    ConstantPool.withPool(pool()).use {
+        SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId }).build(this, errors)
+    }
+
 /**
  * Explicit worker-only member inspection followed by copying. Unlike ordinary semanticSnapshot,
  * this may build receiver TypeInfo and report through [errors]. Never call it on a request thread
@@ -98,7 +116,9 @@ fun EmbeddingSupport.PartialAnalysis.semanticSnapshot(errors: ErrorListener): Pa
 }
 
 /** Compiler-worker extraction. All mutable state dies with the builder. */
-private class SemanticModelBuilder {
+private class SemanticModelBuilder(
+    private val dependencies: Map<IdentityConstant, DependencyDeclaration> = emptyMap(),
+) {
     private val id = UUID.randomUUID()
     private val captureOrigins = IdentityHashMap<Register, Register>()
     private val capturedProperties = mutableMapOf<PropertyConstant, Register>()
@@ -114,6 +134,16 @@ private class SemanticModelBuilder {
     private val callables = linkedMapOf<SymbolId, SemanticModel.Callable>()
     private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
 
+    fun declarations(): Map<IdentityConstant, SourceLocation> =
+        constants.entries
+            .mapNotNull { (constant, id) ->
+                val identity = constant as? IdentityConstant ?: return@mapNotNull null
+                val symbol = symbols.getValue(id)
+                val range = symbol.declaration ?: return@mapNotNull null
+                if (symbol.declarationSource == null || symbol.dependency != null) return@mapNotNull null
+                identity to SourceLocation(symbol.declarationSource, range)
+            }.toMap()
+
     fun unavailable(): SemanticModel =
         SemanticModel(id, Status.UNAVAILABLE, null, SemanticModel.Facts(symbols, types), emptyList(), emptyList())
 
@@ -125,7 +155,7 @@ private class SemanticModelBuilder {
             compilation.parsed()
                 ?: return listOf(unavailable())
         val nodes = nodesIn(root)
-        collect(nodes, compilation.callBindings())
+        collect(nodes, compilation.callBindings(), compilation.pool())
         val implementations =
             if (compilation.succeeded() && errors != null) compilerImplementationTargets(nodes, errors) else emptyMap()
         return finish(nodes, compilation.succeeded(), implementations)
@@ -134,7 +164,14 @@ private class SemanticModelBuilder {
     private fun collect(
         nodes: List<AstNode>,
         bindings: Map<InvocationExpression, InvocationBinding>,
+        pool: ConstantPool?,
     ) {
+        dependencies.forEach { (identity, declaration) ->
+            // Artifact identities supply source associations, not semantic metadata: their pools
+            // have not linked core libraries. Read only the corresponding consumer-owned constant.
+            val linked = pool?.getConstant(identity) as? IdentityConstant ?: return@forEach
+            symbol(linked, linked.name, kind(linked), declaration.location)
+        }
         nodes.filterIsInstance<NewExpression>().forEach {
             capturedProperties.putAll(it.captureOrigins)
             it.sourceBindings?.let { bindings -> captureOrigins.putAll(bindings.captureOrigins) }
@@ -313,7 +350,7 @@ private class SemanticModelBuilder {
     ): PartialSemanticModel {
         val source = analysis.sites().singleOrNull()?.source ?: return PartialSemanticModel(unavailable(), emptyList())
         val nodes = nodesIn(analysis.sourceTrees())
-        collect(nodes, analysis.callBindings())
+        collect(nodes, analysis.callBindings(), analysis.pool().orElse(null))
         val sites =
             analysis.sites().map { site ->
                 val parents = generateSequence(site.parent) { it.parent }.toList()
@@ -562,17 +599,20 @@ private class SemanticModelBuilder {
         val existing = if (target is Register) registers[target] else constants[target as Constant]
         if (existing != null) return existing
         val symbol = SymbolId(id, symbols.size)
+        val dependency = (target as? IdentityConstant)?.let(dependencies::get)
+        val location = declaration ?: dependency?.location
         if (target is Register) registers[target] = symbol else constants[target as Constant] = symbol
         symbols[symbol] =
             Symbol(
                 symbol,
                 name,
                 kind,
-                declaration?.range,
+                location?.range,
                 type(declaredType(target)),
                 signature(target),
-                declaration?.sourceName,
+                location?.sourceName,
                 modifiers(target),
+                dependency = dependency?.key,
             )
         return symbol
     }

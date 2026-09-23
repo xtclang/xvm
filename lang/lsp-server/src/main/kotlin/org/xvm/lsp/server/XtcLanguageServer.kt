@@ -103,6 +103,8 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
@@ -667,6 +669,12 @@ class XtcLanguageServer(
     // =========================================================================
 
     fun refreshForFile(uri: String) = textDocumentService.refreshForFile(uri)
+
+    /** Host API; project discovery/configuration is separate from installing matching artifacts. */
+    fun replaceCompilerDependencies(dependencies: List<XdkDependency>) {
+        val compiler = adapter as? XdkAdapter ?: error("Compiler dependencies require XdkAdapter")
+        textDocumentService.refreshDependencies { compiler.replaceDependencies(dependencies) }
+    }
 
     fun publishDiagnostics(
         uri: String,

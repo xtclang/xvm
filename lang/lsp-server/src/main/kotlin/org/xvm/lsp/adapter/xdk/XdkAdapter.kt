@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
+import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.lsp.adapter.AbstractAdapter
@@ -54,10 +55,21 @@ import org.xvm.util.Severity as XtcSeverity
  * Matching core/bootstrap XDK libraries are bundled; compilation does not start an interpreter.
  */
 class XdkAdapter internal constructor(
-    private val compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
-    private val compileTree: (ModuleInfo, ErrorListener) -> EmbeddingSupport.Compilation,
-    private val analyzeCursor: (Source, ModuleInfo?, Long, ErrorListener) -> EmbeddingSupport.PartialAnalysis = ::analyzeIncomplete,
+    private val compileSource: (Source, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val analyzeCursor: (Source, ModuleInfo?, Long, ModuleRepository?, ErrorListener) -> EmbeddingSupport.PartialAnalysis,
 ) : AbstractAdapter() {
+    internal constructor(
+        compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
+        compileTree: (ModuleInfo, ErrorListener) -> EmbeddingSupport.Compilation,
+        analyzeCursor: (Source, ModuleInfo?, Long, ErrorListener) -> EmbeddingSupport.PartialAnalysis =
+            { source, sources, cursor, errors -> analyzeIncomplete(source, sources, cursor, null, errors) },
+    ) : this(
+        { source, _, errors -> compileSource(source, errors) },
+        { sources, _, errors -> compileTree(sources, errors) },
+        { source, sources, cursor, _, errors -> analyzeCursor(source, sources, cursor, errors) },
+    )
+
     internal constructor(compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation) : this(
         compileSource,
         { sources, errs ->
@@ -66,10 +78,17 @@ class XdkAdapter internal constructor(
         },
     )
 
-    constructor() : this({ source, errs ->
-        XdkLibraries.configure()
-        EmbeddingSupport.instance().compileModule(source, null, errs)
-    })
+    constructor() : this(
+        { source, repository, errors ->
+            XdkLibraries.configure()
+            EmbeddingSupport.instance().compileModule(source, repository, errors)
+        },
+        { sources, repository, errors ->
+            XdkLibraries.configure()
+            EmbeddingSupport.instance().compileModule(sources, repository, errors)
+        },
+        ::analyzeIncomplete,
+    )
 
     override val displayName: String = "XDK"
 
@@ -121,7 +140,7 @@ class XdkAdapter internal constructor(
                 overlays[uri] = content
                 val scope = analysisScope(uri)
                 scopes[uri] = scope
-                request = Request(scope, uri, overlays.filterKeys { analysisScope(it) == scope })
+                request = Request(scope, uri, overlays.filterKeys { analysisScope(it) == scope }, dependencies)
                 request.task = Runnable { runCompilation(request) }
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
@@ -225,7 +244,8 @@ class XdkAdapter internal constructor(
             val facts =
                 cursor?.let {
                     val sources = captureSources(request.compilation) { isStale(request) }
-                    analyzeCursor(source, sources, it, errors).semanticSnapshot(errors)
+                    val dependencies = request.compilation.dependencies.open()
+                    analyzeCursor(source, sources, it, dependencies.repository, errors).semanticSnapshot(errors)
                 }
             synchronized(lifecycle) {
                 if (isStale(request)) throw CancellationException()
@@ -285,6 +305,7 @@ class XdkAdapter internal constructor(
         val scope: String,
         val uri: String,
         val overlays: Map<String, String>,
+        val dependencies: XdkDependencies,
     ) {
         val result = CompletableFuture<CompilationResult>()
         lateinit var task: Runnable
@@ -294,6 +315,9 @@ class XdkAdapter internal constructor(
     private class ModuleAnalysis(
         val documents: Map<String, Analysis>,
         val diagnostics: List<Diagnostic>,
+        val dependencies: Set<String>,
+        val succeeded: Boolean,
+        val dependencySources: Map<String, String>,
     ) {
         val hierarchy = XdkHierarchy(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
         val calls = XdkCalls(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
@@ -304,7 +328,8 @@ class XdkAdapter internal constructor(
                     XdkSources.file(it.key) != null && XdkSources.file(it.key) == XdkSources.file(uri)
                 }?.value
 
-        fun sourceUri(name: String?): String? = documents.entries.firstOrNull { it.value.semantics?.sourceName == name }?.key
+        fun sourceUri(name: String?): String? =
+            documents.entries.firstOrNull { it.value.semantics?.sourceName == name }?.key ?: dependencySources[name]
     }
 
     private data class Analysis(
@@ -317,6 +342,42 @@ class XdkAdapter internal constructor(
     private fun module(uri: String): ModuleAnalysis? = completed[analysisScope(uri)]
 
     private fun analysis(uri: String): Analysis? = module(uri)?.document(uri)
+
+    /**
+     * Atomically replace host-supplied artifacts and retire affected analyses/cursor probes.
+     * The host must reanalyse the returned scopes to publish diagnostics for current document
+     * versions; XtcLanguageServer.replaceCompilerDependencies performs that step under its lock.
+     * Failed and pending attempts are conservatively retried because their import set is incomplete.
+     */
+    fun replaceDependencies(artifacts: List<XdkDependency>): Set<String> {
+        val replacement = XdkDependencies(artifacts)
+        val (retired, probes) =
+            synchronized(lifecycle) {
+                check(!closed) { "XDK adapter is closed" }
+                val changed =
+                    (dependencies.modules.keys + replacement.modules.keys).filterTo(linkedSetOf()) {
+                        dependencies.modules[it]?.revision != replacement.modules[it]?.revision
+                    }
+                if (changed.isEmpty()) return emptySet()
+                dependencies = replacement
+                val retired =
+                    requests.values.filter {
+                        val analysis = completed[it.scope]
+                        analysis == null || !analysis.succeeded || analysis.dependencies.any(changed::contains)
+                    }
+                val probes =
+                    retired.flatMap { request ->
+                        requests.remove(request.scope, request)
+                        completed.remove(request.scope)
+                        compiles.remove(request.task)
+                        retireCursors(request.scope)
+                    }
+                retired to probes
+            }
+        retired.forEach { it.result.cancel(false) }
+        probes.forEach { it.result.cancel(false) }
+        return retired.mapTo(linkedSetOf()) { it.scope }
+    }
 
     override fun closeDocument(uri: String) {
         val (previous, obsoleteCursors) =
@@ -365,7 +426,13 @@ class XdkAdapter internal constructor(
         val errs = ErrorListener.cancellable(heard) { isStale(request) }
         val source = Source(request.overlays.getValue(request.uri), request.uri)
         val sources = captureSources(request) { isStale(request) }
-        val compilation = if (sources == null) compileSource(source, errs) else compileTree(sources, errs)
+        val dependencies = request.dependencies.open()
+        val compilation =
+            if (sources == null) {
+                compileSource(source, dependencies.repository, errs)
+            } else {
+                compileTree(sources, dependencies.repository, errs)
+            }
         if (isStale(request)) throw CancellationException()
         logger.info("compile: scope={} [{}]", request.scope, EmbeddingSupport.instance().footprint(compilation))
         if (compiled.incrementAndGet() == 1L) logger.info("compile: first compilation in this server completed (cold)")
@@ -373,7 +440,7 @@ class XdkAdapter internal constructor(
             buildMap {
                 compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
             }
-        val views = compilation.semanticSnapshots(errs)
+        val views = compilation.semanticSnapshots(errs, dependencies)
         val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
         val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
         val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris) }
@@ -389,7 +456,26 @@ class XdkAdapter internal constructor(
                     views.firstOrNull { it.sourceName == sourceName },
                 )
             }
-        return ModuleAnalysis(documents, diagnostics)
+        val dependencySources =
+            dependencies.declarations.values
+                .mapNotNull { declaration ->
+                    val name = declaration.location.sourceName ?: return@mapNotNull null
+                    val uri =
+                        runCatching { URI(name).takeIf { it.isAbsolute }?.toString() }.getOrNull()
+                            ?: XdkSources.file(name)?.toURI()?.toString()
+                    uri?.let { name to it }
+                }.toMap()
+        return ModuleAnalysis(
+            documents,
+            diagnostics,
+            compilation
+                .file()
+                ?.moduleIds()
+                ?.mapTo(linkedSetOf()) { it.name }
+                .orEmpty(),
+            compilation.succeeded(),
+            dependencySources,
+        )
     }
 
     /**
@@ -712,6 +798,9 @@ class XdkAdapter internal constructor(
     private val lifecycle = Any()
     private var closed = false
 
+    /** Replaced only under lifecycle; each request captures its immutable dependency set. */
+    private var dependencies = XdkDependencies(emptyList())
+
     /** Only current, completed module analyses belong here; a member edit drops all previous views. */
     private val completed = ConcurrentHashMap<String, ModuleAnalysis>()
     private val overlays = linkedMapOf<String, String>()
@@ -757,14 +846,15 @@ class XdkAdapter internal constructor(
             source: Source,
             sources: ModuleInfo?,
             cursor: Long,
+            repository: ModuleRepository?,
             errors: ErrorListener,
         ): EmbeddingSupport.PartialAnalysis {
             XdkLibraries.configure()
             val support = EmbeddingSupport.instance()
             return if (sources == null) {
-                support.analyzeIncomplete(source, cursor, null, errors)
+                support.analyzeIncomplete(source, cursor, repository, errors)
             } else {
-                support.analyzeIncomplete(sources, checkNotNull(XdkSources.file(source.fileName)), cursor, null, errors)
+                support.analyzeIncomplete(sources, checkNotNull(XdkSources.file(source.fileName)), cursor, repository, errors)
             }
         }
     }

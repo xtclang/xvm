@@ -4,6 +4,14 @@
 > **Status**: Planning
 > **Scope**: Making the VS Code extension feel mature and production-ready
 
+> **Status review, 2026-09-23:** The baseline, counts and proposed changes below describe the April
+> plan; they are not a current adapter capability inventory. Semantic tokens are now part of the
+> shipped Tree-sitter backend, and the opt-in compiler provides bounded semantic features and hints.
+> Its dependency artifact/source API is host-facing; editor project configuration remains open.
+> Use the [current capability matrix](plan-ide-integration.md#adapter-capability-matrix),
+> [extension README](../../vscode-extension/README.md) and
+> [manual playbook](../manual-test-plan.md#vs-code-extension-playbook) for current behavior and checks.
+
 ## Guiding Principle
 
 **Keep logic in Kotlin, minimize TypeScript.** The LSP server (Kotlin) is shared
@@ -12,11 +20,11 @@ Neovim, Emacs, and any other LSP client. The VS Code extension's TypeScript code
 should be a thin shell -- just enough to wire VS Code APIs to the LSP server and
 register VS Code-specific contributions (snippets, tasks, settings UI).
 
-The current `extension.ts` is 136 lines. Ideally it stays under 300.
+The original plan counted 136 lines in `extension.ts` and proposed keeping it under 300.
 
 ---
 
-## Current State
+## Original Planning Baseline, 2026-04-03
 
 ### What works
 - TextMate syntax highlighting (generated from DSL)
