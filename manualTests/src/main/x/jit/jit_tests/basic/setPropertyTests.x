@@ -78,6 +78,33 @@ package setPropertyTests {
         t.testNullableXvmPrimitiveElvisAssign(2006);
         assert t.x == 2006;
 
+        testDeclaredSetterOnly();
+    }
+
+    /**
+     * A property that declares set() but not get() has a setter MethodInfo and no getter one.
+     * Choosing the accessor shape from the getter therefore generated no setter at all, and
+     * assigning to the property failed at run time with NoSuchMethodError.
+     */
+    void testDeclaredSetterOnly() {
+        SetterOnly s = new SetterOnly();
+
+        s.observed = 7;
+        assert s.seen == 7;
+
+        s.observed = -3;
+        assert s.seen == -3;
+    }
+
+    class SetterOnly {
+        Int seen = 0;
+
+        Int observed {
+            @Override
+            void set(Int value) {
+                seen = value;
+            }
+        }
     }
 
     class Test(Int i, Dec64 d, String s) {

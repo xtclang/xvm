@@ -27,7 +27,7 @@ import static java.lang.constant.ConstantDescs.CD_long;
 /**
  * The builder for Enum base types.
  *
- * It overrides the CommonBuilder to do the following:
+ * <p>It overrides the CommonBuilder to do the following:
  *   - supply the xEnum class as a super class
  *   - implement the "enumeration" property
  */
