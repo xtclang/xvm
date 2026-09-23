@@ -36,8 +36,12 @@ Execution checklist (complete each item with the evidence specified below):
   snapshots, including source overlays and positions before the end of the file.
   - [x] Explicit cursor before existing closing braces/semicolons; preserve following declarations.
   - [x] Module member sites using the same unsaved root/member snapshot; copy shared semantic facts.
-  - [ ] Assignment, return and incomplete nested-call contexts.
-  - [ ] Adapter request ownership, version invalidation and cancellation through publication.
+  - [x] Simple assignment/initializer values, single return values and final nested call arguments;
+    retain the actual enclosing syntax and validate its compiler context. Broader expression forms
+    remain explicitly unavailable.
+  - [x] Adapter cursor requests share the compiler worker; edits, superseding requests, close and
+    cancellation invalidate running/queued work without replacing normal diagnostics.
+  - [ ] Server document-version checks and request cancellation through publication (with task 3).
 - [ ] **3. Completion and signature help.** Connect proven partial facts to real adapter/server
   requests; establish scope, receiver and argument/overload behavior.
 - [ ] **4. Other semantic consumer probes.** Type-definition, implementation lookup, call hierarchy,
@@ -60,7 +64,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 | Priority / area | What is still unproven or absent | POC acceptance evidence |
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
-| 2. Cursor-based incomplete analysis — in progress | Explicit cursors before closing braces/semicolons and module member overlays now work for standalone statements. Assignments/returns/incomplete nested calls and adapter request publication remain open. | Analyze unchanged source within a module snapshot and its unsaved overlays. Preserve lexical/flow context, source spans, budgets, cancellation and current-version publication; report unavailable facts explicitly. Keep compiler mode Java-only. |
+| 2. Cursor-based incomplete analysis — in progress | Explicit cursors and module overlays now support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter request publication remains open; compound/conditional prefixes and arguments following the cursor are unavailable. | Analyze unchanged source within a module snapshot and its unsaved overlays. Preserve lexical/flow context, source spans, budgets, cancellation and current-version publication; report unavailable facts explicitly. Keep compiler mode Java-only. |
 | 3. Completion and signature help | Receiver candidates exist, but visible locals/implicit receivers, static/type lookup, applicable overloads, expected argument types and incomplete argument-to-parameter mapping are not established. Function values, partial application and receiver-to-argument rewrites have no selected-call record. | Real XdkAdapter/stdio requests for representative qualified/unqualified, generic, overloaded and named/default-argument examples. Results must distinguish source argument slots from selected parameters and survive edits/cancellation without stale facts. |
 | 4. Other semantic consumers | Types lack an explicit copied declaration link; calls lack an explicit caller association; occurrences classify declaration/reference, not read/write or modifiers. Override/implementation and safe rename relationships still need proof. | Small compiler-backed consumers for type-definition, implementation lookup, incoming/outgoing calls, semantic tokens/inlay hints and module-local rename conflict checks. Record which facts can be copied from existing compiler structures and which need a small compiler hook. Include captures, shadowing, overloads and generated declarations. |
 | 5. Dependency/source boundary | Module navigation works; cross-module/library source lookup and persistent workspace indexing do not. Snapshot IDs intentionally expire between attempts. | A two-module fixture proves dependency identity, available source locations and invalidation when the dependency changes. Specify host source/repository ownership and index keys; missing library sources must remain unavailable. A production workspace index can follow separately. |
@@ -103,6 +107,46 @@ All 1,015 executed tests passed; the 19 partial-analysis cases had no skips. XDK
 `spotlessCheck` passed. The new cases cover preserved suffix declarations, module overlays and copied
 cross-file facts, unrelated-file syntax errors, real narrowing, UTF-16/CRLF positions, cancellation,
 budgets, exactly-once diagnostics and normal compilation continuing to reject incomplete input.
+
+Task 2's second slice preserves actual assignment and return nodes around an `IncompleteExpression`.
+The new node owns the existing incomplete-site marker as a normal AST child. It has no implicit
+type, reports no successful type fit, and returns validation failure after inspecting the intact
+prefix in its enclosing compiler context. This avoids reconstructing assignment scope in the
+adapter; a shadowing regression compares the receiver binding with ordinary compilation. Typed
+and inferred declarations, existing-variable assignments and single returns have real consumers.
+
+Nested calls retain their preceding arguments and optional written closing parentheses, while the
+partial result selects the innermost unfinished operation. Enclosing calls never choose an overload
+from a fabricated argument type. This includes named final arguments and assignment/return values
+containing such calls. The syntax traversal follows child links with streams: parent links are not
+installed yet at this point. Ordinary AST cloning owns the wrapper and nested children; no clone
+reset or mutable semantic cache is added. See the [AST placement inventory](errs.md#incomplete-statements-for-explicit-partial-analysis).
+
+Limits remain explicit: compound assignments, binary/conditional prefixes, multiple return values,
+and arguments following an incomplete argument are not covered. The original trailing-EOF overload
+keeps its standalone-statement contract. No completion/signature capability is advertised yet.
+Second-slice validation: 474 compiler tests (40 existing skips), 593 LSP tests (three existing
+skips) and seven packaged compiler-stdio tests completed with zero failures/errors. All 1,031
+executed tests passed, including all 35 partial-analysis cases. XDK installation and
+`spotlessCheck` passed.
+
+The adapter now supplies an internal `analyzeAtAsync(uri, position)` consumer on its existing
+serialized compiler worker. It translates UTF-16 editor positions to compiler Source tokens and
+uses the current module request's frozen overlays. Only copied partial facts leave that worker;
+cursor probes do not replace the module cache or its diagnostics. A newer cursor in the same
+document supersedes older work. Any edit or close in the module, explicit cancellation and shutdown
+retire affected requests, including queued work. Tests deliberately let canceled compiler work
+finish to verify that its facts cannot complete a canceled future. Module-root edits invalidate
+member cursors, and position tests cover CRLF, supplementary characters and source escapes.
+
+This closes adapter request ownership, not protocol publication. The server still needs to connect
+completion/signature requests, forward cancellation and check its captured document version before
+delivering facts. No new protocol capability is advertised; those end-to-end checks are next.
+
+Adapter-slice validation: a fresh full LSP run reported 600 tests with three existing skips, and
+all seven packaged compiler-stdio tests ran. All 604 executed tests passed, including seven cursor
+request regressions and all 35 partial-analysis cases; `spotlessCheck` passed. The compiler sources
+are unchanged from the preceding successful 434-executed-test compiler run.
 
 ### Branch hardening design
 

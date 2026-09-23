@@ -14,10 +14,13 @@ import org.xvm.asm.ModuleRepository
 import org.xvm.asm.ModuleStructure
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
+import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.IncompleteExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.Parameter
+import org.xvm.compiler.ast.ReturnStatement
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.tool.ModuleInfo
 import java.io.File
@@ -28,6 +31,160 @@ import java.util.concurrent.atomic.AtomicBoolean
 class XdkPartialAnalysisTest {
     @TempDir
     lateinit var directory: Path
+
+    @ParameterizedTest
+    @ValueSource(strings = ["return ", "Int result = ", "var result = ", "result = "])
+    fun `incomplete values preserve their assignment or return context`(statement: String) {
+        CompilerTestSupport.configure()
+        for (operation in listOf("value.", "value.indexOf(\"x\", ")) {
+            val setup = if (statement == "result = ") "Int result = 0; " else ""
+            val prefix = "module Editing { Int run(String value) { $setup$statement$operation"
+            val text = "$prefix } Int later() = 42; }"
+            val errors = ErrorList()
+            val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+            assertThat(errors.errors.map { it.code }).describedAs(errors.errors.toString()).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+            assertThat(analysis.pool()).isPresent()
+            val site = analysis.sites().single()
+            assertThat(site.parent).isInstanceOf(IncompleteExpression::class.java)
+            assertThat(site.parent.parent).isInstanceOf(
+                if (statement ==
+                    "return "
+                ) {
+                    ReturnStatement::class.java
+                } else {
+                    AssignmentStatement::class.java
+                },
+            )
+            val receiver = site.receiver.orElseThrow()
+            assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
+            ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+                assertThat(receiver.type.valueString).contains("String")
+            }
+            assertThat((site.parent as IncompleteExpression).isValidated).isFalse()
+            val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
+            assertThat((method.component as MethodStructure).ast).isNull()
+            assertThat(
+                analysis
+                    .semanticSnapshot(errors)
+                    .sites
+                    .single()
+                    .members
+                    .map { it.name },
+            ).contains(if (site.isCall) "indexOf" else "size")
+            assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "work(value.",
+            "work(inner(value.",
+            "work(text = value.",
+            "return work(value.",
+            "Int result = work(value.",
+            "work(value.indexOf(\"x\", ",
+        ],
+    )
+    fun `nested incomplete arguments retain one innermost cursor site`(statement: String) {
+        CompilerTestSupport.configure()
+        val prefix =
+            "module Editing { Int work(String text) = 1; String inner(String text) = text; " +
+                "Int run(String value) { $statement"
+        val closing =
+            when {
+                statement.contains("indexOf") -> ""
+                statement.contains("inner") -> "))"
+                else -> ")"
+            }
+        val text = "$prefix$closing; } Int later() = 42; }"
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+        assertThat(errors.errors.map { it.code }).describedAs(errors.errors.toString()).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        assertThat(analysis.pool()).isPresent()
+        val site = analysis.sites().single()
+        val receiver = site.receiver.orElseThrow() as NameExpression
+        assertThat(receiver.name).isEqualTo("value")
+        assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
+        assertThat(site.source.toRawString()).isEqualTo(text)
+        assertThat(site.endPosition).isEqualTo(position(prefix))
+        val copied = analysis.semanticSnapshot(errors).sites.single()
+        assertThat(copied.members.map { it.name }).contains(if (site.isCall) "indexOf" else "size")
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
+        assertThat((method.component as MethodStructure).ast).isNull()
+    }
+
+    @Test
+    fun `partial value clones own their nested syntax`() {
+        val prefix = "module Editing { Int run(String value) { return work(value."
+        val text = "$prefix); } }"
+        val errors = ErrorList()
+        val parser = Parser.forPartialAnalysis(Source(text, URI), position(prefix), errors)
+        val tree = parser.parseSource()
+        val expression = descendants(tree).filterIsInstance<IncompleteExpression>().first()
+        val clone = expression.clone() as IncompleteExpression
+        val originalNames = descendants(expression).filterIsInstance<NameExpression>().toList()
+        val clonedNames = descendants(clone).filterIsInstance<NameExpression>().toList()
+        assertThat(clonedNames.map { it.name }).containsExactlyElementsOf(originalNames.map { it.name })
+        originalNames.zip(clonedNames).forEach { (original, copied) ->
+            assertThat(copied).isNotSameAs(original)
+            assertThat(copied.isValidated).isFalse()
+        }
+        assertThat(clone.endPosition).isEqualTo(expression.endPosition)
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+    }
+
+    @Test
+    fun `a local initializer retains the same receiver binding as ordinary compilation`() {
+        CompilerTestSupport.configure()
+        val prefix = "module Editing { String value = \"property\"; Int run() { Int value = value."
+        val errors = ErrorList()
+        val complete = EmbeddingSupport.instance().compileModule(Source("${prefix}size; return value; } }", URI), null, errors)
+        assertThat(complete.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        val expected =
+            descendants(complete.parsed()).filterIsInstance<NameExpression>().single {
+                it.name == "value" &&
+                    it.parent is NameExpression
+            }
+        val expectedSymbol = expected.resolvedTarget.toString()
+        val partialErrors = ErrorList()
+        val partial = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix } }", URI), position(prefix), null, partialErrors)
+        assertThat(partialErrors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        val receiver =
+            partial
+                .sites()
+                .single()
+                .receiver
+                .orElseThrow() as NameExpression
+        assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
+        assertThat(receiver.resolvedTarget.toString()).isEqualTo(expectedSymbol)
+    }
+
+    @Test
+    fun `unsupported value prefixes remain unavailable and unknown receivers retain diagnostics`() {
+        CompilerTestSupport.configure()
+        for (statement in listOf("return 1 + value.", "Int result = 1 + value.", "value += value.", "work(flag ? value.")) {
+            val prefix = "module Editing { Int run(String value, Boolean flag) { $statement"
+            val errors = ErrorList()
+            val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)
+            assertThat(errors.hasSeriousErrors()).isTrue()
+            assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.sites()).isEmpty()
+        }
+        val prefix = "module Editing { Int run() { return work(missing."
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix); } }", URI), position(prefix), null, errors)
+        assertThat(errors.errors.map { it.code }).contains(Parser.INCOMPLETE_EXPRESSION, "COMPILER-38").doesNotContain("EMB-5")
+        val receiver =
+            analysis
+                .sites()
+                .single()
+                .receiver
+                .orElseThrow()
+        assertThat(receiver.isValidated && receiver.typeFit.isFit).isFalse()
+    }
 
     @ParameterizedTest
     @ValueSource(strings = ["value.", "value.indexOf(", "value.indexOf(\"x\", ", "value.indexOf(\"x\""])
@@ -63,21 +220,23 @@ class XdkPartialAnalysisTest {
         }
     }
 
-    @Test
-    fun `cursor analysis in a module member uses the unsaved root and member snapshot`() {
+    @ParameterizedTest
+    @ValueSource(strings = ["value.", "return value.", "Int result = value.", "return work(value."])
+    fun `cursor analysis in a module member uses the unsaved root and member snapshot`(statement: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
         val member = directory.resolve("Editing/Child.x").toFile().canonicalFile
         member.parentFile.mkdirs()
         root.writeText("module Editing { class Base { Int value = 1; } }")
         member.writeText("class Child extends Base { void run() {} }")
-        val prefix = "class Child extends Base { void run() { value."
-        val overlay = "$prefix } Int later() = 42; }"
+        val prefix = "class Child extends Base { Int run() { $statement"
+        val closing = if (statement.contains("work(")) ");" else ""
+        val overlay = "$prefix$closing } Int later() = 42; }"
         val sources =
             object : ModuleInfo(root, false) {
                 override fun readSource(file: File): CharArray =
                     when (file) {
-                        root -> "module Editing { class Base { String value = \"overlay\"; } }"
+                        root -> "module Editing { class Base { String value = \"overlay\"; Int work(String text) = text.size; } }"
                         member -> overlay
                         else -> error("Unexpected source $file")
                     }.toCharArray()

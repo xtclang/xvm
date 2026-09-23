@@ -16,10 +16,10 @@ import org.xvm.compiler.Token.Id;
 import static org.xvm.asm.ErrorListener.in;
 
 /**
- * A trailing member access or call whose intact prefix can be validated in its original scope.
- * This is a statement boundary, not an expression with a fabricated value or type. Validation
- * always fails after inspecting the receiver and ordinary arguments, preventing method emission.
- * Only the explicit partial-analysis parser creates this node.
+ * A member access or call whose intact prefix can be validated in its original scope. It can
+ * stand alone or be owned by an {@link IncompleteExpression} in a value position. The marker has
+ * no fabricated value or type. Validation always fails after inspecting the receiver and ordinary
+ * arguments, preventing method emission. Only the explicit partial-analysis parser creates it.
  *
  * Child fields participate in normal AST adoption/cloning; no Context, callback, or separate
  * semantic cache survives validation. Consumers copy facts only from children whose validation
