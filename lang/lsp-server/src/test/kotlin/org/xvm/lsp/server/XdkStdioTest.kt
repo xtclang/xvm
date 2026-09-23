@@ -246,13 +246,55 @@ class XdkStdioTest {
     }
 
     @Test
-    fun `module overlays feed completion and root edits invalidate member requests over stdio`() {
+    fun `typed completion edits and auto-closed signature help round trip over stdio`() {
+        val prefix = "module Stdio {\r\n Int run(Object value) {\r\n  if (value.is(String)) { /* 😀 */ return value.si"
+        val text = "$prefix; } return 0; }\r\n}"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            session.open(text)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val cursor = Position(2, prefix.lines().last().length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).contains("size")
+            assertThat(items).allSatisfy { assertThat(it.label).startsWith("si") }
+            val edit = items.single { it.label == "size" }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(2, cursor.character - 2), cursor))
+            assertThat(edit.newText).isEqualTo("size")
+            val changed = text.replaceRange(prefix.length - 2, prefix.length, edit.newText)
+            session.change(changed, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+
+            val call = "module Stdio { void run(String value) { value.indexOf("
+            session.change("$call); } Int later() = 42; }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))))
+            assertThat(help.signatures).hasSize(2).allSatisfy {
+                assertThat(it.label).startsWith("conditional Int indexOf(")
+                assertThat(it.activeParameter).isZero()
+                assertThat(it.documentation.left).contains("overload not selected")
+            }
+            val completed = "$call\"x\""
+            session.change("$completed); } Int later() = 42; }", 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
+            val selected = session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, completed.length))))
+            assertThat(selected.signatures).hasSize(1)
+            assertThat(selected.signatures.single().documentation).isNull()
+            assertThat(selected.signatures.single().activeParameter).isZero()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", "in"])
+    fun `module overlays feed completion and root edits invalidate member requests over stdio`(memberPrefix: String) {
         directory = directory.toRealPath()
         val root = directory.resolve("Multi.x").toFile()
         val member = directory.resolve("Multi/Child.x").toFile()
         root.writeText("module Multi { class Base { Int value = 1; } }")
         member.parentFile.mkdirs()
-        val prefix = "class Child extends Base { Int run() { return value."
+        val prefix = "class Child extends Base { Int run() { return value.$memberPrefix"
         member.writeText("$prefix } }")
         Session(packagedJar(), directory).use { session ->
             session.initialize()
@@ -274,7 +316,7 @@ class XdkStdioTest {
                 ),
             )
             val after = session.await(service.completion(CompletionParams(memberId, Position(0, prefix.length)))).left
-            assertThat(after).isNotEmpty()
+            if (memberPrefix.isEmpty()) assertThat(after).isNotEmpty()
             assertThat(after.map { it.label }).doesNotContain("indexOf")
             assertThat(root.readText()).contains("Int value")
             session.shutdownAndExit()

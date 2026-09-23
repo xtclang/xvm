@@ -3,19 +3,26 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.adapter.ParameterInfo
+import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.SignatureInfo
+import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
 import org.xvm.lsp.adapter.xdk.SemanticModel.Signature
+import org.xvm.lsp.adapter.Position as AdapterPosition
 
 /** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
 internal object XdkCursorQueries {
-    fun completions(model: PartialSemanticModel): List<CompletionItem> =
-        model.sites
-            .singleOrNull()
-            ?.takeIf { it.kind == PartialSemanticModel.Kind.MEMBER_ACCESS }
-            ?.members
-            .orEmpty()
+    fun completions(model: PartialSemanticModel): List<CompletionItem> {
+        val site = model.sites.singleOrNull()?.takeIf { it.kind == PartialSemanticModel.Kind.MEMBER_ACCESS } ?: return emptyList()
+        val prefix = site.memberPrefix ?: return emptyList()
+        val range =
+            Range(
+                AdapterPosition(prefix.range.start.line, prefix.range.start.column),
+                AdapterPosition(prefix.range.end.line, prefix.range.end.column),
+            )
+        return site.members
+            .filter { it.name.startsWith(prefix.text) }
             .map { member ->
                 CompletionItem(
                     member.name,
@@ -23,8 +30,10 @@ internal object XdkCursorQueries {
                     member.signature?.let { signature(model.semantics, member.name, it).label }
                         ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
                     member.name,
+                    TextEdit(range, member.name),
                 )
             }.distinctBy { it.label to it.detail }
+    }
 
     fun signatureHelp(
         model: PartialSemanticModel,

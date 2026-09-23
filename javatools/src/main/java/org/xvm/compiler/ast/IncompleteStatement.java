@@ -20,6 +20,8 @@ import static org.xvm.asm.ErrorListener.in;
  * stand alone or be owned by an {@link IncompleteExpression} in a value position. The marker has
  * no fabricated value or type. Validation always fails after inspecting the receiver and ordinary
  * arguments, preventing method emission. Only the explicit partial-analysis parser creates it.
+ * An explicit cursor can select a written member token or a call before its closing parenthesis;
+ * the selected operation need not be malformed. The original member token is retained as syntax.
  *
  * Child fields participate in normal AST adoption/cloning; no Context, callback, or separate
  * semantic cache survives validation. Consumers copy facts only from children whose validation
@@ -33,12 +35,25 @@ public final class IncompleteStatement extends Statement {
 
     public IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
                                List<Token> separators, long endPosition, String diagnosticCode) {
+        this(target, operator, arguments, separators, endPosition, diagnosticCode, null);
+    }
+
+    /** A written member token selected at its end by an explicit cursor probe. */
+    public IncompleteStatement(Expression receiver, Token dot, Token memberName,
+                               long cursor, String diagnosticCode) {
+        this(receiver, dot, List.of(), List.of(), cursor, diagnosticCode, memberName);
+    }
+
+    private IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
+                                List<Token> separators, long endPosition, String diagnosticCode,
+                                Token memberName) {
         this.target         = target;
         this.operator       = operator;
         this.arguments      = new ArrayList<>(arguments);
         this.separators     = List.copyOf(separators);
         this.endPosition    = endPosition;
         this.diagnosticCode = diagnosticCode;
+        this.memberName     = memberName;
     }
 
     /** The written receiver (member access) or callee (call); a call is never overload-resolved. */
@@ -49,6 +64,11 @@ public final class IncompleteStatement extends Statement {
     /** The dot or opening parenthesis, at its original source position. */
     public Token getOperator() {
         return operator;
+    }
+
+    /** The original typed member token, if present; its text and range are syntax, not a binding. */
+    public Optional<Token> getMemberName() {
+        return Optional.ofNullable(memberName);
     }
 
     /** Complete written arguments; excludes the missing argument after a trailing comma. */
@@ -91,7 +111,7 @@ public final class IncompleteStatement extends Statement {
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        // A member's name/overload is not validated without its missing suffix or arguments.
+        // The cursor-selected member name/overload is not validated by this probe.
         // The receiver and complete arguments still use the real lexical and flow context.
         getReceiver().ifPresent(receiver -> {
             Expression validated = receiver.validate(ctx, null, errs);
@@ -127,7 +147,8 @@ public final class IncompleteStatement extends Statement {
 
     @Override
     public String toString() {
-        return target + (isCall() ? "(" + arguments : ".") + " <incomplete>";
+        return target + (isCall() ? "(" + arguments
+                : "." + getMemberName().map(Token::getValueText).orElse("")) + " <incomplete>";
     }
 
     protected Expression       target;
@@ -137,6 +158,7 @@ public final class IncompleteStatement extends Statement {
     private final List<Token> separators;
     private final long        endPosition;
     private final String      diagnosticCode;
+    private final Token       memberName;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteStatement.class, "target", "arguments");
 }
