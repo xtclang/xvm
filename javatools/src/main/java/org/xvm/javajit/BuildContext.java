@@ -985,7 +985,7 @@ public class BuildContext {
 
     /**
      * @return {@code true} if there is a {@link org.xvm.asm.op.Label} op associated with the
-     * specified Op address and its label has been bound.
+     *         specified Op address and its label has been bound.
      */
     public boolean isOpLabeled(int opAddress) {
         Op[] ops = methodStruct.getOps();

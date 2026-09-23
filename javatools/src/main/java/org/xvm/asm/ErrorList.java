@@ -69,8 +69,7 @@ public class ErrorList
     // ----- accessors -----------------------------------------------------------------------------
 
     /**
-     * @return the severity of the ErrorList, which is the severity of the worst
-     *         error encountered
+     * @return the severity of the ErrorList, which is the severity of the worst error encountered
      */
     public Severity getSeverity() {
         return m_severity;
@@ -84,8 +83,8 @@ public class ErrorList
     }
 
     /**
-     * @return maximum number of serious errors encountered before attempting to
-     *         abort the process reporting the errors
+     * @return maximum number of serious errors encountered before attempting to abort the process
+     *         reporting the errors
      */
     public int getSeriousErrorMax() {
         return f_cMaxErrors;
