@@ -13,6 +13,7 @@ package propertyInitTests {
         testMethodResultProperty();
         testDefaultProperty();
         testNullablePropertyTarget();
+        testNullablePrimitiveProperty();
         testStaticServiceProperty();
         testSingletonService();
         testSingletonConstWithService();
@@ -125,6 +126,39 @@ package propertyInitTests {
 
         assert read(new Test("set")) == "set";
         assert read(Null) == Null;
+    }
+
+    /**
+     * A property whose type is a nullable Java primitive is stored as the narrow primitive plus a
+     * separate "is Null" flag, so reading it leaves two values on the Java stack. Materializing it
+     * where a reference is expected, as a string template does, has to consume both and turn them
+     * into either a boxed value or Null; getting that wrong produced unverifiable bytecode.
+     */
+    void testNullablePrimitiveProperty() {
+        class Test {
+            Byte?   b    = 0xFD;
+            Int8?   i8   = -5;
+            UInt16? u16  = 60000;
+            Bit?    bit  = 1;
+            Int64?  i64  = 1234567890123;
+            Byte?   none = Null;
+        }
+
+        Test t = new Test();
+
+        String sb   = $"{t.b}";
+        String si8  = $"{t.i8}";
+        String su16 = $"{t.u16}";
+        String sbit = $"{t.bit}";
+        String si64 = $"{t.i64}";
+        String snil = $"{t.none}";
+
+        assert sb   == "253";
+        assert si8  == "-5";
+        assert su16 == "60000";
+        assert sbit == "1";
+        assert si64 == "1234567890123";
+        assert snil == "Null";
     }
 
     void testStaticServiceProperty() {
