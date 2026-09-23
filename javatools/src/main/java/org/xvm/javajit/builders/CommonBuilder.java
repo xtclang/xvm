@@ -856,76 +856,42 @@ public class CommonBuilder
                     continue;
                 }
 
-                if (prop.getInitializer() == null) {
-                    RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
-                    ClassDesc    fieldCD = JitTypeDesc.getFieldClass(prop.getType(), reg.cd());
-                    if (reg instanceof ExtendedSlot extSlot) {
-                        assert extSlot.flavor() == NullablePrimitive;
-                        // loadConstant() has already loaded the value and the boolean
-                        Label ifTrue = code.newLabel();
-                        Label endIf  = code.newLabel();
-                        code.ifne(ifTrue)
-                            .putstatic(CD_this, jitName + EXT, CD_boolean)
-                            .goto_(endIf)
-                            .labelBinding(ifTrue);
-                        pop(code, extSlot.cd());
-                        code.putstatic(CD_this, jitName, fieldCD);
-                        code.labelBinding(endIf);
-                    } else if (reg instanceof MultiSlot multiSlot) {
-                        ClassDesc[] cds = multiSlot.slotCds();
-                        for (int i = cds.length - 1; i >= 0; i--) {
-                            code.putstatic(CD_this, jitName + "$" + i, cds[i]);
-                        }
-                        if (multiSlot.flavor() == NullableXvmPrimitive) {
-                            Label ifTrue = code.newLabel();
-                            Label endIf = code.newLabel();
-                            code.ifne(ifTrue)
-                                    .putstatic(CD_this, jitName + EXT, CD_boolean)
-                                    .goto_(endIf)
-                                    .labelBinding(ifTrue);
-                            for (ClassDesc cd : cds) {
-                                pop(code, cd);
-                            }
-                            code.putstatic(CD_this, jitName, fieldCD);
-                            code.labelBinding(endIf);
-                        }
-                    } else {
-                        assert reg.isSingle();
-                        code.putstatic(CD_this, jitName, fieldCD);
+                // note: a constant property never has a field, because
+                // TypeConstant.createPropertyInfo leaves fField false on the fConstant path.
+                // assembleProperties therefore only collects one that is injected or has an
+                // initializer, and the injected ones have already been handled above, so the
+                // initializer is always present here.
+                MethodConstant init = prop.getInitializer();
+                MethodBody     body = new MethodBody((MethodStructure) init.getComponent());
+                JitMethodDesc  jmd  = body.getJitDesc(this, thisType);
+                TypeConstant   type = prop.getType();
+                JitTypeDesc    jtd  = type.getJitDesc(this);
+
+                code.aload(ctxSlot)
+                    .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD);
+
+                switch (jtd.flavor) {
+                case Specific, Widened:
+                    code.putstatic(CD_this, jitName, jtd.cd);
+                    break;
+
+                case Primitive:
+                    unbox(code, type);
+                    code.putstatic(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(type));
+                    break;
+
+                case XvmPrimitive:
+                    unbox(code, type);
+                    ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
+                    for (int i = cds.length - 1; i >= 0; i--) {
+                        code.putstatic(CD_this, jitName + "$" + i, cds[i]);
                     }
-                } else {
-                    MethodConstant init = prop.getInitializer();
-                    MethodBody     body = new MethodBody((MethodStructure) init.getComponent());
-                    JitMethodDesc  jmd  = body.getJitDesc(this, thisType);
-                    TypeConstant   type = prop.getType();
-                    JitTypeDesc    jtd  = type.getJitDesc(this);
+                    break;
 
-                    code.aload(ctxSlot)
-                        .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD);
-
-                    switch (jtd.flavor) {
-                    case Specific, Widened:
-                        code.putstatic(CD_this, jitName, jtd.cd);
-                        break;
-
-                    case Primitive:
-                        unbox(code, type);
-                        code.putstatic(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(type));
-                        break;
-
-                    case XvmPrimitive:
-                        unbox(code, type);
-                        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
-                        for (int i = cds.length - 1; i >= 0; i--) {
-                            code.putstatic(CD_this, jitName + "$" + i, cds[i]);
-                        }
-                        break;
-
-                    default:
-                        throw new UnsupportedOperationException(
-                                "Static field initializer for " +
-                                prop.getIdentity().getValueString());
-                    }
+                default:
+                    throw new UnsupportedOperationException(
+                            "Static field initializer for " +
+                            prop.getIdentity().getValueString());
                 }
             }
 
