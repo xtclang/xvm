@@ -39,8 +39,10 @@ rename remains off. Serialized-dependency and snapshot-lifetime probes are recor
 integration plan. A versioned dependency host API now exports detached source indices, replaces
 immutable artifact sets and invalidates direct/transitive consumers, with server diagnostic refresh
 at unchanged document versions. Definition/type-definition and inherited implementation bodies can
-resolve into host-indexed sources. Editor project discovery, dependency builds from edited sources,
-external hierarchy and a persistent cross-module reference index remain open.
+resolve into host-indexed sources. An explicit source graph now rebuilds dependencies and affected
+consumers automatically on editor/file events, including unsaved overlays, failures and recovery at
+unchanged consumer versions. Editor project discovery/configuration, external hierarchy and a
+persistent cross-module reference index remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -1223,9 +1225,17 @@ consumers described below. Safe rename still needs conflict/edit validation and 
 for workspace-wide changes. Call hierarchy, resolved-name tokens and bounded inlay hints now use
 copied facts; the current requirements matrix and negative rename probes are in the integration plan.
 The dependency host API now provides versioned artifact/source ownership and consumer invalidation.
-Editor project wiring and dependency builds remain separate from this explicit host contract.
+Configured source modules now rebuild automatically; editor project discovery/wiring and a
+persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+**Automatic recompilation follow-up (2026-09-23):** no Java embedding or AST changes. Kotlin
+`XdkSourceModule`/`XdkProject` own source roots and dependency ordering; XdkAdapter snapshots source
+closures, caches detached artifacts and cancels obsolete work. XtcTextDocumentService owns versioned
+refresh/publication across source consumers. Cache entries contain immutable source values and
+artifacts, never dependency ASTs, compiler pools or compilations. This is host scheduling policy,
+so none of it belongs on an AST node or adds cloning responsibilities.
 
 **Dependency host API follow-up (2026-09-23):** no Java embedding, AST or cloning changes were
 needed. `Compilation.toDependency()` serializes the successful output and copies existing declaration

@@ -569,8 +569,9 @@ Once the LSP server knows the module path, it can:
 The compiler host API now accepts compiled dependencies with optional detached source indices via
 `XtcLanguageServer.replaceCompilerDependencies(...)`. Definition/type-definition and inherited
 implementation-body links can use those indices. Binary symbol tables alone do not supply source
-locations. Editor project discovery, dependency builds and module-path configuration still need an
-integration; a persistent cross-module reference index is separate work.
+locations. Explicit source roots/edges now drive automatic dependency builds through
+`replaceCompilerSourceModules(...)`. Editor project discovery and module-path configuration still
+need an integration; a persistent cross-module reference index is separate work.
 
 #### Priority: **High** (resolution) → **Medium** (recompilation) → **Medium** (navigation)
 
