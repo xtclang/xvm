@@ -159,6 +159,12 @@ package propertyInitTests {
         assert sbit == "1";
         assert si64 == "1234567890123";
         assert snil == "Null";
+
+        // the same reads asserted on directly; this moves the value into the destination the
+        // assert builds for its failure message rather than into a declared String var
+        assert $"{t.b}"    == "253";
+        assert $"{t.i8}"   == "-5";
+        assert $"{t.none}" == "Null";
     }
 
     void testStaticServiceProperty() {

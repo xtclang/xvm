@@ -1933,9 +1933,15 @@ public class BuildContext {
                 break;
 
             case "NullablePrimitive->Specific":
-                assert typeTo.isOnlyNullable();
-                code.pop();
-                Builder.loadNull(code);
+                if (typeTo.isOnlyNullable()) {
+                    // the destination can hold nothing but Null, so the value has to be Null
+                    code.pop();
+                    Builder.loadNull(code);
+                } else {
+                    // the value and its "is Null" flag are on the stack; the flag decides between
+                    // boxing the value and storing Null
+                    Builder.boxNullable(code, typeFrom);
+                }
                 break;
 
             case "NullablePrimitive->Primitive",
