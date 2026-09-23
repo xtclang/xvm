@@ -3182,7 +3182,7 @@ public class ConstantPool
         // the number of returns on the left must not exceed the number of returns on the right;
         // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
         if (cLR > cRR) {
-            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(getCurrentPool().typeTuple0())
+            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(currentOr(this).typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
         }
@@ -3437,6 +3437,27 @@ public class ConstantPool
 
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();
         return info.asNakedRef(this, typeReferent, resolver);
+    }
+
+    /**
+     * The pool to work in: the one bound to this thread if there is one, and the given fallback
+     * otherwise.
+     *
+     * <p>{@link #getCurrentPool} is bound by {@link #withPool} during compilation and execution.
+     * Outside those scopes, callers such as diagnostic formatters can use the constant's owning
+     * pool as the fallback without establishing an ambient binding.
+     *
+     * <p>The ambient pool takes precedence because a cross-pool operation may need to resolve
+     * constants in a destination other than their owner. This helper preserves that selection;
+     * APIs with an explicit destination pool should use that parameter directly.
+     *
+     * @param poolFallback  the pool to use when no pool is bound to this thread
+     *
+     * @return the pool to work in; null only if the fallback is null
+     */
+    public static ConstantPool currentOr(ConstantPool poolFallback) {
+        ConstantPool pool = getCurrentPool();
+        return pool == null ? poolFallback : pool;
     }
 
     /**

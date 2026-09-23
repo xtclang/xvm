@@ -685,10 +685,16 @@ public class MethodBody {
     }
 
     /**
-     * @return the ConstantPool
+     * Select the pool used to resolve well-known constants such as the {@code @Op} annotation.
+     * A compiler-selected ambient pool takes precedence over this body's identity pool.
+     * <p>
+     * Outside a compilation, use the identity's owner so that inspection and diagnostic
+     * formatting do not require a thread-local binding.
+     *
+     * @return the selected pool
      */
     private ConstantPool pool() {
-        return ConstantPool.getCurrentPool();
+        return ConstantPool.currentOr(m_id.getConstantPool());
     }
 
     // ----- Object methods ------------------------------------------------------------------------

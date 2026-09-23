@@ -5,6 +5,7 @@ not a set of PR descriptions or an instruction to publish branches. It records c
 for constructing smaller branches later. The foundation extraction branches have not been
 created or validated. `lagergren/persistent-xtc-runtime` is a separate optional extension based
 on the completed foundation tip `766e17d51`; it does not replace that extraction plan.
+`lagergren/constant-pool-ownership`, based on `68a7ff6b5`, isolates the two-commit PR 11 scope.
 
 Source snapshot: `origin/master` at `6539aa6eb`; the original embedding implementation ends at
 `c884779d6`. The keystore correction is now commit `ca52e2aae`, followed by the common ownership
@@ -58,6 +59,7 @@ the weak discovery registry and adds strong roots only for outstanding cleanup o
 | 8 | Experimental JIT execution through the owned embedding session | 5b; include the small plugin adapter after 7 | Extract JIT changes from `c884779d6`; exclude manual-test rollout |
 | 9 | Make manualTests use DIRECT by default | 4b, 7 and 8 | Manual-test convention, preview startup and removal of automatic mode sweeps |
 | 10 | Optional PERSISTENT worker across builds | 4b, 7; 9 only for the manualTests convention hunk | Separate branch `lagergren/persistent-xtc-runtime`, diff after `766e17d51` |
+| 11 | Guard ambient pool reads, then make signature compatibility explicitly pool-owned | No embedding/Gradle prerequisite; coordinate with errs I2 | Separate branch `lagergren/constant-pool-ownership`, exactly two implementation commits after `68a7ff6b5` |
 
 PRs 1 and 2 can be submitted independently. PRs 3–8 form an implementation sequence, but PR 6
 does not need JIT and PR 8 does not need the manual-test default. Keep PR 9 separate so reviewers
@@ -71,7 +73,7 @@ the split. Reconstruct the listed hunks on top of their predecessors, then run t
 
 ### Review size and readiness
 
-The recommended sequence has **eleven foundation PRs plus one optional extension (PR 10)**.
+The recommended sequence has **eleven foundation PRs plus two separate extensions (PRs 10 and 11)**.
 PR 4b contains native-resource integration. Submit 4b after 5b so its real-runner regressions are available.
 These are scope judgments from the actual diff, not quality scores or validated extraction counts.
 
@@ -88,6 +90,7 @@ These are scope judgments from the actual diff, not quality scores or validated 
 | 8 | Moderate, independent backend review with explicit limitations and five focused regressions. |
 | 9 | Small rollout change; one opt-in smoke task replaces automatic mode sweeps. |
 | 10 | Separate worker/protocol/lifecycle review; defaults remain unchanged and heavy tests stay opt-in. |
+| 11 | Two bounded commits: null-scope guards and one explicit-pool operation family. No metadata cache or concurrency change. |
 
 Do not describe the combined scope 5 as a small PR: it includes both lifecycle and request/xUnit
 capabilities. The 5a/5b split is recommended for submission. Combining them is a fallback only if
@@ -574,6 +577,50 @@ manual modules and 19 xUnit demo tests through PERSISTENT, a DIRECT smoke run, e
 shutdown and formatting checks. These do not
 replace validation of each reconstructed intermediate branch.
 
+## PR 11 — constant-pool guards and explicit signature compatibility
+
+Implementation branch: `lagergren/constant-pool-ownership`; source boundary: changes after
+`68a7ff6b5`. Keep this as a separate PR, with exactly two implementation commits. The branch
+inherits the current working stack for validation, but these production changes do not require
+the embedding lifecycle, native ownership or Gradle/PERSISTENT features. Extract the two commits
+onto the intended submission base rather than opening a master-targeted PR containing that stack.
+Include this plan's relevant scope in the extracted documentation without importing unrelated plans.
+
+1. **Guard reads outside an ambient pool scope.** Reuse the final guard behavior from errs commits
+   `cae4f9452` and `610873fb6` as one change. Add `ConstantPool.currentOr` and `Constant.poolInUse`;
+   preserve an explicit ambient pool ahead of the owning-pool fallback. Include only the readers
+   in `InterpreterConnector`, `ConstantPool`, `ByteConstant`, `IntConstant`, `IdentityConstant`,
+   `MethodBody`, `MethodInfo`, `PropertyInfo` and `TypeConstant`. Tests cover actual range creation
+   in the fallback/selected pool, source ownership, diagnostic formatting and annotation queries.
+   No installed XDK assumptions enter these Java unit tests.
+2. **Pass a destination pool through signature compatibility.** Planned next: change
+   `SignatureConstant.isSubstitutableFor`, `TypeConstant.isCovariantReturn`,
+   `TypeConstant.isContravariantParameter`, the terminal-type override and their direct callers.
+   Select the pool from the compiler, target structure or TypeInfo owner. Preserve it in recursive
+   calls. Keep this change within the inspected compatibility call chain, without propagating a
+   new context object through unrelated compiler APIs. Its focused tests must distinguish source,
+   destination and unrelated ambient pools, including no ambient binding and generic inheritance.
+
+The second commit changes the Java signatures of those compatibility entry points and requires
+callers/subclasses to be recompiled and migrated. It does not change the Ecstasy language or XTC
+format. `getConstantPool()` remains the owning-pool accessor. Other operation families retain
+scoped ambient selection for now. Do not claim complete compiler reentrancy or metadata sharing.
+
+Coordinate with the errs plan's **I2**: land this guard commit once and drop/adapt the overlapping
+errs slice. Do not bring in its listener migration, TypeInfo diagnostic replay, LSP code or broader
+API work. Metadata caches, definition generations, runtime-state separation, removing all thread
+locals, Gradle modes and default changes are outside PR 11.
+
+Validation: run focused Java tests without unexpected skips; rebuild the XDK with each commit;
+compare the 24 installed modules to the unchanged baseline after normalizing only module
+compilation timestamps. Run generic/inheritance and explicit-destination regressions for the second
+commit, plus the existing interpreter manual suite and formatting checks. No automatic JIT or
+multi-build worker tests are added. Record each commit's actual results before declaring it ready.
+
+First-commit validation: all seven focused tests passed with no skips; `:xdk:installDist` and
+`spotlessCheck` passed. All 24 installed XTC modules matched the unchanged baseline byte for byte
+after normalizing only module compilation timestamps. The second commit's checks remain pending.
+
 ## Shared files and extraction rules
 
 | Shared file | Ownership of hunks |
@@ -607,7 +654,7 @@ permission to silently add or enable tests that substantially expand automatic J
 
 ## Work deliberately outside this submission series
 
-- **Further metadata reuse:** explicit constant-pool ownership, immutable definition generations
+- **Further metadata reuse:** ownership migrations beyond PR 11, immutable definition generations
   and measured compiler/application preparation caches. Coordinate with the `lagergren/errs`
   work; do not import that redesign while extracting these PRs.
 - **Broader persistent-host policy:** PR 10 implements the first worker lifetime. Cross-root

@@ -5,7 +5,8 @@ Within-build branch: `lagergren/embedded-gradle-runtime`.
 Opt-in across-build extension: `lagergren/persistent-xtc-runtime`, based on `766e17d51`.
 
 The [PR submission plan](embedded-runtime-pr-plan.md) defines exact change scopes, dependencies,
-extraction steps and validation for eleven foundation PRs and one optional PERSISTENT PR. The native-resource integrations are a
+extraction steps and validation for eleven foundation PRs, the optional PERSISTENT PR and a
+separate two-commit constant-pool PR. The native-resource integrations are a
 separate commit and review scope from the common mechanism, embedding API and Gradle adapter.
 
 The within-build implementation is on this branch and `DIRECT` execution has passed all
@@ -367,8 +368,10 @@ must preserve these rules, not assume that registration always changes the owner
 
 Keep `getConstantPool()` as the owning-pool accessor. Incrementally replace
 `ConstantPool.getCurrentPool()` inside selected operations with an ordinary `ConstantPool pool`
-parameter supplied by their caller. The `errs` branch's ambient-pool fallbacks prevent null-scope
-crashes but deliberately preserve the bound pool's precedence; they do not complete this change.
+parameter supplied by their caller. The first change on `lagergren/constant-pool-ownership`
+reuses the `errs` ambient-pool guards: they prevent null-scope crashes while preserving the bound
+pool's precedence. They do not complete this ownership change. The separate two-commit scope is
+[PR 11 in the submission plan](embedded-runtime-pr-plan.md#pr-11--constant-pool-guards-and-explicit-signature-compatibility).
 Always substituting the receiver's owning pool would lose legitimate destination choices.
 
 Method-signature compatibility is a candidate first scope: carry the destination through
