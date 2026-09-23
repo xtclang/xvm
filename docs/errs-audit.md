@@ -138,7 +138,7 @@ The other initial candidates have different meanings:
 | `JitConnector` and `xFuture` | Runtime/JIT failure ownership; outside the compile-only milestone. |
 | `Launcher.showSystemVersion` | CLI display fallback, not compilation. The null case should eventually replace exception-driven control flow. |
 | `Disassembler` date parsing | Optional display metadata; fallback text is intentional. |
-| `ModuleInfo.loadBinaryFile` / `extractModuleName` | Discovery probes, with invalid/unknown state or no name as the result. Caller error attribution still needs dedicated file-compilation cases. |
+| `ModuleInfo.loadBinaryFile` / `extractModuleName` | Discovery probes, with invalid/unknown state or no name as the result. The 2026-09-23 follow-up below pins valid/malformed source with an unreadable adjacent binary, and fixes reporting of a non-module root. |
 | Parser speculation catches | Owned by `Attempt` rollback; a failed alternative is not a user diagnostic. |
 | Parser include-file I/O catches | Already produce `INVALID_PATH` before aborting; not silently successful. |
 | Constant-folding catches in unary/relational/comparison expressions | Fall back to runtime evaluation; relational arithmetic overflow already reports `VALUE_OUT_OF_RANGE`. Do not report every failed fold as invalid source. |
@@ -258,7 +258,8 @@ was made. Every message in this capture has a classified source/caller group, an
 previously open families now have direct final-metadata evidence supporting provisional silence.
 The artifact and fresh-source regressions pass, including the invalid-override control. They do not
 establish all runtime behavior or justify every historic silence. The
-`@Parsed` constructor family was outside this deeper pass. Existing unmatched `@Override` and
+`@Parsed` constructor family was outside this deeper pass; the 2026-09-23 follow-up below covers it.
+Existing unmatched `@Override` and
 duplicate-annotation tests continue to pin real errors/warnings reaching the host.
 
 ### Fatal forwarding follow-up, 2026-09-22
@@ -285,3 +286,42 @@ The lexer now reports once and returns the unterminated literal token, leaving t
 recorded. A regression covers ordinary and template strings, including empty and Unicode content,
 with an unlimited listener. Its observer fails immediately if the diagnostic repeats, avoiding a
 test that leaves a spinning lexer behind. This fixes termination; it does not make the source valid.
+
+### Annotation metadata and module-source follow-up, 2026-09-23
+
+The `@Parsed` follow-up found a metadata defect, not a missing listener. A consumer of freshly
+deserialized XML modules can compile `new @Parsed(offset, length) @ContentNode Data(text)` with
+runtime arguments and no diagnostics. A subsequent reporting lookup of the constructed type's
+TypeInfo nevertheless emitted `COMPILER-140`. Annotation type descriptors deliberately omit runtime
+arguments (and provisional resolution can strip arguments). `TypeConstant.mergeMixinTypeInfo`
+mistook that omission for an invalid zero-argument construction. The same check exists at the local
+branch base `4a1eae6f7`.
+
+The metadata builder now checks constructor applicability when constants are actually supplied;
+an argument-free descriptor does not assert that a zero-argument constructor was called. Actual
+annotation application validation still checks required arguments and target compatibility. The
+eight added cases in `TypeInfoFinalCompositionTest` cover:
+
+- Constant and runtime arguments, followed by reporting metadata queries for `offset`, `length`
+  and `text` with their expected Int/String types.
+- Missing, mistyped and extra construction arguments, missing declaration-annotation arguments,
+  and an incompatible annotation target. All remain source errors without `EMB-5`.
+- An invalid supplied constant in a directly constructed annotated type. Its error still reaches
+  a reporting caller after an initial silent lookup and is deduplicated by the receiving ErrorList.
+
+The file-discovery check also reproduced a reporting defect: a file containing `class NotModule {}`
+reached the embedding compiler's module-root check, which used a console-only message. The host
+then saw a synthesized internal error instead of the source problem. The embedding check now emits
+`EMB-6` through the structured listener at the offending declaration. `EmbeddingDiagnosticsTest`
+covers file and in-memory entry points, including source ranges, and verifies that malformed source
+beside an unreadable `.xtc` retains its parser diagnostics while valid source still compiles. Discovery
+fallback remains intentional; loading a corrupt dependency through a repository remains a visible
+failure under the earlier repository regressions.
+
+This completes the bounded diagnostic-audit task: the fresh capture's groups and inspected failure
+families have dispositions, and the two reproduced defects have regressions. It does not certify
+every historical silence. The original seventy-message survey is not the same dataset as the
+37-message capture, and no one-to-one comparison is available. The `NameExpression` bound-generic
+binary-AST TODO still needs a reproducer; simple bound-function probes report normal type errors
+and do not reproduce it. Track that with the call-consumer work. Debug formatting, runtime/JIT
+ownership and optional CLI display fallbacks remain separate follow-ups as classified above.
