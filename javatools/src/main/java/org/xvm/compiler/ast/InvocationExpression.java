@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import java.util.stream.Collectors;
 
@@ -45,6 +46,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -613,6 +615,10 @@ public class InvocationExpression
 
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
+        InvocationBinding.Collector bindings = ctx.getInvocationBindings();
+        List<Expression> writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.of();
+        Optional<InvocationBinding> sourceBinding = Optional.empty();
+        bindings.begin(this);
         // the reason for tracking success (fValid) is that we want to get as many things
         // validated as possible, but if some expressions didn't validate, we can't predictably find
         // the desired method or function (e.g. without a left expression providing validated type
@@ -817,6 +823,8 @@ public class InvocationExpression
                             : m_targetInfo.getTargetType();
                 }
 
+                Optional<List<InvocationBinding.Argument>> sourceArgs = bindings.isEnabled() && fCall && !m_fBjarne
+                        ? InvocationBinding.arguments(writtenArgs, listArgs) : Optional.empty();
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
                 if (atypeArgs == null) {
                     return null;
@@ -883,6 +891,10 @@ public class InvocationExpression
                     }
                     if (!mapTypeParams.isEmpty()) {
                         sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
+                    }
+                    if (sourceArgs.isPresent()) {
+                        sourceBinding = Optional.of(new InvocationBinding(method.getIdentityConstant(),
+                                sigMethod, sourceArgs.get()));
                     }
                     atypeResult = sigMethod.getRawReturns();
 
@@ -1075,7 +1087,11 @@ public class InvocationExpression
                 }
             }
         }
-        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+        Expression result = finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+        if (result != null) {
+            sourceBinding.ifPresent(binding -> bindings.record(this, binding));
+        }
+        return result;
     }
 
     @Override
