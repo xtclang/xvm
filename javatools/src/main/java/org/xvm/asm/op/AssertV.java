@@ -252,7 +252,7 @@ public class AssertV
     private void appendValue(BuildContext bctx, CodeBuilder code, MethodTypeDesc mdAppendValue,
                              int nValue, String[] asParts, int index) {
         RegisterInfo reg = nValue >= 0
-                ? bctx.getRegisterInfo(code, nValue)
+                ? bctx.getRegisterInfo(nValue)
                 : null;
         if (nValue >= 0) {
             if (reg == null) {
