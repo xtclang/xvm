@@ -232,7 +232,7 @@ which read like an accessor.
 | `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
 | Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
 | `Compilation.sourceTrees()` / `ModuleInfo.getParsedSources()` | Preserve per-file syntax after a loading/parsing error without presenting it as an assembled or semantically valid module. Structural queries can retain current outlines and ranges. |
-| `analyzeIncomplete(Source, ...)` / `PartialAnalysis` | Opt-in, single-source probe for a standalone trailing `receiver.` or unfinished call. Retains intact syntax, receiver/argument validation and lexical parentage; never returns a compiled module or selects an incomplete call's overload. Normal compilation is unchanged. |
+| `analyzeIncomplete(...)` / `PartialAnalysis` | Opt-in probe for a standalone incomplete `receiver.` or call. The original Source overload supports trailing EOF; explicit-cursor Source and ModuleInfo overloads also support sites before closing braces/semicolons, with unchanged text and module overlays. Retains intact syntax, receiver/argument validation and lexical parentage; never returns a compiled module or selects an incomplete call's overload. Normal compilation is unchanged. |
 
 The source-tree API adds `compileModule(ModuleInfo, repository, errs)` and the protected
 `ModuleInfo.readSource(File)` and `sourceEntries(File)` hooks. A fresh source-tree input uses the
@@ -1251,6 +1251,21 @@ callee and argument nodes. No validation Context, callback, scope map or separat
 is stored, and no clone-reset override is added. No existing AST class gains fields or accessors in
 this pass. Kotlin consumer tests exercise the API, but model copying, completion queries and LSP
 integration remain subsequent work in the existing LSP module.
+
+The cursor/module follow-up extends this same node to an explicit source position before existing
+closing braces or a semicolon. Its additional final `diagnosticCode` is syntax provenance: EOF keeps
+`PARSER-02`, while an explicit cursor uses `PARSER-30`. Validation replays that exact boundary error
+to prevent emission. The field is immutable and needs no clone handling; no Context or semantic
+lookup state is added. The parser owns cursor recognition and resumes after the intact prefix, so
+an unclosed call cannot consume the method's closing brace during recovery. Source is never cut
+off, rewritten or padded. Assignments, returns and incomplete nested arguments remain unsupported.
+
+`ModuleInfo.getSourceTree` accepts an attempt-owned parsing function, passed through its existing
+source-tree traversal rather than stored in a node. The embedding API selects one source/cursor;
+only its recognized incomplete-boundary diagnostic is deferred for assembly. Other file errors
+still prevent semantics. Kotlin copies all module facts into the selected source view, preserving
+cross-file symbol identities and the original source positions. The parser cursor is a final
+primitive with a named `NO_CURSOR` sentinel, not an Optional field or lazy mutable cache.
 
 #### Call facts owned by the compilation attempt
 
