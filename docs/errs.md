@@ -29,7 +29,14 @@ and assignment/return/nested-call contexts, without producing a compiled module.
 facts now support bounded completion and signature help through the adapter and server, with
 request cancellation and document/module lifetime checks. Scope completion, static/type lookup,
 candidate argument fitting, inferred expected types and named slots now have bounded consumers.
+Type-definition and nominal type/method implementation lookup now use copied source identities and
+compiler method chains. These consumers need no new Java embedding or AST accessors; explicit
+TypeInfo inspection takes the host listener, and all retained relationships live in Kotlin.
 Broader syntax, cross-module indexing and the unexamined TypeInfo families remain open.
+Static call hierarchy, resolved-name semantic tokens, read/write highlights and bounded inlay
+hints now have consumers. Rename probes expose silent capture and missing named-label references;
+rename remains off. Serialized-dependency and snapshot-lifetime probes are recorded in the
+integration plan; detached dependency source indexing and automatic reverse invalidation remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -1207,10 +1214,29 @@ the AST per open document for folding and selection; hover and navigation use th
 
 **Remaining consumers.** Completion and signature help now have the bounded compiler-backed
 consumers described below. Safe rename still needs conflict/edit validation and broader ownership
-for workspace-wide changes. Semantic tokens need classification and modifiers beyond the currently
-copied declaration/reference roles.
+for workspace-wide changes. Call hierarchy, resolved-name tokens and bounded inlay hints now use
+copied facts; the current requirements matrix and negative rename probes are in the integration plan.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+**Remaining-consumer verification (2026-09-23):** no AST fields, getters or cloning changes were
+needed. Kotlin derives caller ownership from method/lambda nodes and parent boundaries, source
+usage from assignment/lvalue syntax, and modifiers from validated registers/components. Inferred
+declarations retain their existing `VariableTypeExpression` child. The only new Java fact is
+`InvocationBinding.Argument.named`, captured before argument rewriting in the existing immutable,
+attempt-owned provenance record. It belongs at that boundary because the final invocation no
+longer reliably retains written labels. Its three-argument constructor remains; record-pattern
+arity changes are documented in the integration plan. Rename label ranges are still a separate
+missing fact; this boolean is not a label-to-parameter reference model.
+
+**Type-definition/implementation consumer follow-up (2026-09-23):** no AST fields, clone rules or
+Java API changes were added. Type-definition links use existing `TypeConstant` identities and
+source declarations. `CompilerImplementations.kt` inspects successful source types through
+`ensureTypeInfo(errors)` and copies nominal ancestry and method-chain declaration identities,
+including generic overrides. The passive snapshot overload remains passive; the explicit reporting
+overload runs on the serialized compiler worker. Queries hold only Kotlin IDs/locations and may
+run without a constant pool. Property/accessor and synthetic redirect/delegation targets remain
+outside this consumer. See the current acceptance evidence in `errs-integration-plan.md`.
 
 This inventory covers the branch's source-binding additions and its changes to reporting inside
 `javatools/compiler/ast`. The AST is the compiler's source-positioned, progressively validated

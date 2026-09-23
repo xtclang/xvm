@@ -35,6 +35,7 @@ class CompilerCallSiteTest {
         assertThat(call.signature.parameters.map { model.type(it.type)!!.displayName }).allSatisfy { assertThat(it).contains("String") }
         assertThat(call.signature.returns.map { model.type(it)!!.displayName }).containsExactly("String")
         assertThat(call.arguments.map { it.parameterIndex }).containsExactly(1, 0)
+        assertThat(call.arguments).allSatisfy { assertThat(it.named).isTrue() }
         assertThat(call.arguments.map { source.lines()[it.range.start.line].substring(it.range.start.column, it.range.end.column) })
             .containsExactly("backup=\"b\"", "value=\"a\"")
 
