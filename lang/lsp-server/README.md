@@ -152,11 +152,12 @@ arguments. It requires successful compilation and source locations in the curren
 hierarchy items cannot resolve into a new compilation. Other workspace modules and library sources
 are not indexed by this backend.
 
-Completion now supplies accessible instance members immediately after a supported receiver dot,
-including generic substitution and overload signatures. Signature help shows instantiated
-signatures and argument mappings for resolved calls, and candidate signatures for unfinished
-qualified calls. These cursor requests propagate cancellation and reject stale document/module
-results. Bare-name and typed-prefix completion, implicit/static receiver lookup and incomplete
+Completion supplies accessible instance members after a supported receiver dot or typed member
+prefix, including generic substitution and overload signatures. Explicit completion edits replace
+the original member token. Signature help shows instantiated signatures and argument mappings for
+resolved calls, and candidate signatures for unfinished qualified calls, including those with an
+editor-inserted closing parenthesis. These cursor requests propagate cancellation and reject stale
+document/module results. Bare-name completion, implicit/static receiver lookup and incomplete
 overload inference remain unsupported; the [capability matrix](../doc/plans/plan-ide-integration.md)
 records the precise syntax and parameter-mapping limits.
 

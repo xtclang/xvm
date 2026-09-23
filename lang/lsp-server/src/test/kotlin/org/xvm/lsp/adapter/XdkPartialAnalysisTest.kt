@@ -17,6 +17,7 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.IncompleteExpression
+import org.xvm.compiler.ast.IncompleteStatement
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.Parameter
@@ -115,9 +116,10 @@ class XdkPartialAnalysisTest {
         assertThat((method.component as MethodStructure).ast).isNull()
     }
 
-    @Test
-    fun `partial value clones own their nested syntax`() {
-        val prefix = "module Editing { Int run(String value) { return work(value."
+    @ParameterizedTest
+    @ValueSource(strings = ["", "si"])
+    fun `partial value clones own their nested syntax`(member: String) {
+        val prefix = "module Editing { Int run(String value) { return work(value.$member"
         val text = "$prefix); } }"
         val errors = ErrorList()
         val parser = Parser.forPartialAnalysis(Source(text, URI), position(prefix), errors)
@@ -132,6 +134,8 @@ class XdkPartialAnalysisTest {
             assertThat(copied.isValidated).isFalse()
         }
         assertThat(clone.endPosition).isEqualTo(expression.endPosition)
+        val copiedSite = descendants(clone).filterIsInstance<IncompleteStatement>().single { !it.isCall }
+        assertThat(copiedSite.memberName.map { it.valueText }.orElse("")).isEqualTo(member)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }
 
@@ -221,7 +225,9 @@ class XdkPartialAnalysisTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["value.", "return value.", "Int result = value.", "return work(value."])
+    @ValueSource(
+        strings = ["value.", "return value.", "Int result = value.", "return work(value.", "value.si", "return value.si", "value.indexOf("],
+    )
     fun `cursor analysis in a module member uses the unsaved root and member snapshot`(statement: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
@@ -230,7 +236,7 @@ class XdkPartialAnalysisTest {
         root.writeText("module Editing { class Base { Int value = 1; } }")
         member.writeText("class Child extends Base { void run() {} }")
         val prefix = "class Child extends Base { Int run() { $statement"
-        val closing = if (statement.contains("work(")) ");" else ""
+        val closing = if (statement.contains("work(") || statement.contains("indexOf(")) ");" else ""
         val overlay = "$prefix$closing } Int later() = 42; }"
         val sources =
             object : ModuleInfo(root, false) {
@@ -257,7 +263,11 @@ class XdkPartialAnalysisTest {
         assertThat(snapshot.semantics.sourceName).isEqualTo(member.path)
         val copied = snapshot.sites.single()
         assertThat(snapshot.semantics.type(copied.receiverType!!)!!.displayName).contains("String")
-        assertThat(copied.members.map { it.name }).contains("size", "indexOf")
+        if (site.isCall) {
+            assertThat(copied.members.map { it.name }).containsOnly("indexOf")
+        } else {
+            assertThat(copied.members.map { it.name }).contains("size", "indexOf")
+        }
         assertThat(snapshot.semantics.symbols.mapNotNull { it.declarationSource }).contains(root.path, member.path)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         assertThat(root.readText()).contains("Int value")
@@ -265,10 +275,12 @@ class XdkPartialAnalysisTest {
     }
 
     @Test
-    fun `a cursor does not manufacture partial facts from complete code or an unrelated syntax error`() {
+    fun `cursors outside supported boundaries and unrelated syntax errors yield no partial facts`() {
         CompilerTestSupport.configure()
         for ((prefix, suffix) in listOf(
             "module Editing { void run(String value) { value." to "size; } }",
+            "module Editing { void run(String value) { value.si" to "ze; } }",
+            "module Editing { void run(String value) { value.ind" to "(); } }",
             "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
             "module Editing { void run(String value) { value." to " } void broken( { }",
         )) {
@@ -280,11 +292,89 @@ class XdkPartialAnalysisTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["value.si", "return value.si", "Int result = value.si", "work(value.si", "getValue().si", "work(getValue().si"])
+    fun `typed member prefixes retain compiler context and their original token`(statement: String) {
+        CompilerTestSupport.configure()
+        val prefix = "module Editing { String getValue() = \"text\"; Int work(Int n) = n; Int run(String value) { $statement"
+        val text = prefix + (if (statement.startsWith("work(")) ");" else ";") + " } Int later() = 42; }"
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        val site = analysis.sites().single()
+        assertThat(site.source.toRawString()).isEqualTo(text)
+        assertThat(site.memberName.orElseThrow().valueText).isEqualTo("si")
+        assertThat(site.memberName.orElseThrow().startPosition).isEqualTo(position(prefix.dropLast(2)))
+        assertThat(site.memberName.orElseThrow().endPosition).isEqualTo(position(prefix))
+        val model = analysis.semanticSnapshot(errors)
+        val copied = model.sites.single()
+        assertThat(copied.memberPrefix!!.text).isEqualTo("si")
+        assertThat(model.semantics.type(copied.receiverType!!)!!.displayName).isEqualTo("String")
+        assertThat(copied.members.map { it.name }).contains("size")
+        val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
+        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat(descendants(analysis.sourceTrees().single()).filterIsInstance<MethodDeclarationStatement>().map { it.name }.toList())
+            .contains("later")
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "value.indexOf(",
+            "value.indexOf(\"x\"",
+            "value.indexOf(\"x\", ",
+            "return value.indexOf(",
+            "work(value.indexOf(",
+            "getValue().indexOf(",
+        ],
+    )
+    fun `a call cursor before a closing parenthesis retains the intact prefix`(statement: String) {
+        CompilerTestSupport.configure()
+        val prefix = "module Editing { String getValue() = \"text\"; Int work(Int n) = n; Int run(String value) { $statement"
+        val text = prefix + (if (statement.startsWith("work(")) "));" else ");") + " } Int later() = 42; }"
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        val site = analysis.sites().single()
+        assertThat(site.isCall).isTrue()
+        assertThat(site.source.toRawString()).isEqualTo(text)
+        assertThat(site.endPosition).isEqualTo(position(prefix))
+        val model = analysis.semanticSnapshot(errors)
+        assertThat(model.sites.single().members).isNotEmpty()
+        assertThat(model.semantics.calls.map { model.semantics.symbol(it.method)?.name }).doesNotContain("indexOf")
+        val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
+        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat(descendants(analysis.sourceTrees().single()).filterIsInstance<MethodDeclarationStatement>().map { it.name }.toList())
+            .contains("later")
+    }
+
     @Test
-    fun `cursor analysis preserves flow narrowing and UTF-16 positions inside closing blocks`() {
+    fun `cursor-selected complete syntax remains valid in ordinary compilation`() {
+        CompilerTestSupport.configure()
+        for ((prefix, suffix) in listOf(
+            "module Editing { Int run(String value) { return value.size" to "; } }",
+            "module Editing { void run(String value) { value.indexOf(\"x\"" to "); } }",
+        )) {
+            val text = prefix + suffix
+            val errors = ErrorList()
+            val partial = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+            assertThat(partial.sites()).hasSize(1)
+            assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+            val normal = ErrorList()
+            assertThat(EmbeddingSupport.instance().compileModule(Source(text, URI), null, normal).succeeded())
+                .describedAs(normal.errors.toString())
+                .isTrue()
+            assertThat(normal.errors).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", "si"])
+    fun `cursor analysis preserves flow narrowing and UTF-16 positions inside closing blocks`(member: String) {
         CompilerTestSupport.configure()
         for (newline in listOf("\n", "\r\n")) {
-            val prefix = "module Editing {$newline void run(Object value) {$newline  if (value.is(String)) { /* 😀 */ value."
+            val prefix = "module Editing {$newline void run(Object value) {$newline  if (value.is(String)) { /* 😀 */ value.$member"
             val errors = ErrorList()
             val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix } } }", URI), position(prefix), null, errors)
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
@@ -317,12 +407,13 @@ class XdkPartialAnalysisTest {
         assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
     }
 
-    @Test
-    fun `module cursor diagnostics honor cancellation and budgets without duplicates`() {
+    @ParameterizedTest
+    @ValueSource(strings = ["value.", "value.si", "value.indexOf("])
+    fun `module cursor diagnostics honor cancellation and budgets without duplicates`(operation: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
-        val prefix = "module Editing { void run(String value) { value."
-        root.writeText("$prefix } }")
+        val prefix = "module Editing { void run(String value) { $operation"
+        root.writeText(prefix + (if (operation.endsWith("(")) ");" else ";") + " } }")
         val support = EmbeddingSupport.instance()
         val delivered = mutableListOf<ErrorListener.ErrorInfo>()
         val analysis = support.analyzeIncomplete(ModuleInfo(root, false), root, position(prefix), null, ErrorListener { delivered.add(it) })

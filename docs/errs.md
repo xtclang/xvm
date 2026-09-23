@@ -1295,8 +1295,25 @@ probes. The adapter's internal cursor request API now serializes partial analysi
 the compiler worker, invalidating requests on edit, supersession, cancellation, close and shutdown.
 It returns immutable facts without changing normal diagnostics. The subsequent Kotlin-only protocol
 slice connects completion/signature requests and checks document/module lifetime before delivering
-responses. No further AST or embedding hook was required for that slice. Bare-name scope, typed
-member prefixes and broader incomplete-call inference remain unproven.
+responses. No further AST or embedding hook was required for that slice.
+
+The typed-prefix/closing-parenthesis follow-up adds one final `Token memberName` reference to
+`IncompleteStatement`, a constructor overload and the Optional-returning `getMemberName()`.
+It is null when no member token was written; Optional is not stored in the node. The parser owns
+recognition in both qualified name chains (`value.si`) and postfix expressions (`getValue().si`).
+Keeping the original token here is appropriate: its decoded text and original source span are
+syntax that the AST already owns, not inferred semantics or LSP policy. Kotlin copies those facts
+to `PartialSemanticModel.MemberPrefix`, filters candidates and creates a token replacement edit.
+No additional mutable field, semantic cache, clone override or clone-reset rule is introduced;
+the existing clone regression also checks preservation of the written token.
+
+Explicit cursor probes now also inspect calls before an existing closing parenthesis. A selected
+member/call can be syntactically complete: only the separate probe bypasses that operation's
+validation, validates intact children and prevents emission. Normal compilation is unchanged,
+and successfully resolved calls keep their selected-signature facts. Existing embedding overloads
+cover both cases. Tests exercise original source preservation, later declarations, module overlays,
+flow narrowing, escaped/UTF-16 replacement spans and listener budgets/cancellation without duplicate
+diagnostics. Bare-name scope and broader incomplete-call inference remain unproven.
 
 #### Call facts owned by the compilation attempt
 

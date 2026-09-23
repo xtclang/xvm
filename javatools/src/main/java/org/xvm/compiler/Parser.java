@@ -62,7 +62,9 @@ public class Parser {
     /**
      * Retain a supported incomplete statement at a cursor, without truncating the source.
      * The cursor uses a position token obtained from {@link Source#getPosition()} for this text.
-     * Supports missing member/call suffixes at statement and final call-argument boundaries.
+     * Supports missing member/call suffixes, typed member prefixes and calls before an existing
+     * closing parenthesis at statement and final call-argument boundaries. Cursor-selected syntax
+     * need not be malformed; it is inspected as a prefix, without validating the selected operation.
      */
     public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
         if (cursor == NO_CURSOR) {
@@ -3142,7 +3144,7 @@ public class Parser {
 
             case DOT: {
                 Token dot = expect(Id.DOT);
-                if (canRetainIncomplete(true)) {
+                if (canRetainIncomplete()) {
                     throw incomplete(expr, dot, List.of(), List.of());
                 }
                 switch (peek().getId()) {
@@ -3173,6 +3175,10 @@ public class Parser {
                         if (name == null) {
                             name = expect(Id.IDENTIFIER);
                         }
+                    }
+                    if (noDeRef == null && name.getId() == Id.IDENTIFIER
+                            && name.getEndPosition() == f_cursor && canRetainIncomplete()) {
+                        throw incomplete(expr, dot, name);
                     }
                     long                 lEndPos = name.getEndPosition();
                     List<TypeExpression> params  = null;
@@ -3498,6 +3504,9 @@ public class Parser {
                 }
 
                 left    = new NameExpression(left, nameNDR, name, null, lEndPos);
+                if (fNormal && nameNext.getEndPosition() == f_cursor && canRetainIncomplete()) {
+                    throw incomplete(left, dot, nameNext);
+                }
                 nameNDR = null;                     // only gets applied once
                 name    = nameNext;
                 lEndPos = name.getEndPosition();
@@ -5180,11 +5189,12 @@ public class Parser {
         Token            open       = current();
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
+        if (canRetainIncomplete()) {
+            match(Id.R_PAREN);
+            throw incomplete(callee, open, args, separators);
+        }
         if (match(Id.R_PAREN) == null) {
             while (true) {
-                if (canRetainIncomplete()) {
-                    throw incomplete(callee, open, args, separators);
-                }
                 Expression argument = parseArgument(true, false, f_cursor != NO_CURSOR);
                 args.add(argument);
                 Expression value = argument instanceof LabeledExpression labeled
@@ -5201,6 +5211,7 @@ public class Parser {
                     separators.add(comma);
                 }
                 if (canRetainIncomplete()) {
+                    match(Id.R_PAREN);
                     throw incomplete(callee, open, args, separators);
                 }
                 if (match(Id.R_PAREN, comma == null) != null) {
@@ -5213,10 +5224,6 @@ public class Parser {
     }
 
     private boolean canRetainIncomplete() {
-        return canRetainIncomplete(false);
-    }
-
-    private boolean canRetainIncomplete(boolean beforeArgumentClose) {
         if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
             return false;
         }
@@ -5225,8 +5232,7 @@ public class Parser {
         }
         return prev().getEndPosition() <= f_cursor
                 && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
-                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON)
-                        || beforeArgumentClose && peek(Id.R_PAREN));
+                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN));
     }
 
     private IncompleteSyntax incomplete(Expression target, Token operator,
@@ -5236,6 +5242,12 @@ public class Parser {
         log(Severity.ERROR, code, position, position);
         return new IncompleteSyntax(
                 new IncompleteStatement(target, operator, arguments, separators, position, code));
+    }
+
+    private IncompleteSyntax incomplete(Expression receiver, Token dot, Token memberName) {
+        log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+        return new IncompleteSyntax(new IncompleteStatement(
+                receiver, dot, memberName, f_cursor, INCOMPLETE_EXPRESSION));
     }
 
     /** Preserve the enclosing statement only when its whole value is the incomplete operation. */
