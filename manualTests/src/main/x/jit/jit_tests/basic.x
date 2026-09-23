@@ -11,6 +11,7 @@ package basic {
             Boolean passed = True;
             try {
                 passed &= runTest(() -> assertTests.run());
+                passed &= runTest(() -> assignTests.run());
                 passed &= runTest(() -> callTests.run());
                 passed &= runTest(() -> condMixinTests.run());
                 passed &= runTest(() -> constuctTests.run());

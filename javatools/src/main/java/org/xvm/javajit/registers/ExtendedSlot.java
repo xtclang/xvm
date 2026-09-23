@@ -51,6 +51,10 @@ public record ExtendedSlot(BuildContext bctx, int regId, int slot, int extSlot,
     @Override
     public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
+        if (type != null && type.isJavaPrimitive()) {
+            // a non-null result (e.g. Int? n = new Int("42")) has no null flag on the stack
+            code.iconst_0();
+        }
         // store the "extension" boolean flag first
         code.istore(extSlot());
         return RegisterInfo.super.store(bctx, code, type);
