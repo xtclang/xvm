@@ -53,12 +53,25 @@ Execution checklist (complete each item with the evidence specified below):
     narrowed types, shadowing, imported/enclosing type names and static member access checks.
   - [x] Candidate applicability, inferred expected argument types and incomplete named-argument
     mapping. An unfinished call still has no selected overload; missing arguments cannot prove one.
-- [ ] **4. Other semantic consumer probes.** Type-definition, implementation lookup, call hierarchy,
-  semantic classification/inlay hints and module-local rename validation.
+- [x] **4. Other semantic consumer probes — bounded consumers and gaps established.**
+  - [x] Type-definition and implementation lookup within the current module, using copied type
+    identities and actual compiler method chains; no new Java embedding/AST API.
+  - [x] Static call hierarchy, resolved-name semantic tokens, read/write highlights and inferred-type/
+    selected-parameter hints, including negative controls and immutable copying.
+  - [x] Module-local rename **probes**: captures preserve identities; recompilation alone misses
+    silent capture; named labels are absent from reference occurrences. Production rename stays off.
 - [ ] **5. Dependency/source boundary.** Prove identities, available source locations and dependency
   invalidation across two modules.
+  - [x] Serialized dependency identities match source declarations by compiler equality, separate
+    overloads/modules, and reflect a replacement repository's changed/removed API.
+  - [ ] Copy a versioned dependency/source association into host-owned snapshots; wire repository
+    replacement and reverse invalidation into the adapter. The worker-only join is not an index.
 - [ ] **6. Lifetime and compatibility.** Sustained edits/cancellation/retention, output comparison,
   migration examples and the completed API requirements matrix.
+  - [x] Repeated fresh snapshots, concurrent pool-free queries, recursive compiler-object exclusion,
+    and byte-identical output with/without semantic inspection after timestamp normalization.
+  - [ ] Sustained module/cursor cancellation and heap retention measurement; compare extracted PR
+    outputs against their own bases and run their compatibility/migration examples independently.
 
 The eleventh pass establishes selected-call provenance and bounded partial receiver facts. It does
 not yet establish that the embedding/AST surface is sufficient for every intended editor consumer.
@@ -75,8 +88,8 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; compound/conditional prefixes and arguments following the cursor remain unavailable. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
 | 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Broader syntax, enclosing-instance member completion, type-valued receiver fallbacks and function-valued/receiver-rewritten calls remain outside this slice. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
-| 4. Other semantic consumers | Types lack an explicit copied declaration link; calls lack an explicit caller association; occurrences classify declaration/reference, not read/write or modifiers. Override/implementation and safe rename relationships still need proof. | Small compiler-backed consumers for type-definition, implementation lookup, incoming/outgoing calls, semantic tokens/inlay hints and module-local rename conflict checks. Record which facts can be copied from existing compiler structures and which need a small compiler hook. Include captures, shadowing, overloads and generated declarations. |
-| 5. Dependency/source boundary | Module navigation works; cross-module/library source lookup and persistent workspace indexing do not. Snapshot IDs intentionally expire between attempts. | A two-module fixture proves dependency identity, available source locations and invalidation when the dependency changes. Specify host source/repository ownership and index keys; missing library sources must remain unavailable. A production workspace index can follow separately. |
+| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Rename probes expose silent capture and missing named-label references; property/accessor implementation and dynamic dispatch remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest` and packaged stdio. Safe rename remains unadvertised. |
+| 5. Dependency/source boundary | Compiler identity equality survives serialization and distinguishes overloads/modules. Source tokens remain in host-owned source ASTs, not the artifact or consumer snapshot. Replacing a repository changes compiled facts; the adapter has no dependency configuration/invalidation yet. | `CompilerBoundaryRequirementsTest` proves the worker-only source join and repository replacement. A detached, versioned source index and reverse invalidation remain required; snapshot IDs are not persistent keys. |
 | 6. Lifetime and compatibility | Current concurrency/retention measurements are bounded; the new collector and future partial requests need sustained exercise. Public listener signatures and result record shapes have migration implications. | Repeated multi-file edits, cancellation, close/reopen and shutdown release attempts/ASTs/pools; copied queries remain pool-free on other threads. Record latency observations, compare compiled output against the base, and finalize constructor/record-pattern and listener migration examples. |
 
 Use these consumers to close an API requirements matrix: required fact, existing accessor or new
@@ -86,8 +99,9 @@ an explicit scope decision. Formatting, editor polish, a production persistent i
 implementations of every LSP handler need not delay that API decision. Unsupported protocol
 capabilities remain unadvertised, and Tree-sitter stays the shipped default.
 
-The next step is task 4's other semantic consumers, starting with type-definition and implementation
-lookup, followed by dependency/source boundaries and sustained validation before extracting PRs.
+The next step is the detached dependency/source association and adapter invalidation contract,
+followed by sustained lifecycle measurements and compatibility checks. Safe rename needs label
+bindings and before/after binding validation before it can be advertised.
 
 The runtime-annotation metadata correction should be extracted as an independent compiler fix,
 with its annotation application and reporting-TypeInfo controls. The structured `EMB-6` module-root
@@ -256,6 +270,98 @@ cases and nine existing completion/signature cases, all without skips. Collector
 discarded/retried sites and verify immutable publication; copied expected-type queries run on a
 separate thread without a compiler pool. A captured-lambda candidate has an ordinary-compilation
 control. XDK installation, `spotlessCheck` and `git diff --check` passed. No Gradle logic changed.
+
+### Remaining consumer verification, 2026-09-23
+
+Lookup verification adds instantiated generic return types, covariant overrides and retained
+snapshot results across close/reopen. Static call hierarchy now copies each selected call's nearest
+source method/lambda owner. Lambda calls remain lambda-owned; anonymous methods do not become
+factory calls. Incoming/outgoing results group actual sites, work across module members and reject
+old item IDs after an edit. Function-value dispatch, runtime virtual targets, constructor edges,
+property initializers/accessors and source-less dependencies are not inferred.
+
+Resolved-name semantic tokens classify compiler identities, declaration/static/abstract/readonly
+modifiers and assignment usage. Assignment receivers remain reads; compound and increment targets
+are read/write (LSP highlights show WRITE). Unresolved names have no fabricated token. Inlay hints
+show inferred local types after successful compilation and selected positional parameter names,
+excluding explicit named arguments and synthetic defaults. Failed inference cannot present its
+temporary `Object` type as an inferred hint. The shared token legend is only protocol data; no native parser
+or Tree-sitter fallback is loaded.
+
+| Required fact | Owner / API | Evidence and limits |
+|---|---|---|
+| Source caller | Existing method component, `LambdaExpression.getLambda()`, parent links; copied Kotlin callable table | `XdkCallHierarchyTest`: overloads, recursion, lambdas, anonymous methods, static interface selection, module files, stale IDs. Complete module only. No added AST fields/accessors. |
+| Read/write usage and modifiers | Existing assignment/lvalue/sequence syntax, Register/Component metadata; Kotlin copying | `XdkPresentationTest`: direct/compound/increment writes, receiver reads, captures, shadowing, declarations and static methods. Partial snapshots classify only facts actually resolved. |
+| Inferred local types | Existing `VariableTypeExpression` child and validated register type | Successful compilation required for type hints; explicit types and failed-inference placeholders omitted. Copied hints need no compiler pool. Lambda return hints remain absent. |
+| Written named-argument status | New `InvocationBinding.Argument.named` component, captured with the existing source mapping before argument rewrites | Selected overload and named/default controls. Necessary because validation rewrites the written arguments. No new AST state or clone obligation. |
+| Rename closure and conflict detection | Existing copied occurrence identities plus a fresh compilation of edited text | `CompilerRenameRequirementsTest`: captured-local edit works; same-file property capture still compiles but changes binding; parameter rename misses named labels. These are regression probes, not a safe rename API. |
+| Cross-module identity/source join | Compiler `IdentityConstant.equals` and host-retained declaration tokens on the worker | `CompilerBoundaryRequirementsTest`: serialized dependencies, distinct overloads/modules, changed return types and removed members. Consumer snapshots have no dependency declaration locations. Never use display strings or snapshot UUIDs as persistent keys. |
+| Detached lifetime and emission | Immutable Kotlin facts; explicit reporting inspection on the compiler worker | Twenty retained generations queried concurrently; recursive graph check excludes compiler objects. Inspection leaves emitted bytes unchanged after normalizing only the compilation timestamp. This is not an extracted-PR/base comparison or a heap-leak measurement. |
+
+Rename must compare bindings of **unmodified** references too: changing `local` to `value` can
+silently capture a previously resolved property use. A successful compile is insufficient. Named
+argument labels need source-to-parameter associations before parameter rename is safe; the new
+`named` flag deliberately does not pretend to supply those label spans. Member/override rename
+also needs an explicit affected-source boundary. Rename remains unadvertised.
+
+Dependency source lookup is possible with existing compiler identities while the worker owns both
+source and consumer compilations. A source index must detach that association and tie it to the
+exact dependency artifact/source revision. Fresh repositories in the probe prove changed-input
+compilation, not automatic invalidation of existing adapter sessions. These remain task 5 work.
+
+Compatibility: `new InvocationBinding.Argument(start, end, index)` remains supported and describes
+a positional argument. Producers retaining an explicit label use the four-argument constructor;
+record-pattern consumers must migrate from `Argument(var start, var end, var index)` to
+`Argument(var start, var end, var index, var named)`. This branch's new tooling records should be
+extracted in their final shape; preserving a constructor does not preserve record-pattern arity.
+
+Validation: 474 compiler tests (40 existing skips), 692 LSP tests (three existing skips) and all
+14 packaged compiler-stdio tests completed with zero failures/errors: **1,137 executed tests**.
+The 15 lookup, five call-hierarchy, five presentation, three rename and four boundary/lifetime
+cases all ran without skips. `spotlessCheck` and `git diff --check` passed. The manual playbook now
+has X1–X44; its new Consumers module compiles with `xcc`. Interactive editor actions have not been
+run in this pass. No Gradle logic or backend default changed.
+
+### Type-definition and implementation consumer pass, 2026-09-23
+
+Type-definition copies declaration links from existing type identities. Modifiers unwrap;
+parameterized values navigate to the nominal type rather than its generic arguments. Nullable,
+union and intersection operands can contribute multiple available source targets; a difference
+type follows its positive operand. Aliased values follow their resolved type while a written alias
+or formal parameter can point to its own declaration. Selected calls expose instantiated return
+types; method declarations expose their declared returns. Missing library source and unresolved
+names return no invented target.
+
+Implementation lookup inspects successful source TypeInfo explicitly through the host listener.
+It copies nominal ancestor relationships for concrete source types and method-chain identities for
+actual source bodies. Generic overrides, inherited bodies and interface defaults are preserved;
+overloads and unrelated same-named methods are separate. Anonymous classes contribute their
+user-written method bodies while synthetic type declarations are excluded from type-implementation
+results. Captured values keep their source type targets. Unadopted mixins are not implementations
+of their `into` constraint; mixin bodies are copied through composed hosts. Type lookup is
+nominal/declaration-level, not structural assignability or a search over generic instantiations.
+Property/accessor implementations, synthetic redirects/delegation, conditional compositions and
+cross-module/dependency targets remain outside the proven surface.
+
+`semanticSnapshots()` remains passive. `semanticSnapshots(errors)` opts into implementation
+inspection on the serialized worker; serious inspection failures/cancellation discard its edges.
+The same listener receives any TypeInfo diagnostics before publication. Request threads query
+immutable Kotlin maps of IDs and source locations, without compiler objects or ambient pools.
+There are **no new Java embedding methods, AST fields/accessors or clone rules** in this pass.
+The adapter's existing single-target type-definition method remains; its additive plural hook
+carries union results through the existing LSP handler. Edits use the existing module invalidation
+and request-version checks. Tree-sitter remains default; only XdkAdapter advertises the two features.
+
+Evidence: `XdkSemanticLookupTest` covers type targets, narrowing, generics, method chains, default and
+mixin/anonymous bodies, captured values, unrelated overloads, closed members, overlays, parse failure, cancellation and queries
+on another thread without a constant pool. Packaged stdio covers capabilities and cross-file lookup.
+The [manual playbook](../lang/doc/manual-test-plan.md#xdkadapter-playbook) includes matching user steps.
+
+Validation: a fresh full LSP run reported 672 tests with three existing skips and zero failures or
+errors; all 13 packaged compiler-stdio tests passed. That is 682 executed tests, including all
+12 focused semantic-lookup cases. `spotlessCheck` and `git diff --check` passed. All four baseline
+playbook modules compiled through the installed compiler. No Java or Gradle logic changed in this
+lookup pass. The preceding scope/call work and initial playbook were pushed as `672bc130b`.
 
 ### Branch hardening design
 
@@ -491,8 +597,10 @@ Deferred capabilities are still visible outages when choosing the compiler backe
 syntax can prevent an assembled module AST; recovered per-file syntax supports structural features,
 while navigation requires semantic results for the current module's source files, with no
 cross-module index or library-source lookup. Completion/signature help have the bounded support
-described above; rename, semantic tokens, formatting, code actions, document links and method
-implementation lookup remain unavailable.
+described above; rename, formatting, code actions, document links and linked editing remain
+unavailable. Static call hierarchy, resolved-name tokens and bounded inlay hints now have consumers.
+Type-definition and nominal type/method implementation lookup now
+have current-module consumers; property/accessor and synthetic redirect targets remain outside them.
 The snapshot has declared/instantiated call signatures and direct type hierarchy; explicit partial
 inspection copies bounded receiver-member candidates. A persistent workspace identity scheme,
 broader incomplete-call inference and incremental compilation remain open. These are feature
@@ -537,6 +645,9 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | C8 | Capture cursor scope and resolve visible type names without AST caches | C7 and E4; I3 for direct compiler consumers |
 | C9 | Fit incomplete-call candidates and preserve named argument slots | C8; reuse compiler argument fitting without changing full-call selection |
 | L9 | Consume scope, static lookup and candidate-specific expected types | C8, C9 and L8 |
+| L10 | Copy type-definition and compiler implementation targets | L5, L6 and L7; no C8/C9 dependency |
+| L11 | Copy source callers and expose static call hierarchy | L5 and L7; no new Java/AST API |
+| L12 | Classify resolved names and expose bounded inlay hints | L6 and L7; carry written named-argument status in E4 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -544,7 +655,8 @@ additively. C5 follows with structural recovery; C6 isolates the explicit partia
 E4 and L7 separate compiler provenance collection from the Kotlin call/member models. C7 extends
 the partial compiler API; L8 proves the asynchronous editor consumer and protocol delivery.
 C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotlin/protocol consumers.
-These are twenty-six eventual PRs, not twenty-six simultaneous open branches.
+L10, L11 and L12 can follow their listed dependencies independently of the later completion/scope slices.
+These are twenty-nine eventual PRs, not twenty-nine simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -965,6 +1077,36 @@ full-call selection and compiled outputs must retain their independent controls.
 queries, copied candidates, expected-type and named-slot mapping, capability documentation and
 adapter/stdio regressions. Preserve module invalidation and cancellation. Keep missing syntax and
 callable forms explicit; one surviving candidate is still not a compiler-selected call.
+
+### L10 — Type-definition and implementation lookup
+
+**Contract:** copied type identities and compiler method chains support source navigation in the
+current module. Keep the no-argument snapshot copier passive; a separate reporting overload
+inspects TypeInfo on the worker and returns no implementation set on cancellation or serious
+inspection errors. Preserve the adapter's single-target type-definition hook while adding a
+multi-target hook for unions/intersections. Advertise capabilities only for XdkAdapter. Extract
+adapter/protocol tests and the playbook together; no new compiler/embedding/AST code is required.
+
+### L11 — Static source call hierarchy
+
+**Contract:** selected calls belong to their actual source method/lambda, with grouped incoming and
+outgoing ranges across current module files. Extract the copied callable/owner facts, `XdkCalls`,
+opaque snapshot item IDs and protocol round-trip tests. Keep anonymous methods separate from their
+factory. Runtime dispatch, constructors, property accessors and dependency source edges stay out.
+No Java/AST changes belong in this slice.
+
+### L12 — Semantic presentation consumers
+
+**Contract:** resolved names drive tokens and read/write highlights; successful inference and
+selected call mappings drive hints. Copy assignment usage and existing register/component modifiers
+in Kotlin. Include `InvocationBinding.Argument.named` in E4's final provenance shape; preserve the
+three-argument constructor and document record-pattern migration there. Carry adapter/stdio tests,
+failed-inference controls and capability/playbook updates here. Rename remains unadvertised.
+
+The rename, serialized dependency and lifetime probes are acceptance evidence for the relevant
+source-binding/snapshot slices (E2/L4/L7/L10), not a claim that a rename engine or workspace index
+has shipped. During extraction split their fixtures along those actual dependencies and rerun each
+PR in isolation. Task 5's future production changes need their own reviewed slice once implemented.
 
 ## Changes to hold out of the initial integration
 
