@@ -7,8 +7,9 @@
 > This branch uses the real javatools compiler through `EmbeddingSupport`, with an immutable
 > Kotlin semantic snapshot inside the existing LSP server module. Diagnostics, typed hover and
 > supported same-document navigation are implemented. There is no replacement XTC lexer/parser
-> or separate semantic library. The snapshot does not yet supply member enumeration, instantiated call-site
-> signatures, inheritance indexes or incremental recompilation. Use
+> or separate semantic library. The current snapshot supplies direct source inheritance and selected
+> call signatures; explicit partial analysis supplies bounded receiver-member candidates. Completion
+> and signature help are not yet integrated, and incremental recompilation remains open. Use
 > [the current feature matrix](plan-ide-integration.md) and
 > [the integration plan](../../../docs/errs-integration-plan.md) for current status and priorities.
 

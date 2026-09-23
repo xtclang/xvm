@@ -18,6 +18,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CompilerException;
+import org.xvm.compiler.InvocationBinding;
 
 import org.xvm.compiler.ast.AstNode.ChildIterator;
 
@@ -36,12 +37,19 @@ public class StageMgr {
      * @param errs         the error listener to log to
      */
     public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs) {
+        this(node, stageTarget, errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Progress a node while preserving the compilation attempt's call-fact collector. */
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs,
+                    InvocationBinding.Collector bindings) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = Collections.singletonList(node);
         m_target      = stageTarget;
         f_errs        = requireNonNull(errs, "errs");
+        f_bindings    = requireNonNull(bindings, "bindings");
     }
 
     /**
@@ -53,12 +61,19 @@ public class StageMgr {
      * @param errs         the error listener to log to
      */
     public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs) {
+        this(list, stageTarget, errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Progress child nodes using the same collector as their enclosing compilation. */
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs,
+                    InvocationBinding.Collector bindings) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = list;
         m_target      = stageTarget;
         f_errs        = requireNonNull(errs, "errs");
+        f_bindings    = requireNonNull(bindings, "bindings");
     }
 
     /**
@@ -165,6 +180,11 @@ public class StageMgr {
      */
     public ErrorListener getErrorListener() {
         return f_errs;
+    }
+
+    /** @return the collector owned by this compilation attempt */
+    public InvocationBinding.Collector getInvocationBindings() {
+        return f_bindings;
     }
 
     /**
@@ -445,6 +465,8 @@ public class StageMgr {
      * Error list to log processing errors to.
      */
     private final ErrorListener f_errs;
+
+    private final InvocationBinding.Collector f_bindings;
 
     /**
      * The current node being processed if processing is occurring.

@@ -1190,7 +1190,7 @@ public class NewExpression
 
         m_ctxCapture = new AnonInnerClassContext(ctx);
 
-        catchUpChildren(errs);
+        catchUpChildren(errs, ctx.getInvocationBindings());
 
         if (purpose != AnonPurpose.CaptureAnalysis) {
             // the context is ONLY retained to provide capture information

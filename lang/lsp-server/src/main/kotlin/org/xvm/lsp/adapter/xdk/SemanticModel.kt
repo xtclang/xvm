@@ -17,6 +17,7 @@ class SemanticModel internal constructor(
     private val facts: Facts,
     occurrences: List<Occurrence>,
     expressions: List<ExpressionType>,
+    calls: List<CallSite> = emptyList(),
 ) {
     enum class Status { UNAVAILABLE, PARTIAL, COMPLETE }
 
@@ -132,6 +133,21 @@ class SemanticModel internal constructor(
         val type: TypeId,
     )
 
+    data class CallArgument(
+        val range: Range,
+        val parameterIndex: Int,
+    )
+
+    /** Selected signature after inference; parameter indices exclude hidden type parameters. */
+    @ConsistentCopyVisibility
+    data class CallSite internal constructor(
+        val range: Range,
+        val callee: Range,
+        val method: SymbolId,
+        val signature: Signature,
+        val arguments: List<CallArgument>,
+    )
+
     data class Supertype(
         val symbol: SymbolId,
         val type: TypeId,
@@ -149,6 +165,7 @@ class SemanticModel internal constructor(
     val types: List<Type> = facts.types
     val occurrences: List<Occurrence> = immutableList(occurrences)
     val expressions: List<ExpressionType> = immutableList(expressions)
+    val calls: List<CallSite> = immutableList(calls)
     val typeDeclarations: Map<SymbolId, TypeDeclaration> = facts.typeDeclarations
 
     /** One immutable symbol/type table shared by every source view of the compilation. */

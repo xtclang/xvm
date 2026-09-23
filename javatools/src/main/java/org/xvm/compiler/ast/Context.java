@@ -41,6 +41,7 @@ import org.xvm.compiler.ast.Statement.AstHolder;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
@@ -65,6 +66,12 @@ public class Context {
         m_ctxOuter     = ctxOuter;
         m_fDemuxOnExit = fDemuxOnExit;
         m_fReachable   = ctxOuter == null || ctxOuter.isReachable();
+    }
+
+    /** @return the enclosing compilation's call-fact collector, if enabled */
+    public InvocationBinding.Collector getInvocationBindings() {
+        Context outer = getOuterContext();
+        return outer == null ? InvocationBinding.Collector.NONE : outer.getInvocationBindings();
     }
 
     /**
