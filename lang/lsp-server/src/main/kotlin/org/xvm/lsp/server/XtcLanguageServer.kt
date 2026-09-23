@@ -105,6 +105,7 @@ import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
@@ -674,6 +675,12 @@ class XtcLanguageServer(
     fun replaceCompilerDependencies(dependencies: List<XdkDependency>) {
         val compiler = adapter as? XdkAdapter ?: error("Compiler dependencies require XdkAdapter")
         textDocumentService.refreshDependencies { compiler.replaceDependencies(dependencies) }
+    }
+
+    /** Host-supplied source roots/edges enable automatic dependency builds on editor/file events. */
+    fun replaceCompilerSourceModules(modules: List<XdkSourceModule>) {
+        val compiler = adapter as? XdkAdapter ?: error("Compiler source modules require XdkAdapter")
+        textDocumentService.refreshDependencies { compiler.replaceSourceModules(modules) }
     }
 
     fun publishDiagnostics(

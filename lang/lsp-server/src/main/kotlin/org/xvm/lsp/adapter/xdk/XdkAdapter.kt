@@ -28,12 +28,15 @@ import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.tool.ModuleInfo
 import java.io.File
+import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -121,6 +124,7 @@ class XdkAdapter internal constructor(
 
     override fun analysisScope(uri: String): String =
         synchronized(lifecycle) {
+            project.scope(uri)?.let { return it }
             val root = XdkSources.moduleRoot(uri, overlays)
             if (root == XdkSources.file(uri)) {
                 scopes[uri] ?: root?.toURI()?.toString() ?: uri
@@ -129,24 +133,27 @@ class XdkAdapter internal constructor(
             }
         }
 
+    override fun affectedAnalysisScopes(uri: String): Set<String> = synchronized(lifecycle) { project.affected(analysisScope(uri)) }
+
     override fun compileAsync(
         uri: String,
         content: String,
     ): CompletableFuture<CompilationResult> {
         lateinit var request: Request
-        val (previous, obsoleteCursors) =
+        val (retired, obsoleteCursors) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 overlays[uri] = content
                 val scope = analysisScope(uri)
                 scopes[uri] = scope
-                request = Request(scope, uri, overlays.filterKeys { analysisScope(it) == scope }, dependencies)
-                request.task = Runnable { runCompilation(request) }
+                val sourceScopes = project.buildOrder(scope).mapTo(mutableSetOf(scope)) { it.uri }
+                request =
+                    Request(scope, uri, overlays.filterKeys { analysisScope(it) in sourceScopes }, dependencies, project, ::runCompilation)
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
                         val obsolete =
                             synchronized(lifecycle) {
-                                compiles.remove(request.task)
+                                removeQueued(request)
                                 if (requests.remove(scope, request)) {
                                     completed.remove(scope)
                                     retireCursors(scope)
@@ -157,13 +164,17 @@ class XdkAdapter internal constructor(
                         obsolete.forEach { it.result.cancel(false) }
                     }
                 }
-                val previous = requests.put(scope, request)
-                completed.remove(scope)
-                previous?.let { compiles.remove(it.task) }
-                compiles.execute(request.task)
-                previous to retireCursors(scope)
+                val retired = retireRequests(project.affected(scope))
+                requests[scope] = request
+                scheduled[request] =
+                    debouncer.schedule({
+                        synchronized(lifecycle) {
+                            if (scheduled.remove(request) != null && !isStale(request)) compiles.execute(request.task)
+                        }
+                    }, DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS)
+                retired
             }
-        previous?.result?.cancel(false)
+        retired.forEach { it.result.cancel(false) }
         obsoleteCursors.forEach { it.result.cancel(false) }
         return request.result
     }
@@ -244,7 +255,7 @@ class XdkAdapter internal constructor(
             val facts =
                 cursor?.let {
                     val sources = captureSources(request.compilation) { isStale(request) }
-                    val dependencies = request.compilation.dependencies.open()
+                    val dependencies = (completed[request.compilation.scope]?.inputs ?: request.compilation.dependencies).open()
                     analyzeCursor(source, sources, it, dependencies.repository, errors).semanticSnapshot(errors)
                 }
             synchronized(lifecycle) {
@@ -285,7 +296,7 @@ class XdkAdapter internal constructor(
                     request.uri,
                     result.diagnostics,
                     result.document(request.uri)?.symbols.orEmpty(),
-                    result.documents.keys,
+                    result.documentUris,
                 ),
             )
         } catch (_: CancellationException) {
@@ -306,9 +317,11 @@ class XdkAdapter internal constructor(
         val uri: String,
         val overlays: Map<String, String>,
         val dependencies: XdkDependencies,
+        val project: XdkProject,
+        work: (Request) -> Unit,
     ) {
         val result = CompletableFuture<CompilationResult>()
-        lateinit var task: Runnable
+        val task = Runnable { work(this) }
     }
 
     /** Installed atomically, so all member views always belong to the same compilation. */
@@ -318,6 +331,9 @@ class XdkAdapter internal constructor(
         val dependencies: Set<String>,
         val succeeded: Boolean,
         val dependencySources: Map<String, String>,
+        val inputs: XdkDependencies,
+        val artifact: XdkDependency? = null,
+        val documentUris: Set<String> = documents.keys,
     ) {
         val hierarchy = XdkHierarchy(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
         val calls = XdkCalls(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
@@ -342,6 +358,34 @@ class XdkAdapter internal constructor(
     private fun module(uri: String): ModuleAnalysis? = completed[analysisScope(uri)]
 
     private fun analysis(uri: String): Analysis? = module(uri)?.document(uri)
+
+    /** Explicit source graph; installing a new configuration retires all current attempts. */
+    fun replaceSourceModules(modules: List<XdkSourceModule>): Set<String> {
+        val replacement = XdkProject(modules)
+        val (retired, probes) =
+            synchronized(lifecycle) {
+                check(!closed) { "XDK adapter is closed" }
+                project = replacement
+                builds.clear()
+                retireRequests(requests.keys.toSet())
+            }
+        retired.forEach { it.result.cancel(false) }
+        probes.forEach { it.result.cancel(false) }
+        return replacement.orderedScopes(retired.flatMapTo(linkedSetOf()) { replacement.affected(it.scope) })
+    }
+
+    /** Called under lifecycle. Compiler-owned objects never enter the artifact cache. */
+    private fun retireRequests(scopes: Set<String>): Pair<List<Request>, List<CursorRequest>> {
+        val retired = scopes.mapNotNull { requests.remove(it) }
+        scopes.forEach(completed::remove)
+        retired.forEach(::removeQueued)
+        return retired to scopes.flatMap(::retireCursors)
+    }
+
+    private fun removeQueued(request: Request) {
+        scheduled.remove(request)?.cancel(false)
+        compiles.remove(request.task)
+    }
 
     /**
      * Atomically replace host-supplied artifacts and retire affected analyses/cursor probes.
@@ -369,25 +413,27 @@ class XdkAdapter internal constructor(
                     retired.flatMap { request ->
                         requests.remove(request.scope, request)
                         completed.remove(request.scope)
-                        compiles.remove(request.task)
+                        removeQueued(request)
                         retireCursors(request.scope)
                     }
                 retired to probes
             }
         retired.forEach { it.result.cancel(false) }
         probes.forEach { it.result.cancel(false) }
-        return retired.mapTo(linkedSetOf()) { it.scope }
+        return synchronized(lifecycle) { project.orderedScopes(retired.mapTo(linkedSetOf()) { it.scope }) }
     }
 
     override fun closeDocument(uri: String) {
-        val (previous, obsoleteCursors) =
+        val (retired, obsoleteCursors) =
             synchronized(lifecycle) {
                 val scope = scopes.remove(uri) ?: analysisScope(uri)
                 overlays.remove(uri)
-                completed.remove(scope)
-                requests.remove(scope)?.also { compiles.remove(it.task) } to retireCursors(scope)
+                retireRequests(project.affected(scope)).also {
+                    val retained = requests.keys.flatMap { project.buildOrder(it).map(XdkSourceModule::name) }.toSet()
+                    builds.keys.retainAll(retained)
+                }
             }
-        previous?.result?.cancel(false)
+        retired.forEach { it.result.cancel(false) }
         obsoleteCursors.forEach { it.result.cancel(false) }
     }
 
@@ -401,6 +447,10 @@ class XdkAdapter internal constructor(
                 overlays.clear()
                 scopes.clear()
                 completed.clear()
+                builds.clear()
+                scheduled.values.forEach { it.cancel(false) }
+                scheduled.clear()
+                debouncer.shutdownNow()
                 compiles.queue.clear()
                 compiles.shutdown()
                 pending
@@ -420,13 +470,136 @@ class XdkAdapter internal constructor(
             ?.takeIf { it.isFile || it != XdkSources.file(request.uri) || File(it.parentFile, it.nameWithoutExtension).isDirectory }
             ?.let { XdkSources.capture(it, request.overlays, cancelled) }
 
-    /** Capture disk and overlays, then compile and copy all source views on the single worker. */
+    private data class BuildKey(
+        val sources: XdkSources.Inputs,
+        val dependencies: Map<String, String>,
+    )
+
+    private data class CachedBuild(
+        val key: BuildKey,
+        val artifact: XdkDependency?,
+        val diagnostics: List<Diagnostic>,
+        val documentUris: Set<String>,
+    )
+
+    /** Capture the complete dependency closure before compiling any of it. Only artifacts are cached. */
     private fun compileNow(request: Request): ModuleAnalysis {
+        val order = request.project.buildOrder(request.scope)
+        if (order.isEmpty()) {
+            return compileOne(request, request.uri, captureSources(request) { isStale(request) }, request.dependencies)
+        }
+        val captured =
+            order.associateWith { module ->
+                try {
+                    Result.success(XdkSources.capture(module.root, request.overlays) { isStale(request) })
+                } catch (failure: IOException) {
+                    Result.failure(failure)
+                }
+            }
+        // A source-owned module must never fall back to an older host-supplied binary.
+        val artifacts =
+            request.dependencies.modules
+                .filterKeys { it !in request.project.modules }
+                .toMutableMap()
+        val diagnostics = mutableListOf<Diagnostic>()
+        val documents = linkedSetOf<String>()
+        val analyses =
+            order.map { module ->
+                if (isStale(request)) throw CancellationException()
+                val inputs = XdkDependencies(artifacts.values.toList())
+                val sources = captured.getValue(module).getOrNull()
+                val uri = sources?.uri(module.root) ?: module.uri
+                val missing = module.dependencies.filter { it !in artifacts }
+                val key = sources?.let { BuildKey(it.inputs, artifacts.mapValues { (_, artifact) -> artifact.revision }) }
+                val cached = builds[module.name]?.takeIf { key != null && it.key == key && module.uri != request.scope }
+                val analysis =
+                    when {
+                        sources == null -> {
+                            unavailableProjectModule(
+                                uri,
+                                inputs,
+                                "SOURCE-UNAVAILABLE",
+                                "Cannot read source for ${module.name}: ${captured.getValue(module).exceptionOrNull()?.message}",
+                            )
+                        }
+
+                        missing.isNotEmpty() -> {
+                            unavailableProjectModule(
+                                uri,
+                                inputs,
+                                "DEPENDENCY-FAILED",
+                                "Dependencies unavailable: ${missing.joinToString()}",
+                                sources.documentUris,
+                            )
+                        }
+
+                        cached != null -> {
+                            ModuleAnalysis(
+                                emptyMap(),
+                                cached.diagnostics,
+                                emptySet(),
+                                cached.artifact != null,
+                                emptyMap(),
+                                inputs,
+                                cached.artifact,
+                                cached.documentUris,
+                            )
+                        }
+
+                        else -> {
+                            compileOne(request, uri, sources, inputs, module.name)
+                        }
+                    }
+                synchronized(lifecycle) {
+                    if (isStale(request)) throw CancellationException()
+                    if (key != null) builds[module.name] = CachedBuild(key, analysis.artifact, analysis.diagnostics, analysis.documentUris)
+                }
+                analysis.artifact?.let { artifacts[module.name] = it }
+                diagnostics += analysis.diagnostics
+                documents += analysis.documentUris
+                analysis
+            }
+        val target = analyses.last()
+        return ModuleAnalysis(
+            target.documents,
+            diagnostics,
+            target.dependencies + order.map { it.name },
+            target.succeeded,
+            target.dependencySources,
+            target.inputs,
+            target.artifact,
+            documents,
+        )
+    }
+
+    private fun unavailableProjectModule(
+        uri: String,
+        inputs: XdkDependencies,
+        code: String,
+        message: String,
+        documents: Set<String> = setOf(uri),
+    ) = ModuleAnalysis(
+        emptyMap(),
+        listOf(Diagnostic(wholeDocument(uri), Diagnostic.Severity.ERROR, message, code, SOURCE)),
+        emptySet(),
+        false,
+        emptyMap(),
+        inputs,
+        documentUris = documents,
+    )
+
+    /** Compile and copy all source views on the single worker. */
+    private fun compileOne(
+        request: Request,
+        uri: String,
+        sources: XdkSources?,
+        inputs: XdkDependencies,
+        moduleName: String? = null,
+    ): ModuleAnalysis {
         val heard = ErrorList()
         val errs = ErrorListener.cancellable(heard) { isStale(request) }
-        val source = Source(request.overlays.getValue(request.uri), request.uri)
-        val sources = captureSources(request) { isStale(request) }
-        val dependencies = request.dependencies.open()
+        val source = Source(request.overlays[uri].orEmpty(), uri)
+        val dependencies = inputs.open()
         val compilation =
             if (sources == null) {
                 compileSource(source, dependencies.repository, errs)
@@ -444,7 +617,7 @@ class XdkAdapter internal constructor(
         val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
         val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
         val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris) }
-        val documentUris = sources?.documentUris ?: setOf(request.uri)
+        val documentUris = sources?.documentUris ?: setOf(uri)
         val documents =
             documentUris.associateWith { uri ->
                 val sourceName = sourceUris.entries.firstOrNull { it.value == uri }?.key ?: uri
@@ -465,6 +638,16 @@ class XdkAdapter internal constructor(
                             ?: XdkSources.file(name)?.toURI()?.toString()
                     uri?.let { name to it }
                 }.toMap()
+        val artifact = if (moduleName != null && compilation.succeeded() && !heard.hasSeriousErrors()) compilation.toDependency() else null
+        if (artifact != null && artifact.module != moduleName) {
+            return unavailableProjectModule(
+                uri,
+                inputs,
+                "PROJECT-MODULE",
+                "Expected module $moduleName, found ${artifact.module}",
+                documentUris,
+            )
+        }
         return ModuleAnalysis(
             documents,
             diagnostics,
@@ -475,6 +658,8 @@ class XdkAdapter internal constructor(
                 .orEmpty(),
             compilation.succeeded(),
             dependencySources,
+            inputs,
+            artifact,
         )
     }
 
@@ -800,6 +985,12 @@ class XdkAdapter internal constructor(
 
     /** Replaced only under lifecycle; each request captures its immutable dependency set. */
     private var dependencies = XdkDependencies(emptyList())
+    private var project = XdkProject(emptyList())
+    private val builds = ConcurrentHashMap<String, CachedBuild>()
+    private val scheduled = mutableMapOf<Request, ScheduledFuture<*>>()
+    private val debouncer =
+        ScheduledThreadPoolExecutor(1) { work -> Thread(work, "xtc-debounce").apply { isDaemon = true } }
+            .apply { removeOnCancelPolicy = true }
 
     /** Only current, completed module analyses belong here; a member edit drops all previous views. */
     private val completed = ConcurrentHashMap<String, ModuleAnalysis>()
@@ -826,6 +1017,7 @@ class XdkAdapter internal constructor(
     private companion object {
         const val SOURCE = "xtc"
         const val SHUTDOWN_SECONDS = 5L
+        const val DEBOUNCE_MILLIS = 100L
 
         /** Translate a UTF-16 editor position without consuming or modifying the compiler input. */
         fun cursorPosition(

@@ -8,8 +8,9 @@
 > Kotlin semantic snapshot inside the existing LSP server module. Diagnostics, module navigation,
 > bounded completion/signature help, type/implementation lookup, static call hierarchy, resolved-name
 > tokens and bounded inlay hints have working consumers. A dependency host API supplies revisioned
-> artifacts/source indices and consumer invalidation. There is no replacement XTC lexer/parser or
-> separate semantic library. Safe rename, project dependency discovery/builds, persistent workspace
+> artifacts/source indices and consumer invalidation; explicit source roots/edges now support
+> automatic recompilation with overlays. There is no replacement XTC lexer/parser or separate
+> semantic library. Safe rename, editor project discovery/configuration, persistent workspace
 > indexing and finer-grained incremental recompilation remain open. Use
 > [the current feature matrix](plan-ide-integration.md) and
 > [the integration plan](../../../docs/errs-integration-plan.md) for current status and priorities.
