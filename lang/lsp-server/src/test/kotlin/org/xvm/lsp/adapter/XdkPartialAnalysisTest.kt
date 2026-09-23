@@ -2,6 +2,9 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.ErrorList
@@ -15,10 +18,180 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.Parameter
+import org.xvm.lsp.adapter.xdk.semanticSnapshot
+import org.xvm.tool.ModuleInfo
+import java.io.File
+import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** A real compiler consumer of the bounded partial-analysis API; no fallback parser or mock. */
 class XdkPartialAnalysisTest {
+    @TempDir
+    lateinit var directory: Path
+
+    @ParameterizedTest
+    @ValueSource(strings = ["value.", "value.indexOf(", "value.indexOf(\"x\", ", "value.indexOf(\"x\""])
+    fun `cursor analysis retains following declarations without changing source`(operation: String) {
+        for (terminator in listOf("", ";")) {
+            val prefix = "module Editing { void run(String value) { $operation"
+            val text = "$prefix$terminator } Int later() = 42; }"
+            CompilerTestSupport.configure()
+            val errors = ErrorList()
+            val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+            assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+            assertThat(analysis.pool()).isPresent()
+            val site = analysis.sites().single()
+            assertThat(site.source.toRawString()).isEqualTo(text)
+            assertThat(site.endPosition).isEqualTo(position(prefix))
+            val receiver = site.receiver.orElseThrow() as NameExpression
+            assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
+            ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+                assertThat(receiver.type.valueString).contains("String")
+            }
+            val later =
+                descendants(analysis.sourceTrees().single()).filterIsInstance<MethodDeclarationStatement>().single {
+                    it.name ==
+                        "later"
+                }
+            assertThat(Source.calculateOffset(later.startPosition)).isEqualTo(text.indexOf("Int later"))
+            val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
+            assertThat((method.component as MethodStructure).ast).isNull()
+
+            val compileErrors = ErrorList()
+            assertThat(EmbeddingSupport.instance().compileModule(Source(text, URI), null, compileErrors).succeeded()).isFalse()
+            assertThat(compileErrors.hasSeriousErrors()).isTrue()
+        }
+    }
+
+    @Test
+    fun `cursor analysis in a module member uses the unsaved root and member snapshot`() {
+        CompilerTestSupport.configure()
+        val root = directory.resolve("Editing.x").toFile().canonicalFile
+        val member = directory.resolve("Editing/Child.x").toFile().canonicalFile
+        member.parentFile.mkdirs()
+        root.writeText("module Editing { class Base { Int value = 1; } }")
+        member.writeText("class Child extends Base { void run() {} }")
+        val prefix = "class Child extends Base { void run() { value."
+        val overlay = "$prefix } Int later() = 42; }"
+        val sources =
+            object : ModuleInfo(root, false) {
+                override fun readSource(file: File): CharArray =
+                    when (file) {
+                        root -> "module Editing { class Base { String value = \"overlay\"; } }"
+                        member -> overlay
+                        else -> error("Unexpected source $file")
+                    }.toCharArray()
+            }
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(sources, member, position(prefix), null, errors)
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        assertThat(analysis.pool()).isPresent()
+        val site = analysis.sites().single()
+        assertThat(site.source.fileName).isEqualTo(member.path)
+        assertThat(site.source.toRawString()).isEqualTo(overlay)
+        val receiver = site.receiver.orElseThrow() as NameExpression
+        assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
+        ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+            assertThat(receiver.type.valueString).contains("String")
+        }
+        val snapshot = analysis.semanticSnapshot(errors)
+        assertThat(snapshot.semantics.sourceName).isEqualTo(member.path)
+        val copied = snapshot.sites.single()
+        assertThat(snapshot.semantics.type(copied.receiverType!!)!!.displayName).contains("String")
+        assertThat(copied.members.map { it.name }).contains("size", "indexOf")
+        assertThat(snapshot.semantics.symbols.mapNotNull { it.declarationSource }).contains(root.path, member.path)
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        assertThat(root.readText()).contains("Int value")
+        assertThat(member.readText()).doesNotContain("value.")
+    }
+
+    @Test
+    fun `a cursor does not manufacture partial facts from complete code or an unrelated syntax error`() {
+        CompilerTestSupport.configure()
+        for ((prefix, suffix) in listOf(
+            "module Editing { void run(String value) { value." to "size; } }",
+            "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
+            "module Editing { void run(String value) { value." to " } void broken( { }",
+        )) {
+            val errors = ErrorList()
+            val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(prefix + suffix, URI), position(prefix), null, errors)
+            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.sites()).isEmpty()
+            assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+        }
+    }
+
+    @Test
+    fun `cursor analysis preserves flow narrowing and UTF-16 positions inside closing blocks`() {
+        CompilerTestSupport.configure()
+        for (newline in listOf("\n", "\r\n")) {
+            val prefix = "module Editing {$newline void run(Object value) {$newline  if (value.is(String)) { /* 😀 */ value."
+            val errors = ErrorList()
+            val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix } } }", URI), position(prefix), null, errors)
+            assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+            val site = analysis.sites().single()
+            assertThat(Source.calculateLine(site.endPosition)).isEqualTo(2)
+            assertThat(Source.calculateOffset(site.endPosition)).isEqualTo(prefix.lines().last().length)
+            val receiver = site.receiver.orElseThrow()
+            assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
+            ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+                assertThat(receiver.type.valueString).contains("String")
+            }
+        }
+    }
+
+    @Test
+    fun `a syntax error in another member prevents partial module semantics`() {
+        CompilerTestSupport.configure()
+        val root = directory.resolve("Editing.x").toFile().canonicalFile
+        val member = directory.resolve("Editing/Child.x").toFile().canonicalFile
+        member.parentFile.mkdirs()
+        root.writeText("module Editing { class Base { String value = \"text\"; } }")
+        val prefix = "class Child extends Base { void run() { value."
+        member.writeText("$prefix } }")
+        File(member.parentFile, "Broken.x").writeText("class Broken { void broken( { }")
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(ModuleInfo(root, false), member, position(prefix), null, errors)
+        assertThat(analysis.pool()).isEmpty()
+        assertThat(analysis.sites()).isEmpty()
+        assertThat(errors.errors).anyMatch { it.code != Parser.INCOMPLETE_EXPRESSION }
+        assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+    }
+
+    @Test
+    fun `module cursor diagnostics honor cancellation and budgets without duplicates`() {
+        CompilerTestSupport.configure()
+        val root = directory.resolve("Editing.x").toFile().canonicalFile
+        val prefix = "module Editing { void run(String value) { value."
+        root.writeText("$prefix } }")
+        val support = EmbeddingSupport.instance()
+        val delivered = mutableListOf<ErrorListener.ErrorInfo>()
+        val analysis = support.analyzeIncomplete(ModuleInfo(root, false), root, position(prefix), null, ErrorListener { delivered.add(it) })
+        assertThat(analysis.pool()).isPresent()
+        assertThat(delivered.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+
+        val errors = ErrorList(ErrorList.FIRST_ERROR)
+        val budgeted = support.analyzeIncomplete(ModuleInfo(root, false), root, position(prefix), null, errors)
+        assertThat(budgeted.pool()).isEmpty()
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+
+        val cancelled = AtomicBoolean()
+        val listener = ErrorListener.cancellable(ErrorListener.collecting { cancelled.set(true) }, cancelled::get)
+        assertThat(support.analyzeIncomplete(ModuleInfo(root, false), root, position(prefix), null, listener).pool()).isEmpty()
+        assertThat(cancelled.get()).isTrue()
+        val unread =
+            object : ModuleInfo(root, false) {
+                override fun readSource(file: File): CharArray = error("A cancelled attempt must not read source")
+            }
+        assertThat(support.analyzeIncomplete(unread, root, position(prefix), null, listener).sourceTrees()).isEmpty()
+    }
+
+    private fun position(prefix: String): Long {
+        val source = Source(prefix)
+        while (source.hasNext()) source.next()
+        return source.position
+    }
+
     @Test
     fun `trailing member access resolves the receiver without producing a compiled method`() {
         val text = "module Editing { @Inject Console console; void run() { console."
