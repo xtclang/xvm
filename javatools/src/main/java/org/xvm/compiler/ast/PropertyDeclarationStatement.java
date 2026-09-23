@@ -510,7 +510,7 @@ public class PropertyDeclarationStatement
                         value = null;
 
                         // "catch up" the newly created initializer to our stage
-                        if (!new StageMgr(initializer, Stage.Validated, errs, mgr.getInvocationBindings()).fastForward(10)) {
+                        if (!new StageMgr(initializer, Stage.Validated, errs, mgr.getInvocationBindings(), mgr.getCursorBindings()).fastForward(10)) {
                             // basically an assertion
                             log(errs, Severity.FATAL, Compiler.FATAL_ERROR, initializer);
                         }
