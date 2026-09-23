@@ -55,6 +55,7 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -506,8 +507,65 @@ public class EmbeddingSupport {
      */
     public PartialAnalysis analyzeIncomplete(Source source, ModuleRepository input,
                                             @NotNull ErrorListener errs) {
-        verifyConfigured();
         requireNonNull(source, "source");
+        return analyzeIncomplete(listener -> {
+            StatementBlock tree = Parser.forPartialAnalysis(source, listener).parseSource();
+            return new ParsedSources(tree, List.of(tree));
+        }, Parser.UNEXPECTED_EOF, input, errs);
+    }
+
+    /**
+     * Analyze a standalone incomplete member access/call at an explicit source position, including
+     * before existing closing braces or a semicolon. Source text is unchanged and later declarations
+     * retain their positions. The position must come from {@link Source#getPosition()} for this text.
+     * Other syntax errors prevent semantic analysis; assignments, returns and incomplete nested
+     * arguments remain unsupported. Complete source does not become an incomplete site.
+     */
+    public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,
+                                            @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return analyzeIncomplete(listener -> {
+            StatementBlock tree = Parser.forPartialAnalysis(source, cursor, listener).parseSource();
+            return new ParsedSources(tree, List.of(tree));
+        }, Parser.INCOMPLETE_EXPRESSION, input, errs);
+    }
+
+    /**
+     * Analyze an explicit cursor in one file of a module snapshot. Uses the same source loading,
+     * overlay and resource contract as {@link #compileModule(ModuleInfo, ModuleRepository, ErrorListener)}.
+     * The cursor refers to the selected file's snapshot, which may contain unsaved text. Neither
+     * this ModuleInfo nor its parsed trees may be reused for another attempt or normal compilation.
+     * Only the recognized cursor diagnostic is deferred during assembly; other source errors abort it.
+     */
+    public PartialAnalysis analyzeIncomplete(ModuleInfo sources, File sourceFile, long cursor,
+                                            ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        String name = resolveFile(requireNonNull(sourceFile, "sourceFile")).getPath();
+        return analyzeIncomplete(listener -> {
+            ErrorListener assembly = ErrorListener.cancellable(
+                    ErrorListener.collecting(listener::log), listener::isAbortDesired);
+            Node root = sources.getSourceTree(assembly, (source, nodeErrors) -> {
+                if (!name.equals(source.getFileName())) {
+                    return new Parser(source, nodeErrors).parseSource();
+                }
+                ErrorListener partial = ErrorListener.cancellable(ErrorListener.collecting(error -> {
+                    if (error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)) {
+                        listener.log(error);
+                    } else {
+                        nodeErrors.log(error);
+                    }
+                }), listener::isAbortDesired);
+                return Parser.forPartialAnalysis(source, cursor, partial).parseSource();
+            });
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
+                    sources.getParsedSources());
+        }, Parser.INCOMPLETE_EXPRESSION, input, errs);
+    }
+
+    private PartialAnalysis analyzeIncomplete(Function<ErrorListener, ParsedSources> parse,
+                                             String boundaryCode, ModuleRepository input,
+                                             ErrorListener errs) {
+        verifyConfigured();
         requireNonNull(errs, "errs");
         Set<String> delivered = new HashSet<>();
         ErrorListener host = ErrorListener.cancellable(ErrorListener.collecting(error -> {
@@ -516,12 +574,12 @@ public class EmbeddingSupport {
             }
         }), errs::isAbortDesired);
         ErrorList syntaxErrors = new ErrorList(ErrorList.UNLIMITED);
-        StatementBlock tree;
+        ParsedSources parsed;
         try {
             if (host.isAbortDesired()) {
                 return new PartialAnalysis(List.of(), List.of(), Optional.empty());
             }
-            tree = Parser.forPartialAnalysis(source, ErrorListener.tee(syntaxErrors, host)).parseSource();
+            parsed = parse.apply(ErrorListener.tee(syntaxErrors, host));
         } catch (CompilerException e) {
             return new PartialAnalysis(List.of(), List.of(), Optional.empty());
         } catch (RuntimeException | AssertionError e) {
@@ -529,7 +587,10 @@ public class EmbeddingSupport {
             return new PartialAnalysis(List.of(), List.of(), Optional.empty());
         }
 
-        List<AstNode> nodes = new ArrayList<>(List.of(tree));
+        if (parsed.root() == null) {
+            return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
+        }
+        List<AstNode> nodes = new ArrayList<>(List.of(parsed.root()));
         for (int i = 0; i < nodes.size(); ++i) {
             nodes.get(i).children().forEachRemaining(nodes::add);
         }
@@ -537,12 +598,12 @@ public class EmbeddingSupport {
                 .filter(IncompleteStatement.class::isInstance)
                 .map(IncompleteStatement.class::cast).toList();
         if (sites.size() != 1 || syntaxErrors.getErrors().stream().anyMatch(error ->
-                error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(Parser.UNEXPECTED_EOF))) {
-            return new PartialAnalysis(List.of(tree), List.of(), Optional.empty());
+                error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(boundaryCode))) {
+            return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
         }
 
-        Compilation attempt = compileModule(listener -> new ParsedSources(tree, List.of(tree)), input, host);
-        return new PartialAnalysis(List.of(tree), sites, Optional.ofNullable(attempt.pool()),
+        Compilation attempt = compileModule(listener -> parsed, input, host);
+        return new PartialAnalysis(parsed.sources(), sites, Optional.ofNullable(attempt.pool()),
                 attempt.callBindings());
     }
 
@@ -687,18 +748,18 @@ public class EmbeddingSupport {
             }
 
             if (block == null) {
-                log(ERROR, "Unable to load module sources");
+                error(ERR_MODULE_SOURCE, NOWHERE);
                 return 1;
             }
 
             if (block.getStatements().isEmpty()) {
-                log(ERROR, "In-memory source does not contain a module");
+                block.log(this, ERROR, ERR_MODULE_SOURCE);
                 return checkErrors("source parsing");
             }
             Statement stmt = block.getStatements().getLast();
             if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
                     stmtModule.getCategory().getId() != Id.MODULE) {
-                log(ERROR, "In-memory source does not contain a module");
+                stmt.log(this, ERROR, ERR_MODULE_SOURCE);
                 return checkErrors("source parsing");
             }
 
@@ -916,4 +977,8 @@ public class EmbeddingSupport {
      * "%2" - additional description (may be null)
      */
     public static final String ERR_INTERNAL             = "EMB-5";
+    /**
+     * The source does not contain a module declaration.
+     */
+    public static final String ERR_MODULE_SOURCE        = "EMB-6";
 }

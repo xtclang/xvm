@@ -48,7 +48,7 @@ public class Parser {
      * @param listener the error listener
      */
     public Parser(Source source, ErrorListener listener) {
-        this(source, listener, new Lexer(source, listener), false);
+        this(source, listener, new Lexer(source, listener), false, NO_CURSOR);
     }
 
     /**
@@ -56,7 +56,19 @@ public class Parser {
      * partial analysis. Errors are still reported; this does not make the source compilable.
      */
     public static Parser forPartialAnalysis(Source source, ErrorListener listener) {
-        return new Parser(source, listener, new Lexer(source, listener), true);
+        return new Parser(source, listener, new Lexer(source, listener), true, NO_CURSOR);
+    }
+
+    /**
+     * Retain a supported incomplete statement at a cursor, without truncating the source.
+     * The cursor uses a position token obtained from {@link Source#getPosition()} for this text.
+     * Initially supports a missing member/call suffix before a closing brace or semicolon.
+     */
+    public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
+        if (cursor == NO_CURSOR) {
+            throw new IllegalArgumentException("A source cursor position is required");
+        }
+        return new Parser(source, listener, new Lexer(source, listener), true, cursor);
     }
 
     /**
@@ -66,10 +78,12 @@ public class Parser {
      * @param atoken  the tokens to parse
      */
     protected Parser(Parser parent, Token[] atoken) {
-        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken), false);
+        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken), false,
+                NO_CURSOR);
     }
 
-    private Parser(Source source, ErrorListener errs, Lexer lexer, boolean fPartialAnalysis) {
+    private Parser(Source source, ErrorListener errs, Lexer lexer, boolean fPartialAnalysis,
+                   long cursor) {
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
@@ -80,6 +94,7 @@ public class Parser {
         f_errs            = new Reporting(requireNonNull(errs, "errs"));
         m_lexer           = lexer;
         f_partialAnalysis = fPartialAnalysis;
+        f_cursor          = cursor;
 
         // prime the token stream
         next();
@@ -1241,6 +1256,13 @@ public class Parser {
                 // standalone expression. Only the intact statement prefix is supported.
                 if (e.statement.getStartPosition() == lStart) {
                     stmts.add(e.statement);
+                    // The cursor boundary has already consumed the intact prefix. Keep the
+                    // enclosing brace and following declarations instead of scanning the open
+                    // call again as an unmatched parenthesis.
+                    if (f_cursor != NO_CURSOR) {
+                        match(Id.SEMICOLON);
+                        continue;
+                    }
                 }
                 recoverStatement(statementStart, e);
             } catch (CompilerException e) {
@@ -3082,8 +3104,7 @@ public class Parser {
             case DOT: {
                 Token dot = expect(Id.DOT);
                 if (canRetainIncomplete()) {
-                    throw incomplete(new IncompleteStatement(expr, dot, List.of(), List.of(),
-                            m_source.getPosition()));
+                    throw incomplete(expr, dot, List.of(), List.of());
                 }
                 switch (peek().getId()) {
                 case NEW: {
@@ -5105,8 +5126,7 @@ public class Parser {
         if (match(Id.R_PAREN) == null) {
             while (true) {
                 if (canRetainIncomplete()) {
-                    throw incomplete(new IncompleteStatement(callee, open, args, separators,
-                            m_source.getPosition()));
+                    throw incomplete(callee, open, args, separators);
                 }
                 args.add(parseArgument(true, false));
                 Token comma = match(Id.COMMA);
@@ -5114,8 +5134,7 @@ public class Parser {
                     separators.add(comma);
                 }
                 if (canRetainIncomplete()) {
-                    throw incomplete(new IncompleteStatement(callee, open, args, separators,
-                            m_source.getPosition()));
+                    throw incomplete(callee, open, args, separators);
                 }
                 if (match(Id.R_PAREN, comma == null) != null) {
                     break;
@@ -5127,13 +5146,24 @@ public class Parser {
     }
 
     private boolean canRetainIncomplete() {
-        return f_partialAnalysis && m_cSpeculating == 0 && !m_fAvoidRecovery && eof()
-                && !f_errs.get().isAbortDesired();
+        if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            return false;
+        }
+        if (f_cursor == NO_CURSOR) {
+            return eof();
+        }
+        return prev().getEndPosition() <= f_cursor
+                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON));
     }
 
-    private IncompleteExpression incomplete(IncompleteStatement statement) {
-        log(Severity.ERROR, UNEXPECTED_EOF, m_source.getPosition(), m_source.getPosition());
-        return new IncompleteExpression(statement);
+    private IncompleteExpression incomplete(Expression target, Token operator,
+                                            List<Expression> arguments, List<Token> separators) {
+        long   position = f_cursor == NO_CURSOR ? m_source.getPosition() : f_cursor;
+        String code     = f_cursor == NO_CURSOR ? UNEXPECTED_EOF : INCOMPLETE_EXPRESSION;
+        log(Severity.ERROR, code, position, position);
+        return new IncompleteExpression(
+                new IncompleteStatement(target, operator, arguments, separators, position, code));
     }
 
     /** Unwind to the enclosing statement without pretending the unfinished expression has a value. */
@@ -5974,8 +6004,15 @@ public class Parser {
      * Semicolon is missing.
      */
     public static final String MISSING_SEMICOLON = "PARSER-29";
+    /**
+     * An explicit partial-analysis cursor marks an unfinished expression.
+     */
+    public static final String INCOMPLETE_EXPRESSION = "PARSER-30";
 
     // ----- data members --------------------------------------------------------------------------
+
+    /** Reserved value that cannot be produced by Source.getPosition(). */
+    private static final long NO_CURSOR = -1;
 
     /**
      * The Source to parse.
@@ -5998,6 +6035,9 @@ public class Parser {
 
     /** Whether trailing incomplete expression statements may be retained for partial analysis. */
     private final boolean f_partialAnalysis;
+
+    /** Explicit cursor, or NO_CURSOR for ordinary parsing and trailing-EOF partial analysis. */
+    private final long f_cursor;
 
     /**
      * The "put back" token.

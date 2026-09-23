@@ -5783,9 +5783,15 @@ public abstract class TypeConstant
             Constant[]      args = annotation.getParams();
             MethodStructure ctor = infoMixin.getClassStructure().findConstructor(args, typeTarget);
             if (ctor == null) {
-                log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                        annotation.getValueString(),
-                        typeTarget.getValueString());
+                // A type descriptor can omit annotation arguments supplied at runtime, or
+                // stripped while resolving a provisional type. It describes the composition,
+                // not a zero-argument constructor call. Actual annotation applications validate
+                // their arguments separately; only supplied constants can be checked here.
+                if (args.length > 0) {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            annotation.getValueString(),
+                            typeTarget.getValueString());
+                }
             } else {
                 mapDefaults = new HashMap<>();
                 ctor.collectDefaultParams(args, mapDefaults);
