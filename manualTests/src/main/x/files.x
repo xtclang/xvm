@@ -1,4 +1,5 @@
 module TestFiles {
+    import ecstasy.fs.FileChannel;
     import ecstasy.fs.FileWatcher;
 
     @Inject            Console   console;
@@ -8,6 +9,7 @@ module TestFiles {
         testPaths();
         testInject();
         testModify();
+        testFileChannels();
         testListing();
     }
 
@@ -82,68 +84,134 @@ module TestFiles {
         }
     }
 
+    /**
+     * Wait for actual events; a delay followed by success would not test the watcher.
+     */
     void testModify() {
-        console.print("\n** testModify()");
+        Directory probe = createProbe("xvm_watch");
+        File      file  = probe.fileFor("test.dat");
+        Watcher   first = new Watcher(file.path);
+        Watcher   other = new Watcher(file.path);
+        function void () cancelFirst = file.watch(first);
+        function void () cancelOther = probe.watch(other);
 
+        // This is a deadlock guard, not a requirement on event delivery latency. Native watchers
+        // may poll and coalesce notifications, so each mutation waits for the preceding event.
+        using (new Timeout(Duration:1M)) {
+            try {
+                file.contents = #/files.x;
+                first.awaitCreated();
+                other.awaitCreated();
+
+                Int from = "module ".size;
+                Int to   = "module TestFiles".size;
+                assert file.read(from ..< to).unpackUtf8() == "TestFiles";
+
+                cancelFirst();
+                cancelFirst();
+                assert file.delete();
+                other.awaitDeleted();
+                assert !file.exists;
+                cancelOther();
+
+                // Cancelling the last listener must still allow the same path to be watched again.
+                Watcher again = new Watcher(file.path);
+                function void () cancelAgain = file.watch(again);
+                try {
+                    assert file.create();
+                    again.awaitCreated();
+                } finally {
+                    cancelAgain();
+                }
+            } finally {
+                cancelFirst();
+                cancelOther();
+                probe.deleteRecursively();
+            }
+        }
+    }
+
+    @Concurrent
+    service Watcher(Path expectedPath)
+            implements FileWatcher {
+        @Future Boolean created;
+        @Future Boolean deleted;
+
+        @Override
+        Boolean onEvent(Event event, File file) {
+            if (file.path == expectedPath) {
+                switch (event) {
+                case Created:
+                    if (!&created.assigned) {
+                        created = True;
+                    }
+                    break;
+                case Deleted:
+                    if (!&deleted.assigned) {
+                        deleted = True;
+                    }
+                    break;
+                }
+            }
+            return False;
+        }
+
+        void awaitCreated() { assert created; }
+        void awaitDeleted() { assert deleted; }
+    }
+
+    /**
+     * Explicit close and exception cleanup are application obligations until abandoned native
+     * channels are registered with the request owner. Closing a channel must not delete its file.
+     */
+    void testFileChannels() {
+        Directory probe = createProbe("xvm_channel");
+        File file = probe.fileFor("test.dat");
+        try {
+            file.contents = #/files.x;
+            FileChannel channel = file.open(write=[]);
+            try {
+                assert channel.readable;
+                assert channel.size == file.size;
+                assert channel.position == 0;
+                channel.position = 7;
+                assert channel.position == 7;
+            } finally {
+                channel.close();
+            }
+            channel.close();
+            assert !channel.readable;
+            assert !channel.writable;
+            assert file.exists;
+
+            channel = file.open(write=[]);
+            try {
+                using (channel) {
+                    throw new IllegalState("expected file-channel failure");
+                }
+            } catch (IllegalState e) {
+                assert e.message == "expected file-channel failure";
+            }
+            assert !channel.readable;
+            assert !channel.writable;
+            assert file.contents == #/files.x;
+        } finally {
+            probe.deleteRecursively();
+        }
+    }
+
+    /**
+     * Claim a new temporary directory without deleting another test's files.
+     */
+    Directory createProbe(String prefix) {
         @Inject Directory tmpDir;
-        @Inject Timer timer;
-
-        timer.start();
-        FileWatcher watcher = new FileWatcher() {
-            @Override
-            Boolean onEvent(Event event, Directory dir) {
-                console.print($|[{this:service}]: Directory event: \"{event}\" {dir.name}\
-                                 | after {timer.elapsed.seconds} sec
-                                );
-                return False;
+        Int id = 0;
+        while (True) {
+            Directory probe = tmpDir.dirFor($"{prefix}_{id++}");
+            if (probe.create()) {
+                return probe;
             }
-
-            @Override
-            Boolean onEvent(Event event, File file) {
-                console.print($|[{this:service}]: File event: \"{event}\" {file.name}\
-                                 | after {timer.elapsed.seconds} sec
-                                );
-                return False;
-            }
-        }.makeImmutable();
-
-        File file = tmpDir.fileFor("test.dat");
-
-        function void () cancel = file.watch(watcher);
-
-        console.print($"[{this:service}]: Creating {file.name}");
-
-        file.contents = #/files.x;
-
-        Int from = "module ".size;
-        Int to   = "module TestFiles".size;
-        Byte[] bytes = file.read(from ..< to);
-        assert bytes.unpackUtf8() == "TestFiles";
-
-        // on Mac OS the WatchService implementation simply polls every 10 seconds;
-        // increase the "wait" value to see the events
-        Int wait = 1;
-        @Future Tuple done;
-        timer.schedule(Duration.ofSeconds(wait), () -> {
-            console.print($|[{this:service}]: deleting {file.name}\
-                             | after {timer.elapsed.seconds} sec
-                            );
-
-            file.delete();
-            assert !file.exists;
-
-            timer.schedule(Duration.ofSeconds(wait), () -> {
-                @Inject Clock clock;
-                assert tmpDir.modified.date == clock.now.date;
-
-                console.print($"[{this:service}]: tmpDir={tmpDir}");
-                cancel();
-                done = ();
-            });
-        });
-
-        // this will force the caller to wait
-        return done;
+        }
     }
 
     /**

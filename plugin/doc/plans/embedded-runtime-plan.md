@@ -3,6 +3,10 @@
 Investigation baseline: `master` at `c3e9d641808091910abb018cb40885300ee08001`.
 Working branch: `lagergren/embedded-gradle-runtime`.
 
+The [PR submission plan](embedded-runtime-pr-plan.md) defines exact change scopes, dependencies,
+extraction steps and validation for ten proposed PRs. It also separates the remaining native
+resource integrations from the work already implemented on this branch.
+
 The within-build implementation is on this branch and `DIRECT` execution has passed all
 21 existing sequential manual-test modules. Five measured runs per mode reduced median elapsed
 time from 67.08 seconds ATTACHED to 43.47 seconds DIRECT. A later milestone extends the same
@@ -14,6 +18,12 @@ Extend the existing `DirectRuntimeBuildService` to own an explicitly closeable e
 Create it lazily for the selected XDK, reuse it for sequential compile/run requests, and close it
 when Gradle releases the service. Keep the Java classes and runtime infrastructure warm; create
 fresh compilation state and a fresh application container for every request.
+
+This follows `lib_runner`'s existing Container 0 design: reuse the host, register a new task and
+child container for each application, and release that child through its control. "Session reuse"
+does not mean reusing a completed application's container or keeping its native resources alive.
+The [ownership audit](../../../doc/embedding-resource-ownership.md#runner-reuse-and-why-earlier-tests-did-not-establish-cleanup)
+distinguishes pre-existing disposal gaps from the branch's lifecycle changes and test coverage.
 
 The embedding API is the required boundary for repeated in-process compilation and execution.
 The plugin and any reusable worker must submit requests through that API; they must not repeatedly
@@ -115,13 +125,85 @@ Custom injector implementations remain unsupported. JVM startup options must alr
 the Gradle JVM; assertions are enabled on the implementation loader. The manual tests request
 `--enable-preview`, so their DIRECT host needs that option too. Cancellation cannot forcibly stop
 uncooperative native code: failure to terminate is reported and the session is not reused. General
-native-resource ownership, retained-memory behavior under long workloads, and fatal-runtime
+native-resource ownership still requires the migrations identified in the
+[resource audit](../../../doc/embedding-resource-ownership.md); the common mechanism alone does
+not close existing native handles. Retained-memory behavior under long workloads and fatal-runtime
 recovery need further validation. No automatic JIT test dependencies have been added.
 
 The JIT integration passed all 16 embedding lifecycle tests (including five JIT tests) and all
 20 plugin tests, with no skips. The unchanged small-float suite passed through DIRECT on both
 backends and through ATTACHED with the JIT. All 21 sequential interpreter modules and the 19
 xUnit demo tests also passed. Formatting and whitespace checks passed.
+
+### Follow-up work after this branch
+
+The reusable Gradle build service within one build is implemented. The work below is separate
+from [keeping the host warm across builds](#later-keep-the-host-warm-across-builds). These are
+follow-ups to the validated sequential execution model, not claims that the capabilities already
+exist. Prioritize the remaining resource ownership fixes and their validation, then the constant-pool
+and metadata project.
+
+1. **Native resource ownership — audit completed; fixes still required.** The
+   [resource ownership audit](../../../doc/embedding-resource-ownership.md) reproduced retained
+   native watches after explicit cancellation and an open file channel after both request and
+   session close. It also identifies socket/HTTP disposal gaps, cancelled callback retention and
+   a certificate-manager stream leak. The common ownership mechanism and frame helper are now
+   implemented locally, and the keystore stream leak is fixed by reusing the scoped extraction
+   helper. New `.x` assertions cover watcher delivery and explicit
+   channel cleanup; expanded lifecycle tests cover session watcher shutdown after success,
+   failure and cancellation. They do not establish automatic request disposal. Implement the
+   resource-specific migrations and acceptance criteria in that report before
+   expanding DIRECT's resource support. Longer reuse runs still need retained-handle, thread,
+   heap and classloader checks.
+
+   These gaps affect **sequential requests in one session**, not only concurrent execution or
+   reuse across builds. The probes reproduced a channel surviving control/session close and watch
+   registrations accumulating across sequential requests. Pending work completing does not imply
+   disposal of idle handles. HTTP clients, server listeners/executors and unfinished exchanges
+   still lack owner cleanup; those are source findings, not verified HTTP integration scenarios.
+   The [remaining integration scopes](embedded-runtime-pr-plan.md#remaining-native-resource-integration-scopes)
+   separate channels, sockets, watch subscriptions, HTTP clients, HTTP servers/exchanges and
+   cancelled callbacks, with acceptance criteria for each.
+
+2. **Explicit constant-pool ownership and metadata reuse — next performance project.** Coordinate
+   with the [errs work](#relationship-to-the-errs-branch) before sharing linked definitions or
+   TypeInfo. Establish stable definition generations and keep execution state and diagnostics
+   request-owned. Then measure reuse of compiler dependencies and, subsequently, prepared
+   applications. Completion requires correct same-name/dependency replacement even with unchanged
+   timestamps, fresh singleton state, diagnostics delivered to the current request, bounded cache
+   retention, and a measured reduction in preparation work. The detailed boundaries are in
+   [avoiding repeated metadata work](#avoiding-repeated-metadata-work); the system-definition
+   template experiment that showed no benefit remains excluded.
+
+3. **Custom injectors — embedding API capability.** Implement the currently rejected custom
+   injector path for hosts that need richer resources than the provided string/list injections.
+   Define resource ownership, disposal and supported backend behavior before exposing the API.
+   Verify two requests can supply different resources under the same name without sharing state,
+   and that startup failure and cancellation release owned resources. Unsupported backend/resource
+   combinations must remain explicit.
+
+4. **Parallel DIRECT requests — optional throughput work.** The build service currently serializes
+   requests. Audit compiler, constant-pool, native-template and JIT state before relaxing that
+   serialization; removing the synchronization alone is insufficient. Validate simultaneous
+   projects with identical module names, separate consoles and repositories, dependency replacement,
+   and cancellation of one request while another continues. Keep configuration-cache compatibility
+   and demonstrate a throughput benefit on independent Gradle tasks before changing the policy.
+
+5. **JIT diagnostics and capability growth — separate experimental backend work.** Route
+   code-generation diagnostics to the current request and add an optional mode that fails when
+   execution reaches a placeholder method, instead of silently returning its default value.
+   Extend dependency linking, resource providers and asynchronous completion semantics before
+   enabling JIT xUnit execution. Verify each extension against a known-working subset with
+   externally checked results; do not automatically expand the manual JIT suite in CI. Interpreter
+   xUnit already works. See the [JIT follow-ups](../../../doc/jit-embedding.md#follow-up-work).
+
+6. **Plugin-wide DIRECT default — later rollout decision.** Keep ATTACHED as the general default
+   while manualTests exercises DIRECT. Before changing it, fix and verify the audit's remaining
+   resource ownership gaps and validate additional consumer projects, multiple runtime identities,
+   cancellation, output
+   redirection and incompatible JVM-option handling. Repeat real work with configuration-cache
+   reuse and preserve the explicit ATTACHED override. Decide from correctness and representative
+   workload measurements, including builds where Gradle restores or skips the work.
 
 ### Relationship to the `errs` branch
 

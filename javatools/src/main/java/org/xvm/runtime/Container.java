@@ -2,8 +2,10 @@ package org.xvm.runtime;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
@@ -11,9 +13,11 @@ import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.xvm.asm.ClassStructure;
@@ -143,14 +147,15 @@ public abstract class Container
     }
 
     /**
-     * Terminate this container's services, nested containers, and scheduled alarms.
+     * Terminate this container's services, nested containers, scheduled alarms, and owned resources.
      *
-     * @return a future that completes when all of the services have terminated
+     * @return a future covering service termination, pending acquisition, and resource cleanup
      */
     public CompletableFuture<Void> terminateServices() {
         CompletableFuture<Void> termination;
         Set<IOTask<?>> pendingIO;
-        List<Supplier<CompletableFuture<Void>>> cleanups;
+        List<OwnedResource<?>> resources;
+        Throwable cleanupFailure;
         var services = new ArrayList<ServiceContext>();
         synchronized (this) {
             if (m_futureTermination != null) {
@@ -160,8 +165,8 @@ public abstract class Container
             alarms.forEach(TimerTask::cancel);
             alarms.clear();
             pendingIO = Set.copyOf(ioTasks);
-            cleanups = List.copyOf(terminationActions);
-            terminationActions.clear();
+            resources = List.copyOf(ownedResources);
+            cleanupFailure = resourceFailure;
             f_setServices.forEach(services::add);
         }
 
@@ -169,13 +174,10 @@ public abstract class Container
         signalIdle();
         try {
             var pending = new ArrayList<CompletableFuture<Void>>();
-            for (var cleanup : cleanups) {
-                try {
-                    pending.add(cleanup.get());
-                } catch (RuntimeException | Error e) {
-                    pending.add(CompletableFuture.failedFuture(e));
-                }
+            if (cleanupFailure != null) {
+                pending.add(CompletableFuture.failedFuture(cleanupFailure));
             }
+            resources.forEach(resource -> pending.add(resource.closeAsync()));
             pendingIO.forEach(task -> pending.add(task.cancel()));
             for (Container child : f_runtime.containers()) {
                 if (child.f_parent == this) {
@@ -205,8 +207,99 @@ public abstract class Container
      * @param cleanup  an action that initiates cleanup without blocking
      */
     public synchronized void onTermination(Supplier<CompletableFuture<Void>> cleanup) {
+        Objects.requireNonNull(cleanup);
         checkActive();
-        terminationActions.add(cleanup);
+        var resource = new OwnedResource<Supplier<CompletableFuture<Void>>>(this, Supplier::get);
+        resource.acquired(cleanup);
+        ownedResources.add(resource);
+    }
+
+    /**
+     * Reserve ownership before opening a native resource. Neither acquisition nor cleanup runs
+     * under the container monitor. If termination starts during acquisition, it waits for the
+     * resulting resource's cleanup and this call rejects delivery to the application.
+     *
+     * <p>The factory must dispose of partial allocations if it throws. Cleanup must initiate
+     * without blocking and return a stage covering its actual completion. A resource awaiting
+     * acquisition or cleanup remains registered until that operation finishes. Cleanup order is
+     * unspecified and must not depend on application services continuing to execute.
+     *
+     * @param factory  the acquisition operation; not called if termination has already started
+     * @param cleanup  the cleanup operation
+     * @param <T>      the resource type
+     * @param <E>      the acquisition exception type
+     *
+     * @return the owned resource
+     *
+     * @throws E                      if acquisition fails
+     * @throws IllegalStateException  if termination prevents delivery of the resource
+     */
+    public <T, E extends Exception> OwnedResource<T> acquireResource(
+            OwnedResource.Factory<T, E> factory,
+            Function<? super T, ? extends CompletionStage<Void>> cleanup) throws E {
+        Objects.requireNonNull(factory);
+        var resource = new OwnedResource<T>(this, cleanup);
+        synchronized (this) {
+            checkActive();
+            ownedResources.add(resource);
+        }
+        T value;
+        try {
+            value = Objects.requireNonNull(factory.open(), "Factory returned no resource");
+        } catch (Exception | Error failure) {
+            resource.acquisitionFailed();
+            throw failure;
+        }
+        if (!resource.acquired(value)) {
+            throw new IllegalStateException("Container terminated during resource acquisition");
+        }
+        return resource;
+    }
+
+    /**
+     * Acquire a resource whose {@link AutoCloseable#close()} does not block. Use the asynchronous
+     * overload when closing requires waiting for work or threads to stop.
+     *
+     * @param factory  the acquisition operation
+     * @param <T>      the resource type
+     * @param <E>      the acquisition exception type
+     *
+     * @return the owned resource
+     *
+     * @throws E                      if acquisition fails
+     * @throws IllegalStateException  if termination prevents delivery of the resource
+     */
+    public <T extends AutoCloseable, E extends Exception> OwnedResource<T> acquireResource(
+            OwnedResource.Factory<T, E> factory) throws E {
+        return acquireResource(factory, resource -> {
+            try {
+                resource.close();
+                return CompletableFuture.completedFuture(null);
+            } catch (Exception | Error failure) {
+                if (failure instanceof InterruptedException) {
+                    Thread.currentThread().interrupt();
+                }
+                return CompletableFuture.failedFuture(failure);
+            }
+        });
+    }
+
+    /**
+     * Remove a finished registration without retaining the resource or its cleanup closure.
+     * Remember a cleanup failure so that a later shutdown cannot silently report success.
+     */
+    synchronized void releaseResource(OwnedResource<?> resource, Throwable failure) {
+        ownedResources.remove(resource);
+        if (resourceFailure == null) {
+            resourceFailure = failure;
+        }
+    }
+
+    /**
+     * @return the number of resources acquiring, open or closing in this container
+     */
+    synchronized int ownedResourceCount() {
+        return ownedResources.size();
     }
 
     /**
@@ -987,7 +1080,13 @@ public abstract class Container
     private final Set<TimerTask> alarms = Collections.newSetFromMap(new WeakHashMap<>());
 
     private final Set<IOTask<?>> ioTasks = ConcurrentHashMap.newKeySet();
-    private final List<Supplier<CompletableFuture<Void>>> terminationActions = new ArrayList<>();
+
+    /**
+     * Native resources, including acquisitions and cleanup still in progress. Guarded by this
+     * container, as is the first cleanup failure retained for termination reporting.
+     */
+    private final Set<OwnedResource<?>> ownedResources = new HashSet<>();
+    private Throwable resourceFailure;
     private CompletableFuture<Void> idle;
     private volatile Throwable unhandled;
 

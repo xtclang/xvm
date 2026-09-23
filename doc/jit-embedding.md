@@ -69,11 +69,36 @@ waits for it to finish. Session shutdown closes outstanding controls before the 
 The low-level loader and `Xvm.close()` propagate `IOException`; the session collects shutdown
 failures at its lifecycle boundary.
 
+The interpreter's common native-resource ownership mechanism does not establish JIT resource
+cleanup. The [resource audit](embedding-resource-ownership.md) lists remaining channel, socket,
+watcher, HTTP and callback work; those integrations remain unimplemented even for the interpreter.
+Broader JIT resource support needs its own ownership integration and cleanup tests. Sequential
+requests alone do not prevent resources left by one request from surviving into the next.
+
 Generated loops without interruption checks and uncooperative native code cannot be forcibly
 stopped safely inside the host JVM. If the budget expires, close fails, the control continues to
 report that its worker is running, and the session refuses further work. The template loader is
 not closed underneath a worker that failed to stop. Use a separate process when forced
 termination is required; DIRECT is not a containment boundary for arbitrary code.
+
+## Follow-up work
+
+These are separate backend improvements, not prerequisites for the verified sequential subset:
+
+- Route code-generation diagnostics to the current request, including warnings about skipped
+  methods, without retaining that request's diagnostic destination in shared metadata.
+- Add an optional strict execution mode: invoking a placeholder body must report the method and
+  fail the request. Merely generating an unused placeholder should not fail a supported program.
+  Test an executed placeholder, an unused placeholder and recovery with a subsequent valid request.
+- Extend module dependency linking and request-owned resource providers, including an explicit
+  console-input contract. Verify resource isolation and cleanup on failure and cancellation.
+- Implement asynchronous completion and cancellation semantics, reflection and nested containers
+  before enabling JIT xUnit. Concurrent requests require their own ownership validation; the
+  Gradle DIRECT service currently serializes execution.
+
+The [embedding follow-up plan](../plugin/doc/plans/embedded-runtime-plan.md#follow-up-work-after-this-branch)
+records priorities, validation criteria, metadata ownership work and the later default-mode decision.
+Keep broader JIT test coverage opt-in until the corresponding capabilities are verified.
 
 ## Focused validation
 

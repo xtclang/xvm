@@ -6,17 +6,21 @@ import java.io.StringWriter;
 import java.net.BindException;
 import java.net.ServerSocket;
 
+import java.nio.charset.StandardCharsets;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 
 import java.time.Duration;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import java.util.stream.Collectors;
 
@@ -296,23 +300,61 @@ class EmbeddingLifecycleTest {
     @Test
     void sessionCloseStopsFilesystemWatchers(@TempDir Path root) throws Exception {
         Set<Thread> previous = runtimeThreads();
-        try (var session = EmbeddingSupport.create(repository())) {
-            ModuleStructure module = compile(session, """
-                    module Watching {
-                        void run() {
-                            @Inject Directory rootDir;
-                            rootDir.watch(new ecstasy.fs.FileWatcher() {}.makeImmutable());
+        String source;
+        try (var input = getClass().getResourceAsStream("/ownership/Watching.x")) {
+            assertNotNull(input);
+            source = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+
+        for (int iteration = 0; iteration < 2; iteration++) {
+            var consolesClosed = new ArrayList<AtomicBoolean>();
+            try (var session = EmbeddingSupport.create(repository())) {
+                ModuleStructure module = compile(session, source);
+                var modules = new BuildRepository();
+                modules.storeModule(module);
+                var requestRepository = new LinkedRepository(modules, repository());
+                for (String outcome : List.of("success", "failure", "cancel")) {
+                    var ready = new CountDownLatch(1);
+                    var consoleClosed = new AtomicBoolean();
+                    consolesClosed.add(consoleClosed);
+                    var console = new PrintWriter(new StringWriter(), true) {
+                        @Override
+                        public void println(char[] text) {
+                            super.println(text);
+                            if (new String(text).equals("watching")) {
+                                ready.countDown();
+                            }
+                        }
+
+                        @Override
+                        public void close() {
+                            consoleClosed.set(true);
+                            super.close();
+                        }
+                    };
+                    var errors = new ErrorList(25);
+                    var request = new RunRequest(requestRepository, module.getName(), "run",
+                            List.of(outcome), console, root.toFile(), false);
+                    try (Control control = session.run(request, errors)) {
+                        assertNotNull(control, () -> errors.getErrors().toString());
+                        assertTrue(ready.await(10, TimeUnit.SECONDS), "Watch was never registered");
+                        if (!outcome.equals("cancel")) {
+                            control.join();
+                            assertEquals(outcome.equals("failure"), errors.hasSeriousErrors(),
+                                    () -> errors.getErrors().toString());
                         }
                     }
-                    """);
-            var errors = new ErrorList(25);
-            try (Control control = session.run(module, null, root.toFile(), null, errors)) {
-                assertNotNull(control, () -> errors.getErrors().toString());
-                control.join();
-                assertFalse(errors.hasSeriousErrors(), () -> errors.getErrors().toString());
+                    assertFalse(consoleClosed.get(), "The console belongs to the host");
+                    assertTrue(Files.isDirectory(root), "The directory belongs to the host");
+                    console.println("still usable");
+                    assertFalse(console.checkError());
+                    assertEquals(7L, run(session, compile(session, "module Healthy { Int run() = 7; }")));
+                }
             }
+            assertTrue(consolesClosed.stream().noneMatch(AtomicBoolean::get),
+                    "Session shutdown must not close caller-owned consoles");
+            assertWorkersStopped(previous);
         }
-        assertWorkersStopped(previous);
     }
 
     @Test

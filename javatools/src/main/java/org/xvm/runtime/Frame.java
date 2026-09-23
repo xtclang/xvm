@@ -7,6 +7,9 @@ import java.util.List;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+
+import java.util.function.Function;
 
 import org.xvm.asm.Component.Injection;
 import org.xvm.asm.Constant;
@@ -524,6 +527,43 @@ public class Frame
      */
     public <R> CompletableFuture<R> scheduleIO(Callable<R> task) {
         return f_fiber.getResourceContainer().scheduleIO(task);
+    }
+
+    /**
+     * Acquire a native resource owned by the initiating application, including calls through
+     * shared parent services. Reserve ownership before invoking the factory.
+     *
+     * @param factory  the acquisition operation
+     * @param cleanup  the nonblocking cleanup operation and its completion
+     * @param <T>      the resource type
+     * @param <E>      the acquisition exception type
+     *
+     * @return the owned resource
+     *
+     * @throws E                      if acquisition fails
+     * @throws IllegalStateException  if termination prevents delivery of the resource
+     */
+    public <T, E extends Exception> OwnedResource<T> acquireResource(
+            OwnedResource.Factory<T, E> factory,
+            Function<? super T, ? extends CompletionStage<Void>> cleanup) throws E {
+        return f_fiber.getResourceContainer().acquireResource(factory, cleanup);
+    }
+
+    /**
+     * Acquire an application-owned resource whose close method does not block.
+     *
+     * @param factory  the acquisition operation
+     * @param <T>      the resource type
+     * @param <E>      the acquisition exception type
+     *
+     * @return the owned resource
+     *
+     * @throws E                      if acquisition fails
+     * @throws IllegalStateException  if termination prevents delivery of the resource
+     */
+    public <T extends AutoCloseable, E extends Exception> OwnedResource<T> acquireResource(
+            OwnedResource.Factory<T, E> factory) throws E {
+        return f_fiber.getResourceContainer().acquireResource(factory);
     }
 
     // a convenience method for futures that complete on the IO thread
