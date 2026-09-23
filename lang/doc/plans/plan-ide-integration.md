@@ -122,7 +122,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the current module |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - across the current module, including closed member files |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - accessible instance members immediately after a supported receiver dot; generic substitution and overload signatures retained; no bare-name or typed-prefix completion |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - accessible instance members after a supported receiver dot or typed prefix, with token replacement edits; generic substitution and overload signatures retained; no bare-name scope completion |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -130,7 +130,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | **Partial** - instantiated signatures and named/default argument mapping for resolved calls; unfinished qualified calls show candidates and positional slots without overload selection |
+| Signature help | - | Same-file | **Partial** - instantiated signatures and named/default argument mapping for resolved calls; unfinished qualified calls, including before an existing closing parenthesis, show candidates and positional slots without overload selection |
 | Rename (same file) | Text | AST | Not implemented |
 | Rename (cross-file) | - | - | Not implemented - module references exist; workspace ownership, edit validation and rename rules remain |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -176,12 +176,15 @@ written argument-to-parameter mapping. Incomplete overloads remain candidates; t
 signature is not a compiler-selected overload. Unknown parameter mappings retain the full label
 but omit parameter metadata so the client cannot default to a fabricated parameter-zero highlight.
 
-Remaining cursor limits: `receiver.|` works, while `receiver.pre|`, bare-name scope completion and
-implicit/static receiver lookup remain unavailable. Unfinished qualified calls before a
-brace/semicolon/EOF can show candidates. A syntactically complete call with an editor-inserted
-closing parenthesis that fails validation has no selected signature and is not converted into an
-incomplete site. Broader expression prefixes, arguments after the cursor, applicable-overload
-selection, expected argument types and incomplete named-argument mapping remain follow-ups.
+Cursor inspection supports `receiver.|`, `receiver.pre|` and `receiver.method(|)` at supported
+statement/final-argument boundaries. Completion filters by the decoded member token and replaces
+its original UTF-16 span, including escaped identifiers. Calls with an editor-inserted closing
+parenthesis can show candidates even when normal validation fails; successfully resolved calls
+keep their exact selected signatures. Probe diagnostics do not replace normal diagnostics.
+Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
+bare-name scope completion, implicit/static receiver lookup, broader expression prefixes,
+arguments after the cursor, applicable-overload selection, expected argument types and incomplete
+named-argument mapping.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The
@@ -318,7 +321,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Extend module ownership to dependency sources and other workspace modules before workspace-wide references/rename
    - Direct source type hierarchy is implemented; method implementation lookup still needs override relationships
    - Copy resolved call edges for call hierarchy
-   - Extend bounded cursor analysis to typed prefixes, implicit/static scope and editor-inserted closing parentheses
+   - Typed prefixes and editor-inserted closing parentheses are covered; add bare-name completion and implicit/static scope
    - Preserve selected-call signature/mapping consumers; add incomplete overload inference and expected parameter types with compiler evidence
 
    The selected implementation uses the existing javatools compiler. The older research-fork

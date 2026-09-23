@@ -429,6 +429,7 @@ class XtcTextDocumentService(
                         kind = toCompletionItemKind(c.kind)
                         detail = c.detail
                         insertText = c.insertText
+                        textEdit = c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
                     }
                 }
             Either.forLeft(items)

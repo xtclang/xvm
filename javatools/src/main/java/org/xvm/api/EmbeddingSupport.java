@@ -523,8 +523,11 @@ public class EmbeddingSupport {
      * retain their positions. The position must come from {@link Source#getPosition()} for this text.
      * Supports standalone statements, simple assignment/initializer values, single return values,
      * and final nested call arguments, including named arguments and existing closing parentheses.
+     * A cursor at the end of a written member token retains that token as a completion prefix.
+     * A cursor before a call's closing parenthesis inspects its receiver and written arguments,
+     * even when the selected syntax is complete. The selected member/call itself is not validated.
      * Compound/conditional value prefixes and arguments following the cursor remain unsupported.
-     * Other syntax errors prevent semantic analysis; complete source does not become an incomplete site.
+     * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,
                                             @NotNull ErrorListener errs) {
