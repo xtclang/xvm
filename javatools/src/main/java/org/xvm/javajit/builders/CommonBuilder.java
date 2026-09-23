@@ -900,8 +900,9 @@ public class CommonBuilder
                     TypeConstant   type = prop.getType();
                     JitTypeDesc    jtd  = type.getJitDesc(this);
 
+                    // TODO: use optimized method if possible
                     code.aload(ctxSlot)
-                        .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD);
+                        .invokestatic(CD_this, init.ensureJitMethodName(ts), jmd.standardMD, isInterface);
 
                     switch (jtd.flavor) {
                     case Specific, Widened:
@@ -1557,9 +1558,16 @@ public class CommonBuilder
                         ? stringConst.getValue()
                         : prop.getName();
         Runnable optsLoader;
-        if (optsConst == null || optsConst instanceof RegisterConstant regConst &&
-                regConst.getRegisterIndex() == Op.A_DEFAULT) {
+        if (optsConst == null || optsConst instanceof RegisterConstant constReg &&
+                constReg.getRegisterIndex() == Op.A_DEFAULT) {
             optsLoader = code::aconst_null;
+        } else if (optsConst != null && !(optsConst instanceof RegisterConstant)) {
+            optsLoader = () -> {
+                RegisterInfo reg = loadConstant(code, optsConst);
+                if (reg.flavor().isOptimized) {
+                    box(code, reg);
+                }
+            };
         } else {
             throw new UnsupportedOperationException("TODO: retrieve opts");
         }
@@ -1932,7 +1940,9 @@ public class CommonBuilder
             // for primitive classes e.g. Int64, the "this" is actually a Java primitive, and thus
             // the "method" is not a method at all, but a function
             if (jmd.isOptimizedStatic) {
-                code.invokestatic(CD_this, jitName+OPT, jmd.optimizedMD);
+                code.invokestatic(CD_this, jitName+OPT, jmd.optimizedMD, isInterface);
+            } else if (isInterface) {
+                code.invokeinterface(CD_this, jitName+OPT, jmd.optimizedMD);
             } else {
                 code.invokevirtual(CD_this, jitName+OPT, jmd.optimizedMD);
             }
@@ -4357,6 +4367,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.numbers.Nibble",
             "org.xtclang.ecstasy.numbers.Number$compare$Family*",
             "org.xtclang.ecstasy.numbers.Number$Signum*",
+            // "org.xtclang.ecstasy.numbers.Random",
             "org.xtclang.ecstasy.numbers.UInt*",
 
             // reflect

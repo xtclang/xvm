@@ -7,9 +7,10 @@ import org.xvm.javajit.Ctx;
 /**
  * Native shell for "ecstasy.numbers.IntLiteral".
  */
-public abstract class IntLiteral extends nConst {
-    // unused by the JIT, but it must exist to satisfy javac
+public class IntLiteral extends nConst {
     private IntLiteral() {
         super(null);
     }
+
+    public UIntN magnitude;
 }
