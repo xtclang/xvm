@@ -140,10 +140,10 @@ xUnit demo tests also passed. Formatting and whitespace checks passed.
 The reusable Gradle build service within one build is implemented. The work below is separate
 from [keeping the host warm across builds](#later-keep-the-host-warm-across-builds). These are
 follow-ups to the validated sequential execution model, not claims that the capabilities already
-exist. Prioritize the remaining resource ownership fixes and their validation, then the constant-pool
+exist. Prioritize the remaining resource ownership validation, then the constant-pool
 and metadata project.
 
-1. **Native resource ownership — migrations implemented; shutdown gaps remain.** The
+1. **Native resource ownership — audited fixes implemented; broader validation remains.** The
    [resource audit](../../../doc/embedding-resource-ownership.md) originally reproduced retained
    watches and an open file channel after control/session close. The common mechanism, keystore
    fix and six native migrations now have separate commit boundaries. Channels, sockets, individual
@@ -160,8 +160,11 @@ and metadata project.
    [second audit](../../../doc/embedding-resource-ownership.md#follow-up-findings-after-the-native-migrations)
    reproduced premature runtime termination status and cancelled tasks retained in the Java timer
    queue. Four subsequent corrections cover those failures, deferred host cleanup and failed/ignored
-   native socket handoff, with regressions mapped to the existing PR scopes. Nested-owner retention
-   remains open. Longer retained-handle, heap and classloader measurements, watcher
+   native socket handoff, with regressions mapped to the existing PR scopes. A focused lifetime
+   correction additionally retains nested owners during acquisition, resource ownership and cleanup,
+   preserves failures, and rejects new reservations once shutdown begins. Java barrier tests and
+   `NestedResources.x` verify retention and parent-driven cleanup without GC-dependent assertions.
+   Longer retained-handle, heap and classloader measurements, watcher
    directory/overflow semantics and broader platform coverage remain follow-ups too.
 
 2. **Explicit constant-pool ownership and metadata reuse — next performance project.** Coordinate

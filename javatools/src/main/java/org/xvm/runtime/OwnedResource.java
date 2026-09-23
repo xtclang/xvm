@@ -11,6 +11,11 @@ import java.util.function.Function;
  * A native resource reserved with its container before acquisition begins. Explicit close and
  * container termination share one cleanup action and its completion.
  *
+ * <p>Obtain a handle through {@link Container#acquireResource(Factory, Function)}, passing the
+ * allocation itself as the factory. Use {@link #get()} only after acquisition returns, then call
+ * {@link #closeAsync()} and await its completion when finished. Dropping the handle does not close
+ * the resource: the runtime retains its container until explicit or owner-driven cleanup succeeds.
+ *
  * <p>Cleanup starts without holding either the resource or container monitor. It must not block;
  * asynchronous cleanup returns a stage that completes when the resource has actually stopped.
  * The container's owner applies its existing shutdown deadline while awaiting that completion.
@@ -41,6 +46,8 @@ public final class OwnedResource<T> {
     /**
      * Initiate cleanup once, or wait for an in-progress acquisition to supply the resource to
      * clean up. Successful cleanup removes the registration; failures also reach owner shutdown.
+     * Await the returned future before assuming native disposal has finished. A timeout or
+     * cancellation of that view does not release the owner's lifetime retention or stop cleanup.
      *
      * @return a view of cleanup completion; cancelling or completing this view cannot bypass cleanup
      */

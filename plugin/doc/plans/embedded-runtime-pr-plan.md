@@ -16,15 +16,15 @@ records historical leaks, their corrections and current validation.
 
 The [second ownership audit](../../../doc/embedding-resource-ownership.md#follow-up-findings-after-the-native-migrations)
 at `6fea82130` found gaps beyond the initial passing native regressions. Runtime completion, timer
-queue cleanup, deferred host cleanup and socket handoff are now corrected. Nested-owner retention
-remains open. Keep their extraction boundaries explicit:
+queue cleanup, deferred host cleanup, socket handoff and nested-owner retention are now corrected.
+Keep their extraction boundaries explicit:
 
 | Correction | Intended scope | Verification or remaining work |
 |---|---|---|
 | Include asynchronous native cleanup in runtime termination status; preserve failure and prevent premature replacement | PR 3/4 plus the PR 5a session gate | Controlled pending/failed cleanup, repeated close and replacement attempt |
 | Remove cancelled tasks from the shared Java timer queue | PR 3 plus PR 4b/R6 | Request close removes cancelled entries while another owner's live timer survives |
 | Finish console/temporary-root cleanup after failed or timed-out control release | PR 5a/5b | Late termination releases owned host resources without deleting files still in use |
-| Establish retention of nested owners while resources/acquisitions/cleanup remain | PR 3/4; source-level concern pending deterministic regression | Explicit ownership registration/release, with no GC-based assertion |
+| Retain nested owners while resources/acquisitions/cleanup remain, preserving cleanup failures | PR 3/4; XDK regression after PR 5a/5b | Explicit registration/release and shutdown rejection; `NestedResources.x` opens a child-owned channel and parent close disposes it, with no GC-based assertion |
 | Dispose of sockets on asynchronous construction failure and ignored/failed handoff | PR 4b/R2 | Undelivered socket closes before owner termination; use a native barrier for blocked-read coverage |
 
 The local corrections are `0814693ae` (runtime completion), `c3bfc9582` (timer purge),
@@ -33,6 +33,12 @@ The local corrections are `0814693ae` (runtime completion), `c3bfc9582` (timer p
 injects native constructor/assignment failures and observes peer EOF before owner close; the older
 blocked-read fixture still needs a native-entry barrier. The eleven-PR sequence below remains a
 scope plan, not a readiness claim.
+
+The focused lifetime correction touches `Runtime`, `Container` and `OwnedResource`, with Java
+retention/barrier assertions in `OwnedResourceTest`. Its integration boundary is
+`EmbeddingResourceOwnershipTest.parentReleaseClosesAnIdleNestedOwnersChannel` and the new
+`ownership/NestedResources.x` fixture. Keep this correction separately reviewable; it preserves
+the weak discovery registry and adds strong roots only for outstanding cleanup obligations.
 
 ## Recommended sequence
 

@@ -149,6 +149,12 @@ public abstract class Container
     /**
      * Terminate this container's services, nested containers, scheduled alarms, and owned resources.
      *
+     * <p>Call when the application's lifetime ends, even if its entry method has already returned.
+     * Repeated calls share the same completion. The runtime retains this container until all
+     * shutdown work succeeds; a failed cleanup remains retained and visible to later parent or
+     * runtime shutdown. Callers must await the returned future before treating cleanup as finished.
+     * A caller's wait timeout does not cancel that cleanup.
+     *
      * @return a future covering service termination, pending acquisition, and resource cleanup
      */
     public CompletableFuture<Void> terminateServices() {
@@ -162,6 +168,7 @@ public abstract class Container
             if (m_futureTermination != null) {
                 return m_futureTermination;
             }
+            f_runtime.retainTerminatingContainer(this);
             m_futureTermination = termination = new CompletableFuture<>();
             pendingAlarms = List.copyOf(alarms);
             alarms.clear();
@@ -191,6 +198,9 @@ public abstract class Container
                     .whenComplete((_, error) -> {
                         f_runtime.purgeCancelledTimers();
                         if (error == null) {
+                            synchronized (this) {
+                                f_runtime.releaseContainer(this);
+                            }
                             termination.complete(null);
                         } else {
                             termination.completeExceptionally(error);
@@ -208,20 +218,34 @@ public abstract class Container
      * Register cleanup for a native resource owned by this container. Termination invokes every
      * action and waits for its completion using the runtime owner's shutdown budget.
      *
+     * <p>This registration retains the container until termination and cleanup succeed. Use
+     * {@link #acquireResource(OwnedResource.Factory, Function)} for native allocations that must be
+     * protected against concurrent shutdown, or need explicit close before owner termination.
+     * This hook is for existing owner state; it does not protect allocations made before registration.
+     *
      * @param cleanup  an action that initiates cleanup without blocking
+     *
+     * @throws IllegalStateException if container or runtime shutdown has begun
      */
     public synchronized void onTermination(Supplier<CompletableFuture<Void>> cleanup) {
         Objects.requireNonNull(cleanup);
-        checkActive();
         var resource = new OwnedResource<Supplier<CompletableFuture<Void>>>(this, Supplier::get);
         resource.acquired(cleanup);
-        ownedResources.add(resource);
+        registerResource(resource);
     }
 
     /**
      * Reserve ownership before opening a native resource. Neither acquisition nor cleanup runs
      * under the container monitor. If termination starts during acquisition, it waits for the
      * resulting resource's cleanup and this call rejects delivery to the application.
+     *
+     * <p>Pass the allocation as the factory, rather than opening the resource before this call.
+     * Registration first establishes a strong runtime reference to the container, even if its
+     * application drops every handle to it. After this method returns, use {@link OwnedResource#get}
+     * and call {@link OwnedResource#closeAsync} when finished, awaiting its completion. Owner
+     * termination provides fallback cleanup if the application omits explicit close. Retention
+     * ends after the last successful cleanup, unless termination is still pending; cleanup failures
+     * preserve retention and are reported by later owner shutdown.
      *
      * <p>The factory must dispose of partial allocations if it throws. Cleanup must initiate
      * without blocking and return a stage covering its actual completion. A resource awaiting
@@ -236,17 +260,14 @@ public abstract class Container
      * @return the owned resource
      *
      * @throws E                      if acquisition fails
-     * @throws IllegalStateException  if termination prevents delivery of the resource
+     * @throws IllegalStateException  if container or runtime shutdown prevents acquisition or delivery
      */
     public <T, E extends Exception> OwnedResource<T> acquireResource(
             OwnedResource.Factory<T, E> factory,
             Function<? super T, ? extends CompletionStage<Void>> cleanup) throws E {
         Objects.requireNonNull(factory);
         var resource = new OwnedResource<T>(this, cleanup);
-        synchronized (this) {
-            checkActive();
-            ownedResources.add(resource);
-        }
+        registerResource(resource);
         T value;
         try {
             value = Objects.requireNonNull(factory.open(), "Factory returned no resource");
@@ -261,8 +282,23 @@ public abstract class Container
     }
 
     /**
+     * Reserve ownership before calling a factory. Holding the owner monitor ensures termination
+     * cannot snapshot resources between runtime retention and insertion into the owner's set.
+     * If runtime shutdown rejects retention, no registration is added and no allocation may begin.
+     *
+     * @param resource  the resource reservation to install
+     */
+    private synchronized void registerResource(OwnedResource<?> resource) {
+        checkActive();
+        f_runtime.retainResourceOwner(this);
+        ownedResources.add(resource);
+    }
+
+    /**
      * Acquire a resource whose {@link AutoCloseable#close()} does not block. Use the asynchronous
-     * overload when closing requires waiting for work or threads to stop.
+     * overload when closing requires waiting for work or threads to stop. The same ordering as
+     * {@link #acquireResource(OwnedResource.Factory, Function)} applies: allocate inside the factory,
+     * use the returned handle, then await {@link OwnedResource#closeAsync} when finished.
      *
      * @param factory  the acquisition operation
      * @param <T>      the resource type
@@ -271,7 +307,7 @@ public abstract class Container
      * @return the owned resource
      *
      * @throws E                      if acquisition fails
-     * @throws IllegalStateException  if termination prevents delivery of the resource
+     * @throws IllegalStateException  if container or runtime shutdown prevents acquisition or delivery
      */
     public <T extends AutoCloseable, E extends Exception> OwnedResource<T> acquireResource(
             OwnedResource.Factory<T, E> factory) throws E {
@@ -291,11 +327,19 @@ public abstract class Container
     /**
      * Remove a finished registration without retaining the resource or its cleanup closure.
      * Remember a cleanup failure so that a later shutdown cannot silently report success.
+     * Successful release drops runtime retention only when no other resources or termination
+     * remain. Failed cleanup keeps the owner rooted even after its resource registrations are gone.
+     *
+     * @param resource  the finished reservation
+     * @param failure   the cleanup failure, or null for successful cleanup or failed acquisition
      */
     synchronized void releaseResource(OwnedResource<?> resource, Throwable failure) {
         ownedResources.remove(resource);
         if (resourceFailure == null) {
             resourceFailure = failure;
+        }
+        if (ownedResources.isEmpty() && resourceFailure == null && m_futureTermination == null) {
+            f_runtime.releaseContainer(this);
         }
     }
 

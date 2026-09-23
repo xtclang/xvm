@@ -14,7 +14,8 @@ termination.
 
 The follow-up audit of `6fea82130` found additional gaps. The four requested corrections now cover
 runtime termination status, cancelled timer queue entries, deferred host cleanup and failed/ignored
-native socket handoff. Nested-container reachability remains an open source-level concern. See
+native socket handoff. The nested-container lifetime correction now retains owners through resource
+acquisition, native cleanup and termination, with deterministic Java and `.x` regressions. See
 [Follow-up findings after the native migrations](#follow-up-findings-after-the-native-migrations)
 for the historical evidence, corrections and remaining boundaries.
 
@@ -337,8 +338,8 @@ no automatic JIT tasks and does not change the plugin default. The
 places it after the common mechanism and interpreter request API; its six resource scopes remain
 explicit if reviewers prefer further extraction.
 
-Remaining implementation work includes nested-owner retention, described below. Broader validation
-and capability growth also remain: retained heap/classloader measurements under long workloads, directory/overflow
+The nested-owner retention correction is described below. Broader validation and capability growth
+remain: retained heap/classloader measurements under long workloads, directory/overflow
 watcher event semantics, general custom injectors and JIT resource support. TCP listen/accept is
 still a pre-existing unimplemented native capability; this change owns existing connected TCP
 sockets and HTTP/HTTPS listeners, not a new TCP server API. The bounded-shutdown failure contract
@@ -433,18 +434,44 @@ close again to trigger it. Separate cases cover a stopped runner and session-clo
 caller-owned directory/writer assertions remain in the lifecycle suite. Submission scope: PR 5a,
 with PR 5b resource-context coverage.
 
-### 4. Weak container discovery is not a lifetime owner — source risk requiring a regression
+### 4. Weak container discovery is not a lifetime owner — corrected
 
-`Runtime.f_containers` is a `WeakHashMap`. A parent does not hold a strong child collection;
-termination discovers children through that weak registry. `OwnedResource` is strongly held by
-its owning container, but this does not itself keep an otherwise unreachable container rooted.
-The runner retains its direct application's container until release, so the sequential request
-tests do not exercise an abandoned nested child with idle native resources.
+`Runtime.f_containers` is a `WeakHashMap`, and termination discovers children through that weak
+registry. Originally, only the owning container strongly held its `OwnedResource` registrations;
+this did not root an otherwise unreachable container. The runner retains its direct application's
+container until release, so sequential requests alone did not establish lifetime ownership of an
+abandoned nested child with idle native resources. This was a source-level concern, not a
+GC-dependent leak reproduction.
 
-Define who retains such a child while it owns resources, acquisitions or pending cleanup, and
-release that retention when ownership ends. This is a source-level lifetime concern, not a
-reproduced GC-dependent leak. A regression should inspect explicit ownership registration and
-release deterministically, rather than wait for GC. Submission scope: PR 3/4.
+Correction: a separate runtime set now strongly retains containers with cleanup obligations.
+Resource reservation establishes retention before allocation; failed acquisition releases its
+reservation. Open resources, asynchronous cleanup and pending container termination retain the
+owner until successful completion. Cleanup failures keep the owner discoverable for parent/runtime
+failure reporting. Each retained child also keeps its ancestors reachable through its parent links.
+Containers without obligations remain eligible for normal collection when ordinary references end.
+
+Reservation and runtime shutdown use the same registry monitor. Reservation also holds the owner
+monitor until its resource is registered, so shutdown cannot snapshot a partially registered owner.
+Once runtime shutdown begins, new reservations fail before their factories run. Registry methods
+never call back into containers while holding the registry monitor. API Javadocs describe the
+required allocation/use/close order, asynchronous completion and the distinction between ordinary
+discovery and lifetime retention.
+
+Deterministic Java regressions inspect the explicit strong registrations during acquisition,
+idle ownership, delayed cleanup, parent/descendant termination and failed cleanup. A barrier holds
+runtime shutdown before container termination and verifies that both acquisition and termination
+hook registration are rejected. The `NestedResources.x` integration fixture drops the application's
+child handle after opening a file channel; the host verifies retention, closes the parent, checks
+native channel disposal and release of retention, and runs a healthy request in the same session.
+The assertions use no GC requests, sleeps or elapsed-time thresholds. Submission scope: PR 3/4;
+the XDK regression also needs the PR 5a/5b embedding fixture.
+
+The focused lifetime validation on 2026-09-23 passed **54 tests with zero failures, errors or skips**:
+`OwnedResourceTest` (19), `ContainerActivityTest` (4), `RuntimeShutdownTest` (6),
+`EmbeddingResourceOwnershipTest` (9) and `EmbeddingLifecycleTest` (16). The nested fixture executes
+twice in the same session, with a healthy request after each parent release. `spotlessCheck` passed;
+doclint over `Runtime`, `Container` and `OwnedResource` (`-private -Xdoclint:all,-missing`) reported
+no diagnostics. The missing-documentation category is excluded for older unrelated members.
 
 ### 5. Failed socket handoff can postpone disposal until owner close — corrected
 
@@ -466,8 +493,8 @@ The existing integration fixture's read scenario still signals readiness before 
 so it does not deterministically establish an already-blocked native read; a native-entry barrier
 remains a coverage follow-up. Submission scope: PR 4b/R2, including the frame/continuation support.
 
-Nested-owner retention and the stated coverage boundaries remain open. These four corrections do
-not establish exhaustive shutdown ownership. DNS interruption, custom injectors, JIT native
+The stated coverage boundaries remain open. These corrections do not establish exhaustive shutdown
+ownership. DNS interruption, custom injectors, JIT native
 resources, watcher event semantics and broader platform/retention measurements remain the
 previously documented boundaries.
 

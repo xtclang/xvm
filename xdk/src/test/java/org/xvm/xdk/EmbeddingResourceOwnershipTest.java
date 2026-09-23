@@ -75,6 +75,36 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Timeout(120)
 class EmbeddingResourceOwnershipTest {
     @Test
+    void parentReleaseClosesAnIdleNestedOwnersChannel(@TempDir Path root) throws Exception {
+        try (var session = EmbeddingSupport.create(repository())) {
+            var module = compile(session, source("NestedResources.x"));
+            for (int iteration = 0; iteration < 2; iteration++) {
+                try (var execution = start(session, module, root, List.of())) {
+                    execution.control.join();
+                    assertFalse(execution.errors.hasSeriousErrors(), execution.output::toString);
+                    var snapshot = snapshot(session);
+                    assertEquals(1, snapshot.channels.size());
+                    assertTrue(snapshot.channels.getFirst().isOpen());
+                    assertEquals(1, snapshot.owners.size());
+                    var child = snapshot.owners.getFirst();
+                    var parent = child.f_parent;
+                    assertEquals("NestedResources", child.getModule().getName());
+                    assertEquals("NestedResources", parent.getModule().getName());
+                    assertTrue(child.whenIdle().isDone());
+                    // Inspect the strong ownership set; ordinary discovery and forced GC cannot
+                    // establish whether an abandoned child has a deterministic lifetime owner.
+                    assertTrue(retainedContainers(session).contains(child));
+                    execution.control.close();
+                    snapshot.assertClosed();
+                    assertFalse(retainedContainers(session).contains(child));
+                    assertFalse(retainedContainers(session).contains(parent));
+                }
+                assertHealthy(session);
+            }
+        }
+    }
+
+    @Test
     void undeliveredSocketsCloseBeforeTheirApplicationOwner() throws Exception {
         try (var session = networkSession();
              var listener = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
@@ -546,6 +576,13 @@ class EmbeddingResourceOwnershipTest {
         var method = InterpreterConnector.class.getDeclaredMethod("getNativeContainer");
         method.setAccessible(true);
         return (NativeContainer) method.invoke(session.ensureConnector());
+    }
+
+    private static Set<?> retainedContainers(EmbeddingSupport session) throws Exception {
+        var runtime = nativeContainer(session).f_runtime;
+        var method = runtime.getClass().getDeclaredMethod("retainedContainers");
+        method.setAccessible(true);
+        return (Set<?>) method.invoke(runtime);
     }
 
     private static void assertHealthy(EmbeddingSupport session) {

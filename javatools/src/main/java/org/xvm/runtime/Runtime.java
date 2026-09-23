@@ -59,7 +59,11 @@ public class Runtime
     }
 
     /**
-     * Register a container for lifecycle management and debugging.
+     * Register a newly constructed container for discovery and debugging. This registration is
+     * weak: inactive containers without external references or cleanup obligations may be collected.
+     * Resource acquisition must additionally call {@link #retainResourceOwner} before allocation.
+     *
+     * @param container  the newly constructed container
      */
     public void registerContainer(Container container) {
         synchronized (f_containers) {
@@ -80,10 +84,73 @@ public class Runtime
     }
 
     /**
+     * Retain a container before reserving a native resource. The caller must hold the container
+     * monitor, add its resource registration before releasing that monitor, and eventually call
+     * {@link #releaseContainer} when its last cleanup obligation finishes successfully.
+     *
+     * <p>The registry monitor serializes reservation with runtime shutdown. A reservation either
+     * precedes shutdown, whose container snapshot will include this owner, or fails before the
+     * resource factory is called. This method never calls back into the container while locked.
+     * Retention affects reachability only; it does not count idle resources as application activity.
+     *
+     * @param container  the resource owner
+     *
+     * @throws IllegalStateException if runtime shutdown has begun
+     */
+    void retainResourceOwner(Container container) {
+        synchronized (f_containers) {
+            if (closing) {
+                throw new IllegalStateException("Runtime is closing");
+            }
+            retainedContainers.add(container);
+        }
+    }
+
+    /**
+     * Retain a container until its termination completes successfully, including asynchronous
+     * cleanup of descendants. Unlike acquisition, termination is allowed during runtime shutdown.
+     * Call under the container monitor before publishing its termination future; release only
+     * after successful completion of all shutdown work. Failure preserves retention for reporting.
+     *
+     * @param container  the terminating container
+     */
+    void retainTerminatingContainer(Container container) {
+        synchronized (f_containers) {
+            retainedContainers.add(container);
+        }
+    }
+
+    /**
+     * Release strong retention after the container's last obligation succeeds. Call under its
+     * monitor, only when no resources, pending shutdown work or cleanup failure remain. The weak
+     * discovery registration stays intact, and ordinary references may still keep the container
+     * alive. Never release merely because application execution has become idle.
+     *
+     * @param container  the container whose cleanup obligations have ended
+     */
+    void releaseContainer(Container container) {
+        synchronized (f_containers) {
+            retainedContainers.remove(container);
+        }
+    }
+
+    /**
+     * Obtain a snapshot of containers with cleanup obligations, for lifecycle diagnostics.
+     * Callers should discard the snapshot after inspection: it also strongly references the owners.
+     *
+     * @return the containers retained for acquisition, resources, termination or cleanup failures
+     */
+    Set<Container> retainedContainers() {
+        synchronized (f_containers) {
+            return Set.copyOf(retainedContainers);
+        }
+    }
+
+    /**
      * @return a container that uses the specified ConstantPool; null if not found
      */
     public Container findContainer(ConstantPool pool) {
-        for (Container container : f_containers.keySet()) {
+        for (Container container : containers()) {
             if (container.getConstantPool() == pool) {
                 return container;
             }
@@ -267,9 +334,16 @@ public class Runtime
     private final ThreadGroup serviceThreads = new ThreadGroup("XVM");
 
     /**
-     * The set of containers (stored as a Map with no values); used only for debugging.
+     * Weak discovery index for debugging and descendant traversal. All access uses its monitor;
+     * registry operations must not call container methods while holding that monitor.
      */
     private final Map<Container, Object> f_containers = new WeakHashMap<>();
+
+    /**
+     * Strong roots for outstanding cleanup obligations, guarded by {@link #f_containers}. Each
+     * retained child also keeps its ancestors reachable through {@link Container#f_parent}.
+     */
+    private final Set<Container> retainedContainers = new HashSet<>();
 
     /**
      * Guarded by {@link #f_containers}; prevents container creation during shutdown.

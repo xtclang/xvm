@@ -4,6 +4,10 @@ import java.io.IOException;
 
 import java.lang.ref.Reference;
 
+import java.time.Duration;
+
+import java.util.Set;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +37,107 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Timeout(30)
 class OwnedResourceTest {
+    @Test
+    void idleNestedOwnerIsRetainedUntilItsLastResourceCloses() {
+        try (var runtime = new Runtime()) {
+            var parent = container(runtime, null);
+            var child = container(runtime, parent);
+            var cleaned = new CompletableFuture<Void>();
+            assertTrue(runtime.retainedContainers().isEmpty());
+            var first = child.acquireResource(() -> {
+                assertEquals(Set.of(child), runtime.retainedContainers());
+                return new Object();
+            }, _ -> CompletableFuture.completedFuture(null));
+            var last = child.acquireResource(Object::new, _ -> cleaned);
+            assertTrue(child.whenIdle().isDone(), "Idle resources must still retain their owner");
+            assertEquals(Set.of(child), runtime.retainedContainers());
+            first.closeAsync().join();
+            assertEquals(Set.of(child), runtime.retainedContainers());
+            var closing = last.closeAsync();
+            assertFalse(closing.isDone());
+            assertEquals(Set.of(child), runtime.retainedContainers());
+            cleaned.complete(null);
+            closing.join();
+            assertTrue(runtime.retainedContainers().isEmpty());
+            assertTrue(runtime.containers().contains(child), "Release must preserve ordinary discovery");
+        }
+    }
+
+    @Test
+    void parentTerminationRetainsDescendantsUntilTheirCleanupFinishes() {
+        var cleaned = new CompletableFuture<Void>();
+        try (var runtime = new Runtime()) {
+            var root = container(runtime, null);
+            var parent = container(runtime, root);
+            var child = container(runtime, parent);
+            var nested = container(runtime, child);
+            var sibling = container(runtime, root);
+            var siblingClosed = new AtomicBoolean();
+            nested.onTermination(() -> cleaned);
+            sibling.acquireResource(() -> (AutoCloseable) () -> siblingClosed.set(true));
+            assertEquals(Set.of(nested, sibling), runtime.retainedContainers());
+
+            var stopped = parent.terminateServices();
+            assertFalse(stopped.isDone());
+            assertEquals(Set.of(parent, child, nested, sibling), runtime.retainedContainers());
+            cleaned.complete(null);
+            stopped.join();
+            assertEquals(Set.of(sibling), runtime.retainedContainers());
+            assertFalse(siblingClosed.get());
+            root.terminateServices().join();
+            assertTrue(siblingClosed.get());
+            assertTrue(runtime.retainedContainers().isEmpty());
+        } finally {
+            cleaned.complete(null);
+        }
+    }
+
+    @Test
+    void runtimeShutdownRejectsAcquisitionBeforeContainerTerminationBegins() throws Exception {
+        var stopping = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        try (var runtime = new Runtime(); var workers = Executors.newVirtualThreadPerTaskExecutor()) {
+            var owner = new Container(runtime, null, new FileStructure("test").getModuleId()) {
+                @Override
+                public CompletableFuture<Void> terminateServices() {
+                    stopping.countDown();
+                    try {
+                        release.await();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new CompletionException(e);
+                    }
+                    return super.terminateServices();
+                }
+
+                @Override
+                public ObjectHandle getInjectable(Frame frame, String name, TypeConstant type, ObjectHandle options) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+            var closing = workers.submit(() -> { runtime.close(); });
+            try {
+                assertTrue(stopping.await(5, TimeUnit.SECONDS));
+                var opened = new AtomicBoolean();
+                assertThrows(IllegalStateException.class, () -> owner.acquireResource(() -> {
+                    opened.set(true);
+                    return new Object();
+                }, _ -> CompletableFuture.completedFuture(null)));
+                assertThrows(IllegalStateException.class,
+                        () -> owner.onTermination(() -> CompletableFuture.completedFuture(null)));
+                assertFalse(opened.get());
+                assertEquals(0, owner.ownedResourceCount());
+                assertTrue(runtime.retainedContainers().isEmpty());
+            } finally {
+                release.countDown();
+            }
+            closing.get(5, TimeUnit.SECONDS);
+            assertTrue(runtime.isTerminated());
+        } finally {
+            release.countDown();
+        }
+    }
+
     @Test
     void explicitCloseRemovesRegistrationsAndRunsOnce() {
         try (var runtime = new Runtime()) {
@@ -94,7 +199,7 @@ class OwnedResourceTest {
     }
 
     @Test
-    void shutdownDuringAcquisitionClosesTheUndeliveredResource() throws Exception {
+    void runtimeShutdownDuringAcquisitionClosesTheUndeliveredResource() throws Exception {
         var entered = new CountDownLatch(1);
         var acquired = new CountDownLatch(1);
         var cleaned = new CompletableFuture<Void>();
@@ -103,6 +208,7 @@ class OwnedResourceTest {
             var owner = container(runtime, null);
             var opening = workers.submit(() -> owner.acquireResource(() -> {
                 assertFalse(Thread.holdsLock(owner));
+                assertEquals(Set.of(owner), runtime.retainedContainers());
                 entered.countDown();
                 acquired.await();
                 return new Object();
@@ -112,6 +218,7 @@ class OwnedResourceTest {
             }));
             try {
                 assertTrue(entered.await(5, TimeUnit.SECONDS));
+                assertThrows(IllegalStateException.class, () -> runtime.close(Duration.ZERO));
                 var stopped = owner.terminateServices();
                 assertFalse(stopped.isDone());
                 assertFalse(cleanupCalled.get());
@@ -120,9 +227,11 @@ class OwnedResourceTest {
                 assertInstanceOf(IllegalStateException.class, failure.getCause());
                 assertTrue(cleanupCalled.get());
                 assertFalse(stopped.isDone(), "Shutdown must also await disposal after acquisition");
+                assertEquals(Set.of(owner), runtime.retainedContainers());
                 cleaned.complete(null);
                 stopped.get(5, TimeUnit.SECONDS);
                 assertEquals(0, owner.ownedResourceCount());
+                assertTrue(runtime.retainedContainers().isEmpty());
             } finally {
                 acquired.countDown();
                 cleaned.complete(null);
@@ -149,6 +258,7 @@ class OwnedResourceTest {
             stopped.get().join();
             assertFalse(cleanupCalled.get(), "The factory returned no resource to close");
             assertEquals(0, owner.ownedResourceCount());
+            assertTrue(runtime.retainedContainers().isEmpty());
         }
     }
 
@@ -163,6 +273,7 @@ class OwnedResourceTest {
             }));
             assertFalse(cleanupCalled.get());
             assertEquals(0, owner.ownedResourceCount());
+            assertTrue(runtime.retainedContainers().isEmpty());
             owner.terminateServices().join();
         }
     }
@@ -241,7 +352,8 @@ class OwnedResourceTest {
     void asynchronousExplicitCloseFailureAlsoReachesLaterShutdown() {
         var runtime = new Runtime();
         try {
-            var owner = container(runtime, null);
+            var parent = container(runtime, null);
+            var owner = container(runtime, parent);
             var expected = new IOException("async cleanup failed");
             var cleaned = new CompletableFuture<Void>();
             var resource = owner.acquireResource(Object::new, _ -> cleaned);
@@ -249,8 +361,10 @@ class OwnedResourceTest {
             cleaned.completeExceptionally(expected);
             assertSame(expected, assertThrows(CompletionException.class, closed::join).getCause());
             assertEquals(0, owner.ownedResourceCount());
+            assertEquals(Set.of(owner), runtime.retainedContainers());
             assertSame(expected, assertThrows(CompletionException.class,
-                    () -> owner.terminateServices().join()).getCause());
+                    () -> parent.terminateServices().join()).getCause());
+            assertEquals(Set.of(parent, owner), runtime.retainedContainers());
             assertThrows(IllegalStateException.class, runtime::close);
         } finally {
             assertThrows(IllegalStateException.class, runtime::close);
