@@ -343,6 +343,15 @@ discard the implementation edges. Unadopted mixins are skipped because an `into`
 an implementing host. Type-definition links need only existing type identities and source
 declarations, with no new compiler listener path or AST state. Both editor queries use copied facts.
 
+The dependency host API preserves this boundary. Each compilation/cursor attempt opens a fresh
+repository from immutable `XdkDependency` artifacts and uses the existing host listener and
+cancellation path. A successful compilation can export detached declaration locations with
+`toDependency()`; a failed compilation cannot export a dependency. Replacing the complete artifact
+set invalidates affected consumers and pending probes. The server performs replacement and
+diagnostic refresh under its publication lock, retaining current document versions. No dependency
+state is carried by ErrorListener and no new AST fields are required. Artifact/source revisions
+belong to the host; binary-only inputs have no invented source targets.
+
 ## Ambient constant pools: pre-existing defects versus branch changes
 
 Constant-pool ownership and error-listener ownership are related historically, but they are
@@ -384,10 +393,12 @@ These existing regressions exercise the contract at different boundaries:
 | Partial source results | `XdkRecoveryTest` and packaged stdio: recovered syntax, sibling outlines, UTF-16/CRLF ranges, unavailable semantics after parse failure and restoration after correction. |
 | Explicit incomplete analysis | `XdkPartialAnalysisTest`: real receiver/parameter identities, flow narrowing, argument spans, UTF-16/CRLF, no overload or emitted method, unsupported syntax, cancellation/budgets and exactly-once EOF delivery. |
 | Cursor request consumers | `XdkCompletionSignatureTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio: copied completion/signature facts, cancellation propagation, module invalidation, unchanged diagnostics and rejection of late results even from an uncooperative backend. |
+| Semantic consumers | `XdkSemanticLookupTest`, `XdkCallHierarchyTest` and `XdkPresentationTest`: type/implementation targets, selected source calls, resolved-name tokens, read/write highlights and bounded inlay hints. |
+| Dependency host boundary | `XdkDependencyTest` and `XdkLanguageServerTest`: detached source indices, linked-pool metadata, source-less binaries, transitive invalidation, cancellation and diagnostic refresh at unchanged consumer versions. |
 | Ambient-pool fallback | `MethodBodyAmbientPoolTest`, `ConstantPoolAmbientTest`, including bound-pool precedence. |
 
-The [tenth hardening pass](errs-integration-plan.md#tenth-pass-bounded-incomplete-analysis-2026-09-22)
-records the actual compiler, LSP and packaged-stdio test execution and existing skips.
+The [integration record](errs-integration-plan.md) records compiler, LSP and packaged-stdio execution
+and existing skips for each pass, including the latest dependency host API checks.
 An extracted PR still needs its own tests and output-equivalence checks; green
 tests on this integrated branch are not evidence that every proposed subset stands alone.
 
@@ -411,10 +422,12 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    fitting on trial copies, with candidate-specific generic types and named mappings. Candidate
    mismatches are speculative and discarded; explicit TypeInfo inspection reports through the host
    listener and all probes observe cancellation. No candidate is a selected call. Method
-   implementation lookup still needs override relationships.
-   Cross-module indexing, dependency source navigation and safe rename need ownership beyond this
-   module snapshot. Hierarchy currently covers direct extends/implements edges between source
-   types in the same compilation, not conditional mixins or external library sources.
+   implementation lookup now copies actual override chains. Explicit dependency artifacts/source
+   indices provide definition/type-definition and inherited-body links plus consumer invalidation.
+   Project discovery, dependency builds from edited sources and persistent cross-module indexing
+   remain open. Safe rename still needs named-label bindings and before/after binding validation.
+   Hierarchy currently covers direct extends/implements edges between source types in the same
+   compilation, not conditional mixins or external library sources.
 3. The [bounded diagnostic audit](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23)
    now covers `@Parsed`: runtime arguments exposed a false constructor error in reporting metadata,
    fixed without weakening actual annotation validation. A non-module root now reports positioned
