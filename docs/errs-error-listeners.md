@@ -335,6 +335,14 @@ partial-member copier can request receiver TypeInfo on the compiler worker; that
 a local stateful reporting listener, forwards diagnostics and host cancellation, and suppresses
 candidate output after inspection errors. Ordinary copied-snapshot queries remain compiler-free.
 
+Implementation lookup follows the same reporting boundary. The additive Kotlin
+`semanticSnapshots(errors)` overload inspects source TypeInfo and copies nominal ancestry and
+method-chain declaration identities on the compiler worker. The no-argument overload remains
+passive. Inspection errors reach the compilation's host collector; serious errors or cancellation
+discard the implementation edges. Unadopted mixins are skipped because an `into` constraint is not
+an implementing host. Type-definition links need only existing type identities and source
+declarations, with no new compiler listener path or AST state. Both editor queries use copied facts.
+
 ## Ambient constant pools: pre-existing defects versus branch changes
 
 Constant-pool ownership and error-listener ownership are related historically, but they are

@@ -33,7 +33,18 @@ interface Adapter : Closeable {
 
     /** Features the server may advertise for this backend. */
     val capabilities: Set<AdapterCapability>
-        get() = AdapterCapability.entries.filterNot { it == AdapterCapability.TYPE_HIERARCHY }.toSet()
+        get() =
+            AdapterCapability.entries
+                .filterNot {
+                    it in
+                        setOf(
+                            AdapterCapability.TYPE_HIERARCHY,
+                            AdapterCapability.TYPE_DEFINITION,
+                            AdapterCapability.IMPLEMENTATION,
+                            AdapterCapability.CALL_HIERARCHY,
+                            AdapterCapability.INLAY_HINT,
+                        )
+                }.toSet()
 
     /**
      * Human-readable name of this adapter for display in logs and UI.
@@ -762,6 +773,13 @@ interface Adapter : Closeable {
         line: Int,
         column: Int,
     ): Location?
+
+    /** Multiple type targets, for example union operands; preserves the single-target adapter hook. */
+    fun findTypeDefinitions(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> = listOfNotNull(findTypeDefinition(uri, line, column))
 
     /**
      * Find implementations of the interface or abstract method at a position.
