@@ -328,8 +328,18 @@ public abstract class OpInvocable extends Op {
             return;
         }
 
-        ConstantPool      pool       = bctx.pool();
-        TypeConstant      typeTarget = bctx.getArgumentType(m_nTarget);
+        ConstantPool pool       = bctx.pool();
+        TypeConstant typeTarget = bctx.getArgumentType(m_nTarget);
+        if (m_nTarget == A_THIS || m_nTarget == A_STRUCT) {
+            // resolve this receiver's generic narrowing before method lookup erases the formals;
+            // e.g. Map<Object, Int> becomes Map<Stringable, Int> after augmenting formal types
+            TypeConstant typeFormal = bctx.typeInfo.getClassStructure().getFormalType();
+            TypeConstant typeNarrow = tmx.augmentPropertyType(typeFormal, getAddress());
+
+            typeTarget = typeTarget.removeAccess().combine(pool, typeNarrow).
+                    ensureAccess(typeTarget.getAccess());
+        }
+
         MethodInfo        infoMethod = computeMethodInfo(bctx, typeTarget);
         SignatureConstant sig        = infoMethod.getSignature();
 

@@ -4395,7 +4395,6 @@ public class CommonBuilder
             Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
-                   "estimateStringLength", // TODO: incompatible formal iterator result types
                    "map",              // TODO: incompatible formal result types in TypeMatrix
                    "removeAll")),      // TODO: key's formal type is tracked as Object
         Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
