@@ -1872,6 +1872,11 @@ public class BuildContext {
 
         JitFlavor srcFlavor = regFrom.flavor();
         JitFlavor dstFlavor = regTo.flavor();
+
+        if (srcFlavor == AlwaysNull) {
+            // a narrowed Null is loaded as the boxed singleton, just like a Null constant
+            srcFlavor = Specific;
+        }
         if (srcFlavor != dstFlavor) {
             // additional transformations are required for these scenarios:
             //  - Specific  -> Primitive          (Int n := o.is(Int);)

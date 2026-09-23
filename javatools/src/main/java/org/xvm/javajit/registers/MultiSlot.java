@@ -168,6 +168,10 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
         assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
 
         if (extSlot != NO_SLOT) {
+            if (type != null && type.isXvmPrimitive()) {
+                // a non-null result has only its primitive components on the stack
+                code.iconst_0();
+            }
             // store the "extension" boolean flag first
             code.istore(extSlot);
         }
