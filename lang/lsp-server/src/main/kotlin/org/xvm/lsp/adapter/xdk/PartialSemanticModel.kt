@@ -30,6 +30,12 @@ class PartialSemanticModel internal constructor(
         val type: TypeId?,
     )
 
+    /** Decoded identifier text and its original UTF-16 replacement range; empty after a bare dot. */
+    data class MemberPrefix(
+        val text: String,
+        val range: Range,
+    )
+
     /** Candidates are accessible receiver members, not selected or argument-filtered overloads. */
     @ConsistentCopyVisibility
     data class Site internal constructor(
@@ -43,6 +49,7 @@ class PartialSemanticModel internal constructor(
         val arguments: List<Argument>,
         val separators: List<Position>,
         val members: List<Member>,
+        val memberPrefix: MemberPrefix? = null,
     ) {
         /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
         fun argumentIndexAt(position: Position): Int? =

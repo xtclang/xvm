@@ -102,7 +102,7 @@ class XdkCompletionSignatureTest {
     @Test
     fun `unsupported or unresolved cursor contexts return no invented results`() {
         XdkAdapter().use { adapter ->
-            for (body in listOf("missing.", "box.ec", "ec", "1 + box.")) {
+            for (body in listOf("missing.", "box.noSuchPrefix", "ec", "1 + box.")) {
                 val prefix = "$BOX void run(Box<String> box) { $body"
                 adapter.compile(URI, "$prefix } }")
                 assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()
@@ -110,6 +110,54 @@ class XdkCompletionSignatureTest {
             val prefix = "$BOX void run(Box<String> box) { missing("
             adapter.compile(URI, "$prefix } }")
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
+        }
+    }
+
+    @Test
+    fun `typed member completion filters candidates and replaces only the original identifier`() {
+        XdkAdapter().use { adapter ->
+            for (typed in listOf("ec", "ch", "\\u0065c")) {
+                val prefix = "$BOX void run(Box<String> box) { box.$typed"
+                val text = "$prefix; } Int later() = 42; }"
+                adapter.compile(URI, text)
+                val cached = adapter.getCachedResult(URI)
+                val items = adapter.getCompletions(URI, 0, prefix.length)
+                assertThat(items.map { it.label }).containsOnly(if (typed == "ch") "choose" else "echo")
+                assertThat(items).hasSize(if (typed == "ch") 2 else 1)
+                items.forEach { item ->
+                    val edit = item.textEdit!!
+                    assertThat(edit.range.start).isEqualTo(Position(0, prefix.length - typed.length))
+                    assertThat(edit.range.end).isEqualTo(Position(0, prefix.length))
+                    val applied = text.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)
+                    assertThat(applied).isEqualTo(prefix.dropLast(typed.length) + item.label + "; } Int later() = 42; }")
+                }
+                assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
+            }
+        }
+    }
+
+    @Test
+    fun `signature help works with editor-inserted closing parentheses`() {
+        XdkAdapter().use { adapter ->
+            for (suffix in listOf("echo(", "choose(", "echo(\"x\", ")) {
+                val prefix = "$BOX void run(Box<String> box) { box.$suffix"
+                adapter.compile(URI, "$prefix); } }")
+                val cached = adapter.getCachedResult(URI)
+                val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
+                assertThat(help.signatures).hasSize(if (suffix == "choose(") 2 else 1)
+                assertThat(help.signatures).allSatisfy {
+                    if (suffix.endsWith(", ")) {
+                        // XTC permits a trailing comma: this call is complete and uses its
+                        // selected compiler signature, rather than a candidate from a probe.
+                        assertThat(it.documentation).isNull()
+                        assertThat(cached!!.diagnostics).isEmpty()
+                    } else {
+                        assertThat(it.documentation).describedAs(suffix).contains("overload not selected")
+                    }
+                    assertThat(it.label).contains(if (suffix == "choose(") "choose(" else "echo(String value)")
+                }
+                assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
+            }
         }
     }
 
