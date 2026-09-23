@@ -1,168 +1,56 @@
 package org.xtclang.plugin.runtime;
 
 import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import org.gradle.api.logging.Logger;
-import org.gradle.api.logging.Logging;
 import org.gradle.api.services.BuildService;
 import org.gradle.api.services.BuildServiceParameters;
 
 import org.xtclang.plugin.XtcLauncherRuntime;
 
-import static org.xtclang.plugin.XtcPluginUtils.failure;
-
 /**
- * Build-scoped owner for isolated direct-mode runtimes.
- *
- * <p>The important constraint here is scope: direct execution may reuse an isolated
- * runtime within one build, but it must not leak that runtime into later builds via
- * daemon-global static state. Gradle shared services give us exactly that lifecycle.
- *
- * <p>Each cached entry is keyed by the contents of the runtime classpath, core modules, and
- * plugin code source. That lets multiple direct tasks in the same build reuse the
- * same isolated classloader when they truly target the same runtime, while still
- * separating builds or runtime changes cleanly.
+ * Build-scoped owner for DIRECT execution. Requests reuse a compatible isolated embedding session
+ * during this build; close releases every session. Persistent execution uses a separate owner.
  */
 public abstract class DirectRuntimeBuildService
         implements BuildService<BuildServiceParameters.None>, AutoCloseable {
+    private final Map<DirectRuntimeFingerprint, IsolatedRuntime> runtimes = new HashMap<>();
 
-    private static final String EXECUTOR_CLASS = "org.xtclang.plugin.runtime.impl.IsolatedDirectExecutor";
-    private static final Logger LOG = Logging.getLogger(DirectRuntimeBuildService.class);
-
-    private final Map<DirectRuntimeFingerprint, RuntimeEntry> runtimes = new ConcurrentHashMap<>();
-
-    public int executeCompile(final XtcLauncherRuntime runtime, final List<File> coreModules, final DirectCompileRequest request, final Logger logger) {
-        return invoke(runtime, coreModules, "executeCompile", new Class<?>[]{DirectCompileRequest.class, Logger.class}, request, logger);
+    public int executeCompile(final XtcLauncherRuntime runtime, final List<File> modules, final DirectCompileRequest request, final Logger logger) {
+        return invoke(runtime, modules, request, logger);
     }
 
-    public int executeRun(final XtcLauncherRuntime runtime, final List<File> coreModules, final DirectRunRequest request, final Logger logger) {
-        return invoke(runtime, coreModules, "executeRun", new Class<?>[]{DirectRunRequest.class, Logger.class}, request, logger);
+    public int executeRun(final XtcLauncherRuntime runtime, final List<File> modules, final DirectRunRequest request, final Logger logger) {
+        return invoke(runtime, modules, request, logger);
     }
 
-    public int executeTest(final XtcLauncherRuntime runtime, final List<File> coreModules, final DirectTestRequest request, final Logger logger) {
-        return invoke(runtime, coreModules, "executeTest", new Class<?>[]{DirectTestRequest.class, Logger.class}, request, logger);
+    public int executeTest(final XtcLauncherRuntime runtime, final List<File> modules, final DirectTestRequest request, final Logger logger) {
+        return invoke(runtime, modules, request, logger);
     }
 
-    private synchronized int invoke(
-            final XtcLauncherRuntime runtime,
-            final List<File> coreModules,
-            final String methodName,
-            final Class<?>[] parameterTypes,
-            final Object request,
-            final Logger logger) {
-
-        final var entry = getOrCreateRuntime(runtime, coreModules, logger);
-        final var thread = Thread.currentThread();
-        final var previous = thread.getContextClassLoader();
-        thread.setContextClassLoader(entry.classLoader());
-        try {
-            return (Integer) entry.executorMethod(methodName, parameterTypes).invoke(entry.executor(), request, logger);
-        } catch (final InvocationTargetException e) {
-            final var cause = e.getCause();
-            throw failure(cause == null ? e : cause, "Direct runtime invocation failed in {}()", methodName);
-        } catch (final Exception e) {
-            throw failure(e, "Failed to invoke isolated direct runtime method {}()", methodName);
-        } finally {
-            thread.setContextClassLoader(previous);
-        }
-    }
-
-    private RuntimeEntry getOrCreateRuntime(final XtcLauncherRuntime runtime, final List<File> coreModules, final Logger logger) {
-        final var fingerprint = DirectRuntimeFingerprint.from(runtime, codeSourceUrl(), coreModules);
-        final var existing = runtimes.get(fingerprint);
-        if (existing != null) {
-            logger.info("[plugin] [DIRECT] Reusing isolated runtime '{}' with {} entries (cache hit, cached={})",
-                runtime.source(), runtime.classpath().size(), runtimes.size());
-            logger.debug("[plugin] [DIRECT] Reused runtime fingerprint: {}", fingerprint.describeForLogging());
-            return existing;
-        }
-
-        logger.info("[plugin] [DIRECT] Cache miss for isolated runtime '{}' (cached={})",
-            runtime.source(), runtimes.size());
-        logger.debug("[plugin] [DIRECT] Requested runtime fingerprint: {}", fingerprint.describeForLogging());
-        return runtimes.computeIfAbsent(fingerprint, ignored -> createRuntimeEntry(runtime, coreModules, logger));
-    }
-
-    private RuntimeEntry createRuntimeEntry(final XtcLauncherRuntime runtime, final List<File> coreModules, final Logger logger) {
-        final URL[] runtimeUrls = createRuntimeUrls(runtime);
-        logger.info("[plugin] [DIRECT] Creating build-scoped isolated runtime '{}' with {} entries",
-            runtime.source(), runtimeUrls.length);
-        logger.debug("[plugin] [DIRECT] Runtime classpath:\n{}",
-            runtime.classpath().stream()
-                .map(file -> "[plugin] [DIRECT]   " + file.getAbsolutePath())
-                .collect(Collectors.joining("\n")));
-
-        final var loader = new PluginRuntimeClassLoader(runtimeUrls, getClass().getClassLoader());
-        loader.setDefaultAssertionStatus(true);
-        try {
-            final var executorType = loader.loadClass(EXECUTOR_CLASS);
-            final var entry = new RuntimeEntry(
-                loader,
-                (AutoCloseable) executorType.getConstructor(List.class).newInstance(coreModules),
-                executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class),
-                executorType.getMethod("executeRun", DirectRunRequest.class, Logger.class),
-                executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class)
-            );
-            logger.debug("[plugin] [DIRECT] Cached isolated runtimes after creation: {}", runtimes.size() + 1);
-            return entry;
-        } catch (final Exception e) {
-            try {
-                loader.close();
-            } catch (final IOException cleanup) {
-                e.addSuppressed(cleanup);
-            }
-            throw failure(e, "Failed to create isolated direct runtime for '{}'", runtime.source());
-        }
-    }
-
-    private static URL[] createRuntimeUrls(final XtcLauncherRuntime runtime) {
-        // The plugin code source comes first so the isolated loader can see the plugin-side
-        // runtime bridge classes. The resolved XDK runtime entries follow after that.
-        final URL[] urls = new URL[runtime.classpath().size() + 1];
-        urls[0] = codeSourceUrl();
-        for (int i = 0; i < runtime.classpath().size(); i++) {
-            urls[i + 1] = toUrl(runtime.classpath().get(i));
-        }
-        return urls;
-    }
-
-    private static URL codeSourceUrl() {
-        final var codeSource = DirectRuntimeBuildService.class.getProtectionDomain().getCodeSource();
-        if (codeSource == null) {
-            throw failure("Plugin code source is not available for isolated direct runtime loading");
-        }
-        return codeSource.getLocation();
-    }
-
-    private static URL toUrl(final File file) {
-        try {
-            return file.toURI().toURL();
-        } catch (final MalformedURLException e) {
-            throw failure(e, "Invalid runtime classpath entry: {}", file.getAbsolutePath());
-        }
+    private synchronized int invoke(final XtcLauncherRuntime runtime, final List<File> modules, final Object request, final Logger logger) {
+        final var key = DirectRuntimeFingerprint.from(runtime, IsolatedRuntime.codeSource(), modules);
+        final var executor = runtimes.computeIfAbsent(key, ignored -> {
+            logger.info("[plugin] [DIRECT] Creating build-scoped isolated runtime '{}'", runtime.source());
+            return new IsolatedRuntime(runtime.classpath(), modules);
+        });
+        return executor.execute(request, new RuntimeOutput() {
+            @Override
+            public void out(final String text) { logger.lifecycle(text); }
+            @Override
+            public void err(final String text) { logger.error(text); }
+        });
     }
 
     @Override
     public synchronized void close() {
-        LOG.info("[plugin] [DIRECT] Closing build-scoped runtime service with {} cached runtime(s)", runtimes.size());
-        if (LOG.isDebugEnabled()) {
-            runtimes.keySet().forEach(fingerprint ->
-                LOG.debug("[plugin] [DIRECT] Releasing runtime fingerprint: {}", fingerprint.describeForLogging()));
-        }
         RuntimeException failure = null;
-        for (final var entry : runtimes.values()) {
+        for (final var runtime : runtimes.values()) {
             try {
-                entry.close();
+                runtime.close();
             } catch (final RuntimeException e) {
                 if (failure == null) {
                     failure = e;
@@ -174,32 +62,6 @@ public abstract class DirectRuntimeBuildService
         runtimes.clear();
         if (failure != null) {
             throw failure;
-        }
-    }
-
-    private record RuntimeEntry(
-            PluginRuntimeClassLoader classLoader,
-            AutoCloseable executor,
-            Method compileMethod,
-            Method runMethod,
-            Method testMethod) implements AutoCloseable {
-
-        Method executorMethod(final String methodName, final Class<?>[] parameterTypes) throws NoSuchMethodException {
-            return switch (methodName) {
-                case "executeCompile" -> compileMethod;
-                case "executeRun" -> runMethod;
-                case "executeTest" -> testMethod;
-                default -> throw new NoSuchMethodException(methodName + Arrays.toString(parameterTypes));
-            };
-        }
-
-        @Override
-        public void close() {
-            try (classLoader; executor) {
-                // Resources close in reverse order: stop the XVM before releasing its loader.
-            } catch (final Exception e) {
-                throw failure(e, "Failed to close isolated embedding session");
-            }
         }
     }
 }

@@ -5,12 +5,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.file.Files;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-
-import org.gradle.api.logging.Logger;
 
 import org.xvm.api.EmbeddingSupport;
 import org.xvm.api.RunRequest;
@@ -29,33 +28,46 @@ import org.xvm.util.Severity;
 import org.xtclang.plugin.runtime.DirectCompileRequest;
 import org.xtclang.plugin.runtime.DirectRunRequest;
 import org.xtclang.plugin.runtime.DirectTestRequest;
+import org.xtclang.plugin.runtime.RuntimeExecutor;
+import org.xtclang.plugin.runtime.RuntimeOutput;
 
 /**
  * Owns one embedding session inside the selected XDK's implementation classloader.
  */
-public final class IsolatedDirectExecutor implements AutoCloseable {
+public final class IsolatedDirectExecutor implements RuntimeExecutor {
     private static final int DEFAULT_ERROR_LIMIT = 100;
 
     private final EmbeddingSupport session;
+    private volatile EmbeddingSupport.Control activeControl;
 
     public IsolatedDirectExecutor(final List<File> coreModules) {
         session = EmbeddingSupport.create(repository(coreModules));
     }
 
-    public int executeCompile(final DirectCompileRequest request, final Logger logger) {
+    @Override
+    public int execute(final Object request, final RuntimeOutput output) {
+        return switch (request) {
+            case DirectCompileRequest compile -> executeCompile(compile, output);
+            case DirectRunRequest run -> executeRun(run, output);
+            case DirectTestRequest test -> executeTest(test, output);
+            default -> throw new IllegalArgumentException("Unknown embedded request: " + request);
+        };
+    }
+
+    public int executeCompile(final DirectCompileRequest request, final RuntimeOutput output) {
         final var errors = new ErrorList(DEFAULT_ERROR_LIMIT);
-        try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), logger)) {
+        try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), output)) {
             final var options = new IsolatedLauncherOptionsBuilder().buildCompilerOptions(request);
             final int result = session.compile(options, console, errors);
             return console.failed() ? 1 : result;
         }
     }
 
-    public int executeRun(final DirectRunRequest request, final Logger logger) {
-        return executeRun(request, null, logger);
+    public int executeRun(final DirectRunRequest request, final RuntimeOutput output) {
+        return executeRun(request, null, output);
     }
 
-    public int executeTest(final DirectTestRequest request, final Logger logger) {
+    public int executeTest(final DirectTestRequest request, final RuntimeOutput output) {
         if (request.jit()) {
             throw new UnsupportedOperationException(
                 "The experimental JIT does not yet support xUnit's reflection and nested containers; "
@@ -64,12 +76,12 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
         final var execution = new DirectRunRequest(request.projectDir(), request.stdoutFile(), request.stderrFile(),
             request.modulePath(), request.showVersion(), request.verbose(), request.jit(), request.moduleName(),
             request.methodName(), request.moduleArgs());
-        return executeRun(execution, request.outputDir(), logger);
+        return executeRun(execution, request.outputDir(), output);
     }
 
-    private int executeRun(final DirectRunRequest request, final File testOutput, final Logger logger) {
+    private int executeRun(final DirectRunRequest request, final File testOutput, final RuntimeOutput output) {
         final var errors = new ErrorList(DEFAULT_ERROR_LIMIT);
-        try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), logger)) {
+        try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), output)) {
             final var modules = repository(request.modulePath());
             if (request.showVersion()) {
                 Launcher.showSystemVersion(session.getConfiguredRepository(), console);
@@ -99,12 +111,12 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
                     return 1;
                 }
                 final var version = module.getVersionString();
-                final var output = request.projectDir().toPath().toAbsolutePath().normalize()
+                final var outputPath = request.projectDir().toPath().toAbsolutePath().normalize()
                     .relativize(testOutput.toPath().toAbsolutePath().normalize()).toString();
                 injections = Map.of(
                     TestRunner.XUNIT_MODULE_ARG, List.of(module.getName()),
                     TestRunner.XUNIT_MODULE_VERSION_ARG, version == null ? List.of() : List.of(version),
-                    TestRunner.XUNIT_TEST_OUTPUT_DIR, List.of(output));
+                    TestRunner.XUNIT_TEST_OUTPUT_DIR, List.of(outputPath));
                 moduleName = TestRunner.XUNIT_MODULE;
             }
             final var execution = new RunRequest(modules, moduleName, request.methodName(), request.moduleArgs(),
@@ -115,19 +127,32 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
                     console.err(errors.getErrors());
                     return 1;
                 }
+                activeControl = control;
                 control.join();
                 if (errors.hasSeriousErrors() || control.result() == null || console.failed()) {
                     console.err(errors.getErrors());
                     return 1;
                 }
                 return Math.toIntExact(control.result());
+            } finally {
+                activeControl = null;
             }
         }
     }
 
     @Override
-    public void close() {
-        session.close();
+    public void close(final Duration timeout) {
+        session.close(timeout);
+    }
+
+    @Override
+    public boolean cancel(final Duration timeout) {
+        final var control = activeControl;
+        if (control == null) {
+            return false;
+        }
+        control.close(timeout);
+        return true;
     }
 
     private static ModuleRepository repository(final List<File> paths) {
@@ -142,10 +167,10 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
         private final PrintWriter output;
         private final PrintWriter errors;
 
-        RequestConsole(final File stdout, final File stderr, final Logger logger) {
-            output = writer(stdout, logger::lifecycle);
+        RequestConsole(final File stdout, final File stderr, final RuntimeOutput sink) {
+            output = writer(stdout, sink::out);
             try {
-                errors = writer(stderr, logger::error);
+                errors = writer(stderr, sink::err);
             } catch (final RuntimeException e) {
                 output.close();
                 throw e;
