@@ -14,6 +14,7 @@ package propertyInitTests {
         testDefaultProperty();
         testNullablePropertyTarget();
         testNullablePrimitiveProperty();
+        testNarrowUnsignedPropertyEquality();
         testStaticServiceProperty();
         testSingletonService();
         testSingletonConstWithService();
@@ -159,6 +160,36 @@ package propertyInitTests {
         assert sbit == "1";
         assert si64 == "1234567890123";
         assert snil == "Null";
+    }
+
+    /**
+     * Byte/UInt8 lives in a signed byte field and UInt16 in a signed short, but their register form
+     * is unsigned, so a field load sign-extends them. Without masking that back off, a value whose
+     * high bit is set compares unequal to its own literal. Printing such a property hid this,
+     * because boxing masks on the way through; comparing does not box.
+     */
+    void testNarrowUnsignedPropertyEquality() {
+        class Test {
+            Byte    b    = 0xFD;
+            UInt16  u16  = 60000;
+            Int8    i8   = -3;
+            Byte    low  = 5;
+            Nibble  nib  = 0xF;
+            Byte?   nb   = 0xFD;
+            UInt16? nu16 = 60000;
+        }
+
+        Test t = new Test();
+
+        assert t.b   == 0xFD;
+        assert t.u16 == 60000;
+        assert t.nb  == 0xFD;
+        assert t.nu16 == 60000;
+
+        // the cases that were already correct, so the masking must not disturb them
+        assert t.i8  == -3;
+        assert t.low == 5;
+        assert t.nib == 0xF;
     }
 
     void testStaticServiceProperty() {
