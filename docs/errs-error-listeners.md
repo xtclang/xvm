@@ -375,6 +375,7 @@ These existing regressions exercise the contract at different boundaries:
 | Module sessions and publication | `XdkModuleSessionTest`, `XdkModuleServerTest` and `XdkStdioTest`: member overlays, invalidation, cancellation, per-file versions, file creation/removal, cross-file navigation and hierarchy round trips. |
 | Partial source results | `XdkRecoveryTest` and packaged stdio: recovered syntax, sibling outlines, UTF-16/CRLF ranges, unavailable semantics after parse failure and restoration after correction. |
 | Explicit incomplete analysis | `XdkPartialAnalysisTest`: real receiver/parameter identities, flow narrowing, argument spans, UTF-16/CRLF, no overload or emitted method, unsupported syntax, cancellation/budgets and exactly-once EOF delivery. |
+| Cursor request consumers | `XdkCompletionSignatureTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio: copied completion/signature facts, cancellation propagation, module invalidation, unchanged diagnostics and rejection of late results even from an uncooperative backend. |
 | Ambient-pool fallback | `MethodBodyAmbientPoolTest`, `ConstantPoolAmbientTest`, including bound-pool precedence. |
 
 The [tenth hardening pass](errs-integration-plan.md#tenth-pass-bounded-incomplete-analysis-2026-09-22)
@@ -386,16 +387,18 @@ The three follow-ups from the API probe pass are complete: permanent TypeInfo re
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
 subsequent Java-only recovery pass supplies structural source trees after parse errors. Remaining work:
 
-1. Connect the partial-analysis probe to current editor requests before widening completion. In
+1. Widen the proven completion/signature consumer only with the corresponding compiler facts. In
    addition to its original trailing standalone statement, explicit cursors now cover module
    overlays, simple assignment/initializer values, single returns and final nested call arguments.
    It validates intact children in their compiler context, never the missing operation. Internal
-   adapter cursor requests now use the compiler worker and a cancellable listener, returning only
-   copied facts and preserving normal diagnostics. Broader malformed expressions and protocol
-   publication remain open. Compiler mode stays Java-only; stale semantic ranges must never stand
-   in for current facts.
-2. Add compiler facts only for a concrete consumer. Signature help needs argument/parameter mapping
-   and instantiated call-site facts; method implementation lookup needs override relationships.
+   adapter cursor requests use the compiler worker and a cancellable listener, returning only
+   copied facts and preserving normal diagnostics. Completion/signature protocol requests now
+   propagate cancellation and reject facts after the document/module lifetime changes. Bare-name
+   scope, typed member prefixes and broader malformed expressions remain open. Compiler mode stays
+   Java-only; stale semantic ranges must never stand in for current facts.
+2. Add compiler facts only for a concrete consumer. Resolved-call signature help now consumes the
+   actual instantiated signature and argument mapping; incomplete overload inference and named
+   argument mapping remain absent. Method implementation lookup needs override relationships.
    Cross-module indexing, dependency source navigation and safe rename need ownership beyond this
    module snapshot. Hierarchy currently covers direct extends/implements edges between source
    types in the same compilation, not conditional mixins or external library sources.

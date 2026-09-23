@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Current hardening status (2026-09-22).** This document preserves the investigation's chronology;
+**Current hardening status (2026-09-23).** This document preserves the investigation's chronology;
 some later sections describe limitations that subsequent work removed. The current execution and
 integration record is [errs-integration-plan.md](errs-integration-plan.md), and the refreshed failure
 triage is at the end of [errs-audit.md](errs-audit.md). Compiler tests now require their dependencies
@@ -24,9 +24,11 @@ direct type hierarchy within the compiled module. Permanent TypeInfo regressions
 investigated final compositions and an invalid-override control. Java parser recovery now retains
 per-source syntax for outlines, folding and selection around malformed statements and unfinished
 bodies. Ordinary compilation still rejects parse errors. An explicit `analyzeIncomplete` probe now
-validates intact receivers and arguments at a bounded trailing EOF site, without producing a
-compiled module or changing XdkAdapter's feature behavior. Broader incomplete-source analysis,
-cross-module indexing, call-site facts and the unexamined TypeInfo families remain open.
+validates intact receivers and arguments at supported source cursors, including module overlays
+and assignment/return/nested-call contexts, without producing a compiled module. Copied call/member
+facts now support bounded completion and signature help through the adapter and server, with
+request cancellation and document/module lifetime checks. Scope completion, broader syntax,
+incomplete overload inference, cross-module indexing and the unexamined TypeInfo families remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -1291,8 +1293,10 @@ copied syntax children and unknown-receiver diagnostics. Compound/conditional va
 and arguments after the incomplete argument remain unavailable. These are compiler/consumer
 probes. The adapter's internal cursor request API now serializes partial analysis and copying on
 the compiler worker, invalidating requests on edit, supersession, cancellation, close and shutdown.
-It returns immutable facts without changing normal diagnostics; completion/signature protocol
-wiring and document-version checks still precede capability advertisement.
+It returns immutable facts without changing normal diagnostics. The subsequent Kotlin-only protocol
+slice connects completion/signature requests and checks document/module lifetime before delivering
+responses. No further AST or embedding hook was required for that slice. Bare-name scope, typed
+member prefixes and broader incomplete-call inference remain unproven.
 
 #### Call facts owned by the compilation attempt
 
@@ -1326,9 +1330,12 @@ receiver-to-argument rewrites have no selected-call record.
 identity and accessible receiver members. This explicit worker operation can build TypeInfo through
 its supplied listener; ordinary semantic copying remains passive. Candidate signatures include
 receiver substitution but do not claim incomplete-call overload selection or method-type inference.
-The copied argument slot counts only the parser's top-level commas. Scope completion, static/type
-lookup, broader incomplete syntax and LSP integration remain open; XdkAdapter advertises no new
-capability from these models.
+The copied argument slot counts only the parser's top-level commas. The later `XdkCursorQueries`
+consumer now presents qualified member completion, incomplete qualified-call candidates and exact
+selected-call signatures, including named/default parameter mapping. Unknown mappings keep labels
+without parameter highlights. These bounded features are advertised in compiler mode. Scope
+completion, static/type lookup and broader incomplete syntax remain open; see the current
+[capability matrix](../lang/doc/plans/plan-ide-integration.md).
 
 #### Passive source facts on nodes
 
