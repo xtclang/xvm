@@ -325,13 +325,17 @@ class XdkLanguageServerTest {
                     .capabilities
             assertThat(capabilities.hoverProvider.left).isTrue()
             assertThat(capabilities.definitionProvider.left).isTrue()
+            assertThat(capabilities.typeDefinitionProvider.left).isTrue()
+            assertThat(capabilities.implementationProvider.left).isTrue()
             assertThat(capabilities.documentSymbolProvider.left).isTrue()
             assertThat(capabilities.foldingRangeProvider.left).isTrue()
             assertThat(capabilities.completionProvider).isNotNull()
             assertThat(capabilities.renameProvider).isNull()
             assertThat(capabilities.documentFormattingProvider).isNull()
             assertThat(capabilities.signatureHelpProvider).isNotNull()
-            assertThat(capabilities.semanticTokensProvider).isNull()
+            assertThat(capabilities.semanticTokensProvider).isNotNull()
+            assertThat(capabilities.callHierarchyProvider.left).isTrue()
+            assertThat(capabilities.inlayHintProvider.left).isTrue()
         }
     }
 
