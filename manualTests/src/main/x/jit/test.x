@@ -2,12 +2,13 @@ module test.examples.org {
 
     @Inject Console console;
 
-    Int run(String[] args = []) {
-        for (String arg : args) {
-            console.print(arg, True);
-            console.print(" ", True);
-        }
-        console.print("\nType \"echo $?\" to see the args count");
-        return args.size;
+    void run() {
+        @Inject(opts=42) Random rnd;
+        console.print(rnd.int(100));
+        console.print(rnd.int8());
+        console.print(rnd.uint8());
+
+        @Inject Clock clock;
+        console.print($"{clock.resolution=} {clock.monotonic=}");
     }
 }
