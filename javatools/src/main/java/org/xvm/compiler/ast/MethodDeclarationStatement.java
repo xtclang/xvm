@@ -604,7 +604,7 @@ public class MethodDeclarationStatement
         // method children are all deferred up until this stage, so we have to "catch them up" at
         // this point, recreating the various compiler stages here
         MethodStructure method = (MethodStructure) getComponent();
-        if (method == null || !catchUpChildren(errs, mgr.getInvocationBindings())) {
+        if (method == null || !catchUpChildren(errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
             // we are in an error state; we choose not to proceed with compilation
             mgr.deferChildren();
             return;
@@ -908,7 +908,7 @@ public class MethodDeclarationStatement
         if (cDefaults > 0) {
             StatementBlock block = adopt(new StatementBlock(Collections.emptyList()));
 
-            RootContext ctxMethod = new RootContext(block, method, mgr.getInvocationBindings());
+            RootContext ctxMethod = new RootContext(block, method, mgr.getInvocationBindings(), mgr.getCursorBindings());
             Context     ctx       = ctxMethod.validatingContext();
 
             int cParamExprs = params.size();
@@ -945,7 +945,7 @@ public class MethodDeclarationStatement
     }
 
     protected void compileBody(StageMgr mgr, MethodStructure method, ErrorListener errs) {
-        if (body != null && !body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings())) {
+        if (body != null && !body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
             // the compilation has failed; no further progress is possible
             mgr.deferChildren();
         }

@@ -15,10 +15,10 @@ This document describes how to manually test every feature implemented in the Ec
 > **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
 
 ```bash
-# Build with tree-sitter adapter (recommended for full functionality)
+# Build with tree-sitter adapter (the shipped default)
 ./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
 
-# Or with the XTC compiler itself - real semantic diagnostics, and an outline
+# Or opt into XdkAdapter - compiler diagnostics and semantic IDE features
 ./gradlew :lang:lsp-server:build -Plsp.adapter=compiler
 
 # Or with mock adapter (no native dependencies)
@@ -86,8 +86,8 @@ Clients can also ask over JSON-RPC (`xtc/healthCheck`), which answers with `adap
 **IntelliJ:**
 1. Help → Show Log in Finder/Explorer for the IDE-side log, or read the server log directly
 2. Find the banner above
-3. Also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
-5. For IntelliJ plugin runs from this repo, also verify the startup command line in the IDE log:
+3. For Tree-sitter, also verify: `"semantic tokens ENABLED (23 types, 10 modifiers)"` in the log
+4. For IntelliJ plugin runs from this repo using Tree-sitter, also verify the startup command line in the IDE log:
    - `XTC LSP command configured`
    - `-Dxtc.lsp.semanticTokens=true`
    This confirms you are exercising the branch's semantic-token path rather than a stale fallback.
@@ -109,7 +109,7 @@ XdkAdapter - compile: uri=file:///X.x, 106 bytes, 1 diagnostic(s), 3 symbol(s), 
 not written for two at once. `waited` growing while you type is the sign that serialising has
 started to hurt.
 
-### 3. Create Test File
+### 4. Create Test File
 
 Create a file named `TestModule.x` with this content:
 
@@ -153,14 +153,13 @@ module TestModule {
 > (§9) and folding (§10), plus type hierarchy. Definition/reference queries span the active module,
 > including closed members. Workspace-symbol search covers completed module sessions.
 >
-> The compiler backend does not advertise completion, rename, formatting, signature help, code
-> actions, code lenses, document links, linked editing, inlay hints or semantic tokens. Cross-module
-> navigation, go-to-type-definition, find-implementations and call hierarchy remain unavailable.
-> Java parser recovery preserves available structural syntax around `console.`, but that malformed
-> expression has no semantic type. Completion still needs richer recovery and call-site facts.
-> Compiler mode stays Java-only. See [the recovery pass](../../docs/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
+> Compiler completion and signature help are available for the supported cursor contexts. Rename,
+> formatting, code actions, code lenses, document links, linked editing, inlay hints and semantic
+> tokens are not advertised. Cross-module navigation, go-to-type-definition, find-implementations
+> and call hierarchy remain unavailable. Compiler mode stays Java-only.
 >
-> Sections say which adapters they apply to. §7a covers what is only testable with the compiler.
+> Use the [XdkAdapter playbook](#xdkadapter-playbook) for a complete compiler run, including fixtures
+> that compile and precise expectations for compiler-only features. §7a adds diagnostic stress checks.
 
 ### Compiler module sessions and hierarchy
 
@@ -252,7 +251,7 @@ hierarchy or method-implementation lookup.
 
 **LSP Method:** `textDocument/definition`
 **Status:** ✅ Done (scope-aware same-file + cross-file via workspace index)
-**Works with:** All three (compiler: same document only; cross-file needs an index that does not exist yet)
+**Works with:** All three (compiler: resolved identities across the current module, including closed member files)
 
 **How to trigger:**
 - *IntelliJ:* Ctrl+Click on a symbol, or Ctrl+B, or F12
@@ -271,7 +270,7 @@ hierarchy or method-implementation lookup.
 | 4.9 | Forward reference not resolved | Method body where a usage of `name` precedes a local declaration of `name`. Ctrl+Click on the usage | Resolves to module-level / outer-scope / workspace `name`, NOT the forward-declared local |
 | 4.10 | Doc-commented target | Ctrl+Click on a class/method/property preceded by a `/** ... */` doc comment | Cursor lands on the declaration line (e.g. `class Foo {`), NOT on the `/**` opener |
 
-**Notes:**
+**Tree-sitter notes:**
 - Resolution order is: enclosing-scope locals/parameters → class/module members → same-file top-levels → cross-file workspace index.
 - Cross-file definition uses workspace index fallback only when scope-aware resolution finds nothing.
 - Import-path-based resolution is not yet implemented.
@@ -282,7 +281,7 @@ hierarchy or method-implementation lookup.
 
 **LSP Method:** `textDocument/references`
 **Status:** ⚠️ Partial
-**Works with:** Tree-sitter, and the compiler (same document, by what the name means rather than how it is spelled). Mock limited
+**Works with:** Tree-sitter, and the compiler (current module, by resolved identity). Mock limited
 
 **How to trigger:**
 - *IntelliJ:* Alt+F7 (Find Usages), or right-click → Find Usages, or Shift+F12
@@ -375,7 +374,7 @@ is observable under mock or tree-sitter.
 | 7a.11 | Definition of a method call | F12 on `p.sum()` | Jumps to `sum`'s declaration. The name in a call resolves to nothing by itself - which method it is depends on the target and the arguments - so this is the compiler's answer, not a name match |
 | 7a.12 | Definition of something from the core library | F12 on `Int` or `Console` | Nothing happens. It resolves perfectly well and this document has nowhere to point at; jumping to another mention of `Int` in the same file would be worse than doing nothing |
 | 7a.13 | Hover shows a type | Hover over a variable in an expression | The declaration, and the type the compiler decided. On a document that does not compile the type may be absent - an expression only has one once it has been validated |
-| 7a.14 | Completion is absent | Type `console.` and press Ctrl+Space | Completion remains unavailable. Java parser recovery can retain surrounding structural syntax, but the malformed expression has no semantic type or completion contract. |
+| 7a.14 | Compiler completion and call hints | Run X6–X19 in the [XdkAdapter playbook](#xdkadapter-playbook) | Accessible members, visible scope and applicable call candidates come from compiler validation; completing the expression clears normal diagnostics. |
 
 **7a.8 - the duplicate annotation.** This is the case worth keeping, because it is invisible
 everywhere else. No grammar can find it: it needs the compiler to lay `Derived` over `Base` and
@@ -991,6 +990,212 @@ at startup to confirm they're active.
 
 ---
 
+## XdkAdapter Playbook
+
+Run this section with the opt-in **compiler** backend in either editor. Tree-sitter remains the
+shipped default. These checks cover the current compiler feature surface, including semantic
+answers that a syntax parser cannot supply. They do not require running the test program.
+
+### Launch and confirm the backend
+
+From the repository root, choose one command. Keep `-Plsp.adapter=compiler` on the editor launch
+task too: a later build without it can restore the default backend.
+
+```bash
+# IntelliJ sandbox
+./gradlew :lang:runIntellijPlugin \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+
+# Or VS Code Extension Development Host
+./gradlew :lang:vscode-extension:runCode \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+Open a scratch folder in that editor window. Confirm `backend: XTC Compiler` in
+`~/.xtc/logs/lsp-server.log`; the health-check adapter name is `XDK`. The matching XDK libraries
+are bundled, so no `XDK_HOME`, extracted distribution or separate compiler installation is needed.
+Do not use semantic-token colors to identify this backend: it currently supplies no semantic
+tokens, although the editor's TextMate colors and snippets still work.
+
+Use editor action search if a shortcut conflicts with your keymap. The VS Code actions are listed
+in the [keybindings reference](#keybindings-reference); IntelliJ provides Quick Documentation,
+Go to Declaration, Find Usages, Basic Completion and Parameter Info. For hierarchy, use the
+client's LSP type-hierarchy view (VS Code: **Show Type Hierarchy**). If the installed client does
+not expose an action, record that case as **not exercised**, not a server pass.
+
+Create the files below exactly as named. `|` in a test row marks the cursor; **do not type it**.
+Undo each temporary edit before the next row and wait for diagnostics to settle. A clean baseline
+is important: parse failures can suppress normal semantic answers throughout a module.
+
+### A. Diagnostics, navigation and structure
+
+Save this as `Navigation.x`:
+
+```xtc
+module Navigation {
+    class Holder {
+        Int value = 1;
+        Int read() {
+            Int value = 2;
+            return value + this.value;
+        }
+    }
+
+    String text(Object input) {
+        Object value = input;
+        if (value.is(String)) {
+            return value;
+        }
+        return value.toString();
+    }
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X1 | Open the saved file; inspect Problems, Outline, folding and Expand Selection inside `return value;`. | No errors. Outline includes the module, class, property and methods; folding follows their blocks; selection grows through enclosing syntax. |
+| X2 | In `read`, change `Int value = 2;` to `String value = 2;`, then undo. Separately change `input` to `missing` in the initializer in `text`. | Real compiler diagnostics identify the type mismatch and unresolved name at their source spans, with compiler codes. Each clears after correction without saving. `// ERROR: test` alone produces no diagnostic. |
+| X3 | Hover `value` in `text`'s `return value;`, then in `return value.toString();`. | The first use has narrowed type `String`; the second has `Object`. Go to Definition from either reaches the same local declaration. |
+| X4 | In `read`, use Go to Definition, Find References and occurrence highlighting on the bare `value` in `return value + this.value;`. Repeat on `this.value`. | The local and property lead to different declarations and separate reference sets despite identical spelling. Highlights stay within the document; compiler highlights do not distinguish READ/WRITE. |
+| X5 | Run Go to Definition on `String`. Then remove the final closing brace and inspect Outline, folding and selection; restore it. | The bundled library has no source target, so navigation returns no result. Recoverable syntax retains surrounding structure with a parser diagnostic; stale semantic targets are not reused. A badly broken header may leave structural gaps or a cursor-only selection. |
+
+For the error-listener regression, also run **7a.8** with `DupAnno.x`: the duplicate inherited
+annotation produces exactly one `VERIFY-75` warning. Rows **7a.1–7a.7** cover bundled-library startup,
+timings, queued/superseded edits and memory. Timings depend on hardware and module size; record them
+rather than treating the illustrative numbers as pass thresholds.
+
+### B. Typed and scope-aware completion
+
+Save this as `Editing.x`:
+
+```xtc
+module Editing {
+    class Box<T> {
+        T item;
+        private T itemMethod() = item;
+        String choose(String first, String second) = first;
+        Int choose(Int first, Int second) = first;
+        T pair(T first, T second) = first;
+        <U> U generic(U first, U second) = first;
+        void inspect(T itemLocal) {}
+    }
+
+    class Tools {
+        static Int itemFunction() = 1;
+        static Int itemConstant = 2;
+        Int itemProperty = 3;
+        Int itemMethod() = 4;
+        private static Int itemHidden() = 5;
+        static class itemType {}
+        private static class itemPrivate {}
+    }
+
+    String getValue() = "text";
+    void run(Box<String> box, String itemParameter, Object value) {}
+}
+```
+
+Use **Trigger Completion / Basic Completion**, not just the popup triggered by typing. Replace
+the body of `run` for X6–X10 and X12; for X11 use `Box.inspect`. Undo after each row.
+
+| # | Temporary body / action | Expected result |
+|---|-------------------------|-----------------|
+| X6 | `box.|;`, then `box.it|;` | Public members include `item` with substituted type `String`. The prefix filters to matching names; private `itemMethod` is absent. Accepting `item` replaces only `it`, preserving the receiver and semicolon. |
+| X7 | `Int size = getValue().si|;` | `size` is offered from the expression receiver's `String` type. Accept it: `Int size = getValue().size;` has no errors. |
+| X8 | `if (value.is(String)) { Int size = value.si|; }` | `size` is available because of flow narrowing. Accept it and check diagnostics clear. Undo the guard too when finished. |
+| X9 | `Int itemLocal = 1; Int itemUnassigned; item|; Int itemLater = 2;` | Offers `itemLocal` and `itemParameter`; excludes the unreadable unassigned variable and the later declaration. |
+| X10 | Put the cursor in the empty `run` body and invoke completion without typing a prefix. | Visible parameters such as `itemParameter` appear. Accepting one inserts at the cursor without deleting a brace or nearby text. Undo the insertion afterward. |
+| X11 | In `Box.inspect`: `ite|;`. Then try `{ Int itemClosed = 1; } Int item = 2; ite|;`. | First: implicit `item`, private `itemMethod` and parameter `itemLocal`, with formal type `T`. Second: local `item` has type `Int`, the property is shadowed, and closed-scope `itemClosed` is absent. |
+| X12 | In `run`: `Tools.item|;` | Offers static `itemFunction`, `itemConstant` and nested `itemType`; excludes instance `itemProperty`/`itemMethod` and private `itemHidden`/`itemPrivate`. |
+| X13 | In `run`: `Strin|;`. Then add module import `import ecstasy.text.StringBuffer as Buffer;` and try `Buffe|;`. Replace the import with `import ecstasy.text.*;` and try `StringBuffe|;`. | Implicit `String`, explicit alias `Buffer`, then wildcard-imported `StringBuffer` appear. Restore the file between import variants. |
+| X14 | Repeat X7 with `/* 😀 */` before the statement on the same line and the file saved with CRLF line endings. | The accepted completion still replaces exactly `si`. No shifted edit, damaged emoji or extra character. |
+
+### C. Selected signatures and incomplete-call candidates
+
+Keep `Editing.x`. Replace `run`'s body with the call in each row. Invoke **Trigger Parameter Hints /
+Parameter Info** at `|`; leave the closing `)` in place, as an editor normally does.
+
+| # | Call / action | Expected result |
+|---|---------------|-----------------|
+| X15 | `box.choose("x", |);`, then `box.choose(1, |);` | The first offers the `String` overload, the second the `Int` overload. The second parameter is active. These are applicable **candidates**, not final overload selections. |
+| X16 | `box.pair(second="x", first=|);` | Signature types are `String` from `Box<String>`; `first` is active despite being the second written argument. Insert `"y"`: diagnostics clear and the now-valid call uses the compiler-selected signature. Go to Definition on `pair` reaches its declaration. |
+| X17 | `box.generic("x", |);`, then `box.generic(|);` | The first infers `String` for the expected second parameter. Without an argument, the type remains formal `U`, not an invented `Object`. |
+| X18 | `box.choose(True, |);`, `box.pair(unknown=|);`, and `box.pair(first="x", first=|);`, one at a time | No applicable signature for incompatible types, an unknown label or a duplicate label. Earlier hints must not remain visible as the answer to the new request. |
+| X19 | Inside `Box.inspect`: `pair(itemLocal, |);`. Then add `static String join(String first, String second) = first;` to `Tools` and try `Tools.join("x", |);` in `run`. | Implicit-instance and static calls both show applicable candidates with the second parameter active. Fill in the missing values and confirm diagnostics clear. |
+| X20 | Use `box.pair(second="x", |);`. Then complete `box.choose("x", "y");` and navigate from `choose`; repeat with `box.choose(1, 2);`. | After a named argument without a new label, no guessed parameter is highlighted. Complete calls select and navigate to the correct distinct overloads. |
+
+The candidate label/documentation does not mean an unfinished overload has been selected. Ecstasy
+allows trailing commas in valid calls: such a call can already have a selected signature.
+Expected types currently inform candidate signatures; they do not yet drive completion of a
+missing argument value. Normal diagnostics may remain while these deliberately incomplete calls
+still provide useful hints.
+
+### D. Module files, overlays and type hierarchy
+
+Create this layout in the scratch folder. Save both files, then close `Child.x` while keeping
+`Project.x` open.
+
+```text
+Project.x
+Project/
+    Child.x
+```
+
+`Project.x`:
+
+```xtc
+module Project {
+    interface Named {}
+    class Base<Element> implements Named {
+        Element echo(Element value) = value;
+        Int item = 1;
+    }
+}
+```
+
+`Project/Child.x`:
+
+```xtc
+class Child extends Base<String> {
+    String answer() = echo("member");
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X21 | From `Base` in the root, Find References and search workspace symbols for `Child` (Go to Symbol in Workspace). Open Child and navigate from `Base` and `echo`. | References and symbol search include the closed member. Definitions land on the correct names in Project.x. Search covers analysed module sessions, not every unopened module in the workspace. |
+| X22 | Show Type Hierarchy on `Child`; expand supertypes. Show it on `Base` and `Named`; expand subtypes. | Direct links are `Child → Base<String> → Named`, with correct file locations. Expanding Base's subtypes finds Child even if its tab is closed. Generic arguments remain visible. |
+| X23 | Keep both files open. Change Base's name to `Renamed` in the root without saving, then undo. | Child's diagnostic changes without an edit there, then clears after undo. No generic internal error is added to the root merely because the member has an error. |
+| X24 | Add `void inspect() { ite|; }` in Child and complete. Change root property to `String item = "overlay";` without saving; repeat completion in Child. | `item` changes from `Int` to `String` using the unsaved root. Undo the root change: completion returns `Int`. No temporary source files are written. |
+| X25 | Create a named, unsaved `Project/pkg/Added.x` buffer with `class Added extends Base<String> {}`. | The new member and implicit package join the current module; diagnostics and Base's hierarchy reflect Added. An anonymous Untitled buffer without this URI is not this test. |
+| X26 | With Project.x still open, introduce an error in Child, then discard changes and close Child. Reopen it. | The saved disk version replaces the overlay; its obsolete diagnostic clears. Navigation and hierarchy use the restored source. |
+| X27 | With Project.x open, create `Project/Bad.x` on disk containing `class Bad extends Missing {}`; wait, then delete it. | Watched-file notifications refresh membership; the closed file's diagnostic appears and then clears. Run in a workspace containing these files so the client watches them. |
+| X28 | Open hierarchy on Child. Change its parent to `Object`, wait for analysis, then expand the old item and reopen hierarchy. Undo. | The old item cannot return edges from the previous compilation; a fresh hierarchy no longer claims Base as parent. Restoring the file restores the edge. |
+
+### E. Edits, cancellation and capability boundaries
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
+| X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
+| X31 | Try Rename, Format Document/Selection, quick fixes, code lenses and semantic highlighting with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets, TextMate colors or indentation may still work and do not count as compiler feature passes. |
+| X32 | Try a cursor inside an identifier or `box.pa|ir(...)`, a constructor call, a call through a function value, or a call with arguments after the cursor. | These cursor contexts are outside current completion/candidate coverage. An empty answer is acceptable; a crash, stale answer or incorrect replacement edit is not. |
+
+Also unavailable: separate Go to Declaration, Go to Type Definition, Find Implementations, call
+hierarchy, document links, linked editing and inlay hints. Cross-module/dependency navigation,
+external library source targets and conditional-mixin hierarchy are outside this pass. No
+Tree-sitter fallback runs in compiler mode. Check the
+[capability matrix](plans/plan-ide-integration.md#adapter-capability-matrix) when those limits change.
+
+Record the commit, editor/version, confirmed backend, case ID, source/unsaved edits, expected and
+actual result, and relevant server-log lines for failures. Mark unsupported client actions and
+unrun rows explicitly. The packaged compiler regression suite complements the interactive pass:
+
+```bash
+./gradlew :lang:lsp-server:compilerStdioTest --rerun --no-build-cache \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
 ## VS Code Extension Playbook
 
 A self-contained QA runbook for verifying the **VS Code extension** against the same feature surface the IntelliJ plugin is tested against in sections 1–19. Use this whenever you ship a `.vsix` (release, snapshot, or local build) and want end-to-end confidence that nothing regressed for VS Code users. Headless regression coverage of the file-association pipeline is provided by `:lang:vscode-extension:testVscodeExtension` (see the [extension README](../vscode-extension/README.md#testing)); the playbook below covers everything that test can't, which is the interactive LSP / DAP / UI surface.
@@ -1052,7 +1257,7 @@ If P3 stays `⟳`/`⚠`/`✗`, click the status bar item to restart the server. 
 
 ### Feature playbook
 
-This table maps every numbered feature from sections 1–19 to the exact VS Code action and verification surface. The numeric IDs (e.g. `3.5`) match the test-case IDs in the per-feature sections above — refer there for fine-grained subtests and expected outputs.
+This table maps every numbered feature from sections 1–19 to the exact VS Code action and verification surface. The numeric IDs (e.g. `3.5`) match the test-case IDs in the per-feature sections above — refer there for fine-grained subtests and expected outputs. For compiler mode, use the [XdkAdapter playbook](#xdkadapter-playbook); unsupported compiler features in this table are not expected to pass.
 
 | § | Feature | VS Code action | Where to verify | Notes |
 |----|---------|---------------|-----------------|-------|

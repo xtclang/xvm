@@ -6,9 +6,11 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -41,6 +43,7 @@ import org.xvm.compiler.ast.Statement.AstHolder;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -72,6 +75,28 @@ public class Context {
     public InvocationBinding.Collector getInvocationBindings() {
         Context outer = getOuterContext();
         return outer == null ? InvocationBinding.Collector.NONE : outer.getInvocationBindings();
+    }
+
+    /** @return the explicit cursor attempt's collector, or the disabled collector */
+    public CursorBinding.Collector getCursorBindings() {
+        Context outer = getOuterContext();
+        return outer == null ? CursorBinding.Collector.NONE : outer.getCursorBindings();
+    }
+
+    /** Copy scope facts now; callers must not retain this validation context. */
+    public CursorBinding cursorBinding() {
+        // Parameter registers are initialized lazily, including their assignment state.
+        Stream.iterate(this, Objects::nonNull, Context::getOuterContext).forEach(Context::getNameMap);
+        Set<String> names = new HashSet<>();
+        collectVariables(names);
+        var variables = names.stream().sorted()
+                .filter(name -> !isReservedName(name))
+                .map(name -> getVar(name) instanceof Register register
+                        ? new CursorBinding.Variable(name, register, register.getType(), isVarReadable(name))
+                        : null)
+                .filter(Objects::nonNull)
+                .toList();
+        return new CursorBinding(variables, getThisType(), !isFunction());
     }
 
     /**

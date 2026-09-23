@@ -1252,11 +1252,13 @@ public class Parser {
     StatementBlock parseStatementBlock() {
         Token tokStart = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
+        retainEmptyCursor(stmts);
         while (!atBlockEnd(false)) {
             Mark statementStart = mark();
             long lStart = peek().getStartPosition();
             try {
                 stmts.add(parseStatement());
+                retainEmptyCursor(stmts);
             } catch (IncompleteSyntax e) {
                 // Do not reinterpret a return, assignment, condition or nested call as a
                 // standalone expression. Only the intact statement prefix is supported.
@@ -1277,6 +1279,18 @@ public class Parser {
         }
 
         return new StatementBlock(stmts, tokStart.getStartPosition(), prev().getEndPosition());
+    }
+
+    /** A zero-width insertion anchor after an intact statement or opening brace. */
+    private void retainEmptyCursor(List<Statement> statements) {
+        if (f_cursor != NO_CURSOR && (prev().getId() == Id.L_CURLY
+                || prev().getId() == Id.R_CURLY || prev().getId() == Id.SEMICOLON)
+                && canRetainIncomplete()) {
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            statements.add(new IncompleteStatement(
+                    new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
+            match(Id.SEMICOLON);
+        }
     }
 
     /**
@@ -3499,6 +3513,11 @@ public class Parser {
                 return expr;
             }
 
+            if (left == null && name.getEndPosition() == f_cursor && canRetainIncomplete()) {
+                log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                throw new IncompleteSyntax(new IncompleteStatement(name, f_cursor, INCOMPLETE_EXPRESSION));
+            }
+
             // test for a non-auto-narrowing modifier ("!")
             Token tokNoNarrow = !peek().hasLeadingWhitespace()
                     ? match(Id.NOT)
@@ -5102,6 +5121,9 @@ public class Parser {
             }
         }
 
+        if (partial && label != null && canRetainIncomplete()) {
+            throw new IncompleteArgument(label);
+        }
         Expression expr;
         if (allowCurrying && !fArray) {
             switch (peek().getId()) {
@@ -5156,7 +5178,15 @@ public class Parser {
         }
         if (match(Id.R_PAREN) == null) {
             while (true) {
-                Expression argument = parseArgument(true, false, f_cursor != NO_CURSOR);
+                Expression argument;
+                try {
+                    argument = parseArgument(true, false, f_cursor != NO_CURSOR);
+                } catch (IncompleteArgument e) {
+                    match(Id.R_PAREN);
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    throw new IncompleteSyntax(IncompleteStatement.forNamedArgument(
+                            callee, open, args, separators, f_cursor, e.name));
+                }
                 args.add(argument);
                 Expression value = argument instanceof LabeledExpression labeled
                         ? labeled.getUnderlyingExpression() : argument;
@@ -5244,6 +5274,16 @@ public class Parser {
         }
 
         private final IncompleteStatement statement;
+    }
+
+    /** Unwind only to the owning call, retaining a written label without inventing a value. */
+    private static class IncompleteArgument extends CompilerException {
+        private IncompleteArgument(Token name) {
+            super("Incomplete named argument");
+            this.name = name;
+        }
+
+        private final Token name;
     }
 
     /**

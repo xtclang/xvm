@@ -18,7 +18,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.function.BiConsumer;
+
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -50,6 +53,7 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
@@ -750,6 +754,11 @@ public abstract class AstNode
 
     /** Catch up children using the enclosing compilation attempt's collector. */
     protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings) {
+        return catchUpChildren(errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings,
+                                       CursorBinding.Collector cursors) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
@@ -789,7 +798,7 @@ public abstract class AstNode
         ErrorListener errsTemp = errs.branch(this);
         while (stageOldest.compareTo(stageTarget) < 0) {
             Stage    stageNext = stageOldest.nextTarget();
-            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings);
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings, cursors);
             for (int cTries = 0; !mgrKids.processComplete(); cTries++) {
                 if (errsTemp.isAbortDesired() || cTries > 20) {
                     mgrKids.logDeferredAsErrors(errsTemp);
@@ -1087,6 +1096,25 @@ public abstract class AstNode
             Set<MethodConstant>                  setConvert,
             Map<MethodConstant, MethodStructure> mapMethods,
             ErrorListener                        errs) {
+        collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
+                mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errs, (signature, ordered) -> {});
+    }
+
+    /** Reuse ordinary argument fitting; only explicit cursor probes observe tentative signatures. */
+    private void collectMatchingMethods(
+            Context                              ctx,
+            TypeConstant                         typeTarget,
+            TypeInfo                             infoTarget,
+            Set<MethodConstant>                  setMethods,
+            List<Expression>                     listExprArgs,
+            boolean                              fCall,
+            Map<String, Expression>              mapNamedExpr,
+            TypeConstant[]                       atypeReturn,
+            Set<MethodConstant>                  setIs,
+            Set<MethodConstant>                  setConvert,
+            Map<MethodConstant, MethodStructure> mapMethods,
+            ErrorListener                        errs,
+            BiConsumer<SignatureConstant, List<Expression>> matching) {
         ConstantPool  pool     = pool();
         int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
         int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
@@ -1295,6 +1323,7 @@ public abstract class AstNode
                 setIs.add(idMethod);
             }
             mapMethods.put(idMethod, method);
+            matching.accept(sigMethod, listArgs);
 
             if (fExact) {
                 return;
@@ -1306,6 +1335,43 @@ public abstract class AstNode
         if (cNameErrs > 0 || cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1)) {
             errsKeep.merge();
         }
+    }
+
+    /**
+     * Test one incomplete-call candidate with the compiler's usual named-argument, conversion and
+     * generic inference rules. Cloned arguments and a child context isolate speculative changes.
+     * Missing parameters are permitted; no best-overload selection or invocation validation occurs.
+     */
+    final List<CursorBinding.Candidate> probeCallCandidate(Context ctx, TypeConstant target, TypeInfo info,
+            MethodConstant method, List<Expression> arguments, ErrorListener errs) {
+        var written = arguments.stream().map(argument -> (Expression) argument.clone()).toList();
+        var named = collectNamedArgs(written, errs);
+        if (named == null || errs.isAbortDesired()) {
+            return List.of();
+        }
+        Set<MethodConstant> direct = new HashSet<>();
+        Set<MethodConstant> converting = new HashSet<>();
+        List<CursorBinding.Candidate> result = new ArrayList<>();
+        collectMatchingMethods(ctx.enter(), target, info, Set.of(method), written, false, named,
+                null, direct, converting, new HashMap<>(), errs, (signature, ordered) -> {
+                    var resolved = signature.resolveGenericTypes(pool(), target);
+                    var original = info.getMethodById(method).getSignature();
+                    // A pending method formal is not a concrete expected type. Retain its written
+                    // formal instead of leaking PendingTypeConstant or substituting Object.
+                    var params = IntStream.range(0, resolved.getParamCount())
+                            .mapToObj(i -> resolved.getRawParams()[i].containsUnresolved()
+                                    ? original.getRawParams()[i] : resolved.getRawParams()[i])
+                            .toArray(TypeConstant[]::new);
+                    var returns = IntStream.range(0, resolved.getReturnCount())
+                            .mapToObj(i -> resolved.getRawReturns()[i].containsUnresolved()
+                                    ? original.getRawReturns()[i] : resolved.getRawReturns()[i])
+                            .toArray(TypeConstant[]::new);
+                    var copied = pool().ensureSignatureConstant(resolved.getName(), params, returns);
+                    var declaration = info.getMethodById(method).getTopmostMethodStructure(info).getIdentityConstant();
+                    InvocationBinding.arguments(written, ordered).ifPresent(mapping ->
+                            result.add(new CursorBinding.Candidate(declaration, copied, mapping, converting.contains(method))));
+                });
+        return List.copyOf(result);
     }
 
     /**

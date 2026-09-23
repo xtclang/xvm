@@ -77,6 +77,7 @@ import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -2392,7 +2393,7 @@ public class TypeCompositionStatement
                 break ValidateShorthand;
             }
 
-            RootContext ctxConstruct = createConstructorContext(constructor, mgr.getInvocationBindings());
+            RootContext ctxConstruct = createConstructorContext(constructor, mgr.getInvocationBindings(), mgr.getCursorBindings());
             Context     ctx          = ctxConstruct.validatingContext();
 
             if (constructorParams != null && !constructorParams.isEmpty()) {
@@ -2523,12 +2524,12 @@ public class TypeCompositionStatement
      * A simple helper to create a new context for shorthand constructor processing.
      */
     private RootContext createConstructorContext(MethodStructure constructor,
-                                                 InvocationBinding.Collector bindings) {
+                                                 InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         StatementBlock blockBody = body;
         if (body == null) {
             blockBody = adopt(new StatementBlock(Collections.emptyList()));
         }
-        return new RootContext(blockBody, constructor, bindings);
+        return new RootContext(blockBody, constructor, bindings, cursors);
     }
 
     /**

@@ -37,6 +37,7 @@ import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
@@ -468,18 +469,27 @@ public class EmbeddingSupport {
      * The available source syntax and sites may be unvalidated. A child expression supplies a
      * semantic fact only if validation succeeded (isValidated and a fitting TypeFit) and its
      * resolved target/type is available. Failed validation can leave placeholder types. An absent
-     * pool means semantic analysis did not start. No overload, missing argument, or result type
-     * is inferred for the incomplete operation. Consumers must copy facts while exclusively
+     * pool means semantic analysis did not start. Cursor bindings copy visible scope and candidate
+     * signatures/mappings fitted to written arguments; they never select the incomplete operation
+     * or invent a missing argument/result. Consumers must copy facts while exclusively
      * owning the attempt, as with Compilation; ASTs and pools are not concurrent query objects.
      */
     public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
                                   Optional<ConstantPool> pool,
-                                  Map<InvocationExpression, InvocationBinding> callBindings) {
+                                  Map<InvocationExpression, InvocationBinding> callBindings,
+                                  Map<IncompleteStatement, CursorBinding> cursorBindings) {
         public PartialAnalysis {
-            sourceTrees = List.copyOf(sourceTrees);
-            sites       = List.copyOf(sites);
+            sourceTrees    = List.copyOf(sourceTrees);
+            sites          = List.copyOf(sites);
+            cursorBindings = Map.copyOf(cursorBindings);
             requireNonNull(pool, "pool");
             callBindings = Map.copyOf(callBindings);
+        }
+
+        /** Retain the construction API for call/receiver-only results. */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                               Optional<ConstantPool> pool, Map<InvocationExpression, InvocationBinding> callBindings) {
+            this(sourceTrees, sites, pool, callBindings, Map.of());
         }
 
         /** Retain the construction API for syntax/receiver-only results. */
@@ -526,6 +536,8 @@ public class EmbeddingSupport {
      * A cursor at the end of a written member token retains that token as a completion prefix.
      * A cursor before a call's closing parenthesis inspects its receiver and written arguments,
      * even when the selected syntax is complete. The selected member/call itself is not validated.
+     * Bare-name prefixes and empty statement boundaries expose visible scope; a final named argument
+     * awaiting its value retains its label. Candidate signatures can infer types from written arguments.
      * Compound/conditional value prefixes and arguments following the cursor remain unsupported.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
@@ -604,9 +616,10 @@ public class EmbeddingSupport {
             return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
         }
 
-        Compilation attempt = compileModule(listener -> parsed, input, host);
+        var cursors = new CursorBinding.Collector();
+        Compilation attempt = compileModule(listener -> parsed, input, host, cursors);
         return new PartialAnalysis(parsed.sources(), sites, Optional.ofNullable(attempt.pool()),
-                attempt.callBindings());
+                attempt.callBindings(), cursors.finish(parsed.sources()));
     }
 
     /** Parsed children exist before parent links; expose the innermost unfinished operations. */
@@ -625,9 +638,14 @@ public class EmbeddingSupport {
 
     private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
                                       ModuleRepository input, ErrorListener errs) {
+        return compileModule(parse, input, errs, CursorBinding.Collector.NONE);
+    }
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
+                                      ModuleRepository input, ErrorListener errs, CursorBinding.Collector cursors) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs);
+        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs, cursors);
         try {
             if (!errs.isAbortDesired()) {
                 compiler.process();
@@ -689,6 +707,7 @@ public class EmbeddingSupport {
             extends org.xvm.tool.Compiler {
         private final Function<ErrorListener, ParsedSources> parse;
         private final InvocationBinding.Collector bindings = new InvocationBinding.Collector();
+        private final CursorBinding.Collector cursors;
 
         private final ModuleRepository     inRepo;
         private final ModuleRepository     coreRepo;
@@ -728,10 +747,12 @@ public class EmbeddingSupport {
         }
 
         protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
-                                    ModuleRepository input, ModuleRepository core, ErrorListener errs) {
+                                    ModuleRepository input, ModuleRepository core, ErrorListener errs,
+                                    CursorBinding.Collector cursors) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.parse    = parse;
+            this.cursors  = cursors;
             this.inRepo   = input;
             this.coreRepo = core;
         }
@@ -776,7 +797,7 @@ public class EmbeddingSupport {
                 return checkErrors("source parsing");
             }
 
-            Compiler      compiler = new Compiler(stmtModule, this, bindings);
+            Compiler      compiler = new Compiler(stmtModule, this, bindings, cursors);
             FileStructure struct   = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {

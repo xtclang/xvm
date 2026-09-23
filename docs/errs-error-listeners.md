@@ -393,14 +393,17 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    It validates intact children in their compiler context, never the missing operation. Internal
    adapter cursor requests use the compiler worker and a cancellable listener, returning only
    copied facts and preserving normal diagnostics. Completion/signature protocol requests now
-   propagate cancellation and reject facts after the document/module lifetime changes. Bare-name
-   scope and broader malformed expressions remain open. Typed member prefixes and calls before
+   propagate cancellation and reject facts after the document/module lifetime changes. Broader
+   malformed expressions remain open. Scope completion, typed member prefixes and calls before
    existing closing parentheses now use the same explicit probe, with exactly-once diagnostics,
    cancellation and budget coverage; their results never replace normal compilation diagnostics.
    Compiler mode stays Java-only; stale semantic ranges must never stand in for current facts.
 2. Add compiler facts only for a concrete consumer. Resolved-call signature help now consumes the
-   actual instantiated signature and argument mapping; incomplete overload inference and named
-   argument mapping remain absent. Method implementation lookup needs override relationships.
+   actual instantiated signature and argument mapping. Incomplete calls now reuse compiler argument
+   fitting on trial copies, with candidate-specific generic types and named mappings. Candidate
+   mismatches are speculative and discarded; explicit TypeInfo inspection reports through the host
+   listener and all probes observe cancellation. No candidate is a selected call. Method
+   implementation lookup still needs override relationships.
    Cross-module indexing, dependency source navigation and safe rename need ownership beyond this
    module snapshot. Hierarchy currently covers direct extends/implements edges between source
    types in the same compilation, not conditional mixins or external library sources.

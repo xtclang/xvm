@@ -11,13 +11,16 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.Register
+import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.PseudoConstant
 import org.xvm.asm.constants.SignatureConstant
+import org.xvm.asm.constants.SingletonConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
+import org.xvm.asm.constants.TypedefConstant
 import org.xvm.compiler.InvocationBinding
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
@@ -235,17 +238,61 @@ private class SemanticModelBuilder {
                         ?.let { constants[it] }
                 val receiver = site.receiver.orElse(null)
                 val receiverType = validatedType(receiver)
+                val cursor = analysis.cursorBindings()[site]
+                val identity = (receiver as? NameExpression)?.resolvedTarget
+                val staticType =
+                    when (identity) {
+                        is ClassConstant -> identity.type
+                        is TypedefConstant -> identity.referredToType
+                        else -> null
+                    }
+                val lookupKind =
+                    when {
+                        identity is SingletonConstant -> Lookup.IMPLICIT
+                        staticType != null -> Lookup.STATIC
+                        else -> Lookup.INSTANCE
+                    }
                 val callee = (site.target as? NameExpression)?.name.takeIf { site.isCall }
+                val locals =
+                    cursor?.variables().orEmpty().filter { it.readable() }.mapNotNull { variable ->
+                        val id = symbol(variable.register(), variable.name(), SymbolKind.VARIABLE) ?: return@mapNotNull null
+                        PartialSemanticModel.Member(id, variable.name(), symbols[id]!!.kind, type(variable.type()), null)
+                    }
+                val scopeMembers =
+                    if (cursor != null && owner != null && (site.isNameCompletion || receiver == null)) {
+                        receiverMembers(cursor.thisType(), owner, errors, if (cursor.instance()) Lookup.IMPLICIT else Lookup.STATIC)
+                            .filter { member -> cursor.variables().none { it.name() == member.name } }
+                    } else {
+                        emptyList()
+                    }
+                val scopeTypes =
+                    cursor?.types().orEmpty().mapNotNull { named ->
+                        val id = symbol(named.identity(), named.name(), kind(named.identity())) ?: return@mapNotNull null
+                        PartialSemanticModel.Member(id, named.name(), symbols[id]!!.kind, type(named.identity().type), null)
+                    }
                 val members =
-                    if (receiverType != null && owner != null && !errors.isAbortDesired) {
-                        receiverMembers(receiverType, owner, errors).filter {
+                    if (site.isNameCompletion) {
+                        locals + scopeMembers.filter { member -> scopeTypes.none { it.name == member.name } } + scopeTypes
+                    } else if (site.isCall && receiver == null) {
+                        scopeMembers.filter { it.kind == SymbolKind.METHOD && it.name == callee }
+                    } else if (receiverType != null && owner != null && !errors.isAbortDesired) {
+                        receiverMembers(
+                            staticType ?: receiverType,
+                            owner,
+                            errors,
+                            lookupKind,
+                        ).filter {
                             !site.isCall || (it.kind == SymbolKind.METHOD && it.name == callee)
                         }
                     } else {
                         emptyList()
                     }
                 PartialSemanticModel.Site(
-                    if (site.isCall) PartialSemanticModel.Kind.CALL else PartialSemanticModel.Kind.MEMBER_ACCESS,
+                    when {
+                        site.isCall -> PartialSemanticModel.Kind.CALL
+                        site.isNameCompletion -> PartialSemanticModel.Kind.NAME
+                        else -> PartialSemanticModel.Kind.MEMBER_ACCESS
+                    },
                     location(site.source, site.startPosition, site.endPosition).range,
                     location(site.source, site.operator.startPosition, site.operator.endPosition).range,
                     receiver?.let { location(site.source, it.startPosition, it.endPosition).range },
@@ -275,6 +322,28 @@ private class SemanticModelBuilder {
                             )
                         } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range)
                     },
+                    cursor?.takeIf { it.callsInspected() }?.candidates()?.let { candidates ->
+                        immutableList(
+                            candidates.mapNotNull { candidate ->
+                                val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
+                                val signature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
+                                val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
+                                PartialSemanticModel.CallCandidate(
+                                    PartialSemanticModel.Member(id, method.name, SymbolKind.METHOD, null, signature),
+                                    immutableList(
+                                        candidate.arguments().map {
+                                            SemanticModel.CallArgument(
+                                                location(site.source, it.startPosition(), it.endPosition()).range,
+                                                it.parameterIndex(),
+                                            )
+                                        },
+                                    ),
+                                    candidate.converting(),
+                                )
+                            },
+                        )
+                    },
+                    site.pendingArgumentName.orElse(null)?.valueText,
                 )
             }
         return if (errors.isAbortDesired) {
@@ -284,10 +353,13 @@ private class SemanticModelBuilder {
         }
     }
 
+    private enum class Lookup { INSTANCE, STATIC, IMPLICIT }
+
     private fun receiverMembers(
         receiver: TypeConstant,
         owner: ClassStructure,
         errors: ErrorListener,
+        lookupKind: Lookup = Lookup.INSTANCE,
     ): List<PartialSemanticModel.Member> {
         // This explicit inspection owns its diagnostics. Ordinary snapshot extraction stays passive.
         val lookup = ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
@@ -297,7 +369,8 @@ private class SemanticModelBuilder {
         val methods =
             info.methods.values
                 .filter {
-                    it.identity.isTopLevel && !it.isCtorOrValidator && !it.isFunction &&
+                    it.identity.isTopLevel && !it.isCtorOrValidator &&
+                        (lookupKind == Lookup.IMPLICIT || it.isFunction == (lookupKind == Lookup.STATIC)) &&
                         (privateAccess || it.isVisible(owner.identityConstant))
                 }.mapNotNull { method ->
                     val structure = method.getOptionalTopmostMethodStructure(info) ?: return@mapNotNull null
@@ -306,12 +379,25 @@ private class SemanticModelBuilder {
                     PartialSemanticModel.Member(symbol, structure.name, SymbolKind.METHOD, null, signature)
                 }
         val properties =
-            info.ensurePropertiesByName().values.filter { privateAccess || it.isVisible(owner.identityConstant) }.mapNotNull { property ->
-                val type = type(property.inferImmutable(receiver)) ?: return@mapNotNull null
-                val symbol = symbol(property.identity, property.name, SymbolKind.PROPERTY) ?: return@mapNotNull null
-                PartialSemanticModel.Member(symbol, property.name, SymbolKind.PROPERTY, type, null)
-            }
-        return (methods + properties).sortedWith(compareBy({ it.name }, { it.kind }, { it.symbol.index }))
+            info
+                .ensurePropertiesByName()
+                .values
+                .filter {
+                    (lookupKind != Lookup.STATIC || it.isConstant) && (privateAccess || it.isVisible(owner.identityConstant))
+                }.mapNotNull { property ->
+                    val type = type(property.inferImmutable(receiver)) ?: return@mapNotNull null
+                    val symbol = symbol(property.identity, property.name, SymbolKind.PROPERTY) ?: return@mapNotNull null
+                    PartialSemanticModel.Member(symbol, property.name, SymbolKind.PROPERTY, type, null)
+                }
+        val children =
+            info.childInfosByName.values
+                .filter {
+                    info.type.access.canSee(it.access) || it.identity.classIdentity.isNestMateOf(owner.identityConstant)
+                }.mapNotNull { child ->
+                    val id = symbol(child.identity, child.name, SymbolKind.TYPE) ?: return@mapNotNull null
+                    PartialSemanticModel.Member(id, child.name, SymbolKind.TYPE, type(child.identity.type), null)
+                }
+        return (methods + properties + children).sortedWith(compareBy({ it.name }, { it.kind }, { it.symbol.index }))
     }
 
     private fun hierarchy(nodes: List<AstNode>): Map<SymbolId, SemanticModel.TypeDeclaration> =
