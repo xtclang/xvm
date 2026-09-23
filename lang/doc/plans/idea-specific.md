@@ -67,7 +67,8 @@ The tree-sitter adapter provides the following syntax-based features without com
 - Call hierarchy / type hierarchy views
 
 The compiler now supplies bounded type hints, module references, diagnostics, member completion,
-static call hierarchy and direct source type hierarchy. Safe rename and native override gutter
+static call hierarchy and direct source type hierarchy. Bounded local/private-parameter rename
+requires client support for versioned edits; wider rename and native override gutter
 markers remain work; workspace-wide references and external hierarchy are not implemented.
 
 ---
@@ -170,7 +171,7 @@ server to implement them (most already done):
 | `textDocument/inlayHint` | Type/param hints inline | Bounded inferred-local and selected-parameter hints in compiler mode |
 
 Capabilities depend on the selected adapter: the rows marked Done are the original shared/default
-surface, not a claim that compiler mode supports formatting, rename, code actions or document links.
+surface, not a claim that compiler mode supports formatting, general member/workspace rename, code actions or document links.
 Use the canonical matrix for that distinction.
 
 ### What we should configure in LSP4IJ

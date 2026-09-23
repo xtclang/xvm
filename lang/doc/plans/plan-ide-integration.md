@@ -84,8 +84,9 @@ lambda capture associations live in a helper owned by the lambda compilation con
 The compiler backend supplies bounded member completion and signature help through explicit cursor
 analysis and copied selected-call facts. Type-definition, type/method implementation lookup,
 static call hierarchy, resolved-name semantic tokens, read/write highlights and bounded inlay hints
-also use copied facts. Rename, document links, formatting, code actions, code lenses and linked
-editing remain unsupported. A trailing `.` still produces a
+also use copied facts. Bounded local/private-parameter rename recompiles and checks bindings,
+including named labels, before returning versioned edits. Document links, formatting, code actions,
+code lenses and linked editing remain unsupported. A trailing `.` still produces a
 normal syntax diagnostic; a separate cursor probe can inspect its intact receiver without
 accepting or emitting the damaged expression. Compiler mode stays Java-only.
 The bundled XDK is part of the server; no external installation is required.
@@ -134,8 +135,8 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
 | Signature help | - | Same-file | **Partial** - exact selected signatures for resolved calls; incomplete qualified/implicit/static calls filter candidates using compiler argument fitting, generic inference and named parameter mapping, including before an existing closing parenthesis |
-| Rename (same file) | Text | AST | Not implemented |
-| Rename (cross-file) | - | - | Not implemented - module references exist; workspace ownership, edit validation and rename rules remain |
+| Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; recompilation plus all-binding checks; client versioned-edit support required |
+| Rename (cross-file) | - | - | Member/override/workspace rename unavailable; bounded rename analyzes the whole module, including closed files |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
 | Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | Not implemented |
 | Range formatting | Trailing WS in range | Structural formatting in range | Not implemented |
@@ -181,8 +182,12 @@ Call hierarchy includes written anonymous methods and recursive/overloaded calls
 successful module snapshot and source locations at both ends. Runtime dispatch expansion,
 function-value calls, constructors, property initializer/accessor edges and dependency sources
 remain outside this slice. Inlay hints do not invent parameter names for unresolved candidates or
-infer lambda return annotations. These features load no native parser. Rename probes have exposed
-silent capture and missing named-label reference spans; rename remains unadvertised.
+infer lambda return annotations. These features load no native parser. Rename compares pre/post-edit
+bindings for every recorded occurrence and selected call, rejecting silent capture. Named labels
+resolve to the selected source parameter. Public/lambda/constructor parameters and method-value
+escapes are excluded. Unsupported bindings or unsuccessful compilation produce no edits. Source,
+dependency and document-version changes cancel stale proofs; closed file text/membership is checked
+again before returning edits. The full scope and manual cases are in the rename playbook.
 
 Semantic results can be partial when validation fails. Parse errors prevent semantic compilation,
 but `Compilation.sourceTrees()` retains available per-file syntax for outline, folding and selection.
@@ -370,7 +375,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Direct source type hierarchy, type-definition and actual method-chain implementation lookup are implemented
    - Static selected-call hierarchy, resolved-name tokens, read/write highlights and bounded hints are implemented
    - Scope, imported types, static lookup and bounded incomplete-call fitting now have compiler-backed consumers
-   - Safe rename needs named-label bindings and before/after binding checks; sustained lifecycle and compatibility checks remain the API POC gate
+   - Bounded rename now has named-label and binding checks; lifecycle and migration regressions cover the integrated API. Validate extracted PRs independently
    - Extend the documented syntax/callable limits only with compiler evidence
 
    The selected implementation uses the existing javatools compiler. The older research-fork
@@ -384,7 +389,7 @@ Full tree-sitter support for fast, incremental parsing:
 ### Long-term (Advanced Features)
 
 8. **Refactoring support (cross-file)**
-   - Rename symbol (same file) is implemented by Mock and Tree-sitter; the compiler backend does not advertise it
+   - Rename symbol (same file) is implemented by Mock and Tree-sitter; compiler mode advertises bounded locals/private-parameter rename to clients supporting versioned edits
    - Cross-file rename (requires compiler)
    - Extract method/variable
    - Safe delete
