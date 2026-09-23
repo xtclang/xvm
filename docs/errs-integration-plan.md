@@ -43,14 +43,16 @@ Execution checklist (complete each item with the evidence specified below):
   - [x] Adapter cursor requests share the compiler worker; edits, superseding requests, close and
     cancellation invalidate running/queued work without replacing normal diagnostics.
   - [x] Server document-version checks and request cancellation through publication.
-- [ ] **3. Completion and signature help — protocol and cursor syntax slices implemented.**
+- [x] **3. Completion and signature help — bounded compiler-backed POC complete.**
   - [x] Qualified receiver completions and unfinished qualified-call candidates through real requests.
   - [x] Selected instantiated signatures and named/default argument mapping for resolved calls.
   - [x] Adapter/server cancellation, module invalidation and packaged stdio regressions.
   - [x] Typed member prefixes with original-token replacement edits; incomplete calls with
     editor-inserted closing parentheses.
-  - [ ] Bare-name scope completion and implicit/static receivers.
-  - [ ] Applicable-overload selection, expected argument types and incomplete named-argument mapping.
+  - [x] Bare-name scope completion and implicit/static receivers, including readable locals,
+    narrowed types, shadowing, imported/enclosing type names and static member access checks.
+  - [x] Candidate applicability, inferred expected argument types and incomplete named-argument
+    mapping. An unfinished call still has no selected overload; missing arguments cannot prove one.
 - [ ] **4. Other semantic consumer probes.** Type-definition, implementation lookup, call hierarchy,
   semantic classification/inlay hints and module-local rename validation.
 - [ ] **5. Dependency/source boundary.** Prove identities, available source locations and dependency
@@ -72,7 +74,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; compound/conditional prefixes and arguments following the cursor remain unavailable. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — protocol consumer present | Qualified dot/prefix completion, qualified-call candidates before an existing closing parenthesis and resolved-call signature help now work through the server. Visible locals/implicit receivers, static/type lookup, applicable overloads, expected argument types and incomplete named-argument mapping remain absent. Function values, partial application and receiver-to-argument rewrites have no selected-call record. | Real adapter/stdio requests cover qualified generic receivers, overload candidates, resolved unqualified generic/named calls, original-token edits, module overlays and edits; adapter tests also pin defaults and nested calls. Keep source slots distinct from compiler-selected parameters. Widen scope coverage with consumers before freezing the API. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Broader syntax, enclosing-instance member completion, type-valued receiver fallbacks and function-valued/receiver-rewritten calls remain outside this slice. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Types lack an explicit copied declaration link; calls lack an explicit caller association; occurrences classify declaration/reference, not read/write or modifiers. Override/implementation and safe rename relationships still need proof. | Small compiler-backed consumers for type-definition, implementation lookup, incoming/outgoing calls, semantic tokens/inlay hints and module-local rename conflict checks. Record which facts can be copied from existing compiler structures and which need a small compiler hook. Include captures, shadowing, overloads and generated declarations. |
 | 5. Dependency/source boundary | Module navigation works; cross-module/library source lookup and persistent workspace indexing do not. Snapshot IDs intentionally expire between attempts. | A two-module fixture proves dependency identity, available source locations and invalidation when the dependency changes. Specify host source/repository ownership and index keys; missing library sources must remain unavailable. A production workspace index can follow separately. |
 | 6. Lifetime and compatibility | Current concurrency/retention measurements are bounded; the new collector and future partial requests need sustained exercise. Public listener signatures and result record shapes have migration implications. | Repeated multi-file edits, cancellation, close/reopen and shutdown release attempts/ASTs/pools; copied queries remain pool-free on other threads. Record latency observations, compare compiled output against the base, and finalize constructor/record-pattern and listener migration examples. |
@@ -84,8 +86,8 @@ an explicit scope decision. Formatting, editor polish, a production persistent i
 implementations of every LSP handler need not delay that API decision. Unsupported protocol
 capabilities remain unadvertised, and Tree-sitter stays the shipped default.
 
-The next step is task-3 scope completion, followed by incomplete overload inference, then the other
-semantic consumers and sustained validation before extracting the proposed PRs.
+The next step is task 4's other semantic consumers, starting with type-definition and implementation
+lookup, followed by dependency/source boundaries and sustained validation before extracting PRs.
 
 The runtime-annotation metadata correction should be extracted as an independent compiler fix,
 with its annotation application and reporting-TypeInfo controls. The structured `EMB-6` module-root
@@ -175,16 +177,17 @@ the shipped default. No compiler, embedding API or AST changes were needed for t
 
 | Required fact | Existing source and owner | Proven consumer / remaining boundary |
 |---|---|---|
-| Receiver members and generic substitution | Worker-built `PartialSemanticModel` in Kotlin | Completion after a supported receiver dot or at the end of a written member prefix; overloads and access checks retained. Locals and static/type lookup remain absent. |
+| Receiver members and generic substitution | Worker-built `PartialSemanticModel` in Kotlin | Qualified and implicit members, static functions/constants and nested types retain overloads, receiver substitution and access checks. |
+| Visible lexical scope and type names | Attempt-owned `CursorBinding`, captured from compiler Context and normal name lookup | Readable locals/parameters, declaration order, shadowing, narrowed types, imports and enclosing types; Kotlin receives copied facts, never Context. |
 | Typed prefix text and replacement span | Original parser `Token`, copied to `PartialSemanticModel.MemberPrefix` | Decoded prefix filters candidates; the original UTF-16 token range supplies a completion edit, including escaped identifiers. No adapter source scanning or rewriting. |
 | Selected signature and source parameter mapping | Attempt-owned `InvocationBinding`, copied into `SemanticModel.CallSite` | Signature help for resolved qualified/unqualified, generic, named/default and nested calls. No selection is inferred for failed calls. |
-| Incomplete call candidates and argument slots | Parser syntax and copied receiver TypeInfo | Candidate labels and positional highlighting; named incomplete mapping, applicability and expected types remain unavailable. |
+| Incomplete call candidates and argument slots | Ordinary compiler argument fitting, captured in `CursorBinding.Candidate` | Candidate-specific generic signatures, written argument mappings and expected types; positional and named insertion slots. Rejected candidates do not become source diagnostics. No best-overload selection is claimed. |
 | Current document/module lifetime | Adapter request identity and server `Document` identity | Cancellation reaches query work; edit/close/shutdown reject late responses without canceling shared analysis or replacing diagnostics. |
 
 The cursor syntax follow-up supports `receiver.|`, `receiver.pre|` and `receiver.method(|)` at
 supported statement/final-argument boundaries. Complete valid calls use their copied selected
-signatures; unsuccessful calls can expose candidates through a separate cursor probe. Scope
-completion and incomplete overload inference keep task 3 open. A cursor within an identifier,
+signatures; unsuccessful calls can expose candidates through a separate cursor probe. The scope/call
+follow-up below closes the bounded task-3 POC. A cursor within an identifier,
 further member/call syntax after that identifier, compound/conditional value prefixes and arguments
 following the cursor remain unsupported.
 
@@ -216,6 +219,43 @@ Cursor-syntax validation: 474 compiler tests (40 existing skips), 641 LSP tests 
 skips) and all 11 packaged compiler-stdio tests completed with zero failures/errors: 1,083 executed
 tests passed. All 55 partial-analysis cases and nine completion/signature adapter tests ran without
 skips. XDK installation, `spotlessCheck` and `git diff --check` passed. No Gradle build logic changed.
+
+The scope/call follow-up captures immutable `CursorBinding` records in an attempt-owned collector.
+Compiler, StageMgr and root/nested validation contexts forward the collector explicitly; ordinary
+compilation uses its disabled instance. Publishing keeps only surviving site identities and clears
+scratch entries. `PartialAnalysis.cursorBindings()` is additive; its previous three/four-argument
+constructors remain, but record-pattern consumers must account for the new fifth component.
+
+Scope capture uses the compiler's existing variable/assignment/branch lookup. Parameters are
+initialized before capture even when no preceding expression has referenced them. Unassigned locals
+are omitted as values but still shadow outer members. Bare prefixes and empty statement insertion
+anchors retain their exact edit ranges. `CursorScope` enumerates implicit imports, source imports
+and enclosing type declarations, then asks normal contextual lookup to resolve each name. Static
+receiver completion and implicit members use access-adjusted TypeInfo on the compiler worker.
+
+`PartialCallResolver` reuses ordinary argument fitting through a small AstNode helper. It fits each
+candidate independently using cloned argument syntax and a child context, allowing missing
+parameters without fabricating their values. Generic method inference and named-argument ordering
+come from existing compiler routines. Records retain declaration identity separately from the
+instantiated signature; a specialized method identity is not necessarily a source declaration.
+Pending formals remain formal rather than becoming fabricated Object expectations. Trial mismatch
+diagnostics are speculative; TypeInfo inspection reports through the supplied listener, and all
+work observes cancellation. Neither candidates nor their trial calls enter selected-call records.
+
+Kotlin copies candidate signatures, conversion flags and written parameter mappings. The final
+`name=` token at a missing argument is retained as syntax, so each candidate can identify the right
+parameter. `expectedTypeAt` exposes that candidate's expected type; it does not choose an overload.
+A trailing slot after named arguments has no parameter highlight until its label is known.
+Broader expression recovery, enclosing-instance member enumeration, arbitrary type-valued receiver
+fallbacks, constructors, function values and receiver-to-argument rewrites remain explicit limits.
+
+Scope/call validation: 474 compiler tests (40 existing skips), 660 LSP tests (three existing skips)
+and all 12 packaged compiler-stdio tests completed with zero failures/errors: 1,103 executed tests
+passed. This includes 58 partial-analysis cases, ten scope-completion cases, six incomplete-call
+cases and nine existing completion/signature cases, all without skips. Collector tests reject
+discarded/retried sites and verify immutable publication; copied expected-type queries run on a
+separate thread without a compiler pool. A captured-lambda candidate has an ordinary-compilation
+control. XDK installation, `spotlessCheck` and `git diff --check` passed. No Gradle logic changed.
 
 ### Branch hardening design
 
@@ -494,13 +534,17 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L7 | Copy selected calls and inspect bounded partial receiver members | E4, C6 and L4; no new protocol capability |
 | C7 | Extend partial analysis to source cursors, module overlays and value contexts | C6 and E3; no new protocol capability |
 | L8 | Connect bounded completion/signature requests with cancellation and version checks | C7, L7 and L5 |
+| C8 | Capture cursor scope and resolve visible type names without AST caches | C7 and E4; I3 for direct compiler consumers |
+| C9 | Fit incomplete-call candidates and preserve named argument slots | C8; reuse compiler argument fitting without changing full-call selection |
+| L9 | Consume scope, static lookup and candidate-specific expected types | C8, C9 and L8 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
 additively. C5 follows with structural recovery; C6 isolates the explicit partial-semantic probe.
 E4 and L7 separate compiler provenance collection from the Kotlin call/member models. C7 extends
 the partial compiler API; L8 proves the asynchronous editor consumer and protocol delivery.
-These are twenty-three eventual PRs, not twenty-three simultaneous open branches.
+C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotlin/protocol consumers.
+These are twenty-six eventual PRs, not twenty-six simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -897,6 +941,30 @@ changes. Verify other adapters retain their sync behavior. Carry access/generic/
 tests, deterministic cancellation tests and
 the packaged stdio consumers. Keep unsupported scope/syntax and incomplete overload inference
 explicit in the capability document. Its token and closing-parenthesis hooks belong to C7.
+
+### C8 — Capture cursor scope without retaining validation contexts
+
+**Contract:** explicit name/empty-statement cursors return readable variables and their narrowed
+types, while shadowing and type-name resolution follow the compiler. Extract CursorBinding and
+collector propagation, Context capture, CursorScope, implicit-import name enumeration and the
+name syntax anchors. Keep old constructors and document PartialAnalysis record-pattern arity.
+Direct consumers must verify declaration/import order, narrowing, budgets, cancellation and
+discarded-clone/retry cleanup independently of the LSP implementation.
+
+### C9 — Inspect incomplete-call candidates using ordinary argument fitting
+
+**Contract:** candidate signatures can infer from written arguments and map named parameters,
+without selecting an unfinished call or fabricating missing values. Extract PartialCallResolver,
+the AstNode fitting observer, candidate records and pending-label syntax. Verify generic receiver
+and method inference, named ordering, invalid names, conversions and capture-bearing trial arguments;
+full-call selection and compiled outputs must retain their independent controls.
+
+### L9 — Consume copied scope and candidate-specific call facts
+
+**Contract:** completion and signature help use only copied worker facts. Extract scope/type/static
+queries, copied candidates, expected-type and named-slot mapping, capability documentation and
+adapter/stdio regressions. Preserve module invalidation and cancellation. Keep missing syntax and
+callable forms explicit; one surviving candidate is still not a compiler-selected call.
 
 ## Changes to hold out of the initial integration
 

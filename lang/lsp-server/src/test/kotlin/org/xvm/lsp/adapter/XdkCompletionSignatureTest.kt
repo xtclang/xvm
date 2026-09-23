@@ -28,6 +28,8 @@ class XdkCompletionSignatureTest {
             for (name in listOf("echo", "choose")) {
                 val prefix = "$BOX void run(Box<String> box) { box.$name("
                 adapter.compile(URI, "$prefix } }")
+                val model = adapter.analyzeAtAsync(URI, Position(0, prefix.length)).get(10, SECONDS)!!
+                assertThat(model.sites.single().callCandidates).describedAs(name).isNotEmpty()
                 val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
                 assertThat(help.signatures).hasSize(if (name == "echo") 1 else 2)
                 assertThat(help.signatures).allSatisfy {
@@ -102,7 +104,7 @@ class XdkCompletionSignatureTest {
     @Test
     fun `unsupported or unresolved cursor contexts return no invented results`() {
         XdkAdapter().use { adapter ->
-            for (body in listOf("missing.", "box.noSuchPrefix", "ec", "1 + box.")) {
+            for (body in listOf("missing.", "box.noSuchPrefix", "noSuchPrefix", "1 + box.")) {
                 val prefix = "$BOX void run(Box<String> box) { $body"
                 adapter.compile(URI, "$prefix } }")
                 assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()

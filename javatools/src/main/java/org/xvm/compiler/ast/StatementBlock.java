@@ -56,6 +56,7 @@ import org.xvm.asm.op.Var_CN;
 import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -307,7 +308,12 @@ public class StatementBlock
 
     /** Compile a method with the collector owned by its enclosing compilation attempt. */
     public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings) {
-        return compileMethod(new RootContext(this, code.getMethodStructure(), bindings), code, errs);
+        return compileMethod(code, errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings,
+                                 CursorBinding.Collector cursors) {
+        return compileMethod(new RootContext(this, code.getMethodStructure(), bindings, cursors), code, errs);
     }
 
     /**
@@ -607,11 +613,22 @@ public class StatementBlock
 
         public RootContext(StatementBlock stmt, MethodStructure method,
                            InvocationBinding.Collector bindings) {
+            this(stmt, method, bindings, CursorBinding.Collector.NONE);
+        }
+
+        public RootContext(StatementBlock stmt, MethodStructure method,
+                           InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
             super(null, false);
             f_stmt     = stmt;
             f_method   = method;
             f_holder   = new AstHolder(); // temporary
             f_bindings = Objects.requireNonNull(bindings, "bindings");
+            f_cursors  = Objects.requireNonNull(cursors, "cursors");
+        }
+
+        @Override
+        public CursorBinding.Collector getCursorBindings() {
+            return f_cursors;
         }
 
         @Override
@@ -1492,6 +1509,7 @@ public class StatementBlock
         private final MethodStructure             f_method;
         private final AstHolder                   f_holder;
         private final InvocationBinding.Collector f_bindings;
+        private final CursorBinding.Collector     f_cursors;
         private       Context                     m_ctxValidating;
         private       boolean                     m_fEmitting;
 
