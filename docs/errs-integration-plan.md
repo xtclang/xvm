@@ -69,8 +69,8 @@ Execution checklist (complete each item with the evidence specified below):
   - [x] Copy a versioned dependency/source association into host-owned artifacts; wire repository
     replacement and reverse invalidation into the adapter, including transitive dependencies and
     pending cursor/compile cancellation. Server reanalysis preserves current document versions.
-  - Project discovery, dependency builds from changed source overlays, per-project repository
-    configuration and a persistent workspace reference index remain outside this bounded API POC.
+  - The automatic recompilation pass below now adds source-overlay builds for explicit roots/edges.
+    Editor project discovery/configuration and a persistent workspace reference index remain separate.
 - [ ] **6. Lifetime and compatibility.** Sustained edits/cancellation/retention, output comparison,
   migration examples and the completed API requirements matrix.
   - [x] Repeated fresh snapshots, concurrent pool-free queries, recursive compiler-object exclusion,
@@ -94,7 +94,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; compound/conditional prefixes and arguments following the cursor remain unavailable. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
 | 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Broader syntax, enclosing-instance member completion, type-valued receiver fallbacks and function-valued/receiver-rewritten calls remain outside this slice. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Rename probes expose silent capture and missing named-label references; property/accessor implementation and dynamic dispatch remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest` and packaged stdio. Safe rename remains unadvertised. |
-| 5. Dependency/source boundary — host API complete | `XdkDependency` binds artifact bytes and copied source locations to a revision. Requests use fresh repositories and retain only detached keys/locations. Project/build discovery and live dependency source overlays still require a host integration. | `XdkDependencyTest` proves overload/module separation, generic signatures, source-less libraries, module files, transitive invalidation and pending compile/cursor cancellation. `XdkLanguageServerTest` verifies reanalysis and diagnostic clearing without changing the consumer version. |
+| 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor project discovery/configuration and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions. |
 | 6. Lifetime and compatibility | Current concurrency/retention measurements are bounded; collectors, cursor requests and dependency replacement need sustained exercise. Public listener signatures and result record shapes have migration implications. | Repeated multi-file edits, cancellation, close/reopen and shutdown release attempts/ASTs/pools; copied queries remain pool-free on other threads. Record latency observations, compare compiled output against the base, and finalize constructor/record-pattern and listener migration examples. |
 
 Use these consumers to close an API requirements matrix: required fact, existing accessor or new
@@ -104,9 +104,30 @@ an explicit scope decision. Formatting, editor polish, a production persistent i
 implementations of every LSP handler need not delay that API decision. Unsupported protocol
 capabilities remain unadvertised, and Tree-sitter stays the shipped default.
 
-The next correctness gap is safe rename: label bindings and before/after binding validation are
-required before it can be advertised. Sustained lifecycle measurements and compatibility checks
-remain the final API POC gate. Project discovery/build integration can follow the explicit host API.
+### Automatic dependency recompilation task list, 2026-09-23
+
+This implementation extends the artifact host API to explicitly configured source modules.
+The host supplies module names, source roots and dependency edges; automatic project discovery
+remains separate. Kotlin owns scheduling and immutable input/artifact caches on the existing
+serialized compiler worker. No Gradle invocation runs on an editor change.
+
+- [x] **1. Capture inputs.** Snapshot disk membership/text and unsaved overlays for the dependency
+  closure before compilation. Closing an overlay restores disk content; deleted sources stay absent.
+- [x] **2. Rebuild dependencies and consumers.** Compile in dependency order, reuse only artifacts
+  whose source and dependency inputs still match, and invalidate direct/transitive consumers.
+  Reject cyclic/ambiguous source configurations before changing live state.
+- [x] **3. Coalesce and cancel.** Debounce edits, retire obsolete queued/running compilations and
+  cursor probes, and reject stale publication while preserving unrelated module sessions.
+- [x] **4. Publish failures and recovery.** Keep diagnostics at each source URI/current version.
+  A failed dependency must not silently reuse its previous successful artifact; correction must
+  restore consumers without requiring an edit in them.
+- [x] **5. Verify the full loop.** Two-module and transitive fixtures cover unsaved edits, member
+  changes, dependency failures, deletion/restoration, close/reopen, rapid edits and stale results.
+  Update capability/API notes and the manual playbook with the supported setup and limits.
+
+After this pass, safe rename still needs label bindings and before/after binding validation before
+it can be advertised. Sustained lifecycle measurements and compatibility checks remain the final
+API POC gate. Broad project discovery and persistent workspace indexing remain later work.
 
 The runtime-annotation metadata correction should be extracted as an independent compiler fix,
 with its annotation application and reporting-TypeInfo controls. The structured `EMB-6` module-root
@@ -276,6 +297,53 @@ discarded/retried sites and verify immutable publication; copied expected-type q
 separate thread without a compiler pool. A captured-lambda candidate has an ordinary-compilation
 control. XDK installation, `spotlessCheck` and `git diff --check` passed. No Gradle logic changed.
 
+### Automatic source dependency recompilation, 2026-09-23
+
+`XtcLanguageServer.replaceCompilerSourceModules(...)` installs an immutable source graph described
+by `XdkSourceModule(name, uri, dependencies)`. The host supplies exact compiler module names,
+conventional file roots and direct source dependency edges. Binary dependencies can still be
+installed separately. Duplicate names/roots, overlapping source trees, reserved core module names
+and cyclic source graphs are rejected before changing live state. A compiled name that disagrees
+with the configured name reports `PROJECT-MODULE` at the source root.
+
+The server now refreshes source consumers automatically after open/change/close/save and watched
+file events. It preserves each open document's version, including unchanged consumers. Compilation
+captures the entire transitive source closure before compiling any module, then works in dependency
+order on the existing compiler worker. Unsaved buffers override disk; closing a buffer restores
+disk membership/text. No temporary files or Gradle builds are needed.
+
+The cache retains immutable input values, detached artifacts, diagnostics and source URI sets;
+it retains no dependency AST, pool or compilation. Reuse requires equal source membership/text/URI
+aliases and dependency revisions. Current target modules still produce fresh semantic/structural
+views. Closing sessions prunes unused artifacts; replacing source configuration or shutting down
+clears them. A 100 ms debounce coalesces edits before worker dispatch; edits cancel queued/running
+consumer compilations and cursor requests. Publication and cache writes reject obsolete attempts.
+
+Unreadable/deleted roots report `SOURCE-UNAVAILABLE`. Invalid dependency source publishes the
+compiler's original diagnostics, and affected consumers report `DEPENDENCY-FAILED` without using
+an older artifact. Blocked consumers expose no semantic or structural views until their inputs
+recover. Correction rebuilds consumers without requiring an edit in them. Shared dependency
+diagnostics remain while another open consumer owns them. Artifact-only external diagnostics keep
+the existing related-information policy.
+
+This completes an explicit host-configured build loop, not automatic project discovery. There is
+no JSON-RPC/settings endpoint for these roots yet, no cyclic multi-module compilation, no persistent
+workspace reference index and no stage-level incremental compiler. Hosts must keep declared source
+dependency edges accurate; missing source edges are not inferred from unresolved imports. Filesystem
+changes require the normal client notifications. Compiler mode remains Java-only and opt-in.
+
+Evidence lives in `XdkProjectTest` and `XdkProjectServerTest`: input snapshot timing, artifact reuse,
+rapid-edit coalescing, cancellation, failed libraries, transitive changes, binary replacement,
+unsaved members, source deletion/restoration, shared diagnostics and close/reopen. See the manual
+playbook for a reproducible two-module host setup (X45–X52).
+
+Validation: the full LSP suite ran 713 tests with three existing skips; all 14 packaged compiler-stdio
+tests passed. That is **724 executed tests with zero failures/errors**. Two additional regressions
+then extended the project suites to six adapter and seven server cases; all 13 passed in the final
+focused run without skips. Kotlin formatting, `spotlessCheck` and `git diff --check` passed. No Java
+or Gradle implementation changed. Interactive editor checks and multi-hour retention measurements
+were not run; the latter remains in task 6.
+
 ### Versioned dependency/source host API, 2026-09-23
 
 `Compilation.toDependency()` pairs the successful compilation's emitted bytes with copied source
@@ -315,12 +383,12 @@ val dependency = libraryCompilation.toDependency()
 server.replaceCompilerDependencies(listOf(dependency))
 ```
 
-This API does not discover Gradle projects, build changed dependencies, watch binary repositories
-or merge dependency source overlays automatically. The host owns the dependency graph and matching
-source/artifact versions and must replace them together. Old artifact ranges are not a promise
-about independently edited source text. Editor-launched compiler mode still supplies only bundled
-libraries unless a host installs project artifacts. These are product integration limits, not
-missing compiler identity or source-token accessors.
+This artifact API alone does not discover projects, watch binary repositories or track edited
+dependency source. Its subsequent source-graph integration above now handles source builds and
+overlays for explicitly configured modules. Artifact-only hosts still own matching source/artifact
+versions and must replace them together. Old artifact ranges are not a promise about independently
+edited text. Standard editor launch supplies only bundled libraries until a host installs project
+artifacts or source modules; automatic project discovery remains open.
 
 Evidence: nine `XdkDependencyTest` cases cover detached keys, mutable-byte isolation, overloads,
 generics, inherited bodies, source-less artifacts, multi-file sources, source-module precedence,
@@ -720,6 +788,7 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L11 | Copy source callers and expose static call hierarchy | L5 and L7; no new Java/AST API |
 | L12 | Classify resolved names and expose bounded inlay hints | L6 and L7; carry written named-argument status in E4 |
 | L13 | Export versioned dependency source indices and replace host repositories | L4, L8 and L10; no new Java/AST API |
+| L14 | Rebuild configured source dependencies and refresh consumers automatically | L5 and L13; Kotlin host scheduling only |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -728,8 +797,9 @@ E4 and L7 separate compiler provenance collection from the Kotlin call/member mo
 the partial compiler API; L8 proves the asynchronous editor consumer and protocol delivery.
 C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotlin/protocol consumers.
 L10, L11 and L12 can follow their listed dependencies independently of the later completion/scope slices.
-L13 follows with an explicit dependency host API; automatic project/build discovery stays separate.
-These are thirty eventual PRs, not thirty simultaneous open branches.
+L13 follows with an explicit artifact host API; L14 adds automatic rebuilding for configured source
+modules. Automatic project/build discovery stays separate. These are thirty-one eventual PRs,
+not thirty-one simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -1189,6 +1259,15 @@ declaration keys/locations through linked consumer identities. Carry explicit ho
 reverse invalidation and versioned server reanalysis together with cancellation regressions.
 Keep repository discovery, build-tool integration, automatic dependency source overlays and a
 persistent workspace reference index out of this PR. No compiler/AST changes belong here.
+
+### L14 — Automatic recompilation of configured source modules
+
+**Contract:** explicit source roots/edges own a repeatable disk/overlay snapshot. Rebuild dependencies
+before consumers on the serialized compiler worker, reuse only matching detached artifacts, debounce
+edits and retire stale compiler/cursor work. Publish dependency failures and recovery at current
+document versions without retaining a previous successful artifact as current. Carry close/deletion,
+transitive invalidation, shared publication and cancellation tests with the server integration.
+No Java/AST changes, project discovery or persistent cross-module reference index belong here.
 
 ## Changes to hold out of the initial integration
 
@@ -1668,9 +1747,10 @@ logging, and the real server correctly handles open, edit, correction, supersess
 Known module, dependency and source-location limits must be visible in the usage documentation.
 
 Full workspace/editor support is a later milestone: broader partial syntax, project dependency
-discovery/builds, persistent cross-module indexing and safe rename. Module overlays, module source
+discovery/configuration, persistent cross-module indexing and safe rename. Module overlays, module source
 navigation, direct source hierarchy, bounded completion/signature help, lookup/call/presentation
-consumers and an explicit versioned dependency host API are implemented. Sustained lifecycle and
+consumers, an explicit versioned dependency host API and automatic builds for configured source
+modules are implemented. Sustained lifecycle and
 compatibility verification remain the API POC gate. The bounded diagnostic audit has classified its
 inspected families and fixed demonstrated defects; unexamined historical suppressions and the
 bound-generic binary-AST TODO remain explicit follow-ups. Neither “seven phases complete” nor a
