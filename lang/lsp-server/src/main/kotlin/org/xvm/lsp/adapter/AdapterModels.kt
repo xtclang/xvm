@@ -140,6 +140,8 @@ data class PrepareRenameResult(
  */
 data class WorkspaceEdit(
     val changes: Map<String, List<TextEdit>>,
+    /** Require protocol document versions; hosts must not fall back to unversioned changes. */
+    val versioned: Boolean = false,
 )
 
 /**

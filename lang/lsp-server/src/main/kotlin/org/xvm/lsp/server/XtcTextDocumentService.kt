@@ -60,12 +60,14 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.TypeDefinitionParams
 import org.eclipse.lsp4j.TypeHierarchyItem
 import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -704,31 +706,40 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.rename
      */
     override fun rename(params: RenameParams): CompletableFuture<WorkspaceEdit?> =
-        supplyAsync(
+        queryAsync(
             "textDocument/rename",
-            "${params.textDocument.uri} at ${params.position.fmt()} -> '${params.newName}'",
-            { result -> if (result == null) "no edit" else "${result.changes?.size ?: 0} files changed" },
-            uri = params.textDocument.uri,
-        ) {
-            adapter
-                .rename(
+            params.textDocument.uri,
+            {
+                adapter.renameAsync(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
                     params.newName,
-                )?.let { edit ->
-                    WorkspaceEdit().apply {
-                        changes =
-                            edit.changes.mapValues { (_, edits) ->
-                                edits.map { e ->
-                                    TextEdit().apply {
-                                        range = e.range.toLsp()
-                                        newText = e.newText
-                                    }
-                                }
+                )
+            },
+        ) { edit ->
+            edit?.takeIf { !it.versioned || server.supportsVersionedEdits }?.let {
+                val changes =
+                    edit.changes.mapValues { (_, edits) ->
+                        edits.map { TextEdit(it.range.toLsp(), it.newText) }
+                    }
+                WorkspaceEdit().apply {
+                    if (edit.versioned) {
+                        this.changes = null
+                        documentChanges =
+                            changes.map { (uri, edits) ->
+                                Either.forLeft(
+                                    TextDocumentEdit(
+                                        VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
+                                        edits.map { Either.forLeft(it) },
+                                    ),
+                                )
                             }
+                    } else {
+                        this.changes = changes
                     }
                 }
+            }
         }
 
     /**

@@ -8,7 +8,7 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 
-/** API probes, not an advertised rename implementation: successful recompilation is insufficient. */
+/** Compiler facts required by bounded rename: successful recompilation alone is insufficient. */
 class CompilerRenameRequirementsTest {
     @Test
     fun `identity edits rename captures without touching a shadowing lambda parameter`() {
@@ -34,17 +34,17 @@ class CompilerRenameRequirementsTest {
     }
 
     @Test
-    fun `named argument labels are not reference occurrences and prevent a general parameter rename`() {
+    fun `named argument labels bind to their selected method parameter before argument rewriting`() {
         val source = "module Rename { Int pick(Int input)=input; Int run()=pick(input=1); }"
         val before = compile(source)
         val declaration = source.indexOf("input")
-        assertThat(before.referencesAt(0, declaration, true)).hasSize(2)
-        assertThat(before.occurrenceAt(0, source.lastIndexOf("input"))).isNull()
+        assertThat(before.referencesAt(0, declaration, true)).hasSize(3)
+        assertThat(before.symbolAt(0, source.lastIndexOf("input"))).isEqualTo(before.symbolAt(0, declaration))
         val renamed = rename(source, before, declaration, "other")
         val errors = ErrorList()
         val result = EmbeddingSupport.instance().compileModule(Source(renamed, URI), null, errors)
-        assertThat(result.succeeded()).isFalse()
-        assertThat(errors.hasSeriousErrors()).isTrue()
+        assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        assertThat(errors.hasSeriousErrors()).isFalse()
     }
 
     private fun compile(text: String): SemanticModel {

@@ -150,6 +150,9 @@ class XtcLanguageServer(
     @Suppress("unused")
     private var initialized = false
 
+    internal var supportsVersionedEdits = false
+        private set
+
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
 
@@ -216,6 +219,11 @@ class XtcLanguageServer(
         logServerBanner()
         logWorkspaceFolders(params)
         logClientCapabilities(params)
+
+        supportsVersionedEdits = params.capabilities
+            ?.workspace
+            ?.workspaceEdit
+            ?.documentChanges == true
 
         val capabilities = buildServerCapabilities()
 
@@ -542,7 +550,11 @@ class XtcLanguageServer(
             if (AdapterCapability.DOCUMENT_HIGHLIGHT !in adapter.capabilities) documentHighlightProvider = null
             if (AdapterCapability.SELECTION_RANGE !in adapter.capabilities) selectionRangeProvider = null
             if (AdapterCapability.FOLDING_RANGE !in adapter.capabilities) foldingRangeProvider = null
-            if (AdapterCapability.RENAME !in adapter.capabilities) renameProvider = null
+            if (AdapterCapability.RENAME !in adapter.capabilities ||
+                (adapter is XdkAdapter && !supportsVersionedEdits)
+            ) {
+                renameProvider = null
+            }
             if (AdapterCapability.CODE_ACTION !in adapter.capabilities) codeActionProvider = null
             if (AdapterCapability.FORMATTING !in adapter.capabilities) documentFormattingProvider = null
             if (AdapterCapability.RANGE_FORMATTING !in adapter.capabilities) documentRangeFormattingProvider = null
