@@ -22,4 +22,8 @@ enum class AdapterCapability {
     CODE_LENS,
     LINKED_EDITING,
     TYPE_HIERARCHY,
+    TYPE_DEFINITION,
+    IMPLEMENTATION,
+    CALL_HIERARCHY,
+    INLAY_HINT,
 }
