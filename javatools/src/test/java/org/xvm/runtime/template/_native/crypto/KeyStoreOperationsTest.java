@@ -158,6 +158,15 @@ public class KeyStoreOperationsTest {
     }
 
     @Test
+    public void testExtractKeyRejectsWrongPasswordAndCanBeRetried() throws Exception {
+        var path = new File(tempDir, "extract-wrong-password.p12").getAbsolutePath();
+        KeyStoreOperations.createSymmetricKey(path, PASSWORD, "key");
+        assertThrows(IOException.class, () ->
+                KeyStoreOperations.extractKey(path, "wrong-password".toCharArray(), "key"));
+        assertNotNull(KeyStoreOperations.extractKey(path, PASSWORD, "key"));
+    }
+
+    @Test
     public void testExtractKeyReturnsNullForMissingFile() {
         assertThrows(IOException.class, () ->
             KeyStoreOperations.extractKey("/nonexistent/path.p12", PASSWORD, "key"));

@@ -1,7 +1,6 @@
 package org.xvm.runtime.template._native.crypto;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 
@@ -515,14 +514,10 @@ public class xRTCertificateManager
         char[] achPwd = hPwd.getValue();
         String sKey   = hName.getStringValue();
 
-        KeyStore keyStore;
         if (hPathOrStore instanceof StringHandle hPath) {
-            keyStore = KeyStore.getInstance("PKCS12");
-            keyStore.load(new FileInputStream(hPath.getStringValue()), achPwd);
-        } else {
-            keyStore = ((KeyStoreHandle) hPathOrStore).f_keyStore;
+            return KeyStoreOperations.extractKey(hPath.getStringValue(), achPwd, sKey);
         }
-        return keyStore.getKey(sKey, achPwd);
+        return ((KeyStoreHandle) hPathOrStore).f_keyStore.getKey(sKey, achPwd);
     }
 
     /**
