@@ -5,6 +5,7 @@ package constuctTests {
         testDuplicable();
         testOptimizedVirtualConstructor();
         testPrimitiveStringConstructors();
+        testCharConstructors();
     }
 
     void testReplicable() {
@@ -72,5 +73,19 @@ package constuctTests {
         // assert small == 42;
         // Int128? large = new Int128("42");
         // assert large == 42;
+    }
+
+    void testCharConstructors() {
+        // the native factory must initialize the value used by unboxing and string conversion
+        Char ch = new Char('A'.codepoint);
+        assert ch == 'A';
+        assert ch.codepoint == 'A'.codepoint;
+        assert ch.toString() == "A";
+
+        ch = new Char([0x42]);
+        assert ch == 'B';
+
+        ch = new Char("C");
+        assert ch == 'C';
     }
 }

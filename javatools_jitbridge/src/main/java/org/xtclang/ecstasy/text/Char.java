@@ -10,6 +10,7 @@ import org.xtclang.ecstasy.numbers.UInt32;
 import org.xtclang.ecstasy.numbers.UIntN;
 
 import org.xvm.javajit.Ctx;
+import org.xvm.javajit.Ctx.CtorCtx;
 
 /**
  * Native shell for "ecstasy.text.Char".
@@ -17,12 +18,21 @@ import org.xvm.javajit.Ctx;
 public class Char extends nConst {
     private Char(int codepoint) {
         super(null);
-        $value = codepoint;
+        this.codepoint = codepoint;
     }
 
-    public static Char $new$0$p(Ctx ctx, int codepoint) {
+    /**
+     * Native implementation of: "construct(UInt32 codepoint)".
+     */
+    public static Char $new$2$p(Ctx ctx, int codepoint) {
         return $box(codepoint);
     }
+
+    public static void construct$2$p(Ctx ctx, CtorCtx cctx, Char thi$, int codepoint) {
+        thi$.codepoint = codepoint;
+    }
+
+    public int codepoint; // keep the original property name to avoid using extra field
 
     /**
      * Lazily populated cache.
@@ -30,8 +40,6 @@ public class Char extends nConst {
     private static final Char[][] $cache = new Char[1088][];
 
     public static final int $MaxValue = 0x10FFFF;
-
-    public final int $value;
 
     public static Char $box(int codepoint) {
         Char ch = null;
@@ -60,7 +68,7 @@ public class Char extends nConst {
     }
 
     public UInt32 codepoint$get(Ctx ctx) {
-        return UInt32.$box($value);
+        return UInt32.$box(codepoint);
     }
 
     /**
@@ -115,7 +123,7 @@ public class Char extends nConst {
     }
 
     public AppenderᐸCharᐳ appendTo(Ctx ctx, AppenderᐸCharᐳ appender) {
-        return appender.add$p(ctx, $value);
+        return appender.add$p(ctx, codepoint);
     }
 
     public static AppenderᐸCharᐳ appendTo$p(int thi$, Ctx ctx, AppenderᐸCharᐳ appender) {
@@ -131,7 +139,7 @@ public class Char extends nConst {
 
     @Override
     public java.lang.String toString() {
-        return java.lang.Character.toString($value);
+        return java.lang.Character.toString(codepoint);
     }
 
     // ----- delegated IntConvertible methods -----------------------------------------------------

@@ -1435,11 +1435,11 @@ public abstract class Builder {
                 .getName();
 
         switch (name) {
-            case "Bit"     -> code.getfield(CD_Bit,     "$value", CD_int);
-            case "Boolean" -> code.getfield(CD_Boolean, "$value", CD_boolean);
-            case "Char"    -> code.getfield(CD_Char,    "$value", CD_int);
-            case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",  CD_int);
-            case "Dec64"   -> code.getfield(CD_Dec64,   "$bits",  CD_long);
+            case "Bit"     -> code.getfield(CD_Bit,     "$value",    CD_int);
+            case "Boolean" -> code.getfield(CD_Boolean, "$value",    CD_boolean);
+            case "Char"    -> code.getfield(CD_Char,    "codepoint", CD_int);
+            case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",     CD_int);
+            case "Dec64"   -> code.getfield(CD_Dec64,   "$bits",     CD_long);
             case "Dec128"  -> {
                 // stack is Dec128
                 code.dup();
