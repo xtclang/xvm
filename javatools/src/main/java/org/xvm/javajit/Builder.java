@@ -1388,6 +1388,32 @@ public abstract class Builder {
     }
 
     /**
+     * Generate boxing opcodes for a nullable Java primitive on the Java stack.
+     *
+     * <p>In: the primitive value followed by its "is Null" extension flag<br>
+     * Out: the boxed reference, or Ecstasy {@code Null} when that flag was set
+     *
+     * <p>This is the inverse of {@link #unboxNullable}. A {@code NullablePrimitive} occupies two
+     * Java slots, so it cannot simply be boxed the way a plain primitive can: the extension flag
+     * decides whether there is a value to box at all.
+     *
+     * @param type  the nullable primitive type of the value on the stack
+     */
+    public static void boxNullable(CodeBuilder code, TypeConstant type) {
+        TypeConstant typeSansNull = type.removeNullable();
+        Label        lblNull      = code.newLabel();
+        Label        lblDone      = code.newLabel();
+
+        code.ifne(lblNull);
+        box(code, typeSansNull);
+        code.goto_(lblDone)
+            .labelBinding(lblNull);
+        pop(code, JitTypeDesc.requireJavaPrimitive(typeSansNull));
+        loadNull(code);
+        code.labelBinding(lblDone);
+    }
+
+    /**
      * Generate unboxing opcodes for a wrapper reference on the Java stack.
      *
      * <p>In: a boxed Java reference<br>
