@@ -340,6 +340,7 @@ public abstract class Builder {
                 TypeConstant propType  = singleton.getType();
                 JitTypeDesc  jtd       = propType.getJitDesc(this);
 
+                SingleSlot singleSlot = new SingleSlot(propType, jtd.flavor, jtd.cd, "");
                 if (isContainerScoped(propInfo)) {
                     assert !jtd.flavor.isOptimized;
 
@@ -350,7 +351,7 @@ public abstract class Builder {
                                 propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
                         .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic);
                     code.checkcast(jtd.cd);
-                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                    return singleSlot;
                 }
 
                 switch (jtd.flavor) {
@@ -359,12 +360,12 @@ public abstract class Builder {
                             propId.ensureJitPropertyName(typeSystem),
                             JitTypeDesc.requirePrimitiveFieldClass(propType));
                     normalizePrimitiveField(code, propType);
-                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                    return singleSlot;
 
                 case Specific, Widened:
                     code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
-                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                    return singleSlot;
 
                 case XvmPrimitive:
                     ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(propType);

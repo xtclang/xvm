@@ -376,32 +376,32 @@ public class BuildContext {
      *     if ($doReturn) return $r1
      * }</pre>
      *
-     * @param code
-     * @param ops
+     * @param code  the code builder, used to exchange jumps that have to run a "finally" first
+     * @param ops   the ops of the method being compiled
      */
     public void preprocess(CodeBuilder code, Op[] ops) {
         Scope origScope = scope;
         scope = origScope.startPreprocessing();
 
-        Deque<Integer>       guardStack    = null;
-        Deque<List<Integer>> jumpAddrStack = null;
-        Deque<List<Integer>> jumpDestStack = null;
+        // these are only ever touched from inside a GuardAll region, so the op stream guarantees
+        // they are set by the time they are read; initialize them up front anyway, so that is a
+        // property of the code rather than of the op stream
+        Deque<Integer>       guardStack    = new ArrayDeque<>();
+        Deque<List<Integer>> jumpAddrStack = new ArrayDeque<>();
+        Deque<List<Integer>> jumpDestStack = new ArrayDeque<>();
 
-        int                   guardAddr  = -1;     // the address of the last GuardAll op
-        int                   finAddr    = -1;     // the address of the last FinallyEnd op
-        List<Integer>         jumpsAddr  = null;  // the addresses of Jump ops
-        List<Integer>         jumpsDest  = null;  // the addresses of jump destinations
+        int                   guardAddr  = -1;    // the address of the last GuardAll op
+        int                   finAddr    = -1;    // the address of the last FinallyEnd op
+        List<Integer>         jumpsAddr  = new ArrayList<>(); // the addresses of Jump ops
+        List<Integer>         jumpsDest  = new ArrayList<>(); // the addresses of jump destinations
         Map<Integer, Boolean> refs       = null;  // the ids of registers that need to be boxed as Refs
         boolean               doReturn   = false; // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, opsCount = ops.length; iPC < opsCount; iPC++) {
             Op op = ops[currOpAddr = iPC];
             switch (op) {
             case GuardAll _:
-                if (guardAddr < 0) {
-                    guardStack    = new ArrayDeque<>();
-                    jumpAddrStack = new ArrayDeque<>();
-                    jumpDestStack = new ArrayDeque<>();
-                } else {
+                if (guardAddr >= 0) {
+                    // nested inside an enclosing GuardAll; set its state aside
                     guardStack.push(guardAddr);
                     jumpAddrStack.push(jumpsAddr);
                     jumpDestStack.push(jumpsDest);
@@ -506,11 +506,8 @@ public class BuildContext {
             // also we still need to process all scope changing ops
             if (typeMatrix.isReached(iPC) || op.isEnter() || op.isExit() || op instanceof Nop) {
                 op.computeTypes(this);
-            } else {
-                // TODO: remove
-                // System.err.println("Dead code: " + Op.toName(op.getOpCode()) + " at " + this +
-                //    " for " + thisType.removeAccess().getValueString());
             }
+            // anything else is unreachable code, which needs no types computed for it
         }
 
         if (refs == null) {
@@ -765,7 +762,8 @@ public class BuildContext {
             }
 
             case PrimitiveWithDefault, SpecificWithDefault, WidenedWithDefault: {
-                assert param.hasDefaultValue();
+                // a *WithDefault flavor never applies to "thi$", so param is set here
+                assert param != null && param.hasDefaultValue();
 
                 Label ifNotDefault = code.newLabel();
                 if (flavor == PrimitiveWithDefault) {
@@ -795,7 +793,8 @@ public class BuildContext {
             }
 
             case NullablePrimitiveWithDefault: {
-                assert param.hasDefaultValue();
+                // a *WithDefault flavor never applies to "thi$", so param is set here
+                assert param != null && param.hasDefaultValue();
 
                 Label ifNotDefault = code.newLabel();
                 int   extSlot      = code.parameterSlot(extraArgs + i + 1);
@@ -835,7 +834,8 @@ public class BuildContext {
             }
 
             case XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault: {
-                assert param.hasDefaultValue();
+                // a *WithDefault flavor never applies to "thi$", so param is set here
+                assert param != null && param.hasDefaultValue();
 
                 ClassDesc[] cds          = JitTypeDesc.getXvmPrimitiveClasses(paramDesc.type);
                 Label       ifNotDefault = code.newLabel();
@@ -1093,7 +1093,7 @@ public class BuildContext {
     public RegisterInfo loadThis(CodeBuilder code) {
         assert isConstructor || !isStatic;
 
-        RegisterInfo reg = adjustRegister(code, getRegisterInfo(code, Op.A_THIS));
+        RegisterInfo reg = adjustRegister(code, getRegisterInfo(Op.A_THIS));
         return reg.load(code);
     }
 
@@ -1117,8 +1117,8 @@ public class BuildContext {
      * known during the {@link Op#build} cycle by **that same op** that has just computed it. A
      * common use case is represented by the {@link org.xvm.asm.OpInvocable}, which assigns the
      * type of the "retValue" at the end of {@link org.xvm.asm.OpInvocable#computeInvokeTypes}
-     * method and needs to use it at the end of {@link org.xvm.asm.OpInvocable#buildInvoke} method
-     * via the call to {@link #assignReturns}.
+     * method and needs to use it at the end of its {@code buildInvoke} method via the call to
+     * {@link #assignReturns}.
      *
      * <p>To facilitate that, all we need is to look up the computed type at the very next op
      * address.
@@ -1285,7 +1285,7 @@ public class BuildContext {
         }
 
         if (argId == Op.A_THIS) {
-            return adjustRegister(code, getRegisterInfo(code, Op.A_THIS));
+            return adjustRegister(code, getRegisterInfo(Op.A_THIS));
         }
 
         RegisterInfo reg = argId <= Op.CONSTANT_OFFSET
@@ -1296,9 +1296,10 @@ public class BuildContext {
     }
 
     /**
-     * Get a {@link RegisterInfo} for the specified register id.
+     * @return the {@link RegisterInfo} for the specified register id, or null if the register has
+     *         not been introduced yet
      */
-    public RegisterInfo getRegisterInfo(CodeBuilder code, int regId) {
+    public RegisterInfo getRegisterInfo(int regId) {
         return registerInfos.get(regId);
     }
 
@@ -2220,8 +2221,11 @@ public class BuildContext {
             TypeConstant refType = isVar ? pool().ensureVarType(type) : pool().ensureRefType(type);
             return introduceRegister(code, regId, refType, "");
         } else {
+            // note: typeRef() is read outside the assert; it lazily populates a cache, and an
+            // assertion must not be the thing that fills it
+            TypeConstant typeRef = pool().typeRef();
             assert reg.flavor() != JitFlavor.Ref;
-            assert reg.type().isA(pool().typeRef()) && reg.type().getParamType(0).equals(type);
+            assert reg.type().isA(typeRef) && reg.type().getParamType(0).equals(type);
             return reg;
         }
     }
@@ -2343,12 +2347,14 @@ public class BuildContext {
                 } else if (narrowingType.isXvmPrimitive()) {
                     // this can only mean that the original was a NullableXvmPrimitive
                     if (origType.removeNullable().isXvmPrimitive()) {
-                        assert origReg instanceof MultiSlot multiSlot &&
-                                multiSlot.flavor() == NullableXvmPrimitive &&
+                        if (!(origReg instanceof MultiSlot multiSlot)) {
+                            throw new IllegalStateException(
+                                    "Expected a multi-slot register, not " + origReg);
+                        }
+                        assert multiSlot.flavor() == NullableXvmPrimitive &&
                                 !narrowingType.isNullable();
 
-                        MultiSlot multiSlot = (MultiSlot) origReg;
-                        int          slotCount = multiSlot.slotCount();
+                        int slotCount = multiSlot.slotCount();
                         for (int i = 0; i < slotCount; i++) {
                             Builder.load(code, multiSlot.slotCds()[i], multiSlot.slots()[i]);
                         }
@@ -2371,21 +2377,26 @@ public class BuildContext {
                 } else {
                     if (origType.removeNullable().isJavaPrimitive()) {
                         // this can only mean that the original was a NullablePrimitive
-                        assert origReg instanceof ExtendedSlot extSlot &&
-                                extSlot.flavor() == NullablePrimitive &&
+                        if (!(origReg instanceof ExtendedSlot extSlot)) {
+                            throw new IllegalStateException(
+                                    "Expected an extended-slot register, not " + origReg);
+                        }
+                        assert extSlot.flavor() == NullablePrimitive &&
                                 narrowingType.isOnlyNullable();
 
-                        ExtendedSlot extSlot = (ExtendedSlot) origReg;
                         code.iconst_1()
                             .istore(extSlot.extSlot()); // `true`
                         Builder.defaultLoad(code, extSlot.cd());
                         return -1;
                     } else if (origType.removeNullable().isXvmPrimitive()) {
                         // this can only mean that the original was a NullableXvmPrimitive
-                        assert origReg.flavor() == NullableXvmPrimitive &&
+                        if (!(origReg instanceof MultiSlot multiSlot)) {
+                            throw new IllegalStateException(
+                                    "Expected a multi-slot register, not " + origReg);
+                        }
+                        assert multiSlot.flavor() == NullableXvmPrimitive &&
                                 narrowingType.isOnlyNullable();
 
-                        MultiSlot multiSlot = (MultiSlot) origReg;
                         code.iconst_1()
                             .istore(multiSlot.extSlot()); // `true`
                         for (ClassDesc cd : multiSlot.slotCds()) {
@@ -2707,7 +2718,7 @@ public class BuildContext {
                                           JitFlavor srcFlavor) {
         PropertyConstant prop = getConstant(propId, PropertyConstant.class);
         RegisterInfo     src  = storeTempRegister(code, Op.A_THIS, srcType, srcFlavor);
-        TypeConstant     type = getRegisterInfo(code, Op.A_THIS).type();
+        TypeConstant     type = getRegisterInfo(Op.A_THIS).type();
 
         buildSetProperty(code, type, this::loadThis, prop, src::load);
     }
