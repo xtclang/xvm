@@ -16,7 +16,7 @@ import org.xvm.compiler.Token.Id;
 import static org.xvm.asm.ErrorListener.in;
 
 /**
- * A member access or call whose intact prefix can be validated in its original scope. It can
+ * A name, member access or call whose intact prefix can be validated in its original scope. It can
  * stand alone or be owned by an {@link IncompleteExpression} in a value position. The marker has
  * no fabricated value or type. Validation always fails after inspecting the receiver and ordinary
  * arguments, preventing method emission. Only the explicit partial-analysis parser creates it.
@@ -44,16 +44,27 @@ public final class IncompleteStatement extends Statement {
         this(receiver, dot, List.of(), List.of(), cursor, diagnosticCode, memberName);
     }
 
+    /** An unqualified name prefix at an explicit cursor. */
+    public IncompleteStatement(Token name, long cursor, String diagnosticCode) {
+        this(new NameExpression(name), name, List.of(), List.of(), cursor, diagnosticCode, name);
+    }
+
+    /** A call whose last written name is a named argument awaiting its value. */
+    public static IncompleteStatement forNamedArgument(Expression callee, Token open,
+            List<Expression> arguments, List<Token> separators, long cursor, Token name) {
+        return new IncompleteStatement(callee, open, arguments, separators, cursor, Parser.INCOMPLETE_EXPRESSION, name);
+    }
+
     private IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
                                 List<Token> separators, long endPosition, String diagnosticCode,
-                                Token memberName) {
+                                Token cursorName) {
         this.target         = target;
         this.operator       = operator;
         this.arguments      = new ArrayList<>(arguments);
         this.separators     = List.copyOf(separators);
         this.endPosition    = endPosition;
         this.diagnosticCode = diagnosticCode;
-        this.memberName     = memberName;
+        this.cursorName     = cursorName;
     }
 
     /** The written receiver (member access) or callee (call); a call is never overload-resolved. */
@@ -68,7 +79,12 @@ public final class IncompleteStatement extends Statement {
 
     /** The original typed member token, if present; its text and range are syntax, not a binding. */
     public Optional<Token> getMemberName() {
-        return Optional.ofNullable(memberName);
+        return isCall() ? Optional.empty() : Optional.ofNullable(cursorName);
+    }
+
+    /** The named argument at the cursor, whose value is absent and has no expression/type. */
+    public Optional<Token> getPendingArgumentName() {
+        return isCall() ? Optional.ofNullable(cursorName) : Optional.empty();
     }
 
     /** Complete written arguments; excludes the missing argument after a trailing comma. */
@@ -82,11 +98,18 @@ public final class IncompleteStatement extends Statement {
     }
 
     public boolean isCall() {
-        return operator.getId() != Id.DOT;
+        return operator.getId() == Id.L_PAREN || operator.getId() == Id.ASYNC_PAREN;
+    }
+
+    public boolean isNameCompletion() {
+        return operator.getId() == Id.IDENTIFIER;
     }
 
     /** Explicit receiver only; an unqualified call does not invent an implicit receiver. */
     public Optional<Expression> getReceiver() {
+        if (isNameCompletion()) {
+            return Optional.empty();
+        }
         return isCall()
                 ? target instanceof NameExpression name
                         ? Optional.ofNullable(name.getLeftExpression())
@@ -111,6 +134,12 @@ public final class IncompleteStatement extends Statement {
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
+        var bindings = ctx.getCursorBindings();
+        bindings.begin(this);
+        if (bindings.isEnabled() && !errs.isAbortDesired()) {
+            var scope = ctx.cursorBinding();
+            bindings.record(this, isNameCompletion() ? scope.withTypes(CursorScope.types(this, ctx, errs)) : scope);
+        }
         // The cursor-selected member name/overload is not validated by this probe.
         // The receiver and complete arguments still use the real lexical and flow context.
         getReceiver().ifPresent(receiver -> {
@@ -123,9 +152,12 @@ public final class IncompleteStatement extends Statement {
                 }
             }
         });
+        if (bindings.isEnabled() && isCall() && !errs.isAbortDesired()) {
+            bindings.record(this, ctx.cursorBinding().withCandidates(PartialCallResolver.inspect(this, ctx, errs)));
+        }
         for (int i = 0; i < arguments.size() && !errs.isAbortDesired(); ++i) {
             Expression argument = arguments.get(i);
-            // These need an expected parameter type, which an unfinished call cannot supply.
+            // No single expected type is selected. Candidate fitting inspects trial copies above.
             Expression value = argument instanceof LabeledExpression labeled
                     ? labeled.getUnderlyingExpression() : argument;
             if (value instanceof NonBindingExpression || value instanceof LambdaExpression) {
@@ -147,8 +179,10 @@ public final class IncompleteStatement extends Statement {
 
     @Override
     public String toString() {
-        return target + (isCall() ? "(" + arguments
-                : "." + getMemberName().map(Token::getValueText).orElse("")) + " <incomplete>";
+        String syntax = isNameCompletion() ? getMemberName().map(Token::getValueText).orElse("")
+                : target + (isCall() ? "(" + arguments
+                        : "." + getMemberName().map(Token::getValueText).orElse(""));
+        return syntax + " <incomplete>";
     }
 
     protected Expression       target;
@@ -158,7 +192,7 @@ public final class IncompleteStatement extends Statement {
     private final List<Token> separators;
     private final long        endPosition;
     private final String      diagnosticCode;
-    private final Token       memberName;
+    private final Token       cursorName;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteStatement.class, "target", "arguments");
 }
