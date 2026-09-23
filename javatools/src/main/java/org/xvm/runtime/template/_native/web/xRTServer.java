@@ -10,7 +10,6 @@ import com.sun.net.httpserver.HttpsParameters;
 import com.sun.net.httpserver.HttpsServer;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 import java.net.InetSocketAddress;
@@ -30,10 +29,6 @@ import java.util.List;
 import java.util.Map;
 
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -57,6 +52,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.OwnedResource;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -206,7 +202,7 @@ public class xRTServer
 
         case "closeImpl":
             assert frame.f_context == hServer.f_context;
-            return invokeClose(hServer);
+            return invokeClose(frame, hServer);
         }
 
         return super.invokeNativeN(frame, method, hTarget, ahArg, iReturn);
@@ -249,83 +245,49 @@ public class xRTServer
         int          nHttpPort  = (int) ((JavaLong) ahArg[2]).getValue();
         int          nHttpsPort = (int) ((JavaLong) ahArg[3]).getValue();
 
+        HttpServerResources resources = hServer.resources();
+        OwnedResource<HttpServerResources> owned = frame.acquireResource(() -> resources,
+                value -> OwnedResource.closeOnWorker(() -> {
+                    try {
+                        value.close();
+                    } finally {
+                        Router router = hServer.getRouter();
+                        router.mapRoutes.clear();
+                        router.setBinding(null);
+                        router.setDirectRoute(null);
+                    }
+                }));
+        hServer.setOwnership(owned);
         try {
-            configureHttpServer (hServer, new InetSocketAddress(sBindAddr, nHttpPort));
-            configureHttpsServer(hServer, new InetSocketAddress(sBindAddr, nHttpsPort));
-            configureBinding(hServer, hBinding);
-
-            HttpServer  httpServer  = hServer.getHttpServer();
-            HttpsServer httpsServer = hServer.getHttpsServer();
-
-            // at the moment we only support a single "binding"; set up the thread pool
-            String        sName   = "HttpHandler";
-            ThreadGroup   group   = new ThreadGroup(sName);
-            ThreadFactory factory = r -> {
-                Thread thread = new Thread(group, r);
-                thread.setDaemon(true);
-                thread.setName(sName + "@" + thread.hashCode());
-                return thread;
-            };
-
-            // We don't actually rely on any scaling here; all requests go to a single natural
-            // Handler service instance that needs to demultiplex it as quick as possible
-            // (see HttpHandler.x in xenia.xtclang.org module).
-            // If necessary, we can change the start() method to take an array of handlers and
-            // demultiplex it earlier by the native code
-            Executor executor = Executors.newCachedThreadPool(factory);
-
-            httpServer.setExecutor(executor);
-            httpServer.start();
-
-            httpsServer.setExecutor(executor);
-            httpsServer.start();
-
-            // prevent the container from being terminated
-            hServer.f_context.f_container.registerNativeCallback();
-
-            Router router = hServer.getRouter();
-            httpServer .createContext("/", router);
-            httpsServer.createContext("/", router);
-
+            synchronized (resources) {
+                resources.bindHttp(new InetSocketAddress(sBindAddr, nHttpPort));
+                resources.bindHttps(new InetSocketAddress(sBindAddr, nHttpsPort));
+                SSLContext ssl = SSLContext.getInstance("TLS");
+                ssl.init(new KeyManager[] {new SimpleKeyManager(hServer)}, null, null);
+                resources.configureHttps(new HttpsConfigurator(ssl) {
+                    @Override
+                    public void configure(HttpsParameters params) {
+                        SSLEngine engine = ssl.createSSLEngine();
+                        SSLParameters parameters = ssl.getSupportedSSLParameters();
+                        parameters.setNeedClientAuth(false);
+                        parameters.setCipherSuites(engine.getEnabledCipherSuites());
+                        parameters.setProtocols(engine.getEnabledProtocols());
+                        params.setSSLParameters(parameters);
+                    }
+                });
+                configureBinding(hServer, hBinding);
+                Container owner = frame.getResourceContainer();
+                resources.start(hServer.getRouter(), owner::unregisterNativeCallback);
+                owner.registerNativeCallback();
+            }
             return Op.R_NEXT;
         } catch (Exception e) {
-            frame.f_context.f_container.terminate(hServer.f_context);
-            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
+            var cleanup = owned.closeAsync();
+            return frame.waitForIO(cleanup, caller -> {
+                cleanup.join();
+                return caller.raiseException(xException.obscureIoException(caller, e.getMessage()));
+            });
         }
-    }
-
-    private void configureHttpServer(HttpServerHandle hServer, InetSocketAddress addr)
-            throws IOException {
-        hServer.setHttpServer(HttpServer.create(addr, 0));
-    }
-
-    private void configureHttpsServer(HttpServerHandle hServer, InetSocketAddress addr)
-            throws IOException, GeneralSecurityException {
-        HttpsServer httpsServer = HttpsServer.create(addr, 0);
-        SSLContext  ctxSSL      = SSLContext.getInstance("TLS");
-
-        KeyManager[] aKeyManagers = new KeyManager[] {new SimpleKeyManager(hServer)};
-        ctxSSL.init(aKeyManagers, null, null);
-
-        httpsServer.setHttpsConfigurator(new HttpsConfigurator(ctxSSL) {
-            @Override
-            public void configure(HttpsParameters params) {
-                try {
-                    SSLContext    ctxSSL    = getSSLContext();
-                    SSLEngine     engine    = ctxSSL.createSSLEngine();
-                    SSLParameters paramsSSL = ctxSSL.getSupportedSSLParameters();
-
-                    paramsSSL.setNeedClientAuth(false);
-                    paramsSSL.setCipherSuites(engine.getEnabledCipherSuites());
-                    paramsSSL.setProtocols(engine.getEnabledProtocols());
-
-                    params.setSSLParameters(paramsSSL);
-                } catch (Exception ex) {
-                    throw new RuntimeException("failed to initialize the SSL context", ex);
-                }
-            }
-        });
-        hServer.setHttpsServer(httpsServer);
     }
 
     private void configureBinding(HttpServerHandle hServer, ObjectHandle hBinding) {
@@ -512,15 +474,19 @@ public class xRTServer
         HttpContextHandle hCtx = (HttpContextHandle) ahArg[0];
         long              cb    = ((JavaLong) ahArg[1]).getValue();
 
-        try {
-            InputStream in    = hCtx.f_exchange.getRequestBody();
-            byte[]      ab    = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
-            return frame.assignValue(iResult, ab.length == 0
-                    ? xByteArray.ensureEmptyByteArray()
-                    : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
-        } catch (IOException e) {
-            return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
-        }
+        var read = frame.scheduleIO(() -> hCtx.f_exchange.getRequestBody()
+                .readNBytes((int) Math.min(cb, Integer.MAX_VALUE)));
+        return frame.waitForIO(read, caller -> {
+            try {
+                byte[] bytes = read.get();
+                return caller.assignValue(iResult, bytes.length == 0
+                        ? xByteArray.ensureEmptyByteArray()
+                        : xByteArray.makeByteArrayHandle(bytes, Mutability.Constant));
+            } catch (Exception e) {
+                hCtx.close();
+                return caller.raiseException(xException.obscureIoException(caller, e.getMessage()));
+            }
+        });
     }
 
     /**
@@ -535,30 +501,20 @@ public class xRTServer
     /**
      * Implementation of "closeImpl()" method.
      */
-    private int invokeClose(HttpServerHandle hServer) {
-        HttpServer httpServer  = hServer.getHttpServer();
-        HttpServer httpsServer = hServer.getHttpsServer();
-        if (httpServer != null) {
-            if (httpServer.getExecutor() == null) {
-                // we need to compensate for a bug in com.sun.net.httpserver.HttpServer that doesn't
-                // properly close the server socket that hasn't been established
-                httpServer.start();
-                httpServer.stop(0);
-                httpsServer.start();
-                httpsServer.stop(0);
-            } else {
-                httpServer.removeContext("/");
-                httpServer.stop(0);
-                httpsServer.removeContext("/");
-                httpsServer.stop(0);
-                ((ExecutorService) httpServer.getExecutor()).shutdown();
-                hServer.f_context.f_container.unregisterNativeCallback();
-            }
-            hServer.getRouter().mapRoutes.clear();
-            hServer.clear();
+    private int invokeClose(Frame frame, HttpServerHandle hServer) {
+        OwnedResource<HttpServerResources> resource = hServer.ownership();
+        if (resource == null) {
+            return Op.R_NEXT;
         }
-
-        return Op.R_NEXT;
+        var cleanup = resource.closeAsync();
+        return frame.waitForIO(cleanup, caller -> {
+            try {
+                cleanup.join();
+                return Op.R_NEXT;
+            } catch (RuntimeException e) {
+                return caller.raiseException(xException.obscureIoException(caller, e.getMessage()));
+            }
+        });
     }
 
     /**
@@ -566,7 +522,8 @@ public class xRTServer
      *                                    String[] values, Int responseLength)" method.
      */
     private int invokeSetHeaders(Frame frame, ObjectHandle[] ahArg) {
-        HttpExchange      exchange      = ((HttpContextHandle) ahArg[0]).f_exchange;
+        HttpContextHandle context       = (HttpContextHandle) ahArg[0];
+        HttpExchange      exchange      = context.f_exchange;
         long              nStatus       = ((JavaLong) ahArg[1]).getValue();
         StringArrayHandle hHeaderNames  = (StringArrayHandle) ((ArrayHandle) ahArg[2]).m_hDelegate;
         StringArrayHandle hHeaderValues = (StringArrayHandle) ((ArrayHandle) ahArg[3]).m_hDelegate;
@@ -581,7 +538,7 @@ public class xRTServer
             exchange.sendResponseHeaders((int) nStatus, (int) nLength);
             return Op.R_NEXT;
         } catch (IOException e) {
-            exchange.close();
+            context.close();
             return frame.raiseException(xException.obscureIoException(frame, e.getMessage()));
         }
     }
@@ -591,7 +548,8 @@ public class xRTServer
      * method.
      */
     private int invokeSetBodyBytes(Frame frame, ObjectHandle[] ahArg) {
-        HttpExchange exchange = ((HttpContextHandle) ahArg[0]).f_exchange;
+        HttpContextHandle context = (HttpContextHandle) ahArg[0];
+        HttpExchange exchange = context.f_exchange;
         ArrayHandle  hBody    = (ArrayHandle) ahArg[1];
         boolean      fFinal   = ((BooleanHandle) ahArg[2]).get();
 
@@ -601,13 +559,13 @@ public class xRTServer
             try {
                 out.write(abBody);
             } catch (Throwable e) {
-                exchange.close();
+                context.close();
                 return frame.raiseException(xException.makeObscure(frame, e.getMessage()));
             }
         }
 
         if (fFinal) {
-            exchange.close();
+            context.close();
         }
         return Op.R_NEXT;
     }
@@ -651,6 +609,10 @@ public class xRTServer
 
         @Override
         public void handle(HttpExchange exchange) {
+            if (!f_hServer.resources().track(exchange)) {
+                exchange.close();
+                return;
+            }
             try (var ignore = ConstantPool.withPool(f_context.f_pool)) {
                 // call the Handler handle method
                 ObjectHandle[] hArgs = createArguments(exchange);
@@ -669,7 +631,7 @@ public class xRTServer
 
         private ObjectHandle[] createArguments(HttpExchange exchange) {
             ObjectHandle      hBinding  = f_hServer.getBinding();
-            HttpContextHandle hContext  = new HttpContextHandle(exchange);
+            HttpContextHandle hContext  = new HttpContextHandle(exchange, f_hServer.resources());
             StringHandle      hURI      = xString.makeHandle(exchange.getRequestURI().toASCIIString());
             StringHandle      hMethod   = xString.makeHandle(exchange.getRequestMethod());
             BooleanHandle     hTls      = xBoolean.makeHandle(exchange instanceof HttpsExchange);
@@ -678,10 +640,12 @@ public class xRTServer
 
         private void sendError(HttpExchange exchange, Throwable t) {
             t.printStackTrace();
-            try (exchange) {
+            try {
                 exchange.sendResponseHeaders(500, -1);
             } catch (IOException e) {
                 e.printStackTrace();
+            } finally {
+                f_hServer.resources().release(exchange);
             }
         }
 
@@ -860,6 +824,7 @@ public class xRTServer
             super(clazz, context);
 
             f_aoNative[0] = new Router();
+            f_aoNative[1] = new HttpServerResources();
         }
 
         /**
@@ -892,22 +857,14 @@ public class xRTServer
          * @return underlying {@link HttpServer}.
          */
         protected HttpServer getHttpServer() {
-            return (HttpServer) f_aoNative[1];
-        }
-
-        protected void setHttpServer(HttpServer httpServer) {
-            f_aoNative[1] = httpServer;
+            return resources().http();
         }
 
         /**
          * @return the underlying {@link HttpsServer}
          */
         protected HttpsServer getHttpsServer() {
-            return (HttpsServer) f_aoNative[2];
-        }
-
-        protected void setHttpsServer(HttpsServer httpsServer) {
-            f_aoNative[2] = httpsServer;
+            return resources().https();
         }
 
         protected ObjectHandle getBinding() {
@@ -926,10 +883,17 @@ public class xRTServer
             }
         }
 
-        protected void clear() {
-            setRouter(null);
-            setHttpServer(null);
-            setHttpsServer(null);
+        HttpServerResources resources() {
+            return (HttpServerResources) f_aoNative[1];
+        }
+
+        @SuppressWarnings("unchecked")
+        OwnedResource<HttpServerResources> ownership() {
+            return (OwnedResource<HttpServerResources>) f_aoNative[2];
+        }
+
+        void setOwnership(OwnedResource<HttpServerResources> resource) {
+            f_aoNative[2] = resource;
         }
 
         @Override
@@ -946,10 +910,11 @@ public class xRTServer
      */
     protected static class HttpContextHandle
                 extends ObjectHandle {
-        public HttpContextHandle(HttpExchange exchange) {
+        public HttpContextHandle(HttpExchange exchange, HttpServerResources resources) {
             super(xObject.INSTANCE.getCanonicalClass());
 
             f_exchange = exchange;
+            this.resources = resources;
             m_fMutable = false;
         }
 
@@ -957,6 +922,11 @@ public class xRTServer
          * The wrapped {@link HttpExchange}.
          */
         public final HttpExchange f_exchange;
+        private final HttpServerResources resources;
+
+        void close() {
+            resources.release(f_exchange);
+        }
     }
 
     // ----- data fields and constants -------------------------------------------------------------

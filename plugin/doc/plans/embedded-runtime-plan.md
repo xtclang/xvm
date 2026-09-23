@@ -4,8 +4,8 @@ Investigation baseline: `master` at `c3e9d641808091910abb018cb40885300ee08001`.
 Working branch: `lagergren/embedded-gradle-runtime`.
 
 The [PR submission plan](embedded-runtime-pr-plan.md) defines exact change scopes, dependencies,
-extraction steps and validation for ten proposed PRs. It also separates the remaining native
-resource integrations from the work already implemented on this branch.
+extraction steps and validation for eleven proposed PRs. The native-resource integrations are a
+separate commit and review scope from the common mechanism, embedding API and Gradle adapter.
 
 The within-build implementation is on this branch and `DIRECT` execution has passed all
 21 existing sequential manual-test modules. Five measured runs per mode reduced median elapsed
@@ -125,9 +125,9 @@ Custom injector implementations remain unsupported. JVM startup options must alr
 the Gradle JVM; assertions are enabled on the implementation loader. The manual tests request
 `--enable-preview`, so their DIRECT host needs that option too. Cancellation cannot forcibly stop
 uncooperative native code: failure to terminate is reported and the session is not reused. General
-native-resource ownership still requires the migrations identified in the
-[resource audit](../../../doc/embedding-resource-ownership.md); the common mechanism alone does
-not close existing native handles. Retained-memory behavior under long workloads and fatal-runtime
+native-resource ownership now includes the six integrations described in the
+[resource audit](../../../doc/embedding-resource-ownership.md), with explicit native-handle cleanup
+assertions between requests. Retained-memory behavior under long workloads and fatal-runtime
 recovery need further validation. No automatic JIT test dependencies have been added.
 
 The JIT integration passed all 16 embedding lifecycle tests (including five JIT tests) and all
@@ -143,27 +143,21 @@ follow-ups to the validated sequential execution model, not claims that the capa
 exist. Prioritize the remaining resource ownership fixes and their validation, then the constant-pool
 and metadata project.
 
-1. **Native resource ownership — audit completed; fixes still required.** The
-   [resource ownership audit](../../../doc/embedding-resource-ownership.md) reproduced retained
-   native watches after explicit cancellation and an open file channel after both request and
-   session close. It also identifies socket/HTTP disposal gaps, cancelled callback retention and
-   a certificate-manager stream leak. The common ownership mechanism and frame helper are now
-   implemented locally, and the keystore stream leak is fixed by reusing the scoped extraction
-   helper. New `.x` assertions cover watcher delivery and explicit
-   channel cleanup; expanded lifecycle tests cover session watcher shutdown after success,
-   failure and cancellation. They do not establish automatic request disposal. Implement the
-   resource-specific migrations and acceptance criteria in that report before
-   expanding DIRECT's resource support. Longer reuse runs still need retained-handle, thread,
-   heap and classloader checks.
+1. **Native resource ownership — migrations implemented; longer retention checks remain.** The
+   [resource audit](../../../doc/embedding-resource-ownership.md) originally reproduced retained
+   watches and an open file channel after control/session close. The common mechanism, keystore
+   fix and six native migrations now have separate commit boundaries. Channels, sockets, individual
+   watch subscriptions, HTTP clients, server listeners/exchanges/executors and cancelled callback
+   entries participate in owner cleanup. Paused alarms are disposed too.
 
-   These gaps affect **sequential requests in one session**, not only concurrent execution or
-   reuse across builds. The probes reproduced a channel surviving control/session close and watch
-   registrations accumulating across sequential requests. Pending work completing does not imply
-   disposal of idle handles. HTTP clients, server listeners/executors and unfinished exchanges
-   still lack owner cleanup; those are source findings, not verified HTTP integration scenarios.
-   The [remaining integration scopes](embedded-runtime-pr-plan.md#remaining-native-resource-integration-scopes)
-   separate channels, sockets, watch subscriptions, HTTP clients, HTTP servers/exchanges and
-   cancelled callbacks, with acceptance criteria for each.
+   HTTP pools are created for the requesting application at first use, rather than attaching to
+   the shared runner during injection. Watch directory keys remain until their last owner leaves.
+   Native-handle tests retain references and assert cleanup after each control closes while the
+   host remains running, then execute a healthy request. Network tests use a test-only provider;
+   production network injection policy and incomplete JIT resource support are unchanged.
+   The [six integration scopes](embedded-runtime-pr-plan.md#native-resource-integration-scopes)
+   identify the exact PR 4b boundary. Longer retained-handle, heap and classloader measurements,
+   watcher directory/overflow semantics and broader platform coverage remain follow-ups.
 
 2. **Explicit constant-pool ownership and metadata reuse — next performance project.** Coordinate
    with the [errs work](#relationship-to-the-errs-branch) before sharing linked definitions or
@@ -198,9 +192,8 @@ and metadata project.
    xUnit already works. See the [JIT follow-ups](../../../doc/jit-embedding.md#follow-up-work).
 
 6. **Plugin-wide DIRECT default — later rollout decision.** Keep ATTACHED as the general default
-   while manualTests exercises DIRECT. Before changing it, fix and verify the audit's remaining
-   resource ownership gaps and validate additional consumer projects, multiple runtime identities,
-   cancellation, output
+   while manualTests exercises DIRECT. Before changing it, land the native cleanup scope and
+   validate additional consumer projects, multiple runtime identities, cancellation, output
    redirection and incompatible JVM-option handling. Repeat real work with configuration-cache
    reuse and preserve the explicit ATTACHED override. Decide from correctness and representative
    workload measurements, including builds where Gradle restores or skips the work.

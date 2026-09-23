@@ -483,8 +483,14 @@ public class xOSFile
 
         Path path = hFile.f_path;
         try {
-            FileChannel channel = FileChannel.open(path, aOpenOpt);
-            return xRawOSFileChannel.INSTANCE.createHandle(frame, channel, path, iReturn);
+            OpenOption[] options = aOpenOpt;
+            var resource = frame.acquireResource(() -> FileChannel.open(path, options));
+            try {
+                return xRawOSFileChannel.INSTANCE.createHandle(frame, resource, path, iReturn);
+            } catch (RuntimeException | Error e) {
+                resource.closeAsync();
+                throw e;
+            }
         } catch (IOException e) {
             return raisePathException(frame, e, path);
         }

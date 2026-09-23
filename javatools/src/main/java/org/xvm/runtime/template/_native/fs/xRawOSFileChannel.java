@@ -14,6 +14,7 @@ import java.nio.file.Path;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import org.xvm.asm.ClassStructure;
@@ -24,6 +25,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.OwnedResource;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
@@ -159,10 +161,10 @@ public class xRawOSFileChannel
 
         case "close":
             try {
-                hChannel.f_channel.close();
+                hChannel.resource.closeAsync().join();
                 return Op.R_NEXT;
-            } catch (IOException e) {
-                return xOSFileNode.raisePathException(frame, e, hChannel.f_path);
+            } catch (CompletionException e) {
+                return xOSFileNode.raisePathException(frame, e.getCause(), hChannel.f_path);
             }
         }
 
@@ -237,30 +239,35 @@ public class xRawOSFileChannel
      * Construct a new {@link ChannelHandle} representing the specified file.
      *
      * @param frame    the current frame
-     * @param channel  the channel
+     * @param resource the owned channel
      * @param path     the channel's path
      * @param iReturn  the register id to place the created handle into
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
-    public int createHandle(Frame frame, FileChannel channel, Path path, int iReturn) {
+    public int createHandle(Frame frame, OwnedResource<FileChannel> resource, Path path, int iReturn) {
         if (iReturn == Op.A_IGNORE) {
+            resource.closeAsync().join();
             return Op.R_NEXT;
         }
 
         Container      container = frame.f_context.f_container;
         ServiceContext context   = container.createServiceContext(path.toString());
         ChannelHandle  hChannel  = new ChannelHandle(getCanonicalClass(),
-                context, channel, path.toAbsolutePath());
+                context, resource, path.toAbsolutePath());
 
         // this should come from the config
         int cbPreferredSize = 8192;
         try {
-            cbPreferredSize = Math.clamp((int) channel.size(), 1024, cbPreferredSize);
+            cbPreferredSize = Math.clamp((int) resource.get().size(), 1024, cbPreferredSize);
         } catch (IOException ignore) {}
         hChannel.setPreferredBufferSize(cbPreferredSize);
 
-        return frame.assignValue(iReturn, hChannel);
+        int result = frame.assignValue(iReturn, hChannel);
+        if (result == Op.R_EXCEPTION) {
+            resource.closeAsync();
+        }
+        return result;
     }
 
     /**
@@ -270,12 +277,14 @@ public class xRawOSFileChannel
             extends xRawChannel.ChannelHandle {
         public final FileChannel f_channel;
         public final Path        f_path;
+        private final OwnedResource<FileChannel> resource;
 
         public ChannelHandle(TypeComposition clazz, ServiceContext context,
-                             FileChannel channel, Path path) {
+                             OwnedResource<FileChannel> resource, Path path) {
             super(clazz, context);
 
-            f_channel = channel;
+            this.resource = resource;
+            f_channel = resource.get();
             f_path    = path;
         }
 

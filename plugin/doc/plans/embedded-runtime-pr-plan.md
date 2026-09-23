@@ -4,28 +4,29 @@ This is the proposed review and submission sequence for `lagergren/embedded-grad
 not a set of PR descriptions or an instruction to publish branches. It records concrete scopes
 for constructing smaller branches later. No split branches have been created or validated yet.
 
-Source snapshot: `origin/master` at `6539aa6eb`, branch HEAD at `c884779d6`, plus the local resource
-audit, common ownership mechanism and keystore fix implemented locally on this branch. Recheck both
-revisions and the working diff before extraction. The committed branch has 64 changed files;
-the local ownership work is additional. The
-[implementation plan](embedded-runtime-plan.md) explains the design and measurements. The
-[resource audit](../../../doc/embedding-resource-ownership.md) records cleanup gaps and evidence.
-This document defines submission boundaries instead.
+Source snapshot: `origin/master` at `6539aa6eb`; the original embedding implementation ends at
+`c884779d6`. The keystore correction is now commit `ca52e2aae`, followed by the common ownership
+mechanism/audit in `9b51e0f23`. The separate native migration commit is titled
+**Release application-owned native resources between embedded runs**. Recheck the revisions and
+working diff before extraction. The [implementation plan](embedded-runtime-plan.md) explains the
+design and measurements; the [resource audit](../../../doc/embedding-resource-ownership.md)
+records historical leaks, their corrections and current validation.
 
 ## Recommended sequence
 
 | PR | Concrete scope | Required predecessors | Extraction status |
 |---|---|---|---|
-| 1 | Close the certificate-manager keystore stream | None | One local production hunk; separate from that file's IO scheduling change |
+| 1 | Close the certificate-manager keystore stream | None | Commit `ca52e2aae`; separate from that file's IO scheduling change |
 | 2 | Avoid reloading definitions already present during runtime linking | None | Existing commit `b8d031f2d` is the boundary |
 | 3 | Interpreter activity tracking and bounded runtime shutdown | None; submit after 2 for a simple sequence | Extract runtime/util/native hunks from `d5947a903`, plus the generic service-context cleanup in `c884779d6` |
-| 4 | Common native-resource acquisition and release mechanism | 3 | Current local `OwnedResource` work; no channel/socket/watch-subscription migrations |
+| 4 | Common native-resource acquisition and release mechanism | 3 | Code from `9b51e0f23`; audit tests/docs in that commit also need the scopes described below |
 | 5a | Owned, headless interpreter embedding sessions | 3; 4 is recommended ordering, not an API dependency | Extract basic session/control/runner lifecycle and isolation coverage |
 | 5b | Explicit interpreter run requests, resource context and xUnit | 5a | Extract request configuration, resource-provider/repository fixes and their regressions |
+| 4b | Apply native ownership to channels, sockets, watches, HTTP and callbacks | 4 and 5b for the integration tests | Separate native migration commit; exact six scopes and test boundaries below |
 | 6 | File compilation through the embedding API | 5b (the source-tree execution regression uses `RunRequest`) | Extract the file-compiler API and source-tree tests from `d5947a903` |
 | 7 | Reuse embedding sessions for Gradle DIRECT compile/run/xUnit | 5b and 6 | Extract plugin and bootstrap-consumer changes from `d5947a903` |
 | 8 | Experimental JIT execution through the owned embedding session | 5b; include the small plugin adapter after 7 | Extract JIT changes from `c884779d6`; exclude manual-test rollout |
-| 9 | Make manualTests use DIRECT by default | 7 and 8 | Only the manual-test convention and Gradle preview startup changes from `c884779d6` |
+| 9 | Make manualTests use DIRECT by default | 4b, 7 and 8 | Only the manual-test convention and Gradle preview startup changes from `c884779d6` |
 
 PRs 1 and 2 can be submitted independently. PRs 3–8 form an implementation sequence, but PR 6
 does not need JIT and PR 8 does not need the manual-test default. Keep PR 9 separate so reviewers
@@ -39,7 +40,8 @@ the split. Reconstruct the listed hunks on top of their predecessors, then run t
 
 ### Review size and readiness
 
-The recommended final sequence has **ten PRs**, because scope 5 is split into 5a and 5b below.
+The recommended sequence now has **eleven PRs**: the original ten extraction scopes plus PR 4b
+for native-resource integration. Submit 4b after 5b so its real-runner regressions are available.
 These are scope judgments from the actual diff, not quality scores or validated extraction counts.
 
 | Scope | Review assessment |
@@ -47,6 +49,7 @@ These are scope judgments from the actual diff, not quality scores or validated 
 | 1 and 2 | Small, independent fixes with narrow regressions; easiest to submit first. |
 | 3 | Broad foundational review across runtime, bridge and native call sites. Keep its completion protocol together; review the IO/timer conversions as a separate commit within this PR. |
 | 4 | Bounded new ownership API with substantial race/failure tests. Current local implementation passed its 12 unit cases and the combined lifecycle regressions; no native-handle migrations are included. |
+| 4b | Substantial native cleanup review with six explicit subscopes. Keep separate from the framework API, plugin adoption and rollout; further splitting remains possible using R1–R6 below. |
 | 5a | A substantial lifecycle review, but smaller than the combined embedding scope. Keep session ownership, runner release and cancellation together. |
 | 5b | A focused API/protocol extension with two integration regressions. Requires the explicit intermediate reconstruction described below. |
 | 6 | Small compiler adapter and file-tree regressions. |
@@ -60,14 +63,16 @@ reconstructing and validating the intermediate protocol would create disproporti
 All extracted PRs still need fresh validation; passing checks on the combined branch do not prove
 that an intermediate state compiles or runs.
 
-The latest focused combined-branch run executed 12 ownership tests, 14 keystore-operation tests,
+The earlier framework milestone executed 12 ownership tests, 14 keystore-operation tests,
 7 existing runtime tests and 16 embedding lifecycle tests: 49 tests, with zero failures, errors
 or skips. Commands below are the recommended per-extraction validation matrix, not a claim that
-every exact command or every intermediate branch has already passed.
+every exact command or every intermediate branch has already passed. The native integration
+validation is recorded separately in the resource audit: 48 Java tests with zero skips/failures,
+all 21 sequential manual modules, formatting and configuration-cache reuse.
 
 ## PR 1 — certificate-manager stream lifetime
 
-Include only the local change to
+Take the production change from `ca52e2aae` to
 `javatools/src/main/java/org/xvm/runtime/template/_native/crypto/xRTCertificateManager.java`:
 the filesystem path in `loadKey()` delegates to `KeyStoreOperations.extractKey()`, which owns and
 closes its input stream. Preserve the existing in-memory `KeyStoreHandle` path. Remove the unused
@@ -169,7 +174,7 @@ changes are call-site conversions required to use the same ownership boundary.
 
 ## PR 4 — common native-resource ownership
 
-Take the current local ownership implementation as its own change on top of PR 3:
+Take the common mechanism from `9b51e0f23` as its own change on top of PR 3:
 
 - New `javatools/src/main/java/org/xvm/runtime/OwnedResource.java`.
 - The corresponding local `Container.java` hunks: reserve ownership before acquisition, remove
@@ -180,7 +185,7 @@ Take the current local ownership implementation as its own change on top of PR 3
 - `javatools/src/test/java/org/xvm/runtime/OwnedResourceTest.java`: the deterministic ownership
   tests, including acquisition/shutdown races, explicit-close removal, cleanup failures and the
   requesting-application owner when a shared service creates a resource.
-- The mechanism status and remaining migrations in `doc/embedding-resource-ownership.md`.
+- The framework status and native integration boundaries in `doc/embedding-resource-ownership.md`.
 
 Keep this separate from PR 1. Do not copy the complete current `Container.java` onto master: it
 also contains PR 3. Extract the incremental registry replacement after PR 3's version.
@@ -199,11 +204,13 @@ close. Tests should coordinate races with latches/futures, not sleeps or elapsed
 ```
 
 Re-run the watcher lifecycle cases after PRs 5a/5b are assembled because the existing dispatcher
-uses `onTermination()`. The current ownership test class has 12 cases; confirm all execute after extraction.
+uses `onTermination()`. The framework version has 12 ownership cases; PR 4b adds callback tests. Confirm the appropriate
+cases execute after each extraction.
 
 **Scope limit:** this API does not automatically fix existing file channels, sockets, individual
 watch subscriptions, HTTP objects or cancelled callbacks. Native templates must opt into it.
-Those migrations remain separate work; a green framework test is not evidence of closed handles.
+Those migrations are implemented in the separate PR 4b scope; a green framework test alone is
+not evidence of closed handles.
 
 ## Scope 5 — interpreter embedding, submitted as PRs 5a and 5b
 
@@ -464,21 +471,20 @@ the plugin-wide default.
 ```
 
 Repeat the first command to verify configuration-cache reuse. Check the chosen modes in task
-output, not just the aggregate result. Before submission, decide explicitly whether the known
-native-handle gaps are acceptable for this test-only rollout; the common mechanism alone does
-not resolve them. Resource-consuming workloads must not be cited as disposal coverage until the
-missing native integrations have corresponding assertions.
+output, not just the aggregate result. Land PR 4b and its native-disposal assertions before this
+test-only rollout. The common mechanism alone does not establish cleanup. The JIT task still
+covers only its documented subset; interpreter native-resource tests do not establish JIT parity.
 
 ## Shared files and extraction rules
 
 | Shared file | Ownership of hunks |
 |---|---|
 | `xRTCertificateManager.java` | PR 1 keystore delegation; PR 3 IO scheduling |
-| `Container.java` / `Frame.java` | PR 3 activity/IO/termination foundation; PR 4 resource registry/helpers |
+| `Container.java` / `Frame.java` | PR 3 activity/IO/termination foundation; PR 4 resource registry/helpers; PR 4b cancellation outside the owner monitor and resource-owner accessor |
 | `EmbeddingSupport.java` | PR 5 session/interpreter/in-memory compilation; PR 6 file compilation; PR 8 JIT |
 | `RunRequest.java` | PR 5 interpreter request, then PR 8 backend field and constructors |
 | `JitControl.java` | PR 5 interface-signature compatibility, then PR 8 real embedded implementation |
-| `ServiceContext.java` | All current generic lifecycle/thread-local changes in PR 3, even those committed with JIT |
+| `ServiceContext.java` | Generic lifecycle/thread-local changes in PR 3; concurrent callback map in PR 4b |
 | `xCoreRepository.java` / `xRTFileTemplate.java` | PR 5 interpreter request-repository correctness |
 | `IsolatedDirectExecutor.java` | PR 7 interpreter compile/run/xUnit; PR 8 JIT selection and limitation message |
 | `EmbeddingLifecycleTest.java` | PR 5 interpreter/audit cases; PR 6 file compilation; PR 8 five JIT cases |
@@ -502,10 +508,6 @@ permission to silently add or enable tests that substantially expand automatic J
 
 ## Work deliberately outside this submission series
 
-- **Native integrations after PR 4:** file-channel and socket acquisition/transfer/close ownership;
-  request-specific watch subscriptions and final-listener unwatch; HTTP clients/listeners/exchanges;
-  cancelled callback release. Keep separate commits/scopes with the concrete acceptance tests in
-  the resource audit. They are not implemented merely by adding `OwnedResource`.
 - **Further metadata reuse:** explicit constant-pool ownership, immutable definition generations
   and measured compiler/application preparation caches. Coordinate with the `lagergren/errs`
   work; do not import that redesign while extracting these PRs.
@@ -514,16 +516,22 @@ permission to silently add or enable tests that substantially expand automatic J
 - **Broader execution policy:** concurrent DIRECT requests, custom injectors, plugin-wide DIRECT
   default and broader JIT capability/strict-placeholder reporting.
 
-Known gaps and detailed completion criteria remain in the implementation plan and resource audit.
-This plan does not approve publishing anything; branch construction, commits, pushes and PR
-submission remain separate actions requested by the user.
+The user authorized local implementation and commits. This plan does not authorize publishing:
+pushes and PR submission remain separate actions. Detailed validation and remaining capability
+limits are recorded in the implementation plan and resource audit.
 
-### Remaining native-resource integration scopes
+### Native resource integration scopes
 
-These six scopes are **unimplemented follow-ups**, separate from the ten PRs that extract current
-work. They all build on PR 4's common mechanism. Host integration regressions also need PRs 5a/5b;
-they do not require the Gradle adapter or a host kept warm across builds. Sequential execution
+These six scopes are now implemented together in the separate native migration commit, assigned
+to **PR 4b**. They build on PR 4's common mechanism; host integration regressions need PRs 5a/5b.
+They do not require the Gradle adapter or a host kept warm across builds. Sequential execution
 already needs these fixes: serialization does not dispose resources left by a completed request.
+
+The local commit boundary is **Release application-owned native resources between embedded runs**.
+Keep it separate from `ca52e2aae` (keystore) and `9b51e0f23` (mechanism/audit). It is a coherent
+cleanup change but a substantial review; R1–R6 remain explicit extraction boundaries if reviewers
+prefer smaller PRs. Do not claim that the current combined commit is six independently validated
+intermediate branches.
 
 Paths in this table are under `javatools/src/main/java/org/xvm/runtime/` unless qualified.
 Each scope includes focused unit tests and, where supported, `.x` fixtures under
@@ -540,12 +548,34 @@ must supply their own resource provider without silently expanding default embed
 | R6: cancelled callbacks | `WeakCallback.java`, `ServiceContext.java` callback-map operations and `template/_native/temporal/{xLocalClock,xNanosTimer}.java` cancellation paths | Cancel/execute races release references exactly once, repeated cancellation leaves no callback entries, and keep-alive accounting remains correct |
 
 R1 and R3 address the reproduced leaks; R2/R4/R5/R6 address source-confirmed missing cleanup.
-The current green tests do not establish any of these automatic-disposal guarantees. Test each
-resource after **every control close while the session remains open**, then close/reopen the
-session. Use explicit counters/handle state, loopback peers, dynamic ports and synchronization;
+The new focused tests retain actual native handles and check release after **control close while
+the session remains open**, followed by a healthy request. Existing lifecycle tests also exercise
+session close/reopen. Use explicit counters/handle state, loopback peers, dynamic ports and synchronization;
 avoid public network dependencies, sleeps, GC assertions and timing thresholds.
 
 Keep watcher event semantics (directory classification, invalid keys and overflow handling) as a
 separate behavior change unless required for R3's disposal contract. Retained heap/classloader
 measurements follow the deterministic disposal tests. None of these scopes includes metadata
 caching, concurrent DIRECT execution, plugin-default changes or broader JIT resource support.
+
+
+PR 4b also owns these supporting changes and tests:
+
+- `OwnedResource.closeOnWorker()` for awaited, potentially blocking native shutdown;
+  `Frame.getResourceContainer()`; timer cancellation outside the `Container` monitor.
+- New `template/_native/web/HttpClientPool.java` and `HttpServerResources.java`. Client pools are
+  scoped on first use by each application, including calls through a shared injected connector.
+- The added callback cases in `OwnedResourceTest` and the loopback/partial-startup tests in
+  `template/_native/web/HttpResourceOwnershipTest`.
+- `xdk/src/test/java/org/xvm/xdk/EmbeddingResourceOwnershipTest.java` and its
+  `ownership/NativeResources.x` and `ownership/NetworkResources.x` fixtures. The latter only extends
+  the test runner's provider; production injection policy is unchanged.
+- The `xdk/build.gradle.kts` test-resource input for the production runner source. The installed
+  XDK remains provisioned by the existing test-task dependencies; no skip-on-missing-binary tests
+  are added to javatools, and no JIT execution dependency is added.
+- Current cleanup status in the resource audit, implementation plan and JIT limitations document.
+
+Use the [resource audit's regression command](../../../doc/embedding-resource-ownership.md#current-regression-coverage-and-submission-boundary)
+as this scope's validation gate. Also verify configuration-cache reuse after the XDK test-resource
+change. Tests cover these interpreter resource paths, not general JIT filesystem/network support,
+custom injectors, retained-heap bounds or watcher directory/overflow event semantics.

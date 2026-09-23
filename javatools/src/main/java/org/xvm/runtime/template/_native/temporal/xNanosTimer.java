@@ -143,8 +143,12 @@ public class xNanosTimer
         LongLongHandle llPicos = (LongLongHandle) hDuration.getField(frame, "picoseconds");
         long           cNanos  = Math.max(0, llPicos.getValue().divUnsigned(PICOS_PER_NANO).getLowValue());
 
-        return frame.assignValue(iReturn,
-                hTimer.addAlarm(cNanos, new WeakCallback(frame, hAlarm), hKeepAlive.get()));
+        try {
+            return frame.assignValue(iReturn,
+                    hTimer.addAlarm(cNanos, new WeakCallback(frame, hAlarm), hKeepAlive.get()));
+        } catch (IllegalStateException e) {
+            return frame.raiseException(e.getMessage());
+        }
     }
 
     // ----- ObjectHandle --------------------------------------------------------------------------
@@ -258,6 +262,7 @@ public class xNanosTimer
                 f_setAlarms.add(alarm);
             }
 
+            refCallback.onDiscard(alarm::cancel);
             if (isRunning()) {
                 alarm.start();
             }
@@ -375,13 +380,18 @@ public class xNanosTimer
                 }
 
                 ServiceContext context = f_refCallback.get();
-                if (context != null && !context.isTerminated()) {
-                    WeakCallback.Callback callback = f_refCallback.extractCallback();
-                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
+                if (context != null) {
+                    if (!context.isTerminated()) {
+                        WeakCallback.Callback callback = f_refCallback.extractCallback();
+                        if (callback != null) {
+                            context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
+                        }
+                    }
                     if (f_fRegistered) {
                         context.f_container.unregisterNativeCallback();
                     }
                 }
+                f_refCallback.discard();
                 TimerHandle.this.removeAlarm(this);
             }
 
@@ -406,6 +416,7 @@ public class xNanosTimer
                     m_fDead = true;
 
                     cancelTrigger();
+                    f_refCallback.discard();
                 }
 
                 TimerHandle.this.removeAlarm(this);

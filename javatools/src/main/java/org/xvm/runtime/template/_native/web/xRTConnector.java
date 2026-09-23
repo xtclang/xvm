@@ -18,6 +18,7 @@ import java.security.cert.X509Certificate;
 import java.time.Duration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.OwnedResource;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -108,11 +110,10 @@ public class xRTConnector
     public ObjectHandle ensureConnector(Frame frame, ObjectHandle hOpts) {
         ServiceContext context = f_container.createServiceContext("Connector");
         try {
-            CookieHandler cookieHandler = createCookieHandler();
             SSLContext    sslContext    = createSSLContext();
 
             ConnectorHandle hConnector = new ConnectorHandle(getCanonicalClass(f_container),
-                                            context, cookieHandler, sslContext);
+                                            context, sslContext);
             context.setService(hConnector);
             return hConnector;
         } catch (GeneralSecurityException e) {
@@ -195,7 +196,7 @@ public class xRTConnector
             builderRequest.method(hMethod.getStringValue(),
                     abData == null ? BodyPublishers.noBody() : BodyPublishers.ofByteArray(abData));
 
-            HttpClient  client  = hConn.selectClient(cTimeoutMillis);
+            HttpClient  client  = hConn.clients(frame).selectClient(cTimeoutMillis);
             HttpRequest request = builderRequest.build();
 
             Callable<HttpResponse<byte[]>> task = () ->
@@ -301,45 +302,25 @@ public class xRTConnector
     protected static class ConnectorHandle
             extends ServiceHandle {
         protected ConnectorHandle(TypeComposition clazz, ServiceContext context,
-                                  CookieHandler cookieHandler, SSLContext sslContext) {
+                                  SSLContext sslContext) {
             super(clazz, context);
-
-            f_cookieHandler = cookieHandler;
-            f_sslContext    = sslContext;
+            this.sslContext = sslContext;
         }
 
-        /**
-         * Choose a client with the connection timeout approximated to the request timeout value.
-         *
-         * Note: we need to use different pools for different connection to avoid cross-pollination
-         *       of cookies.
-         */
-        protected HttpClient selectClient(long cTimeoutMillis) {
-            Duration timeout;
-            int      nSlot;
-            if (cTimeoutMillis == 0) {
-                timeout = null;
-                nSlot   = 0;
-            } else {
-                int cApprox = Integer.highestOneBit((int) cTimeoutMillis/1000);
-
-                timeout = Duration.ofSeconds(Math.max(cApprox, 1));
-                nSlot   = Math.min(f_clientPool.length - 1,
-                                   1 + Integer.numberOfTrailingZeros(cApprox));
+        synchronized HttpClientPool clients(Frame frame) {
+            Container owner = frame.getResourceContainer();
+            OwnedResource<HttpClientPool> resource = clients.get(owner);
+            if (resource == null) {
+                resource = frame.acquireResource(
+                        () -> new HttpClientPool(createCookieHandler(), sslContext),
+                        pool -> OwnedResource.closeOnWorker(pool).whenComplete((_, _) -> {
+                            synchronized (this) {
+                                clients.remove(owner);
+                            }
+                        }));
+                clients.put(owner, resource);
             }
-
-            HttpClient client = f_clientPool[nSlot];
-            if (client == null) {
-                HttpClient.Builder builderClient = HttpClient.newBuilder()
-                    .followRedirects(HttpClient.Redirect.NEVER) // we process redirect manually
-                    .cookieHandler(f_cookieHandler)
-                    .sslContext(f_sslContext);
-                if (timeout != null) {
-                    builderClient.connectTimeout(timeout);
-                }
-                f_clientPool[nSlot] = client = builderClient.build();
-            }
-            return client;
+            return resource.get();
         }
 
         @Override
@@ -347,31 +328,8 @@ public class xRTConnector
             return "Connector";
         }
 
-        /**
-         * The {@link CookieHandler} used by this Connector.
-         */
-        protected final CookieHandler f_cookieHandler;
-
-        /**
-         * The {@link SSLContext} used for HTTPS.
-         */
-        protected SSLContext f_sslContext;
-
-        /**
-         * A pool of HttpClient's. The only difference between the clients in the pool is the
-         * "connectionTimeout" value. Since the timeout value should be applied for the entire
-         * request, we don't have to be precise for the "connection" phase timeout and only use very
-         * rough approximation of the request timeout value to control that phase. The slots are:
-         *
-         * [0] - no timeout
-         * [1] - 1 second timeout
-         * [2] - 2 seconds timeout
-         * [3] - 4 seconds timeout
-         * [4] - 8 seconds timeout
-         *
-         * TODO: how to close the HttpClients when ConnectionHandle is GC'd?
-         */
-        private final HttpClient[] f_clientPool = new HttpClient[5];
+        private final SSLContext sslContext;
+        private final Map<Container, OwnedResource<HttpClientPool>> clients = new HashMap<>();
     }
 
     // ----- data fields ---------------------------------------------------------------------------

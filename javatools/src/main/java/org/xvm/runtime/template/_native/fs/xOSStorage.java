@@ -13,6 +13,8 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,6 +30,8 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.OwnedResource;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.xBoolean;
@@ -64,8 +68,9 @@ public class xOSStorage
         markNativeMethod("createDir", STRING, BOOLEAN);
         markNativeMethod("createFile", STRING, BOOLEAN);
         markNativeMethod("delete", STRING, BOOLEAN);
-        markNativeMethod("watch", STRING, VOID);
-        markNativeMethod("unwatch", STRING, VOID);
+        markNativeMethod("watch", null, INT);
+        markNativeMethod("unwatch", INT, VOID);
+        markNativeMethod("lookupWatch", INT, null);
         markNativeMethod("instance", VOID, THIS);
 
         invalidateTypeInfo();
@@ -184,16 +189,11 @@ public class xOSStorage
                 xBoolean.makeHandle(path.toFile().delete()));
         }
 
-        case "watch": { // (pathStringDir)
-            StringHandle hPathStringDir = (StringHandle) hArg;
-
-            try {
-                Path pathDir = Paths.get(hPathStringDir.getStringValue());
-                ensureWatchDaemon().register(pathDir, hStorage);
-                return Op.R_NEXT;
-            } catch (IOException|InvalidPathException e) {
-                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+        case "unwatch": {
+            if (watchDaemon != null) {
+                watchDaemon.unwatch(((JavaLong) hArg).getValue());
             }
+            return Op.R_NEXT;
         }
         }
         return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
@@ -210,6 +210,22 @@ public class xOSStorage
         }
 
         switch (method.getName()) {
+        case "watch": {
+            try {
+                Path path = Paths.get(((StringHandle) ahArg[0]).getStringValue());
+                WatchServiceDaemon daemon = ensureWatchDaemon();
+                var resource = frame.acquireResource(() -> daemon.register(path, hStorage, ahArg[1]));
+                WatchRegistration registration = resource.get();
+                registration.attach(resource);
+                if (iReturn == Op.A_IGNORE) {
+                    resource.closeAsync();
+                    return Op.R_NEXT;
+                }
+                return frame.assignValue(iReturn, xInt64.makeHandle(registration.id));
+            } catch (IOException | IllegalArgumentException | IllegalStateException e) {
+                return frame.raiseException(xException.ioException(frame, e.getMessage()));
+            }
+        }
         case "instance":
             return frame.assignValue(iReturn,
                     ((NativeContainer) f_container).ensureOSStorage(frame, null));
@@ -228,6 +244,13 @@ public class xOSStorage
         }
 
         switch (method.getName()) {
+        case "lookupWatch": {
+            ObjectHandle watcher = watchDaemon == null ? null
+                    : watchDaemon.watcher(((JavaLong) ahArg[0]).getValue());
+            return watcher == null
+                    ? frame.assignValue(aiReturn[0], xBoolean.FALSE)
+                    : frame.assignValues(aiReturn, xBoolean.TRUE, watcher);
+        }
         case "find": { // (store, pathString)
             ObjectHandle hStore      = ahArg[0];
             StringHandle hPathString = (StringHandle) ahArg[1];
@@ -278,18 +301,51 @@ public class xOSStorage
             f_mapWatches = new ConcurrentHashMap<>();
         }
 
-        public void register(Path pathDir, ServiceHandle hStorage)
+        synchronized WatchRegistration register(Path pathDir, ServiceHandle storage, ObjectHandle watcher)
                 throws IOException {
-            // on macOS the WatchService implementation simply polls every 10 seconds;
-            // for Java 9 and above there is no way to configure that
-            WatchKey key = pathDir.register(
-                f_service,
-                StandardWatchEventKinds.ENTRY_CREATE,
-                StandardWatchEventKinds.ENTRY_DELETE,
-                StandardWatchEventKinds.ENTRY_MODIFY
-                );
+            Path path = pathDir.toAbsolutePath().normalize();
+            WatchKey key = path.register(f_service, StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY);
+            WatchContext context = f_mapWatches.computeIfAbsent(key, _ -> new WatchContext(path));
+            var registration = new WatchRegistration(this, ++nextId, key, storage, watcher);
+            context.subscriptions.put(registration.id, registration);
+            subscriptions.put(registration.id, registration);
+            return registration;
+        }
 
-            f_mapWatches.put(key, new WatchContext(pathDir, hStorage));
+        void unwatch(long id) {
+            WatchRegistration registration;
+            synchronized (this) {
+                registration = subscriptions.get(id);
+            }
+            if (registration != null) {
+                registration.cancel();
+            }
+        }
+
+        ObjectHandle watcher(long id) {
+            WatchRegistration registration;
+            synchronized (this) {
+                registration = subscriptions.get(id);
+            }
+            if (registration == null) {
+                return null;
+            }
+            synchronized (registration) {
+                return registration.watcher;
+            }
+        }
+
+        synchronized void remove(WatchRegistration registration) {
+            subscriptions.remove(registration.id);
+            WatchContext context = f_mapWatches.get(registration.key);
+            if (context != null) {
+                context.subscriptions.remove(registration.id);
+                if (context.subscriptions.isEmpty()) {
+                    f_mapWatches.remove(registration.key);
+                    registration.key.cancel();
+                }
+            }
         }
 
         @Override
@@ -305,7 +361,11 @@ public class xOSStorage
             } catch (IOException | RuntimeException | Error e) {
                 completion.completeExceptionally(e);
             } finally {
-                f_mapWatches.clear();
+                List<WatchRegistration> remaining;
+                synchronized (this) {
+                    remaining = List.copyOf(subscriptions.values());
+                }
+                remaining.forEach(WatchRegistration::cancel);
                 completion.complete(null);
             }
         }
@@ -321,34 +381,26 @@ public class xOSStorage
         }
 
         protected void processKey(WatchKey key) {
-            if (key == null) {
+            WatchContext context;
+            List<WatchRegistration> listeners;
+            synchronized (this) {
+                context = f_mapWatches.get(key);
+                listeners = context == null ? List.of() : List.copyOf(context.subscriptions.values());
+            }
+            if (context == null) {
+                key.cancel();
                 return;
             }
-
-            for (WatchEvent event : key.pollEvents()) {
-                int iKind = getKindId(event.kind());
-                if (iKind < 0) {
-                    continue;
+            for (WatchEvent<?> event : key.pollEvents()) {
+                int kind = getKindId(event.kind());
+                if (kind >= 0) {
+                    Path node = context.pathDir.resolve((Path) event.context());
+                    listeners.forEach(listener -> listener.onEvent(context.pathDir, node, kind));
                 }
-
-                WatchContext context = f_mapWatches.get(key);
-
-                Path pathDir      = context.pathDir;
-                Path pathRelative = (Path) event.context();
-                Path pathAbsolute = pathDir.resolve(pathRelative);
-
-                FunctionHandle hfnOnEvent =
-                        xRTFunction.makeInternalHandle(null, s_methodOnEvent).bindTarget(null, context.hStorage);
-
-                StringHandle hPathDir  = xString.makeHandle(pathDir.toString());
-                StringHandle hPathNode = xString.makeHandle(pathAbsolute.toString());
-
-                ObjectHandle[] ahArg = new ObjectHandle[] {
-                    hPathDir, hPathNode, xBoolean.TRUE, xInt64.makeHandle(iKind)
-                };
-                context.hStorage.f_context.callLater(hfnOnEvent, ahArg);
             }
-            key.reset();
+            if (!key.reset()) {
+                listeners.forEach(WatchRegistration::cancel);
+            }
         }
 
         /**
@@ -373,12 +425,91 @@ public class xOSStorage
 
         // ----- WatchContext class --------------------------------------------------------------
 
-        private record WatchContext(Path pathDir, ServiceHandle hStorage) {}
+        private record WatchContext(Path pathDir, Map<Long, WatchRegistration> subscriptions) {
+            WatchContext(Path pathDir) {
+                this(pathDir, new HashMap<>());
+            }
+        }
+
+        private final Map<Long, WatchRegistration> subscriptions = new HashMap<>();
+        private long nextId;
 
         private final ConstantPool                f_pool;
         private final Map<WatchKey, WatchContext> f_mapWatches;
         private final WatchService                f_service;
         private final CompletableFuture<Void>     completion = new CompletableFuture<>();
+    }
+
+    /**
+     * One subscriber, independently owned even when its directory key is shared.
+     */
+    protected static final class WatchRegistration implements AutoCloseable {
+        private WatchRegistration(WatchServiceDaemon daemon, long id, WatchKey key,
+                                  ServiceHandle storage, ObjectHandle watcher) {
+            this.daemon = daemon;
+            this.id = id;
+            this.key = key;
+            this.storage = storage;
+            this.watcher = watcher;
+        }
+
+        void attach(OwnedResource<WatchRegistration> resource) {
+            boolean wasClosed;
+            synchronized (this) {
+                wasClosed = closed;
+                if (!wasClosed) {
+                    this.resource = resource;
+                }
+            }
+            if (wasClosed) {
+                resource.closeAsync();
+            }
+        }
+
+        void cancel() {
+            OwnedResource<WatchRegistration> owned;
+            synchronized (this) {
+                owned = resource;
+            }
+            if (owned == null) {
+                close();
+            } else {
+                owned.closeAsync();
+            }
+        }
+
+        synchronized void onEvent(Path directory, Path node, int kind) {
+            if (!closed) {
+                FunctionHandle callback = xRTFunction.makeInternalHandle(null, s_methodOnEvent)
+                        .bindTarget(null, storage);
+                storage.f_context.callLater(callback, new ObjectHandle[] {
+                    xString.makeHandle(directory.toString()), xString.makeHandle(node.toString()),
+                    xBoolean.TRUE, xInt64.makeHandle(kind), xInt64.makeHandle(id)
+                });
+            }
+        }
+
+        @Override
+        public void close() {
+            synchronized (this) {
+                if (closed) {
+                    return;
+                }
+                closed = true;
+                storage = null;
+                watcher = null;
+                resource = null;
+            }
+            daemon.remove(this);
+        }
+
+        private final WatchServiceDaemon daemon;
+        private final long id;
+        private final WatchKey key;
+        private ServiceHandle storage;
+        private ObjectHandle watcher;
+        private OwnedResource<WatchRegistration> resource;
+        private boolean closed;
     }
 
     // ----- constants -----------------------------------------------------------------------------

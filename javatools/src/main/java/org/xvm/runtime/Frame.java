@@ -522,11 +522,18 @@ public class Frame
     }
 
     /**
+     * @return the application that initiated this call, including calls through shared services
+     */
+    public Container getResourceContainer() {
+        return f_fiber.getResourceContainer();
+    }
+
+    /**
      * Schedule IO owned by the application that initiated this call, including calls through
      * services shared with its parent container.
      */
     public <R> CompletableFuture<R> scheduleIO(Callable<R> task) {
-        return f_fiber.getResourceContainer().scheduleIO(task);
+        return getResourceContainer().scheduleIO(task);
     }
 
     /**
@@ -546,7 +553,7 @@ public class Frame
     public <T, E extends Exception> OwnedResource<T> acquireResource(
             OwnedResource.Factory<T, E> factory,
             Function<? super T, ? extends CompletionStage<Void>> cleanup) throws E {
-        return f_fiber.getResourceContainer().acquireResource(factory, cleanup);
+        return getResourceContainer().acquireResource(factory, cleanup);
     }
 
     /**
@@ -563,7 +570,7 @@ public class Frame
      */
     public <T extends AutoCloseable, E extends Exception> OwnedResource<T> acquireResource(
             OwnedResource.Factory<T, E> factory) throws E {
-        return f_fiber.getResourceContainer().acquireResource(factory);
+        return getResourceContainer().acquireResource(factory);
     }
 
     // a convenience method for futures that complete on the IO thread

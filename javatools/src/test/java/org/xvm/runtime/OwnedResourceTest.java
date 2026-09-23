@@ -309,6 +309,85 @@ class OwnedResourceTest {
         }
     }
 
+    @Test
+    void cancelledCallbacksReleaseFramesAndRegistrations() {
+        try (var runtime = new Runtime()) {
+            var owner = container(runtime, null);
+            var frame = frame(owner, null);
+            for (int i = 0; i < 100; i++) {
+                var callback = new WeakCallback(frame, null);
+                assertEquals(1, frame.f_context.getCallbackMap().size());
+                callback.discard();
+                callback.discard();
+                assertTrue(frame.f_context.getCallbackMap().isEmpty());
+                assertEquals(0, owner.ownedResourceCount());
+                assertEquals(null, callback.extractCallback());
+            }
+            var abandoned = new WeakCallback(frame, null);
+            owner.terminateServices().join();
+            assertTrue(frame.f_context.getCallbackMap().isEmpty());
+            assertEquals(null, abandoned.extractCallback());
+        }
+    }
+
+    @Test
+    void callbackExecutionRacesCancellationWithoutRetainingEitherRegistration() throws Exception {
+        try (var runtime = new Runtime(); var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var owner = container(runtime, null);
+            var frame = frame(owner, null);
+            for (int i = 0; i < 100; i++) {
+                var callback = new WeakCallback(frame, null);
+                var start = new CountDownLatch(1);
+                var execution = executor.submit(() -> {
+                    start.await();
+                    return callback.extractCallback();
+                });
+                var cancellation = executor.submit(() -> {
+                    start.await();
+                    callback.discard();
+                    return null;
+                });
+                start.countDown();
+                execution.get(5, TimeUnit.SECONDS);
+                cancellation.get(5, TimeUnit.SECONDS);
+                assertTrue(frame.f_context.getCallbackMap().isEmpty());
+                assertEquals(0, owner.ownedResourceCount());
+            }
+        }
+    }
+
+    @Test
+    void callbackTerminationCancelsAnAlarmAttachedAfterShutdown() {
+        try (var runtime = new Runtime()) {
+            var owner = container(runtime, null);
+            var frame = frame(owner, null);
+            var callback = new WeakCallback(frame, null);
+            var cancellations = new AtomicInteger();
+            owner.terminateServices().join();
+            callback.onDiscard(cancellations::incrementAndGet);
+            callback.discard();
+            assertEquals(1, cancellations.get());
+            assertTrue(frame.f_context.getCallbackMap().isEmpty());
+        }
+    }
+
+    @Test
+    void extractingCallbackDoesNotCancelTheAlarmBeforeItsCallbackIsQueued() {
+        try (var runtime = new Runtime()) {
+            var owner = container(runtime, null);
+            var frame = frame(owner, null);
+            var callback = new WeakCallback(frame, null);
+            var cancelled = new AtomicBoolean();
+            callback.onDiscard(() -> cancelled.set(true));
+            assertSame(frame, callback.extractCallback().frame());
+            assertFalse(cancelled.get(), "Execution must release keep-alive after queuing its callback");
+            assertTrue(frame.f_context.getCallbackMap().isEmpty());
+            assertEquals(0, owner.ownedResourceCount());
+            owner.terminateServices().join();
+            assertFalse(cancelled.get());
+        }
+    }
+
     private static Container container(Runtime runtime, Container parent) {
         return new Container(runtime, parent, new FileStructure("test").getModuleId()) {
             @Override

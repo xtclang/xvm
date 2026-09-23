@@ -1,15 +1,16 @@
 # Embedding resource ownership audit
 
 Audit of `lagergren/embedded-gradle-runtime` at `c884779d6`, based on master `6539aa6eb`.
-The initial audit added tests and recorded remaining fixes. The common ownership mechanism and
-keystore correction have subsequently been implemented locally; resource-specific migrations
-remain outstanding.
+The initial audit added tests and recorded missing cleanup. The keystore fix is committed as
+`ca52e2aae`; the common mechanism and initial audit are committed as `9b51e0f23`. Native resource
+integrations now form a separate change, **Release application-owned native resources between
+embedded runs**, so their submission boundary remains independent of the Gradle adapter.
 
-**Result: request isolation is not yet complete for native resources.** Pending IO and runtime
-workers have explicit shutdown, but idle native handles and watcher subscriptions do not all
-participate. A successful `Control.close()` or session close is therefore not evidence that every
-application-opened file or socket was closed. Do not use the existing performance results or green
-manual tests as that guarantee.
+The six requested integrations are implemented: file channels, sockets, individual watcher
+subscriptions, HTTP clients, HTTP servers/exchanges, and cancelled callbacks. The release boundary
+is each application's `Control.close()` while its runner host remains alive. Validation below
+identifies what is exercised; this is not a claim of JIT resource parity or arbitrary native-code
+termination.
 
 ## Follow-up implementation
 
@@ -34,46 +35,49 @@ The keystore path now delegates to `KeyStoreOperations.extractKey()`, which alre
 input stream with try-with-resources. This preserves missing-file, invalid-password and missing-key
 behavior without duplicating the extraction implementation.
 
-This is the mechanism and keystore correction only: channel/socket creation, watcher subscriptions
-and HTTP resources have **not** yet been migrated. The leaks below remain open except for the
-keystore stream. The new `OwnedResourceTest` cases exercise controlled acquisition/close races,
-normal-close removal, failure propagation, future cancellation and shared-service owner selection
-without a built XDK, sleeps or GC-dependent assertions.
+The native integrations reserve channel/socket ownership before opening or connecting and keep
+it through handle delivery. Explicit channel/socket close uses that same registration. HTTP client
+pools are created **on first use by the requesting application**, not while injecting a shared
+connector into the runner. Each owner gets independent cookies and connections. Owner cleanup
+stops and awaits all its clients, then removes its entry from the shared connector.
 
-Validation of this implementation passed 12 ownership tests, 14 keystore tests, seven existing
-runtime activity/shutdown/completion tests, and all 16 embedding lifecycle tests: **49 tests,
-zero skips, failures or errors** in the JUnit XML. The XDK task provisioned its distribution for
-the integration cases. Formatting checks also passed.
+HTTP servers register before binding. Partially constructed HTTP and HTTPS listeners are retained
+for cleanup even when later setup fails. Closing releases listeners, unfinished exchanges, the
+handler executor, route references and the matching owner's keep-alive registration. Potentially
+blocking native shutdown runs on a dedicated virtual thread; completion is included in the
+existing owner deadline. Request-body reads use owned IO rather than blocking a service worker.
 
-### Remaining implementation status
+Watch subscriptions are individually owned native registrations. A shared directory key remains
+until its final subscription leaves. Cancellation releases listener references directly, without
+requiring a terminating application's service to run. Queued event notifications carry IDs and
+resolve the listener at dispatch, so a cancelled subscription is not retained by a queued event.
+Invalidated keys cancel their subscriptions. Directory/overflow event semantics remain separate.
 
-The mechanism is implemented; existing native resources must explicitly use it. The
-[submission plan](../plugin/doc/plans/embedded-runtime-pr-plan.md#remaining-native-resource-integration-scopes)
-defines separate change scopes for these remaining integrations.
+Callback registrations use a concurrent map and release their frame/function on extraction,
+explicit cancellation and owner termination. Alarm disposal also removes paused alarms from the
+timer. Timer cancellation runs outside the container monitor to avoid lock inversion with alarm
+cleanup. No GC or elapsed-time assertion determines whether a cleanup test passes.
 
-| Resource | Current status | Remaining cleanup |
+### Native integration status
+
+| Resource | Implemented release | Verification |
 |---|---|---|
-| File channels | Open handle surviving request and session close reproduced | Register acquisition, close abandoned/ignored/undelivered handles, remove registration on explicit close |
-| Sockets | Missing owner disposal confirmed in source | Own connection acquisition and transfer, close idle or blocked sockets on request termination |
-| Watch subscriptions | Registration growth across sequential requests reproduced | Cancel each owner's listeners, implement native unwatch and release the final directory key |
-| HTTP clients | Missing client-pool shutdown confirmed in source | Own pooled clients and cookie state, release them on owner termination and cancel active sends |
-| HTTP/HTTPS servers and exchanges | Missing owner disposal and partial-startup cleanup confirmed in source | Stop listeners, close unfinished exchanges and release the handler executor, including failed startup |
-| Cancelled alarms | Callback-map retention confirmed in source | Remove callback/frame references on cancellation without racing callback execution |
+| File channels | Explicit close, ignored results, failed immediate handle delivery and owner termination | Retained native handle checked after request success/failure/cancellation; caller file survives |
+| Sockets | Ownership before connect, connect failure/cancellation, explicit close and owner termination | Loopback success/failure/cancellation/read scenarios; actual socket closed and peer sees EOF |
+| Watch subscriptions | Individual cancel, owner termination, last-listener native unwatch and invalidated keys | Repeated requests leave no registrations; two owners share one key and can close in either order |
+| HTTP clients | Per-application client pool, active-send cancellation and awaited client shutdown | Native clients terminate after control close; unit test cancels a send after loopback peer accepts it |
+| HTTP/HTTPS servers and exchanges | Partial startup, explicit close and owner termination | Ports can be rebound after request close; unit tests cover unfinished exchanges, executor termination and partial initialization |
+| Cancelled alarms | Callback/frame removal and alarm disposal, including paused timers | Explicit repeated cancellation, extraction/cancel race, owner close and late disposal-hook attachment |
 
-These are **sequential reuse issues too**. Request A can finish and its control can close while
-its idle handle or subscription remains alive; request B then runs in that same session. Running
-one request at a time prevents concurrent requests but does not dispose A's resources. Session
-close currently clears the watch daemon's registrations, but the channel probe remained open even
-after session close. The shared mechanism does not change these results until native call sites
-adopt it.
+These are **sequential reuse issues too**. Serialization does not dispose resources left by an
+application. Tests keep one session open, retain actual native references, close each control,
+check cleanup, and then run a healthy application through the same connector. Separate overlapping
+watch controls verify shared-key ownership. Network fixtures use loopback and dynamic ports.
 
-The passing sequential manual suite exercises execution and explicit application cleanup. It
-does not prove abandoned native resources are released. Each integration needs repeated requests
-in **one still-open session**, checking cleanup after each control closes, covering normal return,
-failure and cancellation, and then running a healthy request. Use explicit handle/registration
-state and completion barriers; do not infer success from GC, sleeps, thread counts or eventual
-session shutdown. Network/HTTP cases need a test resource-provider fixture because the default
-embedding provider does not expose them.
+The default embedding provider still does not expose networking/web resources. The XDK tests
+compile the real runner source with additional **test-only** resource-provider cases, leaving its
+registration/start/release protocol intact. The production runner source is a declared test
+resource input. This does not implement custom injectors or widen default injection policy.
 
 ## Intended ownership
 
@@ -106,17 +110,17 @@ and removes its registry entry. Closing the embedding session stops the host aft
 controls. Starting a new host per test would discard the intended runner reuse and would still
 not substitute for native disposal: the channel probe remained open after session close.
 
-Source comparison with master establishes that the missing native disposal paths predate this
-branch: `OSStorage.x` already had the final-listener cleanup TODO and unfinished native unwatch;
-channel/socket allocation and close paths lacked owner registration; HTTP server code is unchanged,
-and the client pool already had its disposal TODO. The branch changes their IO ownership, not
-those allocation/close paths. Its new cancellation behavior still needs allocation/transfer race
-regressions; this source comparison does not prove identical cancellation behavior on master.
+The initial source comparison with master established that the missing disposal paths predated
+the native migrations: `OSStorage.x` already had the final-listener cleanup TODO and unfinished native unwatch;
+channel/socket allocation and close paths lacked owner registration; HTTP server code had not
+changed, and the client pool already had its disposal TODO. Those native paths are now changed
+by the scoped cleanup implementation. This comparison does not prove identical cancellation
+behavior on master.
 
 The old runner completion callback also set `container = Null` and unregistered the task when
 the entry method completed, without calling `container.kill()` on that path. Its `kill()` only
 acted while `running` was true. This branch retains the child until explicit release and waits for
-application activity, but native handles still need to participate in that termination.
+application activity, and the new native registrations now participate in that termination.
 
 Existing checks missed a different property: successful work or explicit application close does
 not establish disposal of abandoned resources. The old `TestFiles` watcher test printed events,
@@ -126,9 +130,13 @@ accumulation across later requests in that JVM. Persistent runner users could ha
 these gaps before; this audit has not established their historical frequency or whether anyone
 reported them. The reproduced leak evidence here comes from this branch, not a rerun on master.
 
-## Findings
+## Original findings and their corrections
 
-### 1. Watch cancellation leaves native registrations behind — reproduced
+The descriptions and probe counts in this section describe the pre-migration snapshot. The
+implementation/status section above records their corrections; linked source files now contain
+those fixes.
+
+### 1. Watch cancellation retained native registrations — reproduced before correction
 
 [`OSStorage.removeWatch()`](../javatools_bridge/src/main/x/_native/fs/OSStorage.x) nulls the
 listener slot but leaves both the directory entry and its native watch registered. The native
@@ -147,7 +155,7 @@ one `OSStorage`; its `allWatchers` map is consequently shared across requests. T
 daemon retains that service. Request shutdown does not remove the request's listener or prevent
 that registration from outliving its application.
 
-Required fix: give each subscription an owner and cancellation identity; remove it on explicit
+Correction now implemented: give each subscription an owner and cancellation identity; remove it on explicit
 cancel and owner termination. Release the native key and directory entry when the final listener
 leaves. Closing one request must preserve other requests' subscriptions to the same path. Merely
 attaching the shared directory key to the first requesting container would be incorrect.
@@ -157,7 +165,7 @@ it ignores invalidation from `key.reset()`, and `OVERFLOW` is discarded. Directo
 enough retained type information to classify an already-removed node. These event semantics are
 not covered by the new file-event test and remain follow-ups.
 
-### 2. An abandoned file channel survives request and session close — reproduced
+### 2. An abandoned channel survived request and session close — reproduced before correction
 
 [`xOSFile.invokeOpen()`](../javatools/src/main/java/org/xvm/runtime/template/_native/fs/xOSFile.java)
 opens a Java channel and hands it to
@@ -171,12 +179,12 @@ close**. The probe retained the reference to avoid GC/finalization affecting the
 closed it itself afterwards. The creation/close paths are unchanged from master; this branch
 changed which container owns the channel's IO tasks, not the channel itself.
 
-Required fix: register ownership immediately after opening, cover handle-construction failure and
+Correction now implemented: register ownership immediately after opening, cover handle-construction failure and
 ignored results, and unregister on normal close. Closing the channel must not delete a caller's
 file. The new manual tests verify explicit close and `using` cleanup, not automatic disposal of
 abandoned channels.
 
-### 3. Sockets and HTTP objects have the same ownership gap — source audit
+### 3. Sockets and HTTP objects lacked owner disposal — original source audit
 
 - [`xRTSocket`](../javatools/src/main/java/org/xvm/runtime/template/_native/net/xRTSocket.java)
   closes failed connects and explicit closes, but does not register a connected socket for owner
@@ -242,10 +250,10 @@ control, runs a healthy request afterwards, closes/reopens the session and check
 threads stop. It also checks caller-owned consoles/directories. The XDK test task provisions the
 distribution; there are no assumptions that silently skip these tests.
 
-Those passing tests cover **session** watcher shutdown and application-visible explicit close.
-They do not assert the missing request-level watch/channel disposal. The negative host probes
-above exposed those gaps independently; no expected-leak assertion was added to bless the broken
-behavior as a permanent contract.
+Those initial passing tests covered **session** watcher shutdown and application-visible explicit
+close. The new `EmbeddingResourceOwnershipTest` adds the missing request-level native-handle
+assertions. The negative host probes above remain historical evidence; no expected-leak assertion
+blesses the broken behavior as a permanent contract.
 
 Validation on the audited branch:
 
@@ -271,26 +279,61 @@ repeat the Java lifecycle tests, add `--rerun-tasks --no-build-cache`; their ins
 provided by the task dependencies. The two negative native-resource probes are audit evidence,
 not part of this green coverage.
 
-## Implementation boundary and acceptance criteria
+## Current regression coverage and submission boundary
 
-The reusable ownership registration and frame helper are now implemented as described above.
-The next changes should apply them to native allocations and complete the remaining cleanup work:
+`OwnedResourceTest` covers acquisition/termination races, explicit-close removal, cleanup failures,
+cancellation-proof completion, shared-service owner selection, callback extraction/cancellation
+and late alarm-hook attachment. `HttpResourceOwnershipTest` exercises real loopback clients,
+active-send cancellation, partial HTTP/HTTPS binding and unfinished exchanges with executor close.
+These Java tests require no installed XDK.
 
-1. Apply it to file channels and sockets, including allocation-to-handle-transfer failure and
-   cancellation. Verify the same native object is closed after successful, failed and cancelled
-   requests while the session stays open. Repeated explicit close must not grow registrations.
-2. Apply it to individual watcher subscriptions and fix native unwatch separately from the shared
-   daemon lifetime. Test two owners on the same directory, both cancellation orders, abandoned
-   listeners, invalidated keys and a new subscription after the old one ends. Add directory and
-   overflow event coverage with controlled native events where the OS cannot provide determinism.
-3. Scope HTTP clients, listeners, executors and exchanges, including partial bind failure. Use
-   loopback peers and completion barriers, not public servers, sleeps or fixed port numbers.
-   Add the necessary resource-provider fixture rather than silently widening default injections.
-4. Release cancelled callback entries. The certificate-manager stream fix is implemented; retain
-   coverage of extraction failures as well as normal completion.
-5. Repeat reuse checks with explicit counts of registrations/open handles. Follow with retained
-   memory/classloader measurements. A thread-count test alone cannot detect these leaks.
+`EmbeddingResourceOwnershipTest` uses `.x` fixtures in `xdk/src/test/resources/ownership/` and the
+installed distribution provisioned by the XDK test task. It retains channels, sockets and HTTP
+clients, inspects subscription/callback/alarm registrations, and checks server port release after
+control close. It covers sequential success/failure/cancellation, shared watcher keys in both
+close orders, paused alarms, and a healthy request after cleanup. It does not wait for session
+shutdown or GC to make those assertions pass.
 
-These fixes do not depend on redesigning constant-pool ownership or a host that persists across
-builds. They belong at the embedding/runtime ownership boundary and should precede expanding
-DIRECT's supported resources or promoting it as the general plugin default.
+Run the focused matrix and the existing manual suite with:
+
+```bash
+./gradlew :javatools:test \
+  --tests org.xvm.runtime.OwnedResourceTest \
+  --tests org.xvm.runtime.ContainerActivityTest \
+  --tests org.xvm.runtime.RuntimeShutdownTest \
+  --tests org.xvm.runtime.ExternalCompletionTest \
+  --tests org.xvm.runtime.template._native.web.HttpResourceOwnershipTest \
+  :xdk:test --tests org.xvm.xdk.EmbeddingResourceOwnershipTest \
+  --tests org.xvm.xdk.EmbeddingLifecycleTest \
+  :manualTests:runSequential spotlessCheck \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true
+```
+
+Validation on 2026-09-23:
+
+- **48 Java tests passed with zero skips, failures or errors** in JUnit XML: 16 ownership/callback
+  tests, five native HTTP tests, seven existing runtime tests and 20 embedding integration tests.
+- All **21 sequential manual modules passed in DIRECT**, including file events, explicit channel
+  cleanup and the existing timer/service tests.
+- The final embedding run also exercised repeated explicit HTTP-server close. It passed all
+  20 integration tests; production networking injections remain unchanged.
+- `spotlessCheck` and `git diff --check` passed. Repeating the final XDK test/formatting command
+  reused the configuration cache; its Java test outputs were up to date on that cache check.
+
+Test-only timeouts are deadlock guards; no timing performance thresholds, public servers or
+fixed ports are involved. The result establishes disposal for these interpreter resource paths,
+not an exhaustive proof for every native operation, platform or failure mode.
+
+The native migration commit includes only the six native integrations, supporting owner/frame/
+callback changes, focused tests, the runner-source test input and matching documentation. It adds
+no automatic JIT tasks and does not change the plugin default. The
+[submission plan](../plugin/doc/plans/embedded-runtime-pr-plan.md#native-resource-integration-scopes)
+places it after the common mechanism and interpreter request API; its six resource scopes remain
+explicit if reviewers prefer further extraction.
+
+Remaining work is broader validation and capability growth: retained heap/classloader measurements
+under long workloads, directory/overflow watcher event semantics, general custom injectors and JIT
+resource support. TCP listen/accept is still a pre-existing unimplemented native capability; this
+change owns existing connected TCP sockets and HTTP/HTTPS listeners, not a new TCP server API. Uncooperative native code still obeys the existing bounded-shutdown failure
+contract. Do not turn these targeted disposal assertions into a claim that all possible resources
+or platform failures have been proven safe.

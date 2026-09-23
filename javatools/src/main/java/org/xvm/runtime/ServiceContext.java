@@ -289,11 +289,7 @@ public class ServiceContext {
      * @return the map of callbacks keyed by unique ids
      */
     protected Map<Long, WeakCallback.Callback> ensureCallbackMap() {
-        Map<Long, WeakCallback.Callback> map = m_mapCallbacks;
-        if (map == null) {
-            map = m_mapCallbacks = new HashMap<>();
-        }
-        return map;
+        return m_mapCallbacks;
     }
 
     /**
@@ -2293,7 +2289,7 @@ public class ServiceContext {
     /**
      * A "service-local" cache for service callbacks.
      */
-    private Map<Long, WeakCallback.Callback> m_mapCallbacks;
+    private final Map<Long, WeakCallback.Callback> m_mapCallbacks = new ConcurrentHashMap<>();
 
     /**
      * A wake-up scheduler to process registered timeouts.

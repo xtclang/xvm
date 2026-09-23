@@ -53,6 +53,26 @@ public final class OwnedResource<T> {
     }
 
     /**
+     * Run a potentially blocking native close on a dedicated virtual thread. The returned future
+     * remains part of the owner's existing shutdown deadline; no new timeout is introduced.
+     *
+     * @param resource  the resource to close
+     * @return completion of the actual native cleanup
+     */
+    public static CompletableFuture<Void> closeOnWorker(AutoCloseable resource) {
+        var closed = new CompletableFuture<Void>();
+        Thread.ofVirtual().name("XvmResourceClose").start(() -> {
+            try {
+                resource.close();
+                closed.complete(null);
+            } catch (Throwable failure) {
+                closed.completeExceptionally(failure);
+            }
+        });
+        return closed;
+    }
+
+    /**
      * Supply the acquired value, cleaning it up immediately if shutdown won the race.
      *
      * @return true if the value can be handed to the caller

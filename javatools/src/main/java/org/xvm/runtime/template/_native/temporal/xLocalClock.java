@@ -125,7 +125,14 @@ public class xLocalClock
             return frame.assignValue(iReturn, xRTFunction.NATIVE_NO_OP);
         }
 
-        Alarm alarm = new Alarm(new WeakCallback(frame, hAlarm), ldtWakeup, hKeepAlive.get());
+        WeakCallback callback;
+        try {
+            callback = new WeakCallback(frame, hAlarm);
+        } catch (IllegalStateException e) {
+            return frame.raiseException(e.getMessage());
+        }
+        Alarm alarm = new Alarm(callback, ldtWakeup, hKeepAlive.get());
+        callback.onDiscard(alarm::cancel);
         try {
             frame.f_context.scheduleTimer(alarm.getTrigger(), cDelay);
         } catch (Exception e) {
@@ -216,7 +223,10 @@ public class xLocalClock
         /**
          * Called when the alarm is triggered by the Java timer.
          */
-        public void run() {
+        public synchronized void run() {
+            if (finished) {
+                return;
+            }
             ServiceContext context = f_refCallback.get();
             if (context != null && !context.isTerminated()) {
                 Container container = context.f_container;
@@ -231,27 +241,40 @@ public class xLocalClock
                 long ldtNow = container.currentTimeMillis();
                 if (ldtNow >= f_ldtWakeup) {
                     WeakCallback.Callback callback = f_refCallback.extractCallback();
-                    context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
-                    if (f_Registered) {
-                        container.unregisterNativeCallback();
+                    if (callback != null) {
+                        context.callLater(callback.frame(), callback.functionHandle(), Utils.OBJECTS_NONE);
                     }
+                    finish();
                 } else {
                     // reschedule
                     context.scheduleTimer(m_trigger = new Trigger(this), f_ldtWakeup - ldtNow);
                 }
+            } else {
+                finish();
             }
         }
 
         /**
          * Called when the alarm is canceled by the natural code.
          */
-        public boolean cancel() {
-            boolean        fCancelled = m_trigger.cancel();
-            ServiceContext context    = f_refCallback.get();
-            if (context != null && fCancelled && f_Registered) {
-                context.f_container.unregisterNativeCallback();
+        public synchronized boolean cancel() {
+            if (finished) {
+                return false;
             }
-            return fCancelled;
+            m_trigger.cancel();
+            finish();
+            return true;
+        }
+
+        private void finish() {
+            if (!finished) {
+                finished = true;
+                f_refCallback.discard();
+                ServiceContext context = f_refCallback.get();
+                if (context != null && f_Registered) {
+                    context.f_container.unregisterNativeCallback();
+                }
+            }
         }
 
         /**
@@ -268,6 +291,15 @@ public class xLocalClock
                 f_alarm.run();
             }
 
+            @Override
+            public boolean cancel() {
+                boolean cancelled = super.cancel();
+                synchronized (f_alarm) {
+                    f_alarm.finish();
+                }
+                return cancelled;
+            }
+
             private final Alarm f_alarm;
         }
 
@@ -275,6 +307,7 @@ public class xLocalClock
         private final long         f_ldtWakeup;
         private final boolean      f_Registered;
         private       Trigger      m_trigger;
+        private       boolean      finished;
     }
 
     // ----- constants and fields ------------------------------------------------------------------

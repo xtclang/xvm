@@ -440,6 +440,14 @@ tasks.withType<Tar>().configureEach {
     archiveExtension = "tar.gz"
 }
 
+// Exercise the real runner protocol with a test-only network resource provider.
+// Keep its source a declared resource input so changes invalidate the integration tests.
+tasks.processTestResources {
+    from(layout.projectDirectory.file("../lib_runner/src/main/x/runner.x")) {
+        into("ownership")
+    }
+}
+
 // Configure test task to run integration tests after XDK is fully built
 tasks.test {
     // Tests require the XDK to be fully installed with all XTC libraries

@@ -154,6 +154,7 @@ public abstract class Container
     public CompletableFuture<Void> terminateServices() {
         CompletableFuture<Void> termination;
         Set<IOTask<?>> pendingIO;
+        List<TimerTask> pendingAlarms;
         List<OwnedResource<?>> resources;
         Throwable cleanupFailure;
         var services = new ArrayList<ServiceContext>();
@@ -162,7 +163,7 @@ public abstract class Container
                 return m_futureTermination;
             }
             m_futureTermination = termination = new CompletableFuture<>();
-            alarms.forEach(TimerTask::cancel);
+            pendingAlarms = List.copyOf(alarms);
             alarms.clear();
             pendingIO = Set.copyOf(ioTasks);
             resources = List.copyOf(ownedResources);
@@ -173,6 +174,7 @@ public abstract class Container
         // Complete callbacks outside the container monitor; they may notify a parent container.
         signalIdle();
         try {
+            pendingAlarms.forEach(TimerTask::cancel);
             var pending = new ArrayList<CompletableFuture<Void>>();
             if (cleanupFailure != null) {
                 pending.add(CompletableFuture.failedFuture(cleanupFailure));

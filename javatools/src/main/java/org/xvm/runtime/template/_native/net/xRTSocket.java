@@ -27,6 +27,7 @@ import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.OwnedResource;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 
@@ -162,19 +163,31 @@ public class xRTSocket
      */
     public static int connect(Frame frame, byte[] abRemoteIP, int nRemotePort,
                               byte[] abLocalIP, int nLocalPort, int[] aiReturn) {
-        Callable<Socket> task = () ->
-                openConnectedSocket(abRemoteIP, nRemotePort, abLocalIP, nLocalPort);
-
-        CompletableFuture<Socket> cf = frame.scheduleIO(task);
+        // Register the unconnected socket before blocking in connect or publishing an IO result.
+        OwnedResource<Socket> resource = frame.acquireResource(Socket::new);
+        CompletableFuture<Socket> cf;
+        try {
+            cf = frame.scheduleIO(() -> connectSocket(resource.get(),
+                    abRemoteIP, nRemotePort, abLocalIP, nLocalPort));
+        } catch (RuntimeException | Error e) {
+            resource.closeAsync();
+            throw e;
+        }
+        cf.whenComplete((_, failure) -> {
+            if (failure != null) {
+                resource.closeAsync();
+            }
+        });
         Frame.Continuation continuation = frameCaller -> {
             try {
                 Socket      socket  = cf.get();
                 InetAddress local   = socket.getLocalAddress();
                 byte[]      abLocal = local == null ? new byte[0] : local.getAddress();
                 int         nLocal  = socket.getLocalPort();
-                return INSTANCE.constructSocket(frameCaller, socket, abLocal, nLocal,
+                return INSTANCE.constructSocket(frameCaller, resource, abLocal, nLocal,
                         abRemoteIP, nRemotePort, aiReturn);
             } catch (Throwable e) {
+                resource.closeAsync();
                 Throwable cause = unwrap(e);
                 if (cause instanceof IOException) {
                     return frameCaller.assignValue(aiReturn[0], xBoolean.FALSE);
@@ -194,7 +207,11 @@ public class xRTSocket
     static Socket openConnectedSocket(byte[] abRemoteIP, int nRemotePort,
                                       byte[] abLocalIP, int nLocalPort)
             throws IOException {
-        Socket  socket = new Socket();
+        return connectSocket(new Socket(), abRemoteIP, nRemotePort, abLocalIP, nLocalPort);
+    }
+
+    private static Socket connectSocket(Socket socket, byte[] abRemoteIP, int nRemotePort,
+                                         byte[] abLocalIP, int nLocalPort) throws IOException {
         boolean owned = false;
         try {
             socket.setTcpNoDelay(true);
@@ -215,7 +232,7 @@ public class xRTSocket
         }
     }
 
-    protected int constructSocket(Frame frame, Socket socket, byte[] abLocal, int nLocalPort,
+    protected int constructSocket(Frame frame, OwnedResource<Socket> resource, byte[] abLocal, int nLocalPort,
                                   byte[] abRemote, int nRemotePort, int[] aiReturn) {
         ConstantPool     pool         = frame.poolContext();
         ClassTemplate    template     = this;
@@ -231,31 +248,32 @@ public class xRTSocket
 
         switch (template.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {
         case Op.R_NEXT:
-            return finishConnect(frame, socket, aiReturn);
+            return finishConnect(frame, resource, aiReturn);
 
         case Op.R_EXCEPTION:
-            closeQuietly(socket);
+            resource.closeAsync();
             return Op.R_EXCEPTION;
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller ->
-                    finishConnect(frameCaller, socket, aiReturn));
+                    finishConnect(frameCaller, resource, aiReturn));
             return Op.R_CALL;
 
         default:
-            closeQuietly(socket);
+            resource.closeAsync();
             throw new IllegalStateException();
         }
     }
 
-    private static int finishConnect(Frame frame, Socket socket, int[] aiReturn) {
+    private static int finishConnect(Frame frame, OwnedResource<Socket> resource, int[] aiReturn) {
         ObjectHandle h = frame.popStack();
         SocketHandle hSocket = requireSocketHandle(h);
         if (hSocket == null) {
-            closeQuietly(socket);
+            resource.closeAsync();
             return frame.raiseException(xException.illegalState(frame, "socket construct failed"));
         }
-        hSocket.socket = socket;
+        hSocket.resource = resource;
+        hSocket.socket = resource.get();
         return frame.assignValues(aiReturn, xBoolean.TRUE, hSocket);
     }
 
@@ -400,7 +418,9 @@ public class xRTSocket
      * Implementation of "void closeImpl()" method.
      */
     private static int invokeCloseImpl(Frame frame, SocketHandle hSocket) {
-        closeQuietly(hSocket.socket);
+        if (hSocket.resource != null) {
+            hSocket.resource.closeAsync();
+        }
         hSocket.socket = null;
         return Op.R_NEXT;
     }
@@ -430,6 +450,7 @@ public class xRTSocket
     public static class SocketHandle
             extends ServiceHandle {
         public volatile Socket socket;
+        private OwnedResource<Socket> resource;
 
         public SocketHandle(TypeComposition clazz, ServiceContext context) {
             super(clazz, context);

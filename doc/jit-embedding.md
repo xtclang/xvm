@@ -70,8 +70,8 @@ The low-level loader and `Xvm.close()` propagate `IOException`; the session coll
 failures at its lifecycle boundary.
 
 The interpreter's common native-resource ownership mechanism does not establish JIT resource
-cleanup. The [resource audit](embedding-resource-ownership.md) lists remaining channel, socket,
-watcher, HTTP and callback work; those integrations remain unimplemented even for the interpreter.
+cleanup. The [resource audit](embedding-resource-ownership.md) records the interpreter channel, socket,
+watcher, HTTP and callback integrations and their native-disposal tests.
 Broader JIT resource support needs its own ownership integration and cleanup tests. Sequential
 requests alone do not prevent resources left by one request from surviving into the next.
 
