@@ -9,6 +9,12 @@
 > LSP on-type formatting.
 > This plan is retained for reference only.
 
+> **Compiler status, 2026-09-23:** The old compiler-stub descriptions and February comparison below
+> are historical. XdkAdapter now provides diagnostics and bounded semantic features through the
+> Java compiler, plus an explicit dependency artifact/source host API. Tree-sitter remains the
+> shipped default. Use the [current capability matrix](plan-ide-integration.md#adapter-capability-matrix)
+> and [manual playbook](../manual-test-plan.md#xdkadapter-playbook) for current behavior and limits.
+
 **Goal**: Use the existing `TreeSitterGenerator` to build a functional LSP with syntax-level
 intelligence, without requiring compiler modifications.
 
@@ -180,9 +186,10 @@ Uses jtreesitter's Foreign Function API:
 
 ---
 
-## Adapter Architecture
+## Original Adapter Architecture
 
-The LSP server uses a pluggable adapter pattern with three available backends:
+The original design used this pluggable shape. The compiler stub shown here has since been replaced
+by XdkAdapter; current names and capabilities are in the linked capability matrix.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -222,7 +229,7 @@ The abstract base class provides default implementations for all methods that lo
 # Build with Mock adapter (for testing without native libraries)
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# Build with Compiler stub (all LSP calls logged)
+# Build with the opt-in compiler adapter and bundled XDK
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
 
@@ -326,7 +333,8 @@ See [tree-sitter/native-build-strategy.md](./tree-sitter/native-build-strategy.m
 
 ## What This Plan Does NOT Cover
 
-These features require compiler integration (future adapter):
+These features were outside the original Tree-sitter scope. The compiler adapter now supplies
+bounded implementations of several; this is a rationale table, not the current work queue:
 
 | Feature | Why Compiler Needed |
 |---------|---------------------|
@@ -340,17 +348,17 @@ These features require compiler integration (future adapter):
 
 > **Note**: Same-file rename, code actions (organize imports), formatting, folding ranges,
 > document highlights, document links, and signature help have all been implemented using
-> tree-sitter and regex approaches. The compiler adapter will enhance these with
-> cross-file and semantic capabilities.
+> tree-sitter and regex approaches. See the current capability matrix for the compiler's semantic
+> navigation and the features it still does not advertise, including rename and formatting.
 
 ---
 
-## Feature Implementation Status: Tree-sitter vs Compiler
+## Historical Feature Comparison: Tree-sitter vs Compiler
 
 > **Last Updated**: 2026-02-12
 
-This table shows the current implementation status for LSP features, and which require
-the full compiler adapter for advanced capabilities.
+This table records the February baseline, including the then-unimplemented compiler adapter.
+It is superseded by the [current capability matrix](plan-ide-integration.md#adapter-capability-matrix).
 
 | Feature | Tree-sitter | Mock | Compiler | Status |
 |---------|:-----------:|:----:|:--------:|--------|
@@ -391,12 +399,15 @@ Features that could be partially implemented with tree-sitter in the future:
    4-tier fuzzy search (exact, prefix, CamelCase, subsequence), background scanning
 3. **Inlay hints** (structural) - Basic structural hints without type inference
 
-Features requiring compiler for any useful implementation:
+The original compiler-dependent list was:
 
 1. Call hierarchy
 2. Type hierarchy
 3. Semantic code actions (type fixes, missing imports)
 4. Type-aware inlay hints
+
+Bounded call/type hierarchy and inferred-type hints are now implemented in XdkAdapter; semantic
+code actions remain open. This historical list is not the compiler's current backlog.
 
 ---
 
@@ -451,7 +462,7 @@ Features requiring compiler for any useful implementation:
 
 8. ~~**End-to-End Testing**~~ ✅ PARTIAL - `LspIntegrationTest` verifies all LSP features against real `.x` files with tree-sitter native parsing. Manual IDE testing still needed for IntelliJ/VS Code.
 9. **IDE Integration** - See [plan-ide-integration.md](./plan-ide-integration.md)
-10. **Compiler Adapter** - Add semantic features (future)
+10. **Compiler Adapter** - Bounded semantic features now implemented; see the current capability matrix.
 
 ---
 
