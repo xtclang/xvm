@@ -43,7 +43,7 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.GenericArrayDelegate;
 
-import org.xvm.runtime.template._native.mgmt.xCoreRepository;
+import org.xvm.runtime.template._native.mgmt.xCoreRepository.CoreRepoHandle;
 
 /**
  * Native FileTemplate implementation.
@@ -216,8 +216,8 @@ public class xRTFileTemplate
             assert file.validateConstants();
         }
 
-        if (hRepo.getTemplate() instanceof xCoreRepository) {
-            ModuleConstant idMissing = file.linkModules(f_container.getModuleRepository(), true);
+        if (hRepo instanceof CoreRepoHandle repository) {
+            ModuleConstant idMissing = file.linkModules(repository.getRepository(), true);
             return idMissing == null
                     ? frame.assignValue(iReturn, makeHandle(container, file))
                     : frame.raiseException("Missing dependent module: " + idMissing.getName());

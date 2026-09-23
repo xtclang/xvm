@@ -24,19 +24,33 @@ import org.xvm.asm.ModuleRepository;
  * @param hostFileSystem use host storage, root, home and temporary directories, with the explicit
  *                       working directory; does not change the Java process directory
  * @param injections     request-local String and String[] injections
+ * @param backend        execution backend; compilation is shared by both backends
  */
 public record RunRequest(ModuleRepository repository, String moduleName, String method,
                          List<String> arguments, PrintWriter console, File directory, boolean hostFileSystem,
-                         Map<String, List<String>> injections) {
+                         Map<String, List<String>> injections, Backend backend) {
+    /**
+     * Execution backend. JIT is experimental and supports only part of the language and libraries.
+     */
+    public enum Backend { INTERPRETER, JIT }
+
     public RunRequest {
         Objects.requireNonNull(moduleName);
         Objects.requireNonNull(method);
+        Objects.requireNonNull(backend);
         arguments = List.copyOf(arguments);
         injections = injections.entrySet().stream().collect(Collectors.toUnmodifiableMap(
                 Map.Entry::getKey, entry -> List.copyOf(entry.getValue())));
         if (hostFileSystem) {
             Objects.requireNonNull(directory, "Host filesystem mode requires a working directory");
         }
+    }
+
+    public RunRequest(ModuleRepository repository, String moduleName, String method,
+                      List<String> arguments, PrintWriter console, File directory, boolean hostFileSystem,
+                      Map<String, List<String>> injections) {
+        this(repository, moduleName, method, arguments, console, directory, hostFileSystem,
+                injections, Backend.INTERPRETER);
     }
 
     public RunRequest(ModuleRepository repository, String moduleName, String method,

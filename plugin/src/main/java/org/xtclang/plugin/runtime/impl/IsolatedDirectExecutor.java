@@ -56,6 +56,11 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
     }
 
     public int executeTest(final DirectTestRequest request, final Logger logger) {
+        if (request.jit()) {
+            throw new UnsupportedOperationException(
+                "The experimental JIT does not yet support xUnit's reflection and nested containers; "
+                    + "run testXtc with the interpreter.");
+        }
         final var execution = new DirectRunRequest(request.projectDir(), request.stdoutFile(), request.stderrFile(),
             request.modulePath(), request.showVersion(), request.verbose(), request.jit(), request.moduleName(),
             request.methodName(), request.moduleArgs());
@@ -63,9 +68,6 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
     }
 
     private int executeRun(final DirectRunRequest request, final File testOutput, final Logger logger) {
-        if (request.jit()) {
-            throw new UnsupportedOperationException("Embedding does not support JIT execution yet; use ATTACHED mode");
-        }
         final var errors = new ErrorList(DEFAULT_ERROR_LIMIT);
         try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), logger)) {
             final var modules = repository(request.modulePath());
@@ -73,7 +75,8 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
                 Launcher.showSystemVersion(session.getConfiguredRepository(), console);
             }
             if (request.verbose()) {
-                console.out("Embedded interpreter: " + request.moduleName() + '.' + request.methodName()
+                console.out("Embedded " + (request.jit() ? "JIT: " : "interpreter: ")
+                    + request.moduleName() + '.' + request.methodName()
                     + " (working directory: " + request.projectDir() + ')');
             }
             String moduleName = request.moduleName();
@@ -105,7 +108,8 @@ public final class IsolatedDirectExecutor implements AutoCloseable {
                 moduleName = TestRunner.XUNIT_MODULE;
             }
             final var execution = new RunRequest(modules, moduleName, request.methodName(), request.moduleArgs(),
-                console.output, request.projectDir(), true, injections);
+                console.output, request.projectDir(), true, injections,
+                request.jit() ? RunRequest.Backend.JIT : RunRequest.Backend.INTERPRETER);
             try (var control = session.run(execution, errors)) {
                 if (control == null) {
                     console.err(errors.getErrors());

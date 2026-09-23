@@ -1,5 +1,7 @@
 package org.xtclang._native.io;
 
+import java.io.PrintWriter;
+
 import org.xtclang.ecstasy.io.Console;
 import org.xtclang.ecstasy.io.IOException;
 
@@ -11,7 +13,6 @@ import org.xtclang.ecstasy.text.String;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.ModuleLoader;
 
 import org.xvm.runtime.template._native.io.xTerminalConsole;
 
@@ -23,8 +24,18 @@ public class TerminalConsole
         implements Console {
 
     public TerminalConsole() {
-        super(null);
+        this(null);
     }
+
+    /**
+     * Create an output console backed by a caller-owned writer, or the terminal when null.
+     */
+    public TerminalConsole(PrintWriter output) {
+        super(null);
+        this.output = output;
+    }
+
+    private final PrintWriter output;
 
     @Override
     public TypeConstant $xvmType(Ctx ctx) {
@@ -42,17 +53,21 @@ public class TerminalConsole
             suppressNewline = false;
         }
 
-        xTerminalConsole.CONSOLE_OUT.print(object.toString(ctx));
+        PrintWriter writer = output == null ? xTerminalConsole.CONSOLE_OUT : output;
+        writer.print(object.toString(ctx));
         if (!suppressNewline) {
-            xTerminalConsole.CONSOLE_OUT.println();
+            writer.println();
         }
-        xTerminalConsole.CONSOLE_OUT.flush();
+        writer.flush();
     }
 
     /**
      * {@code String readLine(String prompt = "", Boolean suppressEcho = False)}
      */
     public String readLine$p(Ctx ctx, String prompt, boolean suppressEcho, boolean dfltSuppressEcho) {
+        if (output != null) {
+            throw new IOException(ctx).$init(ctx, "Embedded console input is not supported", null);
+        }
         if (prompt == null) {
             prompt = String.EmptyString;
         }

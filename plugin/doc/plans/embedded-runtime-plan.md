@@ -3,7 +3,7 @@
 Investigation baseline: `master` at `c3e9d641808091910abb018cb40885300ee08001`.
 Working branch: `lagergren/embedded-gradle-runtime`.
 
-The within-build implementation is on this branch and opt-in `DIRECT` execution has passed all
+The within-build implementation is on this branch and `DIRECT` execution has passed all
 21 existing sequential manual-test modules. Five measured runs per mode reduced median elapsed
 time from 67.08 seconds ATTACHED to 43.47 seconds DIRECT. A later milestone extends the same
 ownership design to keep the host warm across builds.
@@ -21,7 +21,18 @@ call `Launcher.launch(...)`, construct `Runner`/`TestRunner`, or manage connecto
 Missing capabilities must be implemented in embedding, with no fallback to repeated launcher calls.
 Embedding owns runtime reuse, request isolation, completion, cancellation, and cleanup. The plugin
 owns the session's build lifetime and maps Gradle inputs and results to that API. Keep `ATTACHED`
-as the default while proving the new `DIRECT` implementation.
+as the plugin default while proving the new `DIRECT` implementation. The `manualTests` build now
+defaults compilation, interpreter execution, and xUnit to `DIRECT`. Its explicit mode smoke tests
+retain their selected modes. `runSmallFloatsJit` now also uses DIRECT through the experimental JIT
+embedding backend. Use `-PxtcDefaultExecutionMode=ATTACHED` to override the manual-test default, or
+`--mode=ATTACHED` on an individual task (including a run task given `--jit`). The root Gradle daemon
+enables preview at startup to satisfy the manual tests' existing JVM option.
+
+Validation of this default ran all 21 sequential modules, all 22 parallel-runner modules, the
+19 xUnit demo tests, the shared small-float tests on both backends, and the explicit execution-mode
+smoke tasks. All 11 embedding lifecycle tests passed without skips. The combined Gradle invocation
+also passed on a second run using the stored configuration cache; run tasks executed again while
+unchanged compilation and test outputs remained up to date. Formatting checks passed.
 
 Compilation must work without starting an XVM. In particular, compiling the XDK's bootstrap
 libraries must not require an already compiled `runner.xtc` or an installed XDK. Lazily starting
@@ -81,6 +92,14 @@ core-module fingerprint across their requests.
 - Interruption stops the host's wait; request cleanup still uses its bounded shutdown budget and
   preserves the interrupt flag. A failed request release prevents further session reuse. Unit
   tests use controlled clocks, latches and explicit completion signals, not timing assertions.
+- Running the parallel manual tests through embedding exposed a native file-resolution shortcut
+  that ignored the supplied repository and linked against the host's repository. It now uses the
+  repository in the handle. A regression loads a dependent module in a nested container, then
+  recompiles its dependency and checks the new value through the same session.
+- Failure while remote service calls were pending exposed an assertion during shutdown. Fibers
+  that had already returned remained registered without a frame to drain. Shutdown now removes
+  those terminated fibers; a regression fails a request with a waiting service call, closes it,
+  and successfully runs another request through the same session.
 - Repeated-build testing exposed heap retention that a single successful run did not catch.
   Empty typed thread-local holders and null entries in `TransientThreadLocal` can retain an
   implementation loader on a Gradle thread. Scope exit now removes those empty bindings while
@@ -88,13 +107,21 @@ core-module fingerprint across their requests.
   now registers asynchronous container cleanup, closes its watch service, and participates in
   bounded termination. Tests inspect thread-local ownership directly and exercise watcher shutdown.
 
-This is not full runner parity. DIRECT rejects JIT execution with an instruction to use
-ATTACHED, and custom injector implementations remain unsupported. JVM startup options must already be present on
+DIRECT also accepts JIT run requests through the same owned session, with a shared JIT Xvm and
+a fresh container per invocation. The JIT is incomplete and can generate placeholder method
+bodies; this is not general runner parity. See [JIT embedding](../../../doc/jit-embedding.md) for
+its supported boundary, failure reporting, shutdown limitations and focused validation.
+Custom injector implementations remain unsupported. JVM startup options must already be present on
 the Gradle JVM; assertions are enabled on the implementation loader. The manual tests request
 `--enable-preview`, so their DIRECT host needs that option too. Cancellation cannot forcibly stop
 uncooperative native code: failure to terminate is reported and the session is not reused. General
 native-resource ownership, retained-memory behavior under long workloads, and fatal-runtime
 recovery need further validation. No automatic JIT test dependencies have been added.
+
+The JIT integration passed all 16 embedding lifecycle tests (including five JIT tests) and all
+20 plugin tests, with no skips. The unchanged small-float suite passed through DIRECT on both
+backends and through ATTACHED with the JIT. All 21 sequential interpreter modules and the 19
+xUnit demo tests also passed. Formatting and whitespace checks passed.
 
 ### Relationship to the `errs` branch
 

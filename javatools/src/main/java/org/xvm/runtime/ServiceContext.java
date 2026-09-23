@@ -928,6 +928,9 @@ public class ServiceContext {
             setFibers.remove(fiber);
         }
 
+        // Fibers that already returned can remain registered while remote calls are pending.
+        // They have no frame to drain and cannot resume; the called services shut down separately.
+        setFibers.removeIf(fiber -> fiber.getStatus() == FiberStatus.Terminating);
         assert setFibers.isEmpty();
 
         f_container.terminate(this);

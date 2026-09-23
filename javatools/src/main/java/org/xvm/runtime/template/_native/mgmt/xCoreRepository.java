@@ -138,6 +138,13 @@ public class xCoreRepository
             f_repository = repository;
         }
 
+        /**
+         * @return the repository represented by this handle
+         */
+        public ModuleRepository getRepository() {
+            return f_repository;
+        }
+
         protected final ModuleRepository f_repository;
     }
 

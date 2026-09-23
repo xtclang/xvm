@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import java.nio.file.Path;
+
 import java.time.Duration;
 import java.time.Instant;
 
@@ -42,6 +44,8 @@ import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
+import org.xvm.javajit.JitConnector;
+
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -54,12 +58,12 @@ import static org.xvm.runtime.Runtime.DEFAULT_SHUTDOWN_TIMEOUT;
 import static org.xvm.util.Severity.ERROR;
 
 /**
- * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
- * run a long-running Ecstasy application (in "Container Zero") that is responsible for spinning up
- * any number of child containers to "run()" modules. Use {@link #create} for an owned session or
- * {@link #instance} for the legacy singleton. Configuration supplies the Module Repository from
- * which to load the core Ecstasy classes. Without configuration, the singleton attempts to locate
- * them using the "XDK_HOME" environment variable.
+ * A class used to support embedding Ecstasy tools. Interpreter requests use a long-running Ecstasy
+ * application (in "Container Zero") to create child application containers. JIT requests use a
+ * shared Java-targeting XVM with a fresh container per request. Both runtimes start lazily. Use
+ * {@link #create} for an owned session or {@link #instance} for the legacy singleton. Configuration
+ * supplies the Module Repository from which to load the core Ecstasy classes. Without configuration,
+ * the singleton attempts to locate them using the "XDK_HOME" environment variable.
  *
  * <p>Host-side compilation and request preparation are serialized. Applications run asynchronously
  * in separate containers. Close each control to release its request and close the session to stop
@@ -99,6 +103,8 @@ public class EmbeddingSupport
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
     private Connector        connector;
+    private JitConnector     jitConnector;
+    private Path             jitBridge;
     private volatile boolean closed;
     private Throwable        cleanupFailure;
 
@@ -139,26 +145,30 @@ public class EmbeddingSupport
     }
 
     /**
-     * @return true when the JIT implementation is complete and can be used by EmbeddingSupport
-     */
-    private boolean useJit() {
-        return false;
-    }
-
-    /**
      * @return the Connector instance
      */
     public Connector ensureConnector() {
+        return ensureConnector(RunRequest.Backend.INTERPRETER);
+    }
+
+    /**
+     * Obtain the session's lazily created runtime for the selected backend.
+     */
+    public Connector ensureConnector(RunRequest.Backend backend) {
         synchronized (LOCK) {
             verifyConfigured();
+            if (Objects.requireNonNull(backend) == RunRequest.Backend.JIT) {
+                if (jitConnector == null) {
+                    jitConnector = new JitConnector(cfgRepo, jitBridge);
+                }
+                return jitConnector;
+            }
             if (connector == null) {
                 if (runtimeOwner != null && runtimeOwner != this) {
                     throw new IllegalStateException(
                             "Another embedding session owns the runtime in this classloader");
                 }
-                this.connector = useJit()
-                        ? JitControl.createConnector(cfgRepo)
-                        : InterpreterControl.createConnector(cfgRepo);
+                this.connector = InterpreterControl.createConnector(cfgRepo);
                 runtimeOwner = this;
             }
             return connector;
@@ -178,7 +188,7 @@ public class EmbeddingSupport
      * Create an owned embedding session without starting its execution runtime.
      *
      * <p>Close the session when the host is finished. Only one session per implementation
-     * classloader may own a live native runtime; a closed session cannot be reopened.
+     * classloader may own a live interpreter runtime; a closed session cannot be reopened.
      *
      * @param coreRepo  the repository containing the XDK libraries
      *
@@ -186,6 +196,21 @@ public class EmbeddingSupport
      */
     public static EmbeddingSupport create(ModuleRepository coreRepo) {
         return new EmbeddingSupport().configure(Objects.requireNonNull(coreRepo), null);
+    }
+
+    /**
+     * Create a session with an explicit JIT template JAR or class directory. The templates are read
+     * and augmented by the JIT and must not be placed on the application's Java classpath.
+     *
+     * @param coreRepo   the repository containing the XDK libraries
+     * @param jitBridge  the JIT template JAR or class directory
+     *
+     * @return a configured session; neither execution backend is started yet
+     */
+    public static EmbeddingSupport create(ModuleRepository coreRepo, Path jitBridge) {
+        EmbeddingSupport session = create(coreRepo);
+        session.jitBridge = Objects.requireNonNull(jitBridge);
+        return session;
     }
 
     /**
@@ -206,14 +231,17 @@ public class EmbeddingSupport
         Deadline deadline = Deadline.after(timeout);
         List<OwnedControl> pending;
         Connector          runtime;
+        JitConnector       jitRuntime;
         synchronized (LOCK) {
             if (closed) {
                 pending = null;
                 runtime = null;
+                jitRuntime = null;
             } else {
                 closed  = true;
                 pending = List.copyOf(controls);
                 runtime = connector;
+                jitRuntime = jitConnector;
             }
         }
         if (pending == null) {
@@ -237,6 +265,15 @@ public class EmbeddingSupport
             }
         }
         boolean stopped = runtime == null;
+        // A JIT worker may still be running after a bounded close failed. Keep its templates open
+        // until it exits; never close resources underneath generated code that is still executing.
+        if (jitRuntime != null && failure == null) {
+            try {
+                jitRuntime.xvm.close();
+            } catch (IOException | RuntimeException | Error e) {
+                failure = collectFailure(failure, e);
+            }
+        }
         try {
             if (runtime instanceof InterpreterConnector interpreter) {
                 try {
@@ -251,6 +288,9 @@ public class EmbeddingSupport
             synchronized (LOCK) {
                 controls.clear();
                 connector = null;
+                if (failure == null) {
+                    jitConnector = null;
+                }
                 if (stopped && runtimeOwner == this) {
                     runtimeOwner = null;
                 }
@@ -633,7 +673,7 @@ public class EmbeddingSupport
             String                    customInjector,
             ErrorListener             errs) {
         return run(input, moduleName, version, console, rootDir, injections, customInjector,
-                "run", List.of(), false, errs);
+                "run", List.of(), false, RunRequest.Backend.INTERPRETER, errs);
     }
 
     /**
@@ -642,12 +682,13 @@ public class EmbeddingSupport
     public Control run(RunRequest request, ErrorListener errs) {
         return run(request.repository(), request.moduleName(), null, request.console(),
                 request.directory(), request.injections(), null, request.method(), request.arguments(),
-                request.hostFileSystem(), errs);
+                request.hostFileSystem(), request.backend(), errs);
     }
 
     private Control run(ModuleRepository input, String moduleName, Version version, PrintWriter console,
                         File rootDir, Map<String, List<String>> injections, String customInjector,
-                        String method, List<String> arguments, boolean hostFileSystem, ErrorListener errs) {
+                        String method, List<String> arguments, boolean hostFileSystem,
+                        RunRequest.Backend backend, ErrorListener errs) {
         synchronized (LOCK) {
             try (var ignore = ConstantPool.withPool(null)) {
                 verifyConfigured();
@@ -672,9 +713,10 @@ public class EmbeddingSupport
                 }
 
                 try {
-                    Connector connector = ensureConnector();
-                    Control delegate = useJit()
-                            ? JitControl.create(connector, module, repository, console, rootDir, errs)
+                    Connector connector = ensureConnector(backend);
+                    Control delegate = backend == RunRequest.Backend.JIT
+                            ? JitControl.create((JitConnector) connector, module, repository, console,
+                                    method, arguments, injections == null ? Map.of() : injections, errs)
                             : InterpreterControl.create(connector, module, repository, console, rootDir,
                                     method, arguments, hostFileSystem,
                                     injections == null ? Map.of() : injections, errs);

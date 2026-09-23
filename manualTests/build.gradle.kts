@@ -6,6 +6,11 @@ val ciBuild: Provider<Boolean> = providers.environmentVariable("CI")
     .map { it.equals("true", ignoreCase = true) }
     .orElse(false)
 
+// Exercise the reusable embedding session by default; retain the standard plugin override.
+val manualExecutionMode = providers.gradleProperty("xtcDefaultExecutionMode")
+    .map { ExecutionMode.valueOf(it.trim().uppercase()) }
+    .orElse(ExecutionMode.DIRECT)
+
 tasks.withType<XtcRunTask>().configureEach {
     if (ciBuild.get()) {
         // Keep CI console output focused on Gradle/task status and plugin success/failure summaries.
@@ -192,16 +197,19 @@ sourceSets {
 
 // Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
+    executionMode.convention(manualExecutionMode)
+
     /*
      * Execution mode controls how the compiler runs:
-     *   - DIRECT: In-process via ServiceLoader (fastest, shares JVM)
-     *   - ATTACHED: Forked JVM with inherited I/O (default, isolated)
+     *   - DIRECT: Reuses an embedding session in the Gradle JVM (manualTests default)
+     *   - ATTACHED: Forked JVM with inherited I/O (plugin default)
      *   - DETACHED: Not supported for compile tasks
      *
      * Override per-task:
-     *   executionMode = ExecutionMode.DIRECT
+     *   executionMode = ExecutionMode.ATTACHED
      *
-     * Default is ATTACHED (forked JVM with console output).
+     * Override the manualTests default with -PxtcDefaultExecutionMode=ATTACHED,
+     * or use --mode=ATTACHED for an individual compile/run task.
      */
 
     /*
@@ -289,6 +297,8 @@ xtcCompile {
 // Defaults inherited and overridable by all runXtc tasks you chose to create. The default xtcRun task
 // will execute any modules defined in xtcRun.
 xtcRun {
+    executionMode.convention(manualExecutionMode)
+
     /*
      * Equivalent to the "--version" flag for the launcher (default: false).
      */
@@ -300,7 +310,7 @@ xtcRun {
     verbose = true
 
     /*
-    * Add a JVM argument to the defaults. Will be ignored if the launch does not spawn a forked JVM for its run.
+    * DIRECT requires startup options on the Gradle JVM; root gradle.properties enables preview.
     */
     jvmArgs("-showversion", "--enable-preview")
 
@@ -310,12 +320,12 @@ xtcRun {
      * ============================================================================
      *
      * Execution modes:
-     *   - DIRECT: In-process via ServiceLoader
-     *   - ATTACHED: Forked JVM with inherited I/O (default)
+     *   - DIRECT: Reuses an embedding session in the Gradle JVM (manualTests default)
+     *   - ATTACHED: Forked JVM with inherited I/O (plugin default)
      *   - DETACHED: Forked JVM running in background with file redirects
      *
-     * ATTACHED MODE (default):
-     *   Default: stdout/stderr inherit from console
+     * DIRECT AND ATTACHED MODES:
+     *   Default: stdout/stderr go to the console
      *   Override: Use any of the approaches shown in xtcCompile section
      *
      * DETACHED MODE (executionMode = ExecutionMode.DETACHED):
@@ -362,6 +372,8 @@ xtcRun {
  * will execute all configured tests.
  */
 xtcTest {
+    executionMode.convention(manualExecutionMode)
+
     /*
      * Whether to fail the build if any test fails. Default is true.
      * Set to false to continue the build even when tests fail.
@@ -519,7 +531,7 @@ val runSequential = tasks.register<XtcRunTask>("runSequential") {
 }
 
 // The same compiled module exercises the numeric subset supported by both backends.
-// runSmallFloats also accepts --jit for a direct comparison from the command line.
+// runSmallFloats also accepts --jit to compare the two backends in the embedding session.
 val runSmallFloats = tasks.register<XtcRunTask>("runSmallFloats") {
     group = "verification"
     description = "Run the shared small floating-point tests."
