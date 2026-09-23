@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
@@ -12,6 +13,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.ModuleStructure
+import org.xvm.compiler.CursorBinding
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AssignmentStatement
@@ -30,6 +32,30 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** A real compiler consumer of the bounded partial-analysis API; no fallback parser or mock. */
 class XdkPartialAnalysisTest {
+    @Test
+    fun `cursor facts publish surviving sites and release retries and discarded clones`() {
+        CompilerTestSupport.configure()
+        val prefix = "module Editing { void run(Int item) { ite"
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)
+        assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
+        val site = analysis.sites().single()
+        val binding = analysis.cursorBindings().getValue(site)
+        val clone = site.clone() as IncompleteStatement
+        val collector = CursorBinding.Collector()
+        collector.record(site, binding)
+        collector.record(clone, binding)
+        collector.begin(site)
+        assertThat(collector.finish(analysis.sourceTrees())).isEmpty()
+        collector.record(site, binding)
+        collector.record(clone, binding)
+        val published = collector.finish(analysis.sourceTrees())
+        assertThat(published.keys).containsExactly(site)
+        assertThat(collector.finish(listOf(clone))).isEmpty()
+        assertThatThrownBy { (published as MutableMap).clear() }.isInstanceOf(UnsupportedOperationException::class.java)
+        assertThatThrownBy { (binding.variables() as MutableList).clear() }.isInstanceOf(UnsupportedOperationException::class.java)
+    }
+
     @TempDir
     lateinit var directory: Path
 
@@ -408,12 +434,12 @@ class XdkPartialAnalysisTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["value.", "value.si", "value.indexOf("])
+    @ValueSource(strings = ["value.", "value.si", "value.indexOf(", "val", "value.indexOf(startAt="])
     fun `module cursor diagnostics honor cancellation and budgets without duplicates`(operation: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
         val prefix = "module Editing { void run(String value) { $operation"
-        root.writeText(prefix + (if (operation.endsWith("(")) ");" else ";") + " } }")
+        root.writeText(prefix + (if (operation.endsWith("(") || operation.endsWith("=")) ");" else ";") + " } }")
         val support = EmbeddingSupport.instance()
         val delivered = mutableListOf<ErrorListener.ErrorInfo>()
         val analysis = support.analyzeIncomplete(ModuleInfo(root, false), root, position(prefix), null, ErrorListener { delivered.add(it) })
