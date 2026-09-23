@@ -26,6 +26,27 @@ passes below preserve chronology; the PR slices describe eventual integration, n
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
+Execution checklist (complete each item with the evidence specified below):
+
+- [x] **1. Diagnostic audit.** Closed the `@Parsed` constructor family and classified the remaining
+  inspected suppression/failure cases. Fixed false runtime-annotation metadata errors and lost
+  non-module-root diagnostics; retained negative controls. See the
+  [audit evidence and scope limits](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23).
+- [ ] **2. Cursor/module partial analysis — in progress.** Analyze supported incomplete sites in unchanged module
+  snapshots, including source overlays and positions before the end of the file.
+  - [x] Explicit cursor before existing closing braces/semicolons; preserve following declarations.
+  - [x] Module member sites using the same unsaved root/member snapshot; copy shared semantic facts.
+  - [ ] Assignment, return and incomplete nested-call contexts.
+  - [ ] Adapter request ownership, version invalidation and cancellation through publication.
+- [ ] **3. Completion and signature help.** Connect proven partial facts to real adapter/server
+  requests; establish scope, receiver and argument/overload behavior.
+- [ ] **4. Other semantic consumer probes.** Type-definition, implementation lookup, call hierarchy,
+  semantic classification/inlay hints and module-local rename validation.
+- [ ] **5. Dependency/source boundary.** Prove identities, available source locations and dependency
+  invalidation across two modules.
+- [ ] **6. Lifetime and compatibility.** Sustained edits/cancellation/retention, output comparison,
+  migration examples and the completed API requirements matrix.
+
 The eleventh pass establishes selected-call provenance and bounded partial receiver facts. It does
 not yet establish that the embedding/AST surface is sufficient for every intended editor consumer.
 The completion criterion is a working consumer and negative cases for each required fact, with its
@@ -38,8 +59,8 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 
 | Priority / area | What is still unproven or absent | POC acceptance evidence |
 |---|---|---|
-| 1. Finish the diagnostic audit | The `@Parsed` constructor family and remaining historical suppression/failure cases need final dispositions. | Compare provisional probes with final validation using valid/invalid source controls; pin real host-facing diagnostic loss with a regression. Classify remaining cases as fixed, justified silence or a separately documented compiler defect. |
-| 2. Cursor-based incomplete analysis | The probe accepts one standalone trailing EOF statement in a single-source module. Real edits occur before closing braces, inside assignments/returns/nested calls and in member files. | Analyze unchanged source at an explicit cursor/site within a module snapshot and its unsaved overlays. Preserve lexical/flow context, source spans, budgets, cancellation and current-version publication; report unavailable facts explicitly. Keep compiler mode Java-only. |
+| 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
+| 2. Cursor-based incomplete analysis — in progress | Explicit cursors before closing braces/semicolons and module member overlays now work for standalone statements. Assignments/returns/incomplete nested calls and adapter request publication remain open. | Analyze unchanged source within a module snapshot and its unsaved overlays. Preserve lexical/flow context, source spans, budgets, cancellation and current-version publication; report unavailable facts explicitly. Keep compiler mode Java-only. |
 | 3. Completion and signature help | Receiver candidates exist, but visible locals/implicit receivers, static/type lookup, applicable overloads, expected argument types and incomplete argument-to-parameter mapping are not established. Function values, partial application and receiver-to-argument rewrites have no selected-call record. | Real XdkAdapter/stdio requests for representative qualified/unqualified, generic, overloaded and named/default-argument examples. Results must distinguish source argument slots from selected parameters and survive edits/cancellation without stale facts. |
 | 4. Other semantic consumers | Types lack an explicit copied declaration link; calls lack an explicit caller association; occurrences classify declaration/reference, not read/write or modifiers. Override/implementation and safe rename relationships still need proof. | Small compiler-backed consumers for type-definition, implementation lookup, incoming/outgoing calls, semantic tokens/inlay hints and module-local rename conflict checks. Record which facts can be copied from existing compiler structures and which need a small compiler hook. Include captures, shadowing, overloads and generated declarations. |
 | 5. Dependency/source boundary | Module navigation works; cross-module/library source lookup and persistent workspace indexing do not. Snapshot IDs intentionally expire between attempts. | A two-module fixture proves dependency identity, available source locations and invalidation when the dependency changes. Specify host source/repository ownership and index keys; missing library sources must remain unavailable. A production workspace index can follow separately. |
@@ -52,9 +73,36 @@ an explicit scope decision. Formatting, editor polish, a production persistent i
 implementations of every LSP handler need not delay that API decision. Unsupported protocol
 capabilities remain unadvertised, and Tree-sitter stays the shipped default.
 
-The immediate sequence remains the bounded `@Parsed` audit, then cursor/module partial analysis
-and end-to-end completion/signature help. Follow with the remaining consumer probes and sustained
+The next step is cursor/module partial analysis, followed by end-to-end completion/signature help.
+Follow with the remaining consumer probes and sustained
 validation before extracting the proposed PRs.
+
+The runtime-annotation metadata correction should be extracted as an independent compiler fix,
+with its annotation application and reporting-TypeInfo controls. The structured `EMB-6` module-root
+diagnostic belongs with the embedding diagnostics slice. Neither requires new AST state.
+
+Task 1 validation: a fresh compiler test run reported 474 tests with 40 existing skips; LSP tests
+reported 568 with three existing skips; all seven packaged compiler-stdio tests ran. That is 1,006
+executed tests, zero failures/errors, including every added regression. `:xdk:installDist` and
+`spotlessCheck` also passed. The commands used both lang inclusion flags and `-Plsp.adapter=compiler`.
+
+Task 2's first slice adds `analyzeIncomplete(Source, cursor, ...)` and
+`analyzeIncomplete(ModuleInfo, sourceFile, cursor, ...)`. Both use the shared partial pipeline;
+the source overload remains the convenience case. Cursors are compiler Source position tokens
+for the exact input text. Standalone member/call sites before closing braces or a semicolon retain
+the rest of the file and validate in the original lexical/flow context. Module parsing uses the
+existing assembly and overlay hooks. Only the selected cursor's `PARSER-30` is deferred through
+assembly; other syntax errors, host budgets and cancellation prevent semantic work. Validation
+replays the diagnostic internally, without duplicate host delivery or emitting the damaged method.
+The copied Kotlin partial view includes shared module facts and selects the site source's ranges.
+No XdkAdapter capability is enabled by this slice; the remaining task-2 checkboxes still apply.
+
+Task 2 first-slice validation: the same full command completed with 474 compiler tests (40 existing
+skips), 577 LSP tests (three existing skips), and seven executed packaged compiler-stdio tests.
+All 1,015 executed tests passed; the 19 partial-analysis cases had no skips. XDK installation and
+`spotlessCheck` passed. The new cases cover preserved suffix declarations, module overlays and copied
+cross-file facts, unrelated-file syntax errors, real narrowing, UTF-16/CRLF positions, cancellation,
+budgets, exactly-once diagnostics and normal compilation continuing to reject incomplete input.
 
 ### Branch hardening design
 
