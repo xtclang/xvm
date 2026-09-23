@@ -157,7 +157,8 @@ module TestModule {
 >
 > Compiler completion and signature help are available for the supported cursor contexts, along
 > with type-definition, type/method implementation lookup, static call hierarchy, resolved-name
-> semantic tokens, read/write highlights and bounded inlay hints. Rename, formatting, code actions,
+> semantic tokens, read/write highlights, bounded inlay hints and validated local/private-parameter
+> rename (versioned-edit clients). Formatting, code actions,
 > code lenses, document links and linked editing are not advertised. Definition/type-definition
 > and inherited implementation bodies can also resolve into explicitly host-indexed dependencies;
 > ordinary editor launch does not configure those artifacts. Compiler mode stays Java-only.
@@ -1187,7 +1188,7 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Try Rename, Format Document/Selection, quick fixes and code lenses with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets or indentation may still work and do not count as compiler feature passes. |
+| X31 | Try Format Document/Selection, quick fixes and code lenses with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets or indentation may still work and do not count as compiler feature passes. |
 | X32 | Try a cursor inside an identifier or `box.pa|ir(...)`, a constructor call, a call through a function value, or a call with arguments after the cursor. | These cursor contexts are outside current completion/candidate coverage. An empty answer is acceptable; a crash, stale answer or incorrect replacement edit is not. |
 
 ### F. Type-definition and implementation lookup
@@ -1263,8 +1264,8 @@ module Consumers {
 | X43 | Keep hierarchy items open, insert a blank line before `run`, then reopen hierarchy. Break the module with an unfinished declaration, correct it and close/reopen the file. | Fresh results use current ranges. Old hierarchy items do not resolve against the edited snapshot. A parse failure clears semantic answers; correction restores them. |
 | X44 | In the section D two-file fixture, add `static Int target(Int n)=n;` to Project and `Int callTarget()=target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
 
-Also unavailable: separate Go to Declaration, document links and linked editing. Rename remains
-off: successful recompilation alone cannot rule out silent binding changes. The interactive fixtures
+Also unavailable: separate Go to Declaration, document links and linked editing. The bounded
+rename checks below exercise recompilation plus binding comparison. The interactive fixtures
 do not configure dependency artifacts; source navigation through the host API is tested separately
 below. Workspace-wide reference/implementation searches and external or conditional-mixin hierarchy
 remain open. No Tree-sitter fallback runs in compiler mode. Check the
@@ -1360,6 +1361,53 @@ cursor cancellation, snapshot timing and binary replacement:
     --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
+
+### G. Compiler-validated rename
+
+Use the compiler backend and an editor that advertises `workspace.workspaceEdit.documentChanges`.
+If it does not, record this section as unsupported by that client; the compiler server deliberately
+omits rename. Create `Rename.x`:
+
+```xtc
+module Rename {
+    Int value = 10;
+    private Int pick(Int input) = input;
+    Int run() {
+        Int local = pick(input=1);
+        function Int() captured = () -> local;
+        return captured() + value;
+    }
+}
+```
+
+Use F2 (VS Code) or Shift+F6 (IntelliJ). Wait for diagnostics to clear before each case and undo
+accepted edits before continuing. These are bounded semantic edits, not general member refactoring.
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X53 | Rename `local` to `renamed`. | Declaration and captured use change; `value` and unrelated names do not. Recompilation has no errors. |
+| X54 | Rename `input` to `number`, first at its declaration, then after undo at `input=1`. | Declaration, method body and named label all change; `=` and argument value remain intact. |
+| X55 | Rename `local` to `value`. | No edits: the untouched property use would silently bind to the local even though compilation would succeed. |
+| X56 | Try renaming `pick`, module `Rename`, property `value`, or a public method's parameter. | Rename unavailable. Public/lambda/constructor parameters, method-value escapes and member/override changes are outside the proven scope. |
+| X57 | Start a rename and edit another file in the same module, close/reopen the target, or change its version before applying. | Pending work is canceled or rejected as changed; an edit for an old open-buffer version is not applied. Fast machines may need the controlled server regression below to exercise this race. |
+| X58 | Introduce a syntax error, try rename, fix it and retry. Try an invalid identifier or an existing local name. | Broken/unsupported/conflicting requests give no edits or temporary diagnostics. A valid rename works again after correction. |
+
+For closed-member input checks, version conversion, cancellation and the repeated retention workload:
+
+```bash
+./gradlew :lang:lsp-server:test \
+    --tests 'org.xvm.lsp.adapter.XdkRenameTest' \
+    --tests 'org.xvm.lsp.server.XdkRenameServerTest' \
+    --tests 'org.xvm.lsp.server.XdkCursorServerTest' \
+    --tests 'org.xvm.lsp.adapter.XdkRetentionTest' \
+    --rerun --no-build-cache \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+The retention test repeatedly replaces dependencies, rebuilds an explicit source graph, performs
+rename/cursor proofs and closes/reopens the consumer. It reports actual latency and checks release
+of compiler results, AST roots and pools after close and shutdown. This is a bounded automated
+workload; record interactive and prolonged editor tests separately.
 
 ## VS Code Extension Playbook
 
@@ -1542,5 +1590,5 @@ Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
 - Editor project discovery/configuration and a persistent cross-module index
 - External/conditional-mixin hierarchy and broader implementation targets
-- Safe rename, including named-label references and before/after binding validation
+- Member/override/workspace rename and public-parameter caller closure
 - Diagnostic-driven quick fixes and refactorings

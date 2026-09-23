@@ -64,6 +64,14 @@ internal class XdkSources private constructor(
         text[file]?.toCharArray() ?: throw IOException("Source is absent from this compilation snapshot: $file")
 
     companion object {
+        /** Replay an exact snapshot with proposed edits; never read or write the filesystem. */
+        fun replay(
+            root: File,
+            inputs: Inputs,
+            text: Map<String, String>,
+        ): XdkSources =
+            XdkSources(root, inputs.text.mapValues { (file, original) -> text[file.path] ?: original }, inputs.directories, inputs.aliases)
+
         /** Canonical paths join editor URIs, compiler source names and filesystem notifications. */
         fun file(name: String): File? =
             runCatching {

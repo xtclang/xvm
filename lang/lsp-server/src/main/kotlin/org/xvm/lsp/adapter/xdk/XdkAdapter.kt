@@ -16,11 +16,13 @@ import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.InlayHint
 import org.xvm.lsp.adapter.Position
+import org.xvm.lsp.adapter.PrepareRenameResult
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.TypeHierarchyItem
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.mapCancellable
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
@@ -113,6 +115,7 @@ class XdkAdapter internal constructor(
             AdapterCapability.SIGNATURE_HELP,
             AdapterCapability.SEMANTIC_TOKENS,
             AdapterCapability.INLAY_HINT,
+            AdapterCapability.RENAME,
         )
 
     override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
@@ -140,7 +143,7 @@ class XdkAdapter internal constructor(
         content: String,
     ): CompletableFuture<CompilationResult> {
         lateinit var request: Request
-        val (retired, obsoleteCursors) =
+        val (retired, obsoleteQueries) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 overlays[uri] = content
@@ -156,7 +159,7 @@ class XdkAdapter internal constructor(
                                 removeQueued(request)
                                 if (requests.remove(scope, request)) {
                                     completed.remove(scope)
-                                    retireCursors(scope)
+                                    retireQueries(scope)
                                 } else {
                                     emptyList()
                                 }
@@ -175,7 +178,7 @@ class XdkAdapter internal constructor(
                 retired
             }
         retired.forEach { it.result.cancel(false) }
-        obsoleteCursors.forEach { it.result.cancel(false) }
+        obsoleteQueries.forEach { it.result.cancel(false) }
         return request.result
     }
 
@@ -225,21 +228,42 @@ class XdkAdapter internal constructor(
         val kind: CursorKind,
     )
 
+    private sealed interface QueryRequest {
+        val compilation: Request
+        val result: CompletableFuture<*>
+        val task: Runnable
+    }
+
     private class CursorRequest(
-        val compilation: Request,
+        override val compilation: Request,
         val key: CursorKey,
         val position: Position,
         work: (CursorRequest) -> Unit,
-    ) {
+    ) : QueryRequest {
         val uri: String get() = key.uri
-        val result = CompletableFuture<PartialSemanticModel?>()
-        val task = Runnable { work(this) }
+        override val result = CompletableFuture<PartialSemanticModel?>()
+        override val task = Runnable { work(this) }
+    }
+
+    private class RenameRequest(
+        override val compilation: Request,
+        val module: ModuleAnalysis,
+        val uri: String,
+        val position: Position,
+        val name: String,
+        work: (RenameRequest) -> Unit,
+    ) : QueryRequest {
+        override val result = CompletableFuture<WorkspaceEdit?>()
+        override val task = Runnable { work(this) }
     }
 
     /** Called under lifecycle; future callbacks must run after releasing it. */
-    private fun retireCursors(scope: String): List<CursorRequest> =
-        cursors.values.filter { it.compilation.scope == scope }.onEach {
-            cursors.remove(it.key, it)
+    private fun retireQueries(scope: String): List<QueryRequest> =
+        (cursors.values + renames.values).filter { it.compilation.scope == scope }.onEach {
+            when (it) {
+                is CursorRequest -> cursors.remove(it.key, it)
+                is RenameRequest -> renames.remove(it.uri, it)
+            }
             compiles.remove(it.task)
         }
 
@@ -334,6 +358,8 @@ class XdkAdapter internal constructor(
         val inputs: XdkDependencies,
         val artifact: XdkDependency? = null,
         val documentUris: Set<String> = documents.keys,
+        val sourceInputs: XdkSources.Inputs? = null,
+        val sourceTexts: Map<String, String> = emptyMap(),
     ) {
         val hierarchy = XdkHierarchy(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
         val calls = XdkCalls(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
@@ -375,11 +401,11 @@ class XdkAdapter internal constructor(
     }
 
     /** Called under lifecycle. Compiler-owned objects never enter the artifact cache. */
-    private fun retireRequests(scopes: Set<String>): Pair<List<Request>, List<CursorRequest>> {
+    private fun retireRequests(scopes: Set<String>): Pair<List<Request>, List<QueryRequest>> {
         val retired = scopes.mapNotNull { requests.remove(it) }
         scopes.forEach(completed::remove)
         retired.forEach(::removeQueued)
-        return retired to scopes.flatMap(::retireCursors)
+        return retired to scopes.flatMap(::retireQueries)
     }
 
     private fun removeQueued(request: Request) {
@@ -414,7 +440,7 @@ class XdkAdapter internal constructor(
                         requests.remove(request.scope, request)
                         completed.remove(request.scope)
                         removeQueued(request)
-                        retireCursors(request.scope)
+                        retireQueries(request.scope)
                     }
                 retired to probes
             }
@@ -424,7 +450,7 @@ class XdkAdapter internal constructor(
     }
 
     override fun closeDocument(uri: String) {
-        val (retired, obsoleteCursors) =
+        val (retired, obsoleteQueries) =
             synchronized(lifecycle) {
                 val scope = scopes.remove(uri) ?: analysisScope(uri)
                 overlays.remove(uri)
@@ -434,16 +460,17 @@ class XdkAdapter internal constructor(
                 }
             }
         retired.forEach { it.result.cancel(false) }
-        obsoleteCursors.forEach { it.result.cancel(false) }
+        obsoleteQueries.forEach { it.result.cancel(false) }
     }
 
     override fun close() {
         val pending =
             synchronized(lifecycle) {
                 closed = true
-                val pending = requests.values.map { it.result } + cursors.values.map { it.result }
+                val pending = requests.values.map { it.result } + cursors.values.map { it.result } + renames.values.map { it.result }
                 requests.clear()
                 cursors.clear()
+                renames.clear()
                 overlays.clear()
                 scopes.clear()
                 completed.clear()
@@ -569,6 +596,8 @@ class XdkAdapter internal constructor(
             target.inputs,
             target.artifact,
             documents,
+            target.sourceInputs,
+            target.sourceTexts,
         )
     }
 
@@ -660,6 +689,14 @@ class XdkAdapter internal constructor(
             dependencySources,
             inputs,
             artifact,
+            sourceInputs = sources?.inputs,
+            sourceTexts =
+                sources
+                    ?.inputs
+                    ?.text
+                    ?.entries
+                    ?.associate { (file, text) -> file.path to text }
+                    ?: mapOf(uri to request.overlays.getValue(uri)),
         )
     }
 
@@ -870,6 +907,130 @@ class XdkAdapter internal constructor(
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
     }
 
+    override fun prepareRename(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): PrepareRenameResult? {
+        val model = module(uri)?.takeIf { it.succeeded }?.document(uri)?.semantics ?: return null
+        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable } ?: return null
+        val range =
+            model.occurrences
+                .firstOrNull {
+                    it.symbol == symbol.id && SemanticModel.Position(line, column) in it.range
+                }?.range ?: return null
+        return PrepareRenameResult(range.toRange(), symbol.name)
+    }
+
+    override fun rename(
+        uri: String,
+        line: Int,
+        column: Int,
+        newName: String,
+    ): WorkspaceEdit? = renameAsync(uri, line, column, newName).join()
+
+    override fun renameAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        newName: String,
+    ): CompletableFuture<WorkspaceEdit?> {
+        val (request, previous) =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
+                val module = completed[compilation.scope]?.takeIf { it.succeeded } ?: return CompletableFuture.completedFuture(null)
+                if (prepareRename(uri, line, column) == null) return CompletableFuture.completedFuture(null)
+                val request = RenameRequest(compilation, module, uri, Position(line, column), newName, ::runRename)
+                request.result.whenComplete { _, _ ->
+                    if (request.result.isCancelled) {
+                        synchronized(lifecycle) {
+                            renames.remove(uri, request)
+                            compiles.remove(request.task)
+                        }
+                    }
+                }
+                val previous = renames.put(uri, request)
+                previous?.let { compiles.remove(it.task) }
+                compiles.execute(request.task)
+                request to previous
+            }
+        previous?.result?.cancel(false)
+        return request.result
+    }
+
+    private fun isStale(request: RenameRequest): Boolean =
+        renames[request.uri] !== request || request.result.isCancelled || isStale(request.compilation)
+
+    /** Both proof attempts stay on the compiler worker and never replace the live analysis. */
+    private fun runRename(request: RenameRequest) {
+        try {
+            val edit = proveRename(request)
+            synchronized(lifecycle) {
+                if (isStale(request)) throw CancellationException()
+            }
+            request.result.complete(edit)
+        } catch (_: CancellationException) {
+            request.result.cancel(false)
+        } catch (e: Exception) {
+            request.result.completeExceptionally(e)
+        } catch (e: Error) {
+            request.result.completeExceptionally(e)
+            throw e
+        } finally {
+            renames.remove(request.uri, request)
+        }
+    }
+
+    private fun proveRename(request: RenameRequest): WorkspaceEdit? {
+        val module = request.module
+
+        fun compile(texts: Map<String, String>): CompilerRenameFacts? {
+            if (isStale(request)) throw CancellationException()
+            val heard = ErrorList()
+            val errors = ErrorListener.cancellable(heard) { isStale(request) }
+            val repository = module.inputs.open().repository
+            val sources =
+                module.sourceInputs?.let {
+                    XdkSources.replay(
+                        requireNotNull(XdkSources.file(request.compilation.scope)),
+                        it,
+                        texts,
+                    )
+                }
+            val compilation =
+                if (sources == null) {
+                    compileSource(Source(texts.getValue(request.compilation.uri), request.compilation.uri), repository, errors)
+                } else {
+                    compileTree(sources, repository, errors)
+                }
+            if (isStale(request)) throw CancellationException()
+            return if (compilation.succeeded() && !heard.hasSeriousErrors()) compilation.renameFacts() else null
+        }
+        val source = module.document(request.uri)?.semantics?.sourceName ?: return null
+        val before = compile(module.sourceTexts) ?: return null
+        val plan =
+            XdkRename.plan(before, module.sourceTexts, source, request.position.line, request.position.column, request.name) ?: return null
+        val after = compile(plan.proposed) ?: return null
+        if (!XdkRename.preservesBindings(before, after, plan)) return null
+        // A closed file can change without a watcher event. Refuse edits against that old snapshot.
+        if (module.sourceInputs != null) {
+            val current =
+                try {
+                    captureSources(request.compilation) { isStale(request) }?.inputs
+                } catch (_: IOException) {
+                    return null
+                }
+            if (current != module.sourceInputs) return null
+        }
+        return WorkspaceEdit(
+            plan.edits.keys.associate { name ->
+                (module.sourceUri(name) ?: return null) to plan.textEdits(name)
+            },
+            versioned = true,
+        )
+    }
+
     override fun prepareTypeHierarchy(
         uri: String,
         line: Int,
@@ -998,6 +1159,7 @@ class XdkAdapter internal constructor(
     private val scopes = mutableMapOf<String, String>()
     private val requests = ConcurrentHashMap<String, Request>()
     private val cursors = ConcurrentHashMap<CursorKey, CursorRequest>()
+    private val renames = ConcurrentHashMap<String, RenameRequest>()
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
