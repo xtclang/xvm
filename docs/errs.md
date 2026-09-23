@@ -1252,12 +1252,48 @@ is stored, and no clone-reset override is added. No existing AST class gains fie
 this pass. Kotlin consumer tests exercise the API, but model copying, completion queries and LSP
 integration remain subsequent work in the existing LSP module.
 
+#### Call facts owned by the compilation attempt
+
+The eleventh pass records selected, instantiated method-call signatures and written argument to
+visible parameter mappings. `InvocationExpression.validateMulti` is the authoritative capture
+point: named arguments have been ordered, receiver and method type parameters have been resolved,
+and successful `finishValidations` establishes that the call fits. The mapping is made before
+argument conversion can replace the original expressions. Synthetic defaults get no source span.
+
+The invocation node owns **no new field**. `InvocationBinding` is an immutable Java record and its
+collector is scratch space owned by one embedding attempt. This avoids both a phase-assigned AST
+cache and a final Lazy/AtomicReference wrapper whose mutable contents would be shared by clones.
+No ambient thread local or ErrorListener semantic callback is involved.
+
+| Compiler location | Why the hook belongs there |
+|---|---|
+| `Compiler`, `StageMgr` | Carry the explicitly supplied collector through stage changes; existing constructors use a no-op collector. These are pipeline owners, not source nodes. |
+| `Context`, `StatementBlock.RootContext` | Nested validation contexts delegate to the root's final collector reference. Method compilation installs the enclosing attempt's collector. |
+| `MethodDeclarationStatement`, `LambdaExpression` | Forward the stage manager's collector into real body validation and default-parameter contexts. |
+| `TypeCompositionStatement` | Supply the same collector to the compiler-generated shorthand constructor context. |
+| `AstNode.catchUpChildren`, `NewExpression`, `PropertyDeclarationStatement` | Forward it when deferred children and actual property initializers enter compiler stages. Temporary capture/probe stages may remain unobserved; final compilation records the surviving nodes. |
+| `InvocationExpression` | Invalidate any previous entry when validation starts; submit the resolved record only after successful completion. No new node state or clone handling. |
+| `EmbeddingSupport` | Filter entries to successfully validated invocations in the surviving source tree, return an immutable map, and clear collector scratch entries, including discarded clones. Existing constructors remain available; record-pattern arity changes. |
+
+The map is still compiler-worker data: keys are AST identities and records refer to constants in
+that attempt's pool. Kotlin copies them into `SemanticModel.CallSite` values and retains no compiler
+objects. Failed or unvisited calls, function-valued invocations, partial applications and
+receiver-to-argument rewrites have no selected-call record.
+
+`PartialSemanticModel` copies incomplete syntax, known receiver/argument types, lexical method
+identity and accessible receiver members. This explicit worker operation can build TypeInfo through
+its supplied listener; ordinary semantic copying remains passive. Candidate signatures include
+receiver substitution but do not claim incomplete-call overload selection or method-type inference.
+The copied argument slot counts only the parser's top-level commas. Scope completion, static/type
+lookup, broader incomplete syntax and LSP integration remain open; XdkAdapter advertises no new
+capability from these models.
+
 #### Passive source facts on nodes
 
 | Location | Change and reason for placement | Ownership / limits |
 |---|---|---|
 | `NameExpression` | `getResolvedTarget()` exposes the existing resolved `Argument`. | No new resolution or cache. A failed/unvisited name can return null. The consumer distinguishes register object identity from constant equality. |
-| `InvocationExpression` | `getInvokedExpression()` and `getResolvedMethod()` expose the callee expression and selected overload. | Only invocation validation knows which overload won. A bare method name is insufficient. No call-site substitution or signature-help model is added. |
+| `InvocationExpression` | `getInvokedExpression()` and `getResolvedMethod()` expose the callee expression and selected overload. | Only invocation validation knows which overload won. A bare method name is insufficient. Call-site substitutions are recorded separately in the attempt-owned collector described above. |
 | `VariableDeclarationStatement` | Public access to its existing declaration register. | Connects the written local declaration to its uses without matching names or register numbers. Narrowed shadows use `getOriginalRegister()`. |
 | `MethodDeclarationStatement`, `PropertyDeclarationStatement`, `TypeCompositionStatement`, `TypedefStatement` | Small `getNameToken()` accessors for the written declaration. | The node already owns the token; consumers must not reverse-engineer a name span from `toString()` or component names. |
 | `Parameter` | Name token and an optional retained resolved target; its setter remains package-private. | Unlike declarations backed by components, ordinary parameters need a link to a register. Constructor parameters can instead denote synthetic properties; class/method formals denote formal constants. Missing links remain unknown. |
@@ -1315,8 +1351,9 @@ know whether a diagnostic is a real validation failure, a rejected candidate, or
 
 The inventory does not imply that every no-argument TypeInfo read should become a reporting read.
 The [TypeInfo audit](errs-audit.md#fresh-typeinfo-capture-2026-09-22) classifies the observed callers.
-No LSP request is allowed to continue validation or build TypeInfo; snapshot extraction runs on the
-compiler worker and copies only existing facts. Partial validation can leave gaps, and unsupported
+No LSP request is allowed to continue validation or build TypeInfo. Ordinary snapshot extraction
+copies existing facts; explicit partial member inspection runs separately on the compiler worker
+with a reporting listener before copying. Partial validation can leave gaps, and unsupported
 or unresolved names must remain unknown.
 
 Verification belongs with these boundaries: resolved/unresolved qualified segments; constructor,

@@ -6,6 +6,8 @@ import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component.Composition
 import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
+import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.Register
@@ -13,14 +15,17 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.PseudoConstant
+import org.xvm.asm.constants.SignatureConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
+import org.xvm.compiler.InvocationBinding
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ComponentStatement
 import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.InvocationExpression
+import org.xvm.compiler.ast.LabeledExpression
 import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
@@ -68,6 +73,18 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(): List<SemanticModel> {
     return ConstantPool.withPool(pool).use { builder.build(this) }
 }
 
+/**
+ * Explicit worker-only member inspection followed by copying. Unlike ordinary semanticSnapshot,
+ * this may build receiver TypeInfo and report through [errors]. Never call it on a request thread
+ * or concurrently with another compilation using the same repository.
+ */
+fun EmbeddingSupport.PartialAnalysis.semanticSnapshot(errors: ErrorListener): PartialSemanticModel {
+    val builder = SemanticModelBuilder()
+    if (errors.isAbortDesired) return PartialSemanticModel(builder.unavailable(), emptyList())
+    val pool = pool().orElse(null) ?: return PartialSemanticModel(builder.unavailable(), emptyList())
+    return ConstantPool.withPool(pool).use { builder.buildPartial(this, errors) }
+}
+
 /** Compiler-worker extraction. All mutable state dies with the builder. */
 private class SemanticModelBuilder {
     private val id = UUID.randomUUID()
@@ -81,12 +98,24 @@ private class SemanticModelBuilder {
     private val occurrences = linkedMapOf<SourceLocation, Occurrence>()
     private val expressions = linkedMapOf<SourceLocation, TypeId>()
     private val callees = IdentityHashMap<NameExpression, Argument>()
+    private val calls = linkedMapOf<SourceLocation, SemanticModel.CallSite>()
+
+    fun unavailable(): SemanticModel =
+        SemanticModel(id, Status.UNAVAILABLE, null, SemanticModel.Facts(symbols, types), emptyList(), emptyList())
 
     fun build(compilation: EmbeddingSupport.Compilation): List<SemanticModel> {
         val root =
             compilation.parsed()
-                ?: return listOf(SemanticModel(id, Status.UNAVAILABLE, null, SemanticModel.Facts(symbols, types), emptyList(), emptyList()))
+                ?: return listOf(unavailable())
         val nodes = nodesIn(root)
+        collect(nodes, compilation.callBindings())
+        return finish(nodes, compilation.succeeded())
+    }
+
+    private fun collect(
+        nodes: List<AstNode>,
+        bindings: Map<InvocationExpression, InvocationBinding>,
+    ) {
         nodes.filterIsInstance<NewExpression>().forEach {
             capturedProperties.putAll(it.captureOrigins)
             it.sourceBindings?.let { bindings -> captureOrigins.putAll(bindings.captureOrigins) }
@@ -121,9 +150,13 @@ private class SemanticModelBuilder {
             }
         }
         nodes.forEach { node ->
-            val expressionType = (node as? Expression)?.takeIf { it.isValidated }?.type
+            val expressionType = validatedType(node as? Expression)
             type(expressionType)?.let { expressions[location(node.source, node.startPosition, node.endPosition)] = it }
             when (node) {
+                is InvocationExpression -> {
+                    bindings[node]?.let { copyCall(node, it) }
+                }
+
                 is NameExpression -> {
                     refer(node.nameToken, callees[node] ?: node.resolvedTarget, expressionType, node.source)
                 }
@@ -135,20 +168,140 @@ private class SemanticModelBuilder {
                 }
             }
         }
-        val hierarchy = if (compilation.succeeded()) hierarchy(nodes) else emptyMap()
+    }
+
+    private fun finish(
+        nodes: List<AstNode>,
+        complete: Boolean,
+    ): List<SemanticModel> {
+        val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
         val facts = SemanticModel.Facts(symbols, types, hierarchy)
         return immutableList(
             nodes.map { it.source?.fileName }.distinct().map { source ->
                 SemanticModel(
                     id,
-                    if (compilation.succeeded()) Status.COMPLETE else Status.PARTIAL,
+                    if (complete) Status.COMPLETE else Status.PARTIAL,
                     source,
                     facts,
                     occurrences.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                     expressions.filterKeys { it.sourceName == source }.map { (location, type) -> ExpressionType(location.range, type) },
+                    calls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                 )
             },
         )
+    }
+
+    private fun copyCall(
+        node: InvocationExpression,
+        binding: InvocationBinding,
+    ) {
+        val method = binding.method().component as? MethodStructure ?: return
+        val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
+        val target = symbol(binding.method(), method.name, SymbolKind.METHOD) ?: return
+        val site = location(node.source, node.startPosition, node.endPosition)
+        val callee = node.invokedExpression
+        calls[site] =
+            SemanticModel.CallSite(
+                site.range,
+                location(node.source, callee.startPosition, callee.endPosition).range,
+                target,
+                selected,
+                immutableList(
+                    binding.arguments().map {
+                        SemanticModel.CallArgument(location(node.source, it.startPosition(), it.endPosition()).range, it.parameterIndex())
+                    },
+                ),
+            )
+    }
+
+    private fun validatedType(expression: Expression?): TypeConstant? = expression?.takeIf { it.isValidated && it.typeFit.isFit }?.type
+
+    fun buildPartial(
+        analysis: EmbeddingSupport.PartialAnalysis,
+        errors: ErrorListener,
+    ): PartialSemanticModel {
+        val root = analysis.sourceTrees().singleOrNull() ?: return PartialSemanticModel(unavailable(), emptyList())
+        val nodes = nodesIn(root)
+        collect(nodes, analysis.callBindings())
+        val sites =
+            analysis.sites().map { site ->
+                val parents = generateSequence(site.parent) { it.parent }.toList()
+                val owner = parents.filterIsInstance<TypeCompositionStatement>().firstOrNull()?.component as? ClassStructure
+                val scope =
+                    parents
+                        .filterIsInstance<MethodDeclarationStatement>()
+                        .firstOrNull()
+                        ?.let(::identity)
+                        ?.let { constants[it] }
+                val receiver = site.receiver.orElse(null)
+                val receiverType = validatedType(receiver)
+                val callee = (site.target as? NameExpression)?.name.takeIf { site.isCall }
+                val members =
+                    if (receiverType != null && owner != null && !errors.isAbortDesired) {
+                        receiverMembers(receiverType, owner, errors).filter {
+                            !site.isCall || (it.kind == SymbolKind.METHOD && it.name == callee)
+                        }
+                    } else {
+                        emptyList()
+                    }
+                PartialSemanticModel.Site(
+                    if (site.isCall) PartialSemanticModel.Kind.CALL else PartialSemanticModel.Kind.MEMBER_ACCESS,
+                    location(site.source, site.startPosition, site.endPosition).range,
+                    location(site.source, site.operator.startPosition, site.operator.endPosition).range,
+                    receiver?.let { location(site.source, it.startPosition, it.endPosition).range },
+                    type(receiverType),
+                    callee,
+                    scope,
+                    immutableList(
+                        site.arguments.map {
+                            PartialSemanticModel.Argument(
+                                location(site.source, it.startPosition, it.endPosition).range,
+                                (it as? LabeledExpression)?.name,
+                                type(validatedType(it)),
+                            )
+                        },
+                    ),
+                    immutableList(
+                        site.separators.map { Position(Source.calculateLine(it.startPosition), Source.calculateOffset(it.startPosition)) },
+                    ),
+                    immutableList(members),
+                )
+            }
+        return if (errors.isAbortDesired) {
+            PartialSemanticModel(unavailable(), emptyList())
+        } else {
+            PartialSemanticModel(finish(nodes, false).single(), sites)
+        }
+    }
+
+    private fun receiverMembers(
+        receiver: TypeConstant,
+        owner: ClassStructure,
+        errors: ErrorListener,
+    ): List<PartialSemanticModel.Member> {
+        // This explicit inspection owns its diagnostics. Ordinary snapshot extraction stays passive.
+        val lookup = ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
+        val info = receiver.ensureTypeInfo(owner.identityConstant, lookup)
+        if (lookup.hasSeriousErrors() || lookup.isAbortDesired) return emptyList()
+        val privateAccess = info.type.access == Access.PRIVATE
+        val methods =
+            info.methods.values
+                .filter {
+                    it.identity.isTopLevel && !it.isCtorOrValidator && !it.isFunction &&
+                        (privateAccess || it.isVisible(owner.identityConstant))
+                }.mapNotNull { method ->
+                    val structure = method.getOptionalTopmostMethodStructure(info) ?: return@mapNotNull null
+                    val signature = signature(structure, method.signature, visibleOnly = true) ?: return@mapNotNull null
+                    val symbol = symbol(structure.identityConstant, structure.name, SymbolKind.METHOD) ?: return@mapNotNull null
+                    PartialSemanticModel.Member(symbol, structure.name, SymbolKind.METHOD, null, signature)
+                }
+        val properties =
+            info.ensurePropertiesByName().values.filter { privateAccess || it.isVisible(owner.identityConstant) }.mapNotNull { property ->
+                val type = type(property.inferImmutable(receiver)) ?: return@mapNotNull null
+                val symbol = symbol(property.identity, property.name, SymbolKind.PROPERTY) ?: return@mapNotNull null
+                PartialSemanticModel.Member(symbol, property.name, SymbolKind.PROPERTY, type, null)
+            }
+        return (methods + properties).sortedWith(compareBy({ it.name }, { it.kind }, { it.symbol.index }))
     }
 
     private fun hierarchy(nodes: List<AstNode>): Map<SymbolId, SemanticModel.TypeDeclaration> =
@@ -315,11 +468,26 @@ private class SemanticModelBuilder {
 
     private fun signature(target: Argument): Signature? {
         val method = ((target as? MethodConstant)?.component as? MethodStructure) ?: return null
+        return signature(method, method.identityConstant.signature)
+    }
+
+    private fun signature(
+        method: MethodStructure,
+        signature: SignatureConstant,
+        visibleOnly: Boolean = false,
+    ): Signature? {
+        val parameterTypes = signature.rawParams
+        if (parameterTypes.size != method.paramCount) return null
         val parameters =
-            method.paramArray.map {
-                SemanticModel.Parameter(it.name, type(it.type) ?: return null, it.isTypeParameter, it.hasDefaultValue())
+            method.paramArray.withIndex().drop(if (visibleOnly) method.typeParamCount else 0).map { (index, parameter) ->
+                SemanticModel.Parameter(
+                    parameter.name,
+                    type(parameterTypes[index]) ?: return null,
+                    parameter.isTypeParameter,
+                    parameter.hasDefaultValue(),
+                )
             }
-        val returns = method.returnArray.map { type(it.type) ?: return null }
+        val returns = signature.rawReturns.map { type(it) ?: return null }
         return Signature(immutableList(parameters), immutableList(returns), method.isConditionalReturn)
     }
 
