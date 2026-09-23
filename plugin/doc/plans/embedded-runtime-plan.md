@@ -311,6 +311,82 @@ benchmarks rather than making timing assertions. This is follow-up design, not a
 shared-metadata cache in this branch. It must preserve the explicit-pool and diagnostic ownership
 constraints documented on `lagergren/errs`.
 
+### When operations cross constant pools
+
+A `FileStructure` owns a constant pool, and one file can contain several modules. Separately
+loaded libraries, a compilation output and a prepared application can therefore have different
+pools. A pool records canonical constants and their local indices; type constants also carry
+derived metadata. A constant's index in one pool is not its index in another.
+
+There are two distinct questions:
+
+- **Which pool owns this existing constant?** `constant.getConstantPool()` answers this.
+- **Which pool should this operation use for newly resolved or constructed constants?** The
+  caller must select that destination from the compilation, target file or runtime container.
+
+The answers need not be the same. Cross-pool work already occurs in these paths:
+
+1. **Merging and linking modules.** A module loaded from a library starts with its file's pool.
+   When copied into another file, its constants must be registered against the destination pool.
+   [`FileStructure.merge`](../../../javatools/src/main/java/org/xvm/asm/FileStructure.java)
+   currently binds that destination using `ConstantPool.withPool(pool)` while registering the
+   cloned structures. The source constant still tells us where it came from; it cannot tell us
+   which destination the caller is building.
+2. **Resolving generic library signatures for an application.** Suppose a library declares
+   `Box<Element>.get()`, and an application uses `Box<MyType>`. If the original signature still
+   belongs to the library pool, its resolved form incorporates an application type and needs the
+   application's chosen destination. Putting it into a longer-lived library pool could retain
+   application-specific definitions and mix their lifetimes. The existing
+   [`SignatureConstant.resolveGenericTypes(pool, resolver)`](../../../javatools/src/main/java/org/xvm/asm/constants/SignatureConstant.java)
+   already accepts this destination explicitly. When resolution changes the signature, it builds
+   the result through that pool. If nothing changes, it can return the original signature.
+3. **Preparing isolated executions.**
+   [`InterpreterControl.prepareModule`](../../../javatools/src/main/java/org/xvm/api/InterpreterControl.java)
+   copies the application, then `NativeContainer.createFileStructure` combines it with system
+   modules into a new file before linking dependencies. Each run needs fresh application state
+   while using the reusable host. Those preparation steps cross source and destination pools.
+4. **Resolving runtime templates.**
+   [`Container.getTemplate`](../../../javatools/src/main/java/org/xvm/runtime/Container.java)
+   delegates eligible shared types to the parent. Otherwise it registers the incoming type or
+   identity in its own pool before retaining it. Its comments explicitly identify the reason:
+   avoid holding another pool's constants and structures.
+
+For example, the existing generic-resolution API expresses the choice directly:
+
+```java
+SignatureConstant resolved = librarySignature.resolveGenericTypes(compilationPool, resolver);
+```
+
+[`ConstantPool.register`](../../../javatools/src/main/java/org/xvm/asm/ConstantPool.java) can reuse
+an equivalent destination constant or adopt a clone from another pool; callers must use its
+returned value. It is not an unrestricted transfer operation: unresolved constants and foreign
+types that cannot be shared with the destination can be returned unchanged. Explicit ownership
+must preserve these rules, not assume that registration always changes the owner.
+
+### Small first step toward explicit pool ownership
+
+Keep `getConstantPool()` as the owning-pool accessor. Incrementally replace
+`ConstantPool.getCurrentPool()` inside selected operations with an ordinary `ConstantPool pool`
+parameter supplied by their caller. The `errs` branch's ambient-pool fallbacks prevent null-scope
+crashes but deliberately preserve the bound pool's precedence; they do not complete this change.
+Always substituting the receiver's owning pool would lose legitimate destination choices.
+
+Method-signature compatibility is a candidate first scope: carry the destination through
+`SignatureConstant.isSubstitutableFor`, the return/parameter compatibility methods in
+`TypeConstant`, their overrides and their callers. The inspected call chain spans roughly ten
+production files. This is a proposed bounded change, not an implemented or fully validated fix.
+It needs no new context framework, global cache or repository-wide accessor rename.
+
+Tests should distinguish source pool A, explicitly selected destination B and an unrelated
+ambient pool C. Verify that affected operations use B, preserve source definitions in A and
+leave C unchanged, including calls with no ambient pool. Cover generic substitution, inheritance
+and compiler output equivalence. Other operation families can then migrate separately; the
+thread-local machinery remains until its remaining consumers have explicit ownership too.
+
+This first step establishes a correctness contract. Reusing metadata still requires stable
+definition generations, request-owned execution state and diagnostics, invalidation and bounded
+retention. It does not by itself avoid the preparation work or establish a performance gain.
+
 ### Performance POC and review boundaries
 
 Keep the embedding lifecycle change and preparation optimizations in separate commits within
