@@ -115,6 +115,7 @@ data class SignatureInfo(
     val label: String,
     val documentation: String? = null,
     val parameters: List<ParameterInfo> = emptyList(),
+    val activeParameter: Int? = null,
 )
 
 /**
