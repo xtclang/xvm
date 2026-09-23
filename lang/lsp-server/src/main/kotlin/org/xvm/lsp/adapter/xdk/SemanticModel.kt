@@ -124,6 +124,7 @@ class SemanticModel internal constructor(
         val modifiers: Set<Modifier> = emptySet(),
         val inferred: Boolean = false,
         val dependency: XdkDependency.SymbolKey? = null,
+        val renameable: Boolean = false,
     )
 
     /** A written name; a null symbol explicitly represents an unresolved occurrence. */

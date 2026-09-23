@@ -34,8 +34,8 @@ compiler method chains. These consumers need no new Java embedding or AST access
 TypeInfo inspection takes the host listener, and all retained relationships live in Kotlin.
 Broader syntax, cross-module indexing and the unexamined TypeInfo families remain open.
 Static call hierarchy, resolved-name semantic tokens, read/write highlights and bounded inlay
-hints now have consumers. Rename probes expose silent capture and missing named-label references;
-rename remains off. Serialized-dependency and snapshot-lifetime probes are recorded in the
+hints now have consumers. Bounded local/private-parameter rename now copies named-label references and recompiles proposed
+edits while checking every recorded binding, rejecting silent capture. Serialized-dependency and snapshot-lifetime probes are recorded in the
 integration plan. A versioned dependency host API now exports detached source indices, replaces
 immutable artifact sets and invalidates direct/transitive consumers, with server diagnostic refresh
 at unchanged document versions. Definition/type-definition and inherited implementation bodies can
@@ -1221,14 +1221,29 @@ unresolved names' placeholder types. Queries need no compiler state. The adapter
 the AST per open document for folding and selection; hover and navigation use the copied snapshot.
 
 **Remaining consumers.** Completion and signature help now have the bounded compiler-backed
-consumers described below. Safe rename still needs conflict/edit validation and broader ownership
-for workspace-wide changes. Call hierarchy, resolved-name tokens and bounded inlay hints now use
+consumers described below. Local/private-parameter rename now has conflict/edit validation;
+workspace-wide changes still require broader ownership and indexing. Call hierarchy, resolved-name tokens and bounded inlay hints now use
 copied facts; the current requirements matrix and negative rename probes are in the integration plan.
 The dependency host API now provides versioned artifact/source ownership and consumer invalidation.
 Configured source modules now rebuild automatically; editor project discovery/wiring and a
 persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+**Rename follow-up (2026-09-23):** no AST field, accessor or clone rule was added. The existing
+attempt-owned `InvocationBinding.Argument` now carries a nullable immutable `Label(name, start, end)`
+record copied from `LabeledExpression` before argument rewriting. Positional arguments and legacy
+constructors have no label. Parameter association uses the selected `MethodConstant` and visible
+parameter index; Kotlin derives that index from the existing parameter register and method formal
+count. Module import names use the package's existing linked module identity because they bypass
+ordinary type-name resolution. Both associations belong in the Kotlin copier, not on source nodes.
+
+`XdkRename` and two temporary compiler attempts implement edit planning and binding comparison on
+the serialized worker. Compiler constants used to compare external bindings never enter editor
+snapshots or live caches. Request cancellation, immutable text replay, closed-file checks and
+versioned edits belong to the adapter/server. The bounded policy excludes public parameters,
+lambda/constructor parameters, method-value escapes and member/override/workspace rename.
+See [the implementation and compatibility record](errs-integration-plan.md#bounded-rename-lifetime-and-compatibility-2026-09-23).
 
 **Automatic recompilation follow-up (2026-09-23):** no Java embedding or AST changes. Kotlin
 `XdkSourceModule`/`XdkProject` own source roots and dependency ordering; XdkAdapter snapshots source
@@ -1254,8 +1269,8 @@ declarations retain their existing `VariableTypeExpression` child. The only new 
 `InvocationBinding.Argument.named`, captured before argument rewriting in the existing immutable,
 attempt-owned provenance record. It belongs at that boundary because the final invocation no
 longer reliably retains written labels. Its three-argument constructor remains; record-pattern
-arity changes are documented in the integration plan. Rename label ranges are still a separate
-missing fact; this boolean is not a label-to-parameter reference model.
+arity changes are documented in the integration plan. Rename label ranges were a separate
+fact at that point; the rename follow-up below now adds that model.
 
 **Type-definition/implementation consumer follow-up (2026-09-23):** no AST fields, clone rules or
 Java API changes were added. Type-definition links use existing `TypeConstant` identities and

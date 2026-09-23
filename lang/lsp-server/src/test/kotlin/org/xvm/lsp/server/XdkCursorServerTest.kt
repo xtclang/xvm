@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -24,6 +25,7 @@ import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.ParameterInfo
 import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.SignatureInfo
+import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.CompilationResult
 import java.util.concurrent.CompletableFuture
@@ -34,7 +36,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 class XdkCursorServerTest {
-    enum class Feature { COMPLETION, SIGNATURE }
+    enum class Feature { COMPLETION, SIGNATURE, RENAME }
 
     private class Pending(
         val future: CompletableFuture<*>,
@@ -100,6 +102,13 @@ class XdkCursorServerTest {
             )
 
         fun next(): Pending = checkNotNull(pending.poll(10, SECONDS)) { "query did not reach backend" }
+
+        override fun renameAsync(
+            uri: String,
+            line: Int,
+            column: Int,
+            newName: String,
+        ): CompletableFuture<WorkspaceEdit?> = query(WorkspaceEdit(emptyMap()))
     }
 
     private class Session(
@@ -129,6 +138,7 @@ class XdkCursorServerTest {
             when (feature) {
                 Feature.COMPLETION -> documents.completion(CompletionParams(TextDocumentIdentifier(uri), Position(0, 0)))
                 Feature.SIGNATURE -> documents.signatureHelp(SignatureHelpParams(TextDocumentIdentifier(uri), Position(0, 0)))
+                Feature.RENAME -> documents.rename(RenameParams(TextDocumentIdentifier(uri), Position(0, 0), "renamed"))
             }
 
         override fun close() {
@@ -188,14 +198,15 @@ class XdkCursorServerTest {
         }
     }
 
-    @Test
-    fun `a module edit invalidates member queries without changing their document version`() {
+    @ParameterizedTest
+    @EnumSource(Feature::class)
+    fun `a module edit invalidates member queries without changing their document version`(feature: Feature) {
         val backend = Backend(ignoreCancellation = true, module = true)
         Session(backend).use { session ->
             session.open()
             val member = "file:///Editing/Child.x"
             session.open(member)
-            val old = session.request(Feature.COMPLETION, member)
+            val old = session.request(feature, member)
             val work = backend.next()
             session.change()
             work.finish()
