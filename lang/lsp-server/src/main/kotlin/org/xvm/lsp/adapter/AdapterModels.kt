@@ -230,6 +230,7 @@ data class CallHierarchyItem(
     val range: Range,
     val selectionRange: Range,
     val detail: String? = null,
+    val data: String? = null,
 )
 
 /**
