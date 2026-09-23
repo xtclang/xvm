@@ -114,8 +114,8 @@ public abstract class PrefixExpression
                     SignatureConstant sigNew  = infoMethod.getSignature();
                     SignatureConstant sigBest = infoBest.getSignature();
 
-                    boolean fNewBetter = sigNew.isSubstitutableFor(sigBest, typeRight);
-                    boolean fOldBetter = sigBest.isSubstitutableFor(sigNew, typeRight);
+                    boolean fNewBetter = sigNew.isSubstitutableFor(pool(), sigBest, typeRight);
+                    boolean fOldBetter = sigBest.isSubstitutableFor(pool(), sigNew, typeRight);
                     if (fOldBetter ^ fNewBetter) {
                         if (fNewBetter) {
                             idBest = idMethod;

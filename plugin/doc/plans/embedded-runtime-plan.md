@@ -374,18 +374,22 @@ pool's precedence. They do not complete this ownership change. The separate two-
 [PR 11 in the submission plan](embedded-runtime-pr-plan.md#pr-11--constant-pool-guards-and-explicit-signature-compatibility).
 Always substituting the receiver's owning pool would lose legitimate destination choices.
 
-Method-signature compatibility is a candidate first scope: carry the destination through
-`SignatureConstant.isSubstitutableFor`, the return/parameter compatibility methods in
-`TypeConstant`, their overrides and their callers. The inspected call chain spans roughly ten
-production files. This is a proposed bounded change, not an implemented or fully validated fix.
-It needs no new context framework, global cache or repository-wide accessor rename.
+Method-signature compatibility is now the first explicit scope: a destination parameter flows
+through `SignatureConstant.isSubstitutableFor`, `TypeConstant.isCovariantReturn`,
+`TypeConstant.isContravariantParameter`, the terminal-type override and their direct callers.
+The change touches ten production files. Compiler AST callers use their compilation pool;
+structure checks use their existing destination; TypeInfo and type-metadata checks use their
+target's owning pool. Recursive comparisons preserve that choice. These Java entry points change
+signature, so callers and subclasses must migrate and recompile. There are no ambient overloads
+left for this operation family, and no new context framework or global cache.
 
-Tests should distinguish source pool A, explicitly selected destination B and an unrelated
-ambient pool C. Verify that affected operations use B, preserve source definitions in A and
-leave C unchanged, including calls with no ambient pool. Cover generic substitution, inheritance
-and compiler output equivalence. Other operation families can then migrate separately; the
-thread-local machinery remains until its remaining consumers have explicit ownership too.
-
+The focused XDK regression tests use real `Array<Element>` / `List<Element>` inheritance and
+auto-narrowing. They distinguish source pool A, explicitly selected destination B and an unrelated
+ambient pool C, and assert that newly resolved types appear in B while source constants keep
+owner A. Each case runs with and without C bound. These integration tests use the XDK test task's
+declared distribution prerequisite; the guard unit tests require no installed XDK. Other operation
+families can migrate separately; their scoped ambient selection remains. Compiler output comparison
+and existing interpreter tests are additional validation gates recorded with PR 11.
 This first step establishes a correctness contract. Reusing metadata still requires stable
 definition generations, request-owned execution state and diagnostics, invalidation and bounded
 retention. It does not by itself avoid the preparation work or establish a performance gain.

@@ -472,7 +472,7 @@ public class PropertyStructure
         }
 
         return sigThat.equals(sigThis) ||
-               sigThat.isSubstitutableFor(sigThis, null) && sigThis.isSubstitutableFor(sigThat, null);
+               sigThat.isSubstitutableFor(pool, sigThis, null) && sigThis.isSubstitutableFor(pool, sigThat, null);
     }
 
     /**

@@ -586,20 +586,25 @@ the embedding lifecycle, native ownership or Gradle/PERSISTENT features. Extract
 onto the intended submission base rather than opening a master-targeted PR containing that stack.
 Include this plan's relevant scope in the extracted documentation without importing unrelated plans.
 
-1. **Guard reads outside an ambient pool scope.** Reuse the final guard behavior from errs commits
+1. **Guard reads outside an ambient pool scope** — `9e413ea1e`. Reuse the final guard behavior from errs commits
    `cae4f9452` and `610873fb6` as one change. Add `ConstantPool.currentOr` and `Constant.poolInUse`;
    preserve an explicit ambient pool ahead of the owning-pool fallback. Include only the readers
    in `InterpreterConnector`, `ConstantPool`, `ByteConstant`, `IntConstant`, `IdentityConstant`,
    `MethodBody`, `MethodInfo`, `PropertyInfo` and `TypeConstant`. Tests cover actual range creation
    in the fallback/selected pool, source ownership, diagnostic formatting and annotation queries.
    No installed XDK assumptions enter these Java unit tests.
-2. **Pass a destination pool through signature compatibility.** Planned next: change
+2. **Make signature compatibility destination pools explicit** (the second commit's title). Change
    `SignatureConstant.isSubstitutableFor`, `TypeConstant.isCovariantReturn`,
    `TypeConstant.isContravariantParameter`, the terminal-type override and their direct callers.
    Select the pool from the compiler, target structure or TypeInfo owner. Preserve it in recursive
-   calls. Keep this change within the inspected compatibility call chain, without propagating a
-   new context object through unrelated compiler APIs. Its focused tests must distinguish source,
-   destination and unrelated ambient pools, including no ambient binding and generic inheritance.
+   calls. Production scope is exactly ten files: `ClassStructure`, `PropertyStructure`,
+   `SignatureConstant`, `TypeConstant`, `TerminalTypeConstant`, `TypeInfoReal`, `AstNode`,
+   `ArrayAccessExpression`, `PrefixExpression` and `RelOpExpression`. No context object propagates
+   through unrelated compiler APIs. Add `xdk/.../SignatureCompatibilityTest.java`: six cases cover
+   generic returns, generic parameters and auto-narrowing unions, each with no ambient binding or
+   an unrelated pool. Assert actual destination registration and preserved source ownership.
+   This test uses the XDK test task's existing distribution prerequisite and no embedding APIs;
+   no Gradle changes, execution VMs or additional JIT/worker test dependencies are needed.
 
 The second commit changes the Java signatures of those compatibility entry points and requires
 callers/subclasses to be recompiled and migrated. It does not change the Ecstasy language or XTC
@@ -619,7 +624,32 @@ multi-build worker tests are added. Record each commit's actual results before d
 
 First-commit validation: all seven focused tests passed with no skips; `:xdk:installDist` and
 `spotlessCheck` passed. All 24 installed XTC modules matched the unchanged baseline byte for byte
-after normalizing only module compilation timestamps. The second commit's checks remain pending.
+after normalizing only module compilation timestamps.
+
+Second-commit validation: eight focused javatools tests and all six `SignatureCompatibilityTest`
+cases passed with zero failures, errors or skips. The XDK rebuild passed, and all 24 installed
+modules again matched the baseline after timestamp normalization. All 21 sequential interpreter
+modules passed, including `TestGenerics`; `spotlessCheck` passed. The integration fixture shares
+source metadata initialization while creating a fresh destination for every case. It has no
+timing assertions. An isolated negative-control probe restored ambient selection at the signature
+boundary: compatibility still returned true, but the destination-registration assertion failed.
+
+Reproduce the focused checks with:
+
+```bash
+./gradlew :javatools:test \
+  --tests org.xvm.asm.ConstantPoolAmbientTest \
+  --tests org.xvm.asm.constants.MethodBodyAmbientPoolTest \
+  --tests org.xvm.asm.ConstantPoolScopeTest \
+  --tests org.xvm.asm.constants.SignatureConstantTest \
+  :xdk:test --tests org.xvm.xdk.SignatureCompatibilityTest spotlessCheck
+./gradlew :manualTests:runSequential \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true
+```
+
+Existing production/test hunks apply cleanly to the locally available `origin/master` source.
+This is an extraction check, not a separate build of the reconstructed PR. The two commits have
+been validated on the working stack; repeat the checks on the eventual submission branch.
 
 ## Shared files and extraction rules
 
@@ -634,7 +664,7 @@ after normalizing only module compilation timestamps. The second commit's checks
 | `xCoreRepository.java` / `xRTFileTemplate.java` | PR 5 interpreter request-repository correctness |
 | `IsolatedDirectExecutor.java` | PR 7 interpreter compile/run/xUnit; PR 8 JIT selection; PR 10 host-independent output/dispatch and cancellation |
 | `EmbeddingLifecycleTest.java` | PR 5 interpreter/audit cases; PR 6 file compilation; PR 8 five JIT cases |
-| `embedded-runtime-plan.md` | PR 5 API design; PR 6 compilation; PR 7 plugin/measurements; PR 8 JIT; PR 9 defaults; PR 10 worker lifetime |
+| `embedded-runtime-plan.md` | PR 5 API design; PR 6 compilation; PR 7 plugin/measurements; PR 8 JIT; PR 9 defaults; PR 10 worker lifetime; PR 11 cross-pool ownership and bounded migration |
 
 Imports, overloads, helpers and Javadocs must follow their owning code. Taking whole current files
 from the branch is unsafe for these shared files. A test may be moved to a focused class during

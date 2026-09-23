@@ -1380,7 +1380,7 @@ public class TypeInfoReal
                 // test the actual body signature
                 SignatureConstant sigTest0 = body.getSignature();
                 boolean           fEquals0;
-                if ((fEquals0 = sigTest0.equals(sig)) || sigTest0.isSubstitutableFor(sig, typeCtx)) {
+                if ((fEquals0 = sigTest0.equals(sig)) || sigTest0.isSubstitutableFor(pool(), sig, typeCtx)) {
                     if (methodTest.isCapped()) {
                         methodCapped = methodTest;
                     } else {
@@ -1392,7 +1392,7 @@ public class TypeInfoReal
                 // test the resolved identity signature
                 SignatureConstant sigTest1 = resolveMethodConstant(body.getIdentity(), methodTest).getSignature();
                 boolean           fEquals1;
-                if ((fEquals1 = sigTest1.equals(sig)) || sigTest1.isSubstitutableFor(sig, typeCtx)) {
+                if ((fEquals1 = sigTest1.equals(sig)) || sigTest1.isSubstitutableFor(pool(), sig, typeCtx)) {
                     if (methodTest.isCapped()) {
                         methodCapped = methodTest;
                     } else {
@@ -1404,7 +1404,7 @@ public class TypeInfoReal
                 // test the canonical identity signature
                 SignatureConstant sigTest2 = body.getIdentity().getSignature();
                 boolean           fEquals2;
-                if ((fEquals2 = sigTest2.equals(sig)) || sigTest2.isSubstitutableFor(sig, typeCtx)) {
+                if ((fEquals2 = sigTest2.equals(sig)) || sigTest2.isSubstitutableFor(pool(), sig, typeCtx)) {
                     if (methodTest.isCapped()) {
                         methodCapped = methodTest;
                     } else {
@@ -1471,11 +1471,11 @@ public class TypeInfoReal
         SignatureConstant sigBest = methodBest.getSignature();
         SignatureConstant sigTest = methodTest.getSignature();
         TypeConstant      typeCtx = getType();
-        if (sigBest.isSubstitutableFor(sigTest, typeCtx)) {
+        if (sigBest.isSubstitutableFor(pool(), sigTest, typeCtx)) {
             return methodTest;
         }
 
-        if (sigTest.isSubstitutableFor(sigBest, typeCtx)) {
+        if (sigTest.isSubstitutableFor(pool(), sigBest, typeCtx)) {
             return methodBest;
         }
 
@@ -1696,7 +1696,7 @@ public class TypeInfoReal
                 if (!body.isVirtualConstructor()) {
                     continue;
                 }
-                if (body.getSignature().isSubstitutableFor(sig, null)) {
+                if (body.getSignature().isSubstitutableFor(pool(), sig, null)) {
                     if (methodBest == null) {
                         methodBest = methodTest;
                     } else {

@@ -2742,7 +2742,7 @@ public class ClassStructure
                         if (!fFunction) {
                             sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
                         }
-                        if (sigMethod.isSubstitutableFor(signature, idClass.getType())) {
+                        if (sigMethod.isSubstitutableFor(pool, signature, idClass.getType())) {
                             return true;
                         }
                     }

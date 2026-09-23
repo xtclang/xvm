@@ -782,10 +782,10 @@ public class RelOpExpression
                         SignatureConstant sigOp     = idBest.getSignature();
                         SignatureConstant sigMethod = method.getSignature();
                         if (!sigOp.equals(sigMethod)) {
-                            if (sigMethod.isSubstitutableFor(sigOp, type1)) {
+                            if (sigMethod.isSubstitutableFor(pool(), sigOp, type1)) {
                                 continue;
                             }
-                            if (sigOp.isSubstitutableFor(sigMethod, type1)) {
+                            if (sigOp.isSubstitutableFor(pool(), sigMethod, type1)) {
                                 idBest = method;
                                 continue;
                             }

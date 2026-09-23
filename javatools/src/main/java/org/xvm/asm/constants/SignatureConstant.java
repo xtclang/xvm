@@ -398,10 +398,15 @@ public class SignatureConstant
      *
      * <p>Note: both "this" and "that" signatures must be resolved.
      *
+     * <p>Use the compiler or target metadata pool as the destination for type resolution, even
+     * when the signatures belong to another pool. No ambient binding is required for this
+     * selection; an existing binding does not replace the explicit destination.
+     *
+     * @param pool     the destination pool for type resolution
      * @param that     the signature of the matching method
      * @param typeCtx  the type within which "this" signature is used
      */
-    public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx) {
+    public boolean isSubstitutableFor(ConstantPool pool, SignatureConstant that, TypeConstant typeCtx) {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
          *
@@ -440,7 +445,7 @@ public class SignatureConstant
         TypeConstant[] aR1 = that.getRawReturns();
         TypeConstant[] aR2 = this.getRawReturns();
         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
-            if (!aR2[i].isCovariantReturn(aR1[i], typeCtx)) {
+            if (!aR2[i].isCovariantReturn(pool, aR1[i], typeCtx)) {
                 return false;
             }
         }
@@ -448,7 +453,7 @@ public class SignatureConstant
         TypeConstant[] aP1 = that.getRawParams();
         TypeConstant[] aP2 = this.getRawParams();
         for (int i = 0; i < cP1; i++) {
-            if (!aP2[i].isContravariantParameter(aP1[i], typeCtx)) {
+            if (!aP2[i].isContravariantParameter(pool, aP1[i], typeCtx)) {
                 return false;
             }
         }

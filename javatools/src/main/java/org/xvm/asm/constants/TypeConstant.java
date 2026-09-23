@@ -4731,7 +4731,7 @@ public abstract class TypeConstant
 
             if (id.getName().equals(sigSub.getName()) && id.isTopLevel()
                     && !info.getHead().isVisibilityReductionAllowed()
-                    && sigSub.isSubstitutableFor(id.getSignature(), this)) {
+                    && sigSub.isSubstitutableFor(getConstantPool(), id.getSignature(), this)) {
                 listMatch = lazyAdd(listMatch, id);
             }
         }
@@ -4766,7 +4766,7 @@ public abstract class TypeConstant
                 if (sigCandidate.getName().equals(sigSub.getName())) {
                     MethodBody head = infoCandidate.getHead();
                     if (head.getSignature().equals(sigSub) ||
-                            sigSub.isSubstitutableFor(sigCandidate, this)) {
+                            sigSub.isSubstitutableFor(getConstantPool(), sigCandidate, this)) {
                         listMatch   = lazyAdd(listMatch, nidCandidate);
                         fAnyCapped |= infoCandidate.isCapped();
                         continue;
@@ -4774,8 +4774,8 @@ public abstract class TypeConstant
 
                     if (head.isInto()) {
                         TypeConstant typeInto = head.getIntoMethodInfo().getIdentity().getClassIdentity().getType();
-                        if (sigSub.isSubstitutableFor(head.getSignature(), typeInto) ||
-                                sigSub.isSubstitutableFor(head.getIntoMethodInfo().getSignature(), typeInto)) {
+                        if (sigSub.isSubstitutableFor(getConstantPool(), head.getSignature(), typeInto) ||
+                                sigSub.isSubstitutableFor(getConstantPool(), head.getIntoMethodInfo().getSignature(), typeInto)) {
                             listMatch   = lazyAdd(listMatch, nidCandidate);
                             fAnyCapped |= infoCandidate.isCapped();
                             continue;
@@ -4788,7 +4788,7 @@ public abstract class TypeConstant
                         int cParamsSub = sigSub.getParamCount();
                         if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
-                            if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
+                            if (sigSubReq.isSubstitutableFor(getConstantPool(), sigCandidate, this)) {
                                 listMatch   = lazyAdd(listMatch, nidCandidate);
                                 fAnyCapped |= infoCandidate.isCapped();
                             }
@@ -4853,7 +4853,7 @@ public abstract class TypeConstant
             SignatureConstant sigCandidate  = infoCandidate.getSignature(); // resolved
 
             if (sigCandidate.getName().equals(sigSub.getName())) {
-                if (sigSub.isSubstitutableFor(sigCandidate, this)) {
+                if (sigSub.isSubstitutableFor(getConstantPool(), sigCandidate, this)) {
                     if (!fExact && listMatch != null) {
                         // we found an exact match; get rid of non-exact ones
                         listMatch.clear();
@@ -4868,7 +4868,7 @@ public abstract class TypeConstant
                         int cParamsSub = sigSub.getParamCount();
                         if (cParamsSub > cParamsReq && cParamsSub - cDefault <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
-                            if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
+                            if (sigSubReq.isSubstitutableFor(getConstantPool(), sigCandidate, this)) {
                                 listMatch = lazyAdd(listMatch, idCandidate);
                                 fExact    = false;
                             }
@@ -4918,7 +4918,7 @@ public abstract class TypeConstant
                         }
 
                         if (sigPrev.getParamCount() == cParamsBest &&
-                                !sigPrev.isSubstitutableFor(sigCandidate, this)) {
+                                !sigPrev.isSubstitutableFor(getConstantPool(), sigCandidate, this)) {
                             // still ambiguous
                             continue nextCandidate;
                         }
@@ -4926,11 +4926,11 @@ public abstract class TypeConstant
 
                     // so far, this candidate is the best
                     sigBest = sigCandidate;
-                } else if (sigBest.isSubstitutableFor(sigCandidate, this)) {
+                } else if (sigBest.isSubstitutableFor(getConstantPool(), sigCandidate, this)) {
                     // this assumes that "best" is a transitive concept, i.e. we don't need to
                     // re-test other candidates
                     sigBest = sigCandidate;
-                } else if (!sigCandidate.isSubstitutableFor(sigBest, this)) {
+                } else if (!sigCandidate.isSubstitutableFor(getConstantPool(), sigBest, this)) {
                     sigBest = null;
                 }
             }
@@ -6253,18 +6253,21 @@ public abstract class TypeConstant
      * <p>Determine whether M2 could be invoked via a signature of M1, and M2 could then "super" to
      * M1.
      *
+     * <p>Use the destination pool of the signature comparison for any resolved types. Recursive
+     * comparisons keep that pool; the thread's ambient binding does not select it.
+     *
+     * @param pool      the destination pool for type resolution
      * @param typeBase  the type to determine the covariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
-    public boolean isCovariantReturn(TypeConstant typeBase, TypeConstant typeCtx) {
+    public boolean isCovariantReturn(ConstantPool pool, TypeConstant typeBase, TypeConstant typeCtx) {
         if (this.isA(typeBase)) {
             return true;
         }
 
-        ConstantPool pool = poolInUse();
         if (typeCtx instanceof UnionTypeConstant typeUnion) {
             if (this.containsAutoNarrowing(true) || typeBase.containsAutoNarrowing(true)) {
-                boolean fCovariant = isCovariantReturn(typeBase, pool.ensureIntersectionTypeConstant(
+                boolean fCovariant = isCovariantReturn(pool, typeBase, pool.ensureIntersectionTypeConstant(
                         typeUnion.getUnderlyingType(), typeUnion.getUnderlyingType2()));
                 if (fCovariant) {
                     return true;
@@ -6290,7 +6293,7 @@ public abstract class TypeConstant
             // (TODO need to make this algorithm more precise)
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase && typeBaseR.getTypeDepth() == typeBase.getTypeDepth()) {
-                return isCovariantReturn(typeBaseR, typeCtx);
+                return isCovariantReturn(pool, typeBaseR, typeCtx);
             }
         }
 
@@ -6334,15 +6337,17 @@ public abstract class TypeConstant
      *
      * <p>Note: despite the name this method also handling the auto-narrowing covariance.
      *
+     * <p>Use the destination pool of the signature comparison for any resolved types. Recursive
+     * comparisons keep that pool; the thread's ambient binding does not select it.
+     *
+     * @param pool      the destination pool for type resolution
      * @param typeBase  the type to determine the contravariance with
      * @param typeCtx   (optional) the type within which context the covariance is to be determined
      */
-    public boolean isContravariantParameter(TypeConstant typeBase, TypeConstant typeCtx) {
+    public boolean isContravariantParameter(ConstantPool pool, TypeConstant typeBase, TypeConstant typeCtx) {
         if (typeBase.isA(this)) {
             return true;
         }
-
-        ConstantPool pool = poolInUse();
 
         TypeConstant typeThisR = this.containsAutoNarrowing(true)
                 ? this.resolveAutoNarrowing(pool, false, typeCtx, null)
@@ -6361,7 +6366,7 @@ public abstract class TypeConstant
             typeBaseR = typeBase.resolveGenerics(pool, typeCtx);
             if (typeBaseR != typeBase &&
                     typeBaseR.getTypeDepth() == typeBase.getTypeDepth()) {
-                return isContravariantParameter(typeBaseR, typeCtx);
+                return isContravariantParameter(pool, typeBaseR, typeCtx);
             }
         }
         return false;
