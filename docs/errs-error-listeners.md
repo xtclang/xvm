@@ -369,7 +369,7 @@ These existing regressions exercise the contract at different boundaries:
 | Parser and compiler | `ParserAttemptTest`, `ParserRecoveryTest`, `CompilerDiagnosticsTest`, `ConstantPoolDiagnosticsTest`. |
 | Repository and embedding failures | `FileRepositoryFailureTest`, `DirRepositoryFailureTest`, `EmbeddingRepositoryFailureTest`, `EmbeddingDiagnosticsTest`, `LauncherErrorHandlingTest`. |
 | TypeInfo reporting | `TypeInfoDiagnosticsTest`: real errors, the redundant-annotation warning, cached replay, generic instantiations and serialized dependencies. |
-| Final TypeInfo compositions | `TypeInfoFinalCompositionTest`: fifteen freshly deserialized final compositions, selected substituted members/inherited chains, a fresh anonymous property and an invalid-override control. |
+| Final TypeInfo compositions | `TypeInfoFinalCompositionTest`: fifteen freshly deserialized final compositions, selected substituted members/inherited chains, a fresh anonymous property, invalid-override controls and constant/runtime `@Parsed` metadata with invalid-argument controls. |
 | Editor lifecycle | `XdkAdapterTest`, `XdkAdapterLifecycleTest` and packaged stdio tests. |
 | Source-tree API probes | `CompilerProjectTest`: member overlays, source attribution, cancellation before work, failed parsing and shared per-source semantic identities. |
 | Module sessions and publication | `XdkModuleSessionTest`, `XdkModuleServerTest` and `XdkStdioTest`: member overlays, invalidation, cancellation, per-file versions, file creation/removal, cross-file navigation and hierarchy round trips. |
@@ -396,9 +396,12 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    Cross-module indexing, dependency source navigation and safe rename need ownership beyond this
    module snapshot. Hierarchy currently covers direct extends/implements edges between source
    types in the same compilation, not conditional mixins or external library sources.
-3. Continue the [suppression audit](errs-audit.md#final-composition-follow-up-2026-09-22) by selected
-   source use. The `@Parsed` constructor family remains outside the deeper final-type checks; the
-   historical survey is not closed. Do not broaden reporting without a reproducer showing a loss.
+3. The [bounded diagnostic audit](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23)
+   now covers `@Parsed`: runtime arguments exposed a false constructor error in reporting metadata,
+   fixed without weakening actual annotation validation. A non-module root now reports positioned
+   `EMB-6` instead of losing its console-only explanation and synthesizing `EMB-5`. Historical
+   suppression counts are not an exhaustive proof; the bound-generic binary-AST TODO still needs a
+   reproducer. Do not broaden reporting without evidence of a loss.
 
 Tree-sitter remains the shipped default. The compiler adapter is opt-in and discovers conventional
 module layouts; this is not a workspace dependency build system. Repository sharing still requires

@@ -28,11 +28,17 @@ import static org.xvm.asm.ErrorListener.in;
 public final class IncompleteStatement extends Statement {
     public IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
                                List<Token> separators, long endPosition) {
-        this.target      = target;
-        this.operator    = operator;
-        this.arguments   = new ArrayList<>(arguments);
-        this.separators  = List.copyOf(separators);
-        this.endPosition = endPosition;
+        this(target, operator, arguments, separators, endPosition, Parser.UNEXPECTED_EOF);
+    }
+
+    public IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
+                               List<Token> separators, long endPosition, String diagnosticCode) {
+        this.target         = target;
+        this.operator       = operator;
+        this.arguments      = new ArrayList<>(arguments);
+        this.separators     = List.copyOf(separators);
+        this.endPosition    = endPosition;
+        this.diagnosticCode = diagnosticCode;
     }
 
     /** The written receiver (member access) or callee (call); a call is never overload-resolved. */
@@ -110,7 +116,7 @@ public final class IncompleteStatement extends Statement {
                 arguments.set(i, validated);
             }
         }
-        errs.error(Parser.UNEXPECTED_EOF, in(getSource(), endPosition, endPosition));
+        errs.error(diagnosticCode, in(getSource(), endPosition, endPosition));
         return null;
     }
 
@@ -130,6 +136,7 @@ public final class IncompleteStatement extends Statement {
     private final Token       operator;
     private final List<Token> separators;
     private final long        endPosition;
+    private final String      diagnosticCode;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteStatement.class, "target", "arguments");
 }
