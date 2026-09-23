@@ -50,6 +50,7 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token;
@@ -744,6 +745,11 @@ public abstract class AstNode
      * @return true if the children got caught up; false if the catch-up aborted
      */
     protected boolean catchUpChildren(ErrorListener errs) {
+        return catchUpChildren(errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Catch up children using the enclosing compilation attempt's collector. */
+    protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
@@ -783,7 +789,7 @@ public abstract class AstNode
         ErrorListener errsTemp = errs.branch(this);
         while (stageOldest.compareTo(stageTarget) < 0) {
             Stage    stageNext = stageOldest.nextTarget();
-            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp);
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings);
             for (int cTries = 0; !mgrKids.processComplete(); cTries++) {
                 if (errsTemp.isAbortDesired() || cTries > 20) {
                     mgrKids.logDeferredAsErrors(errsTemp);

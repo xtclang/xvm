@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
@@ -55,6 +56,7 @@ import org.xvm.asm.op.Var_CN;
 import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -300,7 +302,12 @@ public class StatementBlock
      * @return true if nothing occurred during the compilation that should stop further progress
      */
     public boolean compileMethod(Code code, ErrorListener errs) {
-        return compileMethod(new RootContext(this, code.getMethodStructure()), code, errs);
+        return compileMethod(code, errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Compile a method with the collector owned by its enclosing compilation attempt. */
+    public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings) {
+        return compileMethod(new RootContext(this, code.getMethodStructure(), bindings), code, errs);
     }
 
     /**
@@ -595,10 +602,21 @@ public class StatementBlock
     public static class RootContext
             extends Context {
         public RootContext(StatementBlock stmt, MethodStructure method) {
+            this(stmt, method, InvocationBinding.Collector.NONE);
+        }
+
+        public RootContext(StatementBlock stmt, MethodStructure method,
+                           InvocationBinding.Collector bindings) {
             super(null, false);
-            f_stmt   = stmt;
-            f_method = method;
-            f_holder = new AstHolder(); // temporary
+            f_stmt     = stmt;
+            f_method   = method;
+            f_holder   = new AstHolder(); // temporary
+            f_bindings = Objects.requireNonNull(bindings, "bindings");
+        }
+
+        @Override
+        public InvocationBinding.Collector getInvocationBindings() {
+            return f_bindings;
         }
 
         @Override
@@ -1470,11 +1488,12 @@ public class StatementBlock
             return map;
         }
 
-        private final StatementBlock  f_stmt;
-        private final MethodStructure f_method;
-        private final AstHolder       f_holder;
-        private       Context         m_ctxValidating;
-        private       boolean         m_fEmitting;
+        private final StatementBlock              f_stmt;
+        private final MethodStructure             f_method;
+        private final AstHolder                   f_holder;
+        private final InvocationBinding.Collector f_bindings;
+        private       Context                     m_ctxValidating;
+        private       boolean                     m_fEmitting;
 
         /**
          * A lazily created mapping of captured variables that is collected during the validation

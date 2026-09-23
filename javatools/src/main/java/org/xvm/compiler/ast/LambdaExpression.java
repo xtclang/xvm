@@ -304,8 +304,8 @@ public class LambdaExpression
         //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
         //   have to emit the code corresponding to the lambda
-        if (catchUpChildren(errs)) {
-            if (!body.compileMethod(method.createCode(), errs)) {
+        if (catchUpChildren(errs, mgr.getInvocationBindings())) {
+            if (!body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings())) {
                 mgr.deferChildren();
             }
         }

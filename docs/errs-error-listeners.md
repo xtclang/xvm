@@ -329,6 +329,12 @@ concern from diagnostic delivery; their rationale and ownership are documented i
 [AST inventory](errs.md#ast-changes-for-embedding-and-lsp-ownership-and-placement). Semantic copying
 and LSP models live in the existing Kotlin LSP module, with no Kotlin dependency in javatools.
 
+Selected-call records now travel through a separate attempt-owned collector passed through compiler
+stages and validation contexts. ErrorListener is not used as a semantic event bus. The explicit
+partial-member copier can request receiver TypeInfo on the compiler worker; that operation creates
+a local stateful reporting listener, forwards diagnostics and host cancellation, and suppresses
+candidate output after inspection errors. Ordinary copied-snapshot queries remain compiler-free.
+
 ## Ambient constant pools: pre-existing defects versus branch changes
 
 Constant-pool ownership and error-listener ownership are related historically, but they are

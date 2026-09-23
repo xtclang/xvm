@@ -120,7 +120,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the current module |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - across the current module, including closed member files |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | Not implemented - needs incomplete-source handling and resolved member/call-site facts |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | Not implemented - bounded partial receiver/member facts exist; module lifecycle integration and completion selection remain |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -128,7 +128,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | Not implemented - snapshot has declared signatures, but no instantiated call-site/active-argument model |
+| Signature help | - | Same-file | Not implemented - completed calls have instantiated signatures and argument mapping; incomplete calls have candidates/source slots, without overload selection |
 | Rename (same file) | Text | AST | Not implemented |
 | Rename (cross-file) | - | - | Not implemented - module references exist; workspace ownership, edit validation and rename rules remain |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -158,10 +158,16 @@ The separate embedding `analyzeIncomplete` probe can validate intact receivers a
 arguments in a single trailing standalone statement at EOF. Consumer tests verify real method
 scope, flow narrowing and source positions without selecting an overload or emitting the damaged
 method. XdkAdapter does not yet invoke this probe; it does not change the capabilities above.
-Module integration, accessible member enumeration and expected argument types remain follow-ups.
+Its explicit Kotlin copier now supplies accessible instance methods/properties, receiver-substituted
+candidate signatures, argument spans/labels/types and a source argument slot based on top-level
+commas. Completed method calls separately copy the compiler's selected instantiated signature and
+written argument-to-parameter mapping. These facts are tested consumer APIs, not advertised LSP
+features. Module lifecycle integration, broader incomplete syntax, implicit/static receiver lookup,
+applicable-overload selection and expected argument types remain follow-ups.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
-declared callable signatures and direct inheritance edges. The compiler adapter compiles a module
+declared and selected-call signatures, written argument mappings and direct inheritance edges. The
+compiler adapter compiles a module
 root and its member tree together, taking unsaved source overlays ahead of disk. New unsaved member
 files and implicit packages participate without temporary files. Source membership and text are
 captured per attempt; member edits invalidate the module, and diagnostics publish with each open

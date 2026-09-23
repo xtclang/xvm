@@ -34,6 +34,7 @@ import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
@@ -41,6 +42,7 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.IncompleteStatement;
+import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -355,11 +357,21 @@ public class EmbeddingSupport {
      *                     member trees retain their original Sources and positions
      * @param sourceTrees  available per-source syntax, including recovered trees on parse failure;
      *                     these are structural facts, not a promise of semantic validity
+     * @param callBindings  immutable call facts keyed by surviving invocation identity; compiler
+     *                     objects remain worker-owned and must be copied before concurrent use
      */
     public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                              List<StatementBlock> sourceTrees) {
+                              List<StatementBlock> sourceTrees,
+                              Map<InvocationExpression, InvocationBinding> callBindings) {
         public Compilation {
-            sourceTrees = List.copyOf(sourceTrees);
+            sourceTrees  = List.copyOf(sourceTrees);
+            callBindings = Map.copyOf(callBindings);
+        }
+
+        /** Retain the construction API for hosts supplying structural source trees. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees) {
+            this(module, file, ast, sourceTrees, Map.of());
         }
 
         /** Retain the original construction API for hosts supplying one assembled tree. */
@@ -457,11 +469,19 @@ public class EmbeddingSupport {
      * owning the attempt, as with Compilation; ASTs and pools are not concurrent query objects.
      */
     public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
-                                  Optional<ConstantPool> pool) {
+                                  Optional<ConstantPool> pool,
+                                  Map<InvocationExpression, InvocationBinding> callBindings) {
         public PartialAnalysis {
             sourceTrees = List.copyOf(sourceTrees);
             sites       = List.copyOf(sites);
             requireNonNull(pool, "pool");
+            callBindings = Map.copyOf(callBindings);
+        }
+
+        /** Retain the construction API for syntax/receiver-only results. */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                               Optional<ConstantPool> pool) {
+            this(sourceTrees, sites, pool, Map.of());
         }
     }
 
@@ -522,7 +542,8 @@ public class EmbeddingSupport {
         }
 
         Compilation attempt = compileModule(listener -> new ParsedSources(tree, List.of(tree)), input, host);
-        return new PartialAnalysis(List.of(tree), sites, Optional.ofNullable(attempt.pool()));
+        return new PartialAnalysis(List.of(tree), sites, Optional.ofNullable(attempt.pool()),
+                attempt.callBindings());
     }
 
     /** An assembled tree is available only when parsing/loading succeeded. */
@@ -593,6 +614,7 @@ public class EmbeddingSupport {
     private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
         private final Function<ErrorListener, ParsedSources> parse;
+        private final InvocationBinding.Collector bindings = new InvocationBinding.Collector();
 
         private final ModuleRepository     inRepo;
         private final ModuleRepository     coreRepo;
@@ -612,7 +634,8 @@ public class EmbeddingSupport {
          * @return the outcome; never null, though its parts may be
          */
         Compilation result() {
-            return new Compilation(module, file, ast, sourceTrees);
+            return new Compilation(module, file, ast, sourceTrees,
+                    bindings.finish(ast == null ? List.of() : List.of(ast)));
         }
 
         /**
@@ -679,7 +702,7 @@ public class EmbeddingSupport {
                 return checkErrors("source parsing");
             }
 
-            Compiler      compiler = new Compiler(stmtModule, this);
+            Compiler      compiler = new Compiler(stmtModule, this, bindings);
             FileStructure struct   = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {

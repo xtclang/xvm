@@ -542,6 +542,7 @@ jobs:
                     --tests org.xvm.lsp.adapter.XdkModuleSessionTest \
                     --tests org.xvm.lsp.adapter.XdkRecoveryTest \
                     --tests org.xvm.lsp.adapter.XdkPartialAnalysisTest \
+                    --tests org.xvm.lsp.adapter.CompilerCallSiteTest \
                     --tests org.xvm.lsp.adapter.TypeInfoFinalCompositionTest \
                     --tests org.xvm.lsp.server.XdkModuleServerTest \
                     --tests org.xvm.lsp.adapter.XdkDiagnosticTest \
@@ -656,6 +657,7 @@ jobs:
                       "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest", "adapter.CompilerProjectTest",
                       "adapter.TypeInfoDiagnosticsTest", "adapter.TypeInfoFinalCompositionTest", "adapter.EmbeddingDiagnosticsTest",
                       "adapter.XdkModuleSessionTest", "adapter.XdkRecoveryTest", "adapter.XdkPartialAnalysisTest",
+                      "adapter.CompilerCallSiteTest",
                       "server.XdkModuleServerTest",
                       "server.XdkLanguageServerTest", "server.AdapterBackendTest",
                   ]
