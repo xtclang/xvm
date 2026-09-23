@@ -352,6 +352,14 @@ diagnostic refresh under its publication lock, retaining current document versio
 state is carried by ErrorListener and no new AST fields are required. Artifact/source revisions
 belong to the host; binary-only inputs have no invented source targets.
 
+Explicit source graphs now add automatic dependency builds. Each module attempt still uses its own
+ordinary compiler listener with host cancellation. Dependency diagnostics retain their original
+source locations; the server publishes them at each open source's current version. A failed source
+dependency blocks consumers with host diagnostic `DEPENDENCY-FAILED` instead of supplying an older
+artifact. Missing/unreadable roots report `SOURCE-UNAVAILABLE`; configured/declared name mismatches
+report `PROJECT-MODULE`. These are host configuration/input failures, not synthesized compiler
+internal errors. Debouncing and reverse invalidation live in Kotlin and add no listener/AST state.
+
 ## Ambient constant pools: pre-existing defects versus branch changes
 
 Constant-pool ownership and error-listener ownership are related historically, but they are
@@ -395,6 +403,7 @@ These existing regressions exercise the contract at different boundaries:
 | Cursor request consumers | `XdkCompletionSignatureTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio: copied completion/signature facts, cancellation propagation, module invalidation, unchanged diagnostics and rejection of late results even from an uncooperative backend. |
 | Semantic consumers | `XdkSemanticLookupTest`, `XdkCallHierarchyTest` and `XdkPresentationTest`: type/implementation targets, selected source calls, resolved-name tokens, read/write highlights and bounded inlay hints. |
 | Dependency host boundary | `XdkDependencyTest` and `XdkLanguageServerTest`: detached source indices, linked-pool metadata, source-less binaries, transitive invalidation, cancellation and diagnostic refresh at unchanged consumer versions. |
+| Automatic source rebuilds | `XdkProjectTest` and `XdkProjectServerTest`: immutable source-closure capture, matching-artifact reuse, transitive changes, dependency failures/recovery, current diagnostic versions and cancellation of late work. |
 | Ambient-pool fallback | `MethodBodyAmbientPoolTest`, `ConstantPoolAmbientTest`, including bound-pool precedence. |
 
 The [integration record](errs-integration-plan.md) records compiler, LSP and packaged-stdio execution
@@ -424,8 +433,9 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    listener and all probes observe cancellation. No candidate is a selected call. Method
    implementation lookup now copies actual override chains. Explicit dependency artifacts/source
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
-   Project discovery, dependency builds from edited sources and persistent cross-module indexing
-   remain open. Safe rename still needs named-label bindings and before/after binding validation.
+   Explicit source roots/edges now support automatic dependency builds from edited sources.
+   Editor project discovery/configuration and persistent cross-module indexing remain open.
+   Safe rename still needs named-label bindings and before/after binding validation.
    Hierarchy currently covers direct extends/implements edges between source types in the same
    compilation, not conditional mixins or external library sources.
 3. The [bounded diagnostic audit](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23)
@@ -436,6 +446,7 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    reproducer. Do not broaden reporting without evidence of a loss.
 
 Tree-sitter remains the shipped default. The compiler adapter is opt-in and discovers conventional
-module layouts; this is not a workspace dependency build system. Repository sharing still requires
+module layouts. Its automatic dependency build loop needs host-supplied roots/edges; it does not
+discover build-tool projects. Repository sharing still requires
 serialized compilation. Scoped listener fields and immutable semantic snapshots reduce lifetime
 problems but do not make the underlying compiler reentrant.
