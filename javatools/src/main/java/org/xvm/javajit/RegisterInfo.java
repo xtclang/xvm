@@ -124,6 +124,11 @@ public interface RegisterInfo {
             }
             if (type.isJavaPrimitive() && !cd().isPrimitive()) {
                 Builder.box(code, type);
+            } else if (type.isNullable() && type.removeNullable().isJavaPrimitive() &&
+                        !cd().isPrimitive()) {
+                // a NullablePrimitive value arrives as the primitive plus its "is Null" flag, so
+                // the flag has to pick between boxing the value and storing Ecstasy Null
+                Builder.boxNullable(code, type);
             } else if (type.isXvmPrimitive() && !type().isXvmPrimitive()) {
                 Builder.box(code, type);
             }
