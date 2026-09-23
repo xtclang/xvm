@@ -27,8 +27,9 @@ This document describes how to manually test every feature implemented in the Ec
 
 **The compiler adapter uses the core/bootstrap libraries bundled with the server.** Gradle builds
 them through the composite module dependencies and packages them as resources. No external XDK or
-`XDK_HOME` setting is required for compiler analysis. Project-specific repositories are separate,
-deferred work.
+`XDK_HOME` setting is required for compiler analysis. A Kotlin host API can now supply additional
+dependency artifacts and source indices; editor project configuration, discovery and dependency
+builds remain separate work. The fixtures below need only the bundled libraries.
 
 It is also the slow one, deliberately: the first compilation in a session takes about a second
 (class loading, reading the XDK, a JIT still warming up) and then settles to about 60ms. If the
@@ -153,11 +154,12 @@ module TestModule {
 > (§9) and folding (§10), plus type hierarchy. Definition/reference queries span the active module,
 > including closed members. Workspace-symbol search covers completed module sessions.
 >
-> Compiler completion and signature help are available for the supported cursor contexts. Rename,
-> formatting, code actions, code lenses, document links, linked editing, inlay hints and semantic
-> tokens are not advertised. Type-definition and type/method implementation lookup are available
-> within the current module; cross-module navigation and call hierarchy remain unavailable.
-> Compiler mode stays Java-only.
+> Compiler completion and signature help are available for the supported cursor contexts, along
+> with type-definition, type/method implementation lookup, static call hierarchy, resolved-name
+> semantic tokens, read/write highlights and bounded inlay hints. Rename, formatting, code actions,
+> code lenses, document links and linked editing are not advertised. Definition/type-definition
+> and inherited implementation bodies can also resolve into explicitly host-indexed dependencies;
+> ordinary editor launch does not configure those artifacts. Compiler mode stays Java-only.
 >
 > Use the [XdkAdapter playbook](#xdkadapter-playbook) for a complete compiler run, including fixtures
 > that compile and precise expectations for compiler-only features. §7a adds diagnostic stress checks.
@@ -179,8 +181,10 @@ With the compiler backend, create `Project.x` containing `module Project { class
 | Broken syntax | Remove a member's closing brace, then restore it | Current outlines/folding remain available, including sibling files. Semantic navigation clears until correction. |
 | Incomplete statement | Type `console.` inside a method and remove the closing braces | The method/module outline and enclosing selection ranges survive; compiler diagnostics remain, and no semantic definition is invented for the broken expression. |
 
-These checks do not imply workspace dependency builds, library-source navigation or conditional
-mixin hierarchy. The XdkAdapter playbook below also covers method-implementation lookup.
+These checks exercise module source files, not workspace dependency builds or conditional-mixin
+hierarchy. Dependency source navigation needs an explicit host-supplied artifact/source index;
+the [host API checks](#dependency-host-api-checks) below cover that boundary. The XdkAdapter playbook
+also covers method-implementation lookup.
 
 ### 1. Syntax Highlighting (TextMate)
 
@@ -198,7 +202,9 @@ mixin hierarchy. The XdkAdapter playbook below also covers method-implementation
 | 1.6 | Editor color scheme sanity | Open a `.x` file in IntelliJ | Editor background matches the active theme (not a solid white fallback) |
 | 1.7 | TextMate + semantic token layering | Open a `.x` file with types, methods, and annotations | Base TextMate colors remain sane; semantic tokens refine symbols instead of washing out the theme |
 
-**Note:** Semantic tokens Tier 1 (declaration-site classification, type refs, annotations, calls) is implemented. Tier 2+ (distinguishing field vs local vs parameter at usage sites) requires compiler integration.
+**Note:** Tree-sitter supplies syntax-based semantic tokens. The opt-in compiler adapter additionally
+classifies resolved usage sites as properties, locals or parameters and supplies semantic modifiers;
+see X41 in the compiler playbook. TextMate remains the lexical coloring layer.
 
 ---
 
@@ -427,8 +433,9 @@ saying the annotation on the derived property is ignored.
 | 8.6 | Read highlight | Click on `x` in `return x;` | Usage site shows as **read** highlight |
 | 8.7 | Assignment write | Click on `age` in `age = newAge;` | Assignment target shows as **write** highlight |
 
-Rows 8.5–8.7 require Tree-sitter's read/write classification. The compiler adapter currently emits
-text highlights for matching identities without distinguishing reads and writes.
+Rows 8.5–8.7 describe Tree-sitter's read/write classification. The compiler also distinguishes reads
+and writes by resolved identity, but declarations receive TEXT highlights; an assignment or compound
+assignment target receives WRITE. Use X41 for the compiler-specific expectations.
 
 ---
 
@@ -1256,9 +1263,10 @@ module Consumers {
 | X44 | In the section D two-file fixture, add `static Int target(Int n)=n;` to Project and `Int callTarget()=target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
 
 Also unavailable: separate Go to Declaration, document links and linked editing. Rename remains
-off: successful recompilation alone cannot rule out silent binding changes. Cross-module/dependency navigation,
-external library source targets and conditional-mixin hierarchy are outside this pass. No
-Tree-sitter fallback runs in compiler mode. Check the
+off: successful recompilation alone cannot rule out silent binding changes. The interactive fixtures
+do not configure dependency artifacts; source navigation through the host API is tested separately
+below. Workspace-wide reference/implementation searches and external or conditional-mixin hierarchy
+remain open. No Tree-sitter fallback runs in compiler mode. Check the
 [capability matrix](plans/plan-ide-integration.md#adapter-capability-matrix) when those limits change.
 
 Record the commit, editor/version, confirmed backend, case ID, source/unsaved edits, expected and
@@ -1269,6 +1277,33 @@ unrun rows explicitly. The packaged compiler regression suite complements the in
 ./gradlew :lang:lsp-server:compilerStdioTest --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
+
+### Dependency host API checks
+
+There is no editor dependency-setting UI or JSON-RPC configuration endpoint yet. A Kotlin host can
+export a successful `Compilation.toDependency()` and call
+`XtcLanguageServer.replaceCompilerDependencies(listOf(dependency))`. Direct adapter hosts use
+`replaceDependencies(...)` and reschedule the returned scope keys themselves. Binary-only artifacts
+load with `XdkDependency.fromBinary(bytes)` and intentionally supply no source targets.
+
+Run the host regression checks to verify the integration boundary without pretending an ordinary
+editor launch configures it:
+
+```bash
+./gradlew :lang:lsp-server:test \
+    --tests 'org.xvm.lsp.adapter.XdkDependencyTest' \
+    --tests 'org.xvm.lsp.server.XdkLanguageServerTest' \
+    --rerun --no-build-cache \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+Expect dependency definition/type-definition and inherited generic method-body locations to point
+to the exported sources. Replacing a library invalidates direct and transitive consumers, cancels
+queued compilation/cursor work and preserves unrelated successful sessions. Server tests replace
+an Int-returning library with a String-returning one: consumer diagnostics appear at the unchanged
+document version, then clear when the original artifact is restored. Binary-only replacement removes
+source links; compiling the dependency's current source uses that source rather than its old index.
+These checks do not establish dependency builds from unsaved sources or a persistent workspace index.
 
 ## VS Code Extension Playbook
 
@@ -1415,17 +1450,20 @@ all same-name occurrences in the file are highlighted and edited simultaneously.
 
 > **Adapter support**: TreeSitter (same-file text matching). Cross-file linked editing requires compiler/SemanticModel.
 
-### Semantic Tokens Phase 2+ (TODO)
+### Semantic Tokens: Current Scope and Follow-ups
 
-Phase 1 (Tier 1+) is implemented and enabled by default. Future phases:
-- **Tier 2**: Heuristic usage-site tokens (UpperCamelCase type detection, broader property/variable classification)
-- **Tier 3** (compiler): Override tree-sitter tokens with compiler-resolved classifications
+Tree-sitter supplies the default syntax-based tokens; broader heuristic usage-site classification
+remains a possible enhancement. The opt-in compiler adapter now supplies resolved-name tokens and
+modifiers independently, with no Tree-sitter fallback or combined adapter. Broader syntax coverage
+must preserve the distinction between compiler facts and lexical coloring.
 
 ### Cross-File References (partly done)
 
 Tree-sitter supplies cross-file go-to-definition, workspace symbols and import links through its
 workspace index. The compiler supplies definition and references across the current module by
 resolved identity, including closed member files; workspace symbols cover current module sessions.
+Explicit host-indexed dependency sources also supply definition/type-definition and inherited
+method-body targets. They do not add cross-module references.
 Still remaining:
 - References across other workspace modules and dependency sources
 - Cross-file rename refactoring
@@ -1438,10 +1476,14 @@ Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-s
 - Typed hover and identity-based definition/references across a module
 - Unsaved member overlays, sibling invalidation and diagnostics at each file's URI/version
 - Direct extends/implements hierarchy between source types, including generic parents
+- Bounded scope/member completion, generic call-site signatures and incomplete-call candidates
+- Type-definition and nominal type/method implementation lookup
+- Static call hierarchy, resolved-name tokens, read/write highlights and bounded inlay hints
+- Explicit dependency artifacts/source indices, consumer invalidation and server diagnostic refresh
 
 Still to come:
-- Richer Java parser recovery and semantic facts for incomplete expressions
-- Type-aware completion, instantiated call-site signature help and inlay hints
-- Cross-module indexing, library-source navigation and method implementation lookup
-- Cross-file rename refactoring
+- Broader Java parser recovery, incomplete-expression contexts and callable forms
+- Project discovery, dependency builds from edited sources and a persistent cross-module index
+- External/conditional-mixin hierarchy and broader implementation targets
+- Safe rename, including named-label references and before/after binding validation
 - Diagnostic-driven quick fixes and refactorings
