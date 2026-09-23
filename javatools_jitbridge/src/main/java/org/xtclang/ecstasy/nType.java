@@ -127,18 +127,18 @@ public class nType
                 return false;
             }
             return switch (value1) {
-                case Bit n1     -> n1.$value == ((Bit)     value2).$value;
-                case Boolean b1 -> b1.$value == ((Boolean) value2).$value;
-                case Char c1    -> c1.$value == ((Char)    value2).$value;
-                case Nibble n1  -> n1.$value == ((Nibble)  value2).$value;
-                case Int8 n1    -> n1.$value == ((Int8)    value2).$value;
-                case Int16 n1   -> n1.$value == ((Int16)   value2).$value;
-                case Int32 n1   -> n1.$value == ((Int32)   value2).$value;
-                case Int64 n1   -> n1.$value == ((Int64)   value2).$value;
-                case UInt8 n1   -> n1.$value == ((UInt8)   value2).$value;
-                case UInt16 n1  -> n1.$value == ((UInt16)  value2).$value;
-                case UInt32 n1  -> n1.$value == ((UInt32)  value2).$value;
-                case UInt64 n1  -> n1.$value == ((UInt64)  value2).$value;
+                case Bit n1     -> n1.$value    == ((Bit)     value2).$value;
+                case Boolean b1 -> b1.$value    == ((Boolean) value2).$value;
+                case Char c1    -> c1.codepoint == ((Char)    value2).codepoint;
+                case Nibble n1  -> n1.$value    == ((Nibble)  value2).$value;
+                case Int8 n1    -> n1.$value    == ((Int8)    value2).$value;
+                case Int16 n1   -> n1.$value    == ((Int16)   value2).$value;
+                case Int32 n1   -> n1.$value    == ((Int32)   value2).$value;
+                case Int64 n1   -> n1.$value    == ((Int64)   value2).$value;
+                case UInt8 n1   -> n1.$value    == ((UInt8)   value2).$value;
+                case UInt16 n1  -> n1.$value    == ((UInt16)  value2).$value;
+                case UInt32 n1  -> n1.$value    == ((UInt32)  value2).$value;
+                case UInt64 n1  -> n1.$value    == ((UInt64)  value2).$value;
 
                 case Int128 n1 -> Int128.$equals(n1.$lowValue, n1.$highValue,
                         ((Int128) value2).$lowValue, ((Int128) value2).$highValue);
@@ -249,7 +249,7 @@ public class nType
             collector = switch (value) {
                 case Bit n1     -> collector.addInt8(n1.$value);
                 case Boolean b  -> collector.addInt8(b.$value ? 1 : 0);
-                case Char c     -> collector.addInt32(c.$value);
+                case Char c     -> collector.addInt32(c.codepoint);
                 case Nibble n1  -> collector.addInt8(n1.$value);
                 case Int8 n1    -> collector.addInt8(n1.$value);
                 case Int16 n1   -> collector.addInt16(n1.$value);

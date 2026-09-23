@@ -72,7 +72,7 @@ public class ArrayᐸCharᐳ
      */
     public static ArrayᐸCharᐳ $new$1$p(Ctx ctx, TypeConstant type, long size, Object supply) {
         if (supply instanceof Char boxed) {
-            int value = boxed.$value;
+            int value = boxed.codepoint;
             if (value < 0x100) {
                 ctx.alloc(size); // REVIEW + HEADER_SIZE?
                 ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, type);
@@ -136,7 +136,7 @@ public class ArrayᐸCharᐳ
     }
 
     public void setElement(Ctx ctx, Int64 index, Object value) {
-        setElement$pi(ctx, index.$value, ((Char) value).$value);
+        setElement$pi(ctx, index.$value, ((Char) value).codepoint);
     }
 
     public void setElement$p(Ctx ctx, long index, int value) {
@@ -145,7 +145,7 @@ public class ArrayᐸCharᐳ
 
     @Override
     public ArrayᐸCharᐳ add(Ctx ctx, Object element) {
-        return add$p(ctx, ((Char) element).$value);
+        return add$p(ctx, ((Char) element).codepoint);
     }
 
     public ArrayᐸCharᐳ add$p(Ctx ctx, int ch) {
