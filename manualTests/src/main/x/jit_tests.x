@@ -1,7 +1,13 @@
 /**
  * This module will run all of the JIT tests.
  *
- * xtc run -L build/xtc/main/lib -o build/xtc/main/lib --jit src/main/x/jit/jit_tests.x
+ * Run it through the build with:
+ *
+ *     ./gradlew :manualTests:runJitTests
+ *
+ * or directly with:
+ *
+ *     xtc run -L build/xtc/main/lib -o build/xtc/main/lib --jit src/main/x/jit_tests.x
  */
 module jit_tests.examples.org {
 
