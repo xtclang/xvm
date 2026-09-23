@@ -9,6 +9,8 @@ import org.xtclang._native.io.TerminalConsole;
 
 import org.xtclang._native.numbers.RTRandom;
 
+import org.xtclang._native.temporal.LocalClock;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.ConstantPool;
@@ -58,5 +60,10 @@ public class nMainInjector
         TypeConstant randomType = pool.ensureEcstasyTypeConstant("numbers.Random");
         suppliers.put(new Resource(randomType, "rnd"),    RTRandom::$create);
         suppliers.put(new Resource(randomType, "random"), RTRandom::$create);
+
+        TypeConstant clockType = pool.ensureEcstasyTypeConstant("temporal.Clock");
+        suppliers.put(new Resource(clockType, "clock"),      LocalClock::$createUtcClock);
+        suppliers.put(new Resource(clockType, "utcClock"),   LocalClock::$createUtcClock);
+        suppliers.put(new Resource(clockType, "localClock"), LocalClock::$createLocalClock);
     }
 }

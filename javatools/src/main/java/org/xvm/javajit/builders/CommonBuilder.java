@@ -4388,6 +4388,7 @@ public class CommonBuilder
 
             // _native.io
             "_native.io.TerminalConsole",
+            "_native.temporal.LocalClock",
     };
 
     private static final String[] NO_JIT_LIST = new String[] {
