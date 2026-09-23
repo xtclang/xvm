@@ -2626,20 +2626,17 @@ public class BuildContext {
         assert !targetReg.flavor().isOptimized;
 
         JitParamDesc[] returns;
-        ClassDesc      cdField;
+        ClassDesc      fieldCD;
         if (jmd.isOptimized) {
             int[] indexes = jmd.getAllOptimizedReturnIndexes(0);
             returns = new JitParamDesc[indexes.length];
             for (int i = 0; i < indexes.length; i++) {
                 returns[i] = jmd.optimizedReturns[indexes[i]];
             }
-            TypeConstant type = propInfo.getType().removeNullable();
-            cdField = type.isJavaPrimitive()
-                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
-                            : returns[0].cd;
+            fieldCD = JitTypeDesc.getFieldClass(propInfo.getType(), returns[0].cd);
         } else {
             returns = new JitParamDesc[] {jmd.standardReturns[0]};
-            cdField = jmd.standardReturns[0].cd;
+            fieldCD = jmd.standardReturns[0].cd;
         }
 
         TypeConstant ownerType = propInfo.getOwnerType(builder, targetReg.type());
@@ -2657,7 +2654,7 @@ public class BuildContext {
                     : ret.flavor == XvmPrimitive || ret.flavor == NullableXvmPrimitive
                         ? fieldName + "$" + i
                         : fieldName;
-            ClassDesc cd = i == 0 ? cdField : ret.cd;
+            ClassDesc cd = i == 0 ? fieldCD : ret.cd;
             code.getfield(cdOwner, name, cd);
             if (i == 0) {
                 Builder.normalizePrimitiveField(code, propInfo.getType());
@@ -2883,20 +2880,17 @@ public class BuildContext {
     private void buildSetPropertyField(CodeBuilder code, RegisterInfo targetReg,
                                        PropertyInfo propInfo, JitMethodDesc jmd) {
         JitParamDesc[] params;
-        ClassDesc      cdField;
+        ClassDesc      fieldCD;
         if (jmd.isOptimized) {
             int[] indexes = jmd.getAllOptimizedParams(0);
             params = new JitParamDesc[indexes.length];
             for (int i = 0; i < indexes.length; i++) {
                 params[i] = jmd.optimizedParams[indexes[i]];
             }
-            TypeConstant type = propInfo.getType().removeNullable();
-            cdField = type.isJavaPrimitive()
-                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
-                            : params[0].cd;
+            fieldCD = JitTypeDesc.getFieldClass(propInfo.getType(), params[0].cd);
         } else {
             params  = new JitParamDesc[] {jmd.standardParams[0]};
-            cdField = jmd.standardParams[0].cd;
+            fieldCD = jmd.standardParams[0].cd;
         }
 
         int[] slots = new int[params.length];
@@ -2920,7 +2914,7 @@ public class BuildContext {
                     : param.flavor == XvmPrimitive || param.flavor == NullableXvmPrimitive
                         ? fieldName + "$" + i
                         : fieldName;
-            ClassDesc cd = i == 0 ? cdField : param.cd;
+            ClassDesc cd = i == 0 ? fieldCD : param.cd;
             code.putfield(cdOwner, name, cd);
         }
     }
