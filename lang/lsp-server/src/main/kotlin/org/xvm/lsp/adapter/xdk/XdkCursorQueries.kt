@@ -1,0 +1,89 @@
+package org.xvm.lsp.adapter.xdk
+
+import org.xvm.lsp.adapter.CompletionItem
+import org.xvm.lsp.adapter.CompletionItem.CompletionKind
+import org.xvm.lsp.adapter.ParameterInfo
+import org.xvm.lsp.adapter.SignatureHelp
+import org.xvm.lsp.adapter.SignatureInfo
+import org.xvm.lsp.adapter.xdk.SemanticModel.Position
+import org.xvm.lsp.adapter.xdk.SemanticModel.Signature
+
+/** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
+internal object XdkCursorQueries {
+    fun completions(model: PartialSemanticModel): List<CompletionItem> =
+        model.sites
+            .singleOrNull()
+            ?.takeIf { it.kind == PartialSemanticModel.Kind.MEMBER_ACCESS }
+            ?.members
+            .orEmpty()
+            .map { member ->
+                CompletionItem(
+                    member.name,
+                    if (member.kind == SemanticModel.SymbolKind.METHOD) CompletionKind.METHOD else CompletionKind.PROPERTY,
+                    member.signature?.let { signature(model.semantics, member.name, it).label }
+                        ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
+                    member.name,
+                )
+            }.distinctBy { it.label to it.detail }
+
+    fun signatureHelp(
+        model: PartialSemanticModel,
+        position: Position,
+    ): SignatureHelp? {
+        val site = model.sites.singleOrNull() ?: return null
+        val slot = site.argumentIndexAt(position) ?: return null
+        val signatures =
+            site.members
+                .mapNotNull { member ->
+                    member.signature?.let { candidate ->
+                        // Positional source slots map directly. Named partial arguments need compiler
+                        // mapping; do not infer one from commas or choose an applicable overload here.
+                        val active = slot.takeIf { site.arguments.none { it.label != null } && it in candidate.parameters.indices }
+                        signature(model.semantics, member.name, candidate, active, "Candidate signature; overload not selected.")
+                    }
+                }.distinctBy { it.label }
+        return signatures.takeIf { it.isNotEmpty() }?.let { SignatureHelp(it, activeParameter = it.first().activeParameter ?: 0) }
+    }
+
+    fun signatureHelp(
+        model: SemanticModel,
+        position: Position,
+    ): SignatureHelp? {
+        val call =
+            model.calls
+                .filter { position > it.callee.end && position < it.range.end }
+                .minWithOrNull(compareByDescending<SemanticModel.CallSite> { it.range.start }.thenBy { it.range.end })
+                ?: return null
+        val name = model.symbol(call.method)?.name ?: return null
+        val active = call.arguments.firstOrNull { position >= it.range.start && position <= it.range.end }?.parameterIndex
+        return SignatureHelp(listOf(signature(model, name, call.signature, active)), activeParameter = active ?: 0)
+    }
+
+    private fun signature(
+        model: SemanticModel,
+        name: String,
+        signature: Signature,
+        active: Int? = null,
+        documentation: String? = null,
+    ): SignatureInfo {
+        val parameters =
+            signature.parameters.map { parameter ->
+                ParameterInfo(
+                    "${model.type(parameter.type)?.displayName ?: "?"}${parameter.name?.let { " $it" }.orEmpty()}" +
+                        if (parameter.defaulted) " = …" else "",
+                )
+            }
+        // The compiler signature includes the conditional success flag; source syntax does not.
+        val returnTypes = if (signature.conditional) signature.returns.drop(1) else signature.returns
+        val returns = returnTypes.joinToString(", ") { model.type(it)?.displayName ?: "?" }
+        val result = if (returnTypes.size > 1) "($returns)" else returns.ifEmpty { "void" }
+        return SignatureInfo(
+            "${if (signature.conditional) "conditional " else ""}$result $name(${parameters.joinToString { it.label }})",
+            documentation,
+            // LSP defaults an absent/out-of-range active index to parameter zero. Keeping the
+            // signature label but omitting parameter metadata avoids a fabricated highlight.
+            parameters.takeIf { active != null }.orEmpty(),
+            active,
+        )
+    }
+}
