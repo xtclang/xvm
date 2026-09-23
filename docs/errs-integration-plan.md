@@ -19,9 +19,42 @@ regressions, module sessions with overlays, cross-file navigation and direct typ
 The [ninth pass](#ninth-pass-java-parser-recovery-2026-09-22) keeps compiler mode Java-only and retains
 recovered syntax for structural features. The [tenth pass](#tenth-pass-bounded-incomplete-analysis-2026-09-22)
 adds a separate compiler-only probe for intact receivers and arguments in one trailing incomplete
-statement. Broader incomplete-source analysis, cross-module indexing and richer call-site features
-remain open. The numbered
+statement. The [eleventh pass](#eleventh-pass-copied-call-and-member-facts-2026-09-23) copies
+selected call signatures and bounded receiver-member candidates. Adapter integration, broader
+incomplete-source analysis and cross-module indexing remain open. The numbered
 passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
+
+### Remaining work to establish the full API POC, 2026-09-23
+
+The eleventh pass establishes selected-call provenance and bounded partial receiver facts. It does
+not yet establish that the embedding/AST surface is sufficient for every intended editor consumer.
+The completion criterion is a working consumer and negative cases for each required fact, with its
+owner, lifetime, diagnostic behavior and unsupported cases documented. Declaring a method or
+throwing UnsupportedOperationException is not evidence that its required compiler facts exist.
+
+Existing evidence covers compiler diagnostics, cancellation, bundled libraries, module overlays,
+current-module definitions/references, declared type hierarchy, structural recovery and immutable
+semantic copying. Keep that evidence; concentrate further work on these gaps:
+
+| Priority / area | What is still unproven or absent | POC acceptance evidence |
+|---|---|---|
+| 1. Finish the diagnostic audit | The `@Parsed` constructor family and remaining historical suppression/failure cases need final dispositions. | Compare provisional probes with final validation using valid/invalid source controls; pin real host-facing diagnostic loss with a regression. Classify remaining cases as fixed, justified silence or a separately documented compiler defect. |
+| 2. Cursor-based incomplete analysis | The probe accepts one standalone trailing EOF statement in a single-source module. Real edits occur before closing braces, inside assignments/returns/nested calls and in member files. | Analyze unchanged source at an explicit cursor/site within a module snapshot and its unsaved overlays. Preserve lexical/flow context, source spans, budgets, cancellation and current-version publication; report unavailable facts explicitly. Keep compiler mode Java-only. |
+| 3. Completion and signature help | Receiver candidates exist, but visible locals/implicit receivers, static/type lookup, applicable overloads, expected argument types and incomplete argument-to-parameter mapping are not established. Function values, partial application and receiver-to-argument rewrites have no selected-call record. | Real XdkAdapter/stdio requests for representative qualified/unqualified, generic, overloaded and named/default-argument examples. Results must distinguish source argument slots from selected parameters and survive edits/cancellation without stale facts. |
+| 4. Other semantic consumers | Types lack an explicit copied declaration link; calls lack an explicit caller association; occurrences classify declaration/reference, not read/write or modifiers. Override/implementation and safe rename relationships still need proof. | Small compiler-backed consumers for type-definition, implementation lookup, incoming/outgoing calls, semantic tokens/inlay hints and module-local rename conflict checks. Record which facts can be copied from existing compiler structures and which need a small compiler hook. Include captures, shadowing, overloads and generated declarations. |
+| 5. Dependency/source boundary | Module navigation works; cross-module/library source lookup and persistent workspace indexing do not. Snapshot IDs intentionally expire between attempts. | A two-module fixture proves dependency identity, available source locations and invalidation when the dependency changes. Specify host source/repository ownership and index keys; missing library sources must remain unavailable. A production workspace index can follow separately. |
+| 6. Lifetime and compatibility | Current concurrency/retention measurements are bounded; the new collector and future partial requests need sustained exercise. Public listener signatures and result record shapes have migration implications. | Repeated multi-file edits, cancellation, close/reopen and shutdown release attempts/ASTs/pools; copied queries remain pool-free on other threads. Record latency observations, compare compiled output against the base, and finalize constructor/record-pattern and listener migration examples. |
+
+Use these consumers to close an API requirements matrix: required fact, existing accessor or new
+hook, compiler versus Kotlin ownership, complete/partial/unavailable behavior and a regression
+that exercises it. Freeze the proposed embedding/AST surface only when each row has evidence or
+an explicit scope decision. Formatting, editor polish, a production persistent index and full
+implementations of every LSP handler need not delay that API decision. Unsupported protocol
+capabilities remain unadvertised, and Tree-sitter stays the shipped default.
+
+The immediate sequence remains the bounded `@Parsed` audit, then cursor/module partial analysis
+and end-to-end completion/signature help. Follow with the remaining consumer probes and sustained
+validation before extracting the proposed PRs.
 
 ### Branch hardening design
 
@@ -54,7 +87,8 @@ outline and semantic navigation work in later PRs, so accepting the listener cha
 require accepting a particular LSP implementation. Investigate the remaining suppressed
 diagnostics separately, with a reproducer and a decision for each source shape.
 
-Use the eighteen bounded PRs below, including module support, hierarchy and a later parser-recovery slice.
+Use the twenty-one bounded PRs below, including module support, hierarchy, parser recovery and
+separate compiler/consumer slices for call and member facts.
 Four foundations can start independently; the compiler changes form a short
 stack; the adapter changes follow the public API they consume. The unit of review is an observable
 contract, not one historical phase or one commit. A PR that migrates an interface may legitimately
@@ -257,8 +291,9 @@ syntax can prevent an assembled module AST; recovered per-file syntax supports s
 while navigation requires semantic results for the current module's source files, with no
 cross-module index or library-source lookup. Completion, signature help, rename, semantic tokens,
 formatting, code actions, document links and method implementation lookup remain unavailable.
-The snapshot has declared signatures and direct type hierarchy; it has no completion member index,
-instantiated call-site model, persistent workspace identity scheme or incremental compiler. These are feature
+The snapshot has declared/instantiated call signatures and direct type hierarchy; explicit partial
+inspection copies bounded receiver-member candidates. A persistent workspace identity scheme,
+broader incomplete-call inference and incremental compilation remain open. These are feature
 boundaries, not reasons to delay the listener foundation indefinitely.
 
 Runtime/Container failure listeners, JIT/debugger sinks, diagnostic thread/fiber origins, SLF4J/JFR
@@ -293,11 +328,14 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L6 | Copy direct inheritance edges and support source type hierarchy | L5 |
 | C5 | Recover syntax and expose per-file partial source results | E3; L5 for the structural LSP consumer |
 | C6 | Analyze a bounded incomplete statement through an explicit API | C5 and E2; I3 for compiler-consumer tests; no new LSP capability |
+| E4 | Return attempt-owned selected-call bindings without new AST fields | E2 and C6; retain existing result constructors and document record-pattern changes |
+| L7 | Copy selected calls and inspect bounded partial receiver members | E4, C6 and L4; no new protocol capability |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
 additively. C5 follows with structural recovery; C6 isolates the explicit partial-semantic probe.
-These are nineteen eventual PRs, not nineteen simultaneous open branches.
+E4 and L7 separate compiler provenance collection from the Kotlin call/member models.
+These are twenty-one eventual PRs, not twenty-one simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -651,6 +689,27 @@ phase boundaries. Replay the EOF internally without delivering it twice to the h
 receiver/flow/argument consumer tests, clone/speculation regressions and repository-failure control.
 This API is additive and does not change the `Compilation` record shape. Integrating a richer
 copied model or advertising completion/signature help belongs to subsequent consumer work.
+
+### E4 — Return selected-call provenance from the compilation attempt
+
+**Contract:** completed method invocations expose the compiler's instantiated signature and written
+argument-to-visible-parameter mapping, without adding state or clone rules to InvocationExpression.
+Extract InvocationBinding and its attempt-owned collector, explicit compiler/stage/context
+forwarding, successful-validation capture, and immutable maps on Compilation/PartialAnalysis.
+Keep old constructors, but document the changed record-pattern arity. Default compiler clients
+use a no-op collector. Verify named/default/generic calls, nested compilation paths, surviving-node
+identity, failed calls and immutable publication with direct compiler-consumer regressions.
+Function values, partial application and receiver-to-argument rewrites remain explicitly absent.
+
+### L7 — Copy call facts and bounded partial receiver members
+
+**Contract:** compiler-worker extraction produces compiler-free Kotlin call/partial-site models.
+Completed calls copy E4's inferred signature and source mapping; incomplete calls expose accessible
+same-named receiver candidates and source argument slots without claiming overload selection.
+Receiver TypeInfo inspection is explicit, reports through its supplied listener and respects
+cancellation. Preserve access checks, receiver substitution, immutable collection boundaries and
+foreign-compilation ID rejection. Keep ordinary snapshot extraction passive. These APIs prepare
+completion/signature help; protocol advertisement and module lifecycle integration stay separate.
 
 ## Changes to hold out of the initial integration
 
@@ -1024,6 +1083,49 @@ tests executed without skips. The same successful run built the XDK distribution
 requires the new suite with nonzero execution and zero skips. No remote CI or output-equivalence
 comparison was run. Changes were verified locally after the structural recovery commit `60054eb4c`.
 
+### Eleventh pass: copied call and member facts, 2026-09-23
+
+The preceding incomplete-analysis pass was committed and pushed as `d24f1be1f`. This pass supplies
+consumer models inside `lang/lsp-server`; it does not enable completion or signature help yet.
+
+Completed method calls copy the compiler-selected declaration, instantiated signature and each
+written argument's visible parameter index. Capture happens after generic inference, using the
+signature the compiler just resolved. Named argument order and omitted defaults are preserved
+without inventing source spans for compiler-generated arguments. Function-valued calls, partial
+applications and receiver-to-argument rewrites deliberately have no selected-call record yet.
+
+These facts belong to the compilation attempt. `InvocationExpression` adds no semantic field,
+nullable cache, lazy holder or clone override. An explicit collector travels from Compiler through
+StageMgr and method validation Contexts. Successful validation supplies immutable records;
+revalidation invalidates an earlier entry. Publication filters by surviving node identity and
+successful validation, then clears all scratch entries. Speculative clones cannot inherit another
+node's binding or remain retained through this collector. Ordinary compiler constructors select a
+no-op collector; embedding attempts collect facts and return immutable maps. Existing result
+constructors remain, but the additional record components change record-pattern arity; extracted
+API changes must document that compatibility limit.
+
+The explicit partial-analysis copier may inspect receiver TypeInfo on the compiler worker with its
+own reporting listener. It copies accessible instance methods/properties, receiver substitutions,
+lexical method identity, argument spans/labels/types and top-level comma positions. For unfinished
+calls, same-named accessible members are candidates, never a selected overload or an inferred
+argument-to-parameter assignment. Argument index means the source argument slot, not a parameter
+index. Failed or canceled inspection cannot publish fabricated candidates. The ordinary semantic
+snapshot remains passive, and both copied models contain no compiler objects.
+
+Remaining scope: integrate partial results into the adapter's versioned module lifecycle; widen
+beyond a single standalone EOF statement; model implicit receivers, static/type-literal lookup,
+function values and partial application; select applicable incomplete-call overloads and expected
+parameter types. No new LSP capability is advertised. The next agreed investigations remain the
+bounded `@Parsed` TypeInfo audit and sustained editing/retention checks.
+
+Verification: forced compiler and LSP tests report 474 and 556 cases respectively, with 40 and 3
+existing skips and zero failures/errors. All 9 new call/member cases, all 10 partial-analysis cases
+and all 13 semantic-model cases executed without skips. Packaged-server tests initially rejected
+the test command's missing compiler-backend flag; rerunning with `-Plsp.adapter=compiler` passed all
+7 cases with no skips. Together, 994 executed cases passed. The XDK distribution build,
+`spotlessCheck` and `git diff --check` passed. The workflow requires the new consumer suite to run
+with zero skips. No remote CI was inspected.
+
 ## Extraction and verification procedure
 
 1. Preserve `lagergren/errs` as the reference. Prepare one local branch per slice from the agreed
@@ -1087,7 +1189,8 @@ logging, and the real server correctly handles open, edit, correction, supersess
 Known single-module and source-location limits must be visible in the usage documentation.
 
 Full workspace/editor support is a later milestone: partial syntax, cross-module ownership and
-indexing, safe rename and instantiated call-site facts. Module overlays, cross-file source mapping
-and direct source type hierarchy are implemented in the eighth pass. The suppressed-diagnostic and failure
+indexing, safe rename and integrated completion/signature help. Module overlays, cross-file source
+mapping and direct source type hierarchy are implemented in the eighth pass; bounded call/member
+facts are supplied in the eleventh pass. The suppressed-diagnostic and failure
 audits remain explicit backlogs until their cases are classified; neither “seven phases complete”
 nor a green adapter test run closes those investigations.
