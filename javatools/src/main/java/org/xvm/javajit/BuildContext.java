@@ -2661,9 +2661,7 @@ public class BuildContext {
             code.getfield(cdOwner, name, cd);
             if (i == 0) {
                 Builder.normalizePrimitiveField(code, propInfo.getType());
-            }
-
-            if (i > 0) {
+            } else {
                 storeToContext(code, ret.cd, ret.altIndex);
             }
         }

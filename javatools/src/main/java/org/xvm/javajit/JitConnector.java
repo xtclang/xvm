@@ -92,10 +92,10 @@ public class JitConnector
             Class  mainClass = loader.loadClass(typeName);
             Ctx    ctx       = xvm.getCtx();
             Object module    = mainClass.getDeclaredConstructor(Ctx.class).newInstance(ctx);
-
-            // Reflection boxes the optimized Java long as Long, which join() uses as the exit code.
-            String runName = methodStructure.getReturnCount() == 1 &&
+            String runName   = methodStructure.getReturnCount() == 1 &&
                     methodStructure.getReturn(0).getType().equals(pool.typeInt64()) ? "run$p" : "run";
+
+            // reflection boxes the optimized Java long as Long, which join() uses as the exit code
             Object result;
             if (methodStructure.getParamCount() == 0) {
                 Method runMethod = mainClass.getMethod(runName, Ctx.class);

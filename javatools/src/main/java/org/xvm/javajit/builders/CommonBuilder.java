@@ -857,8 +857,8 @@ public class CommonBuilder
                 }
 
                 if (prop.getInitializer() == null) {
-                    RegisterInfo reg = loadConstant(code, prop.getInitialValue());
-                    ClassDesc fieldCD = prop.getType().removeNullable().isJavaPrimitive()
+                    RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
+                    ClassDesc    fieldCD = prop.getType().removeNullable().isJavaPrimitive()
                             ? JitTypeDesc.requirePrimitiveFieldClass(prop.getType()) : reg.cd();
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
