@@ -149,22 +149,21 @@ public class Runtime
      */
     public synchronized void close(Duration timeout) {
         Deadline deadline = Deadline.after(timeout);
-        if (isTerminated()) {
-            return;
-        }
-
         synchronized (f_containers) {
             closing = true;
         }
         timer.cancel();
 
+        if (termination == null) {
+            termination = CompletableFuture.allOf(containers().stream()
+                    .map(Container::terminateServices)
+                    .toArray(CompletableFuture[]::new));
+        }
+
         boolean interrupted = Thread.interrupted();
         RuntimeException failure = null;
         try {
-            CompletableFuture.allOf(containers().stream()
-                    .map(Container::terminateServices)
-                    .toArray(CompletableFuture[]::new))
-                    .get(deadline.remainingNanos(), TimeUnit.NANOSECONDS);
+            termination.get(deadline.remainingNanos(), TimeUnit.NANOSECONDS);
         } catch (InterruptedException e) {
             interrupted = true;
             failure = new IllegalStateException("Interrupted while stopping containers", e);
@@ -206,10 +205,12 @@ public class Runtime
     }
 
     /**
-     * @return true once shutdown has stopped both executors
+     * @return true once container cleanup succeeded and both executors have stopped
      */
     public boolean isTerminated() {
-        return f_executorXVM.isTerminated() && f_executorIO.isTerminated();
+        var pending = termination;
+        return pending != null && pending.isDone() && !pending.isCompletedExceptionally()
+                && f_executorXVM.isTerminated() && f_executorIO.isTerminated();
     }
 
     public boolean isIdle() {
@@ -257,6 +258,11 @@ public class Runtime
      * Guarded by {@link #f_containers}; prevents container creation during shutdown.
      */
     private boolean closing;
+
+    /**
+     * Retain the first shutdown's cleanup result across retries, including cleanup failures.
+     */
+    private volatile CompletableFuture<Void> termination;
 
     /**
      * A unique id producer.
