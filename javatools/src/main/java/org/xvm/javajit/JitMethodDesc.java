@@ -4,7 +4,10 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+
+import java.util.stream.IntStream;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Component.Format;
@@ -114,29 +117,22 @@ public class JitMethodDesc {
      * @return all the indexes of the optimized JitParamDesc for the specified standard argument
      *         index
      */
-    public int[] getAllOptimizedParams(int argIndex) {
-        List<Integer> list = new ArrayList<>(optimizedParams.length);
-        for (int i = 0, c = optimizedParams.length; i < c; i++) {
-            if (optimizedParams[i].index == argIndex) {
-                list.add(i);
-            }
-        }
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("Invalid param index");
-        }
-        return list.stream().mapToInt(i -> i).toArray();
+    public int[] getAllOptimizedParamIndexes(int argIndex) {
+        return allIndexesOf(optimizedParams, argIndex, "param");
+    }
+
+    /**
+     * @return all the optimized JitParamDesc for the specified standard argument index
+     */
+    public JitParamDesc[] getAllOptimizedParams(int argIndex) {
+        return select(optimizedParams, getAllOptimizedParamIndexes(argIndex));
     }
 
     /**
      * @return an index of the optimized JitParamDesc for the specified standard argument index
      */
     public int getOptimizedParamIndex(int argIndex) {
-        for (int i = 0, c = optimizedParams.length; i < c; i++) {
-            if (optimizedParams[i].index == argIndex) {
-                return i;
-            }
-        }
-        throw new IllegalArgumentException("Invalid arg index");
+        return firstIndexOf(optimizedParams, argIndex, "arg");
     }
 
     /**
@@ -150,12 +146,7 @@ public class JitMethodDesc {
      * @return an index of the optimized JitParamDesc for the specified standard return index
      */
     public int getOptimizedReturnIndex(int retIndex) {
-        for (int i = 0, c = optimizedReturns.length; i < c; i++) {
-            if (optimizedReturns[i].index == retIndex) {
-                return i;
-            }
-        }
-        throw new IllegalArgumentException("Invalid return index");
+        return firstIndexOf(optimizedReturns, retIndex, "return");
     }
 
     /**
@@ -163,16 +154,51 @@ public class JitMethodDesc {
      *         index
      */
     public int[] getAllOptimizedReturnIndexes(int retIndex) {
-        List<Integer> list = new ArrayList<>(optimizedReturns.length);
-        for (int i = 0, c = optimizedReturns.length; i < c; i++) {
-            if (optimizedReturns[i].index == retIndex) {
-                list.add(i);
+        return allIndexesOf(optimizedReturns, retIndex, "return");
+    }
+
+    /**
+     * @return all the optimized JitParamDesc for the specified standard return index
+     */
+    public JitParamDesc[] getAllOptimizedReturns(int retIndex) {
+        return select(optimizedReturns, getAllOptimizedReturnIndexes(retIndex));
+    }
+
+    /**
+     * @return the first index into the specified descriptors that carries the standard index
+     *
+     * @throws IllegalArgumentException  if no descriptor carries it
+     */
+    private static int firstIndexOf(JitParamDesc[] descs, int index, String what) {
+        for (int i = 0, c = descs.length; i < c; i++) {
+            if (descs[i].index == index) {
+                return i;
             }
         }
-        if (list.isEmpty()) {
-            throw new IllegalArgumentException("Invalid return index");
+        throw new IllegalArgumentException("Invalid " + what + " index");
+    }
+
+    /**
+     * @return every index into the specified descriptors that carries the standard index; an
+     *         optimized value can occupy more than one Java position
+     *
+     * @throws IllegalArgumentException  if no descriptor carries it
+     */
+    private static int[] allIndexesOf(JitParamDesc[] descs, int index, String what) {
+        int[] indexes = IntStream.range(0, descs.length)
+                                 .filter(i -> descs[i].index == index)
+                                 .toArray();
+        if (indexes.length == 0) {
+            throw new IllegalArgumentException("Invalid " + what + " index");
         }
-        return list.stream().mapToInt(i -> i).toArray();
+        return indexes;
+    }
+
+    /**
+     * @return the descriptors at the specified indexes
+     */
+    private static JitParamDesc[] select(JitParamDesc[] descs, int[] indexes) {
+        return Arrays.stream(indexes).mapToObj(i -> descs[i]).toArray(JitParamDesc[]::new);
     }
 
     /**

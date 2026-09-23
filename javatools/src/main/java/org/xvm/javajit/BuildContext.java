@@ -2177,7 +2177,7 @@ public class BuildContext {
                 assert srcReg.type().isOnlyNullable();
                 code.pop(); // throw away Null; load the default primitive values and "true"
                 assert pd.index != -1; // TODO CP -1 == thi$
-                int[] anIndexes = jmd.getAllOptimizedParams(pd.index);
+                int[] anIndexes = jmd.getAllOptimizedParamIndexes(pd.index);
                 // the last opt arg will be the boolean flag, fill the others with the default
                 for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
                     Builder.defaultLoad(code, jmd.optimizedParams[anIndexes[nIndex]].cd);
@@ -2684,11 +2684,7 @@ public class BuildContext {
         JitParamDesc[] returns;
         ClassDesc      fieldCD;
         if (jmd.isOptimized) {
-            int[] indexes = jmd.getAllOptimizedReturnIndexes(0);
-            returns = new JitParamDesc[indexes.length];
-            for (int i = 0; i < indexes.length; i++) {
-                returns[i] = jmd.optimizedReturns[indexes[i]];
-            }
+            returns = jmd.getAllOptimizedReturns(0);
             fieldCD = JitTypeDesc.getFieldClass(propInfo.getType(), returns[0].cd);
         } else {
             returns = new JitParamDesc[] {jmd.standardReturns[0]};
@@ -2938,11 +2934,7 @@ public class BuildContext {
         JitParamDesc[] params;
         ClassDesc      fieldCD;
         if (jmd.isOptimized) {
-            int[] indexes = jmd.getAllOptimizedParams(0);
-            params = new JitParamDesc[indexes.length];
-            for (int i = 0; i < indexes.length; i++) {
-                params[i] = jmd.optimizedParams[indexes[i]];
-            }
+            params  = jmd.getAllOptimizedParams(0);
             fieldCD = JitTypeDesc.getFieldClass(propInfo.getType(), params[0].cd);
         } else {
             params  = new JitParamDesc[] {jmd.standardParams[0]};
