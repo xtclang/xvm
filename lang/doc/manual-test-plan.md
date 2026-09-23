@@ -28,8 +28,9 @@ This document describes how to manually test every feature implemented in the Ec
 **The compiler adapter uses the core/bootstrap libraries bundled with the server.** Gradle builds
 them through the composite module dependencies and packages them as resources. No external XDK or
 `XDK_HOME` setting is required for compiler analysis. A Kotlin host API can now supply additional
-dependency artifacts and source indices; editor project configuration, discovery and dependency
-builds remain separate work. The fixtures below need only the bundled libraries.
+dependency artifacts/source indices and explicit source roots/edges for automatic recompilation.
+Editor project configuration and discovery remain separate work. The ordinary fixtures below need
+only the bundled libraries; the source-project checks require the explicit host setup.
 
 It is also the slow one, deliberately: the first compilation in a session takes about a second
 (class loading, reading the XDK, a JIT still warming up) and then settles to about 60ms. If the
@@ -1303,7 +1304,62 @@ queued compilation/cursor work and preserves unrelated successful sessions. Serv
 an Int-returning library with a String-returning one: consumer diagnostics appear at the unchanged
 document version, then clear when the original artifact is restored. Binary-only replacement removes
 source links; compiling the dependency's current source uses that source rather than its old index.
-These checks do not establish dependency builds from unsaved sources or a persistent workspace index.
+The source-project checks below separately exercise builds from unsaved sources. Neither API
+establishes a persistent workspace reference index.
+
+### Automatic source recompilation host checks
+
+This section needs a host configured with source roots and dependency edges; the standard editor
+launcher does not discover them yet. In the host that constructs the compiler language server,
+register the following graph before opening the files (substitute actual absolute file URIs):
+
+```kotlin
+server.replaceCompilerSourceModules(
+    listOf(
+        XdkSourceModule("Library", "file:///workspace/lsp-project/Library.x"),
+        XdkSourceModule("Consumer", "file:///workspace/lsp-project/Consumer.x", setOf("Library")),
+    ),
+)
+```
+
+Create these two files on disk:
+
+```xtc
+// Library.x
+module Library { static Int value()=1; }
+```
+
+```xtc
+// Consumer.x
+module Consumer { package lib import Library; Int run()=lib.value(); }
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X45 | Open Consumer.x without opening Library.x. Navigate from `value`. | Both modules compile; Consumer has no errors and definition points into Library.x. No separate Gradle build is needed. |
+| X46 | Open Library.x and change its method to `static String value()="text";` without saving. | Consumer gains a type error without an edit/version change there. Disk still contains the Int version. |
+| X47 | Replace Library's method with `MissingType broken;`, then restore the original method. | The original compiler error belongs to Library. Consumer reports `DEPENDENCY-FAILED` and has no stale navigation; correction clears both files. |
+| X48 | Make the unsaved String change again, then discard and close Library.x. Reopen it. | Consumer recovers using the Int version on disk; reopening uses current text. Closing an overlay does not retain its unsaved artifact. |
+| X49 | While Library is closed, delete its root on disk, then restore it; ensure watched-file notifications reach the server. | Library reports `SOURCE-UNAVAILABLE`; Consumer reports `DEPENDENCY-FAILED`. Restoring the file clears both without editing Consumer. |
+| X50 | Open an unsaved Library/Extra.x with `class Extra { MissingType broken; }`, then discard/close it. Repeat with a saved member and disk deletion. | The member owns its compiler diagnostic. Consumer blocks, then recovers when the invalid member disappears; removed diagnostics clear. |
+| X51 | Make rapid valid/invalid edits in Library while querying Consumer, then leave a valid Int method. Keep an unrelated module open. | Final diagnostics/navigation use the latest inputs; obsolete requests cannot restore older facts. The unrelated module remains available. |
+| X52 | Add Bridge.x with `module Bridge { package lib import Library; static Int value()=lib.value(); }`; register Bridge depending on Library and change Consumer's edge/import to Bridge. Repeat X46–X47. | Changes propagate Library → Bridge → Consumer. A broken Bridge blocks Consumer; correction restores the chain. |
+
+There is a 100 ms edit debounce; compiler cancellation remains cooperative. Source cycles and
+overlapping roots are rejected during configuration. Blocked consumers currently expose no
+semantic or structural views until their dependencies recover. Hosts must supply accurate edges;
+the server does not infer a project graph from unresolved imports or build-tool files.
+
+Automated adapter/server coverage of this setup, including uncooperative late compiler results,
+cursor cancellation, snapshot timing and binary replacement:
+
+```bash
+./gradlew :lang:lsp-server:test \
+    --tests 'org.xvm.lsp.adapter.XdkProjectTest' \
+    --tests 'org.xvm.lsp.server.XdkProjectServerTest' \
+    --rerun --no-build-cache \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
 
 ## VS Code Extension Playbook
 
@@ -1480,10 +1536,11 @@ Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-s
 - Type-definition and nominal type/method implementation lookup
 - Static call hierarchy, resolved-name tokens, read/write highlights and bounded inlay hints
 - Explicit dependency artifacts/source indices, consumer invalidation and server diagnostic refresh
+- Automatic dependency recompilation for explicitly configured roots/edges, including unsaved overlays
 
 Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
-- Project discovery, dependency builds from edited sources and a persistent cross-module index
+- Editor project discovery/configuration and a persistent cross-module index
 - External/conditional-mixin hierarchy and broader implementation targets
 - Safe rename, including named-label references and before/after binding validation
 - Diagnostic-driven quick fixes and refactorings

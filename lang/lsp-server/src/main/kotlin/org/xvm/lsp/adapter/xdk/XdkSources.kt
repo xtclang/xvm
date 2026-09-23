@@ -7,6 +7,7 @@ import java.net.URI
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
 import java.util.Map.copyOf as immutableMap
+import java.util.Set.copyOf as immutableSet
 
 /** One module's immutable text and membership, with editor overlays taking precedence over disk. */
 internal class XdkSources private constructor(
@@ -16,6 +17,16 @@ internal class XdkSources private constructor(
     private val aliases: Map<File, String>,
 ) : ModuleInfo(root, false) {
     private val text = immutableMap(text)
+
+    /** Cache identity contains only immutable input values, never a parsed ModuleInfo tree. */
+    val inputs = Inputs(this.text, immutableSet(directories), immutableMap(aliases))
+
+    data class Inputs(
+        val text: Map<File, String>,
+        val directories: Set<File>,
+        val aliases: Map<File, String>,
+    )
+
     private val entries: Map<File, List<SourceEntry>> =
         buildMap<File, MutableMap<File, SourceEntry>> {
             val boundary = File(root.parentFile, root.nameWithoutExtension)
@@ -111,7 +122,7 @@ internal class XdkSources private constructor(
                     if (cancelled()) throw CancellationException()
                     buffers[file]?.second ?: file.readText()
                 }
-            return XdkSources(root, text, directories, buffers.mapValues { it.value.first })
+            return XdkSources(root, text, directories, buffers.filterKeys { it in files }.mapValues { it.value.first })
         }
     }
 }

@@ -206,10 +206,30 @@ Each compiler attempt deserializes fresh structures. Symbol keys identify a cons
 the exact artifact/source-index revision; they are not permanent identities across library rebuilds.
 
 This is a Kotlin host API, with no editor setting or JSON-RPC configuration endpoint yet. Project
-discovery, dependency builds from edited sources and a persistent workspace reference index remain
-open. Bundled XDK binaries have no source index. See the
+discovery and a persistent workspace reference index remain open. Bundled XDK binaries have no
+source index. See the
 [dependency API verification](../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23)
 for ownership, cancellation and replacement guarantees.
+
+### Automatic recompilation of configured source modules
+
+The host can register source roots and direct dependency edges with
+`XtcLanguageServer.replaceCompilerSourceModules(listOf(XdkSourceModule(...), ...))`.
+Edits, closes and watched file changes then rebuild affected dependencies and open consumers
+automatically, preserving unchanged consumer document versions. Unsaved buffers override disk.
+The whole source closure is captured before compiling in dependency order on the serialized worker;
+100 ms debouncing coalesces edits. Only detached artifacts with matching source/dependency inputs
+are reused, and obsolete compiler/cursor results cannot publish.
+
+Failed dependencies publish their original source diagnostics and block consumers with
+`DEPENDENCY-FAILED`; an old successful artifact is not reused. Deleted/unreadable roots report
+`SOURCE-UNAVAILABLE`, and a declared/configured module-name mismatch reports `PROJECT-MODULE`.
+Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
+overlapping source graphs are rejected. Closing sessions prunes unused cached artifacts.
+
+This requires an explicit host configuration; ordinary editor launch does not discover projects or
+their dependency edges. It runs no Gradle build on edits and adds no Java/AST API. See the
+[two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
 
 ## Context-Aware Completion
 
