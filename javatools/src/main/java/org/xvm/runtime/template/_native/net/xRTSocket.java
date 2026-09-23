@@ -197,7 +197,13 @@ public class xRTSocket
             }
         };
 
-        return frame.waitForIO(cf, continuation);
+        int result = frame.waitForIO(cf, continuation);
+        if (result == Op.R_CALL) {
+            frame.m_frameNext.addExceptionCleanup(resource::closeAsync);
+        } else if (result == Op.R_EXCEPTION) {
+            resource.closeAsync();
+        }
+        return result;
     }
 
     /**
@@ -234,6 +240,10 @@ public class xRTSocket
 
     protected int constructSocket(Frame frame, OwnedResource<Socket> resource, byte[] abLocal, int nLocalPort,
                                   byte[] abRemote, int nRemotePort, int[] aiReturn) {
+        if (aiReturn.length < 2 || aiReturn[1] == Op.A_IGNORE || aiReturn[1] == Op.A_IGNORE_ASYNC) {
+            resource.closeAsync();
+            return frame.assignValue(aiReturn[0], xBoolean.TRUE);
+        }
         ConstantPool     pool         = frame.poolContext();
         ClassTemplate    template     = this;
         ClassComposition clz          = template.getCanonicalClass();

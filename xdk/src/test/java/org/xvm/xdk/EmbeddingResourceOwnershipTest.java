@@ -26,6 +26,7 @@ import java.util.Set;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -42,13 +43,23 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.Op;
+
+import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.BuildRepository;
 
 import org.xvm.runtime.Container;
+import org.xvm.runtime.Frame;
 import org.xvm.runtime.NativeContainer;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OwnedResource;
 import org.xvm.runtime.ServiceContext;
+
+import org.xvm.runtime.template.xException;
+
+import org.xvm.runtime.template._native.net.xRTSocket;
+import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -63,6 +74,105 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Timeout(120)
 class EmbeddingResourceOwnershipTest {
+    @Test
+    void undeliveredSocketsCloseBeforeTheirApplicationOwner() throws Exception {
+        try (var session = networkSession();
+             var listener = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"))) {
+            listener.setSoTimeout(10_000);
+            var module = compile(session, source("NativeResources.x"));
+            try (var execution = start(session, module, null, List.of("file", "cancel"))) {
+                var owner = snapshot(session).owners.getFirst();
+                var original = xRTSocket.INSTANCE;
+                assertNotNull(original);
+                try {
+                    for (String outcome : List.of("ignored", "construct", "assign", "asyncAssign")) {
+                        xRTSocket.INSTANCE = outcome.equals("construct")
+                                ? new xRTSocket(nativeContainer(session), original.getStructure(), false) {
+                                    @Override
+                                    protected int constructSocket(Frame frame, OwnedResource<Socket> resource,
+                                            byte[] local, int localPort, byte[] remote, int remotePort, int[] returns) {
+                                        return failAsynchronously(frame);
+                                    }
+                                } : original;
+                        var operation = new NativeFunctionHandle((frame, args, result) -> {
+                            if (outcome.equals("assign") || outcome.equals("asyncAssign")) {
+                                return frame.call(new FailingSocketAssignment(frame, listener.getLocalPort(),
+                                        outcome.equals("asyncAssign")));
+                            }
+                            return xRTSocket.connect(frame, new byte[] {127, 0, 0, 1}, listener.getLocalPort(),
+                                    null, 0, outcome.equals("ignored")
+                                            ? new int[] {Op.A_IGNORE, Op.A_IGNORE}
+                                            : new int[] {Op.A_STACK, Op.A_STACK});
+                        });
+                        var result = owner.getServiceContext().postRequest(null, operation, new ObjectHandle[0], 0);
+                        try (Socket peer = listener.accept()) {
+                            peer.setSoTimeout(10_000);
+                            if (outcome.equals("ignored")) {
+                                result.get(10, TimeUnit.SECONDS);
+                            } else {
+                                var failure = assertThrows(ExecutionException.class,
+                                        () -> result.get(10, TimeUnit.SECONDS), outcome);
+                                assertTrue(failure.getCause().toString().contains("expected socket"),
+                                        failure::toString);
+                            }
+                            assertEquals(-1, peer.getInputStream().read(), outcome);
+                            assertTrue(execution.control.running(), "Owner shutdown must not cause socket disposal");
+                            assertTrue(snapshot(session).sockets.isEmpty(), outcome);
+                        }
+                    }
+                } finally {
+                    xRTSocket.INSTANCE = original;
+                }
+            }
+            assertHealthy(session);
+        }
+    }
+
+    /**
+     * Exercise the real interpreter's asynchronous exception/continuation machinery, without
+     * changing the production socket constructor to contain a test-only failure switch.
+     */
+    private static int failAsynchronously(Frame frame) {
+        Op fail = new Op() {
+            @Override
+            public int process(Frame caller, int pc) {
+                return caller.raiseException(xException.ioException(caller, "expected socket handoff failure"));
+            }
+
+            @Override
+            public String toString() {
+                return "FailSocketHandoff";
+            }
+        };
+        return frame.call(frame.createNativeFrame(new Op[] {fail}, new ObjectHandle[0], Op.A_IGNORE, null));
+    }
+
+    private static class FailingSocketAssignment extends Frame {
+        FailingSocketAssignment(Frame caller, int port, boolean asynchronous) {
+            super(caller, new Op[] {new Op() {
+                @Override
+                public int process(Frame frame, int pc) {
+                    return xRTSocket.connect(frame, new byte[] {127, 0, 0, 1}, port,
+                            null, 0, new int[] {0, 1});
+                }
+
+                @Override
+                public String toString() {
+                    return "ConnectWithFailingAssignment";
+                }
+            }, Return_0.INSTANCE}, new ObjectHandle[2], Op.A_IGNORE, null);
+            this.asynchronous = asynchronous;
+        }
+
+        @Override
+        public int assignValues(int[] returns, ObjectHandle... values) {
+            return asynchronous ? failAsynchronously(this)
+                    : raiseException(xException.ioException(this, "expected socket assignment failure"));
+        }
+
+        private final boolean asynchronous;
+    }
+
     @Test
     void timedOutControlFinishesHostCleanupWhenItsReleaseCompletes() throws Exception {
         var cleanup = new CompletableFuture<Void>();

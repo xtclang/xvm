@@ -1890,6 +1890,34 @@ public class Frame
     }
 
     /**
+     * Dispose of an undelivered native result if this call or one of its existing continuations
+     * fails. Successful completion disarms the cleanup; asynchronous continuation calls carry it
+     * forward with the continuation chain. Cleanup must not throw or block.
+     *
+     * @param cleanup  the failure cleanup
+     */
+    public void addExceptionCleanup(Runnable cleanup) {
+        addContinuation(new Continuation() {
+            @Override
+            public int proceed(Frame caller) {
+                pending = null;
+                return Op.R_NEXT;
+            }
+
+            @Override
+            public void onException() {
+                Runnable action = pending;
+                pending = null;
+                if (action != null) {
+                    action.run();
+                }
+            }
+
+            private Runnable pending = cleanup;
+        });
+    }
+
+    /**
      * @return the current Synchronicity value for this frame
      */
     public Synchronicity getSynchronicity() {
@@ -2583,6 +2611,12 @@ public class Frame
          * @return R_NEXT, R_CALL, R_EXCEPTION or a positive iPC value
          */
         int proceed(Frame frameCaller);
+
+        /**
+         * Release state when the call or its continuation fails instead of returning normally.
+         * Implementations must be idempotent, nonblocking and must not throw.
+         */
+        default void onException() {}
     }
 
     /**
@@ -2684,6 +2718,11 @@ public class Frame
 
         public void add(Frame.Continuation stepNext) {
             f_list.add(stepNext);
+        }
+
+        @Override
+        public void onException() {
+            f_list.forEach(Continuation::onException);
         }
 
         @Override

@@ -607,12 +607,19 @@ public class ServiceContext {
                     iPC = frame.m_iPC + 1;
                 }
                 if (continuation != null) {
-                    int iResult = continuation.proceed(frame);
+                    int iResult;
+                    try {
+                        iResult = continuation.proceed(frame);
+                    } catch (RuntimeException | Error e) {
+                        continuation.onException();
+                        throw e;
+                    }
                     switch (iResult) {
                     case Op.R_NEXT:
                         break;
 
                     case Op.R_EXCEPTION:
+                        continuation.onException();
                         // continuation is allowed to "throw"
                         assert frame.m_hException != null;
 
@@ -654,6 +661,9 @@ public class ServiceContext {
             }
 
             case Op.R_RETURN_EXCEPTION:
+                if (frame.m_continuation != null) {
+                    frame.m_continuation.onException();
+                }
                 frame = frame.f_framePrev;
                 // fall-through
 
@@ -705,6 +715,9 @@ public class ServiceContext {
                     }
 
                     // not handled by this frame
+                    if (frame.m_continuation != null) {
+                        frame.m_continuation.onException();
+                    }
                     Frame frameCaller = frame.f_framePrev;
                     if (frameCaller != null) {
                         frame = frameCaller;
