@@ -36,7 +36,11 @@ Broader syntax, cross-module indexing and the unexamined TypeInfo families remai
 Static call hierarchy, resolved-name semantic tokens, read/write highlights and bounded inlay
 hints now have consumers. Rename probes expose silent capture and missing named-label references;
 rename remains off. Serialized-dependency and snapshot-lifetime probes are recorded in the
-integration plan; detached dependency source indexing and automatic reverse invalidation remain open.
+integration plan. A versioned dependency host API now exports detached source indices, replaces
+immutable artifact sets and invalidates direct/transitive consumers, with server diagnostic refresh
+at unchanged document versions. Definition/type-definition and inherited implementation bodies can
+resolve into host-indexed sources. Editor project discovery, dependency builds from edited sources,
+external hierarchy and a persistent cross-module reference index remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -923,7 +927,7 @@ behaviour can be counted, count it.
 This assessment records the branch before the later hardening passes. The rationale below includes
 decisions that have since been implemented, notably `void log`, nonthrowing `RUNTIME`, final listener
 ownership and TypeInfo replay. It is not the current backlog. Use
-[the integration plan](errs-integration-plan.md#remaining-limitations-and-the-next-hardening-work)
+[the integration plan](errs-integration-plan.md#remaining-work-to-establish-the-full-api-poc-2026-09-23)
 for current limits and the pre-extraction review.
 
 ### Gap to full parity
@@ -1197,7 +1201,9 @@ types and method calls - and references tell `Holder.x` from `Point.x`, which no
    The earlier claim that the compiler retained no such identity was incorrect.
 3. **Cross-file ownership now covers a module.** Shared module compilation and unsaved overlays
    provide source spans and identity-based definition/references across member files. Dependency
-   sources and other workspace modules still require broader ownership and indexing.
+   artifacts now carry optional detached source indices, allowing definition/type-definition and
+   inherited body links across that boundary. References and workspace-wide implementation searches
+   still need broader ownership and indexing; artifact replacement does not build changed libraries.
 4. **Constructor-parameter properties: fixed.** The compiler does synthesize property declaration
    statements with the parameter's source token. The parameter now retains the corresponding
    identity, so navigation also works when requested at the declaration. Ordinary method parameters
@@ -1216,8 +1222,20 @@ the AST per open document for folding and selection; hover and navigation use th
 consumers described below. Safe rename still needs conflict/edit validation and broader ownership
 for workspace-wide changes. Call hierarchy, resolved-name tokens and bounded inlay hints now use
 copied facts; the current requirements matrix and negative rename probes are in the integration plan.
+The dependency host API now provides versioned artifact/source ownership and consumer invalidation.
+Editor project wiring and dependency builds remain separate from this explicit host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+**Dependency host API follow-up (2026-09-23):** no Java embedding, AST or cloning changes were
+needed. `Compilation.toDependency()` serializes the successful output and copies existing declaration
+locations into an immutable Kotlin index keyed by emitted constant-table positions. Consumer
+attempts match identities by compiler equality and read semantic metadata from the linked consumer
+pool, never from the detached artifact's unlinked constants. `XdkDependency` retains only bytes,
+locations and revisioned keys; fresh compiler objects live within each attempt. The source index
+belongs in the host layer because the host owns source/artifact revisions and replacement policy.
+The audit records the cross-pool mistake caught while implementing this copier separately from
+pre-existing ambient-pool defects.
 
 **Remaining-consumer verification (2026-09-23):** no AST fields, getters or cloning changes were
 needed. Kotlin derives caller ownership from method/lambda nodes and parent boundaries, source

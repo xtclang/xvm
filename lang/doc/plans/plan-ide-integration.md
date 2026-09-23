@@ -1,6 +1,6 @@
 # Ecstasy Language Support Implementation
 
-> **Last Updated**: 2026-09-22 (adapter capability review)
+> **Last Updated**: 2026-09-23 (semantic consumers and dependency host API)
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -64,9 +64,9 @@ the optional operations.
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
-| `MockAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
-| `TreeSitterAdapter` | Tree-sitter grammar | ~85% (syntax + structure + workspace index) | **DEFAULT** - Implemented |
-| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics, cross-file semantic navigation, bounded completion/signature help, workspace symbols over current modules and direct source type hierarchy | **Opt-in** (`-Plsp.adapter=compiler`); Tree-sitter remains the shipped default |
+| `MockAdapter` | Regex patterns | Syntax-level features without an AST | Implemented |
+| `TreeSitterAdapter` | Tree-sitter grammar | Syntax, structure and workspace index | **DEFAULT** - Implemented |
+| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics/navigation, bounded completion/signatures, type and implementation lookup, hierarchy, tokens, hints and explicit dependency source indices | **Opt-in** (`-Plsp.adapter=compiler`); Tree-sitter remains the shipped default |
 
 **`XdkAdapter` is no longer a placeholder.** It compiles through the embedding API and reports
 what the compiler actually says - syntax *and* semantics, with the compiler's own codes, messages
@@ -82,9 +82,10 @@ source occurrences without retaining compiler objects. The compiler exposes the 
 lambda capture associations live in a helper owned by the lambda compilation context.
 
 The compiler backend supplies bounded member completion and signature help through explicit cursor
-analysis and copied selected-call facts. Rename, semantic tokens, document links, formatting and
-code actions remain absent. Call hierarchy, go-to-type-definition, find-implementations, inlay
-hints, code lenses and linked editing are also unimplemented. A trailing `.` still produces a
+analysis and copied selected-call facts. Type-definition, type/method implementation lookup,
+static call hierarchy, resolved-name semantic tokens, read/write highlights and bounded inlay hints
+also use copied facts. Rename, document links, formatting, code actions, code lenses and linked
+editing remain unsupported. A trailing `.` still produces a
 normal syntax diagnostic; a separate cursor probe can inspect its intact receiver without
 accepting or emitting the damaged expression. Compiler mode stays Java-only.
 The bundled XDK is part of the server; no external installation is required.
@@ -93,8 +94,10 @@ Navigation includes type-parameter declarations and anonymous-class captures. Mo
 combine disk sources with unsaved overlays, including new member files, and build per-source views
 in one identity domain. Definitions in bundled libraries still have no source target. Workspace
 symbols search current completed modules by case-insensitive substring, including closed members;
-edits invalidate those views and closing the last open member releases the session. This does not
-index other workspace modules or join identities from separate compilations.
+edits invalidate those views and closing the last open member releases the session. An explicit
+host API can supply compiled dependency artifacts and detached source indices. Revisioned keys
+associate dependency declarations across consumer attempts; these are not stable identities across
+dependency rebuilds or a persistent workspace reference index.
 
 The current verification, reporting audit and remaining work are recorded in
 [errs-integration-plan.md](../../../docs/errs-integration-plan.md).
@@ -119,7 +122,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus compiler tokens for resolved names |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
-| Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the current module |
+| Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - across the current module, including closed member files |
 | Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits |
@@ -143,8 +146,8 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Linked editing | - | Same-file identifiers | Not implemented |
 | Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
-| Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns within the current module |
-| Find implementations | - | - | **Partial** - concrete nominal source types and method bodies from compiler override chains, including generic overrides, inherited/default/anonymous methods and composed mixins; current module only |
+| Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
+| Find implementations | - | - | **Partial** - concrete nominal source types and method bodies from compiler override chains, including generic overrides, inherited/default/anonymous methods and composed mixins; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
 | Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
 
@@ -155,9 +158,20 @@ source target. Implementation lookup uses declaration identities and compiler me
 it does not match by spelling or arity. It requires successful compilation. Type results are
 nominal declaration-level implementations (including a concrete type itself), not a search for
 structurally assignable types or generic instantiations. Property/accessor implementations,
-synthetic delegation/redirect targets and dependency-source implementations remain unavailable.
+synthetic delegation/redirect targets and a search across all dependency implementations remain
+unavailable. An inherited dependency body in a current source type's method chain can resolve when
+the host supplies its declaration source index.
 An explicit reporting inspection runs on the compiler worker; request threads use immutable
 copied locations. See the [manual playbook](../manual-test-plan.md#xdkadapter-playbook).
+
+The Kotlin host API exports successful compilations with `Compilation.toDependency()` and installs
+the complete artifact set with `XtcLanguageServer.replaceCompilerDependencies(...)`. Replacements
+invalidate affected consumers, including transitive imports, cancel pending work and republish
+diagnostics at current document versions. Unrelated successful sessions survive. Binary-only
+artifacts have no invented source targets. The standard editor launch still supplies only bundled
+XDK modules: project configuration, dependency discovery/builds from edited source overlays, external
+type hierarchy and workspace-wide reference indexing are not implemented. See the
+[dependency verification record](../../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23).
 
 Call hierarchy includes written anonymous methods and recursive/overloaded calls. It requires a
 successful module snapshot and source locations at both ends. Runtime dispatch expansion,
@@ -310,11 +324,10 @@ Full tree-sitter support for fast, incremental parsing:
    - Token types: keyword, decorator, comment, string, number, operator, type (heuristic),
      method (call-site heuristic), class/interface/enum/property/variable/parameter/namespace
 
-   **Phase 2 -- Compiler-based (requires pluggable compiler):**
-   - Distinguish classes vs interfaces vs enums vs type parameters
-   - Distinguish variables vs parameters vs properties
-   - Add modifiers: `declaration`, `definition`, `readonly`, `static`, `deprecated`
-   - Cross-file type resolution for accurate identifier classification
+   **Compiler tokens -- bounded implementation complete:**
+   - Resolved type/property/local/parameter names and module-file identities
+   - Declaration, readonly/static/abstract and modification modifiers where established
+   - Broader syntax and additional modifiers remain follow-ups; lexical coloring stays in TextMate
 
 3. **Complete VS Code extension**
    - Finish LSP client integration
@@ -347,19 +360,21 @@ Full tree-sitter support for fast, incremental parsing:
 6. **Extend the compiler adapter**
    - Diagnostics, bundled libraries, semantic snapshots, module overlays and cross-file navigation are implemented
    - Preserve regression coverage for type-parameter declarations and anonymous-class captures
-   - Extend module ownership to dependency sources and other workspace modules before workspace-wide references/rename
-   - Direct source type hierarchy is implemented; method implementation lookup still needs override relationships
-   - Copy resolved call edges for call hierarchy
+   - Versioned dependency artifacts/source indices and consumer invalidation now have an explicit host API
+   - Add editor project discovery, dependency builds and persistent indexing before workspace-wide references/rename
+   - Direct source type hierarchy, type-definition and actual method-chain implementation lookup are implemented
+   - Static selected-call hierarchy, resolved-name tokens, read/write highlights and bounded hints are implemented
    - Scope, imported types, static lookup and bounded incomplete-call fitting now have compiler-backed consumers
-   - Extend to the documented syntax/callable limits only with compiler evidence; next API probes are type-definition and implementation lookup
+   - Safe rename needs named-label bindings and before/after binding checks; sustained lifecycle and compatibility checks remain the API POC gate
+   - Extend the documented syntax/callable limits only with compiler evidence
 
    The selected implementation uses the existing javatools compiler. The older research-fork
    rewrite schedules are not the current integration plan.
 
-7. **Hybrid adapter strategy**
-   - Use tree-sitter for fast syntax feedback
-   - Use compiler adapter for semantic features when available
-   - Graceful degradation when compiler is unavailable
+7. **Compiler recovery and adapter policy**
+   - Keep Tree-sitter as the shipped default and compiler mode opt-in
+   - Compiler mode stays Java-only; improve Java parser recovery without a Tree-sitter fallback
+   - A combined adapter was an earlier proposal and is not the current implementation plan
 
 ### Long-term (Advanced Features)
 
@@ -535,7 +550,7 @@ composite root's `gradle.properties` at settings time).
 ## Related Documentation
 
 - **[plan-tree-sitter.md](./plan-tree-sitter.md)** - Tree-sitter grammar status and development guide
-- **[lsp-feature-tiers.md](./lsp-feature-tiers.md)** - LSP capability tiering: what tree-sitter can still add, what fits a future semantic-model layer, and what truly requires compiler-backed semantics
+- **[lsp-feature-tiers.md](./lsp-feature-tiers.md)** - Historical research-fork proposal; its APIs, coverage figures and schedules do not describe the current compiler integration
 - **[idea-specific.md](./idea-specific.md)** - IntelliJ-specific roadmap beyond standard LSP behavior
 - **[vscode-specific.md](./vscode-specific.md)** - VS Code-specific roadmap beyond standard LSP behavior
 - *Internal documentation* - Comprehensive architecture analysis and compiler modification plans
