@@ -26,6 +26,7 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
@@ -38,6 +39,8 @@ import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Tag
@@ -64,6 +67,36 @@ import java.util.jar.JarOutputStream
 class XdkStdioTest {
     @TempDir
     lateinit var directory: Path
+
+    @Test
+    fun `private parameter rename round trips versioned edits and rejects silent capture`() {
+        val source = "module Stdio { private Int pick(Int input)=input; Int run()=pick(input=1); }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(versionedEdits = true)
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val result =
+                requireNotNull(session.await(documents.rename(RenameParams(document, Position(0, source.lastIndexOf("input")), "value"))))
+            // LSP4J reconstructs its default empty map when the wire omits the changes member.
+            assertThat(result.changes).isNullOrEmpty()
+            val edit = result.documentChanges.single().left
+            assertThat(edit.textDocument.uri).isEqualTo(URI)
+            assertThat(edit.textDocument.version).isEqualTo(1)
+            assertThat(edit.edits.map { it.left.newText }).containsExactly("value", "value", "value")
+            val changed =
+                edit.edits.map { it.left }.sortedByDescending { it.range.start.character }.fold(source) { text, change ->
+                    text.replaceRange(change.range.start.character, change.range.end.character, change.newText)
+                }
+            session.change(changed, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            val capture = "module Stdio { Int value=10; Int run() { Int local=1; return local+value; } }"
+            session.change(capture, 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            assertThat(session.await(documents.rename(RenameParams(document, Position(0, capture.indexOf("local")), "value")))).isNull()
+        }
+    }
 
     @Test
     fun `compiler call hierarchy tokens and hints round trip and reject stale items`() {
@@ -570,8 +603,21 @@ class XdkStdioTest {
         private val listening = launcher.startListening()
         val server = launcher.remoteProxy
 
-        fun initialize() {
-            val initialized = await(server.initialize(InitializeParams().apply { capabilities = ClientCapabilities() }))
+        fun initialize(versionedEdits: Boolean = false) {
+            val initialized =
+                await(
+                    server.initialize(
+                        InitializeParams().apply {
+                            capabilities =
+                                ClientCapabilities().apply {
+                                    workspace =
+                                        WorkspaceClientCapabilities().apply {
+                                            workspaceEdit = WorkspaceEditCapabilities().apply { documentChanges = versionedEdits }
+                                        }
+                                }
+                        },
+                    ),
+                )
             assertThat(initialized.capabilities.definitionProvider.left).isTrue()
             assertThat(initialized.capabilities.typeDefinitionProvider.left).isTrue()
             assertThat(initialized.capabilities.implementationProvider.left).isTrue()
@@ -582,7 +628,11 @@ class XdkStdioTest {
             assertThat(initialized.capabilities.referencesProvider.left).isTrue()
             assertThat(initialized.capabilities.documentHighlightProvider.left).isTrue()
             assertThat(initialized.capabilities.completionProvider).isNotNull()
-            assertThat(initialized.capabilities.renameProvider).isNull()
+            if (versionedEdits) {
+                assertThat(initialized.capabilities.renameProvider.right.prepareProvider).isTrue()
+            } else {
+                assertThat(initialized.capabilities.renameProvider).isNull()
+            }
             assertThat(initialized.capabilities.signatureHelpProvider).isNotNull()
             server.initialized(InitializedParams())
         }

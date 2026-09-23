@@ -24,7 +24,8 @@ selected call signatures and bounded receiver-member candidates. Completion/sign
 reach the server, including typed member prefixes and calls with existing closing parentheses.
 Subsequent passes add scope completion, candidate argument fitting, type/implementation lookup,
 static call hierarchy, tokens, hints and the explicit dependency artifact/source host API. Broader
-incomplete-source analysis, safe rename and persistent cross-module indexing remain open. The numbered
+incomplete-source analysis, member/workspace rename and persistent cross-module indexing remain open.
+Bounded local/private-parameter rename is implemented in the follow-up below. The numbered
 passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
 
 ### Remaining work to establish the full API POC, 2026-09-23
@@ -60,8 +61,8 @@ Execution checklist (complete each item with the evidence specified below):
     identities and actual compiler method chains; no new Java embedding/AST API.
   - [x] Static call hierarchy, resolved-name semantic tokens, read/write highlights and inferred-type/
     selected-parameter hints, including negative controls and immutable copying.
-  - [x] Module-local rename **probes**: captures preserve identities; recompilation alone misses
-    silent capture; named labels are absent from reference occurrences. Production rename stays off.
+  - [x] Module-local rename probes established that recompilation alone misses silent capture.
+    The follow-up now binds named labels and implements bounded local/private-parameter rename.
 - [x] **5. Dependency/source boundary — explicit host API proven.** Identities, source locations
   and dependency replacement now have real adapter/server consumers.
   - [x] Serialized dependency identities match source declarations by compiler equality, separate
@@ -71,12 +72,15 @@ Execution checklist (complete each item with the evidence specified below):
     pending cursor/compile cancellation. Server reanalysis preserves current document versions.
   - The automatic recompilation pass below now adds source-overlay builds for explicit roots/edges.
     Editor project discovery/configuration and a persistent workspace reference index remain separate.
-- [ ] **6. Lifetime and compatibility.** Sustained edits/cancellation/retention, output comparison,
-  migration examples and the completed API requirements matrix.
+- [x] **6. Lifetime and compatibility — bounded integrated API gate.** Repeated edits/cancellation/
+  retention, output comparison, migration examples and the API requirements matrix.
   - [x] Repeated fresh snapshots, concurrent pool-free queries, recursive compiler-object exclusion,
     and byte-identical output with/without semantic inspection after timestamp normalization.
-  - [ ] Sustained module/cursor cancellation and heap retention measurement; compare extracted PR
-    outputs against their own bases and run their compatibility/migration examples independently.
+  - [x] Repeat source-graph rebuilds, repository replacement, cursor/rename cancellation and close/
+    reopen; verify release of weakly observed compiler attempts/roots/pools and record latency.
+  - [x] Executable integrated listener, constructor, record-pattern and pool-alias migration examples.
+  - Extraction gate: compare each PR against its own base and rerun migration/examples independently.
+    A prolonged interactive soak is still open; the bounded workload does not establish one.
 
 The eleventh pass establishes selected-call provenance and bounded partial receiver facts. It does
 not yet establish that the embedding/AST surface is sufficient for every intended editor consumer.
@@ -93,9 +97,9 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; compound/conditional prefixes and arguments following the cursor remain unavailable. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
 | 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Broader syntax, enclosing-instance member completion, type-valued receiver fallbacks and function-valued/receiver-rewritten calls remain outside this slice. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
-| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Rename probes expose silent capture and missing named-label references; property/accessor implementation and dynamic dispatch remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest` and packaged stdio. Safe rename remains unadvertised. |
+| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation; member/override rename, property/accessor implementation and dynamic dispatch remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor project discovery/configuration and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions. |
-| 6. Lifetime and compatibility | Current concurrency/retention measurements are bounded; collectors, cursor requests and dependency replacement need sustained exercise. Public listener signatures and result record shapes have migration implications. | Repeated multi-file edits, cancellation, close/reopen and shutdown release attempts/ASTs/pools; copied queries remain pool-free on other threads. Record latency observations, compare compiled output against the base, and finalize constructor/record-pattern and listener migration examples. |
+| 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
 
 Use these consumers to close an API requirements matrix: required fact, existing accessor or new
 hook, compiler versus Kotlin ownership, complete/partial/unavailable behavior and a regression
@@ -105,6 +109,21 @@ implementations of every LSP handler need not delay that API decision. Unsupport
 capabilities remain unadvertised, and Tree-sitter stays the shipped default.
 
 ### Automatic dependency recompilation task list, 2026-09-23
+
+Follow-on order agreed after automatic recompilation (bounded implementation complete):
+
+- [x] Copy named argument labels and their exact token spans into attempt-owned invocation facts;
+  resolve them to the selected source parameter in Kotlin. No additional AST state.
+- [x] Prove bounded local/private-parameter rename by recompiling proposed edits and comparing all
+  recorded bindings, including untouched references and selected calls. Require current snapshots,
+  cancellation and versioned edits; keep wider member/override/workspace rename unavailable.
+- [x] Exercise repeated source-graph rebuilds, dependency replacement, cursor/rename cancellation,
+  close/reopen and compiler-object retention; record actual measurements.
+- [x] Finalize compatibility examples, API ownership/limits, capabilities and manual playbook.
+  Tests against each extracted PR's own base remain an extraction gate.
+
+These steps use the explicit source graph and existing immutable snapshots. Automatic project
+discovery is not a prerequisite.
 
 This implementation extends the artifact host API to explicitly configured source modules.
 The host supplies module names, source roots and dependency edges; automatic project discovery
@@ -125,9 +144,70 @@ serialized compiler worker. No Gradle invocation runs on an editor change.
   changes, dependency failures, deletion/restoration, close/reopen, rapid edits and stale results.
   Update capability/API notes and the manual playbook with the supported setup and limits.
 
-After this pass, safe rename still needs label bindings and before/after binding validation before
-it can be advertised. Sustained lifecycle measurements and compatibility checks remain the final
-API POC gate. Broad project discovery and persistent workspace indexing remain later work.
+The following rename/lifetime pass closes the bounded integrated API gate. Broad project discovery,
+member/workspace rename and persistent indexing remain later work. PR extraction still requires
+validation of every intermediate slice on its own prerequisites.
+
+### Bounded rename, lifetime and compatibility, 2026-09-23
+
+No discovery infrastructure was needed. The host's explicit graph and immutable module snapshots
+provide the ownership boundary for this pass. Tree-sitter remains the shipped default.
+
+| Required fact / behavior | Owner and implementation | Evidence / supported boundary |
+|---|---|---|
+| Written label to selected parameter | Java `InvocationBinding.Argument.label()` copies `Label(name, startPosition, endPosition)` before argument conversion; Kotlin uses selected method identity and visible register index | `CompilerRenameRequirementsTest`, `XdkRenameTest`: exact label spans, overloads, reordered/default and generic parameters |
+| Module import identity | Kotlin copier reads the package's existing linked imported module | Imports bypass ordinary type-name resolution; dependency-backed rename now compares their compiler identities without spelling guesses or new AST hooks |
+| Edit closure | Kotlin `XdkRename` selects local/private ordinary-method parameter occurrences across copied module views | Captures stay associated; shadowed lambda parameters stay unchanged. Public/lambda/constructor parameters, method-value escapes and member/override/workspace rename are excluded |
+| Meaning preservation | Two fresh worker-only compilations replay the same immutable membership/text and dependencies, then compare every recorded occurrence and selected-call edge | Successful compilation alone is insufficient: silent capture of an untouched property is rejected. Unknown bindings or a failed attempt reject the edit. External constants are compared by compiler equality only on the worker; no compiler object escapes the proof |
+| Current edits | Adapter retires rename work with module/dependency changes; server checks request lifetime and returns `documentChanges` with open-document versions | Closed files use a null version and their captured text/membership is rechecked before return. `XdkRenameServerTest`, request cancellation tests and packaged stdio cover the protocol. No temporary proof diagnostics or proposed source are installed |
+| Ownership and release | Attempt collectors and temporary proofs remain on the compiler worker; source/artifact caches retain only detached inputs | `XdkRetentionTest`: 24 close/reopen cycles, 192 coalesced edits, alternating binary dependencies, source builds, accepted/canceled rename and partial cursor probes |
+| Migration | Integrated Java client examples in `EmbeddingApiCompatibilityTest` | Stateful listener reporting/abort queries, rejected null listener, original constructors, current record patterns and deprecated runtime-pool alias |
+
+The full-suite retention sample observed 482 weak references to results, source roots and pools;
+zero remained reachable after document close or after shutdown and requested GC. Rebuild latency
+was median 214 ms and p95 231 ms, including 100 ms debounce. The earlier focused run observed 481
+references, median 212 ms and p95 239 ms; the count varies with cancellation timing. These are local,
+bounded measurements, not a latency guarantee, retained-byte census or multi-hour editor soak.
+The snapshot purity/output regression also checks pool-free copied values and identical emitted
+bytes with/without semantic inspection after timestamp normalization.
+
+Validation: JUnit XML reports 479 compiler tests (40 existing skips), 733 LSP tests (three existing
+skips), and 15 packaged stdio tests (zero skips), with no failures/errors: **1,184 executed tests**.
+The new rename, retention and migration regressions all ran. `spotlessCheck` passed. The stdio
+client reconstructs an omitted `WorkspaceEdit.changes` as an empty map; its assertion permits that
+while requiring actual versioned `documentChanges`. No remote CI or interactive editor run was made.
+
+The canonical capability matrix and playbook now include the bounded rename policy and X53–X58.
+Interactive editor cases remain unrun. Per-PR output comparison and migration tests must still run
+against each extracted slice's own prerequisites; the integrated result cannot establish that.
+
+#### Compatibility and migration contract
+
+| API change | Policy / required migration |
+|---|---|
+| `boolean log(ErrorInfo)` to `void log(ErrorInfo)` | Deliberate source/binary break. Recompile listener implementations and clients; report first, then ask `isAbortDesired()`. No return-type-only Java compatibility overload is possible |
+| Null/ambient listeners | Supply an explicit non-null listener at reporting boundaries. Use `ErrorListener.collecting(...)` or `ErrorList` for stateful host reporting; derived `silence(PROBE)` for intentional speculation. Removed ambient setters/lookups have no compatibility shim |
+| Runtime pool name | Deprecated `getConstantPool()` still delegates to `ensureRuntimePool()` and retains its runtime-initialization behavior. Compiler clients use `Compilation.pool()` |
+| `Compilation` record | Original three- and four-argument constructors remain. Current record pattern has five components: module, file, ast, sourceTrees, callBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
+| `PartialAnalysis` record | Three- and four-argument constructors remain; current five-component pattern adds callBindings and cursorBindings to sourceTrees, sites, pool |
+| `InvocationBinding.Argument` record | Three- and four-argument constructors remain. Current five-component pattern includes `label`; positional and legacy construction has a null label. A legacy `named=true` is not proof that a label span was supplied |
+| LSP rename | Additive, bounded and negotiated through client `documentChanges` support. No unversioned fallback. The default adapter method retains existing synchronous adapters; compiler rename runs asynchronously |
+
+For a collecting host, replace boolean-report control flow with separate reporting and state checks:
+
+```java
+ErrorListener errors = ErrorListener.collecting(hostDiagnostics::add);
+errors.error(code, site, arguments);
+if (errors.isAbortDesired()) {
+    return;
+}
+```
+
+A bare `ErrorListener` lambda implements only `log`; it does not remember serious errors or abort
+state. Use the stateful factory for the compiler pipeline. The migration test demonstrates this
+without bootstrapping the runtime. Use `Compilation.forFile(file)` for partial file results rather
+than positional nulls. Constructors retained for compatibility do not promise unchanged record
+pattern arity, serialization shape or equality semantics across releases.
 
 The runtime-annotation metadata correction should be extracted as an independent compiler fix,
 with its annotation application and reporting-TypeInfo controls. The structured `EMB-6` module-root
@@ -427,15 +507,15 @@ or Tree-sitter fallback is loaded.
 | Read/write usage and modifiers | Existing assignment/lvalue/sequence syntax, Register/Component metadata; Kotlin copying | `XdkPresentationTest`: direct/compound/increment writes, receiver reads, captures, shadowing, declarations and static methods. Partial snapshots classify only facts actually resolved. |
 | Inferred local types | Existing `VariableTypeExpression` child and validated register type | Successful compilation required for type hints; explicit types and failed-inference placeholders omitted. Copied hints need no compiler pool. Lambda return hints remain absent. |
 | Written named-argument status | New `InvocationBinding.Argument.named` component, captured with the existing source mapping before argument rewrites | Selected overload and named/default controls. Necessary because validation rewrites the written arguments. No new AST state or clone obligation. |
-| Rename closure and conflict detection | Existing copied occurrence identities plus a fresh compilation of edited text | `CompilerRenameRequirementsTest`: captured-local edit works; same-file property capture still compiles but changes binding; parameter rename misses named labels. These are regression probes, not a safe rename API. |
+| Rename closure and conflict detection | Attempt-owned argument label spans, selected method/index, existing parameter registers and linked import identities; Kotlin recompile-and-compare proof | `CompilerRenameRequirementsTest`, `XdkRenameTest` and server/stdio tests: captured locals, private named parameters, untouched binding comparison, closed-member input checks, cancellation and versioned edits. Public/lambda/constructor parameters, method escapes and member/workspace rename remain unavailable. |
 | Cross-module identity/source join | Compiler `IdentityConstant.equals` and existing declaration tokens; detached Kotlin artifact/source index | `CompilerBoundaryRequirementsTest` supplies the worker-level proof. The subsequent `XdkDependencyTest` verifies consumer source locations and revisioned keys across attempts. Never use display strings or snapshot UUIDs as persistent keys. |
 | Detached lifetime and emission | Immutable Kotlin facts; explicit reporting inspection on the compiler worker | Twenty retained generations queried concurrently; recursive graph check excludes compiler objects. Inspection leaves emitted bytes unchanged after normalizing only the compilation timestamp. This is not an extracted-PR/base comparison or a heap-leak measurement. |
 
 Rename must compare bindings of **unmodified** references too: changing `local` to `value` can
 silently capture a previously resolved property use. A successful compile is insufficient. Named
-argument labels need source-to-parameter associations before parameter rename is safe; the new
-`named` flag deliberately does not pretend to supply those label spans. Member/override rename
-also needs an explicit affected-source boundary. Rename remains unadvertised.
+argument labels needed source-to-parameter associations at this milestone; the original
+`named` flag did not supply those spans. The rename follow-up now supplies immutable label records. Member/override rename
+also needs an explicit affected-source boundary. The later bounded consumer is recorded above.
 
 Dependency source lookup is possible with existing compiler identities while the worker owns both
 source and consumer compilations. A source index must detach that association and tie it to the
@@ -789,6 +869,7 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L12 | Classify resolved names and expose bounded inlay hints | L6 and L7; carry written named-argument status in E4 |
 | L13 | Export versioned dependency source indices and replace host repositories | L4, L8 and L10; no new Java/AST API |
 | L14 | Rebuild configured source dependencies and refresh consumers automatically | L5 and L13; Kotlin host scheduling only |
+| L15 | Validate local/private-parameter rename and publish versioned edits | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -798,8 +879,8 @@ the partial compiler API; L8 proves the asynchronous editor consumer and protoco
 C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotlin/protocol consumers.
 L10, L11 and L12 can follow their listed dependencies independently of the later completion/scope slices.
 L13 follows with an explicit artifact host API; L14 adds automatic rebuilding for configured source
-modules. Automatic project/build discovery stays separate. These are thirty-one eventual PRs,
-not thirty-one simultaneous open branches.
+modules. Automatic project/build discovery stays separate. These are thirty-two eventual PRs,
+not thirty-two simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -1244,11 +1325,11 @@ No Java/AST changes belong in this slice.
 selected call mappings drive hints. Copy assignment usage and existing register/component modifiers
 in Kotlin. Include `InvocationBinding.Argument.named` in E4's final provenance shape; preserve the
 three-argument constructor and document record-pattern migration there. Carry adapter/stdio tests,
-failed-inference controls and capability/playbook updates here. Rename remains unadvertised.
+failed-inference controls and capability/playbook updates here. L15 separately advertises bounded rename.
 
 The rename, serialized dependency and lifetime probes are acceptance evidence for the relevant
 source-binding/snapshot slices (E2/L4/L7/L10), not a claim that a rename engine or workspace index
-has shipped. During extraction split their fixtures along those actual dependencies and rerun each
+has shipped at that historical stage. L15 now adds the bounded rename consumer. During extraction split their fixtures along those actual dependencies and rerun each
 PR in isolation.
 
 ### L13 — Versioned dependency artifacts and source lookup
@@ -1284,6 +1365,16 @@ No Java/AST changes, project discovery or persistent cross-module reference inde
 Any net change not assigned to a slice or to this table must be classified during extraction before
 the source branch is considered fully integrated. Equality to the original branch tip is not the
 acceptance criterion: deliberately deferred POCs and newly corrected integration behavior differ.
+
+### L15 — Bounded semantic rename
+
+**Contract:** locals and private ordinary-method parameters in a complete module; labels bind by
+selected method/index. Carry immutable label provenance with E4, retaining old constructors. Kotlin
+owns eligibility, import association, exact source replay, two temporary attempts, all-binding/call
+comparison and stale/cancel checks. The server returns versioned document changes only to capable
+clients. Include adapter/server/stdio regressions and playbook X53–X58; exclude member/workspace
+rename and unsupported targets. The combined retention workload follows L14/L15, while its component
+lifecycle checks accompany the respective prerequisites.
 
 ## Next investigations after the diagnostic milestone
 
@@ -1747,11 +1838,12 @@ logging, and the real server correctly handles open, edit, correction, supersess
 Known module, dependency and source-location limits must be visible in the usage documentation.
 
 Full workspace/editor support is a later milestone: broader partial syntax, project dependency
-discovery/configuration, persistent cross-module indexing and safe rename. Module overlays, module source
+discovery/configuration, persistent cross-module indexing and member/workspace rename. Module overlays, module source
 navigation, direct source hierarchy, bounded completion/signature help, lookup/call/presentation
 consumers, an explicit versioned dependency host API and automatic builds for configured source
-modules are implemented. Sustained lifecycle and
-compatibility verification remain the API POC gate. The bounded diagnostic audit has classified its
+modules and bounded local/private-parameter rename are implemented. Repeated lifecycle and
+executable compatibility checks establish the bounded integrated API POC gate; prolonged interactive
+use and independent extracted-PR validation remain open. The bounded diagnostic audit has classified its
 inspected families and fixed demonstrated defects; unexamined historical suppressions and the
 bound-generic binary-AST TODO remain explicit follow-ups. Neither “seven phases complete” nor a
 green adapter test run closes those investigations.

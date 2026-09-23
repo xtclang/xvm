@@ -435,7 +435,9 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
    Explicit source roots/edges now support automatic dependency builds from edited sources.
    Editor project discovery/configuration and persistent cross-module indexing remain open.
-   Safe rename still needs named-label bindings and before/after binding validation.
+   Bounded local/private-parameter rename now captures named labels and checks before/after bindings.
+   Its two temporary compiler attempts use cancellable request listeners; rejected edits do not
+   publish temporary diagnostics or change the live analysis. Wider rename remains unavailable.
    Hierarchy currently covers direct extends/implements edges between source types in the same
    compilation, not conditional mixins or external library sources.
 3. The [bounded diagnostic audit](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23)
@@ -450,3 +452,13 @@ module layouts. Its automatic dependency build loop needs host-supplied roots/ed
 discover build-tool projects. Repository sharing still requires
 serialized compilation. Scoped listener fields and immutable semantic snapshots reduce lifetime
 problems but do not make the underlying compiler reentrant.
+
+### Executable compatibility examples, 2026-09-23
+
+The integrated API examples in
+[`EmbeddingApiCompatibilityTest`](../javatools/src/test/java/org/xvm/api/EmbeddingApiCompatibilityTest.java)
+exercise stateful `void` reporting with separate abort queries, non-null boundaries, retained
+constructor signatures/current record patterns and the deprecated runtime-pool alias. The
+[compatibility contract](errs-integration-plan.md#compatibility-and-migration-contract) explicitly
+marks the listener return-type change and removed ambient API as breaking. Each extracted PR must
+rerun its examples independently; these tests establish only the integrated branch's behavior.

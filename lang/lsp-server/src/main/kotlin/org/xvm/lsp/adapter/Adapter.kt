@@ -532,7 +532,9 @@ interface Adapter : Closeable {
      * - *Mock:* Whole-word text replacement across all lines in the same file.
      * - *TreeSitter:* Finds all identifier AST nodes with the same text in the same file and
      *   produces edits for each occurrence.
-     * - *Compiler:* Cross-file rename with semantic analysis, updating imports and references.
+     * - *Compiler:* Locals/private ordinary-method parameters in a complete module, including
+     *   captures and named labels. Recompiles proposed edits and compares bindings before returning
+     *   versioned changes. Unsupported targets or incomplete binding coverage yield no edits.
      *
      * **Compiler upgrade path:** Cross-file rename across the workspace, updating import paths,
      * and handling constructor references and type aliases.
@@ -549,6 +551,19 @@ interface Adapter : Closeable {
         column: Int,
         newName: String,
     ): WorkspaceEdit?
+
+    /** Cancellable compiler validation may run on the serialized worker rather than a request thread. */
+    fun renameAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        newName: String,
+    ): CompletableFuture<WorkspaceEdit?> =
+        try {
+            CompletableFuture.completedFuture(rename(uri, line, column, newName))
+        } catch (failure: Exception) {
+            CompletableFuture.failedFuture(failure)
+        }
 
     /**
      * Get code actions for a range (quick fixes, refactorings).

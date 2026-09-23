@@ -25,8 +25,17 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         arguments = List.copyOf(arguments);
     }
 
-    /** A written argument's source range, visible parameter index and explicit-label status. */
-    public record Argument(long startPosition, long endPosition, int parameterIndex, boolean named) {
+    /** A written label copied before argument rewriting, without retaining its mutable token. */
+    public record Label(String name, long startPosition, long endPosition) {}
+
+    /** A written argument's source range and visible parameter index; positional/legacy facts have no label. */
+    public record Argument(long startPosition, long endPosition, int parameterIndex, boolean named,
+                           Label label) {
+        /** Retain callers that recorded named status without the label's source span. */
+        public Argument(long startPosition, long endPosition, int parameterIndex, boolean named) {
+            this(startPosition, endPosition, parameterIndex, named, null);
+        }
+
         /** Retain the original positional-argument construction API. */
         public Argument(long startPosition, long endPosition, int parameterIndex) {
             this(startPosition, endPosition, parameterIndex, false);
@@ -57,8 +66,12 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
                 // than guessing a parameter or changing whether the program compiles.
                 return Optional.empty();
             }
+            Label label = expression instanceof LabeledExpression labeled
+                    ? new Label(labeled.getName(), labeled.getNameToken().getStartPosition(),
+                            labeled.getNameToken().getEndPosition())
+                    : null;
             bindings.add(new Argument(expression.getStartPosition(), expression.getEndPosition(),
-                    parameter, expression instanceof LabeledExpression));
+                    parameter, label != null, label));
         }
         return Optional.of(List.copyOf(bindings));
     }
