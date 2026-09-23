@@ -858,8 +858,7 @@ public class CommonBuilder
 
                 if (prop.getInitializer() == null) {
                     RegisterInfo reg     = loadConstant(code, prop.getInitialValue());
-                    ClassDesc    fieldCD = prop.getType().removeNullable().isJavaPrimitive()
-                            ? JitTypeDesc.requirePrimitiveFieldClass(prop.getType()) : reg.cd();
+                    ClassDesc    fieldCD = JitTypeDesc.getFieldClass(prop.getType(), reg.cd());
                     if (reg instanceof ExtendedSlot extSlot) {
                         assert extSlot.flavor() == NullablePrimitive;
                         // loadConstant() has already loaded the value and the boolean
@@ -1235,36 +1234,34 @@ public class CommonBuilder
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
             if (isOpt) {
-                JitParamDesc pdOpt = jmd.optimizedReturns[0];
-                TypeConstant type  = prop.getType();
-                ClassDesc    cdOpt = type.removeNullable().isJavaPrimitive()
-                                        ? JitTypeDesc.requirePrimitiveFieldClass(type)
-                                        : pdOpt.cd;
+                JitParamDesc pdOpt   = jmd.optimizedReturns[0];
+                TypeConstant type    = prop.getType();
+                ClassDesc    fieldCD = JitTypeDesc.getFieldClass(type, pdOpt.cd);
                 switch (pdOpt.flavor) {
                 case Specific, Widened, Primitive:
                     if (prop.isConstant()) {
-                        code.getstatic(CD_this, jitFieldName, cdOpt);
+                        code.getstatic(CD_this, jitFieldName, fieldCD);
                     } else {
                         loadPropertyOwner(code, jmd);
-                        code.getfield(CD_this, jitFieldName, cdOpt);
+                        code.getfield(CD_this, jitFieldName, fieldCD);
                     }
                     normalizePrimitiveField(code, type);
-                    addReturn(code, cdOpt);
+                    addReturn(code, fieldCD);
                     break;
 
                 case NullablePrimitive:
                     if (prop.isConstant()) {
-                        code.getstatic(CD_this, jitFieldName, cdOpt)
+                        code.getstatic(CD_this, jitFieldName, fieldCD)
                             .getstatic(CD_this, jitFieldName+EXT, CD_boolean);
                     } else {
                         loadPropertyOwner(code, jmd);
-                        code.getfield(CD_this, jitFieldName, cdOpt);
+                        code.getfield(CD_this, jitFieldName, fieldCD);
                         loadPropertyOwner(code, jmd);
                         code.getfield(CD_this, jitFieldName+EXT, CD_boolean);
                     }
                     storeToContext(code, CD_boolean, jmd.optimizedReturns[1].altIndex, ctxSlot);
                     normalizePrimitiveField(code, type);
-                    addReturn(code, cdOpt);
+                    addReturn(code, fieldCD);
                     break;
 
                 case XvmPrimitive:
@@ -1355,33 +1352,31 @@ public class CommonBuilder
             if (isOpt) {
                 JitParamDesc pdOpt   = jmd.optimizedParams[0];
                 TypeConstant type    = prop.getType();
-                ClassDesc    cdOpt   = type.removeNullable().isJavaPrimitive()
-                                            ? JitTypeDesc.requirePrimitiveFieldClass(type)
-                                            : pdOpt.cd;
-                int          extSlot = argSlot + toTypeKind(cdOpt).slotSize();
+                ClassDesc    fieldCD = JitTypeDesc.getFieldClass(type, pdOpt.cd);
+                int          extSlot = argSlot + toTypeKind(fieldCD).slotSize();
 
                 switch (pdOpt.flavor) {
                 case Specific, Widened, Primitive:
                     if (prop.isConstant()) {
-                        load(code, cdOpt, argSlot);
-                        code.putstatic(CD_this, jitFieldName, cdOpt);
+                        load(code, fieldCD, argSlot);
+                        code.putstatic(CD_this, jitFieldName, fieldCD);
                     } else {
                         code.aload(0);
-                        load(code, cdOpt, argSlot);
-                        code.putfield(CD_this, jitFieldName, cdOpt);
+                        load(code, fieldCD, argSlot);
+                        code.putfield(CD_this, jitFieldName, fieldCD);
                     }
                     break;
 
                 case NullablePrimitive:
                     if (prop.isConstant()) {
-                        load(code, cdOpt, argSlot);
-                        code.putstatic(CD_this, jitFieldName, cdOpt)
+                        load(code, fieldCD, argSlot);
+                        code.putstatic(CD_this, jitFieldName, fieldCD)
                             .iload(extSlot)
                             .putstatic(CD_this, jitFieldName+EXT, CD_boolean);
                     } else {
                         code.aload(0);
-                        load(code, cdOpt, argSlot);
-                        code.putfield(CD_this, jitFieldName, cdOpt)
+                        load(code, fieldCD, argSlot);
+                        code.putfield(CD_this, jitFieldName, fieldCD)
                             .aload(0)
                             .iload(extSlot)
                             .putfield(CD_this, jitFieldName+EXT, CD_boolean);
@@ -1492,17 +1487,17 @@ public class CommonBuilder
             Injection injection = computeInjection(code, prop);
 
             if (isOpt) {
-                JitParamDesc pdOpt = jmd.optimizedReturns[0];
-                ClassDesc    cdOpt = pdOpt.cd;
+                JitParamDesc pdOpt   = jmd.optimizedReturns[0];
+                ClassDesc    fieldCD = pdOpt.cd;
                 switch (pdOpt.flavor) {
                 case Primitive:
                     code.aload(0)
-                        .getfield(CD_this, jitFieldName, cdOpt);
+                        .getfield(CD_this, jitFieldName, fieldCD);
                     throw new UnsupportedOperationException("Primitive injection");
 
                 case NullablePrimitive:
                     code.aload(0)
-                        .getfield(CD_this, jitFieldName, cdOpt)
+                        .getfield(CD_this, jitFieldName, fieldCD)
                         .getfield(CD_this, jitFieldName+EXT, CD_boolean);
                     throw new UnsupportedOperationException("MultiSlotPrimitive injection");
 

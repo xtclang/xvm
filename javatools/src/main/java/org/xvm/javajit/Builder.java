@@ -1954,7 +1954,21 @@ public abstract class Builder {
     }
 
     /**
-     * Recover the unsigned FP8 encoding after a byte field load sign-extends it to an int.
+     * Normalize a value that has just been loaded from a primitive backing field.
+     *
+     * <p>In: the raw result of the {@code getfield}/{@code getstatic}, i.e. the field's declared
+     * carrier as the JVM widens it to a computational type; {@code boolean}, {@code byte} and
+     * {@code short} fields all arrive as an {@code int}, sign-extended for the signed ones.<br>
+     * Out: that same single value in the register form the rest of the generated code expects.
+     * The stack depth never changes.
+     *
+     * <p>{@code Float8e4} and {@code Float8e5} are the only types this method normalizes: they
+     * are stored in a {@code byte} field, but their register form is the raw 8-bit encoding held
+     * as an unsigned {@code int}, so the sign extension performed by the field load has to be
+     * masked off again. Every other type is taken as is and nothing at all is emitted for it.
+     *
+     * @param code  the code builder
+     * @param type  the type of the field that was just loaded; a nullable form is accepted
      */
     public static void normalizePrimitiveField(CodeBuilder code, TypeConstant type) {
         TypeConstant baseType = type.removeNullable();
