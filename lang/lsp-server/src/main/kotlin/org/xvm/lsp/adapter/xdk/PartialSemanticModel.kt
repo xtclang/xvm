@@ -13,7 +13,7 @@ class PartialSemanticModel internal constructor(
     val semantics: SemanticModel,
     sites: List<Site>,
 ) {
-    enum class Kind { MEMBER_ACCESS, CALL }
+    enum class Kind { NAME, MEMBER_ACCESS, CALL }
 
     @ConsistentCopyVisibility
     data class Member internal constructor(
@@ -36,7 +36,14 @@ class PartialSemanticModel internal constructor(
         val range: Range,
     )
 
-    /** Candidates are accessible receiver members, not selected or argument-filtered overloads. */
+    @ConsistentCopyVisibility
+    data class CallCandidate internal constructor(
+        val member: Member,
+        val arguments: List<SemanticModel.CallArgument>,
+        val converting: Boolean,
+    )
+
+    /** Members describe accessible names; callCandidates separately records compiler argument fitting. */
     @ConsistentCopyVisibility
     data class Site internal constructor(
         val kind: Kind,
@@ -50,6 +57,8 @@ class PartialSemanticModel internal constructor(
         val separators: List<Position>,
         val members: List<Member>,
         val memberPrefix: MemberPrefix? = null,
+        val callCandidates: List<CallCandidate>? = null,
+        val pendingArgumentName: String? = null,
     ) {
         /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
         fun argumentIndexAt(position: Position): Int? =
@@ -57,6 +66,34 @@ class PartialSemanticModel internal constructor(
                 separators.count { it < position }
             } else {
                 null
+            }
+
+        /** Compiler-proven mapping for a written argument, or a named/positional insertion slot. */
+        fun parameterAt(
+            candidate: CallCandidate,
+            position: Position,
+        ): Int? {
+            val slot = argumentIndexAt(position) ?: return null
+            val parameters = candidate.member.signature?.parameters ?: return null
+            if (slot < arguments.size) {
+                return candidate.arguments.singleOrNull { it.range == arguments[slot].range }?.parameterIndex
+            }
+            if (pendingArgumentName != null) {
+                return parameters.indexOfFirst { it.name == pendingArgumentName }.takeIf { it >= 0 }
+            }
+            return slot.takeIf { arguments.none { it.label != null } && it in parameters.indices }
+        }
+
+        /** Expected type for this candidate, not an assertion that the overload is selected. */
+        fun expectedTypeAt(
+            candidate: CallCandidate,
+            position: Position,
+        ): TypeId? =
+            parameterAt(candidate, position)?.let {
+                candidate.member.signature
+                    ?.parameters
+                    ?.getOrNull(it)
+                    ?.type
             }
     }
 
