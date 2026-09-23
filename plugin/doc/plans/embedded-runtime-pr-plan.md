@@ -12,6 +12,22 @@ working diff before extraction. The [implementation plan](embedded-runtime-plan.
 design and measurements; the [resource audit](../../../doc/embedding-resource-ownership.md)
 records historical leaks, their corrections and current validation.
 
+### Open corrections before submission
+
+The [second ownership audit](../../../doc/embedding-resource-ownership.md#open-findings-after-the-native-migrations)
+at `6fea82130` found gaps beyond the passing native regressions. They are not implemented yet:
+
+| Correction | Intended scope | Required regression |
+|---|---|---|
+| Include asynchronous native cleanup in runtime termination status; preserve failure and prevent premature replacement | PR 3/4 plus the PR 5a session gate | Controlled pending/failed cleanup, repeated close and replacement attempt |
+| Remove cancelled tasks from the shared Java timer queue | PR 3 plus PR 4b/R6 | Request close removes cancelled entries while another owner's live timer survives |
+| Finish console/temporary-root cleanup after failed or timed-out control release | PR 5a/5b | Late termination releases owned host resources without deleting files still in use |
+| Establish retention of nested owners while resources/acquisitions/cleanup remain | PR 3/4; source-level concern pending deterministic regression | Explicit ownership registration/release, with no GC-based assertion |
+| Dispose of sockets on asynchronous construction failure and ignored/failed handoff | PR 4b/R2 | Undelivered socket closes before owner termination; use a native barrier for blocked-read coverage |
+
+Keep these corrections in separate commits on the working branch, then fold them into the listed
+extraction scopes. The eleven-PR sequence below remains a scope plan, not a readiness claim.
+
 ## Recommended sequence
 
 | PR | Concrete scope | Required predecessors | Extraction status |

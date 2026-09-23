@@ -143,7 +143,7 @@ follow-ups to the validated sequential execution model, not claims that the capa
 exist. Prioritize the remaining resource ownership fixes and their validation, then the constant-pool
 and metadata project.
 
-1. **Native resource ownership — migrations implemented; longer retention checks remain.** The
+1. **Native resource ownership — migrations implemented; shutdown gaps remain.** The
    [resource audit](../../../doc/embedding-resource-ownership.md) originally reproduced retained
    watches and an open file channel after control/session close. The common mechanism, keystore
    fix and six native migrations now have separate commit boundaries. Channels, sockets, individual
@@ -156,8 +156,13 @@ and metadata project.
    host remains running, then execute a healthy request. Network tests use a test-only provider;
    production network injection policy and incomplete JIT resource support are unchanged.
    The [six integration scopes](embedded-runtime-pr-plan.md#native-resource-integration-scopes)
-   identify the exact PR 4b boundary. Longer retained-handle, heap and classloader measurements,
-   watcher directory/overflow semantics and broader platform coverage remain follow-ups.
+   identify the exact PR 4b boundary. A
+   [second audit](../../../doc/embedding-resource-ownership.md#open-findings-after-the-native-migrations)
+   reproduced premature runtime termination status and cancelled tasks retained in the Java timer
+   queue. Failed control release also skips host-side cleanup; nested-owner retention and socket
+   handoff need completion. These corrections are explicitly mapped to the existing PR scopes and
+   remain unimplemented. Longer retained-handle, heap and classloader measurements, watcher
+   directory/overflow semantics and broader platform coverage remain follow-ups too.
 
 2. **Explicit constant-pool ownership and metadata reuse — next performance project.** Coordinate
    with the [errs work](#relationship-to-the-errs-branch) before sharing linked definitions or
