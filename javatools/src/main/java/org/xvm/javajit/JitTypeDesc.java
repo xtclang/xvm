@@ -66,9 +66,9 @@ public class JitTypeDesc {
                 case "Int64", "UInt64"
                     -> CD_long;
                 case "BFloat16", "Float16", "Float32"
-                     -> CD_float;
+                    -> CD_float;
                 case "Float64"
-                     -> CD_double;
+                    -> CD_double;
                 case "Boolean"
                     -> CD_boolean;
                 // isJavaPrimitive() and this switch must list the same names
@@ -202,5 +202,36 @@ public class JitTypeDesc {
             throw new IllegalArgumentException("Not a Java primitive type: " + type);
         }
         return cd;
+    }
+
+    /**
+     * Compute the ClassDesc to use for a property's backing field.
+     *
+     * <p>A Java primitive is the only flavor whose field carrier can differ from the carrier the
+     * same value has in a register (on the Java stack, in a local slot or in a method signature).
+     * The JVM has no sub-int computational type, so a register holds {@code Bit}, {@code Nibble},
+     * {@code Byte}, {@code Int8}, {@code UInt8}, {@code Int16}, {@code UInt16}, {@code Float8e4}
+     * and {@code Float8e5} as an {@code int}, while the field declares the narrow carrier
+     * ({@code boolean}, {@code byte} or {@code short}) that {@link #getPrimitiveFieldClass}
+     * returns, so that instances stay small. Every other flavor, {@code Specific}, {@code Widened}
+     * and the multi-slot XVM primitives, uses the very same ClassDesc in both places, which is why
+     * the register carrier can be passed straight through for those.
+     *
+     * <p>This replaces the {@code type.removeNullable().isJavaPrimitive() ? ... : cdSlot} ternary
+     * that used to be spelled out at every call site. The test does not have to be repeated here:
+     * {@link #getPrimitiveFieldClass} strips the Nullable itself, because a {@code Byte?} field
+     * carries its value in a {@code byte} and its "assigned" flag in a separate boolean extension
+     * field, and it returns null for precisely the types that have no narrow carrier. So its null
+     * result <i>is</i> the ternary's false branch, and a caller that has already established the
+     * type is a Java primitive never has to answer for a null it cannot get.
+     *
+     * @param type    the property type; a nullable form is accepted
+     * @param cdSlot  the register carrier, used for any type without a narrower field carrier
+     *
+     * @return the field carrier for a Java primitive type, {@code cdSlot} otherwise
+     */
+    public static ClassDesc getFieldClass(TypeConstant type, ClassDesc cdSlot) {
+        ClassDesc fieldCD = getPrimitiveFieldClass(type);
+        return fieldCD == null ? cdSlot : fieldCD;
     }
 }
