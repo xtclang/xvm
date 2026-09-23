@@ -58,14 +58,15 @@ All adapters extend `AbstractAdapter` which provides:
 - Shared formatting logic (trailing whitespace removal, final newline insertion)
 - Utility method for position-in-range checking
 
-`Adapter` is a pure interface (method signatures only). Concrete adapters override
-only the methods they actually implement -- all others inherit traceable logging stubs.
+`Adapter` defines the shared API, including synchronous defaults for its asynchronous entry points.
+Concrete adapters implement supported features; `AbstractAdapter` supplies traceable stubs for
+the optional operations.
 
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
 | `MockAdapter` | Regex patterns | ~60% (syntax-level, no AST) | Implemented |
 | `TreeSitterAdapter` | Tree-sitter grammar | ~85% (syntax + structure + workspace index) | **DEFAULT** - Implemented |
-| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics, cross-file semantic navigation, workspace symbols over current modules and direct source type hierarchy | **Opt-in** (`-Plsp.adapter=compiler`); Tree-sitter remains the shipped default |
+| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics, cross-file semantic navigation, bounded completion/signature help, workspace symbols over current modules and direct source type hierarchy | **Opt-in** (`-Plsp.adapter=compiler`); Tree-sitter remains the shipped default |
 
 **`XdkAdapter` is no longer a placeholder.** It compiles through the embedding API and reports
 what the compiler actually says - syntax *and* semantics, with the compiler's own codes, messages
@@ -80,11 +81,12 @@ The Kotlin semantic snapshot supplies types, symbol identities, declared signatu
 source occurrences without retaining compiler objects. The compiler exposes the binding facts;
 lambda capture associations live in a helper owned by the lambda compilation context.
 
-The compiler backend still has no completion, signature help, rename, semantic tokens, document
-links, formatting or code actions. Call hierarchy, go-to-type-definition, find-implementations,
-inlay hints, code lenses and linked editing are also unimplemented. A trailing `.` can produce
-`PARSER-03`; Java parser recovery preserves the surrounding method/module syntax, but the invalid
-expression has no semantic result for member completion. Compiler mode stays Java-only.
+The compiler backend supplies bounded member completion and signature help through explicit cursor
+analysis and copied selected-call facts. Rename, semantic tokens, document links, formatting and
+code actions remain absent. Call hierarchy, go-to-type-definition, find-implementations, inlay
+hints, code lenses and linked editing are also unimplemented. A trailing `.` still produces a
+normal syntax diagnostic; a separate cursor probe can inspect its intact receiver without
+accepting or emitting the damaged expression. Compiler mode stays Java-only.
 The bundled XDK is part of the server; no external installation is required.
 
 Navigation includes type-parameter declarations and anonymous-class captures. Module sessions
@@ -120,7 +122,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the current module |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - across the current module, including closed member files |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | Not implemented - bounded partial receiver/member facts exist; module lifecycle integration and completion selection remain |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - accessible instance members immediately after a supported receiver dot; generic substitution and overload signatures retained; no bare-name or typed-prefix completion |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -128,7 +130,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | Not implemented - completed calls have instantiated signatures and argument mapping; incomplete calls have candidates/source slots, without overload selection |
+| Signature help | - | Same-file | **Partial** - instantiated signatures and named/default argument mapping for resolved calls; unfinished qualified calls show candidates and positional slots without overload selection |
 | Rename (same file) | Text | AST | Not implemented |
 | Rename (cross-file) | - | - | Not implemented - module references exist; workspace ownership, edit validation and rename rules remain |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -163,15 +165,23 @@ calls do not choose an overload from a missing argument type. Consumer tests ver
 method scope, flow narrowing and source positions without selecting an overload or emitting the
 damaged method. XdkAdapter's internal asynchronous cursor API now invokes this probe on its compiler
 worker, returning copied facts without replacing normal diagnostics. It coalesces cursor requests
-and invalidates work on module edits, close, cancellation and shutdown. Completion/signature
-handlers do not yet consume it, so the capabilities above are unchanged.
+per document and feature and invalidates work on module edits, close, cancellation and shutdown.
+Completion/signature handlers now consume it. The server propagates cancellation to cursor work,
+leaves shared compilation intact and checks the captured document/module lifetime before completing
+the response. Both capabilities are advertised for the opt-in compiler backend and tested over stdio.
 Its explicit Kotlin copier now supplies accessible instance methods/properties, receiver-substituted
 candidate signatures, argument spans/labels/types and a source argument slot based on top-level
 commas. Completed method calls separately copy the compiler's selected instantiated signature and
-written argument-to-parameter mapping. These facts are tested consumer APIs, not advertised LSP
-features. Protocol cancellation and document-version checks, broader expression prefixes and
-arguments after the cursor, implicit/static receiver lookup, applicable-overload selection and
-expected argument types remain follow-ups.
+written argument-to-parameter mapping. Incomplete overloads remain candidates; the first displayed
+signature is not a compiler-selected overload. Unknown parameter mappings retain the full label
+but omit parameter metadata so the client cannot default to a fabricated parameter-zero highlight.
+
+Remaining cursor limits: `receiver.|` works, while `receiver.pre|`, bare-name scope completion and
+implicit/static receiver lookup remain unavailable. Unfinished qualified calls before a
+brace/semicolon/EOF can show candidates. A syntactically complete call with an editor-inserted
+closing parenthesis that fails validation has no selected signature and is not converted into an
+incomplete site. Broader expression prefixes, arguments after the cursor, applicable-overload
+selection, expected argument types and incomplete named-argument mapping remain follow-ups.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The
@@ -186,7 +196,7 @@ Definitions and references share identities across one module compilation. Hiera
 compilation token; items from before an edit return no results. Hierarchy currently includes declared
 `extends` and `implements`, with source locations available in the module. It does not discover
 library sources, conditional mixin relationships or other modules in the workspace. Method
-implementation lookup, completion and signature help still need additional semantic contracts.
+implementation lookup and broader completion/signature inference still need additional semantic contracts.
 
 Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
 single-source inputs. Opening a module does not establish a workspace-wide dependency build or
@@ -308,8 +318,8 @@ Full tree-sitter support for fast, incremental parsing:
    - Extend module ownership to dependency sources and other workspace modules before workspace-wide references/rename
    - Direct source type hierarchy is implemented; method implementation lookup still needs override relationships
    - Copy resolved call edges for call hierarchy
-   - Extend Java parser recovery beyond structural results before type-aware completion
-   - Add call-site facts before signature help; declared signatures alone are insufficient
+   - Extend bounded cursor analysis to typed prefixes, implicit/static scope and editor-inserted closing parentheses
+   - Preserve selected-call signature/mapping consumers; add incomplete overload inference and expected parameter types with compiler evidence
 
    The selected implementation uses the existing javatools compiler. The older research-fork
    rewrite schedules are not the current integration plan.

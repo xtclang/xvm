@@ -105,6 +105,45 @@ class XdkCursorRequestTest {
     }
 
     @Test
+    fun `completion and signature queries do not cancel one another`() {
+        val compiler = PausedCursor()
+        compiler.adapter().use { adapter ->
+            adapter.compile(URI, text("String"))
+            val completion = adapter.getCompletionsAsync(URI, 0, prefix("String").length)
+            try {
+                compiler.awaitStart()
+                val signature = adapter.getSignatureHelpAsync(URI, 0, prefix("String").length)
+                assertThat(completion.isDone).isFalse()
+                compiler.release.countDown()
+                assertThat(completion.get(10, SECONDS).map { it.label }).contains("size")
+                assertThat(signature.get(10, SECONDS)).isNull()
+                assertThat(compiler.threads).hasSize(2)
+            } finally {
+                compiler.release.countDown()
+            }
+        }
+    }
+
+    @Test
+    fun `canceling converted completion results cancels their compiler request`() {
+        val compiler = PausedCursor()
+        compiler.adapter().use { adapter ->
+            adapter.compile(URI, text("String"))
+            val running = adapter.getCompletionsAsync(URI, 0, prefix("String").length)
+            try {
+                compiler.awaitStart()
+                assertThat(running.cancel(false)).isTrue()
+                compiler.release.countDown()
+                adapter.compileAsync("untitled:Barrier.x", text("String")).get(10, SECONDS)
+                assertThat(running.isCancelled).isTrue()
+                assertThat(adapter.getCompletions(URI, 0, prefix("String").length).map { it.label }).contains("size")
+            } finally {
+                compiler.release.countDown()
+            }
+        }
+    }
+
+    @Test
     fun `close and reopen invalidate a running cursor`() {
         val compiler = PausedCursor()
         compiler.adapter().use { adapter ->

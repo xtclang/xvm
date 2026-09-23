@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -22,6 +23,7 @@ import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -174,6 +176,112 @@ class XdkStdioTest {
     }
 
     @Test
+    fun `compiler completion and signature requests round trip over stdio`() {
+        val declarations =
+            "module Stdio { class Box<Element> { Element echo(Element value) { return value; } " +
+                "Int choose(Int n) { return n; } String choose(String text) { return text; } " +
+                "String label=\"box\"; private Int secret() { return 1; } } "
+        val prefix = "${declarations}void run(Box<String> box) { box."
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            session.open("$prefix } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val items = session.await(service.completion(CompletionParams(document, Position(0, prefix.length)))).left
+            assertThat(items.map { it.label }).contains("echo", "choose", "label").doesNotContain("secret")
+            assertThat(items.single { it.label == "echo" }.detail).isEqualTo("String echo(String value)")
+            assertThat(items.filter { it.label == "choose" }).hasSize(2)
+
+            val call = "${prefix}echo("
+            session.change("$call } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))))
+            assertThat(help.signatures.single().label).isEqualTo("String echo(String value)")
+            assertThat(help.signatures.single().activeParameter).isZero()
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
+
+            val overloaded = "${prefix}choose("
+            session.change("$overloaded } }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
+            assertThat(
+                session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, overloaded.length)))).signatures,
+            ).hasSize(2)
+
+            val complete =
+                "module Stdio { <T> T echo(T value, T backup) { return value; } " +
+                    "void run() { String text=echo(backup=\"b\", value=\"a\"); } }"
+            session.change(complete, 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
+            val selected =
+                session.await(
+                    service.signatureHelp(
+                        SignatureHelpParams(
+                            document,
+                            Position(
+                                0,
+                                complete.indexOf("backup=\"b\"") + 10,
+                            ),
+                        ),
+                    ),
+                )
+            assertThat(selected.signatures.single().label).isEqualTo("String echo(String value, String backup)")
+            assertThat(selected.activeParameter).isEqualTo(1)
+            assertThat(selected.signatures.single().activeParameter).isEqualTo(1)
+
+            session.change("$prefix } }", 5)
+            assertThat(session.diagnosticsAt(5).diagnostics).isNotEmpty()
+            repeat(10) {
+                service.completion(CompletionParams(document, Position(0, prefix.length))).cancel(false)
+            }
+            val latest = session.await(service.completion(CompletionParams(document, Position(0, prefix.length)))).left
+            assertThat(latest.map { it.label }).contains("echo")
+            session.shutdownAndExit()
+        }
+        assertThat(Files.readString(directory.resolve("stderr.log"))).doesNotContain("TreeSitterAdapter", "loadXtcLanguage")
+    }
+
+    @Test
+    fun `module overlays feed completion and root edits invalidate member requests over stdio`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("Multi.x").toFile()
+        val member = directory.resolve("Multi/Child.x").toFile()
+        root.writeText("module Multi { class Base { Int value = 1; } }")
+        member.parentFile.mkdirs()
+        val prefix = "class Child extends Base { Int run() { return value."
+        member.writeText("$prefix } }")
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val rootId = TextDocumentIdentifier(root.toURI().toString())
+            val memberId = TextDocumentIdentifier(member.toURI().toString())
+            val service = session.server.textDocumentService
+            service.didOpen(
+                DidOpenTextDocumentParams(
+                    TextDocumentItem(rootId.uri, "xtc", 1, "module Multi { class Base { String value = \"overlay\"; } }"),
+                ),
+            )
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(memberId.uri, "xtc", 1, member.readText())))
+            val before = session.await(service.completion(CompletionParams(memberId, Position(0, prefix.length)))).left
+            assertThat(before.map { it.label }).contains("indexOf")
+            service.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(rootId.uri, 2),
+                    listOf(TextDocumentContentChangeEvent(root.readText())),
+                ),
+            )
+            val after = session.await(service.completion(CompletionParams(memberId, Position(0, prefix.length)))).left
+            assertThat(after).isNotEmpty()
+            assertThat(after.map { it.label }).doesNotContain("indexOf")
+            assertThat(root.readText()).contains("Int value")
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
     fun `an invalid packaged backend setting fails startup explicitly`() {
         val invalid = directory.resolve("invalid-setting.jar")
         JarFile(packagedJar().toFile()).use { original ->
@@ -306,9 +414,9 @@ class XdkStdioTest {
             assertThat(initialized.capabilities.hoverProvider.left).isTrue()
             assertThat(initialized.capabilities.referencesProvider.left).isTrue()
             assertThat(initialized.capabilities.documentHighlightProvider.left).isTrue()
-            assertThat(initialized.capabilities.completionProvider).isNull()
+            assertThat(initialized.capabilities.completionProvider).isNotNull()
             assertThat(initialized.capabilities.renameProvider).isNull()
-            assertThat(initialized.capabilities.signatureHelpProvider).isNull()
+            assertThat(initialized.capabilities.signatureHelpProvider).isNotNull()
             server.initialized(InitializedParams())
         }
 

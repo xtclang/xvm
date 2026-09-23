@@ -205,6 +205,19 @@ interface Adapter : Closeable {
         triggerCharacter: String? = null,
     ): List<CompletionItem>
 
+    /** Compiler backends can schedule cursor work; cancellation applies only to this query. */
+    fun getCompletionsAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        triggerCharacter: String? = null,
+    ): CompletableFuture<List<CompletionItem>> =
+        try {
+            CompletableFuture.completedFuture(getCompletions(uri, line, column, triggerCharacter))
+        } catch (e: Exception) {
+            CompletableFuture.failedFuture(e)
+        }
+
     /**
      * Find the definition of the symbol at a position.
      *
@@ -451,6 +464,18 @@ interface Adapter : Closeable {
         line: Int,
         column: Int,
     ): SignatureHelp?
+
+    /** Asynchronous counterpart for compiler-backed signature inspection. */
+    fun getSignatureHelpAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): CompletableFuture<SignatureHelp?> =
+        try {
+            CompletableFuture.completedFuture(getSignatureHelp(uri, line, column))
+        } catch (e: Exception) {
+            CompletableFuture.failedFuture(e)
+        }
 
     /**
      * Prepare rename operation -- check if rename is valid at position.

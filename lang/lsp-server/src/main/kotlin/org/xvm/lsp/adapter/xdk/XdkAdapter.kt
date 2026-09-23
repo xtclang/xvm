@@ -13,7 +13,9 @@ import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SelectionRange
+import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.TypeHierarchyItem
+import org.xvm.lsp.adapter.mapCancellable
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
@@ -68,6 +70,7 @@ class XdkAdapter internal constructor(
 
     override val capabilities: Set<AdapterCapability> =
         setOf(
+            AdapterCapability.COMPLETION,
             AdapterCapability.HOVER,
             AdapterCapability.DEFINITION,
             AdapterCapability.REFERENCES,
@@ -77,6 +80,7 @@ class XdkAdapter internal constructor(
             AdapterCapability.FOLDING_RANGE,
             AdapterCapability.WORKSPACE_SYMBOL,
             AdapterCapability.TYPE_HIERARCHY,
+            AdapterCapability.SIGNATURE_HELP,
         )
 
     override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
@@ -137,29 +141,35 @@ class XdkAdapter internal constructor(
 
     /**
      * Compiler-worker probe for a current open document. Results contain copied facts only; they
-     * neither replace normal diagnostics nor install another module analysis. A newer cursor in
-     * this document or any edit in its module invalidates the request. Protocol consumers must
-     * also check their captured document version before publishing the returned facts.
+     * neither replace normal diagnostics nor install another module analysis. A newer cursor of
+     * the same query kind in this document, or any edit in its module, invalidates the request.
+     * Protocol consumers must also check their captured document version before publishing facts.
      */
     internal fun analyzeAtAsync(
         uri: String,
         position: Position,
+    ): CompletableFuture<PartialSemanticModel?> = analyzeAtAsync(CursorKey(uri, CursorKind.PROBE), position)
+
+    private fun analyzeAtAsync(
+        key: CursorKey,
+        position: Position,
     ): CompletableFuture<PartialSemanticModel?> {
+        val uri = key.uri
         val (request, previous) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
                 if (uri !in compilation.overlays) return CompletableFuture.completedFuture(null)
-                val request = CursorRequest(compilation, uri, position, ::runCursorAnalysis)
+                val request = CursorRequest(compilation, key, position, ::runCursorAnalysis)
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
                         synchronized(lifecycle) {
-                            cursors.remove(uri, request)
+                            cursors.remove(key, request)
                             compiles.remove(request.task)
                         }
                     }
                 }
-                val previous = cursors.put(uri, request)
+                val previous = cursors.put(key, request)
                 previous?.let { compiles.remove(it.task) }
                 compiles.execute(request.task)
                 request to previous
@@ -168,12 +178,20 @@ class XdkAdapter internal constructor(
         return request.result
     }
 
+    private enum class CursorKind { PROBE, COMPLETION, SIGNATURE }
+
+    private data class CursorKey(
+        val uri: String,
+        val kind: CursorKind,
+    )
+
     private class CursorRequest(
         val compilation: Request,
-        val uri: String,
+        val key: CursorKey,
         val position: Position,
         work: (CursorRequest) -> Unit,
     ) {
+        val uri: String get() = key.uri
         val result = CompletableFuture<PartialSemanticModel?>()
         val task = Runnable { work(this) }
     }
@@ -181,12 +199,12 @@ class XdkAdapter internal constructor(
     /** Called under lifecycle; future callbacks must run after releasing it. */
     private fun retireCursors(scope: String): List<CursorRequest> =
         cursors.values.filter { it.compilation.scope == scope }.onEach {
-            cursors.remove(it.uri, it)
+            cursors.remove(it.key, it)
             compiles.remove(it.task)
         }
 
     private fun isStale(request: CursorRequest): Boolean =
-        cursors[request.uri] !== request || request.result.isCancelled || isStale(request.compilation)
+        cursors[request.key] !== request || request.result.isCancelled || isStale(request.compilation)
 
     private fun runCursorAnalysis(request: CursorRequest) {
         try {
@@ -211,7 +229,7 @@ class XdkAdapter internal constructor(
             request.result.completeExceptionally(e)
             throw e
         } finally {
-            cursors.remove(request.uri, request)
+            cursors.remove(request.key, request)
         }
     }
 
@@ -573,14 +591,43 @@ class XdkAdapter internal constructor(
         range: Range,
     ): Location = Location(uri, range.start.line, range.start.column, range.end.line, range.end.column)
 
-    // ----- not implemented here ------------------------------------------------------------------
+    // ----- copied cursor facts -------------------------------------------------------------------
 
     override fun getCompletions(
         uri: String,
         line: Int,
         column: Int,
         triggerCharacter: String?,
-    ): List<CompletionItem> = emptyList()
+    ): List<CompletionItem> = getCompletionsAsync(uri, line, column, triggerCharacter).join()
+
+    override fun getCompletionsAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        triggerCharacter: String?,
+    ): CompletableFuture<List<CompletionItem>> =
+        analyzeAtAsync(CursorKey(uri, CursorKind.COMPLETION), Position(line, column))
+            .mapCancellable { it?.let(XdkCursorQueries::completions).orEmpty() }
+
+    override fun getSignatureHelp(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): SignatureHelp? = getSignatureHelpAsync(uri, line, column).join()
+
+    override fun getSignatureHelpAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): CompletableFuture<SignatureHelp?> {
+        if (line < 0 || column < 0) return CompletableFuture.completedFuture(null)
+        val position = SemanticModel.Position(line, column)
+        analysis(uri)?.semantics?.let { model ->
+            XdkCursorQueries.signatureHelp(model, position)?.let { return CompletableFuture.completedFuture(it) }
+        }
+        return analyzeAtAsync(CursorKey(uri, CursorKind.SIGNATURE), Position(line, column))
+            .mapCancellable { it?.let { model -> XdkCursorQueries.signatureHelp(model, position) } }
+    }
 
     private val compiled = AtomicLong()
     private val lifecycle = Any()
@@ -591,7 +638,7 @@ class XdkAdapter internal constructor(
     private val overlays = linkedMapOf<String, String>()
     private val scopes = mutableMapOf<String, String>()
     private val requests = ConcurrentHashMap<String, Request>()
-    private val cursors = ConcurrentHashMap<String, CursorRequest>()
+    private val cursors = ConcurrentHashMap<CursorKey, CursorRequest>()
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
