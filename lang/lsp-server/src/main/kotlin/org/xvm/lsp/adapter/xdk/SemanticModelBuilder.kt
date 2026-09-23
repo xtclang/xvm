@@ -220,8 +220,8 @@ private class SemanticModelBuilder {
         analysis: EmbeddingSupport.PartialAnalysis,
         errors: ErrorListener,
     ): PartialSemanticModel {
-        val root = analysis.sourceTrees().singleOrNull() ?: return PartialSemanticModel(unavailable(), emptyList())
-        val nodes = nodesIn(root)
+        val source = analysis.sites().singleOrNull()?.source ?: return PartialSemanticModel(unavailable(), emptyList())
+        val nodes = nodesIn(analysis.sourceTrees())
         collect(nodes, analysis.callBindings())
         val sites =
             analysis.sites().map { site ->
@@ -270,7 +270,7 @@ private class SemanticModelBuilder {
         return if (errors.isAbortDesired) {
             PartialSemanticModel(unavailable(), emptyList())
         } else {
-            PartialSemanticModel(finish(nodes, false).single(), sites)
+            PartialSemanticModel(finish(nodes, false).single { it.sourceName == source.fileName }, sites)
         }
     }
 
@@ -528,10 +528,11 @@ private class SemanticModelBuilder {
         return id
     }
 
-    private fun nodesIn(root: AstNode): List<AstNode> {
-        val nodes = mutableListOf(root)
+    private fun nodesIn(root: AstNode): List<AstNode> = nodesIn(listOf(root))
+
+    private fun nodesIn(roots: List<AstNode>): List<AstNode> {
         val seen = Collections.newSetFromMap(IdentityHashMap<AstNode, Boolean>())
-        seen.add(root)
+        val nodes = roots.filter { seen.add(it) }.toMutableList()
         var index = 0
         while (index < nodes.size) {
             nodes[index++].children().forEachRemaining { if (seen.add(it)) nodes.add(it) }
