@@ -84,7 +84,9 @@ import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.lsp.adapter.CallHierarchyIncomingCall as AdapterCallHierarchyIncomingCall
 import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
 import org.xvm.lsp.adapter.CallHierarchyOutgoingCall as AdapterCallHierarchyOutgoingCall
@@ -120,6 +122,7 @@ class XtcTextDocumentService(
     private val openDocuments = ConcurrentHashMap<String, Document>()
     private var closed = false
     private val publishedByScope = mutableMapOf<String, Set<String>>()
+    private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
 
     private fun <R> supplyAsync(
         method: String,
@@ -142,6 +145,87 @@ class XtcTextDocumentService(
                 }
             }
         }
+    }
+
+    /** A cursor query owns its backend future, while the module analysis remains shared. */
+    private fun <T, R> queryAsync(
+        method: String,
+        uri: String,
+        request: () -> CompletableFuture<T>,
+        convert: (T) -> R,
+    ): CompletableFuture<R> {
+        val result = CompletableFuture<R>()
+        val document =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(contentModified())
+                pendingQueries[result] = uri
+                openDocuments[uri]
+            }
+        val started = System.nanoTime()
+        logger.info("{}: {}", method, uri)
+        result.whenComplete { _, failure ->
+            synchronized(lifecycle) { pendingQueries.remove(result) }
+            val outcome = if (failure == null) "completed" else "canceled or failed"
+            logger.info(
+                "{}: {} in {}",
+                method,
+                outcome,
+                (System.nanoTime() - started).nanoseconds,
+            )
+        }
+        val ready = document?.analysis ?: CompletableFuture.completedFuture(null)
+        ready
+            .handle { _, _ -> Unit }
+            .thenRunAsync {
+                val work =
+                    synchronized(lifecycle) {
+                        if (result.isDone) return@thenRunAsync
+                        if (closed || openDocuments[uri] !== document) throw contentModified()
+                        request()
+                    }
+                // Register after starting work: if cancellation won the race, this runs immediately.
+                result.whenComplete { _, failure -> if (failure != null) work.cancel(false) }
+                work.whenComplete { value, failure ->
+                    synchronized(lifecycle) {
+                        if (!result.isDone) {
+                            when {
+                                closed || openDocuments[uri] !== document -> {
+                                    result.completeExceptionally(contentModified())
+                                }
+
+                                failure != null -> {
+                                    val cause = generateSequence(failure) { (it as? CompletionException)?.cause }.last()
+                                    if (cause is CancellationException) result.cancel(false) else result.completeExceptionally(cause)
+                                }
+
+                                else -> {
+                                    try {
+                                        result.complete(convert(value))
+                                    } catch (e: Exception) {
+                                        result.completeExceptionally(e)
+                                    } catch (e: Error) {
+                                        result.completeExceptionally(e)
+                                        throw e
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }.whenComplete { _, failure -> if (failure != null) result.completeExceptionally(failure) }
+        return result
+    }
+
+    private fun contentModified() =
+        ResponseErrorException(ResponseError(ResponseErrorCode.ContentModified, "Document changed during analysis", null))
+
+    /** Called under lifecycle; retire the public result even if a backend ignores cancellation. */
+    private fun invalidateQueries(uris: Set<String>) {
+        pendingQueries
+            .filterValues { it in uris }
+            .keys
+            .toList()
+            .forEach { it.completeExceptionally(contentModified()) }
     }
 
     override fun didOpen(params: DidOpenTextDocumentParams) {
@@ -185,6 +269,7 @@ class XtcTextDocumentService(
         val current = affected.mapValues { (_, document) -> Document(document.content, document.version, scope, analysis) }.toMutableMap()
         current[uri] = Document(content, version, scope, analysis)
         openDocuments.putAll(current)
+        invalidateQueries(current.keys)
         affected.values
             .map { it.analysis }
             .distinct()
@@ -245,6 +330,7 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             val uri = params.textDocument.uri
             val document = openDocuments.remove(uri)
+            invalidateQueries(setOf(uri))
             document?.analysis?.cancel(false)
             adapter.closeDocument(uri)
             if (closed) return
@@ -278,6 +364,7 @@ class XtcTextDocumentService(
             closed = true
             val documents = openDocuments.toMap()
             openDocuments.clear()
+            invalidateQueries(pendingQueries.values.toSet())
             publishedByScope.clear()
             documents.forEach { (uri, document) ->
                 document.analysis.cancel(false)
@@ -324,19 +411,20 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.completion
      */
     override fun completion(params: CompletionParams): CompletableFuture<Either<List<CompletionItem>, CompletionList>> =
-        supplyAsync(
+        queryAsync(
             "textDocument/completion",
-            "${params.textDocument.uri} at ${params.position.fmt()} trigger=${params.context?.triggerKind}/${params.context?.triggerCharacter}",
-            { result ->
-                val items = result.left
-                val preview = items.take(5).joinToString { it.label }
-                "${items.size} items${if (preview.isNotEmpty()) " [$preview]" else ""}"
+            params.textDocument.uri,
+            {
+                adapter.getCompletionsAsync(
+                    params.textDocument.uri,
+                    params.position.line,
+                    params.position.character,
+                    params.context?.triggerCharacter,
+                )
             },
-            uri = params.textDocument.uri,
-        ) {
-            val trigger = params.context?.triggerCharacter
+        ) { completions ->
             val items =
-                adapter.getCompletions(params.textDocument.uri, params.position.line, params.position.character, trigger).map { c ->
+                completions.map { c ->
                     CompletionItem(c.label).apply {
                         kind = toCompletionItemKind(c.kind)
                         detail = c.detail
@@ -529,19 +617,19 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.signatureHelp
      */
     override fun signatureHelp(params: SignatureHelpParams): CompletableFuture<SignatureHelp?> =
-        supplyAsync(
+        queryAsync(
             "textDocument/signatureHelp",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result -> if (result == null) "no result" else "${result.signatures.size} signatures" },
-            uri = params.textDocument.uri,
-        ) {
-            adapter.getSignatureHelp(params.textDocument.uri, params.position.line, params.position.character)?.let { help ->
+            params.textDocument.uri,
+            { adapter.getSignatureHelpAsync(params.textDocument.uri, params.position.line, params.position.character) },
+        ) { result ->
+            result?.let { help ->
                 SignatureHelp().apply {
                     signatures =
                         help.signatures.map { s ->
                             SignatureInformation().apply {
                                 label = s.label
                                 documentation = s.documentation?.let { Either.forLeft(it) }
+                                activeParameter = s.activeParameter
                                 parameters =
                                     s.parameters.map { p ->
                                         ParameterInformation().apply {
