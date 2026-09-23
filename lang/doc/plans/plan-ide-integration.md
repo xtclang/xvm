@@ -157,15 +157,21 @@ positions from an older document version. No Tree-sitter fallback is used in com
 The separate embedding `analyzeIncomplete` probe can validate intact receivers and ordinary
 arguments in one standalone incomplete statement. The original overload handles trailing EOF;
 explicit-cursor overloads also handle sites before closing braces/semicolons and in module member
-files, using unsaved root/member overlays without altering source text. Consumer tests verify real
+files, using unsaved root/member overlays without altering source text. They retain simple
+assignment/initializer and single return contexts, plus final nested call arguments; enclosing
+calls do not choose an overload from a missing argument type. Consumer tests verify real
 method scope, flow narrowing and source positions without selecting an overload or emitting the
-damaged method. XdkAdapter does not yet invoke this probe; it does not change the capabilities above.
+damaged method. XdkAdapter's internal asynchronous cursor API now invokes this probe on its compiler
+worker, returning copied facts without replacing normal diagnostics. It coalesces cursor requests
+and invalidates work on module edits, close, cancellation and shutdown. Completion/signature
+handlers do not yet consume it, so the capabilities above are unchanged.
 Its explicit Kotlin copier now supplies accessible instance methods/properties, receiver-substituted
 candidate signatures, argument spans/labels/types and a source argument slot based on top-level
 commas. Completed method calls separately copy the compiler's selected instantiated signature and
 written argument-to-parameter mapping. These facts are tested consumer APIs, not advertised LSP
-features. Adapter request lifecycle integration, assignments/returns/incomplete nested arguments, implicit/static receiver lookup,
-applicable-overload selection and expected argument types remain follow-ups.
+features. Protocol cancellation and document-version checks, broader expression prefixes and
+arguments after the cursor, implicit/static receiver lookup, applicable-overload selection and
+expected argument types remain follow-ups.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The

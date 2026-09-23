@@ -386,11 +386,14 @@ The three follow-ups from the API probe pass are complete: permanent TypeInfo re
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
 subsequent Java-only recovery pass supplies structural source trees after parse errors. Remaining work:
 
-1. Extend the bounded partial-analysis probe before widening completion. It now validates intact
-   receivers and complete ordinary arguments in one trailing standalone statement; it does not
-   validate the missing operation or support arbitrary malformed expressions, module member files
-   or editor requests. Compiler mode stays Java-only; stale semantic ranges must never stand in
-   for current facts.
+1. Connect the partial-analysis probe to current editor requests before widening completion. In
+   addition to its original trailing standalone statement, explicit cursors now cover module
+   overlays, simple assignment/initializer values, single returns and final nested call arguments.
+   It validates intact children in their compiler context, never the missing operation. Internal
+   adapter cursor requests now use the compiler worker and a cancellable listener, returning only
+   copied facts and preserving normal diagnostics. Broader malformed expressions and protocol
+   publication remain open. Compiler mode stays Java-only; stale semantic ranges must never stand
+   in for current facts.
 2. Add compiler facts only for a concrete consumer. Signature help needs argument/parameter mapping
    and instantiated call-site facts; method implementation lookup needs override relationships.
    Cross-module indexing, dependency source navigation and safe rename need ownership beyond this
