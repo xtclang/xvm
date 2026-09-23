@@ -27,8 +27,9 @@ bodies. Ordinary compilation still rejects parse errors. An explicit `analyzeInc
 validates intact receivers and arguments at supported source cursors, including module overlays
 and assignment/return/nested-call contexts, without producing a compiled module. Copied call/member
 facts now support bounded completion and signature help through the adapter and server, with
-request cancellation and document/module lifetime checks. Scope completion, broader syntax,
-incomplete overload inference, cross-module indexing and the unexamined TypeInfo families remain open.
+request cancellation and document/module lifetime checks. Scope completion, static/type lookup,
+candidate argument fitting, inferred expected types and named slots now have bounded consumers.
+Broader syntax, cross-module indexing and the unexamined TypeInfo families remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.
 
@@ -1180,17 +1181,16 @@ types and method calls - and references tell `Holder.x` from `Point.x`, which no
 1. **Incomplete-source semantics remain bounded.** The original investigation found no AST for
    `console.`. The ninth pass retains structural syntax; the tenth adds an explicit compiler-only
    probe that validates a trailing receiver and complete arguments in their real method scope.
-   This probe is separate from normal compilation and is not yet used by XdkAdapter. Accessible
-   member enumeration, expected argument types and call-site substitutions remain prerequisites
-   for completion and signature help. Compiler mode stays Java-only.
+   This probe is separate from normal compilation and now drives XdkAdapter completion/signature
+   help. Scope/member lookup, candidate-specific expected types and call-site substitutions have
+   consumers and regressions; broader syntax remains bounded. Compiler mode stays Java-only.
 2. **Local identity: fixed.** `Register.equals` is unsuitable for source identity, but the existing
    `getOriginalRegister()` connects narrowed shadows to their original register. The adapter now
    compares those objects by identity and reads the declaration register through a public accessor.
    The earlier claim that the compiler retained no such identity was incorrect.
-3. **Cross-file source ownership is missing.** The snapshot maps supported same-file symbols to
-   source spans. Cross-file definition still needs project compilation, dependency repositories,
-   unsaved overlays and a module/source index. Opening several independent documents does not
-   establish that shared compilation context.
+3. **Cross-file ownership now covers a module.** Shared module compilation and unsaved overlays
+   provide source spans and identity-based definition/references across member files. Dependency
+   sources and other workspace modules still require broader ownership and indexing.
 4. **Constructor-parameter properties: fixed.** The compiler does synthesize property declaration
    statements with the parameter's source token. The parameter now retains the corresponding
    identity, so navigation also works when requested at the declaration. Ordinary method parameters
@@ -1205,10 +1205,10 @@ The snapshot builder checks validation state before reading expression types and
 unresolved names' placeholder types. Queries need no compiler state. The adapter still retains
 the AST per open document for folding and selection; hover and navigation use the copied snapshot.
 
-**Not attempted, and why.** Completion needs 1. Rename needs 3 to be safe across files. Signature
-help needs call-site facts beyond the declared signatures currently copied: selected/instantiated
-signatures, argument spans and active-argument information. Semantic tokens also need classification
-and modifiers; they are a possible later consumer, not already supplied by the snapshot.
+**Remaining consumers.** Completion and signature help now have the bounded compiler-backed
+consumers described below. Safe rename still needs conflict/edit validation and broader ownership
+for workspace-wide changes. Semantic tokens need classification and modifiers beyond the currently
+copied declaration/reference roles.
 
 ### AST changes for embedding and LSP: ownership and placement
 
@@ -1313,7 +1313,34 @@ validation, validates intact children and prevents emission. Normal compilation 
 and successfully resolved calls keep their selected-signature facts. Existing embedding overloads
 cover both cases. Tests exercise original source preservation, later declarations, module overlays,
 flow narrowing, escaped/UTF-16 replacement spans and listener budgets/cancellation without duplicate
-diagnostics. Bare-name scope and broader incomplete-call inference remain unproven.
+diagnostics. The scope/call follow-up below extends those consumers.
+
+The scope/call follow-up reuses the same final token field, renamed `cursorName`, for a bare member
+prefix or the final named-argument label. `isNameCompletion()`, `getPendingArgumentName()` and the
+named-argument factory describe syntax only. Empty statement completion uses a zero-width token
+as an insertion anchor; it supplies no value or type and does not rewrite the source. The parser
+creates it only at supported boundaries and prevents duplicate sites inside recovered values.
+
+`IncompleteStatement.validateImpl` sends scope and candidate facts to an attempt-owned
+`CursorBinding.Collector`. The syntax node stores no facts, Context or callback. `Context.cursorBinding()`
+uses existing variable enumeration, assignment checks and branch-aware type lookup while that scope
+exists. `CursorScope` is a separate compiler helper: it enumerates type-name candidates and delegates
+their meaning to normal contextual lookup, preserving imports, shadowing and access rules.
+
+| Location | Scope/call change | Why it belongs there |
+|---|---|---|
+| `Context` / `StatementBlock.RootContext` | Copy visible variables and narrowed types; expose/forward the attempt collector. | Lexical scope and assignment state exist here during validation, not in a later AST walk. No additional AST semantic cache. |
+| `Compiler` / `StageMgr` | Carry a final collector reference through stages; preserve old constructors with a disabled collector. | The compilation attempt owns facts and cleanup. No ambient thread local. |
+| `AstNode.catchUpChildren`, method/property/lambda/type declarations, `NewExpression` | Forward the collector through existing nested compilation paths. | Mechanical propagation, with no new fields on those AST nodes. |
+| `AstNode` argument-fit helper | Expose tentative matching signatures/mappings to `PartialCallResolver`; existing full-call selection keeps its behavior. | Argument fitting already lives here. The helper reuses its named ordering, conversions and inference, with trial argument clones and a child context. No new clone/reset rule. |
+| `PartialCallResolver` | Inspect accessible qualified, implicit and static call candidates and retain written parameter mappings. | Compiler-side query while Context exists; orchestration is outside AST nodes. Candidates never masquerade as successful invocations. |
+| `CursorBinding` / embedding `PartialAnalysis` | Immutable scope/candidate records and a collector keyed by site identity; publication filters surviving syntax and clears scratch entries. | Attempt ownership avoids phase-assigned node fields and leaking validation contexts. Previous result constructors remain; record-pattern arity changes. |
+| `ConstantPool.getImplicitImportNames()` | Copy the existing language import-name set without resolving components. | The compiler owns this vocabulary; the LSP must not maintain another built-in type list. |
+
+The Kotlin LSP module copies these records to compiler-free scope/member/candidate values. Expected
+types and named parameter highlights are candidate-specific. Missing arguments do not select an
+overload, and unresolved method formals remain formal. The final cursor token is still ordinary
+syntax; the only mutable node references remain the pre-existing replaceable syntax children.
 
 #### Call facts owned by the compilation attempt
 
@@ -1346,12 +1373,12 @@ receiver-to-argument rewrites have no selected-call record.
 `PartialSemanticModel` copies incomplete syntax, known receiver/argument types, lexical method
 identity and accessible receiver members. This explicit worker operation can build TypeInfo through
 its supplied listener; ordinary semantic copying remains passive. Candidate signatures include
-receiver substitution but do not claim incomplete-call overload selection or method-type inference.
-The copied argument slot counts only the parser's top-level commas. The later `XdkCursorQueries`
-consumer now presents qualified member completion, incomplete qualified-call candidates and exact
-selected-call signatures, including named/default parameter mapping. Unknown mappings keep labels
-without parameter highlights. These bounded features are advertised in compiler mode. Scope
-completion, static/type lookup and broader incomplete syntax remain open; see the current
+receiver substitution. The scope/call extension adds compiler-tested applicability, method-type
+inference and named argument mappings through the separate CursorBinding records described above.
+`XdkCursorQueries` now presents scope/member completion, candidate-specific signature help and exact
+selected-call signatures. Unknown mappings keep labels without parameter highlights. These bounded
+features are advertised in compiler mode. Broader incomplete syntax and additional callable forms
+remain open; see the current
 [capability matrix](../lang/doc/plans/plan-ide-integration.md).
 
 #### Passive source facts on nodes

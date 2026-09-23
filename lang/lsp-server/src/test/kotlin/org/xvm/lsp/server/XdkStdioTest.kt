@@ -286,6 +286,42 @@ class XdkStdioTest {
         }
     }
 
+    @Test
+    fun `scope completion and inferred named signatures round trip over stdio`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val prefix = "module Stdio { Int run(Int item) { return ite"
+            session.open("$prefix; } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val items = session.await(service.completion(CompletionParams(document, Position(0, prefix.length)))).left
+            val item = items.single { it.label == "item" }
+            assertThat(item.detail).isEqualTo("Int item")
+            assertThat(item.textEdit.left.range).isEqualTo(Range(Position(0, prefix.length - 3), Position(0, prefix.length)))
+            session.change(prefix.dropLast(3) + item.textEdit.left.newText + "; } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+
+            val call =
+                "module Stdio { <T> T pair(T first, T second) = first; " +
+                    "void run() { pair(second=\"x\", first="
+            session.change("$call); } }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))))
+            assertThat(help.signatures).hasSize(1)
+            assertThat(help.signatures.single().label).isEqualTo("String pair(String first, String second)")
+            assertThat(help.signatures.single().activeParameter).isZero()
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
+            session.change("$call\"y\"); } }", 4)
+            assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["", "in"])
     fun `module overlays feed completion and root edits invalidate member requests over stdio`(memberPrefix: String) {

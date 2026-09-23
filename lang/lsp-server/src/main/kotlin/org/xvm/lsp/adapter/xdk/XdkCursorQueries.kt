@@ -14,7 +14,7 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 /** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
 internal object XdkCursorQueries {
     fun completions(model: PartialSemanticModel): List<CompletionItem> {
-        val site = model.sites.singleOrNull()?.takeIf { it.kind == PartialSemanticModel.Kind.MEMBER_ACCESS } ?: return emptyList()
+        val site = model.sites.singleOrNull()?.takeIf { it.kind != PartialSemanticModel.Kind.CALL } ?: return emptyList()
         val prefix = site.memberPrefix ?: return emptyList()
         val range =
             Range(
@@ -26,7 +26,12 @@ internal object XdkCursorQueries {
             .map { member ->
                 CompletionItem(
                     member.name,
-                    if (member.kind == SemanticModel.SymbolKind.METHOD) CompletionKind.METHOD else CompletionKind.PROPERTY,
+                    when (member.kind) {
+                        SemanticModel.SymbolKind.METHOD -> CompletionKind.METHOD
+                        SemanticModel.SymbolKind.VARIABLE, SemanticModel.SymbolKind.PARAMETER -> CompletionKind.VARIABLE
+                        SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.TYPE_PARAMETER -> CompletionKind.CLASS
+                        else -> CompletionKind.PROPERTY
+                    },
                     member.signature?.let { signature(model.semantics, member.name, it).label }
                         ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
                     member.name,
@@ -41,6 +46,23 @@ internal object XdkCursorQueries {
     ): SignatureHelp? {
         val site = model.sites.singleOrNull() ?: return null
         val slot = site.argumentIndexAt(position) ?: return null
+        site.callCandidates?.let { candidates ->
+            val signatures =
+                candidates
+                    .sortedBy { it.converting }
+                    .mapNotNull { candidate ->
+                        candidate.member.signature?.let {
+                            signature(
+                                model.semantics,
+                                candidate.member.name,
+                                it,
+                                site.parameterAt(candidate, position),
+                                "Candidate signature; written arguments fit, overload not selected.",
+                            )
+                        }
+                    }.distinctBy { it.label }
+            return signatures.takeIf { it.isNotEmpty() }?.let { SignatureHelp(it, activeParameter = it.first().activeParameter ?: 0) }
+        }
         val signatures =
             site.members
                 .mapNotNull { member ->
