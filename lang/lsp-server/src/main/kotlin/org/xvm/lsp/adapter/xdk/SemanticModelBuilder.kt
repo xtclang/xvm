@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
+import org.xvm.asm.PackageStructure
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
@@ -26,6 +27,7 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ComponentStatement
+import org.xvm.compiler.ast.CompositionNode
 import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LabeledExpression
@@ -85,6 +87,18 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<
     return ConstantPool.withPool(pool).use { builder.build(this, errors) }
 }
 
+/** Worker-only comparison facts; never publish this compiler-owned identity map to a request. */
+internal class CompilerRenameFacts(
+    val models: List<SemanticModel>,
+    val constants: Map<SymbolId, Constant>,
+)
+
+internal fun EmbeddingSupport.Compilation.renameFacts(): CompilerRenameFacts =
+    ConstantPool.withPool(pool()).use {
+        val builder = SemanticModelBuilder()
+        CompilerRenameFacts(builder.build(this), builder.constantBindings())
+    }
+
 /** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
 fun EmbeddingSupport.Compilation.toDependency(): XdkDependency {
     require(succeeded()) { "A dependency artifact requires successful compilation" }
@@ -133,6 +147,9 @@ private class SemanticModelBuilder(
     private val calls = linkedMapOf<SourceLocation, SemanticModel.CallSite>()
     private val callables = linkedMapOf<SymbolId, SemanticModel.Callable>()
     private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
+    private val parameters = mutableMapOf<Pair<MethodConstant, Int>, SymbolId>()
+
+    fun constantBindings(): Map<SymbolId, Constant> = constants.entries.associate { (constant, id) -> id to constant }
 
     fun declarations(): Map<IdentityConstant, SourceLocation> =
         constants.entries
@@ -190,11 +207,20 @@ private class SemanticModelBuilder(
                 if (it.resolvedTarget is Register) SymbolKind.PARAMETER else kind(it.resolvedTarget),
                 it.source,
             )
+            val method = (it.parent as? MethodDeclarationStatement)?.component as? MethodStructure
+            val register = normalized(it.resolvedTarget) as? Register
+            val id = register?.let(registers::get)
+            if (method != null && register != null && id != null) {
+                parameters[method.identityConstant to (register.index - method.typeParamCount)] = id
+            }
         }
         nodes.forEach { node ->
             when (node) {
                 is VariableDeclarationStatement -> {
                     declare(node.nameToken, node.register, SymbolKind.VARIABLE, node.source)
+                    (normalized(node.register) as? Register)?.let(registers::get)?.let { id ->
+                        symbols[id]?.takeIf { it.kind == SymbolKind.VARIABLE }?.let { symbols[id] = it.copy(renameable = true) }
+                    }
                     if (node
                             .children()
                             .iterator()
@@ -260,10 +286,27 @@ private class SemanticModelBuilder(
                 }
 
                 is NamedTypeExpression -> {
+                    // Module import names bypass ordinary type-name resolution. Their authoritative
+                    // identity is the package's linked imported module, not a spelling lookup.
+                    val imported =
+                        (node.parent as? CompositionNode.Import)?.let {
+                            ((it.parent as? TypeCompositionStatement)?.component as? PackageStructure)?.importedModule?.identityConstant
+                        }
                     node.nameBindings.forEach {
-                        refer(it.name(), it.target(), expressionType.takeIf { _ -> it.name() === node.nameToken }, node.source)
+                        refer(it.name(), it.target() ?: imported, expressionType.takeIf { _ -> it.name() === node.nameToken }, node.source)
                     }
                 }
+            }
+        }
+        parameters.forEach { (parameter, id) ->
+            val method = parameter.first.component as? MethodStructure ?: return@forEach
+            val owner = constants[parameter.first]
+            val directCallsOnly =
+                occurrences.filterValues { it.symbol == owner && it.role == Role.REFERENCE }.all { (at, _) ->
+                    calls.any { (site, call) -> site.sourceName == at.sourceName && at.range.start in call.callee }
+                }
+            if (method.access == Access.PRIVATE && !method.isConstructor && directCallsOnly) {
+                symbols[id]?.let { symbols[id] = it.copy(renameable = true) }
             }
         }
     }
@@ -308,6 +351,12 @@ private class SemanticModelBuilder(
         val method = binding.method().component as? MethodStructure ?: return
         val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
         val target = symbol(binding.method(), method.name, SymbolKind.METHOD) ?: return
+        binding.arguments().forEach { argument ->
+            val label = argument.label() ?: return@forEach
+            val parameter = parameters[binding.method() to argument.parameterIndex()] ?: return@forEach
+            val at = location(node.source, label.startPosition(), label.endPosition())
+            occurrences[at] = Occurrence(at.range, label.name(), Role.REFERENCE, parameter, symbols[parameter]?.type)
+        }
         val site = location(node.source, node.startPosition, node.endPosition)
         val callee = node.invokedExpression
         calls[site] =
