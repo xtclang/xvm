@@ -37,9 +37,8 @@ public class Runtime
             parallelism = java.lang.Runtime.getRuntime().availableProcessors();
         }
 
-        ThreadGroup groupXVM = new ThreadGroup("XVM");
         ThreadFactory factoryXVM = r -> {
-            Thread thread = new Thread(groupXVM, r);
+            Thread thread = new Thread(serviceThreads, r);
             thread.setDaemon(true);
             thread.setName("XvmWorker@" + thread.hashCode());
             return thread;
@@ -168,6 +167,9 @@ public class Runtime
             termination = CompletableFuture.allOf(containers().stream()
                     .map(Container::terminateServices)
                     .toArray(CompletableFuture[]::new));
+            // Services need their queued shutdown work even after a caller's budget expires.
+            // Dropping that work would leave their termination futures permanently incomplete.
+            termination.whenComplete((_, failure) -> f_executorXVM.shutdown());
         }
 
         boolean interrupted = Thread.interrupted();
@@ -181,7 +183,7 @@ public class Runtime
             failure = new IllegalStateException("Unable to stop containers", e);
         } finally {
             f_executorIO.shutdownNow();
-            f_executorXVM.shutdownNow();
+            serviceThreads.interrupt();
             try {
                 boolean ioStopped = f_executorIO.awaitTermination(
                         deadline.remainingNanos(), TimeUnit.NANOSECONDS);
@@ -258,6 +260,11 @@ public class Runtime
      * The timer belongs to this runtime, so closing an embedding session cancels its alarms.
      */
     private final Timer timer;
+
+    /**
+     * Interrupt active service work without discarding queued shutdown processing.
+     */
+    private final ThreadGroup serviceThreads = new ThreadGroup("XVM");
 
     /**
      * The set of containers (stored as a Map with no values); used only for debugging.

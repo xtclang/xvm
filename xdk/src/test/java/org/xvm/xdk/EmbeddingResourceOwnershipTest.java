@@ -17,11 +17,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.time.Duration;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -59,6 +63,92 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Timeout(120)
 class EmbeddingResourceOwnershipTest {
+    @Test
+    void timedOutControlFinishesHostCleanupWhenItsReleaseCompletes() throws Exception {
+        var cleanup = new CompletableFuture<Void>();
+        try (var session = EmbeddingSupport.create(repository())) {
+            var module = compile(session, source("NativeResources.x"));
+            try (var execution = start(session, module, null, List.of("file", "cancel"))) {
+                var nativeOwner = nativeContainer(session);
+                var owner = snapshot(session).owners.getFirst();
+                var delegate = field(execution.control.getClass(), execution.control, "delegate");
+                var temporary = (Path) field(delegate.getClass(), delegate, "temporary");
+                var consoleId = (Long) field(delegate.getClass(), delegate, "consoleId");
+                var names = (Map<?, ?>) field(NativeContainer.class, nativeOwner, "f_mapResourceNames");
+                owner.acquireResource(Object::new, _ -> cleanup);
+                try {
+                    assertThrows(IllegalStateException.class, () -> execution.control.close(Duration.ZERO));
+                    assertTrue(Files.isRegularFile(temporary.resolve("owned.dat")));
+                    assertTrue(names.containsKey("console_" + consoleId));
+                } finally {
+                    cleanup.complete(null);
+                }
+                // Await the already-started release, without invoking close again to trigger cleanup.
+                var release = (CompletableFuture<?>) field(delegate.getClass(), delegate, "releaseAttempt");
+                release.get(10, TimeUnit.SECONDS);
+                assertFalse(Files.exists(temporary));
+                assertFalse(names.containsKey("console_" + consoleId));
+            }
+        } finally {
+            cleanup.complete(null);
+        }
+    }
+
+    @Test
+    void runtimeCloseCompletesHostCleanupWhenTheRunnerCannotAcknowledgeRelease() throws Exception {
+        try (var session = EmbeddingSupport.create(repository())) {
+            var module = compile(session, source("NativeResources.x"));
+            var execution = start(session, module, null, List.of("file", "cancel"));
+            var nativeOwner = nativeContainer(session);
+            var delegate = field(execution.control.getClass(), execution.control, "delegate");
+            var temporary = (Path) field(delegate.getClass(), delegate, "temporary");
+            var consoleId = (Long) field(delegate.getClass(), delegate, "consoleId");
+            var names = (Map<?, ?>) field(NativeContainer.class, nativeOwner, "f_mapResourceNames");
+            ((InterpreterConnector) session.ensureConnector()).close();
+            assertTrue(Files.exists(temporary));
+            assertTrue(names.containsKey("console_" + consoleId));
+            session.close();
+            assertFalse(Files.exists(temporary));
+            assertFalse(names.containsKey("console_" + consoleId));
+            execution.close();
+        }
+        try (var replacement = EmbeddingSupport.create(repository())) {
+            assertHealthy(replacement);
+        }
+    }
+
+    @Test
+    void failedSessionCloseRetainsOwnershipUntilNativeAndHostCleanupFinish() throws Exception {
+        var cleanup = new CompletableFuture<Void>();
+        var session = EmbeddingSupport.create(repository());
+        try {
+            var module = compile(session, source("NativeResources.x"));
+            var execution = start(session, module, null, List.of("file", "cancel"));
+            var nativeOwner = nativeContainer(session);
+            var owner = snapshot(session).owners.getFirst();
+            var delegate = field(execution.control.getClass(), execution.control, "delegate");
+            var temporary = (Path) field(delegate.getClass(), delegate, "temporary");
+            owner.acquireResource(Object::new, _ -> cleanup);
+            assertThrows(IllegalStateException.class, () -> session.close(Duration.ZERO));
+            assertFalse(nativeOwner.f_runtime.isTerminated());
+            assertTrue(Files.exists(temporary));
+            try (var replacement = EmbeddingSupport.create(repository())) {
+                assertThrows(IllegalStateException.class, replacement::ensureConnector);
+            }
+            cleanup.complete(null);
+            session.close();
+            assertTrue(nativeOwner.f_runtime.isTerminated());
+            assertFalse(Files.exists(temporary));
+            execution.close();
+        } finally {
+            cleanup.complete(null);
+            session.close();
+        }
+        try (var replacement = EmbeddingSupport.create(repository())) {
+            assertHealthy(replacement);
+        }
+    }
+
     @Test
     void sequentialRequestsReleaseChannelsWatchesAndCallbacks(@TempDir Path root) throws Exception {
         try (var session = EmbeddingSupport.create(repository())) {
@@ -219,7 +309,8 @@ class EmbeddingResourceOwnershipTest {
                 }
             }
         };
-        var request = new RunRequest(modules, module.getName(), "run", args, console, root.toFile(), false);
+        var request = new RunRequest(modules, module.getName(), "run", args, console,
+                root == null ? null : root.toFile(), false);
         Control control = session.run(request, errors);
         assertNotNull(control, () -> errors.getErrors().toString());
         try {

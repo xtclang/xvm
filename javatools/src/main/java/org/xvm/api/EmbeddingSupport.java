@@ -12,15 +12,15 @@ import java.time.Duration;
 import java.time.Instant;
 
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -109,10 +109,10 @@ public class EmbeddingSupport
     private Throwable        cleanupFailure;
 
     private final Set<OwnedControl> controls = new HashSet<>();
-    private final CompletableFuture<Void> completion = new CompletableFuture<>();
+    private final ReentrantLock closeLock = new ReentrantLock();
 
     // Native templates contain mutable static state; an implementation loader can host only one
-    // live embedding runtime. Release ownership only after its executors have terminated.
+    // live embedding runtime. Release ownership only after native and host cleanup have completed.
     private static EmbeddingSupport runtimeOwner;
 
     /**
@@ -229,47 +229,61 @@ public class EmbeddingSupport
      */
     public void close(Duration timeout) {
         Deadline deadline = Deadline.after(timeout);
-        List<OwnedControl> pending;
-        Connector          runtime;
-        JitConnector       jitRuntime;
-        synchronized (LOCK) {
-            if (closed) {
-                pending = null;
-                runtime = null;
-                jitRuntime = null;
-            } else {
-                closed  = true;
-                pending = List.copyOf(controls);
-                runtime = connector;
-                jitRuntime = jitConnector;
+        boolean interrupted = Thread.interrupted();
+        try {
+            while (true) {
+                try {
+                    if (!closeLock.tryLock(deadline.remainingNanos(), TimeUnit.NANOSECONDS)) {
+                        throw new IllegalStateException("Embedding session close is still in progress");
+                    }
+                    break;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+            try {
+                closeSession(deadline);
+            } finally {
+                closeLock.unlock();
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
             }
         }
-        if (pending == null) {
-            try {
-                completion.get(deadline.remainingNanos(), TimeUnit.NANOSECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException("Interrupted while closing embedding session", e);
-            } catch (ExecutionException | TimeoutException e) {
-                throw new IllegalStateException("Embedding session did not close", e);
-            }
-            return;
+    }
+
+    /**
+     * Retain incomplete controls and runtimes so a later close can finish after a deadline expires.
+     * A failed native cleanup remains a failure; executor termination alone cannot release ownership.
+     */
+    private void closeSession(Deadline deadline) {
+        List<OwnedControl> pending;
+        Connector runtime;
+        JitConnector jitRuntime;
+        synchronized (LOCK) {
+            closed = true;
+            pending = List.copyOf(controls);
+            runtime = connector;
+            jitRuntime = jitConnector;
         }
 
         Throwable failure = null;
+        var controlFailures = new LinkedHashMap<OwnedControl, Throwable>();
         for (OwnedControl control : pending) {
             try {
                 control.close(deadline.remaining());
             } catch (RuntimeException | Error e) {
-                failure = collectFailure(failure, e);
+                controlFailures.put(control, e);
             }
         }
         boolean stopped = runtime == null;
-        // A JIT worker may still be running after a bounded close failed. Keep its templates open
-        // until it exits; never close resources underneath generated code that is still executing.
-        if (jitRuntime != null && failure == null) {
+        boolean jitStopped = jitRuntime == null;
+        // A failed bounded close can leave a JIT worker running. Keep its templates until it stops.
+        if (jitRuntime != null && controlFailures.isEmpty()) {
             try {
                 jitRuntime.xvm.close();
+                jitStopped = true;
             } catch (IOException | RuntimeException | Error e) {
                 failure = collectFailure(failure, e);
             }
@@ -284,31 +298,54 @@ public class EmbeddingSupport
             }
         } catch (RuntimeException | Error e) {
             failure = collectFailure(failure, e);
-        } finally {
-            synchronized (LOCK) {
-                controls.clear();
-                connector = null;
-                if (failure == null) {
-                    jitConnector = null;
+        }
+        if (stopped) {
+            for (OwnedControl control : pending) {
+                if (control.delegate instanceof InterpreterControl interpreterControl) {
+                    try {
+                        interpreterControl.releaseAfterRuntimeClose(deadline.remaining());
+                        controlFailures.remove(control);
+                        synchronized (LOCK) {
+                            controls.remove(control);
+                        }
+                    } catch (RuntimeException | Error e) {
+                        controlFailures.put(control, collectFailure(controlFailures.get(control), e));
+                    }
                 }
-                if (stopped && runtimeOwner == this) {
-                    runtimeOwner = null;
-                }
-            }
-            if (failure == null) {
-                completion.complete(null);
-            } else {
-                completion.completeExceptionally(failure);
             }
         }
-        completion.join();
+        for (Throwable controlFailure : controlFailures.values()) {
+            failure = collectFailure(failure, controlFailure);
+        }
+        synchronized (LOCK) {
+            if (stopped) {
+                connector = null;
+            }
+            if (jitStopped) {
+                jitConnector = null;
+            }
+            if (stopped && controls.isEmpty() && runtimeOwner == this) {
+                runtimeOwner = null;
+            }
+        }
+        if (failure instanceof Error error) {
+            throw error;
+        }
+        if (failure instanceof RuntimeException exception) {
+            throw exception;
+        }
+        if (failure != null) {
+            throw new IllegalStateException("Embedding session did not close", failure);
+        }
     }
 
     private static Throwable collectFailure(Throwable failure, Throwable next) {
         if (failure == null) {
             return next;
         }
-        failure.addSuppressed(next);
+        if (failure != next) {
+            failure.addSuppressed(next);
+        }
         return failure;
     }
 

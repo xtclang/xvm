@@ -77,7 +77,6 @@ class RuntimeShutdownTest {
             try {
                 assertThrows(IllegalStateException.class, () -> runtime.close(Duration.ZERO));
                 assertTrue(runtime.f_executorIO.isTerminated());
-                assertTrue(runtime.f_executorXVM.isTerminated());
                 assertFalse(runtime.isTerminated());
                 assertThrows(IllegalStateException.class, () -> runtime.close(Duration.ZERO));
                 assertFalse(owner.terminateServices().isDone());

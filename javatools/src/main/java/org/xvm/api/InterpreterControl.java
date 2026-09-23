@@ -20,7 +20,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -32,6 +31,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.runtime.MainContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.OwnedResource;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
@@ -280,21 +280,52 @@ class InterpreterControl
     @Override
     public void close(Duration timeout) {
         Deadline deadline = Deadline.after(timeout);
-        if (closed.compareAndSet(false, true)) {
+        await(release(), deadline);
+    }
+
+    /**
+     * A caller's deadline bounds its wait, not the lifetime of the release operation. Once the
+     * runner confirms termination, finish host cleanup even if that caller has already returned.
+     */
+    private synchronized CompletableFuture<Void> release() {
+        if (hostCleanup != null) {
+            return hostCleanup;
+        }
+        if (releaseAttempt == null || releaseAttempt.isCompletedExceptionally()) {
             try {
-                await(postRequest(connector, "releaseTask", xInt64.makeHandle(taskId)), deadline);
-                try {
-                    await(completion, deadline);
-                } finally {
-                    unregisterConsole(connector, consoleId);
-                    deleteTemporaryDirectory(temporary);
-                }
-                released.complete(null);
+                releaseAttempt = postRequest(connector, "releaseTask", xInt64.makeHandle(taskId))
+                        .thenCompose(_ -> completion.handle((_, failure) -> null))
+                        .thenCompose(_ -> releaseHostResources());
             } catch (RuntimeException | Error e) {
-                released.completeExceptionally(e);
+                releaseAttempt = CompletableFuture.failedFuture(e);
             }
         }
-        await(released, deadline);
+        return releaseAttempt;
+    }
+
+    /**
+     * Fall back to runtime termination when the runner could not acknowledge release. A failed
+     * or still-running runtime must never authorize deleting an application's directory.
+     */
+    void releaseAfterRuntimeClose(Duration timeout) {
+        Deadline deadline = Deadline.after(timeout);
+        if (!connector.isClosed()) {
+            throw new IllegalStateException("Runtime cleanup is still pending");
+        }
+        await(releaseHostResources(), deadline);
+    }
+
+    private synchronized CompletableFuture<Void> releaseHostResources() {
+        if (hostCleanup == null) {
+            hostCleanup = OwnedResource.closeOnWorker(() -> {
+                try {
+                    unregisterConsole(connector, consoleId);
+                } finally {
+                    deleteTemporaryDirectory(temporary);
+                }
+            });
+        }
+        return hostCleanup;
     }
 
     private static <T> T await(CompletableFuture<T> future, Deadline deadline) {
@@ -337,8 +368,8 @@ class InterpreterControl
     private final Long                    consoleId;
     private final Instant                 started;
     private final CompletableFuture<Void> completion;
-    private final AtomicBoolean           closed = new AtomicBoolean();
-    private final CompletableFuture<Void> released = new CompletableFuture<>();
+    private CompletableFuture<Void> releaseAttempt;
+    private CompletableFuture<Void> hostCleanup;
 
     private volatile boolean running = true;
     private volatile Instant stopped;
