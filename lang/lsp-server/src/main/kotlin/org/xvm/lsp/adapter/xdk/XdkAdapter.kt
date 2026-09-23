@@ -7,12 +7,17 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.AdapterCapability
+import org.xvm.lsp.adapter.CallHierarchyIncomingCall
+import org.xvm.lsp.adapter.CallHierarchyItem
+import org.xvm.lsp.adapter.CallHierarchyOutgoingCall
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.FoldingRange
+import org.xvm.lsp.adapter.InlayHint
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SelectionRange
+import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.mapCancellable
@@ -80,7 +85,12 @@ class XdkAdapter internal constructor(
             AdapterCapability.FOLDING_RANGE,
             AdapterCapability.WORKSPACE_SYMBOL,
             AdapterCapability.TYPE_HIERARCHY,
+            AdapterCapability.TYPE_DEFINITION,
+            AdapterCapability.IMPLEMENTATION,
+            AdapterCapability.CALL_HIERARCHY,
             AdapterCapability.SIGNATURE_HELP,
+            AdapterCapability.SEMANTIC_TOKENS,
+            AdapterCapability.INLAY_HINT,
         )
 
     override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
@@ -286,6 +296,7 @@ class XdkAdapter internal constructor(
         val diagnostics: List<Diagnostic>,
     ) {
         val hierarchy = XdkHierarchy(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
+        val calls = XdkCalls(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
 
         fun document(uri: String): Analysis? =
             documents[uri] ?: documents.entries
@@ -362,7 +373,7 @@ class XdkAdapter internal constructor(
             buildMap {
                 compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
             }
-        val views = compilation.semanticSnapshots()
+        val views = compilation.semanticSnapshots(errs)
         val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
         val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
         val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris) }
@@ -494,12 +505,26 @@ class XdkAdapter internal constructor(
         uri: String,
         line: Int,
         column: Int,
-    ): List<DocumentHighlight> =
-        analysis(uri)
-            ?.semantics
-            ?.referencesAt(line, column, true)
-            ?.map { DocumentHighlight(it.toRange(), DocumentHighlight.HighlightKind.TEXT) }
-            .orEmpty()
+    ): List<DocumentHighlight> {
+        val model = analysis(uri)?.semantics ?: return emptyList()
+        val symbol = model.symbolAt(line, column) ?: return emptyList()
+        return model.occurrences.filter { it.symbol == symbol.id }.map {
+            val kind =
+                when (it.usage) {
+                    SemanticModel.Usage.READ -> DocumentHighlight.HighlightKind.READ
+                    SemanticModel.Usage.WRITE, SemanticModel.Usage.READ_WRITE -> DocumentHighlight.HighlightKind.WRITE
+                    null -> DocumentHighlight.HighlightKind.TEXT
+                }
+            DocumentHighlight(it.range.toRange(), kind)
+        }
+    }
+
+    override fun getSemanticTokens(uri: String): SemanticTokens? = analysis(uri)?.semantics?.let(XdkPresentation::tokens)
+
+    override fun getInlayHints(
+        uri: String,
+        range: Range,
+    ): List<InlayHint> = analysis(uri)?.semantics?.let { XdkPresentation.hints(it, range) }.orEmpty()
 
     /**
      * Blocks and declarations that span more than one line. An editor offers a fold per region,
@@ -580,9 +605,63 @@ class XdkAdapter internal constructor(
         column: Int,
     ): List<TypeHierarchyItem> = module(uri)?.hierarchy?.prepare(uri, line, column).orEmpty()
 
+    override fun findTypeDefinition(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location? = findTypeDefinitions(uri, line, column).firstOrNull()
+
+    override fun findTypeDefinitions(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> {
+        val module = module(uri) ?: return emptyList()
+        return module.locations(
+            module
+                .document(uri)
+                ?.semantics
+                ?.typeDefinitionLocationsAt(line, column)
+                .orEmpty(),
+        )
+    }
+
+    override fun findImplementation(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> {
+        val module = module(uri) ?: return emptyList()
+        return module.locations(
+            module
+                .document(uri)
+                ?.semantics
+                ?.implementationLocationsAt(line, column)
+                .orEmpty(),
+        )
+    }
+
+    private fun ModuleAnalysis.locations(locations: List<SemanticModel.SourceLocation>): List<Location> =
+        locations
+            .mapNotNull { target -> sourceUri(target.sourceName)?.let { locationOf(it, target.range.toRange()) } }
+            .distinct()
+            .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
+
     override fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> = module(item.uri)?.hierarchy?.supertypes(item).orEmpty()
 
     override fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> = module(item.uri)?.hierarchy?.subtypes(item).orEmpty()
+
+    override fun prepareCallHierarchy(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<CallHierarchyItem> = module(uri)?.calls?.prepare(uri, line, column).orEmpty()
+
+    override fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall> =
+        module(item.uri)?.calls?.incoming(item).orEmpty()
+
+    override fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall> =
+        module(item.uri)?.calls?.outgoing(item).orEmpty()
 
     private fun SemanticModel.Range.toRange(): Range = Range(Position(start.line, start.column), Position(end.line, end.column))
 

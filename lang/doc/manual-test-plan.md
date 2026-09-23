@@ -155,8 +155,9 @@ module TestModule {
 >
 > Compiler completion and signature help are available for the supported cursor contexts. Rename,
 > formatting, code actions, code lenses, document links, linked editing, inlay hints and semantic
-> tokens are not advertised. Cross-module navigation, go-to-type-definition, find-implementations
-> and call hierarchy remain unavailable. Compiler mode stays Java-only.
+> tokens are not advertised. Type-definition and type/method implementation lookup are available
+> within the current module; cross-module navigation and call hierarchy remain unavailable.
+> Compiler mode stays Java-only.
 >
 > Use the [XdkAdapter playbook](#xdkadapter-playbook) for a complete compiler run, including fixtures
 > that compile and precise expectations for compiler-only features. §7a adds diagnostic stress checks.
@@ -178,8 +179,8 @@ With the compiler backend, create `Project.x` containing `module Project { class
 | Broken syntax | Remove a member's closing brace, then restore it | Current outlines/folding remain available, including sibling files. Semantic navigation clears until correction. |
 | Incomplete statement | Type `console.` inside a method and remove the closing braces | The method/module outline and enclosing selection ranges survive; compiler diagnostics remain, and no semantic definition is invented for the broken expression. |
 
-These checks do not imply workspace dependency builds, library-source navigation, conditional mixin
-hierarchy or method-implementation lookup.
+These checks do not imply workspace dependency builds, library-source navigation or conditional
+mixin hierarchy. The XdkAdapter playbook below also covers method-implementation lookup.
 
 ### 1. Syntax Highlighting (TextMate)
 
@@ -1014,8 +1015,8 @@ task too: a later build without it can restore the default backend.
 Open a scratch folder in that editor window. Confirm `backend: XTC Compiler` in
 `~/.xtc/logs/lsp-server.log`; the health-check adapter name is `XDK`. The matching XDK libraries
 are bundled, so no `XDK_HOME`, extracted distribution or separate compiler installation is needed.
-Do not use semantic-token colors to identify this backend: it currently supplies no semantic
-tokens, although the editor's TextMate colors and snippets still work.
+Confirm the backend in the log even when colors look familiar: compiler semantic tokens cover
+resolved names, while the editor's TextMate colors and snippets also remain available.
 
 Use editor action search if a shortcut conflicts with your keymap. The VS Code actions are listed
 in the [keybindings reference](#keybindings-reference); IntelliJ provides Quick Documentation,
@@ -1178,11 +1179,84 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Try Rename, Format Document/Selection, quick fixes, code lenses and semantic highlighting with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets, TextMate colors or indentation may still work and do not count as compiler feature passes. |
+| X31 | Try Rename, Format Document/Selection, quick fixes and code lenses with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets or indentation may still work and do not count as compiler feature passes. |
 | X32 | Try a cursor inside an identifier or `box.pa|ir(...)`, a constructor call, a call through a function value, or a call with arguments after the cursor. | These cursor contexts are outside current completion/candidate coverage. An empty answer is acceptable; a crash, stale answer or incorrect replacement edit is not. |
 
-Also unavailable: separate Go to Declaration, Go to Type Definition, Find Implementations, call
-hierarchy, document links, linked editing and inlay hints. Cross-module/dependency navigation,
+### F. Type-definition and implementation lookup
+
+Save this as `Lookups.x`. Use **Go to Type Definition** (IntelliJ: **Go to Type Declaration**),
+and **Go to Implementations / Go to Implementation(s)** from the editor action menu.
+
+```xtc
+module Lookups {
+    interface Mapper<T> { T map(T value); }
+    class TextMapper implements Mapper<String> {
+        @Override String map(String value) = value;
+        String map(Int value) = value.toString();
+    }
+    class Child extends TextMapper {
+        @Override String map(String value) = value;
+    }
+    class Inherited extends TextMapper {}
+    class Unrelated { String map(String value) = value; }
+    TextMapper make() = new TextMapper();
+    void run(Mapper<String> mapper, TextMapper|Unrelated value) {
+        mapper.map("text");
+        value.toString();
+        if (value.is(TextMapper)) { value.toString(); }
+        make();
+    }
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X33 | Go to Type Definition on `mapper` in `mapper.map("text")`, then on `make` in its call and declaration. | The variable navigates to `Mapper`, not its `String` argument; the method navigates to its `TextMapper` return type. |
+| X34 | Go to Type Definition on `value` before the `if`, then inside the narrowed branch. | Before narrowing, two targets: `TextMapper` and `Unrelated`. Inside, only `TextMapper`. A chooser/peek list instead of a direct jump is normal for multiple targets. |
+| X35 | Go to Type Definition on `value` in `Mapper`'s method signature, then on the written `String` in TextMapper. | The formal value type leads to the declaration of `T`; the bundled `String` type has no source target. No same-spelled local substitute is returned. |
+| X36 | Find Implementations on `Mapper`. | `TextMapper`, `Child` and `Inherited`, once each. `Unrelated` is excluded despite its matching method shape. These are nominal declaration-level results, not a search for every structurally compatible class. |
+| X37 | Find Implementations on the interface's `map`, then on the call `mapper.map("text")`. Repeat on Child's override. | Interface/call: the String bodies in TextMapper and Child. The Int overload and Unrelated's method are excluded; Inherited adds no duplicate body. Child's override resolves to its own body. |
+| X38 | Return to the two-file Project fixture in section D. Go to Type Definition on the return-type `Child` after adding `Child make() = new Child();` to the root. Find Implementations on Base's `echo`; repeat after adding two blank lines before Child without saving, then after a broken member edit and correction. | Type-definition reaches the closed/member source at its current position. The inherited method points to the actual Base body once. A parse failure clears semantic targets until correction; old offsets are never reused. |
+
+Implementation lookup requires a successful current module compilation. Concrete classes can be
+their own implementation target. Interface default bodies and mixin bodies from composed hosts
+can be source targets; an unused mixin is not an implementation of its `into` constraint.
+A user-written override inside an anonymous class is also a method target, although the synthetic
+class is not listed as a named type implementation.
+Property/accessor implementations and synthetic delegation/redirect targets are not provided.
+
+### G. Call hierarchy, semantic highlighting and inlay hints
+
+Save this as `Consumers.x`. Enable semantic highlighting and inlay hints in the editor. For call
+hierarchy use **Show Call Hierarchy** (VS Code) or the client's incoming/outgoing call view.
+In IntelliJ, record an unavailable LSP action as not exercised. Semantic token colors depend on
+the theme; VS Code's **Developer: Inspect Editor Tokens and Scopes** shows the actual token kind.
+
+```xtc
+module Consumers {
+    static Int leaf(Int input, Int extra=2) = input + extra;
+    static String leaf(String text) = text;
+    Int run(Int seed) {
+        var number = leaf(1);
+        val label = leaf("text");
+        number += leaf(input=2, extra=3);
+        function Int() fn = () -> leaf(seed);
+        return number + label.size + fn();
+    }
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X39 | Show incoming calls for the Int `leaf`, then outgoing calls for `run`. | Incoming groups two sites under `run` and one under `<lambda>`. Outgoing `run` lists the Int and String overload separately; the lambda's call is not attributed to `run`. |
+| X40 | Expand the lambda's outgoing calls. Inspect the dynamic `fn()` call. | The lambda leads to Int `leaf`; `fn()` does not invent a statically selected edge. Call ranges navigate to the caller's source. |
+| X41 | Inspect tokens for `leaf`, `seed`, `number` and the `number +=` target. Select `number` to highlight occurrences. | Method, parameter and variable kinds reflect resolved identities. Static/declaration/modification modifiers are present where applicable. Highlights distinguish the write and subsequent read. Theme colors may coincide. |
+| X42 | Inspect inline hints in `run`; compare positional and named calls. | `number: Int` and `label: String` inferred-type hints; `input:` and `text:` before positional values. The named call has no redundant hints and omitted default `extra` has none. Explicit declarations get no inferred-type hint. |
+| X43 | Keep hierarchy items open, insert a blank line before `run`, then reopen hierarchy. Break the module with an unfinished declaration, correct it and close/reopen the file. | Fresh results use current ranges. Old hierarchy items do not resolve against the edited snapshot. A parse failure clears semantic answers; correction restores them. |
+| X44 | In the section D two-file fixture, add `static Int target(Int n)=n;` to Project and `Int callTarget()=target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
+
+Also unavailable: separate Go to Declaration, document links and linked editing. Rename remains
+off: successful recompilation alone cannot rule out silent binding changes. Cross-module/dependency navigation,
 external library source targets and conditional-mixin hierarchy are outside this pass. No
 Tree-sitter fallback runs in compiler mode. Check the
 [capability matrix](plans/plan-ide-integration.md#adapter-capability-matrix) when those limits change.

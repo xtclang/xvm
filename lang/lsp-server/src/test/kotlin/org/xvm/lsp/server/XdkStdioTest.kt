@@ -1,6 +1,9 @@
 package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
+import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
+import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
+import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.ConfigurationParams
@@ -12,8 +15,10 @@ import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.HoverParams
+import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.Position
@@ -22,11 +27,13 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.SelectionRangeParams
+import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TypeDefinitionParams
 import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
@@ -57,6 +64,43 @@ import java.util.jar.JarOutputStream
 class XdkStdioTest {
     @TempDir
     lateinit var directory: Path
+
+    @Test
+    fun `compiler call hierarchy tokens and hints round trip and reject stale items`() {
+        val source = "module Stdio { static Int leaf(Int input)=input; Int run() { var n=leaf(1); return n; } }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val leaf =
+                session
+                    .await(
+                        documents.prepareCallHierarchy(CallHierarchyPrepareParams(document, Position(0, source.indexOf("leaf")))),
+                    ).single()
+            val incoming = session.await(documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf))).single()
+            assertThat(incoming.from.name).isEqualTo("run")
+            assertThat(incoming.fromRanges).containsExactly(
+                Range(
+                    Position(0, source.lastIndexOf("leaf")),
+                    Position(
+                        0,
+                        source.lastIndexOf("leaf") + 4,
+                    ),
+                ),
+            )
+            val outgoing = session.await(documents.callHierarchyOutgoingCalls(CallHierarchyOutgoingCallsParams(incoming.from))).single()
+            assertThat(outgoing.to).isEqualTo(leaf)
+            val hints = session.await(documents.inlayHint(InlayHintParams(document, Range(Position(0, 0), Position(1, 0)))))
+            assertThat(hints.map { it.label.left }).containsExactly(": Int", "input:")
+            assertThat(session.await(documents.semanticTokensFull(SemanticTokensParams(document))).data).isNotEmpty()
+            session.change("\n$source", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            assertThat(session.await(documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf)))).isEmpty()
+            assertThat(session.await(documents.callHierarchyOutgoingCalls(CallHierarchyOutgoingCallsParams(incoming.from)))).isEmpty()
+        }
+    }
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
@@ -96,10 +140,12 @@ class XdkStdioTest {
         directory = directory.toRealPath()
         val root = directory.resolve("Multi.x").toFile()
         val member = directory.resolve("Multi/Child.x").toFile()
-        val source = "module Multi { class Base {} Child make() = new Child(); }"
+        val source =
+            "module Multi { interface Named { String name(); } " +
+                "class Base implements Named { @Override String name() = \"base\"; } Child make() = new Child(); }"
         root.writeText(source)
         member.parentFile.mkdirs()
-        member.writeText("class Child extends Base {}")
+        member.writeText("class Child extends Base { @Override String name() = \"child\"; }")
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             val rootId = TextDocumentIdentifier(root.toURI().toString())
@@ -114,6 +160,15 @@ class XdkStdioTest {
                     ).left
                     .single()
             assertThat(definition.uri).isEqualTo(memberId.uri)
+            val typeDefinition =
+                session.await(documents.typeDefinition(TypeDefinitionParams(rootId, Position(0, source.indexOf("make"))))).left.single()
+            assertThat(typeDefinition.uri).isEqualTo(memberId.uri)
+            assertThat(typeDefinition.range).isEqualTo(Range(Position(0, 6), Position(0, 11)))
+            for (name in listOf("Named", "name")) {
+                val implementations =
+                    session.await(documents.implementation(ImplementationParams(rootId, Position(0, source.indexOf(name))))).left
+                assertThat(implementations.map { it.uri }).containsExactlyInAnyOrder(rootId.uri, memberId.uri)
+            }
             val base =
                 session
                     .await(
@@ -136,6 +191,35 @@ class XdkStdioTest {
             )
             assertThat(session.diagnosticsFor(memberId.uri, 8).diagnostics).isEmpty()
             assertThat(session.await(documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)))).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
+    fun `type definition preserves multiple union targets over stdio and follows narrowing`() {
+        val source =
+            """
+            module Stdio {
+                class First {}
+                class Second {}
+                void run(First|Second value) {
+                    value.toString();
+                    if (value.is(First)) { value.toString(); }
+                }
+            }
+            """.trimIndent()
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            val union = session.await(documents.typeDefinition(TypeDefinitionParams(id, Position(4, 8)))).left
+            assertThat(union.map { it.range.start.line }).containsExactly(1, 2)
+            assertThat(union.map { it.uri }).containsOnly(URI)
+            val narrowedPosition = Position(5, source.lines()[5].lastIndexOf("value"))
+            val narrowed = session.await(documents.typeDefinition(TypeDefinitionParams(id, narrowedPosition))).left
+            assertThat(narrowed).containsExactly(union.first())
             session.shutdownAndExit()
         }
     }
@@ -489,6 +573,11 @@ class XdkStdioTest {
         fun initialize() {
             val initialized = await(server.initialize(InitializeParams().apply { capabilities = ClientCapabilities() }))
             assertThat(initialized.capabilities.definitionProvider.left).isTrue()
+            assertThat(initialized.capabilities.typeDefinitionProvider.left).isTrue()
+            assertThat(initialized.capabilities.implementationProvider.left).isTrue()
+            assertThat(initialized.capabilities.callHierarchyProvider.left).isTrue()
+            assertThat(initialized.capabilities.inlayHintProvider.left).isTrue()
+            assertThat(initialized.capabilities.semanticTokensProvider).isNotNull()
             assertThat(initialized.capabilities.hoverProvider.left).isTrue()
             assertThat(initialized.capabilities.referencesProvider.left).isTrue()
             assertThat(initialized.capabilities.documentHighlightProvider.left).isTrue()
