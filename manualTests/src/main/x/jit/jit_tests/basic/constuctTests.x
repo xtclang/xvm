@@ -4,6 +4,7 @@ package constuctTests {
         testReplicable();
         testDuplicable();
         testOptimizedVirtualConstructor();
+        testPrimitiveStringConstructors();
     }
 
     void testReplicable() {
@@ -62,5 +63,14 @@ package constuctTests {
         Int value;
 
         Boolean hasValue(Int expected) = value == expected;
+    }
+
+    void testPrimitiveStringConstructors() {
+        // TODO: NumberBuilder only generates Bit[] and Byte[] constructors, and these types
+        // have no native String constructor; calling $new(Ctx, String) throws NoSuchMethodError
+        // Int32? small = new Int32("42");
+        // assert small == 42;
+        // Int128? large = new Int128("42");
+        // assert large == 42;
     }
 }
