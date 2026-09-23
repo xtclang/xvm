@@ -20,6 +20,9 @@ import java.util.Set;
 
 import java.util.function.Function;
 
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
@@ -515,11 +518,13 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Analyze a standalone incomplete member access/call at an explicit source position, including
-     * before existing closing braces or a semicolon. Source text is unchanged and later declarations
+     * Analyze an incomplete member access/call at an explicit source position, including before
+     * existing closing braces or a semicolon. Source text is unchanged and later declarations
      * retain their positions. The position must come from {@link Source#getPosition()} for this text.
-     * Other syntax errors prevent semantic analysis; assignments, returns and incomplete nested
-     * arguments remain unsupported. Complete source does not become an incomplete site.
+     * Supports standalone statements, simple assignment/initializer values, single return values,
+     * and final nested call arguments, including named arguments and existing closing parentheses.
+     * Compound/conditional value prefixes and arguments following the cursor remain unsupported.
+     * Other syntax errors prevent semantic analysis; complete source does not become an incomplete site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,
                                             @NotNull ErrorListener errs) {
@@ -590,13 +595,7 @@ public class EmbeddingSupport {
         if (parsed.root() == null) {
             return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
         }
-        List<AstNode> nodes = new ArrayList<>(List.of(parsed.root()));
-        for (int i = 0; i < nodes.size(); ++i) {
-            nodes.get(i).children().forEachRemaining(nodes::add);
-        }
-        List<IncompleteStatement> sites = nodes.stream()
-                .filter(IncompleteStatement.class::isInstance)
-                .map(IncompleteStatement.class::cast).toList();
+        var sites = incompleteSites(parsed.root()).toList();
         if (sites.size() != 1 || syntaxErrors.getErrors().stream().anyMatch(error ->
                 error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(boundaryCode))) {
             return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
@@ -605,6 +604,17 @@ public class EmbeddingSupport {
         Compilation attempt = compileModule(listener -> parsed, input, host);
         return new PartialAnalysis(parsed.sources(), sites, Optional.ofNullable(attempt.pool()),
                 attempt.callBindings());
+    }
+
+    /** Parsed children exist before parent links; expose the innermost unfinished operations. */
+    private static Stream<IncompleteStatement> incompleteSites(AstNode node) {
+        var nested = StreamSupport.stream(node.children().spliterator(), false)
+                .flatMap(EmbeddingSupport::incompleteSites);
+        if (node instanceof IncompleteStatement site) {
+            var descendants = nested.toList();
+            return descendants.isEmpty() ? Stream.of(site) : descendants.stream();
+        }
+        return nested;
     }
 
     /** An assembled tree is available only when parsing/loading succeeded. */

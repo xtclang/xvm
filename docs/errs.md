@@ -232,7 +232,7 @@ which read like an accessor.
 | `footprint()` / `footprint(compilation)` | Observe repository, heap and compilation-pool counts without starting an interpreter. Hosts must serialize compilations sharing the configured repository. |
 | Passive AST source bindings | Resolved names, selected methods, declaration tokens, formals and capture origins connect compiler identities to source. The [AST inventory](#ast-changes-for-embedding-and-lsp-ownership-and-placement) records their ownership and placement. |
 | `Compilation.sourceTrees()` / `ModuleInfo.getParsedSources()` | Preserve per-file syntax after a loading/parsing error without presenting it as an assembled or semantically valid module. Structural queries can retain current outlines and ranges. |
-| `analyzeIncomplete(...)` / `PartialAnalysis` | Opt-in probe for a standalone incomplete `receiver.` or call. The original Source overload supports trailing EOF; explicit-cursor Source and ModuleInfo overloads also support sites before closing braces/semicolons, with unchanged text and module overlays. Retains intact syntax, receiver/argument validation and lexical parentage; never returns a compiled module or selects an incomplete call's overload. Normal compilation is unchanged. |
+| `analyzeIncomplete(...)` / `PartialAnalysis` | Opt-in probe for an incomplete `receiver.` or call. The original Source overload supports a standalone trailing EOF statement; explicit-cursor Source and ModuleInfo overloads support statement, simple assignment/initializer, single return and final nested-argument contexts, with unchanged text and module overlays. Retains intact syntax, receiver/argument validation and lexical parentage; never returns a compiled module or selects an incomplete call's overload. Normal compilation is unchanged. |
 
 The source-tree API adds `compileModule(ModuleInfo, repository, errs)` and the protected
 `ModuleInfo.readSource(File)` and `sourceEntries(File)` hooks. A fresh source-tree input uses the
@@ -1258,7 +1258,7 @@ closing braces or a semicolon. Its additional final `diagnosticCode` is syntax p
 to prevent emission. The field is immutable and needs no clone handling; no Context or semantic
 lookup state is added. The parser owns cursor recognition and resumes after the intact prefix, so
 an unclosed call cannot consume the method's closing brace during recovery. Source is never cut
-off, rewritten or padded. Assignments, returns and incomplete nested arguments remain unsupported.
+off, rewritten or padded. The later value-context extension is described below.
 
 `ModuleInfo.getSourceTree` accepts an attempt-owned parsing function, passed through its existing
 source-tree traversal rather than stored in a node. The embedding API selects one source/cursor;
@@ -1266,6 +1266,33 @@ only its recognized incomplete-boundary diagnostic is deferred for assembly. Oth
 still prevent semantics. Kotlin copies all module facts into the selected source view, preserving
 cross-file symbol identities and the original source positions. The parser cursor is a final
 primitive with a named `NO_CURSOR` sentinel, not an Optional field or lazy mutable cache.
+
+The value-context extension adds `IncompleteExpression` as a small AST wrapper around the existing
+site marker. The real AssignmentStatement or ReturnStatement remains its parent, so the compiler
+owns declaration visibility, shadowing and inference context. The wrapper provides no implicit
+type, never claims a successful type fit, validates the intact prefix and then fails. It supplies
+no replacement value. This belongs in the AST because moving it to Kotlin would require recreating
+those validation rules or compiling changed source. The only field is the ordinary child marker;
+the existing child-field cloning mechanism copies its receiver/arguments. There is no stored
+Context, callback, inferred-result cache or clone override. No fields are added to assignment,
+return or invocation nodes.
+
+Here, cloning ownership means that each copied AST parent gets its own mutable syntax children:
+validation of a trial copy must not rewrite children belonging to the original tree. The existing
+`AstNode.clone()` mechanism already enforces this for declared child fields. The regression checks
+that the new wrapper participates in that mechanism; it does not introduce a new copying policy.
+Embedding/LSP consumers use copied immutable semantic facts and do not manage AST clones.
+
+Nested call prefixes retain preceding arguments and named arguments without selecting an overload
+using a missing value. The embedding result exposes the innermost site; its traversal follows child
+links because the parser has not installed parent links yet. Tests cover assignment/return contexts
+in module overlays, a receiver-shadowing comparison with valid ordinary compilation, independently
+copied syntax children and unknown-receiver diagnostics. Compound/conditional value prefixes, multiple returns
+and arguments after the incomplete argument remain unavailable. These are compiler/consumer
+probes. The adapter's internal cursor request API now serializes partial analysis and copying on
+the compiler worker, invalidating requests on edit, supersession, cancellation, close and shutdown.
+It returns immutable facts without changing normal diagnostics; completion/signature protocol
+wiring and document-version checks still precede capability advertisement.
 
 #### Call facts owned by the compilation attempt
 

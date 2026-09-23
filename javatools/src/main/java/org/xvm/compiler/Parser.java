@@ -62,7 +62,7 @@ public class Parser {
     /**
      * Retain a supported incomplete statement at a cursor, without truncating the source.
      * The cursor uses a position token obtained from {@link Source#getPosition()} for this text.
-     * Initially supports a missing member/call suffix before a closing brace or semicolon.
+     * Supports missing member/call suffixes at statement and final call-argument boundaries.
      */
     public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
         if (cursor == NO_CURSOR) {
@@ -965,8 +965,10 @@ public class Parser {
                 } else {
                     VariableTypeExpression       typeDecl = new VariableTypeExpression(tokType);
                     VariableDeclarationStatement stmtDecl = new VariableDeclarationStatement(typeDecl, tokName, false);
-                    AssignmentStatement          stmtAsn  = new AssignmentStatement(stmtDecl, match(Id.ASN), parseExpression());
-                    expect(Id.SEMICOLON);
+                    Token                        op       = match(Id.ASN);
+                    Expression                   value    = parsePartialValue();
+                    AssignmentStatement          stmtAsn  = new AssignmentStatement(stmtDecl, op, value);
+                    finishValueStatement(value);
                     return stmtAsn;
                 }
             }
@@ -1039,8 +1041,10 @@ public class Parser {
         case COND_OR_ASN:
         case COND_NN_ASN:
         case COND_ELSE_ASN: {
-            AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
-            expect(Id.SEMICOLON);
+            Token               op    = current();
+            Expression          value = op.getId() == Id.ASN ? parsePartialValue() : parseExpression();
+            AssignmentStatement stmt  = new AssignmentStatement(expr, op, value);
+            finishValueStatement(value);
             return stmt;
         }
         }
@@ -1101,9 +1105,9 @@ public class Parser {
         Expression value = null;
         Token      op    = match(Id.ASN);
         if (op != null) {
-            value = parseExpression();
+            value = parsePartialValue();
         }
-        expect(Id.SEMICOLON);
+        finishValueStatement(value);
 
         // apply any annotations to the variable type; "@A @B @C T" is "@A of (@B of (@C of T))"
         if (annotations != null) {
@@ -1251,7 +1255,7 @@ public class Parser {
             long lStart = peek().getStartPosition();
             try {
                 stmts.add(parseStatement());
-            } catch (IncompleteExpression e) {
+            } catch (IncompleteSyntax e) {
                 // Do not reinterpret a return, assignment, condition or nested call as a
                 // standalone expression. Only the intact statement prefix is supported.
                 if (e.statement.getStartPosition() == lStart) {
@@ -1898,8 +1902,18 @@ public class Parser {
         // note: it is possible that the expression list is parenthesized, in which case it will be
         //       parsed as a single expression (a tuple literal), and the compiler will have to
         //       it out later
-        List<Expression> exprs = parseExpressionList();
-        expect(Id.SEMICOLON);
+        long start = peek().getStartPosition();
+        List<Expression> exprs;
+        try {
+            exprs = parseExpressionList();
+        } catch (IncompleteSyntax e) {
+            exprs = List.of(retainPartialValue(start, e));
+        }
+        if (exprs.size() == 1) {
+            finishValueStatement(exprs.getFirst());
+        } else {
+            expect(Id.SEMICOLON);
+        }
         return new ReturnStatement(keyword, exprs);
     }
 
@@ -3103,7 +3117,7 @@ public class Parser {
 
             case DOT: {
                 Token dot = expect(Id.DOT);
-                if (canRetainIncomplete()) {
+                if (canRetainIncomplete(true)) {
                     throw incomplete(expr, dot, List.of(), List.of());
                 }
                 switch (peek().getId()) {
@@ -5061,6 +5075,10 @@ public class Parser {
 
     /** Parse one argument, shared by calls, constructors and annotation argument lists. */
     private Expression parseArgument(boolean allowCurrying, boolean fArray) {
+        return parseArgument(allowCurrying, fArray, false);
+    }
+
+    private Expression parseArgument(boolean allowCurrying, boolean fArray, boolean partial) {
         Token label = null;
         if (!fArray) {
             // special case where the parameter names are being specified with the arguments
@@ -5103,7 +5121,7 @@ public class Parser {
             }
 
             default:
-                expr = parseExpression();
+                expr = partial ? parsePartialValue() : parseExpression();
                 break;
             }
         } else {
@@ -5128,7 +5146,17 @@ public class Parser {
                 if (canRetainIncomplete()) {
                     throw incomplete(callee, open, args, separators);
                 }
-                args.add(parseArgument(true, false));
+                Expression argument = parseArgument(true, false, f_cursor != NO_CURSOR);
+                args.add(argument);
+                Expression value = argument instanceof LabeledExpression labeled
+                        ? labeled.getUnderlyingExpression() : argument;
+                if (value instanceof IncompleteExpression) {
+                    // Keep the enclosing call's intact prefix, but do not attempt overload
+                    // selection using an argument whose type does not exist. A written close
+                    // belongs to this call; its caller will retain its own enclosing context.
+                    match(Id.R_PAREN);
+                    throw incomplete(callee, open, args, separators);
+                }
                 Token comma = match(Id.COMMA);
                 if (comma != null) {
                     separators.add(comma);
@@ -5146,6 +5174,10 @@ public class Parser {
     }
 
     private boolean canRetainIncomplete() {
+        return canRetainIncomplete(false);
+    }
+
+    private boolean canRetainIncomplete(boolean beforeArgumentClose) {
         if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
             return false;
         }
@@ -5154,21 +5186,47 @@ public class Parser {
         }
         return prev().getEndPosition() <= f_cursor
                 && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
-                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON));
+                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON)
+                        || beforeArgumentClose && peek(Id.R_PAREN));
     }
 
-    private IncompleteExpression incomplete(Expression target, Token operator,
-                                            List<Expression> arguments, List<Token> separators) {
+    private IncompleteSyntax incomplete(Expression target, Token operator,
+                                        List<Expression> arguments, List<Token> separators) {
         long   position = f_cursor == NO_CURSOR ? m_source.getPosition() : f_cursor;
         String code     = f_cursor == NO_CURSOR ? UNEXPECTED_EOF : INCOMPLETE_EXPRESSION;
         log(Severity.ERROR, code, position, position);
-        return new IncompleteExpression(
+        return new IncompleteSyntax(
                 new IncompleteStatement(target, operator, arguments, separators, position, code));
     }
 
+    /** Preserve the enclosing statement only when its whole value is the incomplete operation. */
+    private Expression parsePartialValue() {
+        long start = peek().getStartPosition();
+        try {
+            return parseExpression();
+        } catch (IncompleteSyntax e) {
+            return retainPartialValue(start, e);
+        }
+    }
+
+    private Expression retainPartialValue(long start, IncompleteSyntax error) {
+        if (f_cursor == NO_CURSOR || error.statement.getStartPosition() != start) {
+            throw error;
+        }
+        return new IncompleteExpression(error.statement);
+    }
+
+    private void finishValueStatement(Expression value) {
+        if (value instanceof IncompleteExpression) {
+            match(Id.SEMICOLON);
+        } else {
+            expect(Id.SEMICOLON);
+        }
+    }
+
     /** Unwind to the enclosing statement without pretending the unfinished expression has a value. */
-    private static class IncompleteExpression extends CompilerException {
-        private IncompleteExpression(IncompleteStatement statement) {
+    private static class IncompleteSyntax extends CompilerException {
+        private IncompleteSyntax(IncompleteStatement statement) {
             super("Incomplete expression");
             this.statement = statement;
         }
