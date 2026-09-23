@@ -25,6 +25,10 @@ class SemanticModel internal constructor(
 
     enum class Role { DECLARATION, REFERENCE }
 
+    enum class Usage { READ, WRITE, READ_WRITE }
+
+    enum class Modifier { READONLY, STATIC, ABSTRACT }
+
     enum class TypeForm {
         NAMED,
         FORMAL,
@@ -117,6 +121,8 @@ class SemanticModel internal constructor(
         val type: TypeId?,
         val signature: Signature?,
         val declarationSource: String?,
+        val modifiers: Set<Modifier> = emptySet(),
+        val inferred: Boolean = false,
     )
 
     /** A written name; a null symbol explicitly represents an unresolved occurrence. */
@@ -126,6 +132,7 @@ class SemanticModel internal constructor(
         val role: Role,
         val symbol: SymbolId?,
         val type: TypeId?,
+        val usage: Usage? = null,
     )
 
     data class ExpressionType(
@@ -136,6 +143,7 @@ class SemanticModel internal constructor(
     data class CallArgument(
         val range: Range,
         val parameterIndex: Int,
+        val named: Boolean = false,
     )
 
     /** Selected signature after inference; parameter indices exclude hidden type parameters. */
@@ -146,6 +154,14 @@ class SemanticModel internal constructor(
         val method: SymbolId,
         val signature: Signature,
         val arguments: List<CallArgument>,
+        val caller: SymbolId? = null,
+    )
+
+    /** Source callable boundaries, including lambdas whose compiler methods have synthetic names. */
+    data class Callable(
+        val symbol: SymbolId,
+        val location: SourceLocation,
+        val selection: Range,
     )
 
     data class Supertype(
@@ -167,18 +183,25 @@ class SemanticModel internal constructor(
     val expressions: List<ExpressionType> = immutableList(expressions)
     val calls: List<CallSite> = immutableList(calls)
     val typeDeclarations: Map<SymbolId, TypeDeclaration> = facts.typeDeclarations
+    val callables: Map<SymbolId, Callable> = facts.callables
 
     /** One immutable symbol/type table shared by every source view of the compilation. */
     internal class Facts(
         symbols: Map<SymbolId, Symbol>,
         types: Map<TypeId, Type>,
         typeDeclarations: Map<SymbolId, TypeDeclaration> = emptyMap(),
+        typeDefinitions: Map<TypeId, List<SymbolId>> = emptyMap(),
+        implementations: Map<SymbolId, List<SymbolId>> = emptyMap(),
+        callables: Map<SymbolId, Callable> = emptyMap(),
     ) {
         val symbolsById = immutableMap(symbols)
         val typesById = immutableMap(types)
         val symbols = immutableList(symbols.values)
         val types = immutableList(types.values)
         val typeDeclarations = immutableMap(typeDeclarations)
+        val typeDefinitions = immutableMap(typeDefinitions.mapValues { immutableList(it.value) })
+        val implementations = immutableMap(implementations.mapValues { immutableList(it.value) })
+        val callables = immutableMap(callables)
     }
 
     /** IDs from another snapshot return no result. */
@@ -224,6 +247,37 @@ class SemanticModel internal constructor(
         line: Int,
         column: Int,
     ): SourceLocation? = symbolAt(line, column)?.let { symbol -> symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) } }
+
+    /** Nominal types, flow-narrowed values and selected call results; never follow generic arguments. */
+    fun typeDefinitionLocationsAt(
+        line: Int,
+        column: Int,
+    ): List<SourceLocation> {
+        val symbol = symbolAt(line, column)
+        symbol?.takeIf { it.kind == SymbolKind.TYPE || it.kind == SymbolKind.TYPE_PARAMETER }?.let { return locations(listOf(it.id)) }
+        val position = Position(line, column)
+        val resultTypes =
+            if (symbol?.kind == SymbolKind.METHOD) {
+                val signature =
+                    calls.firstOrNull { position in it.callee }?.signature
+                        ?: symbol.signature.takeIf { occurrenceAt(line, column)?.role == Role.DECLARATION }
+                signature?.returns.orEmpty()
+            } else {
+                listOfNotNull(typeAt(line, column)?.id)
+            }
+        return locations(resultTypes.flatMap { facts.typeDefinitions[it].orEmpty() })
+    }
+
+    /** Successful worker inspection supplies declaration-level type and method implementation edges. */
+    fun implementationLocationsAt(
+        line: Int,
+        column: Int,
+    ): List<SourceLocation> = locations(facts.implementations[symbolAt(line, column)?.id].orEmpty())
+
+    private fun locations(ids: List<SymbolId>): List<SourceLocation> =
+        ids
+            .mapNotNull { id -> symbol(id)?.let { symbol -> symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) } } }
+            .distinct()
 
     fun referencesAt(
         line: Int,

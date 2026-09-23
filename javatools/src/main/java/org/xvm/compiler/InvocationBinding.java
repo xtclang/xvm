@@ -25,8 +25,13 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         arguments = List.copyOf(arguments);
     }
 
-    /** A written argument's source range and zero-based visible parameter index. */
-    public record Argument(long startPosition, long endPosition, int parameterIndex) {}
+    /** A written argument's source range, visible parameter index and explicit-label status. */
+    public record Argument(long startPosition, long endPosition, int parameterIndex, boolean named) {
+        /** Retain the original positional-argument construction API. */
+        public Argument(long startPosition, long endPosition, int parameterIndex) {
+            this(startPosition, endPosition, parameterIndex, false);
+        }
+    }
 
     /**
      * Match the compiler's parameter-ordered expressions to their written argument spans before
@@ -52,7 +57,8 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
                 // than guessing a parameter or changing whether the program compiles.
                 return Optional.empty();
             }
-            bindings.add(new Argument(expression.getStartPosition(), expression.getEndPosition(), parameter));
+            bindings.add(new Argument(expression.getStartPosition(), expression.getEndPosition(),
+                    parameter, expression instanceof LabeledExpression));
         }
         return Optional.of(List.copyOf(bindings));
     }

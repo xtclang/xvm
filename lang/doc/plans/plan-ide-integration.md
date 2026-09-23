@@ -107,7 +107,7 @@ out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 
 
 #### Adapter capability matrix
 
-The **Compiler (XdkAdapter)** column describes the current implementation. The nine optional
+The **Compiler (XdkAdapter)** column describes the current implementation. The optional
 features in [XdkAdapter.capabilities](../../lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt)
 are filtered into the server's
 [advertised capabilities](../../lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt).
@@ -116,7 +116,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
-| Syntax highlighting | - | TextMate + semantic tokens (lexer) | No compiler semantic tokens; editor TextMate remains available |
+| Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus compiler tokens for resolved names |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the current module |
@@ -126,7 +126,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
-| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE not distinguished |
+| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE distinguished, compound targets shown as WRITE |
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
@@ -138,15 +138,33 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Range formatting | Trailing WS in range | Structural formatting in range | Not implemented |
 | On-type formatting | - | Structural formatting on trigger characters | Not implemented |
 | Workspace symbols | - | Fuzzy search (4-tier) | **Done** - substring search over completed module sessions, including closed members |
-| Semantic tokens | - | Lexer-based (18 contexts) | Not implemented |
+| Semantic tokens | - | Lexer-based (18 contexts) | **Partial** - resolved names, declarations, readonly/static/abstract modifiers and writes; lexical coloring remains TextMate |
 | Code lenses | - | Run action on module declarations | Not implemented |
 | Linked editing | - | Same-file identifiers | Not implemented |
-| Inlay hints | - | - | Not implemented |
+| Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
-| Go-to-type-definition | - | - | Not implemented |
-| Find implementations | - | - | Not implemented |
+| Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns within the current module |
+| Find implementations | - | - | **Partial** - concrete nominal source types and method bodies from compiler override chains, including generic overrides, inherited/default/anonymous methods and composed mixins; current module only |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
-| Call hierarchy (callers/callees) | - | - | Not implemented - needs resolved call edges and cross-file indexing |
+| Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
+
+Type-definition returns all available source targets for union/intersection operands, unwraps
+modifiers and follows aliases for value types without navigating into generic argument types.
+A written type or formal parameter points to its own declaration. Bundled library types have no
+source target. Implementation lookup uses declaration identities and compiler method chains;
+it does not match by spelling or arity. It requires successful compilation. Type results are
+nominal declaration-level implementations (including a concrete type itself), not a search for
+structurally assignable types or generic instantiations. Property/accessor implementations,
+synthetic delegation/redirect targets and dependency-source implementations remain unavailable.
+An explicit reporting inspection runs on the compiler worker; request threads use immutable
+copied locations. See the [manual playbook](../manual-test-plan.md#xdkadapter-playbook).
+
+Call hierarchy includes written anonymous methods and recursive/overloaded calls. It requires a
+successful module snapshot and source locations at both ends. Runtime dispatch expansion,
+function-value calls, constructors, property initializer/accessor edges and dependency sources
+remain outside this slice. Inlay hints do not invent parameter names for unresolved candidates or
+infer lambda return annotations. These features load no native parser. Rename probes have exposed
+silent capture and missing named-label reference spans; rename remains unadvertised.
 
 Semantic results can be partial when validation fails. Parse errors prevent semantic compilation,
 but `Compilation.sourceTrees()` retains available per-file syntax for outline, folding and selection.
