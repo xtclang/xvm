@@ -152,18 +152,27 @@ arguments. It requires successful compilation and source locations in the curren
 hierarchy items cannot resolve into a new compilation. Other workspace modules and library sources
 are not indexed by this backend.
 
-Completion, signature help, rename, semantic tokens, formatting, code actions, document links,
-code lenses, linked editing, inlay hints, go-to-type-definition, find-implementations and call
-hierarchy remain unsupported. The snapshot exposes declared signatures; instantiated call-site
-signatures and active-argument information are still missing. A member parse failure clears the
-module's semantic answers until a later correction; stale ranges are not reused. Java parser
+Completion now supplies accessible instance members immediately after a supported receiver dot,
+including generic substitution and overload signatures. Signature help shows instantiated
+signatures and argument mappings for resolved calls, and candidate signatures for unfinished
+qualified calls. These cursor requests propagate cancellation and reject stale document/module
+results. Bare-name and typed-prefix completion, implicit/static receiver lookup and incomplete
+overload inference remain unsupported; the [capability matrix](../doc/plans/plan-ide-integration.md)
+records the precise syntax and parameter-mapping limits.
+
+Rename, semantic tokens, formatting, code actions, document links, code lenses, linked editing,
+inlay hints, go-to-type-definition, find-implementations and call hierarchy remain unsupported.
+A member parse failure clears the module's normal semantic answers until a later correction;
+explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser
 recovery retains available per-source syntax for outline, folding and selection, including valid
 sibling files. Malformed statements may be omitted; their surrounding declarations can survive.
 Compiler mode uses no Tree-sitter fallback or native parser.
 
 The adapter uses `compileModule(ModuleInfo, ...)`, with a fresh text/membership snapshot for each
-attempt, and `semanticSnapshots()` to copy per-source views sharing one identity domain. It does
-not build TypeInfo in response to editor queries. `Compilation.sourceTrees()` supplies structural
+attempt, and `semanticSnapshots()` to copy per-source views sharing one identity domain. Ordinary
+snapshot queries are passive. Explicit cursor inspection can build receiver TypeInfo on the
+serialized compiler worker through its cancellable listener; request threads query copied facts.
+`Compilation.sourceTrees()` supplies structural
 views even when parsing errors prevent an assembled `parsed()` tree. See the
 [branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
 remaining limits.
