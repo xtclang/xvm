@@ -39,6 +39,7 @@ import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.compiler.ast.VariableDeclarationStatement
+import org.xvm.compiler.ast.VariableTypeExpression
 import org.xvm.lsp.adapter.xdk.SemanticModel.ExpressionType
 import org.xvm.lsp.adapter.xdk.SemanticModel.Occurrence
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
@@ -57,6 +58,7 @@ import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.UUID
 import java.util.List.copyOf as immutableList
+import java.util.Set.copyOf as immutableSet
 
 /**
  * Copy facts while the calling thread exclusively owns the compilation. This does not resume
@@ -74,6 +76,13 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(): List<SemanticModel> {
     val builder = SemanticModelBuilder()
     val pool = pool() ?: return builder.build(this)
     return ConstantPool.withPool(pool).use { builder.build(this) }
+}
+
+/** Explicit compiler-worker inspection of implementation chains, reporting through the host listener. */
+fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<SemanticModel> {
+    val builder = SemanticModelBuilder()
+    val pool = pool() ?: return builder.build(this)
+    return ConstantPool.withPool(pool).use { builder.build(this, errors) }
 }
 
 /**
@@ -102,17 +111,24 @@ private class SemanticModelBuilder {
     private val expressions = linkedMapOf<SourceLocation, TypeId>()
     private val callees = IdentityHashMap<NameExpression, Argument>()
     private val calls = linkedMapOf<SourceLocation, SemanticModel.CallSite>()
+    private val callables = linkedMapOf<SymbolId, SemanticModel.Callable>()
+    private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
 
     fun unavailable(): SemanticModel =
         SemanticModel(id, Status.UNAVAILABLE, null, SemanticModel.Facts(symbols, types), emptyList(), emptyList())
 
-    fun build(compilation: EmbeddingSupport.Compilation): List<SemanticModel> {
+    fun build(
+        compilation: EmbeddingSupport.Compilation,
+        errors: ErrorListener? = null,
+    ): List<SemanticModel> {
         val root =
             compilation.parsed()
                 ?: return listOf(unavailable())
         val nodes = nodesIn(root)
         collect(nodes, compilation.callBindings())
-        return finish(nodes, compilation.succeeded())
+        val implementations =
+            if (compilation.succeeded() && errors != null) compilerImplementationTargets(nodes, errors) else emptyMap()
+        return finish(nodes, compilation.succeeded(), implementations)
     }
 
     private fun collect(
@@ -140,11 +156,35 @@ private class SemanticModelBuilder {
         }
         nodes.forEach { node ->
             when (node) {
-                is VariableDeclarationStatement -> declare(node.nameToken, node.register, SymbolKind.VARIABLE, node.source)
-                is MethodDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.METHOD, node.source)
-                is PropertyDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.PROPERTY, node.source)
-                is TypeCompositionStatement -> declare(node.nameToken, identity(node), kind(identity(node)), node.source)
-                is TypedefStatement -> declare(node.nameToken, identity(node), SymbolKind.TYPE, node.source)
+                is VariableDeclarationStatement -> {
+                    declare(node.nameToken, node.register, SymbolKind.VARIABLE, node.source)
+                    if (node
+                            .children()
+                            .iterator()
+                            .asSequence()
+                            .any { it is VariableTypeExpression }
+                    ) {
+                        (normalized(node.register) as? Register)?.let(registers::get)?.let { id ->
+                            symbols[id]?.let { symbols[id] = it.copy(inferred = true) }
+                        }
+                    }
+                }
+
+                is MethodDeclarationStatement -> {
+                    declare(node.nameToken, identity(node), SymbolKind.METHOD, node.source)
+                }
+
+                is PropertyDeclarationStatement -> {
+                    declare(node.nameToken, identity(node), SymbolKind.PROPERTY, node.source)
+                }
+
+                is TypeCompositionStatement -> {
+                    declare(node.nameToken, identity(node), kind(identity(node)), node.source)
+                }
+
+                is TypedefStatement -> {
+                    declare(node.nameToken, identity(node), SymbolKind.TYPE, node.source)
+                }
             }
             if (node is InvocationExpression) {
                 val callee = node.invokedExpression
@@ -152,6 +192,23 @@ private class SemanticModelBuilder {
                 if (callee is NameExpression && method != null) callees[callee] = method
             }
         }
+        nodes.forEach { node ->
+            when (node) {
+                is MethodDeclarationStatement -> {
+                    identity(node)?.let(constants::get)?.let { callable(node, it) }
+                }
+
+                is LambdaExpression -> {
+                    val method = node.lambda ?: return@forEach
+                    val at = location(node.source, node.startPosition, node.startPosition)
+                    symbol(method.identityConstant, "<lambda>", SymbolKind.METHOD, at)?.let { callable(node, it) }
+                }
+            }
+        }
+        val writes =
+            compilerWrites(nodes).associate { (name, usage) ->
+                location(name.source, name.nameToken.startPosition, name.nameToken.endPosition) to usage
+            }
         nodes.forEach { node ->
             val expressionType = validatedType(node as? Expression)
             type(expressionType)?.let { expressions[location(node.source, node.startPosition, node.endPosition)] = it }
@@ -161,7 +218,8 @@ private class SemanticModelBuilder {
                 }
 
                 is NameExpression -> {
-                    refer(node.nameToken, callees[node] ?: node.resolvedTarget, expressionType, node.source)
+                    val at = location(node.source, node.nameToken.startPosition, node.nameToken.endPosition)
+                    refer(node.nameToken, callees[node] ?: node.resolvedTarget, expressionType, node.source, writes[at])
                 }
 
                 is NamedTypeExpression -> {
@@ -176,9 +234,21 @@ private class SemanticModelBuilder {
     private fun finish(
         nodes: List<AstNode>,
         complete: Boolean,
+        implementations: Map<IdentityConstant, Set<IdentityConstant>> = emptyMap(),
     ): List<SemanticModel> {
         val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
-        val facts = SemanticModel.Facts(symbols, types, hierarchy)
+        val facts =
+            SemanticModel.Facts(
+                symbols,
+                types,
+                hierarchy,
+                typeIds.entries.associate { (constant, id) -> id to typeDefinitions(constant) },
+                implementations.entries
+                    .mapNotNull { (target, implementations) ->
+                        constants[target]?.let { it to implementations.mapNotNull(constants::get) }
+                    }.toMap(),
+                callables,
+            )
         return immutableList(
             nodes.map { it.source?.fileName }.distinct().map { source ->
                 SemanticModel(
@@ -211,10 +281,28 @@ private class SemanticModelBuilder {
                 selected,
                 immutableList(
                     binding.arguments().map {
-                        SemanticModel.CallArgument(location(node.source, it.startPosition(), it.endPosition()).range, it.parameterIndex())
+                        SemanticModel.CallArgument(
+                            location(node.source, it.startPosition(), it.endPosition()).range,
+                            it.parameterIndex(),
+                            it.named(),
+                        )
                     },
                 ),
+                generateSequence(node.parent) { it.parent }
+                    .firstOrNull { it in callableNodes || it is PropertyDeclarationStatement || it is TypeCompositionStatement }
+                    ?.let(callableNodes::get),
             )
+    }
+
+    private fun callable(
+        node: AstNode,
+        id: SymbolId,
+    ) {
+        val selection = symbols[id]?.declaration ?: return
+        val source = location(node.source, node.startPosition, node.endPosition)
+        if (selection.start < source.range.start || selection.end > source.range.end) return
+        callableNodes[node] = id
+        callables[id] = SemanticModel.Callable(id, source, selection)
     }
 
     private fun validatedType(expression: Expression?): TypeConstant? = expression?.takeIf { it.isValidated && it.typeFit.isFit }?.type
@@ -448,6 +536,7 @@ private class SemanticModelBuilder {
         target: Argument?,
         expressionType: TypeConstant?,
         source: Source?,
+        usage: SemanticModel.Usage? = null,
     ) {
         if (token == null) return
         val location = location(source, token.startPosition, token.endPosition)
@@ -455,7 +544,12 @@ private class SemanticModelBuilder {
         val symbol = symbol(target, token.valueText, kind(target))
         // Failed name validation can leave a required/placeholder type on the expression.
         val type = if (symbol == null) null else type(expressionType) ?: symbols[symbol]?.type
-        occurrences[location] = Occurrence(location.range, token.valueText, Role.REFERENCE, symbol, type)
+        val access =
+            when (symbols[symbol]?.kind) {
+                SymbolKind.VARIABLE, SymbolKind.PARAMETER, SymbolKind.PROPERTY -> usage ?: SemanticModel.Usage.READ
+                else -> null
+            }
+        occurrences[location] = Occurrence(location.range, token.valueText, Role.REFERENCE, symbol, type, access)
     }
 
     private fun symbol(
@@ -470,9 +564,29 @@ private class SemanticModelBuilder {
         val symbol = SymbolId(id, symbols.size)
         if (target is Register) registers[target] = symbol else constants[target as Constant] = symbol
         symbols[symbol] =
-            Symbol(symbol, name, kind, declaration?.range, type(declaredType(target)), signature(target), declaration?.sourceName)
+            Symbol(
+                symbol,
+                name,
+                kind,
+                declaration?.range,
+                type(declaredType(target)),
+                signature(target),
+                declaration?.sourceName,
+                modifiers(target),
+            )
         return symbol
     }
+
+    private fun modifiers(target: Argument): Set<SemanticModel.Modifier> =
+        immutableSet(
+            buildSet {
+                if (target is Register && !target.isWritable) add(SemanticModel.Modifier.READONLY)
+                val component = (target as? IdentityConstant)?.component
+                if (component?.isStatic == true) add(SemanticModel.Modifier.STATIC)
+                if (component?.isAbstract == true) add(SemanticModel.Modifier.ABSTRACT)
+                if (component is PropertyStructure && component.isConstant) add(SemanticModel.Modifier.READONLY)
+            },
+        )
 
     private fun normalized(argument: Argument?): Argument? {
         if (argument is PropertyConstant && argument in capturedProperties) return normalized(capturedProperties[argument])
@@ -622,6 +736,39 @@ private class SemanticModelBuilder {
             }
         types[id] = Type(id, constant.valueString, form, immutableList(arguments), immutableList(underlying), constant.isNullable)
         return id
+    }
+
+    /** Resolve only type identity. Modifiers unwrap; relational operands retain multiple targets. */
+    private fun typeDefinitions(
+        constant: TypeConstant,
+        seen: Set<TypeConstant> = emptySet(),
+    ): List<SymbolId> {
+        if (constant in seen || constant.containsUnresolved()) return emptyList()
+        val visited = seen + constant
+        val resolved = constant.resolveTypedefs()
+        return when {
+            resolved != constant -> {
+                typeDefinitions(resolved, visited)
+            }
+
+            constant.isRelationalType -> {
+                val operands =
+                    if (constant.format == Constant.Format.DifferenceType) {
+                        listOf(constant.underlyingType)
+                    } else {
+                        listOf(constant.underlyingType, constant.underlyingType2)
+                    }
+                operands.flatMap { typeDefinitions(it, visited) }
+            }
+
+            constant.isModifyingType -> {
+                typeDefinitions(constant.underlyingType, visited)
+            }
+
+            else -> {
+                listOfNotNull(constants[normalized(constant)])
+            }
+        }.distinct()
     }
 
     private fun nodesIn(root: AstNode): List<AstNode> = nodesIn(listOf(root))

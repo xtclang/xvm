@@ -374,7 +374,7 @@ class XtcLanguageServer(
      * | documentHighlight  | Highlight other occurrences of symbol under cursor      | treesitter |
      * | selectionRange     | Smart expand/shrink selection based on syntax           | treesitter |
      * | foldingRange       | Code folding regions (classes, methods, blocks)        | treesitter |
-     * | inlayHint          | Inline hints (parameter names, inferred types)         | treesitter |
+     * | inlayHint          | Inline hints (parameter names, inferred types)         | compiler |
      *
      * ### Not yet implemented:
      *
@@ -415,15 +415,15 @@ class XtcLanguageServer(
                 td?.selectionRange?.let { "selectionRange" }, // treesitter: smart selection
                 td?.foldingRange?.let { "foldingRange" }, // treesitter: code folding
                 td?.signatureHelp?.let { "signatureHelp" }, // treesitter: parameter hints
-                td?.inlayHint?.let { "inlayHint" }, // treesitter: inline hints
+                td?.inlayHint?.let { "inlayHint" }, // compiler: inline hints
                 td?.documentLink?.let { "documentLink" }, // treesitter: clickable links
                 td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
                 // Not yet implemented (uncomment as we add support)
                 // td?.synchronization?.let { "synchronization" }, // built-in: doc sync events
                 // td?.rangeFormatting?.let { "rangeFormatting" }, // treesitter: format selection
                 // td?.declaration?.let { "declaration" }, // compiler: go-to-declaration
-                // td?.typeDefinition?.let { "typeDefinition" }, // compiler(types): jump to type
-                // td?.implementation?.let { "implementation" }, // compiler(types): find impls
+                td?.typeDefinition?.let { "typeDefinition" },
+                td?.implementation?.let { "implementation" },
                 td?.codeLens?.let { "codeLens" }, // treesitter: run/compile actions on modules
                 // td?.colorProvider?.let { "colorProvider" }, // mock: color swatches
                 // td?.publishDiagnostics?.let { "publishDiagnostics" }, // compiler: error reporting
@@ -477,7 +477,7 @@ class XtcLanguageServer(
                 DocumentOnTypeFormattingOptions("\n").apply {
                     moreTriggerCharacter = listOf("}", ";", ")")
                 }
-            // inlayHintProvider = Either.forLeft(true) // not implemented in TreeSitterAdapter yet
+            if (AdapterCapability.INLAY_HINT in adapter.capabilities) inlayHintProvider = Either.forLeft(true)
 
             // documentLinkProvider: URLs in comments / string literals.
             // See TreeSitterAdapter.getDocumentLinks for the matcher.
@@ -550,12 +550,12 @@ class XtcLanguageServer(
             if (AdapterCapability.CODE_LENS !in adapter.capabilities) codeLensProvider = null
             if (AdapterCapability.LINKED_EDITING !in adapter.capabilities) linkedEditingRangeProvider = null
 
-            // Not yet advertised (enable when implemented)
+            // Compiler semantic navigation; go-to-declaration remains unavailable.
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
-            // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
-            // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
+            if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities) typeDefinitionProvider = Either.forLeft(true)
+            if (AdapterCapability.IMPLEMENTATION in adapter.capabilities) implementationProvider = Either.forLeft(true)
             if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities) typeHierarchyProvider = Either.forLeft(true)
-            // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
+            if (AdapterCapability.CALL_HIERARCHY in adapter.capabilities) callHierarchyProvider = Either.forLeft(true)
         }
 
     override fun shutdown(): CompletableFuture<Any> {

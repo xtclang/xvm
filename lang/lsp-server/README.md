@@ -141,14 +141,18 @@ At a high level, the current tree-sitter-backed default provides:
 - selection ranges, linked editing, folding ranges, document links, and signature help
 
 The opt-in XDK adapter publishes versioned diagnostics and supports hover, definition, references,
-highlights, outline, folding, selection and type hierarchy. Definitions and references span the
+highlights, outline, folding, selection, type-definition, implementation lookup and type hierarchy. Definitions and references span the
 current module, including closed member files. Workspace-symbol search covers active module
 sessions. Immutable Kotlin snapshots supply semantic queries; structural queries use per-source
 ASTs. Member edits invalidate all sibling views, and filesystem notifications refresh disk inputs.
 Closing an overlay restores the disk version while another document keeps the module session open.
 
 Type hierarchy follows direct declared `extends` and `implements` edges and retains generic parent
-arguments. It requires successful compilation and source locations in the current module. Old
+arguments. It requires successful compilation and source locations in the current module. Type-definition
+uses copied type identities, including flow narrowing, generic parameters and union targets.
+Implementation lookup follows nominal source types and actual method override chains, including
+generic, inherited and default bodies. It does not yet expose property/accessor implementations,
+synthetic delegation/redirect targets or cross-module sources. Old
 hierarchy items cannot resolve into a new compilation. Other workspace modules and library sources
 are not indexed by this backend.
 
@@ -161,8 +165,14 @@ closing parenthesis. Candidates never claim final overload selection. Requests p
 cancellation and reject stale document/module results. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
-Rename, semantic tokens, formatting, code actions, document links, code lenses, linked editing,
-inlay hints, go-to-type-definition, find-implementations and call hierarchy remain unsupported.
+Static call hierarchy groups selected source call sites by method/lambda, including closed module
+members. It does not expand virtual dispatch, function values, constructors or dependency sources.
+Semantic tokens classify resolved names and modifiers; highlights distinguish reads and writes.
+Inlay hints show inferred local types after successful compilation and selected positional
+parameter names, omitting named arguments and synthetic defaults. These queries use copied facts
+and expire with the module snapshot.
+
+Rename, formatting, code actions, document links, code lenses and linked editing remain unsupported.
 A member parse failure clears the module's normal semantic answers until a later correction;
 explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser
 recovery retains available per-source syntax for outline, folding and selection, including valid
@@ -170,9 +180,10 @@ sibling files. Malformed statements may be omitted; their surrounding declaratio
 Compiler mode uses no Tree-sitter fallback or native parser.
 
 The adapter uses `compileModule(ModuleInfo, ...)`, with a fresh text/membership snapshot for each
-attempt, and `semanticSnapshots()` to copy per-source views sharing one identity domain. Ordinary
-snapshot queries are passive. Explicit cursor inspection can build receiver TypeInfo on the
-serialized compiler worker through its cancellable listener; request threads query copied facts.
+attempt, and `semanticSnapshots(errors)` to copy per-source views sharing one identity domain and
+inspect implementation chains through the cancellable host listener. The no-argument
+`semanticSnapshots()` remains passive. Both implementation and explicit cursor inspection can build
+TypeInfo on the serialized compiler worker; request threads query copied facts.
 `Compilation.sourceTrees()` supplies structural
 views even when parsing errors prevent an assembled `parsed()` tree. See the
 [branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and

@@ -869,9 +869,9 @@ class XtcTextDocumentService(
             { result -> if (result.left.isEmpty()) "no result" else "found" },
             uri = params.textDocument.uri,
         ) {
-            adapter.findTypeDefinition(params.textDocument.uri, params.position.line, params.position.character)?.let {
-                Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
-            } ?: Either.forLeft(emptyList())
+            Either.forLeft(
+                adapter.findTypeDefinitions(params.textDocument.uri, params.position.line, params.position.character).map { it.toLsp() },
+            )
         }
 
     /**
@@ -1126,6 +1126,7 @@ class XtcTextDocumentService(
                 this.selectionRange.toLsp(),
             )
         result.detail = this.detail
+        result.data = this.data
         return result
     }
 
@@ -1137,6 +1138,12 @@ class XtcTextDocumentService(
             range = toAdapterRange(range),
             selectionRange = toAdapterRange(selectionRange),
             detail = detail,
+            data =
+                when (val value = data) {
+                    is String -> value
+                    is JsonPrimitive -> value.takeIf { it.isString }?.asString
+                    else -> null
+                },
         )
 
     private fun toAdapterRange(range: org.eclipse.lsp4j.Range) =
