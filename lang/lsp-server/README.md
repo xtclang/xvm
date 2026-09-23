@@ -111,15 +111,19 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
 | Semantic diagnostics | None | None | Compiler errors and warnings |
 | Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
-| Definition / references | By spelling | Syntax and workspace index | Resolved identities across a module |
+| Definition / references | By spelling | Syntax and workspace index | Module identities; definitions also use host-supplied dependency source indices |
 | Hover | Declaration | Declaration | Declaration and validated type |
-| Highlights | By spelling | Syntax, read/write distinction | Resolved identities, text highlights |
-| Completion | Basic | Context-aware | Unavailable |
+| Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
+| Completion | Basic | Context-aware | Bounded scope, instance-member and static completion |
 | Rename / code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST |
-| Signature help / document links | None / imports | Same-file / workspace index | Unavailable |
+| Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
+| Document links | Imports | Workspace index | Unavailable |
 | Workspace symbols | Limited | Workspace index | Completed module sessions, including closed members |
-| Semantic tokens | None | Syntax-based | Unavailable |
+| Semantic tokens | None | Syntax-based | Resolved names and declaration/read-only/static/write modifiers |
+| Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
+| Call hierarchy | None | None | Static selected calls within the module |
+| Inlay hints | None | None | Inferred local types and selected positional parameter names |
 | Type hierarchy | None | None | Source types: declared extends/implements, with generic parents |
 | Native library | Not needed | Required | Not needed |
 
@@ -151,10 +155,11 @@ Type hierarchy follows direct declared `extends` and `implements` edges and reta
 arguments. It requires successful compilation and source locations in the current module. Type-definition
 uses copied type identities, including flow narrowing, generic parameters and union targets.
 Implementation lookup follows nominal source types and actual method override chains, including
-generic, inherited and default bodies. It does not yet expose property/accessor implementations,
-synthetic delegation/redirect targets or cross-module sources. Old
-hierarchy items cannot resolve into a new compilation. Other workspace modules and library sources
-are not indexed by this backend.
+generic, inherited and default bodies. A host-supplied dependency source index also permits
+definition, type-definition and inherited implementation-body links into that dependency. It does
+not supply property/accessor implementations, synthetic delegation/redirect targets or a workspace-wide
+implementation search. Old hierarchy items cannot resolve into a new compilation. External type
+hierarchy and references across separately compiled modules remain unsupported.
 
 Completion supplies visible locals/parameters with flow narrowing, implicit members, imported and
 enclosing types, and static functions/constants. Qualified member prefixes and bare-name/empty
@@ -189,6 +194,23 @@ views even when parsing errors prevent an assembled `parsed()` tree. See the
 [branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
 remaining limits.
 
+### Dependency artifacts supplied by a host
+
+The Kotlin `Compilation.toDependency()` extension exports a successful module as immutable bytes
+with a detached declaration source index. `XdkDependency.fromBinary(bytes)` accepts a binary without
+source locations. A host installs the complete dependency set with
+`XtcLanguageServer.replaceCompilerDependencies(dependencies)`; the server invalidates affected
+analyses and republishes diagnostics at the current document versions. Direct adapter users can
+call `XdkAdapter.replaceDependencies(dependencies)` and reschedule the returned scope keys themselves.
+Each compiler attempt deserializes fresh structures. Symbol keys identify a constant only within
+the exact artifact/source-index revision; they are not permanent identities across library rebuilds.
+
+This is a Kotlin host API, with no editor setting or JSON-RPC configuration endpoint yet. Project
+discovery, dependency builds from edited sources and a persistent workspace reference index remain
+open. Bundled XDK binaries have no source index. See the
+[dependency API verification](../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23)
+for ownership, cancellation and replacement guarantees.
+
 ## Context-Aware Completion
 
 The tree-sitter adapter classifies the cursor context before returning completions,
@@ -220,18 +242,12 @@ is limited to the current class body's declarations. It cannot resolve:
 
 ### Further compiler-backed completion work
 
-The current snapshot supplies resolved types and identities. Completion still needs incomplete-source
-support, accessible member enumeration and call-site substitution before it can offer:
-- **Type-resolved member access**: `person.` would show all members of `Person`,
-  including inherited ones from `Object`, `Hashable`, etc.
-- **Overload-aware signatures**: Show all applicable overloads ranked by match quality
-- **Smart import suggestions**: Suggest imports for unresolved types based on what
-  would make the code compile
-- **Generic type inference**: Show members on `List<String>` with `String`-substituted
-  type parameters
-- **Scope-aware locals**: Only show variables that are actually in scope at the cursor,
-  respecting shadowing and block structure
-- **Ranked results**: Sort completions by relevance (local > member > imported > global)
+Compiler completion now enumerates accessible members with receiver-substituted types, visible
+locals/parameters with shadowing and narrowing, and static/imported names in supported cursor
+contexts. Incomplete-call signatures use compiler argument fitting and generic inference, without
+claiming an overload has been selected. Remaining work includes broader malformed expressions and
+callable forms, smart import suggestions and relevance ranking. The canonical matrix records the
+precise supported contexts and exclusions.
 
 ## Key Components
 
@@ -246,6 +262,7 @@ support, accessible member enumeration and call-site substitution before it can 
 | `TreeSitterAdapter` | Tree-sitter based syntax intelligence |
 | `XdkAdapter` | Serialized compiler worker, bundled XDK, diagnostics and document lifecycle |
 | `SemanticModel` / builder | Immutable per-analysis semantic facts and queries; no retained compiler objects |
+| `XdkDependency` | Immutable module bytes, revisioned symbol keys and optional detached source locations |
 
 ## Building
 
