@@ -1992,9 +1992,20 @@ public class BuildContext {
                 String   resourceName = nameConst instanceof StringConstant stringConst
                                 ? stringConst.getValue()
                                 : name;
-                if (optsConst != null && !(optsConst instanceof RegisterConstant regConst &&
-                                           regConst.getRegisterIndex() == Op.A_DEFAULT)) {
-                    throw new UnsupportedOperationException("retrieve opts");
+
+                Runnable optsLoader;
+                if (optsConst == null || optsConst instanceof RegisterConstant constReg &&
+                        constReg.getRegisterIndex() == Op.A_DEFAULT) {
+                    optsLoader = code::aconst_null;
+                } else {
+                    optsLoader = () -> {
+                        RegisterInfo reg = optsConst instanceof RegisterConstant constReg
+                                ? loadArgument(code, constReg.getRegisterIndex())
+                                : loadConstant(code, optsConst);
+                        if (reg.flavor().isOptimized) {
+                            Builder.box(code, reg);
+                        }
+                    };
                 }
 
                 Label        varStart   = code.newLabel();
@@ -2010,9 +2021,9 @@ public class BuildContext {
 
                 loadCtx(code);
                 loadTypeConstant(code, resourceType);
-                code.ldc(resourceName)
-                    .aconst_null() // opts
-                    .invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
+                code.ldc(resourceName);
+                optsLoader.run();
+                code.invokevirtual(CD_Ctx, "inject", Ctx.MD_inject)
                     .checkcast(reg.cd());
                 storeValue(code, reg);
                 code.labelBinding(varStart);

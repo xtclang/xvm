@@ -37,6 +37,10 @@ public class ArrayᐸBitᐳ
         super(ctx, type);
     }
 
+    public ArrayᐸBitᐳ(Ctx ctx, TypeConstant type, long[] data, long size) {
+        super(ctx, type, data, size);
+    }
+
     // ----- Array API -----------------------------------------------------------------------------
 
     /**
