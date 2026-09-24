@@ -1932,16 +1932,11 @@ public class BuildContext {
                 assert allowUpcast;
                 break;
 
-            case "NullablePrimitive->Specific":
-                if (typeTo.isOnlyNullable()) {
-                    // the destination can hold nothing but Null, so the value has to be Null
-                    code.pop();
-                    Builder.loadNull(code);
-                } else {
-                    // the value and its "is Null" flag are on the stack; the flag decides between
-                    // boxing the value and storing Null
-                    Builder.boxNullable(code, typeFrom);
-                }
+            case "NullablePrimitive->Specific",
+                 "NullableXvmPrimitive->Specific":
+                // the value and its "is Null" flag are on the stack; the flag decides between
+                // boxing the value and storing Null
+                Builder.boxNullable(code, typeFrom);
                 break;
 
             case "NullablePrimitive->Primitive",
@@ -1950,8 +1945,7 @@ public class BuildContext {
                 code.pop();
                 break;
 
-            case "XvmPrimitive->Specific",
-                 "NullableXvmPrimitive->Specific":
+            case "XvmPrimitive->Specific":
                 Builder.box(code, typeTo);
                 break;
 
