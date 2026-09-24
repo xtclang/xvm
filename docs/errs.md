@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Incomplete-call signature help (2026-09-24, current working tree).**
+**Incomplete-call signature help (2026-09-24, `abbc89f88`).**
 Function values and ordinary constructors now expose signatures while arguments are missing.
 Compiler probes reject incompatible/unreadable values, retain function parameter types without
 inventing names or runtime targets, and fit constructor overloads with named/default arguments and
@@ -17,7 +17,7 @@ all candidate facts remain immutable and attempt-owned, with no new AST fields o
 A separate invocation-validation fix prevents return-type success from erasing argument failure.
 See [C11/L23/I6, scope and verification](errs-integration-plan.md#incomplete-function-and-constructor-signature-help).
 
-**Ref/Var annotation lookup follow-up (2026-09-24, current working tree).**
+**Ref/Var annotation lookup follow-up (2026-09-24, `abbc89f88`).**
 Property implementation lookup now copies source annotation getter/setter targets from the host's
 existing nested method chains. Generic annotations, annotation order, explicit accessor overrides,
 inheritance, concrete delegation and indexed dependency locations have regressions. Native
