@@ -19,15 +19,23 @@ import org.xvm.compiler.ast.IncompleteStatement;
 /** Facts captured at an explicit cursor while its real validation context is alive. */
 public record CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
-                            List<FunctionCandidate> functions) {
+                            List<FunctionCandidate> functions, List<Variable> argumentValues) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
         candidates = List.copyOf(candidates);
         functions = List.copyOf(functions);
+        argumentValues = List.copyOf(argumentValues);
     }
 
-    /** Retain callers that only consume method candidates. Record patterns must include functions. */
+    /** Retain signature-only callers. Record patterns must also include argument values. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                         List<FunctionCandidate> functions) {
+        this(variables, thisType, instance, types, candidates, callsInspected, functions, List.of());
+    }
+
+    /** Retain callers that only consume method candidates. */
     public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                          List<NamedType> types, List<Candidate> candidates, boolean callsInspected) {
         this(variables, thisType, instance, types, candidates, callsInspected, List.of());
@@ -38,15 +46,20 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     public CursorBinding withCandidates(List<Candidate> candidates) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions);
+        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues);
     }
 
     public CursorBinding withFunctions(List<FunctionCandidate> functions) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions);
+        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues);
     }
 
     public CursorBinding withTypes(List<NamedType> types) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions);
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues);
+    }
+
+    /** Readable source variables whose proposed insertion fits at least one incomplete-call candidate. */
+    public CursorBinding withArgumentValues(List<Variable> values) {
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, values);
     }
 
     public record NamedType(String name, IdentityConstant identity) {}

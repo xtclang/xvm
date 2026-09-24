@@ -527,3 +527,18 @@ and error budgets still stop recovery; unrelated malformed statements prevent se
 Missing operands, declaration headers and tuple/literal delimiters are not repaired. See the
 [C12/L24 record](errs-integration-plan.md#missing-delimiter-cursor-recovery) for regressions,
 editor coverage, ownership and future extraction boundaries.
+
+### Argument-value completion, 2026-09-24
+
+Copied expected types alone do not preserve the compiler's inference and conversion rules for a
+proposed argument. `PartialCallResolver` now probes visible readable source variables through the
+existing fitter, copying only accepted variables into immutable `CursorBinding.argumentValues`.
+Trials retain lexical context without adding children or mutable semantic state to the source AST.
+No candidate is published as a selected call, and no synthetic value repairs the actual source.
+
+Speculative mismatches remain private, cancellable PROBE diagnostics; local error state rejects
+the value. Actual compilation diagnostics and explicit TypeInfo reporting keep their existing
+listeners. Tests compare proposals against compiling the corresponding real expressions and check
+that source text, argument lists, diagnostics and selected-call facts are unchanged by the query.
+The [C13/L25 record](errs-integration-plan.md#argument-value-completion) describes API migration,
+supported slots, negative controls and protocol/editor evidence.

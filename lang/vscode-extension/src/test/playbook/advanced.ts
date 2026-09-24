@@ -82,7 +82,8 @@ export function advancedCases(): void {
         await noErrors(document.uri);
         for (const [call, active] of [['fn(', 0], ['fn(1, ', 1]] as const) {
             await workspace.replace(document, fixture('Advanced.x').replace('fn(1, "x")', `${call})`));
-            const help = await workspace.signature(document, position(document, call, call.length, true));
+            const anchor = `Int applyPair(function Int(Int, String) fn) = ${call}`;
+            const help = await workspace.signature(document, position(document, anchor, anchor.length));
             assert.strictEqual(help?.signatures[0].label, 'Int fn(Int, String)');
             assert.strictEqual(help?.signatures[0].activeParameter, active);
         }
@@ -133,6 +134,46 @@ export function advancedCases(): void {
         const help = await workspace.signature(document, position(document, expression, expression.length));
         assert.strictEqual(help?.signatures[0].label, 'Int pair(Int first, Int second)');
         assert.strictEqual(help?.signatures[0].activeParameter, 1);
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X77', 'argument value completions fit methods functions and generic constructors', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const [original, prefix] of [
+            ['take(1, text)', 'take(1, '],
+            ['take(1, text)', 'take(first=1, second='],
+            ['fn(1, text)', 'fn(1, '],
+            ['new Packet<String>("a", text)', 'new Packet<String>("a", '],
+            ['new Packet<String>("a", text)', 'new Packet<String>(second="b", first=']
+        ] as const) {
+            await workspace.replace(document, fixture('Advanced.x').replace(original, `${prefix})`));
+            await diagnostics(document.uri, values => values.length > 0, 'Missing argument diagnostics');
+            const at = position(document, prefix, prefix.length, true);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(item => item.label), ['text'], prefix);
+            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at, at)));
+            await workspace.accept(document, items[0]);
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X78', 'argument completion preserves overload alternatives until insertion', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const selected of ['number', 'text']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('choose(text);', 'choose();'));
+            await diagnostics(document.uri, values => values.length > 0, 'Missing overloaded argument diagnostics');
+            const at = position(document, 'choose();', 7);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(item => item.label).sort(), ['number', 'text']);
+            assert.strictEqual((await workspace.signature(document, at))?.signatures.length, 2);
+            await workspace.accept(document, items.find(item => item.label === selected)!);
+            await noErrors(document.uri);
+        }
         await workspace.replace(document, fixture('Advanced.x'));
         await noErrors(document.uri);
     });
