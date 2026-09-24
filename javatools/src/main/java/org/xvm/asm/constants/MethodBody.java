@@ -831,12 +831,18 @@ public class MethodBody {
     }
 
     /**
+     * Construct the callable type in the caller's destination, even when resolving the declaration
+     * leaves its signature unchanged in the source pool.
+     *
+     * @param pool           the destination for the constructed callable type
+     * @param typeContainer  the target type used to resolve the declaration's signature
+     *
      * @return the function or method type for the function or method represented by this body
      */
     public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
-        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
+        SignatureConstant sig = getMethodStructure().resolveSignature(pool, typeContainer);
         return isFunction()
-                ? sig.asFunctionType()
+                ? pool.buildFunctionType(sig.getRawParams(), sig.getRawReturns())
                 : sig.asMethodType(pool, typeContainer);
     }
 

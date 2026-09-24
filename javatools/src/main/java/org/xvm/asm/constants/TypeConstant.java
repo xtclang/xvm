@@ -8072,6 +8072,7 @@ public abstract class TypeConstant
         m_mapConsumes    = null;
         m_mapProduces    = null;
         m_tloInProgress  = null;
+        m_sJitName       = null;
         m_fValidated     = false;
         recursionDepth   = new AtomicInteger();
     }

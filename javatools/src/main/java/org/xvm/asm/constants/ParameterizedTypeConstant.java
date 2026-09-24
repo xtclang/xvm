@@ -1056,6 +1056,7 @@ public class ParameterizedTypeConstant
         long stamp = resolutionLock.writeLock();
         m_typeResolverPrev = null;
         m_typeResolvedPrev = null;
+        m_typeJitCallable  = null;
         resolutionLock.unlockWrite(stamp);
     }
 

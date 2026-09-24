@@ -510,7 +510,7 @@ val runSequential = tasks.register<XtcRunTask>("runSequential") {
 }
 
 // The same compiled module exercises the numeric subset supported by both backends.
-// JIT comparisons use the existing forked launcher with --mode=ATTACHED.
+// runSmallFloats also accepts --jit to compare the two backends in the embedding session.
 val runSmallFloats = tasks.register<XtcRunTask>("runSmallFloats") {
     group = "verification"
     description = "Run the shared small floating-point tests."
@@ -522,7 +522,6 @@ val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
     group = "verification"
     description = "Run the shared small floating-point tests using the JIT."
     jit = true
-    executionMode = ExecutionMode.ATTACHED
     moduleName("TestSmallFloats")
 }
 

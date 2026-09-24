@@ -424,7 +424,8 @@ public class PropertyConstant
     @Override
     protected void setContaining(XvmStructure parent) {
         super.setContaining(parent);
-        // Property metadata belongs to the destination definitions, not the source copy.
+        // Generated names and metadata belong to this owner/type system, not the source copy.
+        m_sJitName = null;
         invalidateCache();
         m_info = null;
     }

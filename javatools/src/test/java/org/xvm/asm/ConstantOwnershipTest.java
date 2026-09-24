@@ -111,6 +111,25 @@ class ConstantOwnershipTest {
     }
 
     @Test
+    void adoptedMemberIdentitiesDiscardSourceJitNames() throws Exception {
+        var source = new FileStructure("Source");
+        var pool = source.getConstantPool();
+        var property = pool.ensurePropertyConstant(source.getModule().getIdentityConstant(), "value");
+        var method = pool.ensureMethodConstant(source.getModule().getIdentityConstant(), "value",
+                TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
+        for (var identity : new Constant[] {property, method}) {
+            var field = identity.getClass().getDeclaredField("m_sJitName");
+            field.setAccessible(true);
+            field.set(identity, "source$generated");
+            // The destination may already have a canonical constant from file cloning; force a
+            // fresh destination so the test always exercises adoption of the primed identity.
+            var target = new FileStructure(source).getConstantPool();
+            assertNull(field.get(target.register(identity)));
+            assertSame("source$generated", field.get(identity));
+        }
+    }
+
+    @Test
     void adoptedTypesHaveIndependentCalculationState() throws Exception {
         var sourceFile = new FileStructure(Constants.ECSTASY_MODULE);
         var source = sourceFile.getConstantPool();
@@ -135,4 +154,18 @@ class ConstantOwnershipTest {
         assertNotSame(lock.get(type), lock.get(copy));
     }
 
+    @Test
+    void adoptedCallableTypeUsesItsDestinationPool() {
+        var sourceFile = new FileStructure(Constants.ECSTASY_MODULE);
+        var source = sourceFile.getConstantPool();
+        var destination = new FileStructure(sourceFile).getConstantPool();
+        var type = source.ensureTupleType(source.typeString());
+        var original = type.getCallableJitType();
+        var copy = destination.register(type);
+
+        assertNotSame(type, copy);
+        assertSame(destination, copy.getCallableJitType().getConstantPool());
+        assertNotSame(original, copy.getCallableJitType());
+        assertSame(source, original.getConstantPool());
+    }
 }

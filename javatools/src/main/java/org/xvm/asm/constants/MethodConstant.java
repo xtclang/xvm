@@ -15,6 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
@@ -612,6 +613,14 @@ public class MethodConstant
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void setContaining(XvmStructure parent) {
+        super.setContaining(parent);
+        // Generated names and metadata belong to this owner/type system, not the source copy.
+        m_sJitName = null;
+        m_type = null;
+    }
 
     @Override
     protected void registerConstants(ConstantPool pool) {

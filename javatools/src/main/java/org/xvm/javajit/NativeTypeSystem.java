@@ -50,17 +50,18 @@ import static org.xvm.util.Handy.require;
  * Native (core) type system.
  */
 public class NativeTypeSystem
-        extends TypeSystem {
+        extends TypeSystem
+        implements AutoCloseable {
     /**
      * Create the NativeTypeSystem, which combines Ecstasy, "bridge" module and modules that the
      * bridge depends on.
      */
-    private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
+    private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned, Path jitBridge) {
         super(xvm, shared, owned);
 
         URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
         Path javatoolsPath = Paths.get(javatoolsURL.getPath());
-        Path bridgePath    = Files.isDirectory(javatoolsPath)
+        Path bridgePath    = jitBridge != null ? jitBridge : Files.isDirectory(javatoolsPath)
             ? Paths.get(javatoolsPath.toString().replace("javatools", "javatools_jitbridge"))
             : javatoolsPath.resolveSibling("javatools-jitbridge.jar");
         try {
@@ -80,7 +81,7 @@ public class NativeTypeSystem
      * @param xvm   the XVM
      * @param repo  the ModuleRepository to load the core Ecstasy modules from
      */
-    static NativeTypeSystem create(Xvm xvm, ModuleRepository repo) {
+    static NativeTypeSystem create(Xvm xvm, ModuleRepository repo, Path jitBridge) {
         require("xvm", xvm);
         require("repo", repo);
 
@@ -118,14 +119,22 @@ public class NativeTypeSystem
         list.sort(Xvm.StructureByModuleId);
         ModuleLoader[]    shared = new ModuleLoader[0];
         ModuleStructure[] owned  = list.toArray(new ModuleStructure[0]);
-        return new NativeTypeSystem(xvm, shared, owned);
+        return new NativeTypeSystem(xvm, shared, owned, jitBridge);
+    }
+
+    /**
+     * Close the resource-only template loader after execution has stopped.
+     */
+    @Override
+    public void close() throws IOException {
+        bridgeLoader.close();
     }
 
     /**
      * The bridge ClassLoader. Note: it **must** never be used with "loadClass" API, only with
      * {@link ClassLoader#getResourceAsStream(String)}" API.
      */
-    private final ClassLoader bridgeLoader;
+    private final URLClassLoader bridgeLoader;
 
     /**
      * The hierarchy resolver for existing JIT bridge classes.

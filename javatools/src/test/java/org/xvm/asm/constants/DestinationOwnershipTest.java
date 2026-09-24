@@ -58,6 +58,23 @@ class DestinationOwnershipTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
+    void callableConstructionUsesDestinationForFunctionsAndMethods(boolean function) {
+        var source = new FileStructure("Source");
+        var clz = source.getModule().createClass(Access.PUBLIC, Format.CLASS, "Holder", null);
+        var method = clz.createMethod(function, Access.PUBLIC, null,
+                Parameter.NO_PARAMS, "empty", Parameter.NO_PARAMS, true, true);
+        var body = new MethodBody(method.getIdentityConstant(), method.getIdentityConstant().getSignature(),
+                Implementation.Explicit);
+        var destination = new FileStructure(source).getConstantPool();
+        var target = destination.register(clz.getCanonicalType());
+        try (var scope = ConstantPool.withPool(new FileStructure("Unrelated").getConstantPool())) {
+            assertSame(destination, body.asFunctionType(destination, target).getConstantPool());
+        }
+        assertSame(source.getConstantPool(), method.getIdentityConstant().getConstantPool());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
     void pendingWrapperResolutionUsesDestination(boolean bindAmbient) {
         var source = new FileStructure(Constants.ECSTASY_MODULE);
         var pool = source.getConstantPool();

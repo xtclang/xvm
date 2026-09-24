@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.time.Duration;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +58,202 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @Timeout(60)
 class EmbeddingLifecycleTest {
+    @Test
+    void jitReusesRuntimeWithFreshStaticsArgumentsAndConsoles() {
+        try (var session = EmbeddingSupport.create(repository(),
+                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
+            ModuleStructure module = compile(session, """
+                    module RepeatedJit {
+                        static Counter counter = new CounterService();
+                        Int evaluate(String[] args) {
+                            @Inject Console console;
+                            console.print(args[0]);
+                            return counter.next();
+                        }
+                        interface Counter {
+                            Int next();
+                        }
+                        service CounterService implements Counter {
+                            Int count;
+                            @Override
+                            Int next() = ++count;
+                        }
+                    }
+                    """);
+            var first = new StringWriter();
+            var second = new StringWriter();
+            var connector = session.ensureConnector(RunRequest.Backend.JIT);
+            assertEquals(1L, runJit(session, module, "evaluate", List.of("first"), first, Map.of()));
+            assertEquals(1L, runJit(session, module, "evaluate", List.of("second"), second, Map.of()));
+            assertEquals("first" + System.lineSeparator(), first.toString());
+            assertEquals("second" + System.lineSeparator(), second.toString());
+            assertSame(connector, session.ensureConnector(RunRequest.Backend.JIT));
+
+            ModuleStructure replacement = compile(session,
+                    "module RepeatedJit { Int run() = 4294967297; }");
+            assertEquals(4294967297L, runJit(session, replacement, "run", List.of(), new StringWriter(), Map.of()));
+            assertEquals(1L, runJit(session, module, "evaluate", List.of("original"), new StringWriter(), Map.of()));
+
+            // The compiler, interpreter and JIT can be used in the same owned session.
+            assertEquals(7L, run(session, compile(session, "module Interpreted { Int run() = 7; }")));
+            assertSame(connector, session.ensureConnector(RunRequest.Backend.JIT));
+        }
+    }
+
+    @Test
+    void jitFailureDoesNotContaminateTheNextRequest() {
+        try (var session = EmbeddingSupport.create(repository(),
+                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
+            ModuleStructure broken = compile(session, "module BrokenJit { void run() { assert False; } }");
+            var modules = new BuildRepository();
+            modules.storeModule(broken);
+            var errors = new ErrorList(25);
+            var output = new StringWriter();
+            var request = new RunRequest(modules, broken.getName(), "run", List.of(),
+                    new PrintWriter(output), null, false, Map.of(), RunRequest.Backend.JIT);
+            try (Control control = session.run(request, errors)) {
+                assertNotNull(control, () -> errors.getErrors().toString());
+                control.join();
+                assertNull(control.result());
+                assertTrue(errors.hasSeriousErrors());
+                assertFalse(control.running());
+                assertNotNull(control.whenStopped());
+            }
+            assertFalse(output.toString().isEmpty());
+            assertEquals(0L, runJit(session, compile(session, "module HealthyJit { void run() {} }"),
+                    "run", List.of(), new StringWriter(), Map.of()));
+        }
+    }
+
+    @Test
+    void jitInjectionsBelongToEachRequest() {
+        try (var session = EmbeddingSupport.create(repository(),
+                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
+            ModuleStructure module = compile(session, """
+                    module InjectedJit {
+                        Int run(String[] args) {
+                            @Inject("sample") String sample;
+                            @Inject("values") List<String> values;
+                            assert sample == args[0];
+                            assert values[0] == sample;
+                            return values.size;
+                        }
+                    }
+                    """);
+            assertEquals(2L, runJit(session, module, "run", List.of("first"), new StringWriter(),
+                    Map.of("sample", List.of("old", "first"), "values", List.of("first", "value"))));
+            assertEquals(1L, runJit(session, module, "run", List.of("second"), new StringWriter(),
+                    Map.of("sample", List.of("second"), "values", List.of("second"))));
+        }
+    }
+
+    @Test
+    void jitSessionCloseStopsItsWorkerAndPreservesInterruption() throws Exception {
+        try (var session = EmbeddingSupport.create(repository(),
+                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
+            var console = new BlockingJitConsole(true);
+            try (Control control = startBlockedJit(session, console)) {
+                try {
+                    console.entered.await();
+                    Thread.currentThread().interrupt();
+                    session.close();
+                    assertTrue(Thread.currentThread().isInterrupted());
+                    assertEquals(0L, console.interrupted.getCount());
+                    assertFalse(control.running());
+                    assertNotNull(control.whenStopped());
+                } finally {
+                    Thread.interrupted();
+                    console.release.countDown();
+                }
+            }
+        }
+    }
+
+    @Test
+    void jitFailedCloseDoesNotPretendItsWorkerStopped() throws Exception {
+        try (var session = EmbeddingSupport.create(repository(),
+                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
+            var console = new BlockingJitConsole(false);
+            try (Control control = startBlockedJit(session, console)) {
+                try {
+                    console.entered.await();
+                    assertThrows(IllegalStateException.class, () -> control.close(Duration.ZERO));
+                    assertTrue(control.running());
+                    assertNull(control.whenStopped());
+                    assertThrows(IllegalStateException.class,
+                            () -> session.ensureConnector(RunRequest.Backend.JIT));
+                } finally {
+                    console.release.countDown();
+                    control.join();
+                }
+                assertFalse(control.running());
+            }
+        }
+    }
+
+    private static Control startBlockedJit(EmbeddingSupport session, PrintWriter console) {
+        ModuleStructure module = compile(session, """
+                module BlockedJit {
+                    void run() {
+                        @Inject Console console;
+                        console.print("entered");
+                    }
+                }
+                """);
+        var modules = new BuildRepository();
+        modules.storeModule(module);
+        var errors = new ErrorList(25);
+        var request = new RunRequest(modules, module.getName(), "run", List.of(),
+                console, null, false, Map.of(), RunRequest.Backend.JIT);
+        Control control = session.run(request, errors);
+        assertNotNull(control, () -> errors.getErrors().toString());
+        return control;
+    }
+
+    private static class BlockingJitConsole extends PrintWriter {
+        BlockingJitConsole(boolean stopOnInterrupt) {
+            super(new StringWriter());
+            this.stopOnInterrupt = stopOnInterrupt;
+        }
+
+        @Override
+        public void print(Object value) {
+            entered.countDown();
+            while (true) {
+                try {
+                    release.await();
+                    return;
+                } catch (InterruptedException e) {
+                    interrupted.countDown();
+                    if (stopOnInterrupt) {
+                        return;
+                    }
+                }
+            }
+        }
+
+        private final boolean stopOnInterrupt;
+        private final CountDownLatch entered = new CountDownLatch(1);
+        private final CountDownLatch interrupted = new CountDownLatch(1);
+        private final CountDownLatch release = new CountDownLatch(1);
+    }
+
+    private static long runJit(EmbeddingSupport session, ModuleStructure module, String method,
+                              List<String> args, StringWriter output, Map<String, List<String>> injections) {
+        var modules = new BuildRepository();
+        modules.storeModule(module);
+        var errors = new ErrorList(25);
+        var request = new RunRequest(modules, module.getName(), method, args,
+                new PrintWriter(output), null, false, injections, RunRequest.Backend.JIT);
+        try (Control control = session.run(request, errors)) {
+            assertNotNull(control, () -> errors.getErrors().toString());
+            control.join();
+            assertFalse(errors.hasSeriousErrors(), () -> errors.getErrors() + "\n" + output);
+            assertNotNull(control.result());
+            return control.result();
+        }
+    }
+
     @Test
     void xunitUsesRequestInjectionsAndReportsFailures(@TempDir Path root) throws Exception {
         try (var session = EmbeddingSupport.create(repository())) {

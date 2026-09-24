@@ -1,0 +1,1433 @@
+diff --git a/javatools/src/main/java/org/xvm/api/EmbeddingSupport.java b/javatools/src/main/java/org/xvm/api/EmbeddingSupport.java
+index 3acd4ba22a32094992b52ddef149b9a40f95b42d..a02e8640ded621540ca62067c3adc8a9475437f4 100644
+--- a/javatools/src/main/java/org/xvm/api/EmbeddingSupport.java
++++ b/javatools/src/main/java/org/xvm/api/EmbeddingSupport.java
+@@ -46,6 +46,8 @@
+ import org.xvm.compiler.ast.StatementBlock;
+ import org.xvm.compiler.ast.TypeCompositionStatement;
+ 
++import org.xvm.javajit.JitConnector;
++
+ import org.xvm.tool.Console;
+ import org.xvm.tool.Launcher.LauncherException;
+ import org.xvm.tool.LauncherOptions.CompilerOptions;
+@@ -58,8 +60,9 @@
+ 
+ /**
+  * A class used to support embedding Ecstasy tools. Interpreter requests use a long-running Ecstasy
+- * application (in "Container Zero") to create child application containers. The runtime starts
+- * lazily. Use {@link #create} for an owned session or {@link #instance} for the legacy singleton. Configuration
++ * application (in "Container Zero") to create child application containers. JIT requests use a
++ * shared Java-targeting XVM with a fresh container per request. Both runtimes start lazily. Use
++ * {@link #create} for an owned session or {@link #instance} for the legacy singleton. Configuration
+  * supplies the Module Repository from which to load the core Ecstasy classes. Without configuration,
+  * the singleton attempts to locate them using the "XDK_HOME" environment variable.
+  *
+@@ -101,6 +104,8 @@
+     private ModuleRepository cfgRepo;
+     private String           cfgInjector;
+     private Connector        connector;
++    private JitConnector     jitConnector;
++    private Path             jitBridge;
+     private volatile boolean closed;
+     private Throwable        cleanupFailure;
+ 
+@@ -144,8 +149,21 @@
+      * @return the Connector instance
+      */
+     public Connector ensureConnector() {
++        return ensureConnector(RunRequest.Backend.INTERPRETER);
++    }
++
++    /**
++     * Obtain the session's lazily created runtime for the selected backend.
++     */
++    public Connector ensureConnector(RunRequest.Backend backend) {
+         synchronized (LOCK) {
+             verifyConfigured();
++            if (Objects.requireNonNull(backend) == RunRequest.Backend.JIT) {
++                if (jitConnector == null) {
++                    jitConnector = new JitConnector(cfgRepo, jitBridge);
++                }
++                return jitConnector;
++            }
+             if (connector == null) {
+                 if (runtimeOwner != null && runtimeOwner != this) {
+                     throw new IllegalStateException(
+@@ -158,23 +176,6 @@
+         }
+     }
+ 
+-    /**
+-     * Obtain the lazily created runtime for the selected backend.
+-     *
+-     * @param backend  the requested execution backend
+-     *
+-     * @return the interpreter connector
+-     *
+-     * @throws UnsupportedOperationException if JIT is selected; its implementation is deferred
+-     *                                       to the JIT branch
+-     */
+-    public Connector ensureConnector(RunRequest.Backend backend) {
+-        if (Objects.requireNonNull(backend) == RunRequest.Backend.JIT) {
+-            throw JitControl.unsupported();
+-        }
+-        return ensureConnector();
+-    }
+-
+     // ----- API -----------------------------------------------------------------------------------
+ 
+     /**
+@@ -199,18 +200,18 @@
+     }
+ 
+     /**
+-     * Reserved entry point for a session with an explicit JIT template JAR or class directory.
+-     * The templates must be augmented by the JIT before loading, not added to the host classpath.
++     * Create a session with an explicit JIT template JAR or class directory. The templates are read
++     * and augmented by the JIT and must not be placed on the application's Java classpath.
+      *
+      * @param coreRepo   the repository containing the XDK libraries
+      * @param jitBridge  the JIT template JAR or class directory
+      *
+-     * @return a configured session once the JIT implementation is available
+-     *
+-     * @throws UnsupportedOperationException always; implemented separately on the JIT branch
++     * @return a configured session; neither execution backend is started yet
+      */
+     public static EmbeddingSupport create(ModuleRepository coreRepo, Path jitBridge) {
+-        throw JitControl.unsupported();
++        EmbeddingSupport session = create(coreRepo);
++        session.jitBridge = Objects.requireNonNull(jitBridge);
++        return session;
+     }
+ 
+     /**
+@@ -260,10 +261,12 @@
+     private void closeSession(Deadline deadline) {
+         List<OwnedControl> pending;
+         Connector runtime;
++        JitConnector jitRuntime;
+         synchronized (LOCK) {
+             closed = true;
+             pending = List.copyOf(controls);
+             runtime = connector;
++            jitRuntime = jitConnector;
+         }
+ 
+         Throwable failure = null;
+@@ -276,6 +279,16 @@
+             }
+         }
+         boolean stopped = runtime == null;
++        boolean jitStopped = jitRuntime == null;
++        // A failed bounded close can leave a JIT worker running. Keep its templates until it stops.
++        if (jitRuntime != null && controlFailures.isEmpty()) {
++            try {
++                jitRuntime.xvm.close();
++                jitStopped = true;
++            } catch (IOException | RuntimeException | Error e) {
++                failure = collectFailure(failure, e);
++            }
++        }
+         try {
+             if (runtime instanceof InterpreterConnector interpreter) {
+                 try {
+@@ -308,6 +321,9 @@
+         synchronized (LOCK) {
+             if (stopped) {
+                 connector = null;
++            }
++            if (jitStopped) {
++                jitConnector = null;
+             }
+             if (stopped && controls.isEmpty() && runtimeOwner == this) {
+                 runtimeOwner = null;
+@@ -696,29 +712,22 @@
+             String                    customInjector,
+             @NotNull ErrorListener    errs) {
+         return run(input, moduleName, version, console, rootDir, injections, customInjector,
+-                "run", List.of(), false, errs);
++                "run", List.of(), false, RunRequest.Backend.INTERPRETER, errs);
+     }
+ 
+     /**
+      * Execute a module with an explicit entry point and host resource context.
+-     *
+-     * @throws UnsupportedOperationException if the request selects JIT; implemented separately
+-     *                                       on the JIT branch
+      */
+     public Control run(RunRequest request, @NotNull ErrorListener errs) {
+-        Objects.requireNonNull(errs, "errs");
+-        if (request.backend() == RunRequest.Backend.JIT) {
+-            throw JitControl.unsupported();
+-        }
+         return run(request.repository(), request.moduleName(), null, request.console(),
+                 request.directory(), request.injections(), null, request.method(), request.arguments(),
+-                request.hostFileSystem(), errs);
++                request.hostFileSystem(), request.backend(), errs);
+     }
+ 
+     private Control run(ModuleRepository input, String moduleName, Version version, PrintWriter console,
+                         File rootDir, Map<String, List<String>> injections, String customInjector,
+                         String method, List<String> arguments, boolean hostFileSystem,
+-                        ErrorListener errs) {
++                        RunRequest.Backend backend, ErrorListener errs) {
+         Objects.requireNonNull(errs, "errs");
+         synchronized (LOCK) {
+             try (var ignore = ConstantPool.withPool(null)) {
+@@ -742,10 +751,13 @@
+                 }
+ 
+                 try {
+-                    Connector connector = ensureConnector();
+-                    Control delegate = InterpreterControl.create(connector, module, repository, console, rootDir,
+-                            method, arguments, hostFileSystem,
+-                            injections == null ? Map.of() : injections, errs);
++                    Connector connector = ensureConnector(backend);
++                    Control delegate = backend == RunRequest.Backend.JIT
++                            ? JitControl.create((JitConnector) connector, module, repository, console,
++                                    method, arguments, injections == null ? Map.of() : injections, errs)
++                            : InterpreterControl.create(connector, module, repository, console, rootDir,
++                                    method, arguments, hostFileSystem,
++                                    injections == null ? Map.of() : injections, errs);
+                     var control = new OwnedControl(delegate);
+                     controls.add(control);
+                     return control;
+diff --git a/javatools/src/main/java/org/xvm/api/JitControl.java b/javatools/src/main/java/org/xvm/api/JitControl.java
+index 71768ac2ace723c797db6503cb7d0641af508c5f..d76861c0ccc7454aabd9718805713cf618d14a0c 100644
+--- a/javatools/src/main/java/org/xvm/api/JitControl.java
++++ b/javatools/src/main/java/org/xvm/api/JitControl.java
+@@ -1,61 +1,148 @@
+ package org.xvm.api;
+ 
+-import java.io.File;
+ import java.io.PrintWriter;
+ 
+ import java.time.Duration;
+ import java.time.Instant;
+ 
++import java.util.List;
++import java.util.Map;
++
+ import org.xvm.asm.ErrorListener;
++import org.xvm.asm.MethodStructure;
+ import org.xvm.asm.ModuleRepository;
+ import org.xvm.asm.ModuleStructure;
+ 
++import org.xvm.javajit.JitConnector;
++
++import org.xvm.util.Deadline;
++
++import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
++
++import static org.xvm.util.Severity.ERROR;
++
+ /**
+- * JIT-backed management and monitoring for one runner task.
++ * Owns one asynchronous JIT invocation in a fresh container of the session's shared runtime.
++ *
++ * <p>The current JIT executes an invocation synchronously on its Java thread. Closing interrupts
++ * that thread and waits for it to exit. Generated code that does not respond to interruption can
++ * exhaust the shutdown budget; it must never be reported as stopped while still executing.
+  */
+ class JitControl
+         implements EmbeddingSupport.Control {
+-    static Connector createConnector(ModuleRepository repository) {
+-        throw unsupported();
++    static EmbeddingSupport.Control create(JitConnector host, ModuleStructure module,
++                                           ModuleRepository repository, PrintWriter console,
++                                           String methodName, List<String> arguments,
++                                           Map<String, List<String>> injections, ErrorListener errs) {
++        PrintWriter output = console == null ? new PrintWriter(System.out, true) : console;
++        var request = new JitConnector(repository, host.xvm, output);
++        request.loadModule(module);
++        // Native initialization must precede findMethods(), which builds the module's TypeInfo.
++        // This matches the launcher and avoids caching incomplete constructor metadata.
++        request.start(injections);
++
++        var methods = request.findMethods(methodName);
++        if (methods.size() != 1) {
++            throw new IllegalArgumentException("Missing or ambiguous entry method: " + methodName);
++        }
++        MethodStructure method = methods.iterator().next();
++        var pool = request.getConstantPool();
++        int paramCount = method.getParamCount();
++        int returnCount = method.getReturnCount();
++        if (paramCount > 1 || paramCount == 1
++                && !method.getParam(0).getType().equals(pool.ensureArrayType(pool.typeString()))) {
++            throw new IllegalArgumentException("JIT entry method must accept zero arguments or String[]");
++        }
++        if (paramCount == 0 && !arguments.isEmpty()) {
++            throw new IllegalArgumentException("JIT entry method does not accept arguments: " + methodName);
++        }
++        if (returnCount > 1 || returnCount == 1
++                && !method.getReturn(0).getType().equals(pool.typeInt64())) {
++            throw new IllegalArgumentException("JIT entry method must return void or Int");
++        }
++        return new JitControl(request, method, arguments, output, module, errs);
+     }
+ 
+-    static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
+-                                           ModuleRepository repository, PrintWriter console,
+-                                           File rootDir, ErrorListener errs) {
+-        throw unsupported();
++    private JitControl(JitConnector request, MethodStructure method, List<String> arguments,
++                       PrintWriter output, ModuleStructure module, ErrorListener errs) {
++        worker = Thread.ofVirtual().name("XvmJit-" + module.getName()).unstarted(() -> {
++            try {
++                request.invoke0(method, arguments);
++                if (request.failure() == null) {
++                    result = request.result();
++                } else if (errs != null) {
++                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {request.failure()}, module);
++                }
++            } catch (Throwable failure) {
++                // Every worker failure must reach its host, including JIT VerifyError/LinkageError.
++                output.println("JIT execution failed: " + failure);
++                if (errs != null) {
++                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
++                }
++            } finally {
++                output.flush();
++                stopped = Instant.now();
++            }
++        });
++        worker.start();
+     }
+ 
+     @Override
+     public boolean running() {
+-        throw unsupported();
++        return worker.isAlive();
+     }
+ 
+     @Override
+     public void join() {
+-        throw unsupported();
++        try {
++            worker.join();
++        } catch (InterruptedException e) {
++            Thread.currentThread().interrupt();
++            throw new IllegalStateException("Interrupted while waiting for JIT execution", e);
++        }
+     }
+ 
+     @Override
+     public Instant whenStarted() {
+-        throw unsupported();
++        return started;
+     }
+ 
+     @Override
+     public Instant whenStopped() {
+-        throw unsupported();
++        return stopped;
+     }
+ 
+     @Override
+     public Long result() {
+-        throw unsupported();
++        return result;
+     }
+ 
+     @Override
+     public void close(Duration timeout) {
+-        throw unsupported();
++        Deadline deadline = Deadline.after(timeout);
++        boolean interrupted = false;
++        if (worker.isAlive()) {
++            worker.interrupt();
++        }
++        try {
++            while (worker.isAlive()) {
++                try {
++                    if (!worker.join(deadline.remaining())) {
++                        throw new IllegalStateException("JIT execution did not stop within the shutdown budget");
++                    }
++                } catch (InterruptedException e) {
++                    interrupted = true;
++                }
++            }
++        } finally {
++            if (interrupted) {
++                Thread.currentThread().interrupt();
++            }
++        }
+     }
+ 
+-    static UnsupportedOperationException unsupported() {
+-        return new UnsupportedOperationException("Will be implemented separately in the JIT branch");
+-    }
++    private final Instant started = Instant.now();
++    private final Thread worker;
++    private volatile Instant stopped;
++    private volatile Long result;
+ }
+diff --git a/javatools/src/main/java/org/xvm/api/RunRequest.java b/javatools/src/main/java/org/xvm/api/RunRequest.java
+index ed3efcf90167aee94490c92a9a486e7e88e0904b..7477dc506257fcfca42b133f0f206ff73c3671c8 100644
+--- a/javatools/src/main/java/org/xvm/api/RunRequest.java
++++ b/javatools/src/main/java/org/xvm/api/RunRequest.java
+@@ -24,14 +24,13 @@
+  * @param hostFileSystem use host storage, root, home and temporary directories, with the explicit
+  *                       working directory; does not change the Java process directory
+  * @param injections     request-local String and String[] injections
+- * @param backend        execution backend; JIT requests are reserved for the separate JIT branch
++ * @param backend        execution backend; compilation is shared by both backends
+  */
+ public record RunRequest(ModuleRepository repository, String moduleName, String method,
+                          List<String> arguments, PrintWriter console, File directory, boolean hostFileSystem,
+                          Map<String, List<String>> injections, Backend backend) {
+     /**
+-     * Execution backend. Selecting JIT currently throws {@link UnsupportedOperationException}
+-     * when the request is submitted; its implementation is maintained on the JIT branch.
++     * Execution backend. JIT is experimental and supports only part of the language and libraries.
+      */
+     public enum Backend { INTERPRETER, JIT }
+ 
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java b/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java
+index decbbb68f32ab32d5eebcf4b53dcda08fb1999b9..a222ed9092c1dfb84e996d811870421942689f70 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/MethodBody.java
+@@ -831,12 +831,18 @@
+     }
+ 
+     /**
++     * Construct the callable type in the caller's destination, even when resolving the declaration
++     * leaves its signature unchanged in the source pool.
++     *
++     * @param pool           the destination for the constructed callable type
++     * @param typeContainer  the target type used to resolve the declaration's signature
++     *
+      * @return the function or method type for the function or method represented by this body
+      */
+     public TypeConstant asFunctionType(ConstantPool pool, TypeConstant typeContainer) {
+-        SignatureConstant sig = getMethodStructure().resolveSignature(pool(), typeContainer);
++        SignatureConstant sig = getMethodStructure().resolveSignature(pool, typeContainer);
+         return isFunction()
+-                ? sig.asFunctionType()
++                ? pool.buildFunctionType(sig.getRawParams(), sig.getRawReturns())
+                 : sig.asMethodType(pool, typeContainer);
+     }
+ 
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java b/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java
+index f92d7165c29ae853cb8da5267cfc8a65cbae07a2..17d12067c288600a5988a08730589eadf1335579 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java
+@@ -15,6 +15,7 @@
+ import org.xvm.asm.GenericTypeResolver;
+ import org.xvm.asm.MethodStructure;
+ import org.xvm.asm.Parameter;
++import org.xvm.asm.XvmStructure;
+ 
+ import org.xvm.javajit.NativeNames;
+ import org.xvm.javajit.TypeSystem;
+@@ -614,6 +615,14 @@
+     // ----- XvmStructure methods ------------------------------------------------------------------
+ 
+     @Override
++    protected void setContaining(XvmStructure parent) {
++        super.setContaining(parent);
++        // Generated names and metadata belong to this owner/type system, not the source copy.
++        m_sJitName = null;
++        m_type = null;
++    }
++
++    @Override
+     protected void registerConstants(ConstantPool pool) {
+         m_type = null;
+ 
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java
+index f6c9e7315ac3787d578ec2876473d41da873c062..61c830cc3a13258932bb5eb65aac1332b320b6e5 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/ParameterizedTypeConstant.java
+@@ -1056,6 +1056,7 @@
+         long stamp = resolutionLock.writeLock();
+         m_typeResolverPrev = null;
+         m_typeResolvedPrev = null;
++        m_typeJitCallable  = null;
+         resolutionLock.unlockWrite(stamp);
+     }
+ 
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java b/javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java
+index 743428c5c050fbb2246d4ccb46e52e43821a5b29..29496d4d2d6b4481b42dda7be933db1eb0b528e1 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/PropertyConstant.java
+@@ -424,7 +424,8 @@
+     @Override
+     protected void setContaining(XvmStructure parent) {
+         super.setContaining(parent);
+-        // Property metadata belongs to the destination definitions, not the source copy.
++        // Generated names and metadata belong to this owner/type system, not the source copy.
++        m_sJitName = null;
+         invalidateCache();
+         m_info = null;
+     }
+diff --git a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+index 40a084b59c5edc443980cded5d14e621aee108c7..fa9288d517397bf4fc7cb4982c94e62e8bf58ee5 100644
+--- a/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
++++ b/javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java
+@@ -8072,6 +8072,7 @@
+         m_mapConsumes    = null;
+         m_mapProduces    = null;
+         m_tloInProgress  = null;
++        m_sJitName       = null;
+         m_fValidated     = false;
+         recursionDepth   = new AtomicInteger();
+     }
+diff --git a/javatools/src/main/java/org/xvm/javajit/JitConnector.java b/javatools/src/main/java/org/xvm/javajit/JitConnector.java
+index d3c6f132af92a2f5ede2cf8e21e79c9be701cf8b..b22134cfad3760dee4b967b2bd3b1701ca539d29 100644
+--- a/javatools/src/main/java/org/xvm/javajit/JitConnector.java
++++ b/javatools/src/main/java/org/xvm/javajit/JitConnector.java
+@@ -1,7 +1,11 @@
+ package org.xvm.javajit;
+ 
++import java.io.ByteArrayInputStream;
++import java.io.ByteArrayOutputStream;
+ import java.io.File;
+ import java.io.IOException;
++import java.io.PrintWriter;
++import java.io.UncheckedIOException;
+ 
+ import java.lang.reflect.Constructor;
+ import java.lang.reflect.InvocationTargetException;
+@@ -24,6 +28,7 @@
+ import org.xvm.api.Connector;
+ 
+ import org.xvm.asm.ConstantPool;
++import org.xvm.asm.FileStructure;
+ import org.xvm.asm.MethodStructure;
+ import org.xvm.asm.ModuleRepository;
+ import org.xvm.asm.ModuleStructure;
+@@ -33,25 +38,72 @@
+ public class JitConnector
+         extends Connector {
+     public JitConnector(ModuleRepository repo) {
++        this(repo, (Path) null);
++    }
++
++    /**
++     * Create a JIT runtime with an optional explicit template location.
++     */
++    public JitConnector(ModuleRepository repo, Path jitBridge) {
++        this(repo, new Xvm(repo, jitBridge), null, true);
++    }
++
++    /**
++     * Create one application connector within an existing runtime. Embedded execution writes only
++     * to the supplied console and does not dump classes into the process working directory.
++     */
++    public JitConnector(ModuleRepository repo, Xvm xvm, PrintWriter console) {
++        this(repo, xvm, console, false);
++    }
++
++    private JitConnector(ModuleRepository repo, Xvm xvm, PrintWriter console, boolean dumpClasses) {
+         super(repo);
+-
+-        xvm = new Xvm(repo);
++        this.xvm         = xvm;
++        this.console     = console;
++        this.dumpClasses = dumpClasses;
+     }
+ 
+     @Override
+     public void loadModule(String appName) {
+-        module = f_repository.loadModule(appName);
+-        if (module == null) {
++        ModuleStructure loaded = f_repository.loadModule(appName);
++        if (loaded == null) {
+             throw new IllegalStateException("Unable to load module \"" + appName + "\"");
+         }
+-
+-        ts = xvm.createLinker().addModule(module).link();
+-        // TODO add error reporting
++        loadModule(loaded);
++    }
++
++    /**
++     * Load a private copy: linking and code generation must not mutate the caller's module.
++     *
++     * <p>Deserialize the application into a new pool before linking, so cached handles and
++     * materialized AST objects from the source are not reused as execution state. Bind the new
++     * pool while linking for helpers that still use ambient selection. If linking reuses a type
++     * system, its selected main module owns the entry definitions and generated classes; the
++     * temporary candidate pool must not supply those identities.
++     */
++    public void loadModule(ModuleStructure loaded) {
++        try {
++            var bytes = new ByteArrayOutputStream();
++            loaded.getFileStructure().writeTo(bytes);
++            var file = new FileStructure(new ByteArrayInputStream(bytes.toByteArray()), true, false);
++            try (var ignore = ConstantPool.withPool(file.getConstantPool())) {
++                var linker = xvm.createLinker().withRepo(f_repository).addModule(file.getModule());
++                ts = linker.link();
++                if (ts == null) {
++                    throw new IllegalStateException("Unable to link module: " + linker.errorList().getErrors());
++                }
++                // A matching type system may already exist. Entry methods must come from the
++                // module that owns its generated classes, not the discarded candidate copy.
++                module = ts.mainModule();
++            }
++        } catch (IOException e) {
++            throw new UncheckedIOException(e);
++        }
+     }
+ 
+     @Override
+     public ConstantPool getConstantPool() {
+-        return module.getConstantPool();
++        return ts == null ? xvm.ecstasyPool : ts.pool();
+     }
+ 
+     @Override
+@@ -60,7 +112,8 @@
+             var loader   = xvm.nativeTypeSystem.loader;
+             var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector")
+                                  .asSubclass(Injector.class);
+-            var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
++            var injector = clz.getDeclaredConstructor(Xvm.class, PrintWriter.class, Map.class)
++                              .newInstance(xvm, console, mapInjections == null ? Map.of() : mapInjections);
+             try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
+                 clz.getMethod("addNativeResources").invoke(injector);
+             }
+@@ -74,12 +127,16 @@
+ 
+     @Override
+     public Set<MethodStructure> findMethods(String sMethodName) {
+-        return findMethods(module.getIdentityConstant(), sMethodName);
++        try (var ignore = ConstantPool.withPool(getConstantPool())) {
++            return findMethods(module.getIdentityConstant(), sMethodName);
++        }
+     }
+ 
+     @Override
+     public void invoke0(MethodStructure methodStructure, String... args) {
+-        container.newFiber(() -> invoke0Impl(methodStructure, args));
++        try (var ignore = ConstantPool.withPool(getConstantPool())) {
++            container.newFiber(() -> invoke0Impl(methodStructure, args));
++        }
+     }
+ 
+     private void invoke0Impl(MethodStructure methodStructure, String... args) {
+@@ -94,8 +151,11 @@
+             Object module    = mainClass.getDeclaredConstructor(Ctx.class).newInstance(ctx);
+ 
+             // Reflection boxes the optimized Java long as Long, which join() uses as the exit code.
+-            String runName = methodStructure.getReturnCount() == 1 &&
+-                    methodStructure.getReturn(0).getType().equals(pool.typeInt64()) ? "run$p" : "run";
++            String runName = methodStructure.getIdentityConstant().ensureJitMethodName(ts);
++            if (methodStructure.getReturnCount() == 1 &&
++                    methodStructure.getReturn(0).getType().equals(pool.typeInt64())) {
++                runName += "$p";
++            }
+             Object result;
+             if (methodStructure.getParamCount() == 0) {
+                 Method runMethod = mainClass.getMethod(runName, Ctx.class);
+@@ -133,12 +193,11 @@
+                 case null, default -> this.result = 0;
+             }
+         } catch (ClassNotFoundException | NoClassDefFoundError e) {
+-            e.printStackTrace(System.err);
+             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
+         } catch (NoSuchMethodException e) {
+-            throw new RuntimeException("No \"run()\" method", e);
++            throw new RuntimeException("No entry method: " + methodStructure.getName(), e);
+         } catch (InstantiationException | IllegalAccessException e) {
+-            throw new RuntimeException("Failed to invoke \"run()\" method", e);
++            throw new RuntimeException("Failed to invoke " + methodStructure.getName(), e);
+         } catch (InvocationTargetException e) {
+             Throwable cause = e.getCause();
+             String    name  = cause.getClass().getSimpleName();
+@@ -147,40 +206,51 @@
+ 
+                 this.result = 1;
+                 try {
+-                    // TODO: add the service info; see Utils.log()
+-                    System.out.println("\nUnhandled exception: " +
+-                        cause.getClass().getField("exception").get(cause));
+-                } catch (Throwable ignore) {}
++                    failure = "Unhandled exception: " + cause.getClass().getField("exception").get(cause);
++                } catch (ReflectiveOperationException ignored) {
++                    failure = "Unhandled exception: " + cause;
++                }
++                if (console == null) {
++                    System.out.println(failure);
++                } else {
++                    console.println(failure);
++                    console.flush();
++                }
+             } else {
+                 if (cause instanceof VerifyError) {
+                     dumpNames.add(extractVerifyErrorClassName(cause.getMessage()));
+                 }
+-                e.printStackTrace(System.err);
+                 throw new RuntimeException(cause);
+             }
+         } finally {
+-            // dump the generated classes.
+-            // each class will be dumped to a separate file under a directory
+-            // ./jasm/<module-name>/<class-name>.jasm
+-            Predicate<String> filter     = s -> dumpNames.stream().anyMatch(s::contains);
+-            File              curDir     = new File(".").getAbsoluteFile();
+-            File              jasmDir    = new File(curDir, "jasm");
+-            String            moduleName = loader.typeSystem.mainModule().getSimpleName();
+-            File              moduleDir  = new File(jasmDir, moduleName);
+-            File              ecstasyDir = new File(jasmDir, "ecstasy");
+-
+-            // delete the existing jasm directory
+-            try (Stream<Path> paths = Files.walk(jasmDir.toPath())) {
+-                paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+-            } catch (IOException e) {
+-                System.err.println(e.getMessage());
+-            }
+-
+-            moduleDir.mkdirs();
+-            loader.dump(moduleDir, filter);
+-            ecstasyDir.mkdirs();
+-            xvm.nativeTypeSystem.loader.dump(ecstasyDir, filter);
+-        }
++            if (dumpClasses) {
++                dumpClasses(loader, dumpNames);
++            }
++        }
++    }
++
++    private void dumpClasses(TypeSystemLoader loader, Set<String> dumpNames) {
++        // dump the generated classes.
++        // each class will be dumped to a separate file under a directory
++        // ./jasm/<module-name>/<class-name>.jasm
++        Predicate<String> filter     = s -> dumpNames.stream().anyMatch(s::contains);
++        File              curDir     = new File(".").getAbsoluteFile();
++        File              jasmDir    = new File(curDir, "jasm");
++        String            moduleName = loader.typeSystem.mainModule().getSimpleName();
++        File              moduleDir  = new File(jasmDir, moduleName);
++        File              ecstasyDir = new File(jasmDir, "ecstasy");
++
++        // delete the existing jasm directory
++        try (Stream<Path> paths = Files.walk(jasmDir.toPath())) {
++            paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
++        } catch (IOException e) {
++            System.err.println(e.getMessage());
++        }
++
++        moduleDir.mkdirs();
++        loader.dump(moduleDir, filter);
++        ecstasyDir.mkdirs();
++        xvm.nativeTypeSystem.loader.dump(ecstasyDir, filter);
+     }
+ 
+     /**
+@@ -207,6 +277,20 @@
+     }
+ 
+     /**
++     * @return the complete Ecstasy Int result, without narrowing to a process exit code
++     */
++    public long result() {
++        return result;
++    }
++
++    /**
++     * @return an uncaught Ecstasy exception description, or null after normal completion
++     */
++    public String failure() {
++        return failure;
++    }
++
++    /**
+      * The XVM within which this TypeSystem exists
+      */
+     public final Xvm xvm;
+@@ -230,6 +314,10 @@
+      * The result of "main" method invocation.
+      */
+     private long result = 1;
++
++    private String failure;
++    private final PrintWriter console;
++    private final boolean dumpClasses;
+ 
+     // TEMPORARY: manually added names
+     private static final String[] CLASS_DUMP_LIST = new String[] {
+diff --git a/javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java b/javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java
+index bc122ebb57d9072372a334c22f9da009188a3ca5..e1b79a67bd92966785445ba77b37cff63f105746 100644
+--- a/javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java
++++ b/javatools/src/main/java/org/xvm/javajit/NativeTypeSystem.java
+@@ -50,17 +50,18 @@
+  * Native (core) type system.
+  */
+ public class NativeTypeSystem
+-        extends TypeSystem {
++        extends TypeSystem
++        implements AutoCloseable {
+     /**
+      * Create the NativeTypeSystem, which combines Ecstasy, "bridge" module and modules that the
+      * bridge depends on.
+      */
+-    private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
++    private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned, Path jitBridge) {
+         super(xvm, shared, owned);
+ 
+         URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
+         Path javatoolsPath = Paths.get(javatoolsURL.getPath());
+-        Path bridgePath    = Files.isDirectory(javatoolsPath)
++        Path bridgePath    = jitBridge != null ? jitBridge : Files.isDirectory(javatoolsPath)
+             ? Paths.get(javatoolsPath.toString().replace("javatools", "javatools_jitbridge"))
+             : javatoolsPath.resolveSibling("javatools-jitbridge.jar");
+         try {
+@@ -80,7 +81,7 @@
+      * @param xvm   the XVM
+      * @param repo  the ModuleRepository to load the core Ecstasy modules from
+      */
+-    static NativeTypeSystem create(Xvm xvm, ModuleRepository repo) {
++    static NativeTypeSystem create(Xvm xvm, ModuleRepository repo, Path jitBridge) {
+         require("xvm", xvm);
+         require("repo", repo);
+ 
+@@ -118,14 +119,22 @@
+         list.sort(Xvm.StructureByModuleId);
+         ModuleLoader[]    shared = new ModuleLoader[0];
+         ModuleStructure[] owned  = list.toArray(new ModuleStructure[0]);
+-        return new NativeTypeSystem(xvm, shared, owned);
++        return new NativeTypeSystem(xvm, shared, owned, jitBridge);
++    }
++
++    /**
++     * Close the resource-only template loader after execution has stopped.
++     */
++    @Override
++    public void close() throws IOException {
++        bridgeLoader.close();
+     }
+ 
+     /**
+      * The bridge ClassLoader. Note: it **must** never be used with "loadClass" API, only with
+      * {@link ClassLoader#getResourceAsStream(String)}" API.
+      */
+-    private final ClassLoader bridgeLoader;
++    private final URLClassLoader bridgeLoader;
+ 
+     /**
+      * The hierarchy resolver for existing JIT bridge classes.
+diff --git a/javatools/src/main/java/org/xvm/javajit/Xvm.java b/javatools/src/main/java/org/xvm/javajit/Xvm.java
+index 3e8ac3be3cb417003b08a7af6054ee5b8356c17a..218b1d6a07185f2c957ebb4885629c1c570f2d5e 100644
+--- a/javatools/src/main/java/org/xvm/javajit/Xvm.java
++++ b/javatools/src/main/java/org/xvm/javajit/Xvm.java
+@@ -1,6 +1,10 @@
+ package org.xvm.javajit;
+ 
++import java.io.IOException;
++
+ import java.lang.ref.WeakReference;
++
++import java.nio.file.Path;
+ 
+ import java.util.Arrays;
+ import java.util.Comparator;
+@@ -30,13 +34,22 @@
+ /**
+  * The Ecstasy-to-Java "just-in-time" (JIT) compiler implementation of the XVM specification.
+  */
+-public class Xvm {
++public class Xvm
++        implements AutoCloseable {
+     /**
+      * Construct an XVM that JITs to Java bytecode.
+      *
+      * @param repo  the {@link ModuleRepository} that the XVM system libraries can be loaded from
+      */
+     public Xvm(ModuleRepository repo) {
++        this(repo, null);
++    }
++
++    /**
++     * Construct an XVM using an explicit template JAR or class directory. A null path selects the
++     * templates beside javatools in the XDK distribution.
++     */
++    public Xvm(ModuleRepository repo, Path jitBridge) {
+         for (int i = 0; i < locks.length; ++i) {
+             locks[i] = new Object();
+         }
+@@ -44,7 +57,7 @@
+         primeNameCounters();
+ 
+         this.systemRepo       = repo;
+-        this.nativeTypeSystem = NativeTypeSystem.create(this, repo);
++        this.nativeTypeSystem = NativeTypeSystem.create(this, repo, jitBridge);
+ 
+         register(this.nativeTypeSystem);
+         this.nativeContainer = createContainer(null, nativeTypeSystem, FailEverythingInjector);
+@@ -190,6 +203,14 @@
+     public final ScopedValue<Ctx> Current = ScopedValue.newInstance();
+ 
+     // ----- public API ----------------------------------------------------------------------------
++
++    /**
++     * Release the template loader after all containers have stopped executing.
++     */
++    @Override
++    public void close() throws IOException {
++        nativeTypeSystem.close();
++    }
+ 
+     /**
+      * Create a Linker in order to create a new TypeSystem.
+diff --git a/javatools/src/test/java/org/xvm/asm/ConstantOwnershipTest.java b/javatools/src/test/java/org/xvm/asm/ConstantOwnershipTest.java
+index f2a963a89365ddd7d542197ac868d812bd98bce0..a8311cab34f0780fd375bbac405f03d9e3392628 100644
+--- a/javatools/src/test/java/org/xvm/asm/ConstantOwnershipTest.java
++++ b/javatools/src/test/java/org/xvm/asm/ConstantOwnershipTest.java
+@@ -111,6 +111,25 @@
+     }
+ 
+     @Test
++    void adoptedMemberIdentitiesDiscardSourceJitNames() throws Exception {
++        var source = new FileStructure("Source");
++        var pool = source.getConstantPool();
++        var property = pool.ensurePropertyConstant(source.getModule().getIdentityConstant(), "value");
++        var method = pool.ensureMethodConstant(source.getModule().getIdentityConstant(), "value",
++                TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
++        for (var identity : new Constant[] {property, method}) {
++            var field = identity.getClass().getDeclaredField("m_sJitName");
++            field.setAccessible(true);
++            field.set(identity, "source$generated");
++            // The destination may already have a canonical constant from file cloning; force a
++            // fresh destination so the test always exercises adoption of the primed identity.
++            var target = new FileStructure(source).getConstantPool();
++            assertNull(field.get(target.register(identity)));
++            assertSame("source$generated", field.get(identity));
++        }
++    }
++
++    @Test
+     void adoptedTypesHaveIndependentCalculationState() throws Exception {
+         var sourceFile = new FileStructure(Constants.ECSTASY_MODULE);
+         var source = sourceFile.getConstantPool();
+@@ -135,4 +154,18 @@
+         assertNotSame(lock.get(type), lock.get(copy));
+     }
+ 
++    @Test
++    void adoptedCallableTypeUsesItsDestinationPool() {
++        var sourceFile = new FileStructure(Constants.ECSTASY_MODULE);
++        var source = sourceFile.getConstantPool();
++        var destination = new FileStructure(sourceFile).getConstantPool();
++        var type = source.ensureTupleType(source.typeString());
++        var original = type.getCallableJitType();
++        var copy = destination.register(type);
++
++        assertNotSame(type, copy);
++        assertSame(destination, copy.getCallableJitType().getConstantPool());
++        assertNotSame(original, copy.getCallableJitType());
++        assertSame(source, original.getConstantPool());
++    }
+ }
+diff --git a/javatools/src/test/java/org/xvm/asm/constants/DestinationOwnershipTest.java b/javatools/src/test/java/org/xvm/asm/constants/DestinationOwnershipTest.java
+index 227846a4ef215d6c56ebc867ebd7a7b864750ccd..9acbc64c4faa6a7a351a4f29c191cf330f7848e6 100644
+--- a/javatools/src/test/java/org/xvm/asm/constants/DestinationOwnershipTest.java
++++ b/javatools/src/test/java/org/xvm/asm/constants/DestinationOwnershipTest.java
+@@ -58,6 +58,23 @@
+ 
+     @ParameterizedTest
+     @ValueSource(booleans = {false, true})
++    void callableConstructionUsesDestinationForFunctionsAndMethods(boolean function) {
++        var source = new FileStructure("Source");
++        var clz = source.getModule().createClass(Access.PUBLIC, Format.CLASS, "Holder", null);
++        var method = clz.createMethod(function, Access.PUBLIC, null,
++                Parameter.NO_PARAMS, "empty", Parameter.NO_PARAMS, true, true);
++        var body = new MethodBody(method.getIdentityConstant(), method.getIdentityConstant().getSignature(),
++                Implementation.Explicit);
++        var destination = new FileStructure(source).getConstantPool();
++        var target = destination.register(clz.getCanonicalType());
++        try (var scope = ConstantPool.withPool(new FileStructure("Unrelated").getConstantPool())) {
++            assertSame(destination, body.asFunctionType(destination, target).getConstantPool());
++        }
++        assertSame(source.getConstantPool(), method.getIdentityConstant().getConstantPool());
++    }
++
++    @ParameterizedTest
++    @ValueSource(booleans = {false, true})
+     void pendingWrapperResolutionUsesDestination(boolean bindAmbient) {
+         var source = new FileStructure(Constants.ECSTASY_MODULE);
+         var pool = source.getConstantPool();
+diff --git a/javatools_jitbridge/src/main/java/org/xtclang/_native/io/TerminalConsole.java b/javatools_jitbridge/src/main/java/org/xtclang/_native/io/TerminalConsole.java
+index 64dc325a95ca68a79480b3970518ede143c157ec..1a543885038ff5e84b6314607951271ef7f7afb1 100644
+--- a/javatools_jitbridge/src/main/java/org/xtclang/_native/io/TerminalConsole.java
++++ b/javatools_jitbridge/src/main/java/org/xtclang/_native/io/TerminalConsole.java
+@@ -1,4 +1,6 @@
+ package org.xtclang._native.io;
++
++import java.io.PrintWriter;
+ 
+ import org.xtclang.ecstasy.io.Console;
+ import org.xtclang.ecstasy.io.IOException;
+@@ -11,7 +13,6 @@
+ import org.xvm.asm.constants.TypeConstant;
+ 
+ import org.xvm.javajit.Ctx;
+-import org.xvm.javajit.ModuleLoader;
+ 
+ import org.xvm.runtime.template._native.io.xTerminalConsole;
+ 
+@@ -23,8 +24,18 @@
+         implements Console {
+ 
+     public TerminalConsole() {
++        this(null);
++    }
++
++    /**
++     * Create an output console backed by a caller-owned writer, or the terminal when null.
++     */
++    public TerminalConsole(PrintWriter output) {
+         super(null);
++        this.output = output;
+     }
++
++    private final PrintWriter output;
+ 
+     @Override
+     public TypeConstant $xvmType(Ctx ctx) {
+@@ -42,17 +53,21 @@
+             suppressNewline = false;
+         }
+ 
+-        xTerminalConsole.CONSOLE_OUT.print(object.toString(ctx));
++        PrintWriter writer = output == null ? xTerminalConsole.CONSOLE_OUT : output;
++        writer.print(object.toString(ctx));
+         if (!suppressNewline) {
+-            xTerminalConsole.CONSOLE_OUT.println();
++            writer.println();
+         }
+-        xTerminalConsole.CONSOLE_OUT.flush();
++        writer.flush();
+     }
+ 
+     /**
+      * {@code String readLine(String prompt = "", Boolean suppressEcho = False)}
+      */
+     public String readLine$p(Ctx ctx, String prompt, boolean suppressEcho, boolean dfltSuppressEcho) {
++        if (output != null) {
++            throw new IOException(ctx).$init(ctx, "Embedded console input is not supported", null);
++        }
+         if (prompt == null) {
+             prompt = String.EmptyString;
+         }
+diff --git a/javatools_jitbridge/src/main/java/org/xtclang/_native/mgmt/nMainInjector.java b/javatools_jitbridge/src/main/java/org/xtclang/_native/mgmt/nMainInjector.java
+index 67076e95e13f0103ab8d632597d771ce4c2ae6dd..08584c39a80afbb5579a31c0a7270a956cf73472 100644
+--- a/javatools_jitbridge/src/main/java/org/xtclang/_native/mgmt/nMainInjector.java
++++ b/javatools_jitbridge/src/main/java/org/xtclang/_native/mgmt/nMainInjector.java
+@@ -1,11 +1,16 @@
+ package org.xtclang._native.mgmt;
+ 
++import java.io.PrintWriter;
++
+ import java.util.HashMap;
++import java.util.List;
+ import java.util.Map;
+ 
+ import java.util.function.Function;
+ 
+ import org.xtclang._native.io.TerminalConsole;
++
++import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
+ 
+ import org.xtclang.ecstasy.text.String;
+ 
+@@ -22,15 +27,39 @@
+         extends Injector {
+ 
+     public nMainInjector(Xvm xvm) {
++        this(xvm, null, Map.of());
++    }
++
++    /**
++     * Create the resources for one application container. The output writer remains caller-owned.
++     */
++    public nMainInjector(Xvm xvm, PrintWriter console, Map<java.lang.String, List<java.lang.String>> injections) {
+         this.xvm = xvm;
++        this.console = console;
++        this.injections = Map.copyOf(injections);
+     }
+ 
+     private final Xvm xvm;
++    private final PrintWriter console;
++    private final Map<java.lang.String, List<java.lang.String>> injections;
+ 
+     private final Map<Resource, Function> suppliers = new HashMap<>();
+ 
+     @Override
+     public Function supplierOf(Resource res) {
++        var values = injections.get(res.name());
++        if (values != null && !values.isEmpty()) {
++            var type = res.type().removeNullable();
++            var pool = xvm.ecstasyPool;
++            if (type.equals(pool.typeString())) {
++                return _ -> String.of(xvm.getCtx(), values.getLast());
++            }
++            if (type.equals(pool.ensureArrayType(pool.typeString())) ||
++                    type.equals(pool.ensureParameterizedTypeConstant(pool.typeList(), pool.typeString()))) {
++                return _ -> ArrayᐸObjectᐳ.$makeStringArray(xvm.getCtx(), values.stream()
++                        .map(value -> String.of(xvm.getCtx(), value)).toArray(String[]::new));
++            }
++        }
+         return suppliers.get(res);
+     }
+ 
+@@ -52,6 +81,6 @@
+ 
+         Class temporaryLoadStringClassToPrimeConstTypeInfo = String.class;
+ 
+-        suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
++        suppliers.put(new Resource(pureType, "console"), _ -> new TerminalConsole(console));
+     }
+ }
+diff --git a/manualTests/build.gradle.kts b/manualTests/build.gradle.kts
+index e9e91b0e0d3af7f2b8c6246c6d8bcd4de1e6f506..f4f18ed5c5b725023ea6474993955ed94e252949 100644
+--- a/manualTests/build.gradle.kts
++++ b/manualTests/build.gradle.kts
+@@ -510,7 +510,7 @@
+ }
+ 
+ // The same compiled module exercises the numeric subset supported by both backends.
+-// JIT comparisons use the existing forked launcher with --mode=ATTACHED.
++// runSmallFloats also accepts --jit to compare the two backends in the embedding session.
+ val runSmallFloats = tasks.register<XtcRunTask>("runSmallFloats") {
+     group = "verification"
+     description = "Run the shared small floating-point tests."
+@@ -522,7 +522,6 @@
+     group = "verification"
+     description = "Run the shared small floating-point tests using the JIT."
+     jit = true
+-    executionMode = ExecutionMode.ATTACHED
+     moduleName("TestSmallFloats")
+ }
+ 
+diff --git a/plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java b/plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java
+index 20a21d9d49897f90d3cb0b02ff3662b08b08d748..1c44a331db34b77d62111653c9bbc28716c414a2 100644
+--- a/plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java
++++ b/plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java
+@@ -68,6 +68,11 @@
+     }
+ 
+     public int executeTest(final DirectTestRequest request, final RuntimeOutput output) {
++        if (request.jit()) {
++            throw new UnsupportedOperationException(
++                "The experimental JIT does not yet support xUnit's reflection and nested containers; "
++                    + "run testXtc with the interpreter.");
++        }
+         final var execution = new DirectRunRequest(request.projectDir(), request.stdoutFile(), request.stderrFile(),
+             request.modulePath(), request.showVersion(), request.verbose(), request.jit(), request.moduleName(),
+             request.methodName(), request.moduleArgs());
+@@ -75,9 +80,6 @@
+     }
+ 
+     private int executeRun(final DirectRunRequest request, final File testOutput, final RuntimeOutput output) {
+-        if (request.jit()) {
+-            throw new UnsupportedOperationException("Embedded execution does not support JIT; use --mode=ATTACHED.");
+-        }
+         final var errors = new ErrorList(DEFAULT_ERROR_LIMIT);
+         try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), output)) {
+             final var modules = repository(request.modulePath());
+@@ -85,7 +87,7 @@
+                 Launcher.showSystemVersion(session.getConfiguredRepository(), console);
+             }
+             if (request.verbose()) {
+-                console.out("Embedded interpreter: "
++                console.out("Embedded " + (request.jit() ? "JIT: " : "interpreter: ")
+                     + request.moduleName() + '.' + request.methodName()
+                     + " (working directory: " + request.projectDir() + ')');
+             }
+@@ -118,7 +120,8 @@
+                 moduleName = TestRunner.XUNIT_MODULE;
+             }
+             final var execution = new RunRequest(modules, moduleName, request.methodName(), request.moduleArgs(),
+-                console.output, request.projectDir(), true, injections);
++                console.output, request.projectDir(), true, injections,
++                request.jit() ? RunRequest.Backend.JIT : RunRequest.Backend.INTERPRETER);
+             try (var control = session.run(execution, errors)) {
+                 if (control == null) {
+                     console.err(errors.getErrors());
+diff --git a/xdk/src/test/java/org/xvm/xdk/EmbeddingLifecycleTest.java b/xdk/src/test/java/org/xvm/xdk/EmbeddingLifecycleTest.java
+index 45dce9ead37bf92c720730dcf0be52067cf50ab4..bdd41dc1ec391ac4b2814fe01a83e8ff5172a753 100644
+--- a/xdk/src/test/java/org/xvm/xdk/EmbeddingLifecycleTest.java
++++ b/xdk/src/test/java/org/xvm/xdk/EmbeddingLifecycleTest.java
+@@ -10,6 +10,8 @@
+ 
+ import java.nio.file.Files;
+ import java.nio.file.Path;
++
++import java.time.Duration;
+ 
+ import java.util.ArrayList;
+ import java.util.List;
+@@ -56,6 +58,202 @@
+  */
+ @Timeout(60)
+ class EmbeddingLifecycleTest {
++    @Test
++    void jitReusesRuntimeWithFreshStaticsArgumentsAndConsoles() {
++        try (var session = EmbeddingSupport.create(repository(),
++                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
++            ModuleStructure module = compile(session, """
++                    module RepeatedJit {
++                        static Counter counter = new CounterService();
++                        Int evaluate(String[] args) {
++                            @Inject Console console;
++                            console.print(args[0]);
++                            return counter.next();
++                        }
++                        interface Counter {
++                            Int next();
++                        }
++                        service CounterService implements Counter {
++                            Int count;
++                            @Override
++                            Int next() = ++count;
++                        }
++                    }
++                    """);
++            var first = new StringWriter();
++            var second = new StringWriter();
++            var connector = session.ensureConnector(RunRequest.Backend.JIT);
++            assertEquals(1L, runJit(session, module, "evaluate", List.of("first"), first, Map.of()));
++            assertEquals(1L, runJit(session, module, "evaluate", List.of("second"), second, Map.of()));
++            assertEquals("first" + System.lineSeparator(), first.toString());
++            assertEquals("second" + System.lineSeparator(), second.toString());
++            assertSame(connector, session.ensureConnector(RunRequest.Backend.JIT));
++
++            ModuleStructure replacement = compile(session,
++                    "module RepeatedJit { Int run() = 4294967297; }");
++            assertEquals(4294967297L, runJit(session, replacement, "run", List.of(), new StringWriter(), Map.of()));
++            assertEquals(1L, runJit(session, module, "evaluate", List.of("original"), new StringWriter(), Map.of()));
++
++            // The compiler, interpreter and JIT can be used in the same owned session.
++            assertEquals(7L, run(session, compile(session, "module Interpreted { Int run() = 7; }")));
++            assertSame(connector, session.ensureConnector(RunRequest.Backend.JIT));
++        }
++    }
++
++    @Test
++    void jitFailureDoesNotContaminateTheNextRequest() {
++        try (var session = EmbeddingSupport.create(repository(),
++                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
++            ModuleStructure broken = compile(session, "module BrokenJit { void run() { assert False; } }");
++            var modules = new BuildRepository();
++            modules.storeModule(broken);
++            var errors = new ErrorList(25);
++            var output = new StringWriter();
++            var request = new RunRequest(modules, broken.getName(), "run", List.of(),
++                    new PrintWriter(output), null, false, Map.of(), RunRequest.Backend.JIT);
++            try (Control control = session.run(request, errors)) {
++                assertNotNull(control, () -> errors.getErrors().toString());
++                control.join();
++                assertNull(control.result());
++                assertTrue(errors.hasSeriousErrors());
++                assertFalse(control.running());
++                assertNotNull(control.whenStopped());
++            }
++            assertFalse(output.toString().isEmpty());
++            assertEquals(0L, runJit(session, compile(session, "module HealthyJit { void run() {} }"),
++                    "run", List.of(), new StringWriter(), Map.of()));
++        }
++    }
++
++    @Test
++    void jitInjectionsBelongToEachRequest() {
++        try (var session = EmbeddingSupport.create(repository(),
++                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
++            ModuleStructure module = compile(session, """
++                    module InjectedJit {
++                        Int run(String[] args) {
++                            @Inject("sample") String sample;
++                            @Inject("values") List<String> values;
++                            assert sample == args[0];
++                            assert values[0] == sample;
++                            return values.size;
++                        }
++                    }
++                    """);
++            assertEquals(2L, runJit(session, module, "run", List.of("first"), new StringWriter(),
++                    Map.of("sample", List.of("old", "first"), "values", List.of("first", "value"))));
++            assertEquals(1L, runJit(session, module, "run", List.of("second"), new StringWriter(),
++                    Map.of("sample", List.of("second"), "values", List.of("second"))));
++        }
++    }
++
++    @Test
++    void jitSessionCloseStopsItsWorkerAndPreservesInterruption() throws Exception {
++        try (var session = EmbeddingSupport.create(repository(),
++                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
++            var console = new BlockingJitConsole(true);
++            try (Control control = startBlockedJit(session, console)) {
++                try {
++                    console.entered.await();
++                    Thread.currentThread().interrupt();
++                    session.close();
++                    assertTrue(Thread.currentThread().isInterrupted());
++                    assertEquals(0L, console.interrupted.getCount());
++                    assertFalse(control.running());
++                    assertNotNull(control.whenStopped());
++                } finally {
++                    Thread.interrupted();
++                    console.release.countDown();
++                }
++            }
++        }
++    }
++
++    @Test
++    void jitFailedCloseDoesNotPretendItsWorkerStopped() throws Exception {
++        try (var session = EmbeddingSupport.create(repository(),
++                Path.of("build", "install", "xdk", "javatools", "javatools-jitbridge.jar"))) {
++            var console = new BlockingJitConsole(false);
++            try (Control control = startBlockedJit(session, console)) {
++                try {
++                    console.entered.await();
++                    assertThrows(IllegalStateException.class, () -> control.close(Duration.ZERO));
++                    assertTrue(control.running());
++                    assertNull(control.whenStopped());
++                    assertThrows(IllegalStateException.class,
++                            () -> session.ensureConnector(RunRequest.Backend.JIT));
++                } finally {
++                    console.release.countDown();
++                    control.join();
++                }
++                assertFalse(control.running());
++            }
++        }
++    }
++
++    private static Control startBlockedJit(EmbeddingSupport session, PrintWriter console) {
++        ModuleStructure module = compile(session, """
++                module BlockedJit {
++                    void run() {
++                        @Inject Console console;
++                        console.print("entered");
++                    }
++                }
++                """);
++        var modules = new BuildRepository();
++        modules.storeModule(module);
++        var errors = new ErrorList(25);
++        var request = new RunRequest(modules, module.getName(), "run", List.of(),
++                console, null, false, Map.of(), RunRequest.Backend.JIT);
++        Control control = session.run(request, errors);
++        assertNotNull(control, () -> errors.getErrors().toString());
++        return control;
++    }
++
++    private static class BlockingJitConsole extends PrintWriter {
++        BlockingJitConsole(boolean stopOnInterrupt) {
++            super(new StringWriter());
++            this.stopOnInterrupt = stopOnInterrupt;
++        }
++
++        @Override
++        public void print(Object value) {
++            entered.countDown();
++            while (true) {
++                try {
++                    release.await();
++                    return;
++                } catch (InterruptedException e) {
++                    interrupted.countDown();
++                    if (stopOnInterrupt) {
++                        return;
++                    }
++                }
++            }
++        }
++
++        private final boolean stopOnInterrupt;
++        private final CountDownLatch entered = new CountDownLatch(1);
++        private final CountDownLatch interrupted = new CountDownLatch(1);
++        private final CountDownLatch release = new CountDownLatch(1);
++    }
++
++    private static long runJit(EmbeddingSupport session, ModuleStructure module, String method,
++                              List<String> args, StringWriter output, Map<String, List<String>> injections) {
++        var modules = new BuildRepository();
++        modules.storeModule(module);
++        var errors = new ErrorList(25);
++        var request = new RunRequest(modules, module.getName(), method, args,
++                new PrintWriter(output), null, false, injections, RunRequest.Backend.JIT);
++        try (Control control = session.run(request, errors)) {
++            assertNotNull(control, () -> errors.getErrors().toString());
++            control.join();
++            assertFalse(errors.hasSeriousErrors(), () -> errors.getErrors() + "\n" + output);
++            assertNotNull(control.result());
++            return control.result();
++        }
++    }
++
+     @Test
+     void xunitUsesRequestInjectionsAndReportsFailures(@TempDir Path root) throws Exception {
+         try (var session = EmbeddingSupport.create(repository())) {
+diff --git a/plugin/src/main/java/org/xtclang/plugin/launchers/PersistentStrategy.java b/plugin/src/main/java/org/xtclang/plugin/launchers/PersistentStrategy.java
+index 0198f9f88f32163ecf380017b3c862b07b6d15b9..16533c4dce1cfaaab02fd24985ccf2d48d457c7a 100644
+--- a/plugin/src/main/java/org/xtclang/plugin/launchers/PersistentStrategy.java
++++ b/plugin/src/main/java/org/xtclang/plugin/launchers/PersistentStrategy.java
+@@ -48,7 +48,7 @@
+ 
+     private static void rejectJit(final XtcRunTask task) {
+         if (task.getJit().get()) {
+-            throw new UnsupportedOperationException("PERSISTENT currently supports interpreter execution; use ATTACHED for JIT");
++            throw new UnsupportedOperationException("PERSISTENT currently supports interpreter execution; use DIRECT or ATTACHED for the experimental JIT");
+         }
+     }
+ }
+diff --git a/javatools/src/test/java/org/xvm/api/EmbeddingJitUnsupportedTest.java b/javatools/src/test/java/org/xvm/api/EmbeddingJitUnsupportedTest.java
+deleted file mode 100644
+index 6d89cbfe6261766ed7e8d73ca0346fc65dd28648..0000000000000000000000000000000000000000
+--- a/javatools/src/test/java/org/xvm/api/EmbeddingJitUnsupportedTest.java
++++ /dev/null
+@@ -1,49 +0,0 @@
+-package org.xvm.api;
+-
+-import java.nio.file.Path;
+-
+-import java.util.List;
+-import java.util.Map;
+-
+-import org.junit.jupiter.api.Test;
+-
+-import org.xvm.asm.ErrorList;
+-
+-import org.xvm.compiler.BuildRepository;
+-
+-import static org.junit.jupiter.api.Assertions.assertEquals;
+-import static org.junit.jupiter.api.Assertions.assertThrows;
+-
+-/** JIT API placeholders reject requests before loading libraries or starting a runtime. */
+-class EmbeddingJitUnsupportedTest {
+-    @Test
+-    void explicitTemplateSessionIsDeferred() {
+-        var failure = assertThrows(UnsupportedOperationException.class,
+-                () -> EmbeddingSupport.create(new BuildRepository(), Path.of("unused-jitbridge.jar")));
+-        assertEquals(MESSAGE, failure.getMessage());
+-    }
+-
+-    @Test
+-    void jitConnectorIsDeferred() {
+-        try (var session = new EmbeddingSupport()) {
+-            var failure = assertThrows(UnsupportedOperationException.class,
+-                    () -> session.ensureConnector(RunRequest.Backend.JIT));
+-            assertEquals(MESSAGE, failure.getMessage());
+-        }
+-    }
+-
+-    @Test
+-    void jitRequestIsDeferredBeforeModuleLookup() {
+-        try (var session = new EmbeddingSupport()) {
+-            var errors = new ErrorList(10);
+-            var request = new RunRequest(new BuildRepository(), "Unloaded", "run", List.of(),
+-                    null, null, false, Map.of(), RunRequest.Backend.JIT);
+-            var failure = assertThrows(UnsupportedOperationException.class,
+-                    () -> session.run(request, errors));
+-            assertEquals(MESSAGE, failure.getMessage());
+-            assertEquals(0, errors.getErrors().size());
+-        }
+-    }
+-
+-    private static final String MESSAGE = "Will be implemented separately in the JIT branch";
+-}
