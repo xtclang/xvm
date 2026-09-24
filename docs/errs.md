@@ -1525,11 +1525,13 @@ mutable captures; cloned-node isolation; immutable snapshot queries without an a
 packaged-server queries after edits and close/reopen. Each extracted compiler slice must run its
 own applicable tests before the consumer slice is introduced.
 
-The [local extraction record](errs-integration-plan.md#second-local-extraction-batch-2026-09-24)
-now includes I3's required compiler consumer and C1's listener contract, independently validated
-against the original base. C1 changes the `AstNode.log` return type but preserves its existing
-null-listener policy; explicit propagation and scoped ownership remain in C2/C3. The AST inventory
-above describes the integrated final state, not changes to import wholesale into the first slice.
+The [local extraction record](errs-integration-plan.md#third-local-extraction-batch-c2-2026-09-24)
+now includes I3's required compiler consumer, C1's listener contract and C2's explicit propagation,
+each validated against its own base/prerequisites. C1 changes the `AstNode.log` return type; C2
+removes its silent null handling and names probe/cascade/discard choices throughout the compiler.
+These changes belong to compiler validation and fit decisions and add no persistent AST state.
+Scoped ownership remains in C3, and file/pool ambient ownership remains in C4. The AST inventory
+above describes the integrated final state, not changes to import wholesale into an early slice.
 
 ### What this is not
 
