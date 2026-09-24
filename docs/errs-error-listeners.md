@@ -342,6 +342,10 @@ passive. Inspection errors reach the compilation's host collector; serious error
 discard the implementation edges. Unadopted mixins are skipped because an `into` constraint is not
 an implementing host. Type-definition links need only existing type identities and source
 declarations, with no new compiler listener path or AST state. Both editor queries use copied facts.
+Property/accessor lookup uses this same reporting scope and cancellation boundary. It reads existing
+property composition and accessor structures; it does not construct an additional Ref/Var TypeInfo
+or generate delegation methods just to answer an editor query. The output/purity regression includes
+properties and delegation controls. No additional suppression or listener API is introduced.
 
 The dependency host API preserves this boundary. Each compilation/cursor attempt opens a fresh
 repository from immutable `XdkDependency` artifacts and uses the existing host listener and
