@@ -39,9 +39,10 @@ class ConstantPoolAmbientTest {
     void rangeOperationsHonorAnExplicitDestinationPool() {
         var owner = new FileStructure("source").getConstantPool();
         var destination = new FileStructure("destination").getConstantPool();
-        try (var scope = ConstantPool.withPool(destination)) {
+        var unrelated = new FileStructure("unrelated").getConstantPool();
+        try (var scope = ConstantPool.withPool(unrelated)) {
             checkRanges(owner, destination);
-            assertSame(destination, ConstantPool.getCurrentPool());
+            assertSame(unrelated, ConstantPool.getCurrentPool());
         }
     }
 
@@ -58,7 +59,8 @@ class ConstantPoolAmbientTest {
                 default -> List.of(Id.I_RANGE_I, Id.I_RANGE_E, Id.E_RANGE_I, Id.E_RANGE_E);
             };
             for (var operation : operations) {
-                assertSame(expected, first.apply(operation, last).getConstantPool(),
+                assertSame(owner, first.apply(operation, last).getConstantPool());
+                assertSame(expected, first.apply(expected, operation, last).getConstantPool(),
                         format + " " + operation);
             }
             assertSame(owner, first.getConstantPool());

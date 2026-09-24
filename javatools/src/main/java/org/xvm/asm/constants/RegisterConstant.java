@@ -10,9 +10,9 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle;
 
 import org.xvm.util.Hash;
 
@@ -52,6 +52,21 @@ public class RegisterConstant
         super(pool);
 
         f_nReg = readPackedInt(in);
+    }
+
+    /** Snapshot a resolved register index without retaining the source compilation's register. */
+    private RegisterConstant(ConstantPool pool, int index) {
+        super(pool);
+        f_nReg = index;
+    }
+
+    @Override
+    protected RegisterConstant adoptedBy(ConstantPool pool) {
+        if (containsUnresolved()) {
+            throw new IllegalStateException("Cannot copy an unassigned register");
+        }
+        // The same representation as deserialization: register objects are compilation-local.
+        return new RegisterConstant(pool, getRegisterIndex());
     }
 
     // ----- type-specific functionality -----------------------------------------------------------

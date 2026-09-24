@@ -9,8 +9,8 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -35,6 +35,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import static java.util.Objects.requireNonNull;
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -157,7 +158,7 @@ public class FileStructure
             if (fAutoClose) {
                 try {
                     in.close();
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
         }
     }
@@ -205,12 +206,21 @@ public class FileStructure
 
         m_kind    = that.m_kind;
         m_fLinked = that.m_fLinked;
-        m_errs    = that.m_errs;
         resetModified();
     }
 
     /**
      * Merge the specified module into this FileStructure.
+     *
+     * <p>This file's pool is the registration destination because the merged structures will be
+     * used and serialized here. Bind that same pool while registering the clones for legacy
+     * helpers that still use ambient selection. The incoming module's pool is the source and
+     * cannot select the destination on behalf of this file.
+     *
+     * <p>Adopted constants reset owner-bound caches and handles; copied methods decode independent
+     * Ops and AST nodes from source-owned bytes. This does not reset objects already owned by the
+     * destination. Application requests therefore still start with a fresh file/pool before
+     * combining their definitions with deliberately shared runtime definitions.
      *
      * <p>A fingerprint child with the merged module's id is superseded by the real module. The
      * merged module's external dependencies are represented here as fingerprints: fingerprints
@@ -863,11 +873,8 @@ public class FileStructure
 
             FileStructure fileUnlinked = moduleUnlinked.getFileStructure();
 
-            if (idModule.getVersion() != null) {
-                moduleUnlinked.registerConstants(fileTop.m_pool);
-                moduleUnlinked.registerChildrenConstants(fileTop.m_pool);
-            }
-
+            // The repository owns moduleUnlinked, including extracted versions. Compile-time
+            // fingerprints refer to that definition; runtime replace() clones before registering.
             if (fRuntime) {
                 listReplace.add(moduleUnlinked);
                 listModulesTodo.addAll(fileUnlinked.moduleIds());
@@ -1453,29 +1460,6 @@ public class FileStructure
         return true;
     }
 
-    @Override
-    public ErrorListener getErrorListener() {
-        ErrorListener errs = m_errs;
-        if (errs == null) {
-            // getCurrentPool() is an AMBIENT thread-local: it is null on any thread that has not had
-            // a pool pushed onto it, which is every thread driving the compiler or runtime from
-            // ordinary Java code. Dereferencing it unconditionally turned this diagnostic accessor
-            // into an NPE source. Ownership belongs in a parameter, not a thread-local - see the PR
-            // discussion - but the null guard is the minimal, behaviour-preserving fix.
-            ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != null && poolCurrent != m_pool) {
-                errs = poolCurrent.getErrorListener();
-            }
-        }
-        return errs == null ? ErrorListener.RUNTIME : errs;
-    }
-
-    @Override
-    public void setErrorListener(ErrorListener errs) {
-        // this is not considered a "mutation" of the FileStructure
-        m_errs = errs;
-    }
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -1650,10 +1634,4 @@ public class FileStructure
      */
     private transient AssemblerContext m_ctx;
 
-    /**
-     * Holds an ErrorListener explicitly provided to this FileStructure. An absence of an
-     * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
-     * the current thread should be used, or failing that, the runtime ErrorListener should be used.
-     */
-    private transient ErrorListener m_errs;
 }

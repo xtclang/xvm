@@ -11,8 +11,8 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -27,18 +27,21 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBindingConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A type annotation is used for type annotations with an optional argument list.
@@ -300,7 +303,7 @@ public class AnnotationExpression
                         if (exprNew instanceof NameExpression exprName &&
                                 exprName.getMeaning() == NameExpression.Meaning.Method) {
                             MethodConstant idMethod = (MethodConstant)
-                                exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+                                exprName.resolveRawArgument(ctx, false, silent(PROBE));
                             method = (MethodStructure) idMethod.getComponent();
                         } else if (exprNew instanceof LambdaExpression exprLambda) {
                             method = exprLambda.getLambda();

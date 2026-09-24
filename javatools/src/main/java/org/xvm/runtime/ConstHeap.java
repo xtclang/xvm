@@ -32,11 +32,16 @@ public class ConstHeap {
     /**
      * Return a handle for the specified constant (could be DeferredCallHandle).
      *
-     * @param constValue "literal" (Int/String/etc.) constant known by the frame's context pool
+     * @param constant  "literal" (Int/String/etc.) constant known by the frame's context pool
      *
      * @return an ObjectHandle (could be DeferredCallHandle representing a call or an exception)
      */
-    protected ObjectHandle ensureConstHandle(Frame frame, Constant constValue) {
+    protected ObjectHandle ensureConstHandle(Frame frame, Constant constant) {
+        // A local alias of a core/shared singleton still uses its origin container's value.
+        // Resolve ownership before either the heap lookup or the constant's live-state lookup.
+        Constant constValue = constant instanceof SingletonConstant singleton
+                ? f_container.ensureSingletonConstant(singleton)
+                : constant;
         if (constValue instanceof FrameDependentConstant constFrame) {
             return constFrame.getHandle(frame);
         }
@@ -75,19 +80,6 @@ public class ConstHeap {
                     }
                 }
                 return saveConstHandle(constValue, hValue);
-            }
-
-            // make sure we don't leak a singleton handle into the parent's container pool
-            ConstantPool pooThis = frame.poolContext();
-            if (constSingle.getConstantPool() != pooThis) {
-                Container containerThis = frame.f_context.f_container;
-                Container containerOrig = containerThis.getOriginContainer(constSingle);
-
-                constSingle = containerOrig.getConstantPool().register(constSingle);
-                hValue      = constSingle.getHandle();
-                if (hValue != null) {
-                    return saveConstHandle(constSingle, hValue);
-                }
             }
 
             return new DeferredSingletonHandle(constSingle);
@@ -132,19 +124,30 @@ public class ConstHeap {
     }
 
     /**
-     * @return saved handle or null
+     * Find a cached value in this heap or a parent whose value is shared with this container.
+     * Equal constants alone do not establish compatible runtime types or singleton ownership.
+     *
+     * @return a local or shareable parent handle, or null
      */
     public ObjectHandle getConstHandle(Constant constValue) {
         ObjectHandle hValue = f_mapConstants.get(constValue);
         if (hValue == null) {
+            if (constValue instanceof SingletonConstant singleton &&
+                    f_container.getOriginContainer(singleton) == f_container) {
+                // Type compatibility does not imply shared singleton state. An unshared child
+                // can know the same module definitions as its parent and still own a fresh value.
+                return null;
+            }
             Container containerParent = f_container.f_parent;
             if (containerParent != null) {
                 hValue = containerParent.f_heap.getConstHandle(constValue);
 
                 // there is a chance that both our child and our parent do "know" that value's type,
                 // but it's not a part of our type system
-                if (hValue != null && hValue.isShared(f_container, null)) {
-                    saveConstHandle(constValue, hValue);
+                if (hValue != null) {
+                    return hValue.isShared(f_container, null)
+                            ? saveConstHandle(constValue, hValue)
+                            : null;
                 }
             }
         }

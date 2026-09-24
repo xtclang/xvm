@@ -9,6 +9,10 @@ extraction steps and validation for eleven foundation PRs, the optional PERSISTE
 separate two-commit constant-pool PR. The native-resource integrations are a
 separate commit and review scope from the common mechanism, embedding API and Gradle adapter.
 
+The [constant-pool audit](#constant-pool-ownership-audit) covers the remaining ambient readers,
+scope writers, registration/linking and copied metadata. The audit is complete for that scope;
+its remaining defects are documented, not fixed by the two-commit PR 11 implementation.
+
 The within-build implementation is on this branch and `DIRECT` execution has passed all
 21 existing sequential manual-test modules. Five measured runs per mode reduced median elapsed
 time from 67.08 seconds ATTACHED to 43.47 seconds DIRECT. The separate PERSISTENT extension now applies the same
@@ -170,9 +174,10 @@ and metadata project.
    Longer retained-handle, heap and classloader measurements, watcher
    directory/overflow semantics and broader platform coverage remain follow-ups too.
 
-2. **Explicit constant-pool ownership and metadata reuse — next performance project.** Coordinate
-   with the [errs work](#relationship-to-the-errs-branch) before sharing linked definitions or
-   TypeInfo. Establish stable definition generations and keep execution state and diagnostics
+2. **Metadata reuse — separate performance project after the ownership corrections.** The
+   [ownership audit and local fixes](#constant-pool-ownership-audit) address source mutation,
+   explicit destinations, singleton ownership and request-owned diagnostics. The final listener
+   behavior from [errs](#relationship-to-the-errs-branch) is incorporated without its LSP work. Establish stable definition generations and keep execution state and diagnostics
    request-owned. Then measure reuse of compiler dependencies and, subsequently, prepared
    applications. Completion requires correct same-name/dependency replacement even with unchanged
    timestamps, fresh singleton state, diagnostics delivered to the current request, bounded cache
@@ -194,7 +199,7 @@ and metadata project.
    and cancellation of one request while another continues. Keep configuration-cache compatibility
    and demonstrate a throughput benefit on independent Gradle tasks before changing the policy.
 
-5. **JIT embedding and capability growth — deferred to the `JIT` branch.** The local archive
+5. **JIT embedding and capability growth — deferred to the `JIT` branch.** The pushed archive
    retains the implementation and provenance; do not include it in a master-targeted PR. Route
    code-generation diagnostics to the current request and add an optional mode that fails when
    execution reaches a placeholder method, instead of silently returning its default value.
@@ -214,11 +219,13 @@ and metadata project.
 
 Reviewed `docs/errs.md`, `docs/errs-audit.md` and `docs/errs-integration-plan.md` at
 [`lagergren/errs`, `f98b0fe87`](https://github.com/xtclang/xvm/tree/f98b0fe87/docs).
-Its constant-pool guards preserve an explicitly bound pool ahead of a constant's own fallback;
-they remove null-scope crashes without making ownership explicit. Its diagnostic work makes the
-listener request-owned and replays cached TypeInfo diagnostics instead of attaching a host sink to
-a shared pool. This branch retains one `ErrorList` per request and does not import that wider API
-or ownership redesign. The thread-local changes here concern release and restoration only.
+The final listener implementation and its compiler/parser/tool callers are now incorporated,
+using the implementation at `17d4a15a5` and final listener/tests at `f98b0fe87`. Listeners are
+non-null and request-owned; explicit silence is labeled PROBE, CASCADE or DISCARD. Parser attempts
+and resolver reporting use scoped commit/discard/restore. FileStructure has no retained listener;
+TypeInfo keeps diagnostic values and replays them to the active request. No LSP, semantic snapshot
+or unrelated CI changes are imported. Extraction must coordinate this slice with errs so it lands
+once, rather than reverting to the old nullable/FileStructure listener behavior.
 
 ### Performance investigation
 
@@ -366,6 +373,35 @@ returned value. It is not an unrestricted transfer operation: unresolved constan
 types that cannot be shared with the destination can be returned unchanged. Explicit ownership
 must preserve these rules, not assume that registration always changes the owner.
 
+Type relations have a separate, concrete selection rule in
+[`TypeConstant.calculateRelation`](../../../javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java).
+For a comparison that needs metadata, use the right-hand type's pool if it can use the left type.
+Otherwise, use the left type's pool if it can use the right type; if neither can use both, the
+relation is incompatible. Equality and Object have earlier fast paths. The chosen pool's
+canonical right-hand type owns the relation cache. Thus comparing a library type with an
+application-only type can move the comparison into the application pool, avoiding an application
+reference in the library's relation cache. This is distinct from the explicit destination for
+new generic/auto-narrowed types during signature compatibility. Neither rule lets an unrelated
+thread-local binding choose the owner.
+
+The code now documents these choices at the relevant boundaries:
+
+| Code location | Ownership contract explained there |
+|---|---|
+| `ConstantPool` class; `XvmStructure.getConstantPool` | Existing owner versus operation destination; pool-local indices and why a source cannot infer its caller's destination. |
+| `ConstantPool.register`, `currentOr`, `withPool` | Adoption exceptions, using the returned value, external compatibility and same-thread restoration. Methods with an explicit destination must use it directly rather than consult the ambient pool. |
+| `SignatureConstant.resolveGenericTypes/isSubstitutableFor`; type variance methods | Resolve specializations for the compilation/target, preserve that destination recursively, allow unchanged signatures to retain their source owner, and distinguish operand-owned relation caches. |
+| `AstNode.pool`, `TypeInfoReal.pool`, class/property compatibility and TypeConstant method selection | Compiler callers select the enclosing compilation; metadata callers select the target type, including checks involving inherited library methods. |
+| `FileStructure.merge`, `Container.getTemplate` | Target-file registration, legacy binding during merge, and parent delegation only for shared definitions. An in-memory merge is not a fresh execution. |
+| `InterpreterControl.prepareModule`, `xContainerLinker.completeResolveAndLink` | Prepare private application state before execution; keep reusable definitions separate from each container's pool and singleton state. |
+
+These source comments describe the implemented selection rules and the limits of the copy APIs.
+The audit below maps the implemented fixes to regression coverage. Each operation documents its selected
+destination, why its lifetime is appropriate, which source objects may be returned unchanged,
+and whether any retained reference must be upstream/shared. Tests must distinguish source A,
+destination B and unrelated ambient C; matching names or successful execution alone cannot prove
+the ownership contract.
+
 ### Small first step toward explicit pool ownership
 
 Keep `getConstantPool()` as the owning-pool accessor. Incrementally replace
@@ -389,12 +425,171 @@ The focused XDK regression tests use real `Array<Element>` / `List<Element>` inh
 auto-narrowing. They distinguish source pool A, explicitly selected destination B and an unrelated
 ambient pool C, and assert that newly resolved types appear in B while source constants keep
 owner A. Each case runs with and without C bound. These integration tests use the XDK test task's
-declared distribution prerequisite; the guard unit tests require no installed XDK. Other operation
-families can migrate separately; their scoped ambient selection remains. Compiler output comparison
+declared distribution prerequisite; the guard unit tests require no installed XDK. The subsequent audit corrections migrate the remaining internal ambient readers explicitly. Compiler output comparison
 and existing interpreter tests are additional validation gates recorded with PR 11.
 This first step establishes a correctness contract. Reusing metadata still requires stable
 definition generations, request-owned execution state and diagnostics, invalidation and bounded
 retention. It does not by itself avoid the preparation work or establish a performance gain.
+
+### Constant-pool ownership audit
+
+Updated 2026-09-24 on `lagergren/constant-pool-ownership`. The original investigation at
+`99a46e385` identified the CP-A findings below; its non-JIT corrections are now implemented locally.
+The later pass also covers copied execution state, singleton ownership, nested-container
+preparation, runtime annotation captures and thread-affine compatibility scopes. The standalone
+[constant-pool ownership document](../../../doc/constant-pool-ownership.md) explains each semantic
+change, inventories every source/test file, and distinguishes reproduced bugs, source-confirmed
+corrections, preventive isolation and contract migrations. Its test/coverage limits qualify the
+summary below. This is not a proof of arbitrary concurrent metadata reuse.
+
+JIT-only CP-A4 (`MethodBody.asFunctionType`), callable-type caches and generated-name resets
+remain **deferred** on the pushed
+[archive branch](https://github.com/xtclang/xvm/tree/archive/embedded-jit-ownership).
+See [the JIT handoff](../../../doc/jit-embedding.md). The `javajit` and `javatools_jitbridge`
+implementation trees have no changes against the master snapshot in this ownership work.
+
+#### Same-pool, cross-pool and ambient contracts
+
+| Operation | Pool selected and permitted result |
+|---|---|
+| Read an existing constant | `getConstantPool()` is its actual owner. Local indices are meaningful only there. It never consults the thread binding. |
+| Register in the same pool | Reuse its canonical definition and valid caches/live state. Registration is not a reset operation. |
+| Register into another pool | Use the returned canonical destination entry or adopted definition. Unresolved constants and unshareable foreign types can remain source-owned; never recursively rewrite those unchanged inputs. Composite references can retain such upstream types where the linking contract permits them. |
+| Resolve generics, pending types, lazy nested identities, compatibility or folding | The compiler/target metadata supplies the destination. New results belong there; a documented no-op may return its unchanged input. Lazy work captures the destination rather than consulting a later thread binding. |
+| Compare type relations | Select an operand pool that can interpret both types. Keep relation state with its canonical type; an unrelated ambient pool cannot decide the relation. |
+| Copy metadata | Rebuild owner-sensitive caches and independent recursion/locking state. Portable parsed scalar values can survive a copy. Methods reconstruct Ops, ASTs and registers from a source-owned serialized snapshot. |
+| Obtain singleton values | Resolve the defining container first, then its canonical constant. Module sharing, rather than an equal name or a local alias, selects live-state ownership. |
+| Capture runtime annotation arguments | `HandleConstant` represents the captured object itself, not a cached definition value. Preserve the object and its capture pool; annotated types containing it cannot be promoted into another pool's type caches. |
+| Report diagnostics | Use a non-null request-owned listener. Metadata records immutable diagnostic values for replay; it never stores a host listener or chooses one from an ambient file. |
+| Enter a compatibility scope | `withPool` restores the prior binding on success/failure and removes an empty binding. Scopes close lexically in reverse order on their creating thread; another thread's close throws without changing either binding. External compatibility APIs remain, but no production internal operation reads them to choose its destination. |
+
+The production scan covers `getCurrentPool`, `currentOr`, `poolInUse`, `setCurrentPool` and
+`withPool` throughout the repository. Only the compatibility implementation itself reads or
+sets the binding directly. Existing lexical scopes remain at compiler, merge, interpreter and
+callback boundaries for compatibility. A plain `ThreadLocal<ConstantPool>` avoids allocating a
+typed pool-array holder on an unbound read; clearing a binding removes the entry.
+
+The binding is not inherited by worker threads and does not create or clone a pool. Runtime work
+binds the service's pool on the executing worker. Multiple threads can explicitly bind the same
+pool object, but neither this nor the copy-isolation fixes make all mutable metadata thread-safe.
+The existing embedding compilation lock and serialized preparation remain. See the detailed
+[threading contract and tests](../../../doc/constant-pool-ownership.md#threads-what-is-local-and-what-can-be-shared).
+
+An AST scan also examined methods with an unused `ConstantPool` parameter, and methods that
+accept a destination but read an owner internally. No-op/return-this overrides, unsupported
+operations, opaque `TypeSequence` handling, existing operand returns from `PendingType`, and
+owner comparisons are intentional. They do not manufacture destination constants. The existing
+arity-only TODO in `MethodDeclarationStatement.findMethod` is a separate overload-resolution
+limitation. CP-A4 is the intentionally deferred JIT exception.
+
+#### Implemented findings and regression mapping
+
+| Finding | Correction | Permanent coverage |
+|---|---|---|
+| CP-A1: foreign registration rewrote source types | Recurse into type registration only when the result belongs to the destination | `ConstantOwnershipTest`, `RegistrationOwnershipTest` |
+| CP-A2: versioned linking rebound repository modules before cloning | Remove pre-copy registration; preserve the repository's source definitions | `FileStructureOwnershipTest`, compile-time and runtime linking |
+| CP-A3: lazy nested identity discarded its destination | Capture the destination for deferred hash/equality/comparison resolution | `DestinationOwnershipTest` |
+| CP-A5: pending generic wrapper used the source pool | Construct changed wrappers in the explicit destination | `DestinationOwnershipTest` |
+| CP-A6: layering depended on ambient Object identity | Compare declaration-owned identities structurally; resolve super signatures for target TypeInfo | `DestinationOwnershipTest`, `SignatureCompatibilityTest` |
+| CP-A7: adopted identity retained canonical nested identity | Clear owner-bound identity/member caches | `ConstantOwnershipTest`, existing `TypeInfoMemberOwnershipTest` |
+| CP-A8: native bootstrap lost/leaked caller binding | Lexical scope around bootstrap, including exceptional exit | XDK `ConstantPoolOwnershipTest` |
+| CP-A9: copied/cached metadata retained or bypassed diagnostics | Import final listener behavior from errs; replay immutable TypeInfo diagnostics to each request | `ReportingTest`, listener/compiler tests, XDK duplicate-annotation warning fixture |
+| CP-A10: copied methods shared mutable AST/register/Op state | Snapshot code before copying, independently decode destination state, clear initialization flag | `FileStructureOwnershipTest`: new, decoded and read-only method sources |
+| Remaining direct ambient selections | Explicit compiler folding destination; declaration-owned annotation checks; metadata-owned property queries; receiver-owned compatibility; main-container invocation arguments | Ambient/scope tests, registration matrix, signature integration and sequential interpreter tests |
+| Copied calculation state | Reset type usage/relation/normalization/validation state, recursion counters/guards, parameterized resolution locks, property metadata and signature comparison locks | `ConstantOwnershipTest`, `RegistrationOwnershipTest` |
+| Copied execution state | Clear adopted singleton/file-node/file-store handles and singleton initialization fibers/futures; detach completed compiler registers | `ConstantOwnershipTest`, `SingletonOwnershipTest` |
+| Parent heap returned an incompatible or unshared singleton handle | Check both value sharing and the singleton's actual defining owner before borrowing a parent handle | `ConstHeapOwnershipTest`, positive and negative cases |
+| Local aliases bypassed the singleton owner | Centralize canonical selection in `Container.ensureSingletonConstant`; use it in heap lookup and method initialization | `SingletonOwnershipTest`, XDK cold/warm native and explicit nested-sharing checks |
+| Singleton bookkeeping ran in the caller's container | Dispatch one owner at a time to that owner's main service; keep mixed lists out of parent pools; release failed asynchronous initialization attempts | `SingletonOwnershipTest`, repeated failing constructor in `Singletons.x` |
+| Nested children reused a resolved template's live pool | Copy definitions at `xContainerLinker.completeResolveAndLink` before constructing each child | Repeated children/grandchild, singleton switch caches and repeated host requests in `Singletons.x` |
+| Runtime annotation captures could enter parent metadata caches | Carry an explicit capture pool and check it in `AnnotatedTypeConstant.isShared` | `ConstantOwnershipTest`: local use, foreign registration and composite type sharing |
+
+The first heap, cold-core-singleton, runtime-annotation and nested-isolation regressions failed
+against their previous implementations. Tests of copied locks/recursion state assert structural
+independence, not a claimed reproduced concurrent race. No tests require GC, sleeps or performance
+thresholds. Timeouts on integration tests are hang guards.
+
+#### Singleton definitions versus singleton instances
+
+Copying a `SingletonConstant` copies its definition, not its current value, initializing fiber
+or waiter future. Same-pool registration preserves the canonical instance. For execution:
+
+1. Ask `Container.getOriginContainer` which container owns the definition. Core definitions
+   resolve to the native root. Explicitly shared application modules resolve to the highest
+   sharing ancestor. An unshared application definition belongs to its current container.
+2. Obtain that owner's canonical constant with `ensureSingletonConstant`. Do this even for an
+   alias already registered in the caller's pool; copying core definitions does not create a
+   second True, False or Null. Tests assert the exact native handles with cold and warm heaps.
+3. `Utils.initConstants` routes initialization and waiter updates to the owner's main service.
+   Other fibers wait on that owner's attempt; same-fiber recursion retains the existing circular
+   initialization handling. A mixed list resumes in its caller before selecting the next owner.
+   Failed asynchronous constructors clear the attempt and notify waiters, allowing a later retry.
+4. Read through the canonical constant/heap. A source or child alias is a definition reference,
+   not an alternative place to store the owner's live state. A rejected parent-heap handle is
+   never returned merely because its constant compares equal.
+
+`FSNodeConstant` and `FileStoreConstant` similarly discard materialized handles on adoption.
+`HandleConstant` is deliberately different: a runtime annotation explicitly captures its value,
+so discarding that handle would lose data. Its annotation type remains bound to the capture pool.
+Shared primitive templates and immutable native handles remain root-owned; there is no global
+clearing of native state when an application request completes.
+
+#### Supported boundaries and remaining work
+
+- The Ecstasy `Container` linker currently accepts only `Lightweight`, but supplies no application
+  shared-module list to `NestedContainer`. Its existing TODO treats shared/additional definitions
+  alike. Implementing automatic Lightweight sharing and the other models is **not completed** by
+  these pool fixes. The `.x` test covers the supported core-only sharing and isolated application
+  state. A Java integration test exercises the runtime's explicit shared-module list through a
+  child and grandchild. Implement the linker models as a separate feature with type-system and
+  lifetime validation; do not silently assume the documented full model already exists.
+- Runtime type compatibility currently recognizes module identity/presence, not stable definition
+  generations. Cross-generation metadata caching, same-name module replacement in such a cache,
+  bounded retention and concurrent compilation remain separate projects. Serialized request
+  preparation and repository isolation stay in place; this audit does not enable a global cache.
+- JIT-specific fixes remain in the archive. The embedding JIT API on this branch reports its
+  unsupported status explicitly. No automatic JIT execution was added to CI.
+
+#### Validation record
+
+Library-independent regressions live under `javatools/src/test`. Native bootstrap, actual generic
+library metadata and `.x` execution live under `xdk/src/test`, whose task declares the distribution
+prerequisite. There are no installed-XDK assumptions or silent skips in the new ownership tests.
+Verified on 2026-09-24:
+
+- Full javatools suite: **543 discovered, 503 passed, 40 pre-existing disabled/skipped**, zero
+  failures/errors. The new ownership/listener tests have zero skips.
+- XDK integration: **36 passed**, zero failures/errors/skips: ownership 8, signature compatibility
+  8, lifecycle 11 and resource ownership 9. The strengthened singleton fixture was rerun afterward
+  and passed, including stable per-container const values around switch caching and exactly two
+  failed constructor attempts. This follow-up reused the Gradle configuration cache.
+- Existing plugin result: **26 passed**, zero skips; the final combined command reused that
+  unchanged task's up-to-date result rather than claiming a new execution.
+- DIRECT interpreter manual suite: **21 modules passed**; manual xUnit: **19 tests passed**, no
+  failures/errors/skips. No JIT suite was added or enabled.
+- `spotlessCheck` and `git diff --check` pass. Java counts come from JUnit XML; manual execution
+  counts come from the module/xUnit runner summaries.
+
+The subsequent thread-scope follow-up added three deterministic tests. The wrong-thread-close test
+failed against the old implementation; after the creator-thread guard, the full javatools suite
+reported **546 discovered, 506 passed, 40 existing disabled/skipped**, zero failures/errors. All five
+scope cases passed, and `spotlessCheck` passed again. The XDK/plugin/manual counts above describe
+the earlier executions, not additional runs after the guard.
+
+Commands used for the broad checks:
+
+```bash
+./gradlew :javatools:test :plugin:test :xdk:test \
+  --tests org.xvm.xdk.ConstantPoolOwnershipTest \
+  --tests org.xvm.xdk.SignatureCompatibilityTest \
+  --tests org.xvm.xdk.EmbeddingLifecycleTest \
+  --tests org.xvm.xdk.EmbeddingResourceOwnershipTest spotlessCheck --console=plain
+./gradlew :javatools:test :manualTests:runSequential :manualTests:runXunitTests \
+  -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true spotlessCheck --console=plain
+```
+
+Extraction branches still require their own builds: a passing combined stack is not proof of each
+intermediate PR. See the [exact submission scopes](embedded-runtime-pr-plan.md#constant-pool-audit-follow-up-boundaries).
 
 ### Performance POC and review boundaries
 

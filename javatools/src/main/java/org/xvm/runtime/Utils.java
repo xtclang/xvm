@@ -735,6 +735,12 @@ public abstract class Utils {
      * Ensure that all SingletonConstants in the specified list are initialized and proceed
      * with the specified continuation.
      *
+     * <p>Each definition is resolved in its origin container, independent of its source or the
+     * ambient pool. Initialization and waiter bookkeeping run on that owner's main service.
+     * Requests containing constants from several owners return to the caller between owners;
+     * they never transfer a child's unshared constants into a parent's pool. Callers that later
+     * read the handle must use {@link Container#ensureSingletonConstant} or the constant heap.
+     *
      * @param frame           the caller's frame
      * @param listSingletons  the list of singleton constants
      * @param continuation    the continuation to proceed with after initialization completes
@@ -743,59 +749,53 @@ public abstract class Utils {
      */
     public static int initConstants(Frame frame, List<SingletonConstant> listSingletons,
                                     Frame.Continuation continuation) {
-        boolean fMainContext = false;
-
-        for (SingletonConstant constSingleton : listSingletons) {
+        for (SingletonConstant definition : listSingletons) {
+            Container owner = frame.f_context.f_container.getOriginContainer(definition);
+            SingletonConstant constSingleton = owner.getConstantPool().register(definition);
             ObjectHandle hValue = constSingleton.getHandle();
-            if (hValue != null) {
-                if (hValue instanceof InitializingHandle) {
-                    // another fiber may observe the placeholder created by same-fiber
-                    // recursion; wait unless this fiber is the recursive initializer
-                    CompletableFuture<ObjectHandle> cfInitialized =
-                            constSingleton.getInitializationWaiter(frame.f_fiber);
-                    if (cfInitialized != null) {
-                        return frame.waitForExternalCompletion(cfInitialized, Op.A_IGNORE,
+            if (hValue != null && !(hValue instanceof InitializingHandle)) {
+                continue;
+            }
+
+            // Only the defining owner's main service may read or change initialization state.
+            // A local alias in a child pool is not an independent initialization attempt.
+            ServiceContext ctxCurr = frame.f_context;
+            ServiceContext ctxMain = owner.ensureServiceContext();
+            if (ctxCurr != ctxMain) {
+                if (ctxMain.isOverwhelmed()) {
+                    Frame frameNext = frame.createNativeFrame(
+                            WAIT_FOR_RELIEF, OBJECTS_NONE, Op.A_IGNORE, null);
+                    frameNext.addContinuation(frameCaller ->
+                            initConstants(frameCaller, listSingletons, continuation));
+                    return frame.call(frameNext);
+                }
+                assert continuation != null;
+
+                // Other constants in this list may belong to different containers. Send only
+                // this owner's constant, then resume the original list in the caller's context.
+                CompletableFuture<ObjectHandle> cfResult =
+                        ctxMain.sendConstantRequest(frame, List.of(constSingleton));
+                if (ctxCurr.getSynchronicity() == Synchronicity.Concurrent) {
+                    ctxCurr.setSynchronicity(frame.f_fiber, Synchronicity.Critical);
+                    cfResult.whenComplete((r, e) ->
+                        ctxCurr.setSynchronicity(null, Synchronicity.Concurrent));
+                }
+                return frame.wait(cfResult, Op.A_IGNORE,
+                        frameCaller -> initConstants(frameCaller, listSingletons, continuation));
+            }
+
+            if (hValue instanceof InitializingHandle) {
+                CompletableFuture<ObjectHandle> cfInitialized =
+                        constSingleton.getInitializationWaiter(frame.f_fiber);
+                if (cfInitialized != null) {
+                    return frame.waitForExternalCompletion(cfInitialized, Op.A_IGNORE,
                             frameCaller -> initConstants(frameCaller, listSingletons, continuation));
-                    }
                 }
                 continue;
             }
 
-            ServiceContext ctxCurr = frame.f_context;
-            if (!fMainContext) {
-                ServiceContext ctxMain = ctxCurr.getMainContext();
-                if (ctxCurr == ctxMain) {
-                    fMainContext = true;
-                } else {
-                    if (ctxMain.isOverwhelmed()) {
-                        Frame frameNext = frame.createNativeFrame(
-                                WAIT_FOR_RELIEF, OBJECTS_NONE, Op.A_IGNORE, null);
-                        frameNext.addContinuation(frameCaller ->
-                                initConstants(frameCaller, listSingletons, continuation));
-                        return frame.call(frameNext);
-                    }
-                    assert continuation != null;
-
-                    // we have at least one non-initialized singleton;
-                    // call the main service to initialize them all
-                    CompletableFuture<ObjectHandle> cfResult =
-                            ctxMain.sendConstantRequest(frame, listSingletons);
-
-                    if (ctxCurr.getSynchronicity() == Synchronicity.Concurrent) {
-                        // create a pseudo frame to deal with the wait, but don't allow any other fiber
-                        // to interleave until a response comes back (as in "forbidden" reentrancy)
-                        ctxCurr.setSynchronicity(frame.f_fiber, Synchronicity.Critical);
-                        cfResult.whenComplete((r, e) ->
-                            ctxCurr.setSynchronicity(null, Synchronicity.Concurrent));
-                    }
-
-                    return frame.wait(cfResult, Op.A_IGNORE, continuation);
-                }
-            }
-
-            // we are on the main context and can actually perform the initialization
             if (!constSingleton.markInitializing(frame.f_fiber)) {
-                // exact same-fiber recursion is circular; unrelated concurrent fibers wait
+                // Same-fiber recursion is circular; another fiber in this owner must wait.
                 CompletableFuture<ObjectHandle> cfInitialized =
                         constSingleton.getInitializationWaiter(frame.f_fiber);
                 return cfInitialized == null
@@ -804,47 +804,18 @@ public abstract class Utils {
                             frameCaller -> initConstants(frameCaller, listSingletons, continuation));
             }
 
-            Container containerThis = ctxCurr.f_container;
-            Container containerOrig = containerThis.getOriginContainer(constSingleton);
-
-            int iResult;
-            if (containerOrig == containerThis) {
-                iResult = constructSingletonHandle(frame, constSingleton);
-            } else {
-                Op opConstruct = new Op() {
-                    public int process(Frame frame, int iPC) {
-                        switch (constructSingletonHandle(frame, constSingleton)) {
-                        case Op.R_NEXT:
-                            return frame.assignValue(0, frame.popStack());
-
-                        case Op.R_CALL:
-                            Frame.Continuation stepNext = frameCaller ->
-                                frameCaller.assignValue(0, frameCaller.popStack());
-                            frame.m_frameNext.addContinuation(stepNext);
-                            return Op.R_CALL;
-
-                        case Op.R_EXCEPTION:
-                            return Op.R_EXCEPTION;
-
-                        default:
-                            throw new IllegalStateException();
-                        }
-                    }
-
-                    public String toString() {
-                        return "ConstructSingleton: " + constSingleton.getClassConstant();
-                    }
-                };
-
-                iResult = containerOrig.getServiceContext().sendOp1Request(frame, opConstruct, Op.A_STACK);
-            }
-
+            int iResult = constructSingletonHandle(frame, constSingleton);
             switch (iResult) {
             case Op.R_NEXT:
                 constSingleton.setHandle(frame.popStack());
                 break; // next constant
 
             case Op.R_CALL:
+                // A failed asynchronous constructor never reaches the success continuation.
+                // Release its owner-local attempt and wake waiters before another call retries.
+                frame.m_frameNext.addExceptionCleanup(() -> constSingleton.abortInitialization(
+                        new IllegalStateException("Singleton initialization failed: " +
+                                constSingleton.getValueString())));
                 frame.m_frameNext.addContinuation(frameCaller -> {
                     constSingleton.setHandle(frameCaller.popStack());
                     return initConstants(frameCaller, listSingletons, continuation);

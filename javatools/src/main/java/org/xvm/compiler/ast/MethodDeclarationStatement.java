@@ -12,13 +12,13 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PropertyStructure;
@@ -34,13 +34,16 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Constants;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
@@ -362,8 +365,8 @@ public class MethodDeclarationStatement
                 if (fValidator) {
                     if (modifiers != null && !modifiers.isEmpty()) {
                         Token tok = modifiers.getFirst();
-                        errs.log(Severity.ERROR, Compiler.ILLEGAL_MODIFIER, null,
-                            getSource(), tok.getStartPosition(), tok.getEndPosition());
+                        errs.error(Compiler.ILLEGAL_MODIFIER, in(
+                            getSource(), tok.getStartPosition(), tok.getEndPosition()));
                         return;
                     }
                     if (params != null && !params.isEmpty()) {
@@ -724,7 +727,7 @@ public class MethodDeclarationStatement
                     shuffle(atypeInto,  iFound, iNext);
                     shuffle(atypeAnno, iFound, iNext);
 
-                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, ErrorListener.BLACKHOLE)) {
+                    if (validateAnnotations(typeBase, aAnno, atypeAnno, atypeInto, silent(PROBE))) {
                         fReordered = true;
                         break Validate;
                     }

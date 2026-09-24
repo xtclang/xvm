@@ -16,20 +16,20 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Annotation;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Component.Injection;
+import org.xvm.asm.Component;
 import org.xvm.asm.ComponentBifurcator;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.PackageStructure;
@@ -62,31 +62,31 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.L_Get;
-import org.xvm.asm.op.Label;
-import org.xvm.asm.op.SynInit;
 import org.xvm.asm.op.L_Set;
+import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Return_0;
+import org.xvm.asm.op.SynInit;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.CompositionNode.Annotates;
 import org.xvm.compiler.ast.CompositionNode.Default;
 import org.xvm.compiler.ast.CompositionNode.Delegates;
 import org.xvm.compiler.ast.CompositionNode.Extends;
-import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
+import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
@@ -95,6 +95,9 @@ import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.compiler.Constants.ECSTASY_MODULE;
 import static org.xvm.compiler.Constants.X_PKG_IMPORT;
 import static org.xvm.compiler.Lexer.CR;
@@ -102,7 +105,6 @@ import static org.xvm.compiler.Lexer.LF;
 import static org.xvm.compiler.Lexer.isLineTerminator;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 import static org.xvm.compiler.Lexer.isWhitespace;
-
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
@@ -436,10 +438,8 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
-                            new String[] {sModule}, source,
-                            qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition());
+                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.get(0).getStartPosition(),
+                            qualified.get(qualified.size()-1).getEndPosition()), sModule);
                     return;
                 }
 
@@ -1420,8 +1420,7 @@ public class TypeCompositionStatement
             lStart = listParams.get(0).getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
-        errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-            new String[] {sb.toString()}, getSource(), lStart, lEnd);
+        errs.error(Compiler.SIGNATURE_AMBIGUOUS, in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**
@@ -1494,12 +1493,9 @@ public class TypeCompositionStatement
                 lEndPos   = compositions.getFirst().getEndPosition();
             }
 
-            errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    new Object[] {
-                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.getTypeConstant().getValueString()
-                    },
-                    getSource(), lStartPos, lEndPos);
+            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION, in(getSource(), lStartPos, lEndPos),
+                    contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                    contribCyclical.getTypeConstant().getValueString());
             return;
         }
 
@@ -2326,8 +2322,8 @@ public class TypeCompositionStatement
                 if (typeConstraint != null) {
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
-                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            fAllowInto, ErrorListener.BLACKHOLE);
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto,
+                                silent(PROBE));
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();

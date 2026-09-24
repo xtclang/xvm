@@ -11,19 +11,19 @@ import java.util.Set;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
-import org.xvm.asm.Op;
 import org.xvm.asm.Op.ConstantRegistry;
+import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
@@ -56,14 +56,16 @@ import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.NameResolver.Result;
 import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.in;
 
 /**
  * A block statement specifies a series of statements.
@@ -341,8 +343,7 @@ public class StatementBlock
                     astRoot = new StmtBlockAST(newStmts, true);
                 }
             } else {
-                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
-                        getEndPosition(), getEndPosition());
+                errs.error(Compiler.RETURN_REQUIRED, in(getSource(), getEndPosition(), getEndPosition()));
             }
         } else {
             // it is possible that there is a dangling label at the end that is unreachable,
@@ -793,8 +794,8 @@ public class StatementBlock
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis && errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+            if (!fHasThis) {
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             }
             return fHasThis;
         }
@@ -1222,7 +1223,7 @@ public class StatementBlock
                 MethodConstant    idMethod   = method.getIdentityConstant();
                 Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                 TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                TypeInfo          infoType   = typeCtx.ensureTypeInfo(errs);
                 MethodInfo        infoMethod = infoType.getMethodById(idMethod);
                 SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 

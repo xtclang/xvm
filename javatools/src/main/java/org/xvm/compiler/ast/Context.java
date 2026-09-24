@@ -4,20 +4,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -25,7 +26,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
-import org.xvm.asm.Assignment;
 
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
@@ -45,6 +45,10 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Compiler context for compiling a method body.
@@ -799,7 +803,7 @@ public class Context {
      * @param sName  the name to look up
      * @param name   the token to use for error reporting (optional)
      * @param branch the branch to look at
-     * @param errs   the error list to use for error reporting (optional)
+     * @param errs   the error list to use for error reporting
      *
      * @return the argument for the variable, or null
      */
@@ -945,7 +949,7 @@ public class Context {
      * @param tokName  the variable name as a token from the source code (optional)
      * @param fDeref   true if the variable is dereferenced (e.g.: val); false if dereference is
      *                 suppressed (e.g: {@code &val})
-     * @param errs     the error list to log to (optional)
+     * @param errs     the error list to log to
      */
     protected void markVarRead(boolean fNested, String sName, Token tokName, boolean fDeref,
                                ErrorListener errs) {
@@ -960,7 +964,7 @@ public class Context {
                 }
             }
         } else {
-            if (tokName != null && errs != null) {
+            if (tokName != null) {
                 if (isReservedName(sName)) {
                     MethodStructure  method = getMethod();
                     IdentityConstant idCtx  = method == null
@@ -1030,7 +1034,7 @@ public class Context {
      *
      * @param tokName  the variable name as a token from the source code
      * @param fCond    true if the variable is conditionally assigned
-     * @param errs     the error list to log to (optional)
+     * @param errs     the error list to log to
      */
     public final void markVarWrite(Token tokName, boolean fCond, ErrorListener errs) {
         markVarWrite(tokName.getValueText(), tokName, fCond, errs);
@@ -1040,16 +1044,14 @@ public class Context {
      * Mark an AstNode at the specified position as reliant on "this".
      *
      * @param lPos  the node's position
-     * @param errs  the error list to log to (optional)
+     * @param errs  the error list to log to
      *
      * @return true iff the check was successful; otherwise an error has been generated
      */
     public boolean requireThis(long lPos, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null) {
-            if (errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
-            }
+            errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             return false;
         }
         return ctxOuter.requireThis(lPos, errs);
@@ -1061,7 +1063,7 @@ public class Context {
      * @param sName    the variable name
      * @param tokName  the variable name as a token from the source code (optional)
      * @param fCond    true if the variable is conditionally assigned
-     * @param errs     the error list to log to (optional)
+     * @param errs     the error list to log to
      */
     protected void markVarWrite(String sName, Token tokName, boolean fCond, ErrorListener errs) {
         if (getVar(sName) == null) {
@@ -1073,7 +1075,7 @@ public class Context {
 
         if (isVarWritable(sName)) {
             setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
-        } else if (tokName != null && errs != null) {
+        } else if (tokName != null) {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
         } else {
             throw new IllegalStateException("illegal var write: name=" + sName);
@@ -1084,7 +1086,7 @@ public class Context {
      * Mark the specified formal type as being used within this context.
      *
      * @param type  the formal type or a type that contains formal types
-     * @param errs  the error list to log to (optional)
+     * @param errs  the error list to log to
      */
     public void useFormalType(TypeConstant type, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
@@ -1143,7 +1145,7 @@ public class Context {
      * @return the Argument representing the meaning of the name, or null
      */
     public final Argument resolveName(String sName) {
-        return resolveName(sName, null, ErrorListener.BLACKHOLE);
+        return resolveName(sName, null, silent(PROBE));
     }
 
     /**
@@ -1166,7 +1168,7 @@ public class Context {
      *
      * @param sName  the name to resolve
      * @param name   the token from the source for the name to resolve (optional)
-     * @param errs   the error list to log to (optional)
+     * @param errs   the error list to log to
      *
      * @return the Argument representing the meaning of the name, or null
      */
@@ -1230,7 +1232,7 @@ public class Context {
      * @param ctxFrom  the context from which the name resolution began
      * @param sName    the name to resolve
      * @param name     the name token (optional)
-     * @param errs     the error list to log errors to (optional)
+     * @param errs     the error list to log errors to
      *
      * @return an Argument iff the name is registered to an argument; otherwise null
      */
@@ -1267,7 +1269,7 @@ public class Context {
      *
      * @param sName  the name to look up
      * @param name   the token to use for error reporting (optional)
-     * @param errs   the error list to use for error reporting (optional)
+     * @param errs   the error list to use for error reporting
      *
      * @return the argument for the reserved name, or null if no such reserved name can be
      *         resolved within this context
@@ -2532,7 +2534,7 @@ public class Context {
                 case Property:
                 case TypeParameter: {
                     String   sName = constFormal.getName();
-                    Argument arg   = resolveName(sName, null, ErrorListener.BLACKHOLE);
+                    Argument arg   = resolveName(sName, null, silent(PROBE));
                     if (arg != null) {
                         ensureFormalMap().putIfAbsent(sName, arg);
                     }

@@ -12,15 +12,15 @@ import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Contribution;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.Constants;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -51,19 +51,22 @@ import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Invocation expression represents calling a method or function. An oversimplification of the
@@ -305,7 +308,7 @@ public class InvocationExpression
 
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx) {
-        return resolveReturnTypes(ctx, null, false, ErrorListener.BLACKHOLE);
+        return resolveReturnTypes(ctx, null, false, silent(PROBE));
     }
 
     @Override
@@ -315,8 +318,7 @@ public class InvocationExpression
             return TypeFit.Fit;
         }
 
-        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive,
-                                    errs == null ? ErrorListener.BLACKHOLE : errs);
+        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive, errs);
 
         return calcFitMulti(ctx, atype, atypeRequired);
     }
@@ -407,8 +409,7 @@ public class InvocationExpression
                     TypeConstant[] atype = m_fCall || cReturns == 0 || atypeReturn == null
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]);
-                    resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype,
-                                    ErrorListener.BLACKHOLE);
+                    resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype, silent(PROBE));
                 }
 
                 if (m_fCall) {
@@ -891,7 +892,7 @@ public class InvocationExpression
                         if (atypeReturn.length == 0) {
                             atypeResult = atypeReturn;
                         } else if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
-                                ErrorListener.BLACKHOLE).isPacking()) {
+                                silent(PROBE)).isPacking()) {
                             atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
                             m_fPack     = true;
                         }
@@ -1916,7 +1917,7 @@ public class InvocationExpression
         boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
         if (exprLeft == null) {
-            Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
+            Argument arg = ctx.resolveName(tokName, silent(PROBE));
 
             if (arg == null) {
                 typeLeft = ctx.getThisType();
@@ -1925,8 +1926,8 @@ public class InvocationExpression
                     // try to use the type info
                     TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
-                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
-                                true, atypeReturn, ErrorListener.BLACKHOLE);
+                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any, true, atypeReturn,
+                            silent(PROBE));
                     if (arg instanceof MethodConstant idMethod) {
                         MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                         if (method == null) {
@@ -1951,12 +1952,11 @@ public class InvocationExpression
                     log(errs, Severity.ERROR, Compiler.NO_SUPER);
                 } else {
                     TypeConstant typeTarget = ctx.getThisType();
-                    TypeInfo     infoTarget = getTypeInfo(ctx, null, ErrorListener.BLACKHOLE);
+                    TypeInfo     infoTarget = getTypeInfo(ctx, null, silent(PROBE));
 
                     // check if the method would be callable from outside the constructor
-                    if (ctx.isConstructor() &&
-                            findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
-                                true, atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                    if (ctx.isConstructor() && findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
+                                true, atypeReturn, silent(PROBE)) != null) {
                         log(errs, Severity.ERROR, Compiler.INVALID_CALL_FROM_CONSTRUCT, sName);
                     } else {
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName,
@@ -2010,7 +2010,7 @@ public class InvocationExpression
                             TypeInfo       infoSuper   = typeSuper.ensureTypeInfo(errs);
                             MethodConstant idConstruct = (MethodConstant) findCallable(ctx, typeSuper,
                                     infoSuper, "construct", MethodKind.Constructor,
-                                    false, atypeReturn, ErrorListener.BLACKHOLE);
+                                    false, atypeReturn, silent(PROBE));
                             if (idConstruct == null) {
                                 log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
                                     ctx.getThisType().getValueString(), typeSuper.getValueString());
@@ -2070,7 +2070,7 @@ public class InvocationExpression
                         // search
                         if (kind == MethodKind.Function &&
                                 findMethod(ctx, typeTarget, infoTarget, sName, args, MethodKind.Method,
-                                    !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                                    !fNoCall, id.isNested(), atypeReturn, silent(PROBE)) != null) {
                             if (target.getStepsOut() > 0) {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_OUTER_METHOD,
                                     target.getTargetType().removeAccess().getValueString(), sName);
@@ -2281,9 +2281,8 @@ public class InvocationExpression
                 Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
                         kind, false, atypeReturn, errsTemp);
 
-                if (arg == null && kind == MethodKind.Function &&
-                        findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                            MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                if (arg == null && kind == MethodKind.Function && findCallable(ctx, infoLeft.getType(), infoLeft, sName,
+                            MethodKind.Any, false, atypeReturn, silent(PROBE)) != null) {
                     exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
                             sName, infoLeft.getType().getValueString());
                     return null;
@@ -2527,7 +2526,7 @@ public class InvocationExpression
             method = (MethodStructure) idMethod.getComponent();
             if (method == null) {
                 TypeConstant type = m_targetInfo.getTargetType();
-                TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
+                TypeInfo     info = getTypeInfo(ctx, type, silent(PROBE));
 
                 method = getMethod(ctx, type, info, idMethod);
             }
@@ -2560,7 +2559,7 @@ public class InvocationExpression
         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
         if (prop == null) {
             TypeConstant type = m_targetInfo.getTargetType();
-            TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
+            TypeInfo     info = getTypeInfo(ctx, type, silent(PROBE));
 
             prop = info.findProperty(idProp).getHead().getStructure();
         }

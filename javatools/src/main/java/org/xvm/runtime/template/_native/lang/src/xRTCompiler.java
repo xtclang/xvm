@@ -9,6 +9,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
@@ -28,8 +29,8 @@ import org.xvm.runtime.CallChain;
 import org.xvm.runtime.ClassComposition;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -39,9 +40,9 @@ import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.text.xString;
 
@@ -52,8 +53,8 @@ import org.xvm.runtime.template._native.reflect.xRTFileTemplate;
 
 import org.xvm.tool.Compiler;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
-import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
+import org.xvm.tool.ModuleInfo;
 
 import org.xvm.util.Severity;
 
@@ -225,7 +226,7 @@ public class xRTCompiler
     private int completeWithError(Frame frame, CompilerAdapter compiler, String
                                   sMissing, int[] aiReturn) {
         // org.xvm.compiler.Compiler.MODULE_MISSING
-        compiler.logError(Severity.FATAL, "MODULE_MISSING", new Object[] {sMissing});
+        compiler.logError(Severity.FATAL, "MODULE_MISSING", sMissing);
         return completeCompilation(frame, compiler, null, aiReturn);
     }
 
@@ -315,10 +316,10 @@ public class xRTCompiler
         private List<Node>                      m_allNodes;
 
         // error collection
-        private final ErrorList m_errorList;
+        private final ErrorList f_errs;
 
         protected CompilerAdapter(CompilerOptions options) {
-            super(options, null, m_errorList = new ErrorList(100));
+            super(options, null, f_errs = new ErrorList());
         }
 
         // ----- accessors -------------------------------------------------------------------------
@@ -345,7 +346,7 @@ public class xRTCompiler
         }
 
         protected List<String> getErrors() {
-            return m_errorList.getErrors().stream()
+            return f_errs.getErrors().stream()
                     .map(err -> err.getSeverity().desc() + ": " + err.getMessage())
                     .toList();
         }
@@ -354,8 +355,8 @@ public class xRTCompiler
             return m_repoResults;
         }
 
-        protected void logError(Severity severity, String sCode, Object[] aoParam) {
-            m_errorList.log(severity, sCode, aoParam, null);
+        protected void logError(Severity severity, String sCode, Object... aoParam) {
+            f_errs.log(severity, sCode, ErrorListener.NOWHERE, aoParam);
         }
 
         /**
@@ -464,7 +465,7 @@ public class xRTCompiler
             m_compilers   = null;
             m_repoOutput  = null;
             m_allNodes    = null;
-            m_errorList.clear();
+            f_errs.clear();
         }
 
         // ----- Compiler API ----------------------------------------------------------------------

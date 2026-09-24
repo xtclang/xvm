@@ -242,8 +242,12 @@ public class xContainerLinker
 
     private int completeResolveAndLink(Frame frame, Container container,
                                        ModuleStructure moduleApp, ObjectHandle hProvider, int iReturn) {
+        // Resolution may return an already-linked repository template. Each unshared execution
+        // needs its own pool, method state and singleton initialization; the template can outlive
+        // this child and can be used to construct another child concurrently or later.
+        var file = new FileStructure(moduleApp.getFileStructure());
         NestedContainer containerNested = new NestedContainer(container,
-                moduleApp.getIdentityConstant(), hProvider, Collections.emptyList());
+                file.getModuleId(), hProvider, Collections.emptyList());
         return new CollectResources(containerNested, iReturn).doNext(frame);
     }
 

@@ -13,12 +13,12 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.BinaryAST.NodeType;
+import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.ForEachStmtAST;
 import org.xvm.asm.ast.RegAllocAST;
@@ -27,28 +27,30 @@ import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RangeConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -228,7 +230,7 @@ public class ForEachStatement
 
         if (reg == null) {
             // this occurs only during validate()
-            assert m_ctxLabelVars != null;
+            assert m_labelVars != null;
 
             String       sLabel = ((LabeledStatement) getParent()).getName();
             Token        tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
@@ -244,7 +246,7 @@ public class ForEachStatement
             };
 
             reg = ctx.createRegister(type, getLabelName() + '.' + sName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
 
             switch (sName) {
             case "first": m_regFirst   = reg; break;
@@ -302,8 +304,7 @@ public class ForEachStatement
             ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
-            m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
+            m_labelVars = new ValidationScope(ctx, errs);
 
             // ultimately, the condition has to be re-written, because it is inevitably shorthand for
             // a measure of syntactic sugar; in order of precedence, the condition can be:
@@ -375,7 +376,7 @@ public class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                 };
 
-                if (exprRVal.testFit(ctx, typeRVal, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRVal, false, silent(PROBE)).isFit()) {
                     atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
@@ -403,7 +404,7 @@ public class ForEachStatement
                     typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
                 }
 
-                if (exprRVal.testFit(ctx, typeRValExact, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRValExact, false, silent(PROBE)).isFit()) {
                     typeRVal = typeRValExact;
                 } else {
                     // the specific container type didn't fit; proceed with the basic type,
@@ -563,8 +564,7 @@ public class ForEachStatement
             ctx = ctx.exit();
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
+            m_labelVars = null;
 
             errs.merge();
             return fValid ? this : null;
@@ -1356,8 +1356,7 @@ public class ForEachStatement
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
-    private transient Context          m_ctxLabelVars;
-    private transient ErrorListener    m_errsLabelVars;
+    private transient ValidationScope m_labelVars;
     private transient Register         m_regFirst;
     private transient Register         m_regLast;
     private transient Register         m_regCount;

@@ -100,7 +100,7 @@ public class InterpreterConnector
 
         // the container binds a pool to the thread it starts on; a caller invoking from another
         // thread would otherwise find none, so fall back to the container's own
-        ConstantPool   pool        = ConstantPool.currentOr(getConstantPool());
+        ConstantPool   pool        = getConstantPool();
         TypeConstant   typeStrings = pool.ensureArrayType(pool.typeString());
         ObjectHandle[] ahArg       = Utils.OBJECTS_NONE;
 

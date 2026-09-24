@@ -9,6 +9,8 @@ import org.xvm.asm.BuildInfo;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Integration test for launcher version display functionality.
@@ -48,7 +50,7 @@ public class LauncherVersionTest {
         final var args = new String[]{"--version"};
 
         // Run build --version command
-        Launcher.launch(Launcher.CMD_BUILD, args, console, null);
+        Launcher.launch(Launcher.CMD_BUILD, args, console, silent(DISCARD));
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Version output should not be empty");
@@ -93,7 +95,7 @@ public class LauncherVersionTest {
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        Launcher.launch(Launcher.CMD_RUN, args, console, null);
+        Launcher.launch(Launcher.CMD_RUN, args, console, silent(DISCARD));
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Runner version output should not be empty");
@@ -107,7 +109,7 @@ public class LauncherVersionTest {
         final var console = new CaptureConsole();
         final var args = new String[]{"--version"};
 
-        Launcher.launch(Launcher.CMD_BUILD, args, console, null);
+        Launcher.launch(Launcher.CMD_BUILD, args, console, silent(DISCARD));
 
         final var output = console.getAllOutput().trim();
         assertFalse(output.isEmpty(), "Compiler version output should not be empty");

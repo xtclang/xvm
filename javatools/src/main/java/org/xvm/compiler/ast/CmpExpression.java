@@ -16,8 +16,8 @@ import org.xvm.asm.ast.CondOpExprAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.NotNullExprAST;
-import org.xvm.asm.ast.OrderedExprAST;
 import org.xvm.asm.ast.OrderedExprAST.Operator;
+import org.xvm.asm.ast.OrderedExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST;
 
 import org.xvm.asm.constants.CastTypeConstant;
@@ -47,12 +47,15 @@ import org.xvm.asm.op.JumpNull;
 import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Comparison binary expression.
@@ -273,8 +276,8 @@ public class CmpExpression
         if (fValid) {
             if (expr1New.isConstant() && expr2New.isConstant()) {
                 try {
-                    constVal = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
-                } catch (RuntimeException ignore) {}
+                    constVal = expr1New.toConstant().apply(pool(), operator.getId(), expr2New.toConstant());
+                } catch (RuntimeException _) {}
                 break CheckInference;
             }
 
@@ -385,7 +388,7 @@ public class CmpExpression
             type2 = type2.getUnderlyingType2();
         }
 
-        TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
+        TypeConstant typeCommon = Op.selectCommonType(type1, type2, silent(PROBE));
 
         if (type1 == null || type2 == null) {
             return typeCommon;

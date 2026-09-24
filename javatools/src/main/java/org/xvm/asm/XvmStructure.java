@@ -9,6 +9,7 @@ import java.io.StringWriter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -134,7 +135,11 @@ public abstract class XvmStructure
      * Get a reference to the ConstantPool that is shared by all of the XvmStructures within the
      * same FileStructure.
      *
-     * @return  the ConstantPool
+     * <p>This is the structure's owning pool, independent of the thread's ambient binding.
+     * An operation constructing constants for another file or target must receive that
+     * destination separately instead of deriving it from the source structure.
+     *
+     * @return the owning ConstantPool
      */
     public ConstantPool getConstantPool() {
         return getContaining().getConstantPool();
@@ -478,42 +483,15 @@ public abstract class XvmStructure
     /**
      * Log an error against this structure.
      *
-     * @param errs     the error list to log to, or null to use the runtime ErrorListener
+     * @param errs     the current operation's non-null error listener; pass an explicit
+     *                 non-reporting listener when diagnostics are intentionally discarded
      * @param sev      the severity of the error
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
+    public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
-    }
-
-    /**
-     * Make sure that an error listener is returned to use.
-     *
-     * @param  errs  an error listener, or null
-     *
-     * @return the error listener passed in, if it was not null, otherwise the previously specified
-     *         error listener, otherwise the runtime error listener
-     */
-    public ErrorListener ensureErrorListener(ErrorListener errs) {
-        return errs == null ? getErrorListener() : errs;
-    }
-
-    /**
-     * @return the error listener, if provided, otherwise the runtime error listener
-     */
-    public ErrorListener getErrorListener() {
-        return m_xsParent.getErrorListener();
-    }
-
-    /**
-     * Specify an error listener.
-     *
-     * @param errs  the error listener
-     */
-    public void setErrorListener(ErrorListener errs) {
-        m_xsParent.setErrorListener(errs);
+        Objects.requireNonNull(errs, "errs").log(sev, sCode, ErrorListener.at(this), aoParam);
     }
 
     // ----- debugging support ---------------------------------------------------------------------

@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -29,15 +30,15 @@ import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.runtime.MainContainer;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.JavaLong;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.OwnedResource;
 
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
-import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
@@ -51,9 +52,7 @@ import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 import org.xvm.util.Deadline;
 
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
-
 import static org.xvm.runtime.Runtime.DEFAULT_SHUTDOWN_TIMEOUT;
-
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -185,6 +184,21 @@ class InterpreterControl
         }
     }
 
+    /**
+     * Prepare application definitions in a fresh request file and constant pool.
+     *
+     * <p>First deserialize the application's serialized form to discard cached runtime handles
+     * and materialized AST objects. Then combine that copy with the native definitions and link
+     * dependencies into the resulting request file. The reusable connector owns the host; its
+     * pool must not become the owner of application-specific specializations or singleton state.
+     * A shallow in-memory module copy does not provide this execution isolation.
+     *
+     * @param connector   the reusable host that supplies native definitions
+     * @param module      the source application; its pool is not the request's destination
+     * @param repository  the dependencies available to this request
+     *
+     * @return the application file prepared for the new request
+     */
     private static FileStructure prepareModule(InterpreterConnector connector, ModuleStructure module,
                                                ModuleRepository repository) {
         FileStructure file;
@@ -216,7 +230,7 @@ class InterpreterControl
         this.connector  = connector;
         this.module     = module;
         this.temporary  = temporary;
-        this.errs       = errs;
+        this.errs       = Objects.requireNonNull(errs, "errs");
         this.taskId     = taskId;
         this.consoleId  = consoleId;
         this.started    = started;
@@ -229,9 +243,7 @@ class InterpreterControl
                 this.result = result;
             } else {
                 this.result = null;
-                if (errs != null) {
-                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
-                }
+                errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
             }
         } finally {
             this.stopped = Instant.now();

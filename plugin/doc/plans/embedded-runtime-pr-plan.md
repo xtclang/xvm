@@ -5,7 +5,11 @@ not a set of PR descriptions or an instruction to publish branches. It records c
 for constructing smaller branches later. The foundation extraction branches have not been
 created or validated. `lagergren/persistent-xtc-runtime` is a separate optional extension based
 on the completed foundation tip `766e17d51`; it does not replace that extraction plan.
-`lagergren/constant-pool-ownership`, based on `68a7ff6b5`, isolates the two-commit PR 11 scope.
+`lagergren/constant-pool-ownership`, based on `68a7ff6b5`, contains the original two-commit
+PR 11 scope plus the subsequent local ownership and final-listener corrections. The
+[updated audit](embedded-runtime-plan.md#constant-pool-ownership-audit) maps the implemented fixes
+to tests. Extract those corrections using the separate scopes below; the combined working diff
+is not itself a review-sized PR and this plan does not authorize publication.
 
 Source snapshot: `origin/master` at `6539aa6eb`; the original embedding implementation ends at
 `c884779d6`. The keystore correction is now commit `ca52e2aae`, followed by the common ownership
@@ -56,7 +60,7 @@ the weak discovery registry and adds strong roots only for outstanding cleanup o
 | 4b | Apply native ownership to channels, sockets, watches, HTTP and callbacks | 4 and 5b for the integration tests | Separate native migration commit; exact six scopes and test boundaries below |
 | 6 | File compilation through the embedding API | 5b (the source-tree execution regression uses `RunRequest`) | Extract the file-compiler API and source-tree tests from `d5947a903` |
 | 7 | Reuse embedding sessions for Gradle DIRECT compile/run/xUnit | 5b and 6 | Extract plugin and bootstrap-consumer changes from `d5947a903` |
-| 8 | Experimental JIT execution through the owned embedding session | Reconcile 5b/7 APIs with target branch `JIT` | Deferred; preserved on local `archive/embedded-jit-ownership`, excluded from this branch |
+| 8 | Experimental JIT execution through the owned embedding session | Reconcile 5b/7 APIs with target branch `JIT` | Deferred; preserved on pushed `archive/embedded-jit-ownership`, excluded from this branch |
 | 9 | Make manualTests use DIRECT by default | 4b and 7 | Manual-test convention, preview startup and removal of automatic mode sweeps |
 | 10 | Optional PERSISTENT worker across builds | 4b, 7; 9 only for the manualTests convention hunk | Separate branch `lagergren/persistent-xtc-runtime`, diff after `766e17d51` |
 | 11 | Guard ambient pool reads, then make signature compatibility explicitly pool-owned | No embedding/Gradle prerequisite; coordinate with errs I2 | Separate branch `lagergren/constant-pool-ownership`, exactly two implementation commits after `68a7ff6b5` |
@@ -606,7 +610,7 @@ Include this plan's relevant scope in the extracted documentation without import
    `MethodBody`, `MethodInfo`, `PropertyInfo` and `TypeConstant`. Tests cover actual range creation
    in the fallback/selected pool, source ownership, diagnostic formatting and annotation queries.
    No installed XDK assumptions enter these Java unit tests.
-2. **Make signature compatibility destination pools explicit** (the second commit's title). Change
+2. **Make signature compatibility destination pools explicit** — `99a46e385`. Change
    `SignatureConstant.isSubstitutableFor`, `TypeConstant.isCovariantReturn`,
    `TypeConstant.isContravariantParameter`, the terminal-type override and their direct callers.
    Select the pool from the compiler, target structure or TypeInfo owner. Preserve it in recursive
@@ -621,11 +625,12 @@ Include this plan's relevant scope in the extracted documentation without import
 
 The second commit changes the Java signatures of those compatibility entry points and requires
 callers/subclasses to be recompiled and migrated. It does not change the Ecstasy language or XTC
-format. `getConstantPool()` remains the owning-pool accessor. Other operation families retain
-scoped ambient selection for now. Do not claim complete compiler reentrancy or metadata sharing.
+format. `getConstantPool()` remains the owning-pool accessor. At this original commit boundary,
+other operation families retain ambient selection; scope 11c below subsequently migrates them.
+Neither scope establishes concurrent compiler reentrancy or global metadata sharing.
 
 Coordinate with the errs plan's **I2**: land this guard commit once and drop/adapt the overlapping
-errs slice. Do not bring in its listener migration, TypeInfo diagnostic replay, LSP code or broader
+errs slice. Keep the listener migration and TypeInfo replay in scope 11f below; exclude LSP code and broader
 API work. Metadata caches, definition generations, runtime-state separation, removing all thread
 locals, Gradle modes and default changes are outside PR 11.
 
@@ -664,6 +669,50 @@ Existing production/test hunks apply cleanly to the locally available `origin/ma
 This is an extraction check, not a separate build of the reconstructed PR. The two commits have
 been validated on the working stack; repeat the checks on the eventual submission branch.
 
+### Constant-pool audit follow-up boundaries
+
+The original audit at `99a46e385` has been followed by implementation and permanent tests.
+The following scopes are **implemented on the source branch**, not yet extracted into independent
+validated PR branches. Keep the original PR 11 commits (`9e413ea1e` and `99a46e385`) intact as historical boundaries; the later migration supersedes their ambient fallbacks.
+The final-listener slice is incorporated from errs, rather than left as an unspecified dependency.
+All finding IDs and current contracts are in the
+[audit record](embedded-runtime-plan.md#constant-pool-ownership-audit).
+The standalone [ownership document](../../../doc/constant-pool-ownership.md) provides the detailed
+change/evidence catalogue, complete file inventory and explicit limits of each test. Use it when
+extracting hunks; a source-confirmed correction must not be presented as an independently
+reproduced failure, and a state-isolation test is not proof of general concurrency safety.
+
+| Separate review scope | Exact production boundary | Tests and extraction dependencies |
+|---|---|---|
+| 11a: protect registration sources (CP-A1) | `TypeConstant.registerTypeConstants`; `ConstantPool.register` contract | Foreign signature parameter remains source-owned and readable; `ConstantOwnershipTest`. No embedding prerequisite. |
+| 11b: preserve linked and compiled definitions (CP-A2, CP-A10) | `FileStructure.linkModules`; `MethodStructure.cloneBody`/code snapshot; detached `RegisterConstant` and `DynamicFormalConstant` | `FileStructureOwnershipTest`, completed-register assertions. Split linking and method-copy hunks into two commits. Preserve new/decoded/read-only ASTs, Ops and independent initialization state. |
+| 11c: explicit destinations and ambient removal (CP-A3, CP-A5, CP-A6) | Lazy `IdentityConstant.NestedIdentity` and Method/Property callers; `ParameterizedTypeConstant.resolvePending`; `MethodInfo`; `PropertyInfo`; `MethodBody` annotation queries; `TypeCollector`; receiver compatibility; `InterpreterConnector.invoke0`; `Constant.apply` plus Byte/Int and five compiler expression callers | `DestinationOwnershipTest`, ambient/registration matrix, `SignatureCompatibilityTest`. Remove `poolInUse` after its callers migrate. Preserve compatibility `currentOr` externally and no-op/source-return contracts. Requires original PR 11 signature APIs, not the Gradle service. **Exclude JIT-only `MethodBody.asFunctionType`.** |
+| 11d: copied metadata calculation state (CP-A7) | `IdentityConstant`, `TypeConstant`, `ParameterizedTypeConstant`, `PropertyConstant`, `PropertyClassTypeConstant`, `SignatureConstant`, `TypeParameterConstant` owner-sensitive reset/lock/guard changes | `ConstantOwnershipTest`, `RegistrationOwnershipTest`, existing TypeInfo-member tests. Retain portable scalar caches and weak foreign comparison targets. No JIT generated-name/callable cache hunks. |
+| 11e: native bootstrap and compatibility binding (CP-A8) | `NativeContainer.loadNativeTemplates`; plain ThreadLocal binding/removal and creator-thread close guard in `ConstantPool` | Scope tests: nested/empty restoration, no worker inheritance, explicit same-object binding, reused worker after failure, wrong-thread close rejection; XDK bootstrap success/failure. No sleeps or timing assertions. Runtime lifecycle prerequisites only; no plugin dependency. |
+| 11f: final listener API and cached diagnostic replay (CP-A9) | Final `ErrorListener`/`ErrorList`; new `Reporting` and `ValidationScope`; compiler/parser/lexer/resolver/tool caller migration; remove listener fields/accessors from FileStructure/XvmStructure; `TypeInfo` diagnostic records and `TypeConstant` build/replay; EmbeddingSupport/InterpreterControl non-null boundaries | Imported listener/compiler/parser suites, `ReportingTest`, `EmbeddingListenerContractTest`, XDK warning replay before/after silent metadata construction. Source provenance: errs `17d4a15a5` and final listener/tests `f98b0fe87`. Split API/caller migration from metadata replay as reviewable commits. Coordinate with errs to land once; no LSP or semantic snapshot scope. |
+| 11g: singleton and runtime-value ownership | `SingletonConstant`, `FSNodeConstant`, `FileStoreConstant` adopted state; `Container.ensureSingletonConstant`/origin contract; `ConstHeap` lookup; `MethodStructure.addSingleton`; `Utils.initConstants` owner-service dispatch and failed-constructor cleanup; `xContainerLinker.completeResolveAndLink` fresh child copy | `SingletonOwnershipTest`, `ConstHeapOwnershipTest`, XDK root identity/explicit sharing tests and `ownership/Singletons.x`. Depends on 11b/11d copy safety. The async failure cleanup uses PR 4b's Frame exception cleanup, so extract with that prerequisite or retain the exact small continuation support. Separate commits for definition state, canonical runtime dispatch, then nested preparation. No new container models or automatic module-sharing policy. |
+| 11h: runtime annotation capture boundary | Explicit pool in `HandleConstant`; `AnnotatedTypeConstant.isShared`; single constructor caller in `xRTTypeTemplate` | Capture-sharing regression in `ConstantOwnershipTest`, including composite types. Captured handles remain values; do not clear them like singleton caches. Independent of Gradle, no JIT changes. |
+
+New XDK cases are in `ConstantPoolOwnershipTest`; extract only the methods/resources belonging to
+each scope. Small library-independent fixtures remain in javatools. Do not add installed-XDK
+assumptions there. The broader final-listener migration accounts for most changed files; its caller
+updates are required by the final API and must not leak into unrelated pool-copy PRs. Combined
+validation is recorded in the [audit](embedded-runtime-plan.md#validation-record): the latest
+javatools run after the scope guard passed 506 tests (40 existing disabled); the earlier 36 XDK
+integration cases, 21 manual modules and 19 xUnit cases passed. Those results do not replace
+validation of each extracted intermediate branch.
+
+Keep these boundaries explicit after extraction:
+
+- CP-A4, generated JIT names and callable-type caches remain on the pushed archive for the `JIT`
+  branch. They are not completed on this branch and must not be reintroduced through shared files.
+- Current Ecstasy container linking accepts only Lightweight and leaves the application shared
+  list empty. Full automatic module sharing and other container models need a separate feature;
+  the new tests distinguish this limitation from the runtime's explicit sharing mechanism.
+- Stable definition generations, cross-generation caches, concurrent compiler/metadata reuse and
+  retained-memory budgets are separate design/performance work. Request serialization and the
+  existing repository boundaries remain in place.
+
 ## Shared files and extraction rules
 
 | Shared file | Ownership of hunks |
@@ -697,9 +746,12 @@ permission to silently add or enable tests that substantially expand automatic J
 
 ## Work deliberately outside this submission series
 
-- **Further metadata reuse:** ownership migrations beyond PR 11, immutable definition generations
-  and measured compiler/application preparation caches. Coordinate with the `lagergren/errs`
-  work; do not import that redesign while extracting these PRs.
+- **Further metadata reuse:** immutable definition generations and measured compiler/application
+  preparation caches. The ownership corrections are implemented locally and assigned to the
+  [scopes above](#constant-pool-audit-follow-up-boundaries). Extract and validate those scopes
+  before extending reuse. Coordinate the incorporated final-listener slice with `lagergren/errs`.
+- **Container model completeness:** implement automatic Lightweight application-module sharing
+  and the unsupported models separately, with explicit type-system/state/lifetime tests.
 - **Broader persistent-host policy:** PR 10 implements the first worker lifetime. Cross-root
   sharing, bounded retained memory, disk quotas and broad concurrency/platform validation remain
   outside this sequence.

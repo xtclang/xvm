@@ -12,8 +12,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.Fiber;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -103,7 +103,11 @@ public class SingletonConstant
     // ----- run-time support  ---------------------------------------------------------------------
 
     /**
-     * @return an ObjectHandle representing this singleton value
+     * Read the live value from an owner's canonical singleton constant.
+     * Callers holding a copied definition first resolve it through
+     * {@link org.xvm.runtime.Container#ensureSingletonConstant}.
+     *
+     * @return the value, an initializing handle, or null before initialization
      */
     public ObjectHandle getHandle() {
         return m_handle;
@@ -111,6 +115,9 @@ public class SingletonConstant
 
     /**
      * Set the handle for this singleton's value.
+     *
+     * <p>Update only the defining container's canonical constant, on its main service (or during
+     * native bootstrap before execution starts). This completes that owner's pending waiters.
      *
      * @param handle  the corresponding handle
      */
@@ -130,7 +137,8 @@ public class SingletonConstant
     }
 
     /**
-     * Mark this ObjectHandle as being initialized.
+     * Begin initialization on the defining owner's main service. Other fibers in that service
+     * use {@link #getInitializationWaiter}; copied definitions must not share this bookkeeping.
      *
      * @param fiber  the current fiber
      *
@@ -192,6 +200,17 @@ public class SingletonConstant
     }
 
     // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    protected SingletonConstant adoptedBy(ConstantPool pool) {
+        var copy = (SingletonConstant) super.adoptedBy(pool);
+        // A definition copied into another pool does not own the source execution's singleton
+        // or its initialization attempt. Container.ensureSingletonConstant selects shared owners.
+        copy.m_handle            = null;
+        copy.m_fiberInitializing = null;
+        copy.m_cfInitialized     = null;
+        return copy;
+    }
 
     @Override
     public Format getFormat() {

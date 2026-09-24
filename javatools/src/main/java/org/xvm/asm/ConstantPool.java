@@ -49,7 +49,6 @@ import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
-
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
@@ -57,6 +56,19 @@ import static org.xvm.util.Handy.writePackedLong;
 
 /**
  * A shared pool of all Constant objects used in a particular FileStructure.
+ *
+ * <p>A constant's owning pool determines its local index and the definitions available to it.
+ * Ownership is distinct from an operation's destination: resolving a library signature for an
+ * application can require new constants in the application's pool. The caller should select
+ * that destination from its compilation, target metadata or runtime container and pass it
+ * explicitly; the source constant cannot infer which destination is being built.
+ *
+ * <p>Use {@link #register} to obtain a destination's representation of an existing constant,
+ * subject to its sharing rules. Registration is not an unconditional ownership transfer, and
+ * adopted definitions discard owner-specific caches and execution state. Intentional runtime
+ * sharing is selected by the container, rather than inherited through a shallow copy.
+ * The ambient API remains for compatibility; internal operations select owners or destinations
+ * explicitly. It does not change the meaning of {@link Constant#getConstantPool()}.
  */
 public class ConstantPool
         extends XvmStructure {
@@ -152,15 +164,20 @@ public class ConstantPool
      * Constants by the {@link XvmStructure#registerConstants} method of all of the various parts
      * of the FileStructure.
      *
-     * <p>The caller should use the returned constant in lieu of the constant that the caller passed
-     * in.
+     * <p>This pool is the destination; the thread's ambient binding does not select it. The caller
+     * must use the returned constant: registration can resolve a typedef, reuse an existing entry
+     * or adopt a clone from another pool. Constant indices are local to their owning pool.
+     *
+     * <p>When no equivalent entry exists, unresolved constants and foreign types that are not
+     * {@link TypeConstant#isShared shared} with this pool are returned without adoption. The
+     * result therefore need not belong to this pool. A caller must not treat such a result as
+     * permission to rewrite the source object's referenced constants into this pool.
      *
      * @param constant  the Constant to register
      *
      * @param <T>       the type of the constant being registered
-     * @return if the passed Constant was not previously registered, then it is returned; otherwise,
-     *         the previously registered Constant (which should be used in lieu of the passed
-     *         Constant) is returned
+     * @return the resolved/reused/adopted constant, an unchanged constant that cannot be adopted,
+     *         or null if the input is null
      */
     @SuppressWarnings("unchecked")
     public <T extends Constant> T register(T constant) {
@@ -3182,7 +3199,7 @@ public class ConstantPool
         // the number of returns on the left must not exceed the number of returns on the right;
         // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
         if (cLR > cRR) {
-            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(currentOr(this).typeTuple0())
+            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
         }
@@ -3440,16 +3457,11 @@ public class ConstantPool
     }
 
     /**
-     * The pool to work in: the one bound to this thread if there is one, and the given fallback
-     * otherwise.
+     * Legacy destination selection: the thread's binding, or the given fallback when unbound.
      *
-     * <p>{@link #getCurrentPool} is bound by {@link #withPool} during compilation and execution.
-     * Outside those scopes, callers such as diagnostic formatters can use the constant's owning
-     * pool as the fallback without establishing an ambient binding.
-     *
-     * <p>The ambient pool takes precedence because a cross-pool operation may need to resolve
-     * constants in a destination other than their owner. This helper preserves that selection;
-     * APIs with an explicit destination pool should use that parameter directly.
+     * <p>Retained for compatibility with external callers. Internal code must use the declared
+     * operation's destination or the metadata's owner. This helper cannot determine whether an
+     * unrelated bound pool can interpret the inputs, and must not override an explicit pool.
      *
      * @param poolFallback  the pool to use when no pool is bound to this thread
      *
@@ -3461,10 +3473,11 @@ public class ConstantPool
     }
 
     /**
-     * @return a ContextPool associated with the current thread
+     * @return the pool bound to the current thread, or null outside a binding; this is not an
+     *         owning-pool accessor
      */
     public static ConstantPool getCurrentPool() {
-        return s_tloPool.get()[0];
+        return s_tloPool.get();
     }
 
     /**
@@ -3473,30 +3486,38 @@ public class ConstantPool
      * @param pool  a ContextPool
      */
     public static void setCurrentPool(ConstantPool pool) {
-        s_tloPool.get()[0] = pool;
+        if (pool == null) {
+            s_tloPool.remove();
+        } else {
+            s_tloPool.set(pool);
+        }
     }
 
     /**
      * Temporarily update the current ConstantPool, restoring it when the returned AutoCloseable
      * is closed.
      *
+     * <p>Use a try-with-resources scope around the synchronous work that needs the binding.
+     * Close scopes in reverse order on the thread that created them; do not pass a scope to an
+     * asynchronous callback. Closing on another thread throws without changing either binding.
+     * Closing restores the caller's binding on success or failure; a null prior binding also
+     * removes the thread-local holder. A task dispatched to another thread must establish its
+     * own scope. The binding supports external compatibility; it does not transfer constants
+     * or make shared metadata thread-safe.
+     *
      * @param pool the new pool
      *
      * @return an Auto which will revert to the prior pool
      */
     public static Auto withPool(ConstantPool pool) {
-        ConstantPool[] poolHolder = s_tloPool.get();
-        ConstantPool poolPrior = poolHolder[0];
-        poolHolder[0] = pool;
+        var thread = Thread.currentThread();
+        ConstantPool poolPrior = getCurrentPool();
+        setCurrentPool(pool);
         return () -> {
-            poolHolder[0] = poolPrior;
-            if (poolPrior == null) {
-                // Even an empty ConstantPool[] pins its implementation classloader on a host thread.
-                s_tloPool.remove();
-            } else {
-                // A nested null scope may have removed or replaced the holder.
-                s_tloPool.set(poolHolder);
+            if (Thread.currentThread() != thread) {
+                throw new IllegalStateException("Constant-pool scope must close on its creating thread");
             }
+            setCurrentPool(poolPrior);
         };
     }
 
@@ -3845,8 +3866,8 @@ public class ConstantPool
     /**
      * Thread local allowing to get the "current" ConstantPool without any context.
      */
-    private static final ThreadLocal<ConstantPool[]> s_tloPool =
-            ThreadLocal.withInitial(() -> new ConstantPool[1]);
+    // An unbound read must not leave a typed holder that retains the implementation classloader.
+    private static final ThreadLocal<ConstantPool> s_tloPool = new ThreadLocal<>();
 
     /**
      * NakedRef is a fundamental formal type that comes from the "_native" module.
