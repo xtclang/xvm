@@ -120,6 +120,10 @@ dependencies {
 sourceSets {
     main {
         xtc {
+            // the JIT test module lives one level down; the plugin only treats a .x file as a
+            // module definition when its parent is a source root, so make that directory one
+            srcDir("src/main/x/jit")
+
              // TODO: tests below are meant to be compiled and run manually; consider moving them
              //       somewhere else and filter out the negative tests
             exclude("**/archive/**")
@@ -534,6 +538,15 @@ val runSmallFloatsJit = tasks.register<XtcRunTask>("runSmallFloatsJit") {
     moduleName("TestSmallFloats")
 }
 
+// The JIT test module exercises code paths that only the JIT backend has; running it through the
+// interpreter would pass without testing any of them.
+val runJitTests = tasks.register<XtcRunTask>("runJitTests") {
+    group = "verification"
+    description = "Run the JIT test suite using the JIT."
+    jit = true
+    moduleName("jit_tests.examples.org")
+}
+
 val runAllTestTasks = tasks.register("runAllTestTasks") {
     group = "application"
     description = "Run all test tasks."
@@ -549,13 +562,13 @@ val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
 val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runSequential)
+    dependsOn(runTestAllExecutionModes, runSequential, runJitTests, runSmallFloatsJit)
 }
 
 val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
     description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runParallel)
+    dependsOn(runTestAllExecutionModes, runParallel, runJitTests, runSmallFloatsJit)
 }
 
 /**
@@ -632,3 +645,4 @@ val printTestModules = tasks.register("printTestModules") {
         }
     }
 }
+
