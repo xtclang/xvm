@@ -1,11 +1,17 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.asm.XvmStructure
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.model.Location
+import java.util.IdentityHashMap
 
 /**
  * Reading a compiled document's AST for the questions an editor asks about a position.
@@ -14,6 +20,37 @@ import org.xvm.lsp.adapter.Range
  * the compiler-owned snapshot cached by [XdkAdapter].
  */
 internal object XdkAst {
+    /** Attempt-local structure ownership; binary structures cannot acquire a guessed source span. */
+    fun declarationLocations(
+        roots: Collection<AstNode>,
+        sourceUris: Map<String, String>,
+    ): Map<XvmStructure, Location> {
+        val locations = IdentityHashMap<XvmStructure, Location>()
+
+        fun visit(node: AstNode) {
+            val declaration =
+                when (node) {
+                    is TypeCompositionStatement -> node.component to node.nameToken
+                    is MethodDeclarationStatement -> node.component to node.nameToken
+                    is PropertyDeclarationStatement -> node.component to node.nameToken
+                    is TypedefStatement -> node.component to node.nameToken
+                    else -> null
+                }
+            val uri = node.source?.fileName?.let(sourceUris::get)
+            if (declaration != null && uri != null) {
+                val (structure, token) = declaration
+                if (structure != null && token != null) {
+                    val range = spanOf(token.startPosition, token.endPosition)
+                    locations[structure] = Location(uri, range.start.line, range.start.column, range.end.line, range.end.column)
+                    locations[structure.identityConstant] = locations.getValue(structure)
+                }
+            }
+            node.children().forEachRemaining(::visit)
+        }
+        roots.forEach(::visit)
+        return locations
+    }
+
     /** Each source keeps its own structural root even when module assembly nests the trees. */
     fun rootsBySource(root: AstNode?): Map<String, AstNode> =
         buildMap {
