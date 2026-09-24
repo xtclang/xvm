@@ -35,7 +35,7 @@ passes below preserve chronology; the PR slices describe eventual integration, n
   strict parsing, atomic replacement, unchanged configurations and stale response rejection.
 - [x] Run actual editor diagnostics/navigation/completion/rename/recompilation and repeated editing;
   fix observed failures and distinguish UI observations from automated editor-host checks.
-- [ ] Freeze the documented embedding/AST contract for this scope and prepare the first independent
+- [x] Freeze the documented embedding/AST contract for this scope and prepare the first independent
   local PR slices. Preserve the integrated branch and verify slices against their own base. Remote
   publication remains separate.
 
@@ -61,6 +61,42 @@ in `errs.md`, define its ownership and limits. Editor configuration adds no Java
 Future feature requirements can extend that contract additively; unsupported syntax, wider rename,
 workspace indexing and discovery are explicit follow-ups. Each extracted slice must still pass
 against its own base, including the applicable migration and output checks.
+
+### First local extraction batch, 2026-09-24
+
+The integrated editor/configuration checkpoint is `6372ba07d`, following the rename/API checkpoint
+`7b13e0980`. Both remain local. The first three slices are committed on separate local branches,
+each based directly on `4a1eae6f7`; none depends on another slice. The remote base has not been
+refreshed, and no branches or PRs have been published.
+
+| Slice | Local branch / commit | Size | Independent validation |
+|---|---|---|---|
+| I1 | `errs/i1-diagnostic-identity` / `e4c633c4c` | 4 files, +132 / -3 | Five tests, zero skips; `spotlessCheck` |
+| I2 | `errs/i2-ambient-pools` / `d4fc67090` | 12 files, +200 / -19 | Five tests, zero skips; full XDK build; `spotlessCheck`; 24 timestamp-normalized modules match the base |
+| R1 | `errs/r1-repository-failures` / `6384f2658` | 4 files, +112 / -25 | Four tests, zero skips, including the existing concurrent-scan regression; `spotlessCheck` |
+
+Worktrees are under `build/errs-integration/{i1,i2,r1}`. The detached `base` worktree is restored to
+its clean base after comparison. The reference branch remains intact. Extraction deliberately
+adapts I1's tests to the original boolean listener API and omits later origin/listener helpers.
+I2 combines the two pool fixes, removes a duplicate Javadoc block and uses an import in its test.
+R1 omits the unrelated unnamed-catch cleanup and strengthens file-header/payload tests to check
+repeated failure and recovery after replacement. Its embedding diagnostics test still belongs to E1.
+
+The focused Gradle runs used `--rerun-tasks --no-build-cache`; JUnit XML confirmed nonzero execution
+and no failures/errors/skips. I2 and the unmodified base each built the full XDK. Because emitted
+modules contain absolute source paths, the output comparison then applied only I2's production
+patch to the same base worktree and rebuilt all 24 modules there. Both sets were read and serialized
+with the unchanged base compiler, changing only module creation timestamps to `Instant.EPOCH`.
+Module membership and bytes matched exactly; source paths and other metadata were not masked.
+Neither build emitted compiler warnings/errors. The local comparison receipt is
+`build/errs-integration/comparison/result.json`; the normalization helper and patch are alongside it.
+
+This closes the first extraction batch, not validation of the entire proposed stack. Next prepare
+I3's compiler-consumer test wiring and C1's listener contract, then validate their own base/prerequisite
+combinations. Keep the deliberate `boolean log` to `void log` compatibility break explicit. Remote
+publication requires separate authorization and a refreshed base/conflict check. A multi-hour editor
+soak, dedicated IntelliJ source-graph settings, automatic discovery, broader syntax and workspace
+indexing/rename remain follow-ups to the bounded POC.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
