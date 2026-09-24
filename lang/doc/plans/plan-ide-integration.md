@@ -134,7 +134,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | **Partial** - exact selected signatures for resolved calls; incomplete qualified/implicit/static calls filter candidates using compiler argument fitting, generic inference and named parameter mapping, including before an existing closing parenthesis |
+| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/ordinary-constructor calls, including before an existing closing parenthesis. Methods/constructors retain named mappings; function types have unnamed parameters. Explicit constructor class type arguments are substituted |
 | Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; ordinary instance methods additionally require an explicit source graph; client versioned-edit support required |
 | Rename (cross-file) | - | - | **Partial** - ordinary instance-method override families across the configured graph; full recompilation plus binding/call/dispatch checks; no discovery of outside consumers |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -148,7 +148,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
-| Find implementations | - | - | **Partial** - nominal source types, method bodies and ordinary property fields/accessors from compiler composition, including generic overrides, inherited/default bodies, composed mixins and concrete delegation; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
+| Find implementations | - | - | **Partial** - nominal source types, method bodies and property fields/accessors from compiler composition, including generic overrides, inherited/default bodies, composed mixins, Ref/Var annotation accessors and concrete delegation; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
 | Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls (including ordinary `super`) with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
 
@@ -173,8 +173,9 @@ nominal declaration-level implementations (including a concrete type itself), no
 structurally assignable types or generic instantiations. Ordinary properties expose effective written
 getter/setter bodies or backing fields; accessor declarations retain separate chains. A property
 use has the declaration-level set, not a read/write-specific dispatch result. Ref/Var annotation
-dispatch, synthetic redirect targets and a search across all dependency implementations remain
-unavailable. Delegation follows compiler-selected signatures through concrete receiver types; interface-
+accessors use the host's existing nested method chains, including annotation order and explicit
+property overrides. Native annotation storage, synthetic redirect targets and a search across all
+dependency implementations remain unavailable. Delegation follows compiler-selected signatures through concrete receiver types; interface-
 valued or cyclic delegates have no proven target, and no forwarding code is generated for lookup. An inherited dependency body in a current source type's method chain can resolve when
 the host supplies its declaration source index.
 An explicit reporting inspection runs on the compiler worker; request threads use immutable
@@ -252,10 +253,15 @@ candidate does not claim final overload selection. Unresolved formals remain for
 Explicit cursor analysis now retains binary/conditional expressions and arguments following an
 incomplete member expression. Completed function-valued calls expose signature types and written
 argument slots separately from selected-method calls; their runtime targets and parameter names
-are not guessed. Remaining limits: cursors inside identifiers, further member/call syntax after a
-typed prefix, missing enclosing delimiters, enclosing-instance member enumeration, arbitrary type-
-valued receiver fallbacks, constructors, incomplete function-valued calls and receiver-to-argument
-rewrites. Completion in a missing call-argument value is not yet driven by its expected type.
+are not guessed. Incomplete function calls validate a trial copy of the callee and written positional
+arguments, preserving the full function signature for the missing slots. This covers narrowed and
+generic function properties, function-producing expressions and captured lambda arguments. Named
+arguments cannot be inferred from a function type. Ordinary constructor candidates reuse compiler
+argument fitting, including overloads, defaults, named slots and explicit class type arguments.
+Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
+missing enclosing delimiters, enclosing-instance member enumeration, arbitrary type-valued receiver
+fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and
+receiver-to-argument rewrites. Completion in a missing call-argument value is not yet driven by its expected type.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The

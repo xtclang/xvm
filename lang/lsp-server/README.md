@@ -159,10 +159,12 @@ Implementation lookup follows nominal source types and actual method override ch
 generic, inherited and default bodies. Ordinary properties lead to their effective accessor bodies
 or written backing fields; getter/setter declarations have separate implementation sets. Composed
 mixin accessors are included, with no standalone inspection of the mixin's constraint.
+Ref/Var annotation accessors use the host's existing composed chains, respecting annotation order
+and explicit property overrides. Native annotation storage has no invented source body.
 A host-supplied dependency source index also permits
 definition, type-definition and inherited implementation-body links into that dependency. It does
-not supply Ref/Var annotation dispatch, synthetic redirect targets or a workspace-wide
-implementation search. Concrete delegation follows compiler-selected method/property signatures;
+not supply synthetic redirect targets or a workspace-wide implementation search. Concrete
+delegation follows compiler-selected method/property signatures;
 interface-valued or cyclic delegates remain unresolved. No forwarding code is generated for lookup. Old hierarchy items cannot resolve into a new compilation. External type
 hierarchy remains unsupported. Exact references additionally compile all configured source modules,
 including unopened consumers and source uses of bundled binary members. No persistent index or
@@ -173,7 +175,11 @@ enclosing types, and static functions/constants. Qualified member prefixes and b
 statement cursors return exact replacement edits. Signature help uses exact selected signatures
 for completed calls. Incomplete qualified/implicit/static calls expose compiler-fitted candidates,
 generic expected types and named parameter mappings, including a pending `name=|` and an existing
-closing parenthesis. Candidates never claim final overload selection. Requests propagate
+closing parenthesis. Function-valued calls also show their full function type while arguments are
+missing, with active positional slots and no guessed parameter names or runtime targets. Ordinary
+`new Type(...)` candidates include overload filtering, explicit class type arguments, named slots
+and defaults. Virtual/inner/array/annotated construction and omitted class-type inference remain
+outside the proven scope. Candidates never claim final overload selection. Requests propagate
 cancellation and reject stale document/module results. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
