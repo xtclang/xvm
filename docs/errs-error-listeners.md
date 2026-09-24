@@ -434,7 +434,8 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    implementation lookup now copies actual override chains. Explicit dependency artifacts/source
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
    Explicit source roots/edges now support automatic dependency builds from edited sources.
-   Editor project discovery/configuration and persistent cross-module indexing remain open.
+   Initialization options and live editor settings now expose those source graphs; automatic project
+   discovery and persistent cross-module indexing remain open. No new Java/AST hooks were needed.
    Bounded local/private-parameter rename now captures named labels and checks before/after bindings.
    Its two temporary compiler attempts use cancellable request listeners; rejected edits do not
    publish temporary diagnostics or change the live analysis. Wider rename remains unavailable.

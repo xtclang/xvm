@@ -17,6 +17,26 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 - **Snippets** for common Ecstasy constructs (`module`, `class`, `service`, `mixin`, `const`, etc.)
 - **Automatic Java discovery** — finds or downloads a suitable Java 25+ JRE; no manual setup needed
 
+## Compiler project settings
+
+Compiler builds accept `xtc.compiler.sourceModules` in workspace settings. Each entry supplies
+`name`, `uri` and optional `dependencies` (module names). URIs may be relative to a single workspace
+folder; multi-root workspaces require absolute file URIs. Changes apply without restarting; invalid
+graphs preserve the last valid configuration. Set the list to `[]` to clear it.
+
+```json
+{
+  "xtc.compiler.sourceModules": [
+    { "name": "Library", "uri": "Library.x" },
+    { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
+  ]
+}
+```
+
+Tree-sitter remains the shipped default. Build with `-Plsp.adapter=compiler` to exercise these
+settings and the [compiler playbook](../doc/manual-test-plan.md). Project discovery and binary
+artifact configuration are outside this editor setting.
+
 ## Requirements
 
 | Requirement   | Version / Notes                                                    |
