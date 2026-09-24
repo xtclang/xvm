@@ -418,6 +418,12 @@ and null/ambient ownership while introducing the new reporting contract; C2–C4
 callers and owners separately. The extracted README explicitly documents the return-type break
 and the requirement to recompile clients at a breaking release boundary.
 
+The [C2 extraction record](errs-integration-plan.md#third-local-extraction-batch-c2-2026-09-24)
+adds independently verified explicit listener propagation, named silence and report-site migration
+on top of C1. It retains the deprecated positional overloads and removes the blackhole names.
+Boundary regressions, the full compiler suite, unchanged normalized XDK output and the I3 consumer
+all pass. Parser/resolver scopes remain in C3; ambient ownership and TypeInfo replay remain in C4.
+
 The three follow-ups from the API probe pass are complete: permanent TypeInfo regressions, module
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
 subsequent Java-only recovery pass supplies structural source trees after parse errors. Remaining work:

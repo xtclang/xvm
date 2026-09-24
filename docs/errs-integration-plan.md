@@ -144,9 +144,56 @@ one test, zero skips/failures/errors. The receipt is
 `build/errs-integration/comparison/i3-c1-result.json`. I3 was then restored to its own clean commit;
 the combined check does not introduce a dependency between the two standalone branches.
 
-Next extract **C2**, explicit listener propagation and reasons for silence, on top of C1; then **C3**,
-scoped parser/resolver reporting and validation state. Validate each against its actual prerequisites,
+C2 follows in the batch below. Validate each later slice against its actual prerequisites,
 including the required I3 consumer. No remote branches or PRs have been published.
+
+### Third local extraction batch: C2, 2026-09-24
+
+**C2 is committed as `f0b0db3a4` on `errs/c2-explicit-listeners`, based on C1's `d6463091c`.**
+Its worktree is `build/errs-integration/c2`. The slice changes 73 files, +821 / -512; the file count
+comes from migrating reporting and speculative-fit calls throughout the compiler. It builds and
+passes independently of I1, I2, R1, I3 and the later embedding/ownership changes.
+
+C2 requires supplied listeners at embedding, launcher, compiler and staging boundaries, removes
+silent null coalescing from validation/reporting paths, and makes each resolution collector supply
+its destination. Both in-tree implementations, `SimpleCollector` and `NameResolver`, implement the
+required method. Probes use `silent(PROBE)`; incomplete TypeInfo work derives `silence(CASCADE)`
+at affected calls without rebinding the caller's parameter. Explicit discards cover callers with
+no external diagnostic consumer. The old positional report overloads remain deprecated and retain
+C1's branch source anchoring. Production callers now use the site/severity API.
+
+The AST changes belong to compiler fit, conversion and validation decisions shared by all hosts.
+They add no persistent AST state or LSP implementation. Existing field names and parser/resolver
+ownership are preserved for C3. File/pool ambient reporting, including the fallback in
+`XvmStructure.log` and compilation-wide file silence, remains for C4. This is an explicit boundary
+of the slice; it does not claim TypeInfo replay or complete failure delivery before C4/E1.
+
+Validation:
+
+- Seven new boundary regressions reject missing listeners before compilation, file access or
+  launcher dispatch, check stage-manager destination retention, require a collector implementation
+  and prevent AST reporting from silently accepting null. The focused listener/launcher run has
+  56 tests, zero skips/failures/errors, including C1's kept-branch, probe and cascade checks.
+- Full javatools XML: 437 cases, **397 executed**, 40 existing skips, zero failures/errors.
+  The forced run used `--rerun-tasks --no-build-cache`; `spotlessCheck` passed. A temporary Gradle
+  init script enabled `-Xlint:deprecation` with the build's existing `-Werror`: production reporting
+  has no deprecated calls. The deliberate legacy-overload migration test suppresses that warning.
+- The full XDK builds successfully. Applying C1+C2 production changes at the same source path as
+  the C1 comparison yields **24 identical modules** after normalizing only creation timestamps
+  with the unchanged base serializer. Receipt: `build/errs-integration/comparison/c2-result.json`.
+- The complete C1+C2 patch applies over I3 and its required compiler consumer executes successfully:
+  one test, zero skips/failures/errors. Receipt:
+  `build/errs-integration/comparison/i3-c1-c2-result.json`. Base and I3 source worktrees were restored
+  clean after validation. No editor launch or remote CI run was needed.
+
+The extracted `javatools/README.md` records the additional compatibility changes: null rejection,
+removal of `BLACKHOLE`/`BlackholeErrorListener`, the now-abstract collector method and removal of
+the reporting-listener parameter from `Expression.testFitAsType`. These require the same explicit
+breaking release boundary as C1; the release/version is still a publication decision.
+
+**Next: C3**, scoped parser/resolver reporting and statement validation state, on top of C2.
+Keep its exceptional-exit and kept/discarded-attempt regressions with that slice. Remote publication
+still requires authorization and a refreshed base/conflict check.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
