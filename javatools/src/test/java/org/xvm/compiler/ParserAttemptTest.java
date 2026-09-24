@@ -3,6 +3,7 @@ package org.xvm.compiler;
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Severity;
 
@@ -90,6 +91,87 @@ public class ParserAttemptTest {
             assertFalse(parser.recoverable(), "a guess does not");
         }
         assertTrue(parser.recoverable(), "and recovery comes back afterwards");
+    }
+
+    @Test
+    public void testNestedKeptAttemptStillBelongsToOuterAttempt() {
+        var errors = new ErrorList(UNLIMITED);
+        var parser = new Parser(new Source(SOURCE), errors);
+        var first = parser.peek();
+        try (var outer = parser.attempt()) {
+            parser.current();
+            try (var inner = parser.attempt()) {
+                parser.log(Severity.WARNING, CODE, 0, 1);
+                inner.keep();
+            }
+            assertTrue(outer.hasError(CODE));
+            assertTrue(errors.getErrors().isEmpty());
+            assertFalse(parser.recoverable());
+        }
+        assertEquals(first.getId(), parser.peek().getId());
+        assertEquals(first.getStartPosition(), parser.peek().getStartPosition());
+        assertTrue(parser.recoverable());
+        assertTrue(errors.getErrors().isEmpty());
+        parser.log(Severity.WARNING, CODE, 2, 3);
+        assertEquals(1, errors.getErrors().size(), "the caller's destination is restored");
+    }
+
+    @Test
+    public void testExceptionRewindsTokensAndRestoresRecovery() {
+        var errors = new ErrorList(UNLIMITED);
+        var parser = new Parser(new Source(SOURCE), errors);
+        var first = parser.peek();
+        assertThrows(CompilerException.class, () -> {
+            try (var attempt = parser.attempt()) {
+                parser.current();
+                parser.log(Severity.ERROR, CODE, 0, 1);
+            }
+        });
+        assertEquals(first.getId(), parser.peek().getId());
+        assertEquals(first.getStartPosition(), parser.peek().getStartPosition());
+        assertTrue(parser.recoverable());
+        parser.log(Severity.WARNING, CODE, 2, 3);
+        assertEquals(1, errors.getErrors().size());
+    }
+
+    @Test
+    public void testKeptAttemptAdvancesTokensAndRestoresEvenWhenHostThrows() {
+        var failure = new IllegalStateException("host rejected report");
+        var parser = new Parser(new Source(SOURCE), err -> { throw failure; });
+        assertThrows(IllegalStateException.class, () -> {
+            try (var attempt = parser.attempt()) {
+                parser.current();
+                parser.log(Severity.WARNING, CODE, 0, 1);
+                attempt.keep();
+            }
+        });
+        assertEquals(Token.Id.IDENTIFIER, parser.peek().getId());
+        assertTrue(parser.recoverable());
+        assertThrows(IllegalStateException.class, () -> parser.log(Severity.WARNING, CODE, 2, 3));
+    }
+
+    @Test
+    public void testNestedAttemptsObserveCallerAbort() {
+        var errors = new ErrorList(ErrorList.FIRST_ERROR);
+        var parser = new Parser(new Source(SOURCE), errors);
+        try (var outer = parser.attempt(); var inner = parser.attempt()) {
+            errors.error(CODE, ErrorListener.NOWHERE);
+            assertTrue(outer.isAbortDesired());
+            assertTrue(inner.isAbortDesired());
+        }
+    }
+
+    @Test
+    public void testModuleNameScanRestoresDestinationForValidAndMalformedNames() {
+        for (var source : new String[] {"module example.com {}", "module 123 {}", "class Other {}"}) {
+            var errors = new ErrorList(UNLIMITED);
+            var parser = new Parser(new Source(source), errors);
+            assertEquals(source.startsWith("module example") ? "example.com" : null,
+                    parser.parseModuleNameIgnoreEverythingElse());
+            assertTrue(errors.getErrors().isEmpty());
+            parser.log(Severity.WARNING, CODE, 0, 1);
+            assertEquals(1, errors.getErrors().size());
+        }
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";

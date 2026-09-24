@@ -8,6 +8,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.Parameter;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -25,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * code meant to describe it, and an assertion failure mentioning one failed to report itself.</p>
  *
  * <p>This is the same fault as the one {@code FileStructure.getErrorListener()} had, in the same
- * shape, from the same thread-local. See the appendix of docs/errs.md.</p>
+ * shape, from the same thread-local. Both use the owning pool when none is bound.</p>
  */
 public class MethodBodyAmbientPoolTest {
     @Test
@@ -48,12 +49,14 @@ public class MethodBodyAmbientPoolTest {
      * is what makes the test meaningful rather than accidental.
      */
     private static MethodBody bodyOnAThreadWithNoPool() {
-        assertNull(ConstantPool.getCurrentPool(), "the premise: a test thread has never had a pool pushed onto it");
+        assertNull(ConstantPool.getCurrentPool(),
+                "the premise: a test thread has never had a pool pushed onto it");
 
         FileStructure   file   = new FileStructure("test");
-        ClassStructure  clz    = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Test", null);
+        ClassStructure  clz    = file.getModule().createClass(
+                Access.PUBLIC, Format.CLASS, "Test", null);
         MethodStructure method = clz.createMethod(false, Access.PUBLIC, null,
-                org.xvm.asm.Parameter.NO_PARAMS, "go", org.xvm.asm.Parameter.NO_PARAMS, true, true);
+                Parameter.NO_PARAMS, "go", Parameter.NO_PARAMS, true, true);
 
         return new MethodBody(method.getIdentityConstant(), method.getIdentityConstant().getSignature(),
                 MethodBody.Implementation.Explicit);
