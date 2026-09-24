@@ -484,8 +484,12 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    now covers `@Parsed`: runtime arguments exposed a false constructor error in reporting metadata,
    fixed without weakening actual annotation validation. A non-module root now reports positioned
    `EMB-6` instead of losing its console-only explanation and synthesizing `EMB-5`. Historical
-   suppression counts are not an exhaustive proof; the bound-generic binary-AST TODO still needs a
-   reproducer. Do not broaden reporting without evidence of a loss.
+   suppression counts are not an exhaustive proof. I4 now fixes the reproduced bound-generic
+   typing/binary-AST failure. The [atomic/switch audit](errs-audit.md#atomic-binary-ast-and-switch-conversion-audit-2026-09-24)
+   fixes existing atomic result/owner metadata and unhandled access cases, with no listener changes.
+   Generic source/dependency operations retain their warning exactly once; invalid operations keep
+   normal source errors. Dense-switch conversion probes reproduce no missing diagnostic, so
+   `ToIntExpression` reporting is unchanged. Do not broaden reporting without evidence of a loss.
 
 Tree-sitter remains the shipped default. The compiler adapter is opt-in and discovers conventional
 module layouts. Its automatic dependency build loop needs host-supplied roots/edges; it does not
@@ -520,3 +524,14 @@ Ref/Var annotation implementation lookup now reads the adopting host's existing 
 chains under the same explicit listener/cancellation boundary. It does not construct a separate
 property TypeInfo or discard its diagnostics. This Kotlin-only consumer adds no listener or AST
 contract; annotated-output and snapshot-purity regressions guard the inspection boundary.
+
+### Cursor recovery and normal diagnostics
+
+Explicit cursor analysis now retains missing enclosing call/group parentheses and index brackets,
+plus missing block braces when the cursor is at EOF. Its existing `PARSER-30` diagnostic covers the
+selected unfinished expression and that closing suffix. Only this opt-in attempt defers that
+diagnostic during assembly; normal compilation still reports the actual syntax errors and remains
+the source of published Problems entries. Other syntax errors, cancellation and listener budgets
+still stop semantic analysis. No suppression rule or listener API changes are needed. Parser tests,
+adapter/cache checks and packaged/editor round trips are tracked in the
+[delimiter recovery checkpoint](errs-integration-plan.md#missing-delimiter-cursor-recovery).
