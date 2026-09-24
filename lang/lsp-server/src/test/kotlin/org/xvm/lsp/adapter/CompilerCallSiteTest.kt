@@ -45,6 +45,21 @@ class CompilerCallSiteTest {
     }
 
     @Test
+    fun `matching returns cannot validate a function call with invalid arguments`() {
+        val prefix =
+            "module Calls { function Int(Int, String) make(function Int(Int, String) fn)=fn; " +
+                "Int apply(function Int(Int, String) fn)=make(fn)("
+        assertThat(compile("${prefix}1, \"x\"); }").functionBindings()).hasSize(1)
+        for (arguments in listOf("1", "True, \"x\"")) {
+            val errors = ErrorList()
+            val result = EmbeddingSupport.instance().compileModule(Source("$prefix$arguments); }", URI), null, errors)
+            assertThat(result.succeeded()).isFalse()
+            assertThat(errors.hasSeriousErrors()).isTrue()
+            assertThat(result.functionBindings()).isEmpty()
+        }
+    }
+
+    @Test
     fun `super records the inherited body and instantiated signature`() {
         val model =
             compile(
