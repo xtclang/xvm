@@ -1,12 +1,16 @@
-# Embedded JIT work moved to a local archive
+# Embedded JIT work preserved in a backup branch
 
 The experimental embedding backend has been removed from `lagergren/constant-pool-ownership`
-and preserved on the local branch **`archive/embedded-jit-ownership`**. The eventual target is
-**`JIT`**; that branch has not been modified. Nothing has been pushed.
+and preserved on [`archive/embedded-jit-ownership`](https://github.com/xtclang/xvm/tree/archive/embedded-jit-ownership).
+The backup was pushed to `origin` on 2026-09-24 at `eb25a1e39`, without opening a pull request.
+The extracted implementation is commit `7a27437b4`. The eventual target is **`JIT`**; that branch
+has not been modified.
 
-On the archive branch, `doc/embedded-jit-handoff.md` describes the machinery, source commits,
-prerequisites and validation limits. `doc/patches/embedded-jit.patch` contains the extracted
-implementation and tests, and `doc/jit-embedding.md` retains the full implementation notes.
+On the archive branch, the [handoff](https://github.com/xtclang/xvm/blob/archive/embedded-jit-ownership/doc/embedded-jit-handoff.md)
+describes the machinery, source commits, prerequisites and validation limits. The
+[saved patch](https://github.com/xtclang/xvm/blob/archive/embedded-jit-ownership/doc/patches/embedded-jit.patch)
+contains the extracted implementation and tests, and `doc/jit-embedding.md` retains the full
+implementation notes.
 The archive has an explicit snapshot base followed by a JIT-only restoration commit. Its base
 also preserves the unfinished interpreter/compiler ownership work; do not cherry-pick the
 snapshot or the whole original mixed commit onto `JIT`.
