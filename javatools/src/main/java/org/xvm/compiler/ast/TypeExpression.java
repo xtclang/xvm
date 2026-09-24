@@ -12,6 +12,9 @@ import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A type expression is used to specify an abstract data type. In its compiled form, there are many
  * different possible representations of an abstract data type, depending on how it is declared, and
@@ -39,7 +42,7 @@ public abstract class TypeExpression
      * @return a TypeConstant
      */
     public TypeConstant ensureTypeConstant() {
-        return ensureTypeConstant(null, null);
+        return ensureTypeConstant(null, silent(PROBE));
     }
 
     /**
@@ -66,7 +69,7 @@ public abstract class TypeExpression
                 // once the expression has validated, we know the type (can be Object for dynamic types)
                 constType = getType().getParamType(0);
             } else {
-                constType = instantiateTypeConstant(ctx, errs == null ? ErrorListener.BLACKHOLE : errs);
+                constType = instantiateTypeConstant(ctx, errs);
             }
 
             m_constType = constType;
@@ -184,7 +187,7 @@ public abstract class TypeExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        TypeConstant type = ensureTypeConstant(ctx, null);
+        TypeConstant type = ensureTypeConstant(ctx, silent(PROBE));
         if (type == null) {
             throw new IllegalStateException("type has not yet been determined for this: " + this);
         }

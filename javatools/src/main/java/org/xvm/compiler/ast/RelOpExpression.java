@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
@@ -27,10 +27,10 @@ import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_DivRem;
-import org.xvm.asm.op.GP_IRangeI;
+import org.xvm.asm.op.GP_ERangeE;
 import org.xvm.asm.op.GP_ERangeI;
 import org.xvm.asm.op.GP_IRangeE;
-import org.xvm.asm.op.GP_ERangeE;
+import org.xvm.asm.op.GP_IRangeI;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
 import org.xvm.asm.op.GP_Or;
@@ -40,12 +40,15 @@ import org.xvm.asm.op.GP_ShrAll;
 import org.xvm.asm.op.GP_Sub;
 import org.xvm.asm.op.GP_Xor;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.Token;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
@@ -297,7 +300,7 @@ public class RelOpExpression
         // this logic must conform to the rules used by validate()
 
         if (typeRequired != null && typeRequired.isTypeOfType()) {
-            TypeFit fit = testFitAsType(ctx, typeRequired, fExhaustive, errs);
+            TypeFit fit = testFitAsType(ctx, typeRequired, fExhaustive);
             if (fit.isFit()) {
                 return fit;
             }
@@ -338,7 +341,10 @@ public class RelOpExpression
                 typeConv = typeConv.resolveAutoNarrowing(pool, false, typeLeft, null);
             }
 
-            for (MethodConstant idMethod : typeConv.ensureTypeInfo().findOpMethods(sMethod, sOp, 1)) {
+            // testFit asks a question and the return value is the answer, so this is a probe:
+            // not the no-arg form, whose silence is a cascade and whose callers are the runtime
+            for (MethodConstant idMethod :
+                    typeConv.ensureTypeInfo(silent(PROBE)).findOpMethods(sMethod, sOp, 1)) {
                 TypeConstant[] aRets = idMethod.getRawReturns();
                 if (aRets.length >= 1 && isAssignable(ctx, aRets[0], typeRequired)) {
                     // there is a solution via an operator on the result of a conversion
@@ -564,14 +570,14 @@ public class RelOpExpression
         if (expr1New.isConstant() && expr2New.isConstant()) {
             // delegate the operation to the constants
             try {
-                Constant constResult = expr1New.toConstant().apply(operator.getId(), expr2New.toConstant());
+                Constant constResult = expr1New.toConstant().apply(pool(), operator.getId(), expr2New.toConstant());
                 aconstResult = fMulti
                         ? ((ArrayConstant) constResult).getValue() // divrem result is in a tuple
                         : new Constant[] {constResult};
             } catch (ArithmeticException e) {
                 log(errs, Severity.ERROR, Compiler.VALUE_OUT_OF_RANGE, typeRequired, this);
                 return null;
-            } catch (RuntimeException ignore) {}
+            } catch (RuntimeException _) {}
         }
 
         return finishValidations(ctx, atypeRequired, atypeResults, TypeFit.Fit, aconstResult, errs);
@@ -627,10 +633,10 @@ public class RelOpExpression
 
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
-        if (expr1.testFit(ctx, typeRequired, false, null).isFit()) {
+        if (expr1.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()) {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()) {
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, silent(PROBE)).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns()[0];
                     if (typeReturn.containsAutoNarrowing(false)) {
                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
@@ -646,10 +652,10 @@ public class RelOpExpression
 
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
-                if (expr1.testFit(ctx, typeParam, false, null).isFit()) {
+                if (expr1.testFit(ctx, typeParam, false, silent(PROBE)).isFit()) {
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()) {
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, silent(PROBE)).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns()[0];
                             if (typeReturn.containsAutoNarrowing(false)) {
                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
@@ -703,9 +709,9 @@ public class RelOpExpression
                 }
 
                 TypeConstant typeParam = idMethod.getRawParams()[0];
-                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null);
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, silent(PROBE));
                 if (!fit.isFit()) {
-                    fit = expr2.testFitExhaustive(ctx, typeParam, null);
+                    fit = expr2.testFitExhaustive(ctx, typeParam, silent(PROBE));
                 }
 
                 if (fit.betterThan(fitBest)) {

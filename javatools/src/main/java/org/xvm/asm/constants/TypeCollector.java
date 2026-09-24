@@ -7,8 +7,10 @@ import java.util.Objects;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A TypeCollector is used to collect a number of types, such as would occur from return statements
@@ -172,14 +174,14 @@ public class TypeCollector {
         if (typeRequired != null && typeRequired.containsFormalType(true)) {
             typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
         }
-        typeCommon = Op.selectCommonType(typeCommon, typeRequired, ErrorListener.BLACKHOLE);
+        typeCommon = Op.selectCommonType(typeCommon, typeRequired, silent(PROBE));
 
         if (typeRequired != null &&
                 (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
-            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), ErrorListener.BLACKHOLE);
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), silent(PROBE));
             for (int i = 1; i < cTypes; i++) {
-                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), ErrorListener.BLACKHOLE);
+                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), silent(PROBE));
             }
 
             if (typeAlt != null) {
@@ -342,8 +344,7 @@ public class TypeCollector {
             for (int iCol = 0; iCol < cWidth; ++iCol) {
                 TypeConstant typeRequired = iCol < cReqTypes ? atypeRequired[iCol] : null;
                 if (typeRequired != null) {
-                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired,
-                            ErrorListener.BLACKHOLE);
+                    aResult[iCol] = Op.selectCommonType(aResult[iCol], typeRequired, silent(PROBE));
                 }
             }
         }
@@ -378,6 +379,10 @@ public class TypeCollector {
     /**
      * Determine if the passed array of types indicates a particular common type.
      *
+     * <p>Use the caller's pool for adopted operands and constructed results. Registration can
+     * retain an unshareable source type; relation checks then select a pool that can use both
+     * types, rather than an unrelated ambient binding.
+     *
      * @param aTypes  an array of types, which can be null and which can contain nulls
      * @param pool    the constant pool to use
      *
@@ -394,7 +399,7 @@ public class TypeCollector {
             return null;
         }
 
-        TypeConstant typeCommon = aTypes[0];
+        TypeConstant typeCommon = pool.register(aTypes[0]);
         if (typeCommon == null || typeCommon.containsUnresolved()) {
             return null;
         }
@@ -402,7 +407,7 @@ public class TypeCollector {
         boolean fConvApplied = false;
         boolean fImmutable   = typeCommon.isImmutable();
         for (int i = 1; i < cTypes; ++i) {
-            TypeConstant type = aTypes[i];
+            TypeConstant type = pool.register(aTypes[i]);
             if (type == null) {
                 return null;
             }
@@ -429,7 +434,7 @@ public class TypeCollector {
                     }
                 }
 
-                typeCommon = Op.selectCommonType(type, typeCommon, ErrorListener.BLACKHOLE);
+                typeCommon = Op.selectCommonType(type, typeCommon, silent(PROBE));
                 if (typeCommon == null) {
                     // no obvious common type
                     return null;
@@ -444,7 +449,7 @@ public class TypeCollector {
             assert typeCommon != null;
         }
 
-        return fImmutable ? typeCommon.freeze() : typeCommon;
+        return pool.register(fImmutable ? typeCommon.freeze() : typeCommon);
     }
 
     // ----- data members --------------------------------------------------------------------------

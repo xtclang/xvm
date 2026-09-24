@@ -56,8 +56,8 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xInjector;
 
-import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
+import org.xvm.runtime.template.text.xString;
 
 import org.xvm.runtime.template._native.collections.xBasicHashCollector;
 
@@ -147,78 +147,77 @@ public class NativeContainer
         m_moduleNative = fileRoot.getChild(NATIVE_MODULE);
 
         ConstantPool pool = fileRoot.getConstantPool();
-        ConstantPool.setCurrentPool(pool);
-
-        if (pool.getNakedRefType() == null) {
-            ClassStructure clzNakedRef = (ClassStructure) m_moduleTurtle.getChild("NakedRef");
-            pool.setNakedRefType(clzNakedRef.getFormalType());
-        }
-
-        String sRoot = xObject.class.getProtectionDomain().getCodeSource().getLocation().getFile();
-        sRoot = URLDecoder.decode(sRoot, StandardCharsets.UTF_8);
-
-        Map<String, Class> mapTemplateClasses = new HashMap<>();
-        if (sRoot.endsWith(".jar")) {
-            scanNativeJarDirectory(sRoot, "org/xvm/runtime/template", mapTemplateClasses);
-        } else {
-            File dirTemplates = new File(sRoot, "org/xvm/runtime/template");
-            scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
-        }
-
-        // we need a number of INSTANCE static variables to be set up right away
-        // (they are used by the ClassTemplate constructor)
-        storeNativeTemplate(new xObject (this, getClassStructure("Object"),  true));
-        storeNativeTemplate(new xEnum   (this, getClassStructure("Enum"),    true));
-        storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
-        storeNativeTemplate(new xService(this, getClassStructure("Service"), true));
-
-        for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
-            ClassStructure structClass = getClassStructure(entry.getKey());
-            if (structClass == null) {
-                // this is a native class for a composite type;
-                // it will be declared by the corresponding "primitive"
-                // (see xArray.initNative() for an example)
-                continue;
+        // Bootstrap uses the native pool; both normal and exceptional exits restore the host.
+        try (var scope = ConstantPool.withPool(pool)) {
+            if (pool.getNakedRefType() == null) {
+                ClassStructure clzNakedRef = (ClassStructure) m_moduleTurtle.getChild("NakedRef");
+                pool.setNakedRefType(clzNakedRef.getFormalType());
             }
 
-            if (f_mapTemplatesByType.containsKey(
-                    structClass.getIdentityConstant().getType())) {
-                // already loaded - one of the "base" classes
-                continue;
+            String sRoot = xObject.class.getProtectionDomain().getCodeSource().getLocation().getFile();
+            sRoot = URLDecoder.decode(sRoot, StandardCharsets.UTF_8);
+
+            Map<String, Class> mapTemplateClasses = new HashMap<>();
+            if (sRoot.endsWith(".jar")) {
+                scanNativeJarDirectory(sRoot, "org/xvm/runtime/template", mapTemplateClasses);
+            } else {
+                File dirTemplates = new File(sRoot, "org/xvm/runtime/template");
+                scanNativeDirectory(dirTemplates, "", mapTemplateClasses);
             }
 
-            Class<ClassTemplate> clz = entry.getValue();
-            if (!Modifier.isAbstract(clz.getModifiers())) {
-                try {
-                    storeNativeTemplate(clz.getConstructor(
-                        Container.class, ClassStructure.class, Boolean.TYPE).
-                        newInstance(this, structClass, Boolean.TRUE));
-                } catch (Exception e) {
-                    throw new LauncherException(true, "Constructor failed for " + clz.getName(), e);
+            // we need a number of INSTANCE static variables to be set up right away
+            // (they are used by the ClassTemplate constructor)
+            storeNativeTemplate(new xObject (this, getClassStructure("Object"),  true));
+            storeNativeTemplate(new xEnum   (this, getClassStructure("Enum"),    true));
+            storeNativeTemplate(new xConst  (this, getClassStructure("Const"),   true));
+            storeNativeTemplate(new xService(this, getClassStructure("Service"), true));
+
+            for (Map.Entry<String, Class> entry : mapTemplateClasses.entrySet()) {
+                ClassStructure structClass = getClassStructure(entry.getKey());
+                if (structClass == null) {
+                    // this is a native class for a composite type;
+                    // it will be declared by the corresponding "primitive"
+                    // (see xArray.initNative() for an example)
+                    continue;
+                }
+
+                if (f_mapTemplatesByType.containsKey(
+                        structClass.getIdentityConstant().getType())) {
+                    // already loaded - one of the "base" classes
+                    continue;
+                }
+
+                Class<ClassTemplate> clz = entry.getValue();
+                if (!Modifier.isAbstract(clz.getModifiers())) {
+                    try {
+                        storeNativeTemplate(clz.getConstructor(
+                            Container.class, ClassStructure.class, Boolean.TYPE).
+                            newInstance(this, structClass, Boolean.TRUE));
+                    } catch (Exception e) {
+                        throw new LauncherException(true, "Constructor failed for " + clz.getName(), e);
+                    }
                 }
             }
+
+            // add run-time templates
+            f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.INSTANCE);
+            f_mapTemplatesByType.put(pool.typeType()    , xRTType.INSTANCE);
+
+            // clone the map since the loop below can add to it
+            Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());
+
+            for (ClassTemplate template : setTemplates) {
+                template.registerNativeTemplates();
+            }
+
+            Utils.initNative(this);
+
+            for (ClassTemplate template : f_mapTemplatesByType.values()) {
+                template.initNative();
+            }
+
+            ensureServiceContext();
         }
-
-        // add run-time templates
-        f_mapTemplatesByType.put(pool.typeFunction(), xRTFunction.INSTANCE);
-        f_mapTemplatesByType.put(pool.typeType()    , xRTType.INSTANCE);
-
-        // clone the map since the loop below can add to it
-        Set<ClassTemplate> setTemplates = new HashSet<>(f_mapTemplatesByType.values());
-
-        for (ClassTemplate template : setTemplates) {
-            template.registerNativeTemplates();
-        }
-
-        Utils.initNative(this);
-
-        for (ClassTemplate template : f_mapTemplatesByType.values()) {
-            template.initNative();
-        }
-
-        ensureServiceContext();
-
-        ConstantPool.setCurrentPool(null);
         return pool;
     }
 

@@ -11,13 +11,13 @@ import java.util.stream.Collectors;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -34,12 +34,14 @@ import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 /**
@@ -355,7 +357,7 @@ public class NamedTypeExpression
 
         // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.BLACKHOLE);
+        TypeConstant type = calculateDefaultType(ctx, constId, silent(PROBE));
 
         if (listParams != null) {
             int            cParams     = listParams.size();

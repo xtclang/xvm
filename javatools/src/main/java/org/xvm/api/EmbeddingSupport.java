@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
@@ -52,7 +54,6 @@ import org.xvm.tool.ModuleInfo.Node;
 import org.xvm.util.Deadline;
 
 import static org.xvm.runtime.Runtime.DEFAULT_SHUTDOWN_TIMEOUT;
-
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -397,11 +398,12 @@ public class EmbeddingSupport
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the non-null listener for compiler diagnostics
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         synchronized (LOCK) {
             try (var ignore = ConstantPool.withPool(null)) {
                 verifyConfigured();
@@ -410,13 +412,13 @@ public class EmbeddingSupport
                     return compiler.process() == 0
                             ? compiler.getModule()
                             : null;
+                } catch (LauncherException e) {
+                    return null;
                 } catch (RuntimeException | AssertionError e) {
                     // as in run(): the compiler runs over caller-supplied source, so a failure in it is
                     // reported here rather than thrown at the caller, who was promised a null instead
-                    if (errs != null) {
-                        errs.log(ERROR, ERR_INTERNAL,
-                                new Object[] {e, "Compilation failed"}, null);
-                    }
+                    errs.log(ERROR, ERR_INTERNAL,
+                            new Object[] {e, "Compilation failed"}, null);
                     return null;
                 }
             }
@@ -429,7 +431,8 @@ public class EmbeddingSupport
      *
      * @return zero on success, nonzero if compilation fails
      */
-    public int compile(CompilerOptions options, Console console, ErrorListener errs) {
+    public int compile(CompilerOptions options, Console console, @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         synchronized (LOCK) {
             try (var ignore = ConstantPool.withPool(null)) {
                 verifyConfigured();
@@ -439,9 +442,7 @@ public class EmbeddingSupport
                 } catch (LauncherException e) {
                     return 1;
                 } catch (RuntimeException | AssertionError e) {
-                    if (errs != null) {
-                        errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
-                    }
+                    errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
                     return 1;
                 }
             }
@@ -455,12 +456,13 @@ public class EmbeddingSupport
      *                or the directory containing a single .x file and nested contents thereof
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the non-null listener for compiler diagnostics
      *
      * @return true if the compilation succeeded and the result was placed into the output
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+                           @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         synchronized (LOCK) {
             try (var ignore = ConstantPool.withPool(null)) {
                 verifyConfigured();
@@ -468,10 +470,10 @@ public class EmbeddingSupport
                 try {
                     return new FileCompiler(options, SILENT_CONSOLE, errs, cfgRepo, input,
                             output == null ? new BuildRepository() : output).compile() == 0;
+                } catch (LauncherException e) {
+                    return false;
                 } catch (RuntimeException | AssertionError e) {
-                    if (errs != null) {
-                        errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
-                    }
+                    errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
                     return false;
                 }
             }
@@ -642,7 +644,7 @@ public class EmbeddingSupport
      *                    unique temporary directory that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     * @param errs        the non-null listener for uncaught exceptions and
      *                    other errors
      *
      * @return a Control object for the running module
@@ -652,7 +654,7 @@ public class EmbeddingSupport
             PrintWriter               console,
             File                      rootDir,
             Map<String, List<String>> injections,
-            ErrorListener             errs) {
+            @NotNull ErrorListener    errs) {
         return run(new InstantRepository(module), module.getName(), module.getVersion(),
                 console, rootDir, injections, null, errs);
     }
@@ -678,7 +680,7 @@ public class EmbeddingSupport
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
      *                        ignored
-     * @param errs            (optional) a means for the container to report uncaught exceptions and
+     * @param errs            the non-null listener for uncaught exceptions and
      *                        other errors
      *
      * @return a Control object for the running module, or null if it could not be started, in
@@ -692,7 +694,7 @@ public class EmbeddingSupport
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
-            ErrorListener             errs) {
+            @NotNull ErrorListener    errs) {
         return run(input, moduleName, version, console, rootDir, injections, customInjector,
                 "run", List.of(), false, errs);
     }
@@ -703,7 +705,8 @@ public class EmbeddingSupport
      * @throws UnsupportedOperationException if the request selects JIT; implemented separately
      *                                       on the JIT branch
      */
-    public Control run(RunRequest request, ErrorListener errs) {
+    public Control run(RunRequest request, @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         if (request.backend() == RunRequest.Backend.JIT) {
             throw JitControl.unsupported();
         }
@@ -716,6 +719,7 @@ public class EmbeddingSupport
                         File rootDir, Map<String, List<String>> injections, String customInjector,
                         String method, List<String> arguments, boolean hostFileSystem,
                         ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         synchronized (LOCK) {
             try (var ignore = ConstantPool.withPool(null)) {
                 verifyConfigured();
@@ -727,10 +731,8 @@ public class EmbeddingSupport
                         ? repository.loadModule(moduleName)
                         : repository.loadModule(moduleName, version, true);
                 if (module == null) {
-                    if (errs != null) {
-                        errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                                new Object[] {moduleName, version}, null);
-                    }
+                    errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
+                            new Object[] {moduleName, version}, null);
                     return null;
                 }
 
@@ -752,10 +754,8 @@ public class EmbeddingSupport
                     // assertion in the structure code past this report and out to the host. Errors are
                     // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
                     // this module failed to start, and handling one is not something to rely on
-                    if (errs != null) {
-                        errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                                new Object[] {e, "Unable to start " + moduleName}, module);
-                    }
+                    errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
+                            new Object[] {e, "Unable to start " + moduleName}, module);
                     return null;
                 }
             }

@@ -455,7 +455,11 @@ public class PropertyStructure
     /**
      * Check if this property could be accessed via the specified signature.
      *
-     * @param pool        the ConstantPool to place a potentially created new constant into
+     * <p>The caller supplies the target's destination even if this property was declared in a
+     * different library pool. Keep that destination for generic resolution and both directions
+     * of signature compatibility; the declaration's owner does not determine the use-site pool.
+     *
+     * @param pool        the destination pool for resolved property signatures and types
      * @param sigThat     the signature of the matching property (resolved)
      * @param listActual  the actual generic types
      */

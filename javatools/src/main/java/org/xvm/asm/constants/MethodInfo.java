@@ -250,11 +250,12 @@ public class MethodInfo
         ArrayList<MethodBody> listMerge = null;
         NextLayer: for (int iThat = 0; iThat < cAdd; ++iThat) {
             MethodBody bodyThat = aAdd[iThat];
+            MethodConstant idThat = bodyThat.getIdentity();
             // allow duplicate interface methods to survive (we need the correct "default" to be on
             // top, and we don't want to yank its duplicate from underneath), except when the
             // equivalent bodies would sit next to each other; since Object is present on every
             // single type, exclude it from this check
-            boolean fAllowDuplicate = bodyThat.getIdentity().getNamespace() != pool().clzObject() &&
+            boolean fAllowDuplicate = !idThat.getNamespace().equals(idThat.getConstantPool().clzObject()) &&
                     bodyThat.getImplementation().EXISTS == Existence.Interface &&
                     !containsBody(b -> b.getImplementation().EXISTS == Existence.Class);
 
@@ -1333,12 +1334,13 @@ public class MethodInfo
 
         // if the "head" is auto-narrowing, we need to adjust the "super()" signature as well
         MethodBody bodyHead = chain[0];
+        ConstantPool pool = infoType.getType().getConstantPool();
         if (bodyHead.getSignature().containsAutoNarrowing(false)) {
-            sigSuper = sigSuper.resolveAutoNarrowing(pool(), infoType.getType(), null);
+            sigSuper = sigSuper.resolveAutoNarrowing(pool, infoType.getType(), null);
         }
         if (sigSuper.containsTypeParameters()) {
             // formal type parameters need to be resolved by the "head"
-            sigSuper = sigSuper.resolveGenericTypes(pool(), bodyHead.getIdentity());
+            sigSuper = sigSuper.resolveGenericTypes(pool, bodyHead.getIdentity());
         }
 
         return sigSuper;
@@ -1465,13 +1467,6 @@ public class MethodInfo
      */
     public int getRank() {
         return f_nRank;
-    }
-
-    /**
-     * @return the ConstantPool
-     */
-    private ConstantPool pool() {
-        return ConstantPool.currentOr(getIdentity().getConstantPool());
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

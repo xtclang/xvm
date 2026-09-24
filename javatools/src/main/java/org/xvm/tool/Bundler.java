@@ -19,7 +19,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.tool.LauncherOptions.BundlerOptions;
 
 import static java.util.Objects.requireNonNull;
-
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.INFO;
@@ -48,12 +47,12 @@ public class Bundler extends Launcher<BundlerOptions> {
     /**
      * Bundler constructor for programmatic use.
      *
-     * @param options     pre-configured bundler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured bundler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Bundler(BundlerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Bundler(BundlerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

@@ -35,8 +35,8 @@ import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
@@ -235,13 +235,13 @@ public class ForStatement
         Register reg = fFirst ? m_regFirst : m_regCount;
         if (reg == null) {
             // this occurs only during validate()
-            assert m_ctxLabelVars != null;
+            assert m_labelVars != null;
 
             String sLabel = ((LabeledStatement) getParent()).getName();
             Token  tok    = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sLabel + '.' + sName);
 
             reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sLabel + '.' + sName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
 
             if (fFirst) {
                 m_regFirst = reg;
@@ -338,8 +338,7 @@ public class ForStatement
             ctx.setReachable(true);
 
             // save off the current context and errors, in case we have to lazily create some loop vars
-            m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
+            m_labelVars = new ValidationScope(ctx, errs);
 
             // the test expression plays a role of an "if", since the block cannot be entered if this
             // expression evaluates to "false"
@@ -503,8 +502,7 @@ public class ForStatement
             }
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
+            m_labelVars = null;
 
             errs.merge();
             return fValidInit && fValid ? this : null;
@@ -718,8 +716,7 @@ public class ForStatement
 
     private transient Label m_labelContinue;
 
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
+    private transient ValidationScope m_labelVars;
     private transient Register      m_regFirst;
     private transient Register      m_regCount;
 

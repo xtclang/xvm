@@ -4,8 +4,8 @@ import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
@@ -685,16 +685,13 @@ public class MethodBody {
     }
 
     /**
-     * Select the pool used to resolve well-known constants such as the {@code @Op} annotation.
-     * A compiler-selected ambient pool takes precedence over this body's identity pool.
-     * <p>
-     * Outside a compilation, use the identity's owner so that inspection and diagnostic
-     * formatting do not require a thread-local binding.
+     * Select the declaration's pool for well-known annotation identities. Annotation inspection
+     * creates no use-site specialization, so an unrelated ambient destination is not relevant.
      *
      * @return the selected pool
      */
     private ConstantPool pool() {
-        return ConstantPool.currentOr(m_id.getConstantPool());
+        return m_id.getConstantPool();
     }
 
     // ----- Object methods ------------------------------------------------------------------------

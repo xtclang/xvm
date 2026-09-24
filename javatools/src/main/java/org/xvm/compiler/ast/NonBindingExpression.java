@@ -12,6 +12,9 @@ import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * This is used to specify an argument ("?") for a function that indicates that the corresponding
  * parameter of the function should remain unbound.
@@ -54,7 +57,7 @@ public class NonBindingExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return type == null ? null : type.ensureTypeConstant(ctx, null);
+        return type == null ? null : type.ensureTypeConstant(ctx, silent(PROBE));
     }
 
     @Override

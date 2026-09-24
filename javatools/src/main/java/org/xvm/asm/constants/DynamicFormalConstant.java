@@ -72,6 +72,27 @@ public class DynamicFormalConstant
         m_iFormal = readMagnitude(in);
     }
 
+    /** Snapshot the completed register binding; the destination registers its types afterward. */
+    private DynamicFormalConstant(ConstantPool pool, DynamicFormalConstant source) {
+        super(pool, source.getMethod(), source.getNameConstant().getValue());
+        f_nReg        = source.getRegisterIndex();
+        m_nRegId      = source.registerId();
+        m_typeReg     = source.m_typeReg;
+        m_constFormal = source.m_constFormal;
+    }
+
+    @Override
+    protected DynamicFormalConstant adoptedBy(ConstantPool pool) {
+        if (m_reg != null && m_reg.isUnknown()) {
+            throw new IllegalStateException("Cannot copy an unassigned dynamic formal register");
+        }
+        return new DynamicFormalConstant(pool, this);
+    }
+
+    private int registerId() {
+        return m_reg == null ? m_nRegId : m_reg.getId();
+    }
+
     @Override
     protected void resolveConstants() {
         super.resolveConstants();
@@ -254,15 +275,15 @@ public class DynamicFormalConstant
             return n;
         }
 
-        if (this.m_reg == null) {
-            return that.m_reg == null
-                ? (this.f_nReg - that.f_nReg) | (this.m_nRegId - that.m_nRegId)
-                : -1;
+        if (this.m_reg != null && that.m_reg != null) {
+            // During compilation, two unassigned registers can have the same provisional index.
+            return this.m_reg == that.m_reg ? 0 : -1;
         }
 
-        return that.m_reg == null
-            ? 1
-            : this.m_reg == that.m_reg ? 0 : -1;
+        // A completed definition can be compared with its detached/serialized counterpart.
+        // Both the assigned index and the method-local register id form the stable binding.
+        n = Integer.compare(getRegisterIndex(), that.getRegisterIndex());
+        return n == 0 ? Integer.compare(registerId(), that.registerId()) : n;
     }
 
     // ----- Object methods ------------------------------------------------------------------------

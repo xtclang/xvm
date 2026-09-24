@@ -44,8 +44,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
 
-import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.BinaryAST.ConstantResolver;
+import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Nop;
@@ -65,6 +65,9 @@ import org.xvm.runtime.Utils;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
@@ -810,7 +813,7 @@ public class MethodStructure
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            TypeInfo info = typeResult.ensureTypeInfo(silent(PROBE));
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -826,7 +829,7 @@ public class MethodStructure
                     // the new parameter type is wider or the old return type is narrower; use it instead
                 } else {
                     // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
+                    typeResult = Op.selectCommonType(typePrev, typeResult, silent(PROBE));
                     if (typeResult == null) {
                         // different arguments cause the formal type to resolve into
                         // incompatible types
@@ -1092,6 +1095,15 @@ public class MethodStructure
 
     public void forceAssembly(ConstantPool pool) {
         verifyMutable();
+        assembleCode(pool);
+    }
+
+    /**
+     * Materialize code and binary AST bytes using the method's selected pool. This also supports
+     * copying a read-only definition: lazy assembly changes its representation, not its definition.
+     * A copy snapshots in the source pool before its constants are registered in the destination.
+     */
+    private void assembleCode(ConstantPool pool) {
 
         // if we need to reassemble, we're going to throw away the bytes, so make sure that we have
         // the deserialized form of those bytes ensured so that we can recreate the "new" version of
@@ -1120,7 +1132,9 @@ public class MethodStructure
                 code.registerConstants(registry);
             }
             if (ast != null) {
-                registry.init(m_aAstParams);
+                if (m_aAstParams != null) {
+                    registry.init(m_aAstParams);
+                }
                 ast.prepareWrite(registry);
             }
 
@@ -1779,8 +1793,7 @@ public class MethodStructure
                 // REVIEW need a better error?
                 AstNode node = collector.getNode();
                 if (node == null) {
-                    collector.getErrorListener().log(Severity.ERROR,
-                        Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, null, this);
+                    collector.getErrorListener().error(Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, at(this));
                 } else {
                     node.log(collector.getErrorListener(), Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);
@@ -1794,6 +1807,13 @@ public class MethodStructure
 
     @Override
     protected MethodStructure cloneBody() {
+        // Ops, binary AST nodes and parameter registers are mutable during registration/execution.
+        // Snapshot completed code in its source pool, then let the copy decode independent objects
+        // after destination registration. Copying code still being built is not supported.
+        if (needsReassembly()) {
+            assembleCode(getConstantPool());
+        }
+
         MethodStructure that = (MethodStructure) super.cloneBody();
 
         if (this.m_aAnnotations != null) {
@@ -1822,15 +1842,11 @@ public class MethodStructure
             that.m_aParams = aParams;
         }
 
-        if (this.m_abOps == null && this.m_code != null) {
-            // m_code is a mutable object, and tied back to the MethodStructure, so explicitly clone it
-            that.m_code = this.m_code.cloneOnto(that);
-        } else {
-            that.m_code = null;
-        }
-
-        // REVIEW is it necessary to explicitly clone the AST? we treat it as immutable data, but it
-        //        will hold references to Constants from the pool -- does that matter?
+        that.m_code        = null;
+        that.m_fInitialized = false;
+        that.m_ast        = null;
+        that.m_aAstParams = null;
+        that.m_registry   = null;
 
         if (this.m_aconstLocal != null) {
             that.m_aconstLocal = this.m_aconstLocal.clone();
@@ -1838,10 +1854,6 @@ public class MethodStructure
         if (this.m_aconstSuper != null) {
             that.m_aconstSuper = this.m_aconstSuper.clone();
         }
-        if (this.m_aAstParams != null) {
-            that.m_aAstParams = this.m_aAstParams.clone();
-        }
-
         // force the reloading of the m_structFinally
         that.m_structFinally = null;
 
@@ -2087,7 +2099,9 @@ public class MethodStructure
             }
 
             if (m_ast != null) {
-                registry.init(m_aAstParams);
+                if (m_aAstParams != null) {
+                    registry.init(m_aAstParams);
+                }
                 m_ast.prepareWrite(registry);
             }
 
@@ -2485,33 +2499,6 @@ public class MethodStructure
             default:
                 return false;
             }
-        }
-
-        /**
-         * Create a clone of this code that will exist on the specified method structure.
-         *
-         * @param method  the method structure to graft a clone onto
-         *
-         * @return the new Code clone
-         */
-        Code cloneOnto(MethodStructure method) {
-            Code that = new Code(method, this);
-
-            if (this.m_listOps != null) {
-                // this isn't 100% correct, since a few ops are mutable in theory, but unless the
-                // clone is made in the middle of code being added (which is not a supported time
-                // at which to be calling clone), then this should be fine; (otherwise we'd have to
-                // individually clone every single op)
-                that.m_listOps = new ArrayList<>(this.m_listOps);
-            }
-
-            that.m_mapIndex        = null;
-            that.m_fTrailingPrefix = this.m_fTrailingPrefix;
-            that.m_aop             = this.m_aop == null ? null : this.m_aop.clone();
-            that.m_nPrevLine       = this.m_nPrevLine;
-            that.m_nCurLine        = this.m_nCurLine;
-
-            return that;
         }
 
         // ----- helpers for building Ops -----------------------------------------------------

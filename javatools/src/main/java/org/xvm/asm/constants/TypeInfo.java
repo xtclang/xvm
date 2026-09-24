@@ -1,8 +1,9 @@
 package org.xvm.asm.constants;
 
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
@@ -12,6 +13,7 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -26,6 +28,30 @@ import org.xvm.util.ListMap;
  * <p>An implementation may fully realize the information or provide a view of another TypeInfo.
  */
 public abstract class TypeInfo {
+    /**
+     * Retain diagnostic values with the metadata that produced them, never the request's listener.
+     * The immutable snapshot is installed before the TypeInfo is published in its type's cache.
+     * A reused view can contribute diagnostics without erasing those already recorded.
+     */
+    final synchronized void recordDiagnostics(List<ErrorInfo> errors) {
+        if (!errors.isEmpty()) {
+            var unique = new LinkedHashMap<String, ErrorInfo>();
+            diagnostics.forEach(error -> unique.put(error.genUID(), error));
+            errors.forEach(error -> unique.put(error.genUID(), error));
+            diagnostics = List.copyOf(unique.values());
+        }
+    }
+
+    /**
+     * Report a cached result's diagnostics to the current caller. Receiving ErrorLists deduplicate
+     * repeat queries, while a new request receives its own complete report.
+     */
+    final void replayDiagnostics(ErrorListener listener) {
+        diagnostics.forEach(listener::log);
+    }
+
+    private volatile List<ErrorInfo> diagnostics = List.of();
+
     /**
      * Create a new TypeInfo that represents a more limited (public or protected) access to the
      * members of this private type.

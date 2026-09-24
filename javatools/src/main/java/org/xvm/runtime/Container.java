@@ -43,16 +43,16 @@ import org.xvm.asm.constants.VersionConstant;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 
 import org.xvm.runtime.template.Child;
-import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
+import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xEnum;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xObject;
 import org.xvm.runtime.template.xService;
 
-import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
@@ -532,6 +532,13 @@ public abstract class Container
     }
 
     /**
+     * Resolve a template under the container that can own the type's definitions.
+     *
+     * <p>Delegate upward only when the type is shared with the parent pool. Otherwise this
+     * container must know the type, and registers it in its own pool for the local template cache.
+     * Keeping application-specific types in that local cache avoids retaining a child request's
+     * definitions in its longer-lived parent. The thread's ambient pool does not select this owner.
+     *
      * @return a ClassTemplate for the specified type
      */
     public ClassTemplate getTemplate(TypeConstant type) {
@@ -562,6 +569,11 @@ public abstract class Container
     }
 
     /**
+     * Resolve a class identity using the same parent-sharing rule as {@link #getTemplate(TypeConstant)}.
+     *
+     * <p>If the identity cannot be delegated to the parent, use this container's pool before
+     * retaining it in a local template. The source identity's pool does not select the cache owner.
+     *
      * @return a ClassTemplate for the specified class identity
      */
     public ClassTemplate getTemplate(IdentityConstant idClass) {

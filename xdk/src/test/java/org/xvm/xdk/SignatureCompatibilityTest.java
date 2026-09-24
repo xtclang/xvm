@@ -12,8 +12,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
@@ -21,6 +21,7 @@ import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.IntersectionTypeConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -111,6 +112,18 @@ class SignatureCompatibilityTest {
         assertOwnedResolution(fixture, intersection);
         assertSame(source, thisArray.getConstantPool());
         assertSame(source, union.getConstantPool());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void inferredCommonTypeUsesTheRequestedDestination(boolean bindAmbient) throws IOException {
+        var fixture = fixture();
+        try (var scope = ConstantPool.withPool(bindAmbient ? fixture.ambient() : null)) {
+            var result = TypeCollector.inferFrom(new TypeConstant[] {library.array()}, fixture.destination());
+            assertNotNull(result);
+            assertSame(fixture.destination(), result.getConstantPool());
+            assertSame(library.pool(), library.array().getConstantPool());
+        }
     }
 
     private static void assertOwnedResolution(Fixture fixture, TypeConstant expected) {

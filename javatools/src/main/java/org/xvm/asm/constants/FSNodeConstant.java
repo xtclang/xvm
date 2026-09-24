@@ -305,6 +305,14 @@ public class FSNodeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    protected FSNodeConstant adoptedBy(ConstantPool pool) {
+        var copy = (FSNodeConstant) super.adoptedBy(pool);
+        // The destination runtime constructs its own handle from the copied definition.
+        copy.m_handle = null;
+        return copy;
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constName     = pool.register(m_constName);
         m_constCreated  = pool.register(m_constCreated);

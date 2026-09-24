@@ -2,25 +2,29 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConstantPoolScopeTest {
     @Test
-    void closingAnEmptyHostScopeReleasesTheTypedHolder() throws Exception {
+    void unboundReadsAndClosedScopesRetainNoPoolOrTypedHolder() throws Exception {
         var field = ConstantPool.class.getDeclaredField("s_tloPool");
         field.setAccessible(true);
         var local = (ThreadLocal<?>) field.get(null);
         local.remove();
         try {
-            Object previous = local.get();
-            try (var scope = ConstantPool.withPool(new FileStructure("test").getConstantPool())) {
-                assertSame(previous, local.get());
-            }
-            // Inspect the holder directly: relying on GC or class unloading would make this flaky.
-            assertNotSame(previous, local.get(), "An empty typed array must not retain the XDK loader");
             assertNull(ConstantPool.getCurrentPool());
+            assertNull(local.get());
+            var pool = new FileStructure("test").getConstantPool();
+            try (var scope = ConstantPool.withPool(pool)) {
+                assertSame(pool, local.get());
+            }
+            // Inspect the value directly; no GC or class-unloading timing is involved.
+            assertNull(local.get());
+            assertNull(ConstantPool.getCurrentPool());
+            ConstantPool.setCurrentPool(pool);
+            ConstantPool.setCurrentPool(null);
+            assertNull(local.get());
         } finally {
             local.remove();
         }

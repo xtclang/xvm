@@ -4,20 +4,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.SimpleCollector;
+import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
@@ -25,7 +26,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
-import org.xvm.asm.Assignment;
 
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
@@ -45,6 +45,10 @@ import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Compiler context for compiling a method body.
@@ -960,7 +964,7 @@ public class Context {
                 }
             }
         } else {
-            if (tokName != null && errs != null) {
+            if (tokName != null) {
                 if (isReservedName(sName)) {
                     MethodStructure  method = getMethod();
                     IdentityConstant idCtx  = method == null
@@ -1047,9 +1051,7 @@ public class Context {
     public boolean requireThis(long lPos, ErrorListener errs) {
         Context ctxOuter = getOuterContext();
         if (ctxOuter == null) {
-            if (errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, new Object[0], getSource(), lPos, lPos);
-            }
+            errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             return false;
         }
         return ctxOuter.requireThis(lPos, errs);
@@ -1073,7 +1075,7 @@ public class Context {
 
         if (isVarWritable(sName)) {
             setVarAssignment(sName, getVarAssignment(sName).applyAssignment());
-        } else if (tokName != null && errs != null) {
+        } else if (tokName != null) {
             tokName.log(errs, getSource(), Severity.ERROR, Compiler.VAR_ASSIGNMENT_ILLEGAL, sName);
         } else {
             throw new IllegalStateException("illegal var write: name=" + sName);
@@ -1143,7 +1145,7 @@ public class Context {
      * @return the Argument representing the meaning of the name, or null
      */
     public final Argument resolveName(String sName) {
-        return resolveName(sName, null, ErrorListener.BLACKHOLE);
+        return resolveName(sName, null, silent(PROBE));
     }
 
     /**
@@ -2532,7 +2534,7 @@ public class Context {
                 case Property:
                 case TypeParameter: {
                     String   sName = constFormal.getName();
-                    Argument arg   = resolveName(sName, null, ErrorListener.BLACKHOLE);
+                    Argument arg   = resolveName(sName, null, silent(PROBE));
                     if (arg != null) {
                         ensureFormalMap().putIfAbsent(sName, arg);
                     }

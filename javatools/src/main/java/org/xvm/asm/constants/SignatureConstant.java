@@ -244,10 +244,16 @@ public class SignatureConstant
     /**
      * Create an equivalent signature with generic types resolved based on the specified resolver.
      *
-     * @param pool      the ConstantPool to place a potentially created new constant into
+     * <p>Use the pool of the compilation or target metadata that needs the resolved signature.
+     * For a library signature specialized with an application type, that destination can differ
+     * from this signature's owner: application-specific constants should not accumulate in the
+     * library pool. If resolution changes nothing, the original signature is returned and keeps
+     * its owner; resolution is not an unconditional registration into the destination.
+     *
+     * @param pool      the destination for a changed signature and newly resolved types
      * @param resolver  the resolver
      *
-     * @return a resolved signature
+     * @return a resolved signature, or this signature if nothing changed
      */
     public SignatureConstant resolveGenericTypes(ConstantPool pool, GenericTypeResolver resolver) {
         if (resolver == null) {
@@ -401,6 +407,13 @@ public class SignatureConstant
      * <p>Use the compiler or target metadata pool as the destination for type resolution, even
      * when the signatures belong to another pool. No ambient binding is required for this
      * selection; an existing binding does not replace the explicit destination.
+     * The destination must support the types being resolved. For example, a compilation checking
+     * a library method against an application method supplies its application pool, so the
+     * specialization is not retained in the library's pool.
+     *
+     * <p>This parameter governs constants constructed during compatibility resolution. Existing
+     * operand types keep their owners; their assignability checks and derived caches follow
+     * {@link TypeConstant#calculateRelation} rather than moving all metadata to this pool.
      *
      * @param pool     the destination pool for type resolution
      * @param that     the signature of the matching method

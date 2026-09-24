@@ -27,8 +27,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ConstantExprAST;
@@ -43,13 +43,13 @@ import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.Label;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token;
@@ -59,6 +59,10 @@ import org.xvm.compiler.ast.NameExpression.Meaning;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -610,7 +614,13 @@ public abstract class AstNode
     }
 
     /**
-     * @return the constant pool
+     * Obtain the destination pool from the enclosing compilation structure.
+     *
+     * <p>Use this pool for constants synthesized while checking expressions and library method
+     * signatures in this AST. An imported signature's owner describes its source library, not
+     * the compilation being built. This lookup follows the AST, not the ambient thread binding.
+     *
+     * @return the enclosing structure's pool, or null if no enclosing structure supplies one
      */
     protected ConstantPool pool() {
         AstNode nodeParent = getParent();
@@ -642,16 +652,12 @@ public abstract class AstNode
      * @param sCode       the error code that identifies the error message
      * @param aoParam     the parameters for the error message; may be null
      *
-     * @return true to attempt to abort the process that reported the error, or
-     *         false to attempt to continue the process
      */
-    public boolean log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
+    public void log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
-        return errs == null
-                ? severity.ordinal() >= Severity.ERROR.ordinal()
-                : errs.log(severity, sCode, aoParam, source,
-                source == null ? 0L : getStartPosition(),
-                source == null ? 0L : getEndPosition());
+        errs.log(severity, sCode, source == null
+                ? NOWHERE
+                : in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- compile phases ------------------------------------------------------------------------
@@ -1220,7 +1226,7 @@ public abstract class AstNode
                                 lit.getLiteral().getValueText());
                     } else {
                         if (exprArg instanceof NameExpression exprName) {
-                            typeExpr = exprName.getImplicitType(ctx, typeParam, ErrorListener.BLACKHOLE);
+                            typeExpr = exprName.getImplicitType(ctx, typeParam, silent(PROBE));
                         }
 
                         log(errsTemp, Severity.ERROR, Compiler.INCOMPATIBLE_PARAMETER_TYPE,
@@ -1328,7 +1334,7 @@ public abstract class AstNode
     protected TypeConstant transformType(Context ctx, NameExpression exprName) {
         ConstantPool pool = pool();
         TypeConstant type = pool.typeType();
-        Argument     arg  = exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+        Argument     arg  = exprName.resolveRawArgument(ctx, false, silent(PROBE));
         if (arg instanceof Register reg) {
             PropertyConstant idProp   = type.ensureTypeInfo().findProperty("DataType").getIdentity();
             FormalConstant   idFormal = pool.ensureDynamicFormal(

@@ -12,8 +12,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.Fiber;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -192,6 +192,17 @@ public class SingletonConstant
     }
 
     // ----- Constant methods ----------------------------------------------------------------------
+
+    @Override
+    protected SingletonConstant adoptedBy(ConstantPool pool) {
+        var copy = (SingletonConstant) super.adoptedBy(pool);
+        // A definition copied into another pool does not own the source execution's singleton
+        // or its initialization attempt. Parent/core sharing is selected by ConstHeap instead.
+        copy.m_handle            = null;
+        copy.m_fiberInitializing = null;
+        copy.m_cfInitialized     = null;
+        return copy;
+    }
 
     @Override
     public Format getFormat() {

@@ -159,6 +159,14 @@ public class FileStoreConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    protected FileStoreConstant adoptedBy(ConstantPool pool) {
+        var copy = (FileStoreConstant) super.adoptedBy(pool);
+        // The destination runtime constructs its own handle from the copied definition.
+        copy.m_handle = null;
+        return copy;
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constPath = pool.register(m_constPath);
         m_constDir  = pool.register(m_constDir);

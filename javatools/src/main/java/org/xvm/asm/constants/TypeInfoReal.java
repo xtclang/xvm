@@ -7,18 +7,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
@@ -36,6 +36,9 @@ import org.xvm.compiler.Constants;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * The fully realized "flattened" information about a type.
@@ -803,7 +806,7 @@ public class TypeInfoReal
                 return false;
             }
             TypeConstant typeParent = f_type.getParentType();
-            if (!typeParent.ensureTypeInfo(errs).isNewable(false, ErrorListener.BLACKHOLE)) {
+            if (!typeParent.ensureTypeInfo(errs).isNewable(false, silent(PROBE))) {
                 // the parent is abstract, so the virtual child "new-ability" will be checked
                 // by concrete parent's subclasses
                 return true;
@@ -2077,6 +2080,15 @@ public class TypeInfoReal
         return f_mapChildren;
     }
 
+    /**
+     * Obtain the pool of the type described by this metadata.
+     *
+     * <p>Inherited methods can come from other pools. Resolve their signatures for this target
+     * in its pool so target-specific specializations do not accumulate in an ancestor's pool.
+     * This choice is independent of the caller's thread binding.
+     *
+     * @return the target type's owning pool
+     */
     private ConstantPool pool() {
         return f_type.getConstantPool();
     }

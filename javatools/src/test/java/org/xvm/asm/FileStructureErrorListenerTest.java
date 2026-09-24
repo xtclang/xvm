@@ -2,42 +2,59 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
+import org.xvm.util.Severity;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link FileStructure#getErrorListener()} must not depend on an ambient "current pool" being bound
- * to the calling thread.
- *
- * <p>It consulted {@code ConstantPool.getCurrentPool()} - a thread-local - and dereferenced the
- * result unconditionally. That thread-local is simply {@code null} on any thread that has not had a
- * pool pushed onto it, which is every thread that drives the compiler or runtime from ordinary Java
- * code (an embedding host, a build tool, a test). The accessor is a DIAGNOSTIC accessor, so the
- * failure mode was a {@code NullPointerException} thrown from the very code meant to report
- * problems.</p>
+ * Diagnostic sinks belong to individual operations, never files or ambient pools.
  */
-public class FileStructureErrorListenerTest {
+class FileStructureErrorListenerTest {
     @Test
-    public void getErrorListenerWorksWithNoAmbientPoolBound() {
-        // a plain FileStructure with no explicit ErrorListener set; this test thread has never had a
-        // pool bound, so getCurrentPool() returns null
-        var file = new FileStructure("test");
-
-        ErrorListener errs = file.getErrorListener();
-
-        assertNotNull(errs, "a diagnostic accessor must never return null");
-        assertSame(ErrorListener.RUNTIME, errs,
-                "with no explicit listener and no ambient pool, the runtime listener is the answer");
+    void diagnosticsUseOnlyTheExplicitRequestListener() {
+        var source = new FileStructure("Source");
+        var ambient = new FileStructure("Ambient").getConstantPool();
+        var first = new ErrorList(10);
+        var second = new ErrorList(10);
+        try (var scope = ConstantPool.withPool(ambient)) {
+            source.log(first, Severity.WARNING, "FIRST");
+            var copy = new FileStructure(source);
+            copy.log(second, Severity.WARNING, "SECOND");
+            assertEquals(1, first.getErrors().size());
+            assertTrue(first.hasError("FIRST"));
+            assertEquals(1, second.getErrors().size());
+            assertTrue(second.hasError("SECOND"));
+            assertThrows(NullPointerException.class,
+                    () -> source.log(null, Severity.WARNING, "NO_LISTENER"));
+        }
     }
 
     @Test
-    public void getErrorListenerPrefersAnExplicitlySetListener() {
-        var file = new FileStructure("test");
-        var mine = new ErrorList(10);
+    void recordingPreservesBranchRollbackAndAbortState() {
+        var request = new ErrorList(1);
+        var recorded = new ErrorList(0);
+        var listener = ErrorListener.tee(request, recorded);
+        var file = new FileStructure("Source");
+        var abandoned = listener.branch(null);
+        abandoned.log(Severity.ERROR, "ABANDONED", null, file);
+        assertFalse(request.hasErrors());
+        assertFalse(recorded.hasErrors());
+        var committed = listener.branch(null);
+        committed.log(Severity.ERROR, "COMMITTED", null, file);
+        committed.merge();
+        assertTrue(listener.isAbortDesired());
+        assertTrue(listener.hasSeriousErrors());
+        assertTrue(listener.hasError("COMMITTED"));
+        assertEquals(request.getErrors(), recorded.getErrors());
+        assertEquals(1, recorded.getErrors().size());
 
-        file.setErrorListener(mine);
-
-        assertSame(mine, file.getErrorListener(),
-                "an explicitly supplied listener must win over any fallback");
+        // A cleared request must accept the same cached diagnostic again.
+        request.clear();
+        assertFalse(request.isAbortDesired());
+        recorded.logTo(request);
+        assertEquals(recorded.getErrors(), request.getErrors());
     }
 }
