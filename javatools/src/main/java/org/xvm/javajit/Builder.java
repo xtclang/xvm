@@ -1984,10 +1984,15 @@ public abstract class Builder {
      * Out: that same single value in the register form the rest of the generated code expects.
      * The stack depth never changes.
      *
-     * <p>{@code Float8e4} and {@code Float8e5} are the only types this method normalizes: they
-     * are stored in a {@code byte} field, but their register form is the raw 8-bit encoding held
-     * as an unsigned {@code int}, so the sign extension performed by the field load has to be
-     * masked off again. Every other type is taken as is and nothing at all is emitted for it.
+     * <p>The types that need normalizing are the ones whose register form is unsigned but whose
+     * field carrier is a signed {@code byte} or {@code short}: {@code Byte}/{@code UInt8} and
+     * {@code Float8e4}/{@code Float8e5} in a {@code byte}, {@code UInt16} in a {@code short}. For
+     * those the field load sign-extends, so the high bits have to be masked off again to get back
+     * the unsigned register form, exactly as {@link #adjustIntValue} does after arithmetic.
+     *
+     * <p>Everything else is taken as is: the signed types want the sign extension, {@code Nibble}
+     * holds 0 to 15 and so is always positive in its {@code byte}, {@code Bit} and {@code Boolean}
+     * load as 0 or 1, and the remaining carriers are not narrowed at all.
      *
      * @param code  the code builder
      * @param type  the type of the field that was just loaded; a nullable form is accepted
@@ -1996,7 +2001,8 @@ public abstract class Builder {
         TypeConstant baseType = type.removeNullable();
         if (baseType.isJavaPrimitive()) {
             switch (baseType.getSingleUnderlyingClass(false).getName()) {
-                case "Float8e4", "Float8e5" -> code.ldc(0xFF).iand();
+                case "Byte", "UInt8", "Float8e4", "Float8e5" -> code.ldc(0xFF).iand();
+                case "UInt16"                                -> code.ldc(0xFFFF).iand();
             }
         }
     }
