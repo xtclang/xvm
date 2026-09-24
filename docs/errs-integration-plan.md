@@ -495,7 +495,7 @@ and automatic discovery remain explicit follow-ups rather than claims of this AP
 
 #### Ref/Var annotation accessor follow-up
 
-The next remaining semantic case after `570a7e870` is implemented in the current working tree:
+The next remaining semantic case after `570a7e870` is implemented in `abbc89f88`:
 
 - [x] Resolve written Ref/Var annotation getter/setter targets from the host's existing nested
   method chains. Preserve annotation order, explicit accessor precedence and generic substitution.
@@ -518,8 +518,8 @@ outside this slice.
 `XdkSemanticLookupTest` and `XdkDependencyTest`, the annotated-output/purity fixture in
 `CompilerBoundaryRequirementsTest`, and playbook X72 with its capability documentation.
 It depends on L18/L13; the concrete-delegation regression also needs L19, and editor acceptance
-uses L16's runner. This is the 43rd extraction group. Commit assignment is pending the next
-checkpoint; development remains on `lagergren/errs`.
+uses L16's runner. This is the 43rd extraction group, assigned to the annotation-lookup portion of
+`abbc89f88`; development remains on `lagergren/errs`.
 
 Focused verification: **46 cases**, zero failures/errors/skips (27 lookup, 11 dependency and
 eight boundary tests). Integrated verification also passes:
@@ -541,7 +541,7 @@ and a production persistent index remain later work.
 
 #### Incomplete function and constructor signature help
 
-Implemented on `lagergren/errs`, in the current working tree after `4ceb56477`:
+Implemented on `lagergren/errs` in `abbc89f88`, after `4ceb56477`:
 
 - [x] Function-valued callees expose full parameter/return types while positional arguments are
   missing. Written arguments use normal compiler validation; candidates retain active slots and
@@ -580,7 +580,7 @@ named arguments or runtime targets. Virtual/inner/array/annotated construction, 
 class-type inference and wider missing-delimiter recovery remain outside the proof. Expected
 argument types are copied but do not yet drive argument-value completion.
 
-**Future extraction boundaries (commit assignment pending):**
+**Future extraction boundaries (source commit `abbc89f88`):**
 
 | Group | Files / responsibility | Prerequisites |
 |---|---|---|
@@ -589,7 +589,7 @@ argument types are copied but do not yet drive argument-value completion.
 | I6 | Preserve argument failure in `InvocationExpression.testFunction`; positive/negative function-call regression in `CompilerCallSiteTest` | Independent production fix; I3/E1 embedding test harness; no-invalid-binding assertion also needs E5 |
 
 L22 remains a separate extraction group. These three units bring the planned total to **46**.
-No independent PR validation or new commit hashes are claimed for this working-tree checkpoint.
+These are portions of one integrated source commit; each extracted PR must still pass independently.
 
 **Verification:** the focused function/constructor/existing-incomplete/call-site run passes **32
 cases**, with zero failures/errors/skips. Java parser/API compatibility passes **29 cases**,
@@ -1605,10 +1605,10 @@ above identify old candidate patches, not additional changes to merge into the i
 | I4 | Correct bound-generic function types and binary AST emission | `570a7e870` (NameExpression fix and regressions) | Independent production fix; I3/E1 test harness |
 | I5 | Attribute annotation warnings to the contributed property | `570a7e870` (PropertyInfo diagnostic ownership) | Independent production fix; C4 replay tests |
 | L21 | Position source-structure diagnostics at declaration tokens | `570a7e870` (source diagnostic positioning) | L1/L5, I5 |
-| L22 | Copy written Ref/Var annotation accessor implementations | Current working tree; annotation follow-up above | L18/L13; concrete-delegation proof L19; editor runner L16 |
-| C11 | Capture incomplete function candidates and ordinary constructor syntax | Current working tree; incomplete-signature follow-up above | C7/C9; constructor and record-pattern migration proof |
-| L23 | Deliver function/constructor signature help while typing | Current working tree; incomplete-signature follow-up above | C11, L9, E5/L20, I6; editor runner L16 |
-| I6 | Preserve argument errors when fitting function-call returns | Current working tree; `InvocationExpression.testFunction` and call-site regression | Independent production fix; I3/E1 harness and E5 binding assertion |
+| L22 | Copy written Ref/Var annotation accessor implementations | `abbc89f88` (annotation lookup); follow-up above | L18/L13; concrete-delegation proof L19; editor runner L16 |
+| C11 | Capture incomplete function candidates and ordinary constructor syntax | `abbc89f88` (incomplete signatures); follow-up above | C7/C9; constructor and record-pattern migration proof |
+| L23 | Deliver function/constructor signature help while typing | `abbc89f88` (incomplete signatures); follow-up above | C11, L9, E5/L20, I6; editor runner L16 |
+| I6 | Preserve argument errors when fitting function-call returns | `abbc89f88` (`InvocationExpression.testFunction` and call-site regression) | Independent production fix; I3/E1 harness and E5 binding assertion |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
