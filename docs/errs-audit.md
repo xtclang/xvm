@@ -471,3 +471,59 @@ slots and defaults. Virtual/inner/array/annotated construction and omitted class
 remain outside the proof. No AST semantic fields or clone/reset machinery were added. The
 [integration record](errs-integration-plan.md#incomplete-function-and-constructor-signature-help)
 separates C11 compiler facts, L23 consumers and I6, and records full verification.
+
+## Atomic binary-AST and switch-conversion audit, 2026-09-24
+
+The remaining atomic and `ToIntExpression` metadata consumers now have source-level emission
+probes in `CompilerEmissionAuditTest`, including serialized output. The audit found compiler
+correctness defects, rather than evidence for broader TypeInfo diagnostic replay:
+
+- Atomic prefix/postfix `++` and `--` serialized an invocation with zero results, even for an
+  expression returning `Int`. All four forms reproduced the mismatch. The existing validator's
+  result types now describe the invocation in the binary AST.
+- Atomic lookup handled only `This` and `Left`; an unqualified module property reached the
+  unhandled singleton case and surfaced as `EMB-5`. Lookup now includes singleton and outer-instance
+  owners. Both AST producers use the same resolved Ref/Var type as lookup, including a concrete
+  generic referent, rather than resolving the property without its receiver.
+- After outer-instance operations could compile, their serialized property owner was still typed
+  `Int64` instead of the enclosing `Counter`. The existing assignment generator now uses the outer
+  register's type. All four sequential forms pin the owner and return types after serialization.
+
+These paths exist in local `origin/master` at `4a1eae6f7430bda4204f0b4ec8248f942d58d6ba`, including
+the empty return-type array, incomplete access-plan switch and incorrect outer AST type. This
+establishes source provenance; no new master checkout/execution is claimed. The tests live downstream
+of the compiler because Gradle must first supply compiled core modules.
+
+The listener controls compile generic source and serialized-dependency atomic uses with a duplicate
+annotation: both report `VERIFY-75` exactly once. Invalid atomic operations report ordinary compiler
+errors before emission. None of these fixes changes diagnostic suppression or adds a host callback.
+The compiler's existing exception path remains visible as `EMB-5`; the valid-source reproducer now
+compiles instead of relying on that fallback.
+
+`ToIntExpression` is used by the dense-switch JumpInt path after validation. Fifteen built-in type
+cases cover extraction (Bit/Nibble/Char), nonzero offsets and conversion from each signed/unsigned
+integer family. Tests assert the emitted operations and original binary-AST condition type after
+serialization, rather than accepting compilation success alone. An enum control confirms that
+normal enum switches avoid ordinal lowering, so its legacy ordinal accessor is not reached by
+this path. No lost source diagnostic or broken conversion metadata was reproduced; no listener
+migration is justified here. This is a bounded metadata/emission audit, not exhaustive numeric
+execution or proof about every silent TypeInfo consumer.
+
+The [I7 integration record](errs-integration-plan.md#atomic-binary-ast-and-switch-conversion-audit)
+tracks scope, AST ownership, validation and future PR placement. The following cursor-recovery
+checkpoint addresses the next implementation item.
+
+### Missing delimiters around an explicit cursor, 2026-09-24
+
+The parser previously discarded an intact cursor site when an enclosing grouping parenthesis or
+index bracket was absent. A retained site followed by a real inner closer could also lose its outer
+call. Recovery now follows existing syntax ownership, retains only the missing closing suffix at
+statement/outer-delimiter boundaries, and leaves actual closing tokens for their owning constructs.
+An explicit EOF cursor covers missing block ends under its existing `PARSER-30` diagnostic. The
+ordinary compilation still reports its usual errors; a cursor request never replaces that cache.
+
+This adds no error-listener interface, AST field or semantic collector. Speculation, cancellation
+and error budgets still stop recovery; unrelated malformed statements prevent semantic analysis.
+Missing operands, declaration headers and tuple/literal delimiters are not repaired. See the
+[C12/L24 record](errs-integration-plan.md#missing-delimiter-cursor-recovery) for regressions,
+editor coverage, ownership and future extraction boundaries.
