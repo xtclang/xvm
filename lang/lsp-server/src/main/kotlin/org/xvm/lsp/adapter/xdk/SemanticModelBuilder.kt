@@ -422,15 +422,7 @@ private class SemanticModelBuilder(
         node: InvocationExpression,
         binding: InvocationBinding.FunctionCall,
     ) {
-        val pool = binding.type().constantPool
-        val parameters = pool.extractFunctionParams(binding.type()) ?: return
-        val returns = pool.extractFunctionReturns(binding.type()) ?: return
-        val signature =
-            Signature(
-                immutableList(parameters.map { SemanticModel.Parameter(null, type(it) ?: return, false, false) }),
-                immutableList(returns.map { type(it) ?: return }),
-                false,
-            )
+        val signature = functionSignature(binding.type()) ?: return
         val at = location(node.source, node.startPosition, node.endPosition)
         val callee = node.invokedExpression
         functionCalls[at] =
@@ -444,6 +436,17 @@ private class SemanticModelBuilder(
                     },
                 ),
             )
+    }
+
+    private fun functionSignature(function: TypeConstant): Signature? {
+        val pool = function.constantPool
+        val parameters = pool.extractFunctionParams(function) ?: return null
+        val returns = pool.extractFunctionReturns(function) ?: return null
+        return Signature(
+            immutableList(parameters.map { SemanticModel.Parameter(null, type(it) ?: return null, false, false) }),
+            immutableList(returns.map { type(it) ?: return null }),
+            false,
+        )
     }
 
     private fun callable(
@@ -569,7 +572,13 @@ private class SemanticModelBuilder(
                                 val signature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
                                 val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
                                 PartialSemanticModel.CallCandidate(
-                                    PartialSemanticModel.Member(id, method.name, SymbolKind.METHOD, null, signature),
+                                    PartialSemanticModel.Member(
+                                        id,
+                                        if (method.isConstructor) "new ${method.containingClass.name}" else method.name,
+                                        SymbolKind.METHOD,
+                                        null,
+                                        signature,
+                                    ),
                                     immutableList(
                                         candidate.arguments().map {
                                             SemanticModel.CallArgument(
@@ -579,11 +588,28 @@ private class SemanticModelBuilder(
                                         },
                                     ),
                                     candidate.converting(),
+                                    method.isConstructor,
                                 )
                             },
                         )
                     },
                     site.pendingArgumentName.orElse(null)?.valueText,
+                    immutableList(
+                        cursor?.functions().orEmpty().mapNotNull { candidate ->
+                            val signature = functionSignature(candidate.type()) ?: return@mapNotNull null
+                            PartialSemanticModel.FunctionCandidate(
+                                signature,
+                                immutableList(
+                                    candidate.arguments().map {
+                                        SemanticModel.CallArgument(
+                                            location(site.source, it.startPosition(), it.endPosition()).range,
+                                            it.parameterIndex(),
+                                        )
+                                    },
+                                ),
+                            )
+                        },
+                    ),
                 )
             }
         return if (errors.isAbortDesired) {

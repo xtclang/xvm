@@ -60,4 +60,53 @@ export function advancedCases(): void {
         await workspace.replace(document, fixture('Advanced.x'));
         await noErrors(document.uri);
     });
+
+    playbook('X72', 'annotation accessors follow compiler composition and explicit overrides', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const [use, getter, getterOffset, setter, setterOffset] of [
+            ['meter.count', 'Referent get() = super()', 9, 'void set(Referent value)', 5],
+            ['meter.computed', 'Int get() = 3', 4, 'void set(Int value)', 5]
+        ] as const) {
+            const found = await targets(document, 'Implementation', position(document, use, 6));
+            assert.strictEqual(found.length, 2);
+            for (const at of [position(document, getter, getterOffset), position(document, setter, setterOffset)]) {
+                const range = new vscode.Range(at, at.translate(0, 3));
+                assert.ok(found.some(target => target.uri.toString() === document.uri.toString() && target.range.isEqual(range)), use);
+            }
+        }
+    });
+
+    playbook('X73', 'incomplete function values retain signatures and reject incompatible arguments', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const [call, active] of [['fn(', 0], ['fn(1, ', 1]] as const) {
+            await workspace.replace(document, fixture('Advanced.x').replace('fn(1, "x")', `${call})`));
+            const help = await workspace.signature(document, position(document, call, call.length, true));
+            assert.strictEqual(help?.signatures[0].label, 'Int fn(Int, String)');
+            assert.strictEqual(help?.signatures[0].activeParameter, active);
+        }
+        await workspace.replace(document, fixture('Advanced.x').replace('fn(1, "x")', 'fn(True, )'));
+        const rejected = await workspace.signature(document, position(document, 'fn(True, ', 9));
+        assert.ok(!rejected || rejected.signatures.length === 0);
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X74', 'incomplete generic constructors map positional and named arguments', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const [call, active] of [
+            ['new Packet<String>(', 0],
+            ['new Packet<String>("a", ', 1],
+            ['new Packet<String>(second="b", first=', 0]
+        ] as const) {
+            await workspace.replace(document, fixture('Advanced.x').replace('new Packet<String>("a", "b")', `${call})`));
+            const help = await workspace.signature(document, position(document, call, call.length));
+            assert.strictEqual(help?.signatures[0].label, 'new Packet(String first, String second)');
+            assert.strictEqual(help?.signatures[0].activeParameter, active);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
 }

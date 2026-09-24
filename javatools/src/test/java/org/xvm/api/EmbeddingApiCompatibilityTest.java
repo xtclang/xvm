@@ -11,6 +11,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 
 import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
@@ -55,6 +56,18 @@ public class EmbeddingApiCompatibilityTest {
         assertEquals(0, switch (named) {
             case EmbeddingSupport.Compilation(var module, var structure, var ast,
                     var trees, var bindings, var functions) -> trees.size() + bindings.size() + functions.size();
+        });
+    }
+
+    @Test
+    public void cursorConstructorsRemainAvailableWhileRecordPatternsIncludeFunctions() {
+        var type = new FileStructure("Compatibility").getModule().getIdentityConstant().getType();
+        var original = new CursorBinding(List.of(), type, true);
+        var candidates = new CursorBinding(List.of(), type, true, List.of(), List.of(), false);
+        assertEquals(original, candidates);
+        assertEquals(0, switch (candidates) {
+            case CursorBinding(var variables, var thisType, var instance, var types,
+                    var methods, var inspected, var functions) -> functions.size();
         });
     }
 

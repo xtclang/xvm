@@ -18,11 +18,19 @@ import org.xvm.compiler.ast.IncompleteStatement;
 
 /** Facts captured at an explicit cursor while its real validation context is alive. */
 public record CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
-                            List<NamedType> types, List<Candidate> candidates, boolean callsInspected) {
+                            List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                            List<FunctionCandidate> functions) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
         candidates = List.copyOf(candidates);
+        functions = List.copyOf(functions);
+    }
+
+    /** Retain callers that only consume method candidates. Record patterns must include functions. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected) {
+        this(variables, thisType, instance, types, candidates, callsInspected, List.of());
     }
 
     public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance) {
@@ -30,11 +38,15 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     public CursorBinding withCandidates(List<Candidate> candidates) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true);
+        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions);
+    }
+
+    public CursorBinding withFunctions(List<FunctionCandidate> functions) {
+        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions);
     }
 
     public CursorBinding withTypes(List<NamedType> types) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected);
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions);
     }
 
     public record NamedType(String name, IdentityConstant identity) {}
@@ -43,6 +55,13 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     public record Candidate(MethodConstant method, SignatureConstant signature,
                             List<InvocationBinding.Argument> arguments, boolean converting) {
         public Candidate {
+            arguments = List.copyOf(arguments);
+        }
+    }
+
+    /** A function type whose written arguments fit; there is no selected method or parameter names. */
+    public record FunctionCandidate(TypeConstant type, List<InvocationBinding.Argument> arguments) {
+        public FunctionCandidate {
             arguments = List.copyOf(arguments);
         }
     }
