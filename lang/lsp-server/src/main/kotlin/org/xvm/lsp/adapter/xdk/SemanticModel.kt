@@ -270,7 +270,7 @@ class SemanticModel internal constructor(
         return locations(resultTypes.flatMap { facts.typeDefinitions[it].orEmpty() })
     }
 
-    /** Successful worker inspection supplies declaration-level type and method implementation edges. */
+    /** Worker inspection copies type/member implementations, including property fields and accessors. */
     fun implementationLocationsAt(
         line: Int,
         column: Int,

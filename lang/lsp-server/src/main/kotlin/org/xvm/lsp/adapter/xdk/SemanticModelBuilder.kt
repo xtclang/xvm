@@ -192,6 +192,11 @@ private class SemanticModelBuilder(
         collect(nodes, compilation.callBindings(), compilation.pool())
         val implementations =
             if (compilation.succeeded() && errors != null) compilerImplementationTargets(nodes, errors) else emptyMap()
+        // An inherited accessor need not appear in a written call or the consumer's constant table.
+        // Inspect its linked compiler identity, never the unlinked artifact used as the index key.
+        implementations.values.flatten().filter { it in dependencies }.forEach { implementation ->
+            symbol(implementation, implementation.name, kind(implementation))
+        }
         return finish(nodes, compilation.succeeded(), implementations)
     }
 
