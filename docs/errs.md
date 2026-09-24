@@ -1525,6 +1525,12 @@ mutable captures; cloned-node isolation; immutable snapshot queries without an a
 packaged-server queries after edits and close/reopen. Each extracted compiler slice must run its
 own applicable tests before the consumer slice is introduced.
 
+The [local extraction record](errs-integration-plan.md#second-local-extraction-batch-2026-09-24)
+now includes I3's required compiler consumer and C1's listener contract, independently validated
+against the original base. C1 changes the `AstNode.log` return type but preserves its existing
+null-listener policy; explicit propagation and scoped ownership remain in C2/C3. The AST inventory
+above describes the integrated final state, not changes to import wholesale into the first slice.
+
 ### What this is not
 
 Not a plan for the runtime-side listener, and not a plan for the `Container` work. Those are in
