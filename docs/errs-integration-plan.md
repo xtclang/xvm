@@ -12,7 +12,8 @@ the two Markdown files above.
 
 ## Recommendation
 
-**Current execution order:** harden the existing branch before extracting PRs. The initial scope
+**Current execution order:** the bounded hardening and editor acceptance passes are complete;
+extract and validate the local PR slices in the batches recorded below. The initial scope
 was reliable compiler diagnostics and existing LSP features. The subsequently approved
 [eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) now adds permanent final-TypeInfo
 regressions, module sessions with overlays, cross-file navigation and direct type hierarchy.
@@ -91,12 +92,61 @@ Module membership and bytes matched exactly; source paths and other metadata wer
 Neither build emitted compiler warnings/errors. The local comparison receipt is
 `build/errs-integration/comparison/result.json`; the normalization helper and patch are alongside it.
 
-This closes the first extraction batch, not validation of the entire proposed stack. Next prepare
-I3's compiler-consumer test wiring and C1's listener contract, then validate their own base/prerequisite
-combinations. Keep the deliberate `boolean log` to `void log` compatibility break explicit. Remote
+This closes the first extraction batch, not validation of the entire proposed stack. The second
+batch below covers I3's compiler-consumer test wiring and C1's listener contract. Keep the deliberate
+`boolean log` to `void log` compatibility break explicit. Remote
 publication requires separate authorization and a refreshed base/conflict check. A multi-hour editor
 soak, dedicated IntelliJ source-graph settings, automatic discovery, broader syntax and workspace
 indexing/rename remain follow-ups to the bounded POC.
+
+### Second local extraction batch, 2026-09-24
+
+I3 and C1 are committed on separate local branches, each based directly on `4a1eae6f7`.
+Neither requires I1, I2 or R1 to compile and pass its own checks. Worktrees are under
+`build/errs-integration/{i3,c1}`; the integrated reference branch remains intact.
+
+| Slice | Local branch / commit | Size | Independent validation |
+|---|---|---|---|
+| I3 | `errs/i3-compiler-consumer-tests` / `8f3a57305` | 6 files, +175 / -2 | Real compiler consumer: one test, zero skips; configuration-cache storage and reuse; `spotlessCheck` and LSP `ktlintCheck` |
+| C1 | `errs/c1-listener-contract` / `d6463091c` | 18 files, +1,100 / -67 | Full javatools suite: 430 cases, 390 executed, 40 existing skips, no failures/errors; full XDK build; `spotlessCheck`; all 24 timestamp-normalized modules match the base |
+
+I3 resolves the existing compiled-module variants into a required test repository. It adds no
+archive extraction, installation dependency or binary copying. The fixture fails if required
+modules are absent and uses a writable `BuildRepository` ahead of the read-only artifact directories
+so `LinkedRepository` can cache loaded modules. Its consumer uses the original embedding API;
+production resource bundling and `XdkLibraries` still belong to L1. Root inclusion defaults remain
+unchanged. IDE lifecycle attachment is explicit, and IDE publication selection is unchanged.
+
+Compiler-related CI paths now select the consumer test even without a `lang` change. A result gate
+requires the expected suite with nonzero execution and no skips, failures or errors. Local negative
+controls reject missing XML, zero tests, skipped tests, failures and errors. Workflow validation
+adds no actionlint findings relative to the base; the existing ShellCheck findings remain. This
+is local workflow validation, not a remote CI run. Later slices must extend the required-suite list
+when they introduce further compiler consumers.
+
+C1 includes the reporting/state contract, source sites, severity helpers, named budgets and silence,
+branch/merge behavior and tee forwarding. Its 25 new listener/migration tests and the existing 24
+launcher error-handling tests all execute without skips. A migration regression checks that both
+legacy structure reports and new `Site.At` reports still acquire the branch's source location.
+The legacy structure overload delegates through the new site API for that purpose. Legacy positional
+reporting, `BLACKHOLE` and the existing null/ambient listener policy remain until C2/C4; parser scope
+ownership remains for C3. This avoids importing those later changes just to compile C1.
+
+The standalone C1 README documents the source/binary break, recompilation, collector versus lambda
+state, deduplication, budgets, serialized callbacks and the nonthrowing `RUNTIME` policy. An explicit
+breaking release/version still needs to be selected before publication. The output comparison
+applied only C1 production changes to the same base worktree used for the original baseline and
+serialized both sets with the unchanged base compiler. Only creation timestamps changed; the local
+receipt is `build/errs-integration/comparison/c1-result.json`. The base source was restored clean.
+
+The full C1 patch also applied cleanly over I3 and passed its forced compiler-consumer run:
+one test, zero skips/failures/errors. The receipt is
+`build/errs-integration/comparison/i3-c1-result.json`. I3 was then restored to its own clean commit;
+the combined check does not introduce a dependency between the two standalone branches.
+
+Next extract **C2**, explicit listener propagation and reasons for silence, on top of C1; then **C3**,
+scoped parser/resolver reporting and validation state. Validate each against its actual prerequisites,
+including the required I3 consumer. No remote branches or PRs have been published.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
