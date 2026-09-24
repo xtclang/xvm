@@ -156,9 +156,12 @@ Type hierarchy follows direct declared `extends` and `implements` edges and reta
 arguments. It requires successful compilation and source locations in the current module. Type-definition
 uses copied type identities, including flow narrowing, generic parameters and union targets.
 Implementation lookup follows nominal source types and actual method override chains, including
-generic, inherited and default bodies. A host-supplied dependency source index also permits
+generic, inherited and default bodies. Ordinary properties lead to their effective accessor bodies
+or written backing fields; getter/setter declarations have separate implementation sets. Composed
+mixin accessors are included, with no standalone inspection of the mixin's constraint.
+A host-supplied dependency source index also permits
 definition, type-definition and inherited implementation-body links into that dependency. It does
-not supply property/accessor implementations, synthetic delegation/redirect targets or a workspace-wide
+not supply Ref/Var annotation dispatch, synthetic delegation/redirect targets or a workspace-wide
 implementation search. Old hierarchy items cannot resolve into a new compilation. External type
 hierarchy remains unsupported. Exact references additionally compile all configured source modules,
 including unopened consumers and source uses of bundled binary members. No persistent index or
