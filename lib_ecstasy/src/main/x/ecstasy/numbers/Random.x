@@ -5,9 +5,7 @@ interface Random {
     /**
      * @return a random boolean value
      */
-    Boolean boolean() {
-        return bit().toBoolean();
-    }
+    Boolean boolean() = bit().toBoolean();
 
     /**
      * @return a random bit value
@@ -22,7 +20,7 @@ interface Random {
      *
      * @return the passed array
      */
-    Bit[] bits(Int size) = new Bit[size](_ -> bit()).freeze(inPlace=True);
+    immutable Bit[] bits(Int size) = new Bit[size](_ -> bit()).freeze(inPlace=True);
 
     /**
      * A second name for the [toUInt8] method, to assist with readability. By using a property
