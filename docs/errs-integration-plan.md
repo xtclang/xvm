@@ -463,8 +463,8 @@ AST state or clone rule changed.
 Future PR placement is **L17**, after L13/L14/L15 (and L16 for editor cases). Keep graph identity/
 dispatch collection, bodyless parameter copying, adapter/server lifecycle guards and their tests
 together. Playbook X59–X63 and the Problems-view additions follow the complete acceptance runner.
-The checkpoint is titled `Validate references and method rename across configured source modules`;
-its source commit belongs in the L17 table below. Extraction still requires independent validation.
+The checkpoint is `332003f0a` (`Validate references and method rename across configured source
+modules`), recorded in L17 below. Extraction still requires independent validation.
 
 The Problems-view acceptance also pins a remaining diagnostic-location limit: `VERIFY-75`
 arrives once with warning severity and its compiler code, but uses a file-level `(0,0)` range.
@@ -1374,7 +1374,7 @@ above identify old candidate patches, not additional changes to merge into the i
 | L14 | Rebuild configured source dependencies and refresh consumers automatically | `266b48784` | L5 and L13; Kotlin host scheduling only |
 | L15 | Validate local/private-parameter rename and publish versioned edits | `7b13e0980` | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
 | L16 | Configure source graphs from editor initialization and settings | `6372ba07d` | L14; rename acceptance cases additionally require L15 |
-| L17 | Query references and validate method override rename across the configured graph | Current working tree; hash pending | L13/L14/L15 and L4/L5; editor acceptance additionally requires L16 |
+| L17 | Query references and validate method override rename across the configured graph | `332003f0a` | L13/L14/L15 and L4/L5; editor acceptance additionally requires L16 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
