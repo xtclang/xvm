@@ -21,7 +21,7 @@ import org.xvm.asm.constants.TypeConstant;
  *
  * <p>The descriptor pool is a transitional adapter to existing constant factories. It has no XTC
  * indices and is not attached as a child of the image. Derived descriptors can grow without
- * extending the image's constant table. Metadata and handles have not yet been separated from
+ * extending the image's constant table. Metadata has not yet been separated from
  * {@link TypeConstant}; consequently this context must not be shared between containers.
  */
 public final class RuntimeTypeContext {
@@ -62,6 +62,24 @@ public final class RuntimeTypeContext {
     }
 
     /**
+     * Apply reflective type arguments, including the language's normalization of omitted arguments.
+     * Import all operands before invoking the existing type algebra, and retain the result here
+     * even when that algebra returns an unchanged operand.
+     *
+     * @param type        the type being parameterized
+     * @param parameters  the reflected type arguments from this image or context
+     * @return the normalized descriptor owned by this context
+     */
+    public TypeConstant adoptParameters(TypeConstant type, TypeConstant... parameters) {
+        TypeConstant base = intern(type);
+        TypeConstant[] arguments = new TypeConstant[parameters.length];
+        for (int i = 0; i < parameters.length; i++) {
+            arguments[i] = intern(parameters[i]);
+        }
+        return intern(base.adoptParameters(descriptors, arguments));
+    }
+
+    /**
      * Obtain the factory adapter for runtime code generation. Import operands through
      * {@link ConstantPool#register} before calling factories, which may return an operand directly.
      * Use a method's local constant registry for code references; image-index lookup and assembly
@@ -71,6 +89,17 @@ public final class RuntimeTypeContext {
      */
     public ConstantPool getDescriptorPool() {
         return descriptors;
+    }
+
+    /**
+     * An operand belongs to a definition generation or runtime context that this context cannot
+     * use. Reflection can translate this expected ownership rejection into an Ecstasy type error;
+     * failures in descriptor construction or handle initialization must not be translated with it.
+     */
+    public static final class IncompatibleTypeOwnerException extends IllegalArgumentException {
+        private IncompatibleTypeOwnerException(String message) {
+            super(message);
+        }
     }
 
     /**
@@ -123,19 +152,19 @@ public final class RuntimeTypeContext {
             }
             ConstantPool owner = constant.getConstantPool();
             if (owner != this && !definitions.contains(owner)) {
-                throw new IllegalArgumentException("Constant belongs to another image or context: "
+                throw new IncompatibleTypeOwnerException("Constant belongs to another image or context: "
                         + constant);
             }
             if (constant instanceof ModuleConstant id) {
                 var selected = getFileStructure().getModule(id);
                 if (selected == null) {
-                    throw new IllegalArgumentException("Module is outside this image graph: " + id);
+                    throw new IncompatibleTypeOwnerException("Module is outside this image graph: " + id);
                 }
                 if (selected.isFingerprint()) {
                     selected = selected.getFingerprintOrigin();
                 }
                 if (selected == null || selected != id.getComponent()) {
-                    throw new IllegalArgumentException("Module resolves to another image generation: " + id);
+                    throw new IncompatibleTypeOwnerException("Module resolves to another image generation: " + id);
                 }
             }
             constant.forEachUnderlying(child -> validate(child, visited));

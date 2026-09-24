@@ -26,6 +26,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
+import org.xvm.runtime.Container.TypeKey;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ObjectHandle.TransientId;
 
@@ -59,7 +60,7 @@ public class ClassComposition
         assert typeInception.isSingleDefiningConstant();
         assert typeInception.getAccess() == Access.PUBLIC;
 
-        ConstantPool pool = container.getConstantPool();
+        ConstantPool pool = typeInception.getConstantPool();
 
         f_clzInception    = this;
         f_container       = container;
@@ -114,8 +115,10 @@ public class ClassComposition
      */
     public CanonicalizedTypeComposition ensureCanonicalizedComposition(TypeConstant typeActual) {
         assert typeActual.isShared(getContainer().getConstantPool());
-        return (CanonicalizedTypeComposition) f_mapCompositions.computeIfAbsent(typeActual,
-                (type) -> new CanonicalizedTypeComposition(this, register(type)));
+        typeActual = register(typeActual);
+        var key = new TypeKey(typeActual.getConstantPool(), typeActual);
+        return canonicalCompositions.computeIfAbsent(key,
+                type -> new CanonicalizedTypeComposition(this, type.type()));
     }
 
     /**
@@ -131,6 +134,12 @@ public class ClassComposition
     @Override
     public Container getContainer() {
         return f_container;
+    }
+
+    @Override
+    public ConstantPool getConstantPool() {
+        ConstantPool pool = f_typeRevealed.getConstantPool();
+        return pool.hasSerializedIndices() ? getContainer().getConstantPool() : pool;
     }
 
     @Override
@@ -210,7 +219,7 @@ public class ClassComposition
             typeCurrent = typeCurrent.getUnderlyingType();
         }
 
-        ConstantPool pool = getContainer().getConstantPool();
+        ConstantPool pool = typeCurrent.getConstantPool();
         TypeConstant typeTarget;
         switch (access) {
         case PUBLIC:
@@ -522,6 +531,10 @@ public class ClassComposition
         ConstantPool poolThis  = container.getConstantPool();
         ConstantPool poolThat  = type.getConstantPool();
 
+        if (!poolThat.hasSerializedIndices()) {
+            return container.getTypeContext().getDescriptorPool().register(type);
+        }
+
         if (poolThat == poolThis) {
             return type;
         }
@@ -570,7 +583,7 @@ public class ClassComposition
             return;
         }
 
-        ConstantPool pool       = getContainer().getConstantPool();
+        ConstantPool pool       = typePublic.getConstantPool();
         TypeConstant typeStruct = pool.ensureAccessTypeConstant(typePublic, Access.STRUCT);
         TypeInfo     infoStruct = typeStruct.ensureTypeInfo();
 
@@ -925,6 +938,10 @@ public class ClassComposition
      * to the corresponding natural interface.
      * */
     private final Map<TypeConstant, TypeComposition> f_mapCompositions;
+
+    /** Canonical layouts may represent both image and runtime types without folding their owners. */
+    private final Map<TypeKey, CanonicalizedTypeComposition> canonicalCompositions =
+            new ConcurrentHashMap<>();
 
     /**
      * A cache of derivative ProxyCompositions keyed by the "proxy type".

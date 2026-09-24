@@ -2012,8 +2012,8 @@ public abstract class TypeConstant
                 }
             } else {
                 // discard any partial TypeInfos created as part of creating the Object TypeInfo
-                for (int i = 0, c = pool.size(); i < c; ++i) {
-                    if (pool.getConstant(i) instanceof TypeConstant type
+                for (Constant constant : pool.getConstants()) {
+                    if (constant instanceof TypeConstant type
                             && type.getTypeInfo() != null && !type.isRootObject()) {
                         type.clearTypeInfo();
                     }

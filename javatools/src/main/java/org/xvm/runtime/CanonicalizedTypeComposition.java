@@ -2,6 +2,7 @@ package org.xvm.runtime;
 
 import java.util.Set;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 
 import org.xvm.asm.constants.MethodConstant;
@@ -40,6 +41,12 @@ public class CanonicalizedTypeComposition
     @Override
     public TypeConstant getType() {
         return f_typeActual;
+    }
+
+    @Override
+    public ConstantPool getConstantPool() {
+        ConstantPool pool = f_typeActual.getConstantPool();
+        return pool.hasSerializedIndices() ? getContainer().getConstantPool() : pool;
     }
 
     @Override

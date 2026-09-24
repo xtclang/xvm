@@ -23,7 +23,10 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
+import org.xvm.asm.constants.TerminalTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.runtime.RuntimeTypeContext.IncompatibleTypeOwnerException;
 
 import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Return_0;
@@ -128,6 +131,31 @@ class RuntimeTypeContextTest {
         assertThrows(IllegalArgumentException.class, () -> second.intern(first.intern(type)));
         var captured = new HandleConstant(file.getConstantPool(), new ObjectHandle(null) {});
         assertThrows(IllegalArgumentException.class, () -> first.getDescriptorPool().register(captured));
+    }
+
+    @Test
+    void reflectiveNormalizationDistinguishesOwnershipRejectionFromImplementationFailure() {
+        var file = new Image();
+        var value = file.type("Value");
+        var context = new RuntimeTypeContext(file.getConstantPool());
+        var other = new Image();
+        assertThrows(IncompatibleTypeOwnerException.class,
+                () -> context.adoptParameters(other.type("Value")));
+        assertThrows(IncompatibleTypeOwnerException.class,
+                () -> context.adoptParameters(value, other.type("Argument")));
+        assertSame(context.intern(value), context.adoptParameters(value));
+
+        var identity = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Broken", null)
+                .getIdentityConstant();
+        var failure = new IllegalStateException("injected normalization failure");
+        var broken = new TerminalTypeConstant(file.getConstantPool(), identity) {
+            @Override
+            public TypeConstant adoptParameters(ConstantPool pool, TypeConstant[] parameters) {
+                throw failure;
+            }
+        };
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> context.adoptParameters(broken)));
     }
 
     @Test

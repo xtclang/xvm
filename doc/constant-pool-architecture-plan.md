@@ -559,9 +559,9 @@ Final verification on 2026-09-24:
 - Counts were read from JUnit XML. `spotlessCheck` and `git diff --check` passed. No Gradle
   task wiring, CI dependencies or default execution modes changed.
 
-The next migration must cover reflection and handle/composition creation together. Merely
-changing `xRTType.parameterize` would be misleading: `TypeConstant.ensureTypeHandle` and
-`Container.resolveClass` currently register results back into the container's image pool.
+The reflection migration below covers parameterization together with handle/composition creation.
+Merely changing `xRTType.parameterize` would be misleading: the old `TypeConstant.ensureTypeHandle`
+and `Container.resolveClass` paths registered results back into the container's image pool.
 Metadata still lives on `TypeConstant`, native/bootstrap preparation still edits structures,
 and delegation/accessors/const helpers/debugger code still have separate generation paths.
 Those are remaining work, not exceptions hidden behind the new context. The prototype neither
@@ -593,3 +593,40 @@ keeps the existing image registration path; moving the cache alone does not sepa
 checks distinct handles and composition owners with the same `FileStructure`, plus repeated
 lookup identity in both containers. The opt-in ownership integration suite passed on 2026-09-24
 with no skipped tests, rebuilding the distribution rather than assuming compiled libraries exist.
+
+## Local reflection through the descriptor context
+
+This is the next separate commit after reflective handle ownership. Local `Type.parameterize`
+imports its operands into `RuntimeTypeContext` before normalization; local relational operators
+do the same before combining types. `Container.ensureTypeHandle`, `resolveClass`, class access
+wrappers and canonical reflective compositions preserve the runtime descriptor owner. The image
+preparation path remains for compiled types. Cache keys distinguish these two domains even when
+their types are structurally equal, and context validation precedes descriptor cache lookup.
+
+The template's native inception identity is a binding selected by the runtime. Resolve that
+identity in the container's prepared image before importing it into the descriptor store. This
+is intentionally different from registering a derived `Array<T>` back into the image: the native
+binding identifies the declaration, while its actual parameters remain runtime descriptors.
+`Object` metadata bootstrap now traverses constants directly; its previous integer-index loop
+failed as soon as a descriptor composition needed metadata in a store without serialized indices.
+
+Ownership rejection has its own `IncompatibleTypeOwnerException`. Reflection catches only this
+expected input failure and reports Ecstasy `InvalidType`, with the ownership reason. It no longer
+catches arbitrary `RuntimeException` or performs handle initialization inside that catch. Internal
+normalization and handle bugs propagate instead of being disguised as a type-system mismatch.
+The diagnostic also works when the parameter list is empty.
+
+Evidence includes `RuntimeDescriptors.x` parameterization with repeated, distinct and omitted
+arguments, plus nullable relational construction. The Java test snapshots image entries and
+positions while creating an unused generic descriptor, its reflective handle and its ordinary
+class composition. It also checks native array composition ownership. A handle from another
+descriptor context stays foreign; direct composition creation in the receiving context rejects it.
+Standalone descriptor tests check the specific ownership exception and propagation of an injected
+internal normalization failure, without requiring compiled libraries.
+
+This is a local-reflection boundary, not a blanket migration of every reflection operation.
+Foreign parameterization retains its existing source-side path with an explicit common-pool check;
+moving foreign dispatch needs an identified source context and remains separate. Constructor
+function handles, annotations with captured arguments, property/method reflection and legacy
+image-backed metadata still require migration. No source-image freeze, cross-container descriptor
+sharing or removal of application copies is implied.

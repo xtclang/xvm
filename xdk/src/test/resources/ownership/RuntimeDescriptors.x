@@ -12,6 +12,17 @@ module RuntimeDescriptors {
         assert first.count == 41;
         assert second.count == 41;
         assert text.count == 41;
+
+        Type base = Box;
+        Type textType = base.parameterize([String]);
+        assert textType == Box<String>;
+        assert textType == base.parameterize([String]);
+        assert textType != base.parameterize([Int]);
+        Type nullableText = textType | Nullable;
+        assert Type underlying := nullableText.isNullable();
+        assert underlying == textType;
+        Type unchanged = String.parameterize();
+        assert unchanged == String;
         assert first.label == "initialized";
         assert first.zero == 0;
         assert text.zero == 0;

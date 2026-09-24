@@ -208,7 +208,7 @@ public abstract class ClassTemplate
      */
     public ClassComposition getCanonicalClass(Container container) {
         TypeConstant typeCanonical = getCanonicalType();
-        return (ClassComposition) ensureClass(container, computeInceptionType(typeCanonical), typeCanonical);
+        return (ClassComposition) ensureClass(container, computeInceptionType(container, typeCanonical), typeCanonical);
     }
 
     /**
@@ -234,14 +234,20 @@ public abstract class ClassTemplate
      *       (all formal parameters resolved)
      */
     public TypeComposition ensureClass(Container container, TypeConstant typeActual) {
-        return ensureClass(container, computeInceptionType(typeActual), typeActual);
+        return ensureClass(container, computeInceptionType(container, typeActual), typeActual);
     }
 
     /**
      * Compute the inception type based on the actual type.
      */
-    private TypeConstant computeInceptionType(TypeConstant typeActual) {
-        IdentityConstant constInception = getInceptionClassConstant();
+    private TypeConstant computeInceptionType(Container container, TypeConstant typeActual) {
+        IdentityConstant identity = getInceptionClassConstant();
+        ConstantPool pool = typeActual.getConstantPool();
+        // The selected template supplies a native binding, possibly from the root container.
+        // Resolve that declaration in this container's prepared image, then import it into the
+        // descriptor context. Never register the derived parameterization back into the image.
+        IdentityConstant constInception = pool.hasSerializedIndices() ? identity
+                : pool.register(container.getConstantPool().register(identity));
         if (typeActual.getDefiningConstant().equals(constInception)) {
             return typeActual.isAccessSpecified()
                     ? typeActual.getUnderlyingType()

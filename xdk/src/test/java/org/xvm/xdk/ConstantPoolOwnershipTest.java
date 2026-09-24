@@ -42,6 +42,7 @@ import org.xvm.runtime.NativeContainer;
 import org.xvm.runtime.NestedContainer;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.Runtime;
+import org.xvm.runtime.RuntimeTypeContext.IncompatibleTypeOwnerException;
 import org.xvm.runtime.ServiceContext;
 
 import org.xvm.runtime.ServiceContext.CallLaterRequest;
@@ -77,7 +78,7 @@ class ConstantPoolOwnershipTest {
             var compilation = new ErrorList(100);
             var module = COMPILER.compile(
                     new String(input.readAllBytes(), StandardCharsets.UTF_8), repository, compilation);
-            assertNotNull(module, compilation::toString);
+            assertNotNull(module, () -> compilation.getErrors().toString());
             assertFalse(compilation.hasSeriousErrors(), compilation::toString);
             // Use the same unlinked compiled artifact that the launcher reads from an XTC file.
             // Compiler-linked definitions have not undergone native runtime preparation.
@@ -124,6 +125,27 @@ class ConstantPoolOwnershipTest {
         assertArrayEquals(constants, pool.getConstants());
         assertArrayEquals(positions, Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray());
         assertFalse(application.getModule().getComponent().children().contains(initializer));
+
+        // Warm the canonical reflective layout, then request a parameterization unused by the
+        // compiled program. The handle must not send its descriptor back through the image pool.
+        pool.typeObject().ensureTypeHandle(application);
+        constants = pool.getConstants();
+        positions = Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray();
+        var reflected = context.adoptParameters(box, pool.typeBoolean());
+        var handle = reflected.ensureTypeHandle(application);
+        assertSame(reflected, handle.getDataType());
+        assertSame(context.getDescriptorPool(), handle.getType().getConstantPool());
+        assertSame(handle, reflected.ensureTypeHandle(application));
+        var reflectedComposition = application.resolveClass(reflected);
+        assertSame(context.getDescriptorPool(), reflectedComposition.getType().getConstantPool());
+        assertSame(reflectedComposition, application.resolveClass(reflected));
+        assertArrayEquals(constants, pool.getConstants());
+        assertArrayEquals(positions, Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray());
+
+        var arrayType = context.adoptParameters(pool.typeArray(), reflected);
+        var arrayComposition = application.resolveClass(arrayType);
+        assertSame(context.getDescriptorPool(), arrayComposition.getType().getConstantPool());
+        assertSame(context.getDescriptorPool(), arrayComposition.getConstantPool());
     }
 
     @Test
@@ -143,6 +165,14 @@ class ConstantPoolOwnershipTest {
             assertSame(second, secondHandle.getComposition().getContainer());
             assertSame(firstHandle, type.ensureTypeHandle(first));
             assertSame(secondHandle, type.ensureTypeHandle(second));
+            var descriptor = first.getTypeContext().intern(type);
+            var descriptorHandle = descriptor.ensureTypeHandle(first);
+            assertNotSame(firstHandle, descriptorHandle);
+            assertSame(descriptor, descriptorHandle.getDataType());
+            var foreignHandle = descriptor.ensureTypeHandle(second);
+            assertTrue(foreignHandle.isForeign());
+            assertSame(descriptor, foreignHandle.getUnsafeDataType());
+            assertThrows(IncompatibleTypeOwnerException.class, () -> second.resolveClass(descriptor));
         } finally {
             runtime.shutdownXVM();
         }

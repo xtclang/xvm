@@ -39,6 +39,7 @@ import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ProxyComposition;
+import org.xvm.runtime.RuntimeTypeContext.IncompatibleTypeOwnerException;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
@@ -1397,29 +1398,43 @@ public class xRTType
             throw new UnsupportedOperationException();
         }
 
-        ConstantPool   pool         = frame.poolContext();
         TypeConstant   typeThis     = hType.getDataType();
         TypeConstant[] atypeParams  = new TypeConstant[cFormalTypes];
+        ConstantPool foreignPool = null;
         for (int i = 0; i < cFormalTypes; ++i) {
             TypeHandle   hTypeParam = (TypeHandle) ahFormalTypes[i];
             TypeConstant typeParam  = hTypeParam.getUnsafeDataType();
 
-            if (hTypeParam.isForeign()) {
-                pool = typeParam.getConstantPool();
-            }
-
             atypeParams[i] = typeParam;
+            if (hTypeParam.isForeign()) {
+                foreignPool = typeParam.getConstantPool();
+            }
         }
 
+        Container container = frame.f_context.f_container;
+        TypeConstant typeResult;
         try {
-            TypeConstant typeResult = typeThis.adoptParameters(pool, atypeParams);
-            return frame.assignValue(iReturn, typeResult.ensureTypeHandle(frame.f_context.f_container));
-        } catch (RuntimeException e) {
-            // this is temporary; only correct for one type argument
+            if (foreignPool == null) {
+                typeResult = container.getTypeContext().adoptParameters(typeThis, atypeParams);
+            } else {
+                // Foreign parameterization keeps its existing source-side path. It must not be
+                // imported into the caller's context; migrating foreign type-system dispatch is
+                // separate from local reflection and requires an explicit source owner.
+                if (!typeThis.isShared(foreignPool)) {
+                    return frame.raiseException(xException.invalidType(frame, "No common TypeSystem"));
+                }
+                for (TypeConstant parameter : atypeParams) {
+                    if (!parameter.isShared(foreignPool)) {
+                        return frame.raiseException(xException.invalidType(frame, "No common TypeSystem"));
+                    }
+                }
+                typeResult = typeThis.adoptParameters(foreignPool, atypeParams);
+            }
+        } catch (IncompatibleTypeOwnerException e) {
             return frame.raiseException(xException.invalidType(frame,
-                "No common TypeSystem for (" + typeThis.getValueString() +
-                " and " + atypeParams[0].getValueString() + ")"));
+                "Cannot parameterize " + typeThis.getValueString() + ": " + e.getMessage()));
         }
+        return frame.assignValue(iReturn, typeResult.ensureTypeHandle(container));
     }
 
     /**
@@ -1818,7 +1833,12 @@ public class xRTType
         TypeConstant type2 = hType2.getUnsafeDataType();
 
         ConstantPool pool;
-        if (type1.isShared(type2.getConstantPool())) {
+        if (!hType1.isForeign() && !hType2.isForeign()) {
+            var context = frame.f_context.f_container.getTypeContext();
+            type1 = context.intern(type1);
+            type2 = context.intern(type2);
+            pool = context.getDescriptorPool();
+        } else if (type1.isShared(type2.getConstantPool())) {
             pool = type2.getConstantPool();
         } else if (type2.isShared(type1.getConstantPool())) {
             pool = type1.getConstantPool();

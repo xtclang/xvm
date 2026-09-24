@@ -117,17 +117,24 @@ public abstract class Container
      */
     public TypeHandle ensureTypeHandle(TypeConstant type) {
         ConstantPool pool = getConstantPool();
-        if (!type.isShared(pool)) {
+        if (!type.getConstantPool().hasSerializedIndices()) {
+            if (type.getConstantPool() != getTypeContext().getDescriptorPool()) {
+                return xRTType.makeForeignHandle(type);
+            }
+            type = getTypeContext().intern(type);
+        } else if (!type.isShared(pool)) {
             return xRTType.makeForeignHandle(type);
+        } else {
+            type = pool.register(type);
         }
 
-        type = pool.register(type);
-        TypeHandle handle = typeHandles.get(type);
+        var key = new TypeKey(type.getConstantPool(), type);
+        TypeHandle handle = typeHandles.get(key);
         if (handle == null) {
             // Creating a composition can recursively request other handles. Do not construct
             // inside ConcurrentHashMap.computeIfAbsent(), which rejects recursive updates.
             handle = xRTType.makeHandle(this, type, true);
-            TypeHandle previous = typeHandles.putIfAbsent(type, handle);
+            TypeHandle previous = typeHandles.putIfAbsent(key, handle);
             if (previous != null) {
                 handle = previous;
             }
@@ -314,6 +321,15 @@ public abstract class Container
      * @return a ClassTemplate for the specified type
      */
     public ClassTemplate getTemplate(TypeConstant type) {
+        if (!type.getConstantPool().hasSerializedIndices()) {
+            // Validate the context before any structural cache lookup. Native template selection
+            // uses declaration identities; never send a derived parameterization to a parent pool.
+            type = getTypeContext().intern(type);
+            ClassTemplate template = getTemplate(type.getSingleUnderlyingClass(true));
+            return type.isShared(template.f_container.getConstantPool())
+                    ? template.getTemplate(type)
+                    : template;
+        }
         if (f_parent != null && type.isShared(f_parent.getConstantPool())) {
             return f_parent.getTemplate(type);
         }
@@ -429,14 +445,20 @@ public abstract class Container
      * Produce a TypeComposition based on the specified TypeConstant.
      */
     public TypeComposition resolveClass(TypeConstant type) {
+        if (!type.getConstantPool().hasSerializedIndices()) {
+            type = getTypeContext().intern(type);
+        }
         if (type instanceof PropertyClassTypeConstant typeProp) {
             ClassComposition clz = (ClassComposition) resolveClass(
                                         typeProp.getParentType().removeAccess());
             return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
         }
 
-        // make sure we don't hold on other pool's constants
-        type = getConstantPool().register(type);
+        // Runtime descriptors retain their context through composition creation. Image types
+        // continue to use the existing preparation path until that migration is complete.
+        type = type.getConstantPool().hasSerializedIndices()
+                ? getConstantPool().register(type)
+                : getTypeContext().intern(type);
 
         return getTemplate(type).ensureClass(this, type.normalizeParameters());
     }
@@ -447,9 +469,16 @@ public abstract class Container
      * <p>Note: the passed inception type should be normalized (all formal parameters resolved).
      */
     public ClassComposition ensureClassComposition(TypeConstant typeInception, ClassTemplate template) {
-        ClassComposition clz = f_mapCompositions.get(typeInception);
+        boolean runtimeType = !typeInception.getConstantPool().hasSerializedIndices();
+        if (runtimeType) {
+            typeInception = getTypeContext().intern(typeInception);
+        }
+        Map<TypeConstant, ClassComposition> compositions = runtimeType
+                ? runtimeCompositions : f_mapCompositions;
+        ClassComposition clz = compositions.get(typeInception);
         if (clz == null) {
-            ConstantPool pool = getConstantPool();
+            ConstantPool pool = runtimeType
+                    ? getTypeContext().getDescriptorPool() : getConstantPool();
 
             assert typeInception.isShared(pool);
             assert !typeInception.isAccessSpecified();
@@ -457,7 +486,7 @@ public abstract class Container
 
             typeInception = pool.register(typeInception);
 
-            clz = f_mapCompositions.computeIfAbsent(typeInception, (type) -> {
+            clz = compositions.computeIfAbsent(typeInception, (type) -> {
                 ClassTemplate templateReal = type.isAnnotated() && type.isIntoVariableType()
                         ? type.getTemplate(this)
                         : template;
@@ -838,7 +867,23 @@ public abstract class Container
             Lazy.of(() -> new RuntimeTypeContext(getConstantPool()));
 
     /** Reflective values have container lifetime, independently of definition identity. */
-    private final Map<TypeConstant, TypeHandle> typeHandles = new ConcurrentHashMap<>();
+    private final Map<TypeKey, TypeHandle> typeHandles = new ConcurrentHashMap<>();
+
+    /** Keep image preparation compositions separate from runtime-derived compositions. */
+    private final Map<TypeConstant, ClassComposition> runtimeCompositions = new ConcurrentHashMap<>();
+
+    /** Structural equality alone must not collapse the image and descriptor domains. */
+    record TypeKey(ConstantPool pool, TypeConstant type) {
+        @Override
+        public int hashCode() {
+            return 31 * System.identityHashCode(pool) + type.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof TypeKey key && pool == key.pool && type.equals(key.type);
+        }
+    }
 
     /**
      * The service context for the container itself.
