@@ -134,7 +134,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/ordinary-constructor calls, including before an existing closing parenthesis. Methods/constructors retain named mappings; function types have unnamed parameters. Explicit constructor class type arguments are substituted |
+| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/ordinary-constructor calls, including existing or missing enclosing call/group/index closers. Methods/constructors retain named mappings; function types have unnamed parameters. Explicit constructor class type arguments are substituted |
 | Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; ordinary instance methods additionally require an explicit source graph; client versioned-edit support required |
 | Rename (cross-file) | - | - | **Partial** - ordinary instance-method override families across the configured graph; full recompilation plus binding/call/dispatch checks; no discovery of outside consumers |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -258,8 +258,13 @@ arguments, preserving the full function signature for the missing slots. This co
 generic function properties, function-producing expressions and captured lambda arguments. Named
 arguments cannot be inferred from a function type. Ordinary constructor candidates reuse compiler
 argument fitting, including overloads, defaults, named slots and explicit class type arguments.
+Missing enclosing call/group parentheses and index brackets now retain the cursor's original
+syntax and scope at statement/outer-delimiter boundaries. An explicit cursor at EOF also retains
+missing block braces. This uses the existing incomplete syntax children, with no new AST state or
+public API components; normal compiler diagnostics remain cached and visible. X75–X76 cover the
+editor behavior. Missing operands, declaration headers and tuple/literal delimiters remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
-missing enclosing delimiters, enclosing-instance member enumeration, arbitrary type-valued receiver
+enclosing-instance member enumeration, arbitrary type-valued receiver
 fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and
 receiver-to-argument rewrites. Completion in a missing call-argument value is not yet driven by its expected type.
 

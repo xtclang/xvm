@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X74 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X76 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1046,6 +1046,17 @@ separate debugger, IntelliJ or Tree-sitter playbooks.
 After assembling with the same compiler flag, `npm run test:playbook` from `lang/vscode-extension`
 reruns just the editor suite. It reports existing host-test evidence without rebuilding/rerunning it.
 See the [extension testing notes](../vscode-extension/README.md#testing) for display/`xvfb` requirements.
+
+The host suite also includes `CompilerEmissionAuditTest`: it compiles atomic operations through
+qualified, singleton, enclosing-instance and generic receivers, deserializes their binary ASTs,
+checks source/dependency diagnostic delivery, and inspects dense-switch conversion metadata. These
+are compiler-output checks that the editor UI cannot establish. To run them without launching VS Code:
+
+```bash
+./gradlew :lang:lsp-server:test --tests org.xvm.lsp.adapter.CompilerEmissionAuditTest \
+    --rerun --no-build-cache \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
 
 ### Launch and confirm the backend
 
@@ -1656,6 +1667,8 @@ module Advanced {
 | X72 | Find Implementations on `meter.count` and `meter.computed`. | `count` reaches Trace's written `get` and `set`; `computed` reaches its explicit `get` and `set`, which precede the annotation. Property queries return the combined accessor set, not a read/write-specific target. Native annotation storage has no invented source body. |
 | X73 | In `applyPair`, replace the call with `fn()` and then `fn(1, )`; request signature help after `(` and after the comma. Try `fn(True, )`, then restore the original. | `Int fn(Int, String)` with the corresponding parameter highlighted, no invented names/defaults/runtime target. The incompatible Boolean argument produces no candidate. Normal diagnostics clear after restoring the complete call. |
 | X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second="b", first=)`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Virtual/inner/array/annotated construction and omitted class-type inference are outside this proof. |
+| X75 | In `edit`, replace `1 + word.size` with `(word.si`, `pair((word.si`, and `word[word.si` in turn, leaving the semicolon and method/module braces. Trigger completion after `si`, then restore. | `size` is offered despite missing `)`/`]`. The edit replaces only `si`; Problems continues showing the normal compiler errors until the source is repaired. No missing operand or value is invented. |
+| X76 | In `edit`, replace `1 + word.size` with `pair((pair(1, `, leaving the semicolon and braces. Request signature help after the comma, then restore. | The innermost `Int pair(Int first, Int second)` candidate highlights `second` despite the missing call/group delimiters. Problems clears after restoring the original source. |
 
 ## VS Code Extension Playbook
 
