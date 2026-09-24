@@ -13,7 +13,10 @@ the two Markdown files above.
 ## Recommendation
 
 **Current execution order:** the bounded hardening and editor acceptance passes are complete;
-extract and validate the local PR slices in the batches recorded below. The initial scope
+extract and validate the local PR slices in the batches recorded below. **`lagergren/errs` remains
+the complete development branch. Fixes and regressions found during extraction must also be kept
+there; the smaller worktrees are independently validated publication candidates, not the sole home
+of new development.** The initial scope
 was reliable compiler diagnostics and existing LSP features. The subsequently approved
 [eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) now adds permanent final-TypeInfo
 regressions, module sessions with overlays, cross-file navigation and direct type hierarchy.
@@ -221,8 +224,8 @@ Extraction exposed gaps in the historical implementation that this slice closes:
   inactive destination for a resolver, but its active scopes require a listener. Neither helper
   makes compiler objects safe to share across threads.
 
-These follow-up fixes live in the extracted C3 branch. The integrated reference has not been
-rewritten to include them; the audit and AST inventory distinguish that difference explicitly.
+At the end of this extraction pass, these follow-up fixes existed only in C3. The synchronization
+pass below now also includes them in `lagergren/errs`; the extracted commit remains unchanged.
 The lexer's original listener remains independent of parser scopes. A module-name-only caller
 that wants no lexical diagnostics must construct the parser with explicit discard reporting.
 
@@ -247,6 +250,41 @@ clients and recompile at the already-required breaking release boundary before p
 **Next: E1**, useful embedding compilation results, with I1/C2/R1 and I3's consumer evidence as
 specified below. C4 follows with the ambient-listener and TypeInfo-replay work. Each still needs
 independent extraction and validation against its actual prerequisites.
+
+### Synchronize extraction improvements back into errs, 2026-09-24
+
+The extraction work began after the editor-configuration checkpoint `6372ba07d` at 09:51
+Stockholm time on September 24. The four following commits on `lagergren/errs` recorded extraction
+evidence only; implementation work for I1/I2/R1, I3/C1, C2 and C3 happened in their local worktrees.
+Most extracted code was already present on `errs`, but leaving newly discovered fixes and tests
+only in those worktrees was a workflow error.
+
+The main checkout now includes the missing improvements while retaining its later embedding,
+parser recovery, semantic and LSP implementation:
+
+| Slice | Reconciliation with the integrated branch |
+|---|---|
+| I1 | Identity/source fixes already present. Existing `CompilerDiagnosticsTest` covers both named and unnamed document cases, so the extraction-only duplicate fixture is not added. |
+| I2 | Pool behavior and tests already present; retain the small duplicate-comment/import cleanup. |
+| R1 | Repository behavior already present; add assertions for repeated failures and recovery after replacing corrupt files. |
+| I3 | Keep the integrated Gradle module bundling and broader consumer/stdio checks. Add its legacy embedding compilation smoke test and wrapper/version compiler triggers; require the new suite in the existing XML gate. |
+| C1 | Fix legacy structure-report dispatch to preserve branch source attribution; add executable migration/budget regressions. |
+| C2 | Explicit-listener behavior and cascade handling already present; add the seven boundary regressions. |
+| C3 | Add validation cleanup on exceptional/early exits, nested parser state-query forwarding, non-null active validation pairs, scope regressions and accurate helper documentation. Keep final source-node buffers and their drain behavior. |
+
+All implementation changes above are directly in `lagergren/errs`. The extracted branches retain
+their commits and independent validation; they are not merged wholesale, which would also import
+their older compiler baseline. Future fixes should be made and tested on `errs`, then carried into
+the applicable extraction and independently revalidated there.
+
+Validation on the integrated branch: the full XDK rebuild and 134 focused Java cases pass with
+zero failures/errors/skips. Forced full runs pass: Java has **508 cases, 468 executed and 40
+existing skips**; LSP has **738 cases, 735 executed and 3 existing skips**. Both have zero
+failures/errors, and the added `CompilerConsumerTest` executes once with no skips. `spotlessCheck`,
+LSP `ktlintCheck`, `git diff --check` and local `actionlint -shellcheck=` pass. All 17 workflow-required
+compiler suite names resolve to actual test classes. Receipts are under
+`build/errs-integration/comparison/errs-sync-{focused,tests}.json`. No editor was launched and no
+remote CI was queried.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
