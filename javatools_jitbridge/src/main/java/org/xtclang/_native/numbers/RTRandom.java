@@ -9,8 +9,8 @@ import org.xtclang.ecstasy.nService;
 import org.xtclang.ecstasy.collections.ArrayᐸBitᐳ;
 
 import org.xtclang.ecstasy.numbers.Int64;
-
 import org.xtclang.ecstasy.numbers.IntLiteral;
+
 import org.xvm.javajit.Ctx;
 
 /**
@@ -22,7 +22,7 @@ public class RTRandom extends nService {
         $random = random;
     }
 
-    private final Random $random;
+    private final Random $random; // if null, the ThreadLocalRandom is used
 
     /**
      * @return the Random to use
@@ -54,8 +54,12 @@ public class RTRandom extends nService {
 
         byte[] bytes = new byte[(int) ((size+7)>>>3)];
         rnd().nextBytes(bytes);
-        long[] longs = new long[bytes.length >> 3];
-        // TODO: copy bytes into longs
+        long[] longs = new long[(int) ((size + 63) >>> 6)];
+
+        // bit arrays are stored most-significant-bit first, including a partial final word
+        for (int i = 0; i < bytes.length; i++) {
+            longs[i >>> 3] |= (bytes[i] & 0xFFL) << (56 - ((i & 7) << 3));
+        }
         return new ArrayᐸBitᐳ(ctx, ctx.pool().typeBitArray(), longs, size);
     }
 

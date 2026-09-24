@@ -4,11 +4,11 @@ package bitArrayTests {
     @Inject Console console;
 
     void run() {
-
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
+        shouldCreateRandomArray();
         shouldBeEmpty();
         shouldAddElement();
         shouldAddElementUsingOperator();
@@ -17,7 +17,6 @@ package bitArrayTests {
         shouldIterateUsingIterator();
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
-
     }
 
     void shouldCreateWithCapacity() {
@@ -43,6 +42,23 @@ package bitArrayTests {
         Bit[] array = [0, 1, 1];
         assert array.size == 3;
         assert array[0] == 0 && array[1] == 1 && array[2] == 1;
+    }
+
+    void shouldCreateRandomArray() {
+        // java.util.Random(42).nextBytes() produces these bytes; verify MSB-first packing
+        Byte[] bytes    = #359D41BAF78AFE0DE1BBE7AE28C0450CE4;
+        Bit[]  expected = bytes.toBitArray();
+
+        // restart the seed for each length, including partial bytes and partial long words
+        for (Int size : [1, 7, 8, 9, 63, 64, 65, 127, 128, 129]) {
+            @Inject(opts=42) Random random;
+            Bit[] bits = random.bits(size);
+            assert bits.size == size;
+            assert bits.mutability == Constant;
+            for (Int i : 0..<size) {
+                assert bits[i] == expected[i];
+            }
+        }
     }
 
     void shouldBeEmpty() {
