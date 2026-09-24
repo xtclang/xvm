@@ -4367,7 +4367,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.numbers.Nibble",
             "org.xtclang.ecstasy.numbers.Number$compare$Family*",
             "org.xtclang.ecstasy.numbers.Number$Signum*",
-            // "org.xtclang.ecstasy.numbers.Random",
+            "org.xtclang.ecstasy.numbers.Random",
             "org.xtclang.ecstasy.numbers.UInt*",
 
             // reflect

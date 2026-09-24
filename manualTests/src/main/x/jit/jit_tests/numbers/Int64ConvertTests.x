@@ -176,6 +176,48 @@ class Int64ConvertTests {
         testInt64ToUIntN(100, 100, False);
         testInt64ToUIntN(Int64.MaxValue, 0x7FFF_FFFF_FFFF_FFFF, False);
 
+        testInt64ToFloat16(Int64.MinValue, Float16.NegativeInfinity);
+        testInt64ToFloat16(-2051, -2052.0);
+        testInt64ToFloat16(-2049, -2048.0);
+        testInt64ToFloat16(-100, -100.0);
+        testInt64ToFloat16(0, 0.0);
+        testInt64ToFloat16(100, 100.0);
+        // all integers through 2^11 are exact; halfway values round to even
+        testInt64ToFloat16(2047, 2047.0);
+        testInt64ToFloat16(2048, 2048.0);
+        testInt64ToFloat16(2049, 2048.0);
+        testInt64ToFloat16(2051, 2052.0);
+        testInt64ToFloat16(65504, 65504.0);
+        testInt64ToFloat16(65519, 65504.0);
+        testInt64ToFloat16(65520, Float16.PositiveInfinity);
+        testInt64ToFloat16(Int64.MaxValue, Float16.PositiveInfinity);
+
+        testInt64ToFloat32(Int64.MinValue, -9223372036854775808.0);
+        testInt64ToFloat32(-16777219, -16777220.0);
+        testInt64ToFloat32(-16777217, -16777216.0);
+        testInt64ToFloat32(-100, -100.0);
+        testInt64ToFloat32(0, 0.0);
+        testInt64ToFloat32(100, 100.0);
+        // all integers through 2^24 are exact; halfway values round to even
+        testInt64ToFloat32(16777215, 16777215.0);
+        testInt64ToFloat32(16777216, 16777216.0);
+        testInt64ToFloat32(16777217, 16777216.0);
+        testInt64ToFloat32(16777219, 16777220.0);
+        testInt64ToFloat32(Int64.MaxValue, 9223372036854775808.0);
+
+        testInt64ToFloat64(Int64.MinValue, -9223372036854775808.0);
+        testInt64ToFloat64(-9007199254740995, -9007199254740996.0);
+        testInt64ToFloat64(-9007199254740993, -9007199254740992.0);
+        testInt64ToFloat64(-100, -100.0);
+        testInt64ToFloat64(0, 0.0);
+        testInt64ToFloat64(100, 100.0);
+        // all integers through 2^53 are exact; halfway values round to even
+        testInt64ToFloat64(9007199254740991, 9007199254740991.0);
+        testInt64ToFloat64(9007199254740992, 9007199254740992.0);
+        testInt64ToFloat64(9007199254740993, 9007199254740992.0);
+        testInt64ToFloat64(9007199254740995, 9007199254740996.0);
+        testInt64ToFloat64(Int64.MaxValue, 9223372036854775808.0);
+
     }
 
     void testInt64ToInt8(Int64 a, Int8 expected) {
@@ -357,5 +399,20 @@ class Int64ConvertTests {
             UIntN b = a.toUIntN();
             assert b == expected;
         }
+    }
+
+    void testInt64ToFloat16(Int64 a, Float16 expected) {
+        Float16 b = a.toFloat16();
+        assert b == expected;
+    }
+
+    void testInt64ToFloat32(Int64 a, Float32 expected) {
+        Float32 b = a.toFloat32();
+        assert b == expected;
+    }
+
+    void testInt64ToFloat64(Int64 a, Float64 expected) {
+        Float64 b = a.toFloat64();
+        assert b == expected;
     }
 }
