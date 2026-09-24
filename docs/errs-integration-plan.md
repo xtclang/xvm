@@ -23,6 +23,10 @@ regression tests, and record its hash and validation evidence here after committ
 crosses groups, record the file or behavior boundary instead of treating the whole commit as an
 independent cherry-pick. Preserve the integrated history; regroup changes during later PR preparation.
 The [commit grouping record](#commit-grouping-record) supplements the detailed scope descriptions.
+The [PR-to-commit map](#dependencies-and-eventual-landing-order) gives every group's source hashes
+and prerequisites. The [consolidation checkpoint](#consolidation-checkpoint-before-the-user-playbook-run-2026-09-24)
+accounts for the earlier extraction branches. Next, prepare the integrated compiler extension and
+scratch fixtures for the user to run the playbook; no further extraction is scheduled.
 
 The bounded hardening and editor acceptance passes are complete. The initial scope was reliable
 compiler diagnostics and existing LSP features. The subsequently approved
@@ -295,6 +299,39 @@ LSP `ktlintCheck`, `git diff --check` and local `actionlint -shellcheck=` pass. 
 compiler suite names resolve to actual test classes. Receipts are under
 `build/errs-integration/comparison/errs-sync-{focused,tests}.json`. No editor was launched and no
 remote CI was queried.
+
+### Consolidation checkpoint before the user playbook run, 2026-09-24
+
+The source of truth is `lagergren/errs` at `c97ea9e6f`, following the main reconciliation
+`855ec569f` and workflow correction `e0e321f82`. Comparing all seven extracted commits with the
+integrated tree found two further omissions: the README migration guide and a test's isolated
+runtime listener. `c97ea9e6f` carries both, plus the collecting-listener documentation and resolver
+comment cleanup. The guide describes the final C4 ownership contract, not the intermediate C2
+ambient fallback. No later parser, embedding or LSP feature was replaced with an older slice.
+
+| Historical extraction | Equivalent integrated commits / disposition |
+|---|---|
+| I1 `e4c633c4c` | `19e567e55`, `fad701097`. Its standalone NamedSourceDiagnosticsTest is covered by CompilerDiagnosticsTest's named/unnamed controls; do not duplicate it. |
+| I2 `d4fc67090` | `cae4f9452`, `610873fb6`, cleanup in `855ec569f`. Pool regressions are present. Later ConstantPool/TypeConstant changes belong to their own groups. |
+| R1 `6384f2658` | `ddc0b063d`, strengthened retry/replacement assertions in `855ec569f`. The remaining repository difference is the unnamed catch variable. |
+| I3 `8f3a57305` | `7097892b6`, `9e951df3e`, `ddc0b063d`, `855ec569f`. Retain current compilerModules/XdkLibraries bundling and the broader CI gate; its legacy CompilerConsumerTest is present. The extracted pre-LSP fixture wiring is intentionally superseded. |
+| C1 `d6463091c` | The C1 source group below plus `855ec569f` for structure dispatch/migration tests and `c97ea9e6f` for isolated runtime testing and migration guidance. |
+| C2 `f0b0db3a4` | The C2 source group below plus `855ec569f` for boundary regressions and `c97ea9e6f` for migration guidance. Current tests use the final API and retain later fatal-forwarding coverage. |
+| C3 `e2a481b45` | The C3 source group below plus `855ec569f` for exceptional-exit/state-query regressions and `c97ea9e6f` for documentation. All scope test classes are present; current parser recovery, module hooks and source bindings remain intact. |
+
+The standalone branches remain historical references. Their old commits are not extra prerequisites
+to merge into `errs`, and their older build/API forms must not overwrite the integrated versions.
+Review included every changed test file; the only absent test class is the equivalent I1 fixture
+identified above. Formatting/import differences do not require copying old files over current ones.
+
+Validation: `c97ea9e6f` has 13 executed listener/resolver tests, zero failures/errors/skips, and
+passing `spotlessCheck`/`git diff --check`. The full Java/LSP/XDK evidence for `855ec569f` is recorded
+above; it is not presented as a new full run. The source-map check covers all 97 commits from
+`4a1eae6f7` through `c97ea9e6f`: 68 touch implementation/build/tests and 29 are documentation-only.
+Every implementation commit is assigned below or explicitly deferred; every mapped source hash is
+an ancestor of the integrated checkpoint. The local receipt is
+`build/errs-integration/comparison/errs-pr-source-map.json`. This verifies classification, not that
+each future PR already builds independently.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
@@ -1113,10 +1150,19 @@ provenance, not a promise that an unedited cherry-pick compiles.
 The detailed PR sections below identify the earlier source commits and the intended final behavior.
 This table records the later integrated commits that extend those groups. Rows with several IDs
 require splitting by the stated responsibility during PR preparation, with tests accompanying the
-behavior they exercise. The dependency table remains authoritative for prerequisites.
+behavior they exercise. The table below is the PR-to-commit map; this record explains mixed-commit boundaries.
+A hash appearing in several PR rows means portions of that commit, not repeated cherry-picks.
+Keep the final implementation and the later corrections together; do not replay superseded designs.
 
 | Commits on `lagergren/errs` | Future PR groups | Grouping boundary |
 |---|---|---|
+| `9e951df3e` | C1, E1, I3, L1, L2 | Branch/silence abort state and tee queries belong to C1; passive footprint and failure handling to E1; dependency/CI wiring to I3; diagnostics/capabilities to L1; document versions, cancellation and lifecycle tests to L2. |
+| `ddc0b063d` | R1, E1, E2, I3, L1, L2, L3, L4 | Repository production/tests go to R1, embedding failure diagnostics to E1, Java source accessors to E2, build/test wiring to I3/L1, source attribution and bundled resources to L1, process exit handling to L2, structural ranges to L3 and navigation to the final L4 snapshot. Do not restore the superseded XdkResolution walker. |
+| `45fa0ab13` | E1, C4, L1, L2 | Split empty-buffer regression, TypeInfo regressions, packaged startup/protocol checks and shutdown/lifecycle checks with their respective behavior. The later C4 tests extend the same suite. |
+| `f98b0fe87` | E1, E2, C4, L1, L3, L4 | Deprecated runtime-pool alias goes to E1; qualified/formal/lambda/anonymous source bindings to E2; metadata contract and replay regressions to C4; backend selection to L1; structural extraction to L3; immutable Kotlin semantics to L4. |
+| `c33b013eb` | C4, E3, L5, L6 | Final-TypeInfo fixtures and their test-only module variants go to C4; Java module input, source hooks and fatal forwarding to E3; Kotlin module sessions/publication to L5; direct hierarchy facts and requests to L6. |
+| `60054eb4c`, `d24f1be1f` | C5, C6 | Normal parser recovery, per-file results and structural consumers form C5. Explicit incomplete-analysis APIs, parser sites and direct compiler-consumer tests form C6. |
+| `91b5182b8` | E4, L7 | Attempt-owned Java call provenance and immutable result maps go to E4; copied Kotlin call/member models and their consumer tests go to L7. |
 | `28e9fd540` | C4, E3, C7, L8 | Annotation TypeInfo diagnostics and their regressions go to C4; module-root diagnostic forwarding goes to E3; cursor/module partial-analysis APIs go to C7. The Kotlin partial-model extension for module sources accompanies L8 because it requires C7. |
 | `32ac93a5a`, `24b8f5910`, `c97c36a88` | C7, L8 | Combine compiler value-context, typed-prefix and closing-parenthesis support in C7. Combine serialized cursor requests, completion/signature consumers and server tests in L8. |
 | `672bc130b` | C8, C9, L9 | Separate cursor-scope capture from incomplete-call argument fitting; put copied Kotlin scope/candidate queries and protocol consumers in L9. |
@@ -1126,7 +1172,8 @@ behavior they exercise. The dependency table remains authoritative for prerequis
 | `7b13e0980` | E4, L15; compatibility/lifetime checks with their owning APIs | Label provenance and preserved InvocationBinding constructors belong to E4; bounded rename and its protocol tests belong to L15. Split EmbeddingApiCompatibilityTest by the API each assertion covers; keep the combined retention workload after L14/L15. |
 | `6372ba07d` | L16 | Editor initialization/settings, configuration validation and VS Code acceptance; rename acceptance additionally requires L15. |
 | `855ec569f` | I2, R1, I3, C1, C2, C3, C4 | Split the synchronization fixes and regressions by the [assignment table](#synchronize-extraction-improvements-back-into-errs-2026-09-24). In particular, defer the unused Reporting method removal to C4. I1 already had equivalent coverage and receives no new code from this commit. |
-| `5c0a3dce8`, `a663b5511`, `9c432f778`, `643ca65f0` | Planning history | These record earlier extraction evidence. They are not implementation commits to cherry-pick into compiler PRs. |
+| `c97ea9e6f` | C1, C2, C3, C4 | Runtime-listener test isolation and collecting documentation go to C1; resolver comment cleanup to C3. Split the restored README migration sections across C1/C2/C3/C4. |
+| `5c0a3dce8`, `a663b5511`, `9c432f778`, `643ca65f0`, `e0e321f82` | Planning history | These record extraction evidence and the corrected development workflow. They are not implementation commits to cherry-pick into compiler PRs. |
 
 Documentation changes within implementation commits accompany the relevant capability or API;
 consolidate historical progress notes into accurate final documentation for each future PR. Add
@@ -1135,41 +1182,41 @@ above identify old candidate patches, not additional changes to merge into the i
 
 ### Dependencies and eventual landing order
 
-| ID | Scope | Prerequisites |
-|---|---|---|
-| I1 | Preserve distinct diagnostics and name in-memory sources | Independent |
-| I2 | Guard ambient constant-pool reads | Independent |
-| I3 | Establish compiler-consumer test wiring without requiring IDE builds | Independent foundation; activate required suites as they land |
-| R1 | Propagate repository read failures and preserve retry behavior | Independent; embedding regression joins E1 |
-| C1 | Define the host listener contract and reporting API | Independent of ownership work; coordinate public API compatibility |
-| C2 | Require explicit listeners and explicit reasons for silence | C1 |
-| C3 | Scope parser/resolver reporting and statement validation state | C2 |
-| E1 | Return useful compilation results through the embedding API | I1, C2, R1; I3 for compiled-XDK tests |
-| E2 | Expose resolved source bindings, lambda origins and qualified segments | E1; I3 for direct compiler-consumer tests |
-| C4 | Replay TypeInfo diagnostics and remove ambient listener ownership | C2, C3; E1 and I3 for the downstream regression tests |
-| L1 | Connect the diagnostic-only XDK adapter and prove publication | I1, I3, C4, E1 |
-| L2 | Complete cancellation and document lifecycle handling | L1; includes the listener cancellation decorator |
-| L3 | Add the outline and structural AST features | E1, L2 |
-| L4 | Snapshot semantic facts in Kotlin and use them for navigation and hover | E2, L3; I2 for ambient-pool handling |
-| E3 | Compile source trees with host text/membership and member cancellation | E1, C3; L2's listener decorator for cancellation; I3 for compiled-XDK tests |
-| L5 | Add module sessions, per-file publication and cross-file navigation | E3, L2, L4 |
-| L6 | Copy direct inheritance edges and support source type hierarchy | L5 |
-| C5 | Recover syntax and expose per-file partial source results | E3; L5 for the structural LSP consumer |
-| C6 | Analyze a bounded incomplete statement through an explicit API | C5 and E2; I3 for compiler-consumer tests; no new LSP capability |
-| E4 | Return attempt-owned selected-call bindings without new AST fields | E2 and C6; retain existing result constructors and document record-pattern changes |
-| L7 | Copy selected calls and inspect bounded partial receiver members | E4, C6 and L4; no new protocol capability |
-| C7 | Extend partial analysis to source cursors, module overlays and value contexts | C6 and E3; no new protocol capability |
-| L8 | Connect bounded completion/signature requests with cancellation and version checks | C7, L7 and L5 |
-| C8 | Capture cursor scope and resolve visible type names without AST caches | C7 and E4; I3 for direct compiler consumers |
-| C9 | Fit incomplete-call candidates and preserve named argument slots | C8; reuse compiler argument fitting without changing full-call selection |
-| L9 | Consume scope, static lookup and candidate-specific expected types | C8, C9 and L8 |
-| L10 | Copy type-definition and compiler implementation targets | L5, L6 and L7; no C8/C9 dependency |
-| L11 | Copy source callers and expose static call hierarchy | L5 and L7; no new Java/AST API |
-| L12 | Classify resolved names and expose bounded inlay hints | L6 and L7; carry written named-argument status in E4 |
-| L13 | Export versioned dependency source indices and replace host repositories | L4, L8 and L10; no new Java/AST API |
-| L14 | Rebuild configured source dependencies and refresh consumers automatically | L5 and L13; Kotlin host scheduling only |
-| L15 | Validate local/private-parameter rename and publish versioned edits | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
-| L16 | Configure source graphs from editor initialization and settings | L14; rename acceptance cases additionally require L15 |
+| ID | Scope | Source commits on `errs` (take only the assigned portions) | Prerequisites |
+|---|---|---|---|
+| I1 | Preserve distinct diagnostics and name in-memory sources | `19e567e55`, `fad701097` | Independent |
+| I2 | Guard ambient constant-pool reads | `cae4f9452`, `610873fb6`, `855ec569f` | Independent |
+| I3 | Establish compiler-consumer test wiring without requiring IDE builds | `bb3c4c62c`, `566bc0c4a`, `7097892b6`, `9e951df3e`, `ddc0b063d`, `855ec569f` | Independent foundation; activate required suites as they land |
+| R1 | Propagate repository read failures and preserve retry behavior | `ddc0b063d`, `855ec569f` | Independent; embedding regression joins E1 |
+| C1 | Define the host listener contract and reporting API | `3896e7409`, `920cc3858`, `34b9f8ea2`, `0b4261ca0`, `e5154fb24`, `8f3870386`, `14189a716`, `469cecf1b`, `dc58262cd`, `9e951df3e`, `855ec569f`, `c97ea9e6f` | Independent of ownership work; coordinate public API compatibility |
+| C2 | Require explicit listeners and explicit reasons for silence | `b1c71fb4e`, `469cecf1b`, `63bd09bb9`, `6d342f915`, `01e816622`, `9165c00b0`, `dc58262cd`, `8ac04ec93`, `c60bdb26d`, `716c7f118`, `d3d28348f`, `9bbeb8348`, `855ec569f`, `c97ea9e6f` | C1 |
+| C3 | Scope parser/resolver reporting and statement validation state | `01e0161be`, `259f8135e`, `fe778a92b`, `9bbeb8348`, `9cdd84519`, `855ec569f`, `c97ea9e6f` | C2 |
+| E1 | Return useful compilation results through the embedding API | `53b13d7a4`, `bb3c4c62c`, `60a451a3f`, `91d1b08e1`, `535b9d80e`, `9e951df3e`, `ddc0b063d`, `45fa0ab13`, `f98b0fe87`, `3ccf9efe4` | I1, C2, R1; I3 for compiled-XDK tests |
+| E2 | Expose resolved source bindings, lambda origins and qualified segments | `956d56f41`, `ddc0b063d`, `f98b0fe87` | E1; I3 for direct compiler-consumer tests |
+| C4 | Replay TypeInfo diagnostics and remove ambient listener ownership | `ed8d3f278`, `14189a716`, `ff20ca0bc`, `0af497641`, `a49b326f5`, `e383a818a`, `f98b0fe87`, `c33b013eb`, `28e9fd540`, `855ec569f`, `c97ea9e6f` | C2, C3; E1 and I3 for the downstream regression tests |
+| L1 | Connect the diagnostic-only XDK adapter and prove publication | `bb3c4c62c`, `535b9d80e`, `26c8fa9c1`, `849bb7a04`, `9e951df3e`, `ddc0b063d`, `45fa0ab13`, `f98b0fe87` | I1, I3, C4, E1 |
+| L2 | Complete cancellation and document lifecycle handling | `d92f93fb3`, `9e951df3e`, `ddc0b063d`, `45fa0ab13` | L1; includes the listener cancellation decorator |
+| L3 | Add the outline and structural AST features | `91d1b08e1`, `956d56f41`, `ddc0b063d`, `f98b0fe87` | E1, L2 |
+| L4 | Snapshot semantic facts in Kotlin and use them for navigation and hover | `956d56f41`, `ddc0b063d`, `f98b0fe87` | E2, L3; I2 for ambient-pool handling |
+| E3 | Compile source trees with host text/membership and member cancellation | `c33b013eb`, `28e9fd540` | E1, C3; L2's listener decorator for cancellation; I3 for compiled-XDK tests |
+| L5 | Add module sessions, per-file publication and cross-file navigation | `c33b013eb` | E3, L2, L4 |
+| L6 | Copy direct inheritance edges and support source type hierarchy | `c33b013eb` | L5 |
+| C5 | Recover syntax and expose per-file partial source results | `60054eb4c` | E3; L5 for the structural LSP consumer |
+| C6 | Analyze a bounded incomplete statement through an explicit API | `d24f1be1f` | C5 and E2; I3 for compiler-consumer tests; no new LSP capability |
+| E4 | Return attempt-owned selected-call bindings without new AST fields | `91b5182b8`, `cdd9bf67f`, `7b13e0980` | E2 and C6; retain existing result constructors and document record-pattern changes |
+| L7 | Copy selected calls and inspect bounded partial receiver members | `91b5182b8` | E4, C6 and L4; no new protocol capability |
+| C7 | Extend partial analysis to source cursors, module overlays and value contexts | `28e9fd540`, `32ac93a5a`, `c97c36a88` | C6 and E3; no new protocol capability |
+| L8 | Connect bounded completion/signature requests with cancellation and version checks | `28e9fd540`, `32ac93a5a`, `24b8f5910`, `c97c36a88` | C7, L7 and L5 |
+| C8 | Capture cursor scope and resolve visible type names without AST caches | `672bc130b` | C7 and E4; I3 for direct compiler consumers |
+| C9 | Fit incomplete-call candidates and preserve named argument slots | `672bc130b` | C8; reuse compiler argument fitting without changing full-call selection |
+| L9 | Consume scope, static lookup and candidate-specific expected types | `672bc130b` | C8, C9 and L8 |
+| L10 | Copy type-definition and compiler implementation targets | `cdd9bf67f` | L5, L6 and L7; no C8/C9 dependency |
+| L11 | Copy source callers and expose static call hierarchy | `cdd9bf67f` | L5 and L7; no new Java/AST API |
+| L12 | Classify resolved names and expose bounded inlay hints | `cdd9bf67f` | L6 and L7; carry written named-argument status in E4 |
+| L13 | Export versioned dependency source indices and replace host repositories | `39f7862bb` | L4, L8 and L10; no new Java/AST API |
+| L14 | Rebuild configured source dependencies and refresh consumers automatically | `266b48784` | L5 and L13; Kotlin host scheduling only |
+| L15 | Validate local/private-parameter rename and publish versioned edits | `7b13e0980` | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
+| L16 | Configure source graphs from editor initialization and settings | `6372ba07d` | L14; rename acceptance cases additionally require L15 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -1183,6 +1230,22 @@ modules; L16 exposes those roots/edges through editor configuration. Automatic p
 discovery stays separate. These are thirty-three eventual PR groups. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
+
+For the future merge project, use these milestones. Order within each milestone follows the
+prerequisites above; these are not batches to open simultaneously.
+
+| Milestone | PR groups | Result |
+|---|---|---|
+| Compiler diagnostics | I1, I2, R1, I3, C1, C2, C3, E1, C4, L1, L2 | Host listener contract, useful compilation outcomes and reliable diagnostic publication/lifecycle. |
+| Module semantics | E2, L3, L4, E3, L5, L6 | Source bindings, immutable snapshots, module overlays/navigation and direct hierarchy. |
+| Incomplete editing | C5, C6, E4, L7, C7, L8, C8, C9, L9 | Recovery, partial compiler facts, bounded completion and signature help. |
+| Other semantic consumers | L10, L11, L12 | Type/implementation lookup, call hierarchy and semantic presentation; these can land once their listed prerequisites are ready. |
+| Source projects and editing | L13, L14, L15, L16 | Versioned dependencies, automatic recompilation, bounded rename and editor configuration. |
+
+When preparing each PR, record its actual base, new branch/commit hashes and validation alongside
+its source group. Keep code, regression tests and applicable migration notes together. Resolve any
+API/build dependencies exposed by extraction before submission. The C1/C2 breaking release policy
+still applies; the source map does not turn those changes into compatible additions.
 
 ### I1 — Preserve distinct diagnostics and name in-memory sources
 
@@ -1654,6 +1717,7 @@ No Java/AST changes, project discovery or persistent cross-module reference inde
 
 | Change | Disposition |
 |---|---|
+| Superseded ambient-listener scope, `d23120b50` and FileStructure portions of `9cdd84519` | Do not extract the temporary ownership design. C3 retains parser/resolver scopes; C4 removes file/pool listener ownership directly. |
 | `Origin` POC, `3a836cd80` | Defer until a consumer needs it. Thread name is not request identity; never add it to the dedup key. |
 | Runtime-backed footprint, part of `535b9d80e` | Keep the original runtime-starting implementation out. The hardening pass's passive overload and regression tests can accompany E1 or form a small additive follow-up. Retain queue/compile timing and the SLF4J packaging fix. |
 | Unnamed-catch and TestNumber sweep inside `259f8135e` | Optional independent mechanical PR. It changes no reporting policy and must not enlarge the parser review. |
