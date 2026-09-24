@@ -1007,6 +1007,44 @@ Run this section with the opt-in **compiler** backend in either editor. Tree-sit
 shipped default. These checks cover the current compiler feature surface, including semantic
 answers that a syntax parser cannot supply. They do not require running the test program.
 
+### Automated VS Code run
+
+Run the compiler playbook from the repository root:
+
+```bash
+./gradlew :lang:vscode-extension:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
+suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
+a separate workspace/profile, and runs one case for every X1–X58 row plus the configuration and
+compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
+fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
+To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
+`:lang:lsp-server:compilerStdioTest --rerun` to the command.
+
+Reports and failing source buffers remain under
+`lang/vscode-extension/build/reports/compiler-playbook/run-*/`. `latest-run.txt` identifies the
+latest directory; `results.txt` is readable and `results.json` includes the commit, dirty paths,
+VS Code version, case durations/failures and host-test XML evidence. VS Code's logs are under that
+run's `logs/`. The short temporary profile is removed after shutdown. Your normal editor profile
+and manually prepared scratch workspace are separate.
+
+These checks exercise editor providers, real document edits and filesystem watchers. Raw LSP
+requests additionally verify hierarchy snapshot identity, cancellation, versioned rename and
+named nonexistent-file overlays. After reverting/closing a tab, the runner uses the language client's
+synchronization provider to send `didClose` for any retained hidden text model; reopening sends `didOpen`.
+They do not drive every menu/key or inspect rendered pixels:
+popup/hierarchy layout, theme appearance, physical keyboard interaction and a prolonged interactive
+memory/GC soak remain manual. The report identifies those limits and maps 7a.1–7a.14 and the host-only
+API checks to their automated coverage. This command covers the **XdkAdapter** playbook, not the
+separate debugger, IntelliJ or Tree-sitter playbooks.
+
+After assembling with the same compiler flag, `npm run test:playbook` from `lang/vscode-extension`
+reruns just the editor suite. It reports existing host-test evidence without rebuilding/rerunning it.
+See the [extension testing notes](../vscode-extension/README.md#testing) for display/`xvfb` requirements.
+
 ### Launch and confirm the backend
 
 From the repository root, choose one command. Keep `-Plsp.adapter=compiler` on the editor launch
@@ -1111,7 +1149,7 @@ the body of `run` for X6–X10 and X12; for X11 use `Box.inspect`. Undo after ea
 
 | # | Temporary body / action | Expected result |
 |---|-------------------------|-----------------|
-| X6 | `box.|;`, then `box.it|;` | Public members include `item` with substituted type `String`. The prefix filters to matching names; private `itemMethod` is absent. Accepting `item` replaces only `it`, preserving the receiver and semicolon. |
+| X6 | `box.|;`, then `box.it|;` | Public members include `item` with substituted type `String`. The prefix filters to matching names; private `itemMethod` is absent. Accepting `item` replaces only `it`, preserving the receiver and semicolon. A bare property access is not a valid statement; change the accepted text to `String selected = box.item;` to confirm diagnostics clear. |
 | X7 | `Int size = getValue().si|;` | `size` is offered from the expression receiver's `String` type. Accept it: `Int size = getValue().size;` has no errors. |
 | X8 | `if (value.is(String)) { Int size = value.si|; }` | `size` is available because of flow narrowing. Accept it and check diagnostics clear. Undo the guard too when finished. |
 | X9 | `Int itemLocal = 1; Int itemUnassigned; item|; Int itemLater = 2;` | Offers `itemLocal` and `itemParameter`; excludes the unreadable unassigned variable and the later declaration. |
@@ -1181,7 +1219,7 @@ class Child extends Base<String> {
 | X25 | Create a named, unsaved `Project/pkg/Added.x` buffer with `class Added extends Base<String> {}`. | The new member and implicit package join the current module; diagnostics and Base's hierarchy reflect Added. An anonymous Untitled buffer without this URI is not this test. |
 | X26 | With Project.x still open, introduce an error in Child, then discard changes and close Child. Reopen it. | The saved disk version replaces the overlay; its obsolete diagnostic clears. Navigation and hierarchy use the restored source. |
 | X27 | With Project.x open, create `Project/Bad.x` on disk containing `class Bad extends Missing {}`; wait, then delete it. | Watched-file notifications refresh membership; the closed file's diagnostic appears and then clears. Run in a workspace containing these files so the client watches them. |
-| X28 | Open hierarchy on Child. Change its parent to `Object`, wait for analysis, then expand the old item and reopen hierarchy. Undo. | The old item cannot return edges from the previous compilation; a fresh hierarchy no longer claims Base as parent. Restoring the file restores the edge. |
+| X28 | Open hierarchy on Child. Temporarily replace the member file with `class Child {}`, wait for analysis, then expand the old item and reopen hierarchy. Undo. | The old item cannot return edges from the previous compilation; a fresh hierarchy no longer claims Base as parent. Restoring the file restores the edge. `Object` is an interface, so `extends Object` is not a valid replacement fixture. |
 
 ### E. Edits, cancellation and capability boundaries
 
