@@ -492,11 +492,26 @@ jobs:
                 
                 echo "🧪 Running manual tests inline (cache still hot)..."
                 inspect_gradle_cache "before manual tests"
-                manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runCiTestTasksParallel" || echo "runCiTestTasks" )
-                echo "Running manual tests (main task: $manual_task_main)"
                 mkdir -p manualTests/build/logs
-                ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence
-                ./gradlew $GRADLE_OPTIONS "manualTests:$manual_task_main"
+
+                # Which branch is this build ultimately for? For a pull request that is the branch
+                # being merged into; for a push it is the branch itself. Deciding on the target
+                # rather than on the source means merging JIT into master cannot drag the reduced
+                # JIT test selection along with it: once the target is master, the full suite runs.
+                target_branch="${{ github.base_ref != '' && github.base_ref || github.ref_name }}"
+                echo "Target branch for this build: $target_branch"
+
+                if [ "$target_branch" = "JIT" ]; then
+                    # Temporary: while the JIT backend is still being built out, work targeted at
+                    # the JIT branch runs only the JIT test suites, not the whole manual test set.
+                    echo "Target is JIT: running the JIT test suites only"
+                    ./gradlew $GRADLE_OPTIONS manualTests:runJitTests manualTests:runSmallFloatsJit
+                else
+                    manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runCiTestTasksParallel" || echo "runCiTestTasks" )
+                    echo "Running manual tests (main task: $manual_task_main)"
+                    ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence
+                    ./gradlew $GRADLE_OPTIONS "manualTests:$manual_task_main"
+                fi
                 echo "🧾 Manual test logs captured under manualTests/build/logs and uploaded as CI artifacts."
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
