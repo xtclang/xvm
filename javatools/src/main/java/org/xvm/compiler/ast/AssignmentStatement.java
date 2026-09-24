@@ -855,11 +855,12 @@ public class AssignmentStatement
                         // atomic property
                         PropertyConstant  idProp = LVal.getProperty();
                         PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                        if (prop != null && prop.isAtomic()) {
+                        if (prop != null && prop.isAtomic() && lvalueExpr instanceof NameExpression exprName) {
                             MethodConstant idOp = findAtomicInPlaceAssignMethod(ctx, LVal.getType());
                             if (idOp != null) {
                                 ExprAST astVar = new UnaryOpExprAST(
-                                        astLValue, UnaryOpExprAST.Operator.Var, idProp.getRefType(null));
+                                        astLValue, UnaryOpExprAST.Operator.Var,
+                                        exprName.getAtomicRefType(ctx));
                                 astAssign = new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar,
                                         new ExprAST[] {astRValue}, false);
                                 break;
