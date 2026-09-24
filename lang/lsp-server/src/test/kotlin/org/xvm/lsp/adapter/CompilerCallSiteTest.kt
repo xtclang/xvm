@@ -15,10 +15,54 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.lsp.adapter.xdk.PartialSemanticModel
 import org.xvm.lsp.adapter.xdk.SemanticModel
+import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import java.util.concurrent.Executors
 
 class CompilerCallSiteTest {
+    @Test
+    fun `function valued calls expose typed signatures without inventing method targets`() {
+        val source = "module Calls { Int apply(function Int(Int) fn) { return fn(42); } }"
+        val compilation = compile(source)
+        val model = compilation.semanticSnapshot()
+        assertThat(model.calls).isEmpty()
+        val call = model.functionCalls.single()
+        assertThat(call.signature.parameters.map { model.type(it.type)!!.displayName }).containsExactly("Int")
+        assertThat(call.signature.parameters.map { it.name }).containsExactly(null)
+        assertThat(call.signature.returns.map { model.type(it)!!.displayName }).containsExactly("Int")
+        assertThat(compilation.functionBindings()).hasSize(1)
+        val node = compilation.functionBindings().keys.single()
+        assertThat(compilation.functionBindings()[node.clone() as InvocationExpression]).isNull()
+        assertThatThrownBy { (compilation.functionBindings() as MutableMap).clear() }.isInstanceOf(
+            UnsupportedOperationException::class.java,
+        )
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(URI, source).success).isTrue()
+            val help = requireNotNull(adapter.getSignatureHelp(URI, 0, source.indexOf("42") + 1))
+            assertThat(help.signatures.single().label).isEqualTo("Int fn(Int)")
+            assertThat(help.activeParameter).isZero()
+        }
+    }
+
+    @Test
+    fun `super records the inherited body and instantiated signature`() {
+        val model =
+            compile(
+                "module Calls { class Base<T> { T pick(T value)=value; } " +
+                    "class Child extends Base<String> { @Override String pick(String value)=super(value); } }",
+            ).semanticSnapshot()
+        val call = model.calls.single()
+        assertThat(model.symbol(call.method)!!.name).isEqualTo("pick")
+        assertThat(
+            model
+                .symbol(call.method)!!
+                .declaration!!
+                .start.column,
+        ).isEqualTo(33)
+        assertThat(call.signature.parameters.map { model.type(it.type)!!.displayName }).containsExactly("String")
+        assertThat(call.signature.returns.map { model.type(it)!!.displayName }).containsExactly("String")
+    }
+
     @Test
     fun `selected generic calls copy instantiated signatures and named argument ordering`() {
         val source =
@@ -167,6 +211,12 @@ class CompilerCallSiteTest {
                 "module Binding { Int choose(Int n) { return n; } void run() { function Int(Int) fn=&choose(_); Int n=fn(1); } }",
             ).semanticSnapshot()
         assertThat(binding.calls).isEmpty()
+        assertThat(binding.functionCalls).hasSize(1)
+        assertThat(
+            binding.functionCalls
+                .single()
+                .signature.parameters,
+        ).allSatisfy { assertThat(it.name).isNull() }
     }
 
     @Test

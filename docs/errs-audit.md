@@ -322,8 +322,8 @@ This completes the bounded diagnostic-audit task: the fresh capture's groups and
 families have dispositions, and the two reproduced defects have regressions. It does not certify
 every historical silence. The original seventy-message survey is not the same dataset as the
 37-message capture, and no one-to-one comparison is available. The `NameExpression` bound-generic
-binary-AST TODO still needs a reproducer; simple bound-function probes report normal type errors
-and do not reproduce it. Track that with the call-consumer work. Debug formatting, runtime/JIT
+binary-AST TODO was unresolved at this checkpoint; the post-L18 findings below now reproduce and
+fix its bound-function typing/emission path. Debug formatting, runtime/JIT
 ownership and optional CLI display fallbacks remain separate follow-ups as classified above.
 
 ### Dependency source ownership follow-up, 2026-09-23
@@ -407,3 +407,28 @@ bytes. This is an inspection-boundary finding, not a new claim about an upstream
 Delegating and Ref/Var-annotated properties remain explicit negative cases. Delegation's optimized
 chain APIs can generate forwarding methods, so resolving their source meaning needs its own consumer
 and output/lifetime checks before enabling it. Property rename remains disabled.
+
+## Post-L18 diagnostic and emission findings (2026-09-24)
+
+The structure-location follow-up above is implemented. Kotlin builds an attempt-local association
+from written declaration structures and their identities to original name tokens; it does not parse
+message text. Closed members retain their own URI, overlays move the span, and binary-only sites
+keep the document fallback. The real VERIFY-75 probe revealed that PropertyInfo logged against the
+inherited base identity. Duplicate/superfluous annotations now report the contributed declaration,
+which is the same owner named in the diagnostic parameters. ErrorList still deduplicates replay.
+
+The bound-function TODO now has a reproducer: a generic static `id(T)` returned as a
+`function Int(Int)` by name (with and without `&`). Before the correction it fails validation with
+COMPILER-43 because the hidden type parameter remains in the exposed function type. Removing that
+already-bound parameter reaches the documented missing binary AST and produces EMB-5. The fix
+constructs BindFunctionAST from the same binding indices/arguments as FBind, for static and bound
+instance paths, and retains the actual resulting function type. Artifact serialization/deserialization
+is covered. This is an existing compiler typing/emission defect, not a missing listener replay;
+no listener suppression or public error contract was changed. The atomic binary-AST and
+ToIntExpression audit items remain separate until reproduced.
+
+Post-L18 verification passes all 76 automated editor cases, including the exact derived-property
+warning range, all 788 executed LSP tests (three existing skips), 16 packaged stdio tests and 29
+focused Java tests. The 120-cycle editing/cancellation workload releases 2,400 tracked attempts,
+pools and source roots; p50/p95 rebuild times were 217/231 ms including debounce. This bounded
+run does not substitute for a multi-hour editor soak or remaining manual visual checks.

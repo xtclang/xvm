@@ -32,6 +32,38 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** A real compiler consumer of the bounded partial-analysis API; no fallback parser or mock. */
 class XdkPartialAnalysisTest {
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "return 1 + value.|;",
+            "return flag ? value.| : 0;",
+            "return flag ? 0 : value.|;",
+            "return work(value.|, 2);",
+            "return work(1 + value.|, 2);",
+        ],
+    )
+    fun `compound values and following arguments preserve the cursor context`(statement: String) {
+        CompilerTestSupport.configure()
+        val marked = "module Editing { Int work(Int first, Int second)=first; Int run(String value, Boolean flag) { $statement } }"
+        val prefix = marked.substringBefore('|')
+        val text = marked.replace("|", "")
+        val errors = ErrorList()
+        val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
+        assertThat(analysis.pool()).describedAs(errors.errors.toString()).isPresent()
+        val site = analysis.sites().single()
+        assertThat(site.receiver.orElseThrow().isValidated).describedAs(errors.errors.toString()).isTrue()
+        assertThat(
+            analysis
+                .semanticSnapshot(errors)
+                .sites
+                .single()
+                .members
+                .map { it.name },
+        ).contains("size")
+        assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+        assertThat((parents(site).filterIsInstance<MethodDeclarationStatement>().first().component as MethodStructure).ast).isNull()
+    }
+
     @Test
     fun `cursor facts publish surviving sites and release retries and discarded clones`() {
         CompilerTestSupport.configure()
@@ -194,7 +226,7 @@ class XdkPartialAnalysisTest {
     @Test
     fun `unsupported value prefixes remain unavailable and unknown receivers retain diagnostics`() {
         CompilerTestSupport.configure()
-        for (statement in listOf("return 1 + value.", "Int result = 1 + value.", "value += value.", "work(flag ? value.")) {
+        for (statement in listOf("work(flag ? value.", "return (value.")) {
             val prefix = "module Editing { Int run(String value, Boolean flag) { $statement"
             val errors = ErrorList()
             val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)

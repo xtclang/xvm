@@ -157,6 +157,7 @@ private class SemanticModelBuilder(
     private val expressions = linkedMapOf<SourceLocation, TypeId>()
     private val callees = IdentityHashMap<NameExpression, Argument>()
     private val calls = linkedMapOf<SourceLocation, SemanticModel.CallSite>()
+    private val functionCalls = linkedMapOf<SourceLocation, SemanticModel.FunctionCallSite>()
     private val callables = linkedMapOf<SymbolId, SemanticModel.Callable>()
     private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
     private val parameters = mutableMapOf<Pair<MethodConstant, Int>, SymbolId>()
@@ -189,7 +190,7 @@ private class SemanticModelBuilder(
             compilation.parsed()
                 ?: return listOf(unavailable())
         val nodes = nodesIn(root)
-        collect(nodes, compilation.callBindings(), compilation.pool())
+        collect(nodes, compilation.callBindings(), compilation.functionBindings(), compilation.pool())
         val implementations =
             if (compilation.succeeded() && errors != null) compilerImplementationTargets(nodes, errors) else emptyMap()
         // An inherited accessor need not appear in a written call or the consumer's constant table.
@@ -203,6 +204,7 @@ private class SemanticModelBuilder(
     private fun collect(
         nodes: List<AstNode>,
         bindings: Map<InvocationExpression, InvocationBinding>,
+        functions: Map<InvocationExpression, InvocationBinding.FunctionCall>,
         pool: ConstantPool?,
     ) {
         dependencies.forEach { (identity, declaration) ->
@@ -285,7 +287,7 @@ private class SemanticModelBuilder(
             }
             if (node is InvocationExpression) {
                 val callee = node.invokedExpression
-                val method = node.resolvedMethod
+                val method = bindings[node]?.method() ?: node.resolvedMethod
                 if (callee is NameExpression && method != null) callees[callee] = method
             }
         }
@@ -312,6 +314,7 @@ private class SemanticModelBuilder(
             when (node) {
                 is InvocationExpression -> {
                     bindings[node]?.let { copyCall(node, it) }
+                    functions[node]?.let { copyFunctionCall(node, it) }
                 }
 
                 is NameExpression -> {
@@ -373,6 +376,7 @@ private class SemanticModelBuilder(
                     occurrences.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                     expressions.filterKeys { it.sourceName == source }.map { (location, type) -> ExpressionType(location.range, type) },
                     calls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
+                    functionCalls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                 )
             },
         )
@@ -414,6 +418,34 @@ private class SemanticModelBuilder(
             )
     }
 
+    private fun copyFunctionCall(
+        node: InvocationExpression,
+        binding: InvocationBinding.FunctionCall,
+    ) {
+        val pool = binding.type().constantPool
+        val parameters = pool.extractFunctionParams(binding.type()) ?: return
+        val returns = pool.extractFunctionReturns(binding.type()) ?: return
+        val signature =
+            Signature(
+                immutableList(parameters.map { SemanticModel.Parameter(null, type(it) ?: return, false, false) }),
+                immutableList(returns.map { type(it) ?: return }),
+                false,
+            )
+        val at = location(node.source, node.startPosition, node.endPosition)
+        val callee = node.invokedExpression
+        functionCalls[at] =
+            SemanticModel.FunctionCallSite(
+                at.range,
+                location(node.source, callee.startPosition, callee.endPosition).range,
+                signature,
+                immutableList(
+                    binding.arguments().map {
+                        SemanticModel.CallArgument(location(node.source, it.startPosition(), it.endPosition()).range, it.parameterIndex())
+                    },
+                ),
+            )
+    }
+
     private fun callable(
         node: AstNode,
         id: SymbolId,
@@ -433,7 +465,7 @@ private class SemanticModelBuilder(
     ): PartialSemanticModel {
         val source = analysis.sites().singleOrNull()?.source ?: return PartialSemanticModel(unavailable(), emptyList())
         val nodes = nodesIn(analysis.sourceTrees())
-        collect(nodes, analysis.callBindings(), analysis.pool().orElse(null))
+        collect(nodes, analysis.callBindings(), analysis.functionBindings(), analysis.pool().orElse(null))
         val sites =
             analysis.sites().map { site ->
                 val parents = generateSequence(site.parent) { it.parent }.toList()
