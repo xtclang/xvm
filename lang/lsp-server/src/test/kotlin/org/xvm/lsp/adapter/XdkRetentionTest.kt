@@ -85,11 +85,13 @@ class XdkRetentionTest {
                 timings += System.nanoTime() - started
                 val renamed = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed").get(30, SECONDS)
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
-                val incomplete = CONSUMER.replace("box) {}", "box) { box. }")
+                val prefix = if (cycle % 2 == 0) "box." else "take("
+                val expected = if (cycle % 2 == 0) "number" else "box"
+                val incomplete = CONSUMER.replace("box) {}", "box) { $prefix }")
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
-                val column = incomplete.indexOf("box. ") + 4
-                assertThat(adapter.getCompletionsAsync(uri, 0, column, ".").get(30, SECONDS).map { it.label }).contains("number")
-                val cancelled = adapter.getCompletionsAsync(uri, 0, column, ".")
+                val column = incomplete.lastIndexOf(prefix) + prefix.length
+                assertThat(adapter.getCompletionsAsync(uri, 0, column).get(30, SECONDS).map { it.label }).contains(expected)
+                val cancelled = adapter.getCompletionsAsync(uri, 0, column)
                 cancelled.cancel(false)
                 assertThat(adapter.compile(uri, CONSUMER).success).isTrue()
                 val rename = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed")
@@ -122,6 +124,6 @@ class XdkRetentionTest {
         const val CYCLES = 120
         const val CONSUMER =
             "module Consumer { package lib import Library; " +
-                "Int run() { Int local=lib.value(); return local; } void probe(lib.Box box) {} }"
+                "Int run() { Int local=lib.value(); return local; } void take(lib.Box value) {} void probe(lib.Box box) {} }"
     }
 }
