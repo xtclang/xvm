@@ -664,6 +664,10 @@ selection rules.
   Calculations already running can only publish to detached maps. Existing compiler per-source
   metadata invalidation detaches that source's bucket; it does not redefine the compiler's broader
   dependency invalidation rules.
+- Constant-table optimization and deserialization clear completed relations before pruning or
+  replacing constants. Once memoization belongs to the pool, removing a constant from its index
+  no longer releases that constant's relation entries automatically. The table object and active
+  guards stay intact; a pool that has never calculated relations does not allocate a table to clear.
 
 Compiler placeholders are a separate category. Registration deliberately cannot adopt unresolved
 types, and some register placeholders cannot be structurally compared yet. `calculateUnresolved`
@@ -686,6 +690,9 @@ another thread cannot see a provisional result, failures can be retried, depende
 are not cached, completed recursive roots are reusable, scoped inputs do not poison outer results,
 invalidation cannot be undone by an older calculation, and equal keys from another owner are
 rejected. Timeouts only bound a hung test. No test relies on sleeps or elapsed-time assertions.
+Two additional lifecycle cases inspect retained keys after constant-table optimization and reload.
+Both reproduced retention before the fix and passed after it; they inspect the table directly
+because a cache miss on a newly loaded identity would not prove release of the old identity.
 
 The XDK ownership test compares a matrix of actual string, integer, object, generic and nullable
 type relations against the image type algebra with cold, warm and cleared runtime tables. It
@@ -698,8 +705,9 @@ existing warning-replay test also checks that clearing relations preserves TypeI
 |---|---|---|
 | `6dd461277` — reflective handle ownership | Container-owned handles; exact same-image isolation regression | Singleton/descriptor prototype |
 | `95510d2ab` — local reflection and compositions | Parameterization/relational construction, native declaration binding, owner-aware composition caches and narrow ownership errors | Handle ownership |
-| Type-relation semantic table | Completed results, calculation-local guards, explicit clear operation and equivalence/concurrency tests | Descriptor context; tested together with reflection |
-| Collection-style cleanup | Immutable fixed test collections and transformations at existing array API boundaries | Independent of the ownership architecture |
+| `ddc9ad868` — type-relation semantic table | Completed results, calculation-local guards, explicit clear operation and equivalence/concurrency tests | Descriptor context; tested together with reflection |
+| Relation-table lifecycle cleanup | Release completed relation keys on constant-table optimization and reload; deterministic retention regressions | Type-relation semantic table |
+| Collection-style cleanup and identity comments | Immutable fixed test collections, transformations at existing array API boundaries, and rationale for identity-based keys | Independent of the ownership architecture |
 
 Next scopes remain separately reviewable: foreign reflection dispatch and constructor/property/
 method representations; TypeInfo and variance/normalization cache semantics; other generated
@@ -709,9 +717,9 @@ be attempted. This slice does not guarantee a fully frozen or universally sharea
 nor does it establish a performance gain. The general error-listener architecture and native
 resource shutdown remain outside this branch.
 
-Verification on 2026-09-24: `:javatools:test --rerun` completed 486 tests (446 passed,
-40 existing skips, no failures/errors), including all nine `TypeRelationsTest` cases and nine
+Verification on 2026-09-24: `:javatools:test --rerun` completed 488 tests (448 passed,
+40 existing skips, no failures/errors), including all eleven `TypeRelationsTest` cases and nine
 descriptor-context tests. The full opt-in `:xdk:test --rerun` rebuilt every library and passed all
-36 tests without skips. The successful full build took 1m18s on this run; that is validation,
+36 tests without skips. The successful full build took 1m29s on this run; that is validation,
 not a controlled benchmark. Counts were read from JUnit XML. `spotlessCheck` and `git diff --check`
 passed. No CI task dependencies or default execution modes changed.

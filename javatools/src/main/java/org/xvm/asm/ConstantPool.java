@@ -2634,6 +2634,7 @@ public class ConstantPool
     protected void disassemble(DataInput in)
             throws IOException {
         requireSerializedIndices();
+        clearTypeRelations();
         f_listConst.clear();
         m_mapConstants.clear();
         m_mapLocators.clear();
@@ -3023,6 +3024,17 @@ public class ConstantPool
      */
     public TypeRelations getTypeRelations() {
         return typeRelations.get(this);
+    }
+
+    /**
+     * Release completed relation keys before replacing or pruning the constant table. This cache
+     * is owned by the pool, so discarded constants cannot release its entries themselves. Keep
+     * the semantic table and its active recursion guards; do not create one solely to clear it.
+     */
+    private void clearTypeRelations() {
+        if (typeRelations.isComputed()) {
+            getTypeRelations().clear();
+        }
     }
 
     /**
@@ -3566,6 +3578,7 @@ public class ConstantPool
      * Constants occur before the less used constants.
      */
     private void optimize() {
+        clearTypeRelations();
         ArrayList<Constant> list = f_listConst;
 
         // remove unused constants

@@ -1,5 +1,12 @@
 package org.xvm.asm;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+
+import java.util.Map;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -9,6 +16,9 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.TypeConstant.Relation;
 
@@ -16,9 +26,45 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 class TypeRelationsTest {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void rebuildingTheConstantTableReleasesCompletedRelationKeys(boolean reload) throws Exception {
+        var pool = new FileStructure(Constants.ECSTASY_MODULE).getConstantPool();
+        var relations = pool.getTypeRelations();
+        var right = pool.typeString();
+        var left = pool.typeChar();
+        relations.calculate(right, left, true, () -> Relation.INCOMPATIBLE);
+
+        // Inspect retained keys directly: equal types loaded again have new identities, so a cache
+        // miss would not prove that the old keys were released. This avoids GC timing assertions.
+        var completed = TypeRelations.class.getDeclaredField("completed");
+        completed.setAccessible(true);
+        assertEquals(1, ((Map<?, ?>) completed.get(relations)).size());
+
+        if (reload) {
+            var bytes = new ByteArrayOutputStream();
+            try (var out = new DataOutputStream(bytes)) {
+                pool.assemble(out);
+            }
+            try (var in = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+                pool.disassemble(in);
+            }
+        } else {
+            pool.preRegisterAll();
+            pool.register(right);
+            pool.postRegisterAll(true);
+            assertTrue(right.getPosition() >= 0);
+            assertEquals(-1, left.getPosition());
+        }
+        assertSame(relations, pool.getTypeRelations());
+        assertTrue(((Map<?, ?>) completed.get(relations)).isEmpty(),
+                "The pool's semantic table must not retain discarded constant keys");
+    }
+
     @Test
     void completedResultsCanBeClearedWithoutResettingConstantIdentity() {
         var pool = new FileStructure(Constants.ECSTASY_MODULE).getConstantPool();
