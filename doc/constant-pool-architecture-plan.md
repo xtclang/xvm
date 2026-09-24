@@ -196,6 +196,7 @@ underlying type definitions are compatible.
 | 2. Singleton prototype | Owner-local initialization table; migrate handles, waiting and failure release together; narrow adapter for existing callers | TypeInfo/interner rewrite, native resource shutdown | Existing singleton regressions plus same-image isolation/sharing tests |
 | 3. Descriptor boundary | Runtime descriptor interner distinct from compiled constant indices; explicit resolution context | Global interning, binary format changes | Reflection, cross-image resolution and index-domain tests |
 | 4. Metadata separation | Move selected derived metadata and diagnostics to context-owned memo tables; later separate remaining runtime handles/method flags | Assuming every TypeInfo is context-free | Cache-clear equivalence, recursion/failure and generation-isolation tests |
+| 4a. Generated executable code | Finish image-level synthesis before publication; move late delegation bodies and per-composition initializers into a context-owned executable overlay | Arbitrary eager generation of all generic specializations; mutable generated Ops in shared images | Delegation, accessors, const helpers, reflection and debugger tests against an unchanged image |
 | 5. Frozen image | Complete native preparation; prohibit definition writes; immutable body publication | New container models or cross-build reuse | Full interpreter regressions with freeze guards enabled |
 | 6. Optional sharing | Reuse proven immutable images/metadata across requests with measured retention policy | Cross-generation name-based cache, arbitrary interner eviction | CPU/allocation/retained-memory comparison and ownership assertions |
 
@@ -271,3 +272,107 @@ own; a wholesale rewrite needs stronger evidence.
 A successful first prototype would make the singleton definition describe a singleton, while
 its selected container owns the running instance and initialization state. That is a useful,
 reviewable boundary even if we decide not to undertake the larger frozen-image architecture.
+
+## Singleton separation experiment
+
+The local experiment is on `lagergren/constant-pool-state-separation`, forked at `bda7556e7`.
+The ownership-only branch remains the reviewable correctness baseline. This experiment implements
+stages 1 and 2 only; it does not freeze definitions or change the binary format, general listener
+API, shutdown protocol, Gradle plugin or JIT execution. Existing shared JIT sources must compile.
+
+### Mutation inventory before implementation
+
+This is an inventory of the interpreter's definition/metadata boundary and its known blockers,
+not a claim that arbitrary runtime code has been proven immutable. Compiler writes before
+activation remain valid. None of the rows below authorizes sharing a whole FileStructure.
+
+| State and mutation sites | Actual lifetime / meaning | Action in this experiment |
+|---|---|---|
+| `SingletonConstant.getHandle`, `setHandle`, `markInitializing`, `getInitializationWaiter`, `abortInitialization`; reset in `adoptedBy` | Owner-container value, initializer fiber and completion future; not disposable metadata | Move together into the owner's `ConstHeap`; retain ancestor selection in `Container` |
+| `Utils.initConstants`, `ObjectHandle.DeferredSingletonHandle` / `InitializingHandle` | Initialization dispatch, recursion, suspension and failure cleanup | Resolve state from the explicit container; a recursive handle must retain the specific owner-local state |
+| `xEnum.initNative` / `createConstHandle`, `xPackage.ensureConstHandle`, `ClassTemplate.createPropertyRef`, `ConstHeap.relocateConst` | Bootstrap values, enum structs, package/module values, lazy refs and relocation | Migrate every singleton state read/write, preserving the existing owner/service protocol |
+| `ConstantPool.register` and `ensure*TypeConstant` factories | Canonical definition references and on-demand runtime descriptors; indices remain pool-local | Keep registration and existing destination rules; an interner is not a disposable cache |
+| `TypeConstant.ensureTypeInfo`, relation/variance maps, normalization and recursion guards; property/signature caches | Derived facts plus in-progress computations; compiler invalidation differs from runtime memoization | Keep current adoption/reset rules; later separation requires full query keys and failure semantics |
+| `TypeConstant.ensureTypeHandle`, `FSNodeConstant.setHandle`, `FileStoreConstant.setHandle`, `HandleConstant` | Runtime representations or captured live values with distinct lifetime rules | Do not move or clear these as if they were singleton state |
+| `MethodStructure.ensureInitialized`, `ensureRuntimeInfo`, `ensureCode`, `cloneBody` | Execution flag, variable/scope sizes, lazily decoded mutable code and copied compiler state | Keep independent method bodies and all application copies; same-definition singleton tests do not imply safe same-image execution |
+| `ClassTemplate.markNativeMethod` / `markNativeProperty`, native template `INSTANCE` fields | Structural bootstrap overlays and classloader-wide runtime bindings | No freeze guard or multi-runtime sharing claim; complete native preparation needs a separate design |
+| `Container` template/composition maps and `ServiceContext` operation caches | Container/service-specific execution metadata | Already have explicit runtime owners; retain their lifetimes |
+
+The desired change is structural: after migration a copied singleton definition has no execution
+state to clear. The live value still needs module-sharing owner selection, and changing to a table
+does not make the service scheduler or mutable definition graph generally thread safe.
+
+### Generated methods and other freeze blockers
+
+Generated executable code is a distinct responsibility, not simply a cache to clear. In particular,
+metadata queries can currently create methods and insert them into the declaration tree. Before
+sharing a frozen image, resolution must distinguish an image-defined method from an executable
+implementation supplied by the current type/execution context. The proposed runtime context needs
+an executable overlay in addition to its descriptor interner and semantic memo tables.
+
+| Concrete source path / trigger | What changes today | Proposed boundary and required checks |
+|---|---|---|
+| `FileStructure` construction/linking → `synthesizeChildren` → `ClassStructure.synthesizeConstInterface(true)` | Const/enum equals, compare, hash and Stringable support declarations; `synthesizeAppendTo` can generate code | Complete declaration-level synthesis before publication; test const equality, hashing, ordering and custom `toString`/`appendTo` behavior after freezing |
+| `ClassComposition.ensureAutoInitializer` → `ClassStructure.createInitializer` | Builds a transient method for the concrete struct field layout, registers its constants, caches the body in the composition; it is not attached as a declaration child | Keep the executable in the owning composition/context; reference image definitions without writing them; test generic fields, annotations, injected fields and independent variable/scope counts |
+| `MethodInfo.ensureOptimizedMethodChain` → `ClassStructure.ensureMethodDelegation` | Creates a delegating method on the host class, assembles Ops, stores the body in metadata | Move late bodies to the executable overlay; key by image, resolved host/signature, delegate and applicable native bindings; test generic and atomic delegation, failure/retry and concurrent first lookup |
+| `PropertyInfo.createDelegatingChain` → `ClassStructure.ensurePropertyDelegation` | Creates a host property if absent and synthesizes getter/setter methods | Keep semantic property facts separate from generated accessors; test both reads and writes, inherited visibility and annotation behavior |
+| `ClassTemplate.markNativeMethod` / `markNativeProperty` | Marks methods native; can insert synthetic overriding methods/properties and alter getter behavior | Complete stable bootstrap declarations before freeze; represent later native bindings in an explicit overlay; test inherited native overrides and dispatch after a cold lookup |
+| `xRTType.invokeStructConstructor` and `xRTFunction` constructor/function handles | Runtime callable representations and parameter/type descriptors, sometimes capturing an outer value | Keep captured values in execution state and descriptors in the type context; a synthetic handle is not necessarily a new declaration; test reflective construction with/without an outer instance |
+| `ClassStructure.ensureSyntheticMethod` / `ensureSyntheticProperty` | General structural insertion APIs on synthetic classes | Include in structural mutation guards. No production caller was found for `ensureSyntheticMethod` in this inventory; do not count it as an exercised runtime path |
+| `MethodStructure.ensureCode` / `ensureRuntimeInfo`, code assembly/registration, `MethodBody.setMethodStructure` | Lazy decoding, mutable Ops/registers, local constant arrays and calculated frame layout | Decode immutable templates or keep executable copies in the overlay; frame sizing must match the selected body, including generated constructors; verify cold/warm execution and cross-context isolation |
+| `ServiceContext.insertBreakPointOp` | Replaces entries in an executing Op array, later restores them | Debugger instrumentation must be execution-owned even if decoded code is shared; two executions of one image must not inherit each other's breakpoints |
+| `TypeInfoReal` optimized chains and member maps, `TypeConstant` relation/variance/in-progress state | Reads can populate maps, recurse, or trigger the synthesis above | Classify individual calculations before moving them; retain context/generation keys and immutable diagnostic values, and test failed recursion without publishing partial entries |
+| `TypeConstant.ensureTypeHandle`, reflective cached compositions/empty arrays, native static `INSTANCE` and value fields | Handles and representations may be container-, runtime- or classloader-owned rather than image-pure | Audit each sharing policy before using several images/runtimes in one host; a metadata-table move cannot repair classloader-wide ownership |
+| `FSNodeConstant` / `FileStoreConstant` handles, annotated `HandleConstant`, frame-dependent register constants | Execution values, captures or compiler register dependencies are embedded in constant objects | Separate each according to semantics; never evict a captured annotation argument or persist a frame-relative value as an image constant |
+
+The overlay is a proposal, not an implementation in the singleton prototype. It should expose
+lookup/build operations through an explicit context; generated method identities must not reuse
+serialized constant positions as a second index domain. Publish completed bodies atomically, keep
+construction recursion local to an attempt, and ensure reflection/dispatch consult the same view.
+Do not recreate a global ambient pool under the name of a method-generation context.
+
+There are three distinct work items before freeze enforcement:
+
+1. Finish stable linking, const/helper synthesis and structural native preparation before the
+   image is published. Preserve the compiler's ability to mutate its own workspace.
+2. Redirect genuinely late, specialization-dependent generation into the executable overlay.
+   Retain service-local caches and execution-specific instrumentation outside immutable bodies.
+3. Guard every structural insertion/replacement and image registration path, then execute the
+   workloads above with guards enabled. Also compare declaration trees and serialized indices
+   before/after execution; merely observing no calls to one factory is insufficient.
+
+This inventory names source-confirmed paths, not an exhaustive immutability proof. New guard
+failures become explicit inventory entries rather than exceptions that silently allow writes.
+The frozen-image stage cannot pass its gate while an unclassified runtime write remains.
+
+### Reproducible comparison
+
+`xdk/src/test/benchmarks/SingletonStateBenchmark.java` is an opt-in Java source launcher outside
+Gradle's test source set. It compiles the existing assertion-only `ownership/Singletons.x` fixture
+once, then measures native bootstrap and repeated preparation/execution of fresh applications
+under that root. Each run retains the existing definition copies. It reports wall time, whole-JVM
+CPU time and total thread allocation; it introduces no CI task, JVM sizing flags or timing assertions.
+
+From the repository root, build the installed distribution and run:
+
+```sh
+./gradlew :xdk:installDist
+java -ea -cp xdk/build/install/xdk/javatools/javatools.jar \
+    xdk/src/test/benchmarks/SingletonStateBenchmark.java \
+    xdk/build/install/xdk xdk/src/test/resources/ownership/Singletons.x 8
+```
+
+Use multiple fresh JVMs for each revision. Report the cold iteration separately and use the same
+warm iterations on both revisions. Do not interpret cumulative allocation as retained memory or
+attribute changes in copying/linking to this prototype: those algorithms remain unchanged.
+Comparing live heap requires a separate controlled collection/retention experiment; no forced-GC
+assertion belongs in the tests. A small timing difference in this workload is not evidence of a
+general XDK-build speedup.
+
+Baseline validation at `bda7556e7`: 14 focused Java cases and 8 XDK ownership cases executed with
+zero skipped tests. Inspecting stderr found that the existing failure fixture accepted a runtime
+array-bounds exception before its intended constructor exception. The comparison must first fix
+the missing constructor local-variable slots and require the expected exception type/message;
+that prerequisite is isolated from the state-table migration in `846bf5315`. The strengthened
+test fails on `bda7556e7`; all 8 XDK ownership cases and formatting pass with the fix, without the
+array-bounds error on stderr. Use `846bf5315` as the behaviorally valid performance baseline.
