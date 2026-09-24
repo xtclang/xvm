@@ -156,6 +156,9 @@ public interface ErrorListener {
      * during a compilation, to decide whether a stage may proceed, so a host that lambdas the
      * interface directly is telling the compiler that its own diagnostics did not happen.
      *
+     * Every report is delivered; this factory does not deduplicate. Use {@link ErrorList} when
+     * repeated reports should collapse. Compiler callbacks must be serialized by the host.
+     *
      * @param consumer  receives each diagnostic as it is reported
      *
      * @return a listener that reports to the consumer and remembers what it reported
