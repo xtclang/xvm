@@ -391,6 +391,7 @@ class XdkAdapter internal constructor(
         val (retired, probes) =
             synchronized(lifecycle) {
                 check(!closed) { "XDK adapter is closed" }
+                if (project.sameConfiguration(replacement)) return emptySet()
                 project = replacement
                 builds.clear()
                 retireRequests(requests.keys.toSet())

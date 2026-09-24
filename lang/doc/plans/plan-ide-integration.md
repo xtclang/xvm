@@ -169,12 +169,13 @@ The Kotlin host API exports successful compilations with `Compilation.toDependen
 the complete artifact set with `XtcLanguageServer.replaceCompilerDependencies(...)`. Replacements
 invalidate affected consumers, including transitive imports, cancel pending work and republish
 diagnostics at current document versions. Unrelated successful sessions survive. Binary-only
-artifacts have no invented source targets. The standard editor launch still supplies only bundled
-XDK modules unless a host also configures source modules. `replaceCompilerSourceModules(...)` now
+artifacts have no invented source targets. Editor launch supplies bundled XDK modules and explicit source modules from
+`xtcCompiler` initialization options or `xtc.compiler` settings. VS Code exposes the live workspace
+setting `xtc.compiler.sourceModules`; IntelliJ has no dedicated graph settings UI yet. `replaceCompilerSourceModules(...)` now
 provides automatic source dependency builds for explicit roots/edges, including unsaved overlays,
 100 ms edit debouncing, transitive invalidation and per-document diagnostic versions. Failed
 dependencies block consumers without reusing old artifacts; corrections restore them automatically.
-Editor project discovery/configuration, external hierarchy and workspace-wide reference indexing
+Automatic editor project discovery, external hierarchy and workspace-wide reference indexing
 remain open. Cyclic source graphs are rejected. See the
 [dependency verification record](../../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23).
 
@@ -371,7 +372,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Preserve regression coverage for type-parameter declarations and anonymous-class captures
    - Versioned dependency artifacts/source indices and consumer invalidation now have an explicit host API
    - Explicit source roots/edges now enable automatic dependency builds and consumer diagnostic refresh
-   - Add editor project discovery/configuration and persistent indexing before workspace-wide references/rename
+   - Add automatic editor project discovery and persistent indexing before workspace-wide references/rename
    - Direct source type hierarchy, type-definition and actual method-chain implementation lookup are implemented
    - Static selected-call hierarchy, resolved-name tokens, read/write highlights and bounded hints are implemented
    - Scope, imported types, static lookup and bounded incomplete-call fitting now have compiler-backed consumers
