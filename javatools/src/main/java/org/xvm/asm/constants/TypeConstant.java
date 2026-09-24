@@ -7212,6 +7212,18 @@ public abstract class TypeConstant
      * @return the default value for this type, or null if there is none
      */
     public Constant getDefaultValue() {
+        return getDefaultValue(getConstantPool());
+    }
+
+    /**
+     * Resolve this type's default using its declaration, creating the value in the selected
+     * destination. Runtime code generation passes its descriptor pool so a previously unused
+     * default does not extend the image's constant table.
+     *
+     * @param pool  the destination for newly created default constants
+     * @return an existing declaration value or a new constant in the destination, or null if none
+     */
+    public Constant getDefaultValue(ConstantPool pool) {
         if (isExplicitClassIdentity(false) && isSingleUnderlyingClass(false)) {
             IdentityConstant id   = getSingleUnderlyingClass(false);
             ClassStructure   clz  = (ClassStructure) id.getComponent();
@@ -7219,13 +7231,12 @@ public abstract class TypeConstant
             if (prop instanceof PropertyStructure propDefault) {
                 Constant constDefault = propDefault.getInitialValue();
                 if (constDefault == null) {
-                    constDefault = getConstantPool().
-                            ensureSingletonConstConstant(prop.getIdentityConstant());
+                    constDefault = pool.ensureSingletonConstConstant(pool.register(prop.getIdentityConstant()));
                 }
                 return constDefault;
             }
         } else if (isNullable()) {
-            return getConstantPool().valNull();
+            return pool.valNull();
         }
 
         return null;

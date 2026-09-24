@@ -2824,7 +2824,7 @@ public class ClassStructure
      * Note: the resulting method will be marked as abstract if there are no properties
      *       to initialize.
      *
-     * @param pool        the ConstantPool to use
+     * @param pool        the owning runtime context's descriptor pool, not an image constant pool
      * @param typeStruct  the type, for which a default constructor is to be created
      * @param mapFields   the field infos keyed by properties nids
      *
@@ -2832,17 +2832,20 @@ public class ClassStructure
      */
     public MethodStructure createInitializer(ConstantPool pool, TypeConstant typeStruct,
                                              Map<Object, FieldInfo> mapFields) {
-        int nFlags = Format.METHOD.ordinal() | Access.PUBLIC.FLAGS | STATIC_BIT | SYNTHETIC_BIT;
-
-        // create a transient MethodStructure (without an intermediate MultiMethodStructure)
+        // The template may come from the native root, while this composition belongs to an
+        // application copy. Select the identity from the composition's type, whose metadata also
+        // supplies the fields below, rather than importing the template's source-image identity.
+        IdentityConstant idClass = typeStruct.getSingleUnderlyingClass(true);
+        if (idClass instanceof NativeRebaseConstant) {
+            // Native interface implementations have a pseudo class identity. Methods belong to
+            // the corresponding declaration in the selected image, not to that pseudo identity.
+            idClass = idClass.getComponent().getIdentityConstant();
+        }
         MethodConstant idMethod = pool.ensureMethodConstant(
-                pool.register(getIdentityConstant()),
+                pool.register(idClass),
                 "default", TypeConstant.NO_TYPES, TypeConstant.NO_TYPES);
 
-        // use the module as a parent component without adding the method as a child
-        ModuleStructure module = pool.getFileStructure().getModule();
-        MethodStructure method = new MethodStructure(module, nFlags, idMethod, null,
-                Annotation.NO_ANNOTATIONS, Parameter.NO_PARAMS, Parameter.NO_PARAMS, true, false);
+        MethodStructure method = new RuntimeMethodStructure(idMethod);
 
         Code code = method.createCode();
 
@@ -2872,7 +2875,7 @@ public class ClassStructure
                 }
             } else {
                 if (!infoProp.isImplicitlyAssigned()) {
-                    constInit = infoProp.getType().getDefaultValue();
+                    constInit = infoProp.getType().getDefaultValue(pool);
                 }
             }
 

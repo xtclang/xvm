@@ -6,8 +6,10 @@ the ownership implementation and its minimal execution prerequisites. It exclude
 DIRECT/PERSISTENT work and broad resource/shutdown changes.
 The proposed next architectural step is in [the separation plan](constant-pool-architecture-plan.md).
 The experimental branch `lagergren/constant-pool-state-separation`, forked at `bda7556e7`, now
-implements its singleton-state step. Sections C15/C16 below distinguish the original fix from
-that follow-up; the rest of the ownership model remains in place. The plan records the wider
+implements its singleton-state step and a first descriptor/index boundary for runtime-generated
+field initializers. Sections C15/C16 below distinguish the original singleton fix from that
+follow-up; the plan's descriptor prototype section records the newer changes and their limits.
+The rest of the ownership model remains in place. The plan records the wider
 mutation inventory, including runtime-generated methods and the remaining freeze blockers.
 The original combined work remains on `lagergren/constant-pool-ownership`; its
 [submission plan](https://github.com/xtclang/xvm/blob/lagergren/constant-pool-ownership/plugin/doc/plans/embedded-runtime-pr-plan.md)

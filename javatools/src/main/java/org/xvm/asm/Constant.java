@@ -377,8 +377,11 @@ public abstract class Constant
 
     /**
      * Determine the last known position that the Constant was located at in its ConstantPool.
-     * Generally. the position only has meaning during the disassembly and assembly processes. The
+     * Generally, the position only has meaning during the disassembly and assembly processes. The
      * position of all constants may be re-ordered as part of the assembly process.
+     *
+     * <p>Constants in a runtime descriptor store have no image index and always return {@code -1},
+     * even after interning. A position is neither a type identity nor a method-local code reference.
      *
      * @return the last known index of the Constant, or <code>-1</code> if no position has been assigned
      *         to the constant

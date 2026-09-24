@@ -870,9 +870,10 @@ public class Frame
      */
     private void checkType(ObjectHandle hValueFrom, VarInfo infoTo) {
         TypeConstant typeFrom = hValueFrom.getUnsafeType();
-        if (typeFrom.getPosition() != infoTo.m_nTypeId) { // quick check
-            TypeConstant typeTo = infoTo.getType();
-
+        TypeConstant typeTo   = infoTo.getType();
+        // Positions belong to an image, and runtime descriptors have no image position at all.
+        // Only canonical object identity can bypass the relation check.
+        if (typeFrom != typeTo) {
             switch (typeFrom.calculateRelation(typeTo)) {
             case IS_A:
                 // no need to do anything
@@ -2410,7 +2411,7 @@ public class Frame
      */
     public class VarInfo {
         private TypeConstant    m_type;
-        private int             m_nTypeId;
+        private int             auxiliaryId; // input to the custom resolver, not a pool index
         private int             m_nStyle;    // a combination of VAR_*, TYPE_* or RESOLVED_TYPE values
         private final int       f_nNameId;
         private String          m_sVarName;
@@ -2430,7 +2431,6 @@ public class Frame
          */
         public VarInfo(TypeConstant type, int nNameId, int nStyle) {
             m_type    = type;
-            m_nTypeId = type.getPosition();
             f_nNameId = nNameId;
             m_nStyle  = nStyle;
         }
@@ -2440,10 +2440,10 @@ public class Frame
          */
         public VarInfo(int nTargetId, int nAuxId, VarTypeResolver resolver) {
             m_nTargetId = nTargetId;
-            m_nTypeId   = nAuxId;
-            f_nNameId   = 0;
-            m_nStyle    = VAR_STANDARD;
-            m_resolver  = resolver;
+            auxiliaryId = nAuxId;
+            f_nNameId    = 0;
+            m_nStyle     = VAR_STANDARD;
+            m_resolver   = resolver;
         }
 
         /**
@@ -2484,7 +2484,7 @@ public class Frame
                 boolean fDynamic;
                 if (type == null) {
                     assert m_resolver != null;
-                    type = m_resolver.resolve(Frame.this, m_nTargetId, m_nTypeId);
+                    type = m_resolver.resolve(Frame.this, m_nTargetId, auxiliaryId);
                     fDynamic = type.containsDynamicType();
                 } else {
                     fDynamic = type.containsDynamicType();
@@ -2496,7 +2496,6 @@ public class Frame
                     m_nStyle |= TYPE_DYNAMIC;
                 } else {
                     m_type    = type;
-                    m_nTypeId = type.getPosition();
                     m_nStyle |= RESOLVED_TYPE;
                 }
             }

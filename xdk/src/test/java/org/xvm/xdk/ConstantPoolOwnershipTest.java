@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,7 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
+import org.xvm.asm.RuntimeMethodStructure;
 
 import org.xvm.asm.constants.SingletonConstant;
 
@@ -47,6 +49,7 @@ import org.xvm.runtime.ServiceContext.CallLaterRequest;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -64,9 +67,9 @@ class ConstantPoolOwnershipTest {
     private static final EmbeddingSupport COMPILER = EmbeddingSupport.instance().configure(repository(), null);
 
     @ParameterizedTest
-    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x"})
+    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x"})
     @Timeout(60)
-    void singletonProgramsRunInIndependentApplications(String source) throws Exception {
+    void ownershipProgramsRunInIndependentApplications(String source) throws Exception {
         var repository = repository();
         var runtime = new Runtime();
         try (var input = getClass().getResourceAsStream("/ownership/" + source)) {
@@ -90,12 +93,37 @@ class ConstantPoolOwnershipTest {
                 var file = root.createFileStructure(new FileStructure(module.getFileStructure()).getModule());
                 assertNull(file.linkModules(runtimeRepository, true));
                 var application = new MainContainer(runtime, root, file.getModuleId());
+                if (source.equals("RuntimeDescriptors.x")) {
+                    verifyLateInitializer(application);
+                }
                 application.start(Map.of());
                 application.invokeAsync("run").join();
             }
         } finally {
             runtime.shutdownXVM();
         }
+    }
+
+    /** Check the boundary before either generic composition's initializer has executed. */
+    private static void verifyLateInitializer(MainContainer application) {
+        var pool = application.getConstantPool();
+        var box = ((ClassStructure) application.getModule().getComponent().getChild("Box"))
+                .getIdentityConstant().getType();
+        var composition = application.resolveClass(pool.ensureParameterizedTypeConstant(box, pool.typeInt64()));
+        // Composition and metadata preparation are still image-backed. The new boundary starts
+        // at descriptor construction and executable generation, not at all metadata queries yet.
+        var constants = pool.getConstants();
+        var positions = Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray();
+        var context = application.getTypeContext();
+        var descriptor = context.parameterize(box, pool.typeString());
+        assertEquals(-1, descriptor.getPosition());
+        var initializer = composition.ensureAutoInitializer();
+        assertTrue(initializer instanceof RuntimeMethodStructure);
+        assertSame(context.getDescriptorPool(), initializer.getConstantPool());
+        assertTrue(Arrays.stream(initializer.getLocalConstants()).allMatch(c -> c.getPosition() == -1));
+        assertArrayEquals(constants, pool.getConstants());
+        assertArrayEquals(positions, Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray());
+        assertFalse(application.getModule().getComponent().children().contains(initializer));
     }
 
     @Test

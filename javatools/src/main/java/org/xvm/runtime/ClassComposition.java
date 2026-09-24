@@ -253,7 +253,7 @@ public class ClassComposition
 
         MethodStructure method = m_methodInit;
         if (method == null) {
-            ConstantPool pool = getContainer().getConstantPool();
+            ConstantPool pool = getContainer().getTypeContext().getDescriptorPool();
             m_methodInit = method =
                 f_template.getStructure().createInitializer(pool, f_typeStructure, m_mapFields);
         }

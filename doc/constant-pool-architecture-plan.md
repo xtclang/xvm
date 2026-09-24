@@ -1,8 +1,9 @@
 # Separating definitions, type metadata and execution state
 
-Status: staged proposal and singleton-state prototype, 2026-09-24. The experimental branch
-`lagergren/constant-pool-state-separation` implements only the singleton execution-state boundary;
-the descriptor, metadata, generated-code and frozen-image boundaries remain proposals.
+Status: staged proposal and architectural prototypes, 2026-09-24. The experimental branch
+`lagergren/constant-pool-state-separation` implements the singleton execution-state boundary and
+the first descriptor/index boundary, including late-generated field initializers. Broad reflection
+migration, metadata separation, other generated methods and whole-image freezing remain proposals.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -487,6 +488,88 @@ with unprofiled runs.
 
 The result supports keeping this small ownership boundary: definitions no longer need singleton
 handle/waiter reset logic, and identical definitions can coexist with isolated values. It does
-**not** yet justify the larger rewrite for performance. The next design work, if approved, is the
-descriptor/index boundary together with late generated-code ownership. Existing application
-copies remain until method flags, mutable Ops, synthesis and the other inventory rows are handled.
+**not** yet justify the larger rewrite for performance. The following descriptor/index prototype
+tests the next correctness boundary. Existing application copies remain until method flags,
+mutable Ops, synthesis and the other inventory rows are handled.
+
+## Descriptor/index and initializer prototype
+
+This is the first slice of stages 3 and 4a. It establishes an executable path through a separate
+descriptor store; it does not declare either stage complete.
+
+### Owners, indices and API order
+
+1. Complete module linking and native preparation using the existing image pools.
+2. Obtain `Container.getTypeContext()` when runtime derivation is first needed. Its lazy holder
+   creates one context for that container and captures the exact linked dependency pools.
+3. Use `RuntimeTypeContext.intern(type)` or `parameterize(base, arguments)` for context-owned
+   descriptors. Imports are checked before structural equality can find a cached result. A
+   same-named type from another compilation or runtime context is rejected. Linked dependencies
+   are accepted by identity and must resolve to the module generation selected by this image.
+4. Generated initializers use the context's descriptor pool. `RuntimeMethodStructure` keeps that
+   owner even though its parent module provides declaration lookup. The method is never inserted
+   into the module's children. Assemble its code with its own pool, then execute through the
+   existing composition; an attempt to assemble against another pool is rejected.
+5. Retain the context and generated methods with the container/composition. Do not share or evict
+   canonical descriptors across containers. Captured frame-dependent values are rejected.
+
+`ConstantPool` remains a factory/interner adapter inside the context to avoid duplicating the
+existing type algebra. That inheritance is transitional, not a claim that caches have all been
+extracted. Runtime constants have position `-1`; image-index lookup, pool serialization and bulk
+image registration reject this store. Method-local `Op.ConstantRegistry` indices still work:
+they select entries in that method's constant array, independently of XTC image positions.
+No XTC format change or global descriptor index was introduced. The low-level factory adapter
+requires operands to be imported first; callers should prefer the context's checked operations.
+
+### Changes and the problems they address
+
+| Change | Why it is needed | Classification |
+|---|---|---|
+| `RuntimeTypeContext` and its descriptor pool | Give derived types a context and lifetime without appending to image tables; reject another generation before equality-based interning | New architectural boundary |
+| `ConstantPool.hasSerializedIndices()` and guards | Existing registration assigns every entry an image position; runtime descriptors must not silently borrow that domain | Architectural prerequisite; binary pools retain their existing behavior |
+| `RuntimeMethodStructure` | A transient method's module parent otherwise selects the image pool during later assembly; generated code needs an explicit owner | Architectural prerequisite |
+| `ClassComposition.ensureAutoInitializer` / `ClassStructure.createInitializer` | Route real late code generation through the context. Select the identity from the composition's type, rather than the native template's potentially different source image | Production migration; strict checks exposed the old source/destination mismatch |
+| `NativeRebaseConstant` traversal/adoption | A native implementation wraps an interface identity. Previously only its name and parent were traversed/adopted, leaving the wrapped interface in the source pool. Initializer identities now use the selected image's declaration instead of the native pseudo-class | Previously incomplete ownership transfer, exposed while exercising lazy references |
+| `TypeConstant.getDefaultValue(destination)` | An initializer can request a default not yet represented in the image. Create that constant in the descriptor store; existing declaration values are imported by the method's local registry | Explicit destination for generated defaults |
+| `Frame` type checking | Equal positions can belong to unrelated pools, and all runtime descriptors have position `-1`. Compare canonical objects before computing the type relation. Keep the custom resolver's auxiliary argument separate | Invalid identity shortcut in the optional `DEBUG` assignment checker; ordinary execution does not enable that checker |
+
+### Evidence and remaining work
+
+`RuntimeTypeContextTest` uses small Java-built images, without installed XDK assumptions. It
+checks derivation, previously unused defaults and late code assembly against a read-only source image, unchanged constant
+entries/positions and declaration children, exact dependency imports, conflicting generations,
+separate contexts over one image, native wrapper adoption, captured-value rejection, and concurrent canonical publication
+with no ambient pool. Concurrency is coordinated by latches; timeout is a failure guard only.
+
+`RuntimeDescriptors.x` runs through the interpreter in two fresh applications sharing a native
+root. Generic `Box<Int>` and `Box<String>` instances check generated field defaults and independent
+mutable fields. The Java integration test also checks the actual initializer's owner and local
+constant references, and snapshots the image table before descriptor/initializer generation.
+Composition/metadata preparation occurs before that snapshot because it is still image-backed.
+The existing nested-container, lazy-reference, native-enum and singleton regressions exercise
+other initializer paths.
+
+Final verification on 2026-09-24:
+
+- `./gradlew :javatools:test --rerun spotlessCheck --console=plain`: 476 tests discovered,
+  436 passed, 40 existing skips, no failures/errors. All eight new descriptor tests executed.
+- `RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test --rerun --console=plain`: all 35 tests passed,
+  no skips/failures/errors. This also rebuilt the distribution and compiled the JIT bridge;
+  it did not execute the JIT.
+- Counts were read from JUnit XML. `spotlessCheck` and `git diff --check` passed. No Gradle
+  task wiring, CI dependencies or default execution modes changed.
+
+The next migration must cover reflection and handle/composition creation together. Merely
+changing `xRTType.parameterize` would be misleading: `TypeConstant.ensureTypeHandle` and
+`Container.resolveClass` currently register results back into the container's image pool.
+Metadata still lives on `TypeConstant`, native/bootstrap preparation still edits structures,
+and delegation/accessors/const helpers/debugger code still have separate generation paths.
+Those are remaining work, not exceptions hidden behind the new context. The prototype neither
+removes image copies nor proves shared-image concurrency, JIT execution or a performance gain.
+
+The remaining index audit also includes `OpCallable`'s `A_SUPER` return-type resolver, which still
+uses an image position. The migrated initializers are static zero-argument functions and do not
+emit that operation. Migrate that resolver before moving arbitrary method bodies into the overlay.
+The existing `ModuleStructure.markReadOnly` path also calls `getVersions()` for fingerprints,
+although their `getVersionConstant()` rejects that use with assertions enabled. The focused
+freeze tests use bundled declarations; general fingerprint freezing needs its own fix in stage 5.

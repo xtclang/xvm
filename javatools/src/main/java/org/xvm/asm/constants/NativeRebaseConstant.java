@@ -2,9 +2,13 @@ package org.xvm.asm.constants;
 
 import java.io.DataOutput;
 
+import java.util.function.Consumer;
+
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
+
 import org.xvm.util.Hash;
 
 /**
@@ -12,8 +16,9 @@ import org.xvm.util.Hash;
  * not exist outside of (previous to) the runtime, and could not have been naturally created.
  * Its purpose is to provide a native class representation where there is only an interface known.
  *
- * This TypeConstant is *never* registered with the ConstantPool and is intended to be used only
- * by the runtime.
+ * <p>This identity is intended only for runtime type descriptions, not serialized declarations.
+ * Its wrapped interface participates in traversal and adoption just like its parent identity;
+ * retaining the source interface would give an adopted native type two different owners.
  */
 public class NativeRebaseConstant
         extends ClassConstant {
@@ -58,6 +63,18 @@ public class NativeRebaseConstant
     }
 
     @Override
+    public void forEachUnderlying(Consumer<Constant> visitor) {
+        super.forEachUnderlying(visitor);
+        visitor.accept(m_constIface);
+    }
+
+    @Override
+    protected void registerConstants(ConstantPool pool) {
+        super.registerConstants(pool);
+        m_constIface = pool.register(m_constIface);
+    }
+
+    @Override
     public Format getFormat() {
         return Format.NativeClass;
     }
@@ -95,5 +112,5 @@ public class NativeRebaseConstant
     /**
      * The underlying type.
      */
-    private final ClassConstant m_constIface;
+    private ClassConstant m_constIface;
 }

@@ -93,8 +93,10 @@ public class ConstantPool
      * @param i  the index, for example obtained during the disassembly process
      *
      * @return the Constant at that index
+     * @throws UnsupportedOperationException if this is a runtime descriptor store
      */
     public Constant getConstant(int i) {
+        requireSerializedIndices();
         return i == -1 ? null : f_listConst.get(i);
     }
 
@@ -108,8 +110,10 @@ public class ConstantPool
      * @return the Constant at that index, cast to the expected type
      *
      * @throws IllegalStateException if the constant is not of the expected type
+     * @throws UnsupportedOperationException if this is a runtime descriptor store
      */
     public <T extends Constant> T getConstant(int i, Class<T> type) {
+        requireSerializedIndices();
         if (i == -1) {
             return null;
         }
@@ -226,7 +230,7 @@ public class ConstantPool
                     return (T) mapConstants.get(constant);
                 }
 
-                constant.setPosition(f_listConst.size());
+                constant.setPosition(hasSerializedIndices() ? f_listConst.size() : -1);
                 f_listConst.add(constant);
                 mapConstants.put(constant, constant);
 
@@ -2527,6 +2531,26 @@ public class ConstantPool
         return this;
     }
 
+    /**
+     * Whether entries have indices in an XTC constant table. Runtime descriptor stores reuse the
+     * factories and interning machinery, but their constants have position {@code -1}. Generated
+     * code refers to those constants through its own method-local {@link Op.ConstantRegistry}.
+     *
+     * @return true for a serialized constant pool
+     */
+    public boolean hasSerializedIndices() {
+        return true;
+    }
+
+    /**
+     * Reject image-index operations on a runtime descriptor store.
+     */
+    private void requireSerializedIndices() {
+        if (!hasSerializedIndices()) {
+            throw new UnsupportedOperationException("Runtime descriptors have no serialized indices");
+        }
+    }
+
     @Override
     public Iterable<? extends XvmStructure> getContained() {
         // NOTE: this returns a live, modCount-blind, index-based iterator rather than a
@@ -2609,6 +2633,7 @@ public class ConstantPool
     @Override
     protected void disassemble(DataInput in)
             throws IOException {
+        requireSerializedIndices();
         f_listConst.clear();
         m_mapConstants.clear();
         m_mapLocators.clear();
@@ -2741,6 +2766,7 @@ public class ConstantPool
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
+        requireSerializedIndices();
         writePackedLong(out, f_listConst.size());
         for (Constant constant : f_listConst) {
             constant.assemble(out);
@@ -2800,6 +2826,7 @@ public class ConstantPool
      * number of bytes throughout the FileStructure.
      */
     protected void preRegisterAll() {
+        requireSerializedIndices();
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 

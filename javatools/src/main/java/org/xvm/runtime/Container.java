@@ -45,6 +45,8 @@ import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
+import org.xvm.util.Lazy;
+
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
 
 /**
@@ -85,6 +87,17 @@ public abstract class Container
      */
     public ConstantPool getConstantPool() {
         return f_idModule.getConstantPool();
+    }
+
+    /**
+     * Obtain the descriptor context after this container's image has been linked and prepared.
+     * Keep compiled constant lookup on {@link #getConstantPool}; new runtime descriptors and
+     * generated methods belong here. The context lives as long as this container.
+     *
+     * @return this container's runtime descriptor context
+     */
+    public RuntimeTypeContext getTypeContext() {
+        return typeContext.get();
     }
 
     // ----- Container API -------------------------------------------------------------------------
@@ -785,6 +798,9 @@ public abstract class Container
      * The main module id.
      */
     protected final ModuleConstant f_idModule;
+
+    private final Lazy<RuntimeTypeContext> typeContext =
+            Lazy.of(() -> new RuntimeTypeContext(getConstantPool()));
 
     /**
      * The service context for the container itself.
