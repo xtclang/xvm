@@ -29,8 +29,9 @@ This document describes how to manually test every feature implemented in the Ec
 them through the composite module dependencies and packages them as resources. No external XDK or
 `XDK_HOME` setting is required for compiler analysis. A Kotlin host API can now supply additional
 dependency artifacts/source indices and explicit source roots/edges for automatic recompilation.
-Editor project configuration and discovery remain separate work. The ordinary fixtures below need
-only the bundled libraries; the source-project checks require the explicit host setup.
+VS Code exposes source roots/edges through `xtc.compiler.sourceModules`; automatic project discovery
+remains separate work. The ordinary fixtures below need only the bundled libraries; the
+source-project checks use the explicit settings shown in the XdkAdapter playbook.
 
 It is also the slow one, deliberately: the first compilation in a session takes about a second
 (class loading, reading the XDK, a JIT still warming up) and then settles to about 60ms. If the
@@ -376,7 +377,7 @@ is observable under mock or tree-sitter.
 | 7a.4 | Steady state | Edit the same file ten times, watching `compiled in` | Settles to tens of milliseconds. A number that keeps climbing means something is accumulating - compare `footprint` across the run |
 | 7a.5 | Queue depth | Type quickly across two or three open files | `queue=` rises above 1 and falls back. `waited` staying high is the signal that one-at-a-time has become the bottleneck |
 | 7a.6 | Superseded edit | Type continuously for several seconds without pausing | Log shows `superseded before it started, skipped` or `superseded after ..., abandoned`. No diagnostics are published for text that has already been replaced - a squiggle under an identifier you have finished typing is the failure this prevents |
-| 7a.7 | Memory over a session | Leave the server up, edit for a while, watch `heap=` in the `footprint` on each line | Flat, not a staircase |
+| 7a.7 | Memory over a session | Leave the server up, edit for a while, watch `heap=` in the `footprint` on each line | Normal allocation/GC produces a sawtooth. Record sustained growth across repeated collections or after closing files; a single increasing sequence is not proof of retained compiler state. |
 | 7a.8 | A diagnostic no other adapter can find | See the duplicate-annotation file below | One `WARNING VERIFY-75`, the annotation is ignored |
 | 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file | Diagnostics stop at a hundred serious errors rather than filling the panel with consequences of the first one |
 | 7a.10 | References follow meaning, not spelling | Two classes each with a property `x`; Shift+F12 on one | Only that class's `x`. A text search cannot do this, and neither can a grammar |
@@ -1066,7 +1067,7 @@ module Navigation {
 | X1 | Open the saved file; inspect Problems, Outline, folding and Expand Selection inside `return value;`. | No errors. Outline includes the module, class, property and methods; folding follows their blocks; selection grows through enclosing syntax. |
 | X2 | In `read`, change `Int value = 2;` to `String value = 2;`, then undo. Separately change `input` to `missing` in the initializer in `text`. | Real compiler diagnostics identify the type mismatch and unresolved name at their source spans, with compiler codes. Each clears after correction without saving. `// ERROR: test` alone produces no diagnostic. |
 | X3 | Hover `value` in `text`'s `return value;`, then in `return value.toString();`. | The first use has narrowed type `String`; the second has `Object`. Go to Definition from either reaches the same local declaration. |
-| X4 | In `read`, use Go to Definition, Find References and occurrence highlighting on the bare `value` in `return value + this.value;`. Repeat on `this.value`. | The local and property lead to different declarations and separate reference sets despite identical spelling. Highlights stay within the document; compiler highlights do not distinguish READ/WRITE. |
+| X4 | In `read`, use Go to Definition, Find References and occurrence highlighting on the bare `value` in `return value + this.value;`. Repeat on `this.value`. | The local and property lead to different declarations and separate reference sets despite identical spelling. Highlights stay within the document and distinguish reads from writes; X41 checks an assignment target. |
 | X5 | Run Go to Definition on `String`. Then remove the final closing brace and inspect Outline, folding and selection; restore it. | The bundled library has no source target, so navigation returns no result. Recoverable syntax retains surrounding structure with a parser diagnostic; stale semantic targets are not reused. A badly broken header may leave structural gaps or a cursor-only selection. |
 
 For the error-listener regression, also run **7a.8** with `DupAnno.x`: the duplicate inherited
@@ -1282,7 +1283,8 @@ unrun rows explicitly. The packaged compiler regression suite complements the in
 
 ### Dependency host API checks
 
-There is no editor dependency-setting UI or JSON-RPC configuration endpoint yet. A Kotlin host can
+Binary artifact/source-index replacement has no editor setting or JSON-RPC endpoint. Source module
+configuration is available separately in the following section. A Kotlin host can
 export a successful `Compilation.toDependency()` and call
 `XtcLanguageServer.replaceCompilerDependencies(listOf(dependency))`. Direct adapter hosts use
 `replaceDependencies(...)` and reschedule the returned scope keys themselves. Binary-only artifacts
@@ -1384,7 +1386,7 @@ the old working graph to remain active. Restore valid settings, repeat the same 
 that existing semantic results remain available. These checks exercise the ordinary editor bridge;
 the host-only binary-artifact section above still requires a Kotlin host.
 
-### G. Compiler-validated rename
+### H. Compiler-validated rename
 
 Use the compiler backend and an editor that advertises `workspace.workspaceEdit.documentChanges`.
 If it does not, record this section as unsupported by that client; the compiler server deliberately
