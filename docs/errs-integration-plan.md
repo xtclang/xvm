@@ -191,9 +191,62 @@ removal of `BLACKHOLE`/`BlackholeErrorListener`, the now-abstract collector meth
 the reporting-listener parameter from `Expression.testFitAsType`. These require the same explicit
 breaking release boundary as C1; the release/version is still a publication decision.
 
-**Next: C3**, scoped parser/resolver reporting and statement validation state, on top of C2.
-Keep its exceptional-exit and kept/discarded-attempt regressions with that slice. Remote publication
-still requires authorization and a refreshed base/conflict check.
+C3 follows in the fourth batch below. Remote publication still requires authorization and a
+refreshed base/conflict check.
+
+### Fourth local extraction batch: C3, 2026-09-24
+
+**C3 is committed as `e2a481b45` on `errs/c3-reporting-scopes`, based on C2's `f0b0db3a4`.**
+The slice changes 18 files: 875 insertions and 158 deletions. Its worktree is
+`build/errs-integration/c3`. This is a local extraction from the integrated
+`lagergren/errs` reference at `9c432f778`; nothing has been published.
+
+The slice includes parser attempts backed by listener branches, shared parser/resolver `Reporting`
+scopes, the grouped `ValidationScope` value, and construction-owned diagnostic buffers for
+`EvalCompiler` and `ModuleInfo.Node`. It excludes FileStructure reporting scopes/adoption, TypeInfo
+ownership changes, unrelated catch-variable edits and broad listener-field renaming. Successful
+`Node.logErrors` forwarding still drains its buffer.
+
+Extraction exposed gaps in the historical implementation that this slice closes:
+
+- All four loop/try validation owners restore their previous context/listener value in `finally`,
+  including failed validation and the empty infinite-for early return. The common
+  `Statement.validate` context is restored as well. The immutable pair remains on the statement
+  because lazy label variables and jump callbacks need that active compiler context; a final
+  mutable holder shared by cloned AST nodes would complicate ownership.
+- Parser attempts forward listener state queries to their branch, so nested attempts retain the
+  caller's abort request. Kept warnings merge; discarded attempts restore tokens and recovery;
+  throwing host callbacks cannot leave the parser reporting into an abandoned branch.
+- `ValidationScope` rejects a missing context/listener. `Reporting` deliberately permits a null
+  inactive destination for a resolver, but its active scopes require a listener. Neither helper
+  makes compiler objects safe to share across threads.
+
+These follow-up fixes live in the extracted C3 branch. The integrated reference has not been
+rewritten to include them; the audit and AST inventory distinguish that difference explicitly.
+The lexer's original listener remains independent of parser scopes. A module-name-only caller
+that wants no lexical diagnostics must construct the parser with explicit discard reporting.
+
+Validation on the final slice:
+
+- Full Java suite: **458 cases, 418 executed, 40 pre-existing skips**, with zero failures/errors.
+  The six C3-related classes cover 115 cases with zero skips, including the existing
+  `ModuleInfoTest` cases. The full suite was forced to execute; final review changes were rerun.
+- `spotlessCheck` and `git diff --check` pass. No Gradle dependency or distribution-extraction
+  plumbing is introduced. C3's new unit tests do not require installed XDK modules.
+- All **24** timestamp-normalized XDK modules match C2 byte for byte at the same source path.
+  The existing `loop.x` and `exceptions.x` exercises compile and run with exit zero and no failure
+  markers, covering lazy `.first`, `.count`, `.exception` and nested try/finally behavior.
+- The complete C1+C2+C3 patch applies over I3, and the required `CompilerConsumerTest` executes:
+  **1 test, 0 failures/errors/skips**. Both temporary verification worktrees are restored afterward.
+
+Ignored receipts live under `build/errs-integration/comparison/`: `c3-tests.json`, `c3-result.json`,
+`c3-exercises.json` and `i3-c1-c2-c3-result.json`. The extracted README states the additional parser
+API break: `Parser.SafeLookAhead`/`keepResults()` becomes `Parser.Attempt`/`keep()`. Migrate source
+clients and recompile at the already-required breaking release boundary before publication.
+
+**Next: E1**, useful embedding compilation results, with I1/C2/R1 and I3's consumer evidence as
+specified below. C4 follows with the ambient-listener and TypeInfo-replay work. Each still needs
+independent extraction and validation against its actual prerequisites.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
