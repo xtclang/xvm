@@ -559,7 +559,10 @@ public class EmbeddingSupport {
      * even when the selected syntax is complete. The selected member/call itself is not validated.
      * Bare-name prefixes and empty statement boundaries expose visible scope; a final named argument
      * awaiting its value retains its label. Candidate signatures can infer types from written arguments.
-     * Compound/conditional value prefixes and arguments following the cursor remain unsupported.
+     * Compound/conditional values and arguments following the cursor retain their real contexts.
+     * Missing enclosing call/group parentheses and index brackets are retained at statement or outer
+     * delimiter boundaries. An explicit cursor at EOF can also retain missing block braces. This
+     * does not repair missing operands, declaration headers, tuple/literal delimiters or unrelated errors.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,

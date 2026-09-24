@@ -437,6 +437,39 @@ class XdkStdioTest {
     }
 
     @Test
+    fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`() {
+        val header = "module Stdio { Int pair(Int first, Int second) = first; Int run(String value, Int[] values) { return "
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val prefix = "$header(values[value.si"
+            session.open("$prefix; } }")
+            val diagnostics = session.diagnosticsAt(1).diagnostics
+            assertThat(diagnostics).isNotEmpty()
+            val cursor = Position(0, prefix.length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            val edit = items.single { it.label == "size" }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+
+            val call = "$header(values[pair(1, "
+            session.change("$call; } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))))
+            assertThat(help.signatures.single().label).isEqualTo("Int pair(Int first, Int second)")
+            assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
+            session.change("${call}2)]); } }", 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
     fun `scope completion and inferred named signatures round trip over stdio`() {
         Session(packagedJar(), directory).use { session ->
             session.initialize()

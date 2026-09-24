@@ -226,7 +226,7 @@ class XdkPartialAnalysisTest {
     @Test
     fun `unsupported value prefixes remain unavailable and unknown receivers retain diagnostics`() {
         CompilerTestSupport.configure()
-        for (statement in listOf("work(flag ? value.", "return (value.")) {
+        for (statement in listOf("work(flag ? value.", "return (value. +")) {
             val prefix = "module Editing { Int run(String value, Boolean flag) { $statement"
             val errors = ErrorList()
             val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)

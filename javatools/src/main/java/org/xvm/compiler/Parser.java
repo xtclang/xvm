@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -65,6 +66,8 @@ public class Parser {
      * Supports missing member/call suffixes, typed member prefixes and calls before an existing
      * closing parenthesis at statement and final call-argument boundaries. Cursor-selected syntax
      * need not be malformed; it is inspected as a prefix, without validating the selected operation.
+     * Missing call/group/index closers around that operation retain their enclosing syntax at a
+     * statement or outer-delimiter boundary; a cursor at EOF also retains unfinished blocks.
      */
     public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
         if (cursor == NO_CURSOR) {
@@ -1054,7 +1057,7 @@ public class Parser {
 
         if (isMissingStatementSemicolon()) {
             long lPos = expr.getEndPosition();
-            if (!(expr instanceof IncompleteExpression)) {
+            if (!containsCursorHole(expr)) {
                 log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
             }
             return new ExpressionStatement(expr);
@@ -3243,7 +3246,8 @@ public class Parser {
                 } else if (match(Id.COND) == null) {
                     // "someArray[3]"
                     List<Expression> indexes = parseExpressionList();
-                    expr = new ArrayAccessExpression(expr, indexes, expect(Id.R_SQUARE));
+                    expr = new ArrayAccessExpression(expr, indexes,
+                            expectPartialClose(Id.R_SQUARE, indexes));
                 } else {
                     // "SomeClass[?,?]"
                     int cExplicitDims = 1;
@@ -3675,9 +3679,8 @@ public class Parser {
             }
 
             default:
-                expect(Id.R_PAREN);
-                skipToNextStatement();
-                return expr;
+                return new ParenthesizedExpression(expr, tokLParen.getStartPosition(),
+                        expectPartialClose(Id.R_PAREN, List.of(expr)).getEndPosition());
             }
         }
 
@@ -5216,7 +5219,7 @@ public class Parser {
                 args.add(argument);
                 Expression value = argument instanceof LabeledExpression labeled
                         ? labeled.getUnderlyingExpression() : argument;
-                if (value instanceof IncompleteExpression) {
+                if (containsCursorHole(value)) {
                     incomplete = true;
                 }
                 Token comma = match(Id.COMMA);
@@ -5226,6 +5229,9 @@ public class Parser {
                 if (canRetainIncomplete()) {
                     match(Id.R_PAREN);
                     throw incomplete(callee, open, args, separators);
+                }
+                if (comma == null && incomplete && !peek(Id.R_PAREN) && atMissingClose()) {
+                    break;
                 }
                 if (match(Id.R_PAREN, comma == null) != null) {
                     break;
@@ -5248,7 +5254,40 @@ public class Parser {
         return prev().getEndPosition() <= f_cursor
                 && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
                 && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
-                        || peek(Id.COMMA) || peek(Id.COLON));
+                        || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON));
+    }
+
+    /**
+     * Retain enclosing syntax around a cursor hole at a statement/outer-delimiter boundary.
+     * The existing incomplete-expression diagnostic covers the hole and its missing suffix;
+     * this zero-width end marker neither edits the source nor consumes an enclosing delimiter.
+     * Without that hole, ordinary parsing (including speculation and error budgets) still fails.
+     */
+    private Token expectPartialClose(Id close, List<Expression> expressions) {
+        Token token = match(close);
+        if (token != null) {
+            return token;
+        }
+        if (atMissingClose() && expressions.stream().anyMatch(this::containsCursorHole)) {
+            long end = Math.max(f_cursor, prev().getEndPosition());
+            return new Token(end, end, close);
+        }
+        return expect(close);
+    }
+
+    private boolean atMissingClose() {
+        return f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired()
+                && (eof() || peek(Id.SEMICOLON) || peek(Id.R_CURLY)
+                        || peek(Id.R_PAREN) || peek(Id.R_SQUARE));
+    }
+
+    /** Query syntax ownership rather than caching cursor state on ordinary AST nodes. */
+    private boolean containsCursorHole(AstNode node) {
+        return f_cursor != NO_CURSOR && node != null
+                && (node instanceof IncompleteStatement site && site.getEndPosition() == f_cursor
+                        || StreamSupport.stream(node.children().spliterator(), false)
+                                .anyMatch(this::containsCursorHole));
     }
 
     private IncompleteSyntax incomplete(Expression target, Token operator,
@@ -5284,7 +5323,7 @@ public class Parser {
     }
 
     private void finishValueStatement(Expression value) {
-        if (value instanceof IncompleteExpression) {
+        if (value instanceof IncompleteExpression || atMissingClose() && containsCursorHole(value)) {
             match(Id.SEMICOLON);
         } else {
             expect(Id.SEMICOLON);
@@ -5461,7 +5500,11 @@ public class Parser {
             throw new CompilerException("Parsing aborted");
         }
         if (eof()) {
-            if (!fFileLevel && !f_errs.get().hasError(UNEXPECTED_EOF)) {
+            // An explicit EOF cursor already reports its unfinished suffix, including containers.
+            // Other cursors and ordinary parsing must still diagnose missing block braces.
+            if (!fFileLevel && !f_errs.get().hasError(UNEXPECTED_EOF)
+                    && !(f_cursor == m_source.getPosition()
+                            && f_errs.get().hasError(INCOMPLETE_EXPRESSION))) {
                 log(Severity.ERROR, UNEXPECTED_EOF, m_source.getPosition(), m_source.getPosition());
             }
             // Retain an end marker for recovered containers without advancing past EOF.

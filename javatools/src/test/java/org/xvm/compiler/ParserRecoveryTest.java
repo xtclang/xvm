@@ -177,6 +177,61 @@ public class ParserRecoveryTest {
         assertEquals(1, nodes(parser.parseSource()).stream().filter(IncompleteStatement.class::isInstance).count());
     }
 
+    @Test
+    public void missingCursorDelimitersRetainOriginalRangesAndFollowingDeclarations() {
+        for (String expression : List.of("((value.si", "work((value.si", "values[value.si")) {
+            String prefix = "module Recovery { Int run(String value) { return " + expression;
+            String text   = prefix + "; } Int later = 42; }";
+            Source source = new Source(text);
+            prefix.chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            ErrorList errs = new ErrorList();
+            StatementBlock tree = Parser.forPartialAnalysis(source, cursor, errs).parseSource();
+            assertTrue(names(tree).containsAll(List.of("Recovery", "run", "later")));
+            assertTrue(errs.getErrors().stream()
+                    .allMatch(error -> error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
+            IncompleteStatement site = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).filter(node -> !node.isCall())
+                    .findFirst().orElseThrow();
+            assertEquals(cursor, site.getEndPosition());
+            assertEquals(prefix.length() - 2, Source.calculateOffset(
+                    site.getMemberName().orElseThrow().getStartPosition()));
+            assertEquals(text, source.toRawString());
+
+            ErrorList ordinary = new ErrorList();
+            assertTrue(nodes(parse(text, ordinary)).stream().noneMatch(IncompleteStatement.class::isInstance));
+            assertTrue(ordinary.hasSeriousErrors());
+        }
+    }
+
+    @Test
+    public void missingDelimiterRecoveryHonorsBudgetsCancellationAndSpeculation() {
+        String prefix = "module Recovery { Int run(String value) { return ((value.";
+        String text = prefix + "; } }";
+        Source source = new Source(prefix);
+        prefix.chars().forEach(_ -> source.next());
+        long cursor = source.getPosition();
+        ErrorList budget = new ErrorList(ErrorList.FIRST_ERROR);
+        assertThrows(CompilerException.class, () ->
+                Parser.forPartialAnalysis(new Source(text), cursor, budget).parseSource());
+        assertEquals(1, budget.getSeriousErrorCount());
+
+        ErrorListener cancelled = ErrorListener.cancellable(new ErrorList(), () -> true);
+        assertThrows(CompilerException.class, () ->
+                Parser.forPartialAnalysis(new Source(text), cursor, cancelled).parseSource());
+
+        ErrorList errs = new ErrorList();
+        Parser parser = Parser.forPartialAnalysis(new Source(text), cursor, errs);
+        assertThrows(CompilerException.class, () -> {
+            try (Parser.Attempt ignored = parser.attempt()) {
+                parser.parseTypeCompositionStatement();
+            }
+        });
+        assertFalse(errs.hasSeriousErrors());
+        assertEquals(1, nodes(parser.parseSource()).stream().filter(IncompleteStatement.class::isInstance).count());
+    }
+
     private List<AstNode> nodes(AstNode root) {
         List<AstNode> nodes = new ArrayList<>(List.of(root));
         for (int i = 0; i < nodes.size(); ++i) {

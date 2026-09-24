@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { CallHierarchyItem, CallHierarchyOutgoingCall } from 'vscode-languageclient/node';
-import { client, fixture, noErrors, playbook, position, targets } from './support';
+import { client, diagnostics, fixture, noErrors, playbook, position, targets } from './support';
 
 export function advancedCases(): void {
     playbook('X68', 'concrete chained delegation reaches written method and getter bodies', async workspace => {
@@ -106,6 +106,33 @@ export function advancedCases(): void {
             assert.strictEqual(help?.signatures[0].label, 'new Packet(String first, String second)');
             assert.strictEqual(help?.signatures[0].activeParameter, active);
         }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X75', 'missing grouping and index delimiters retain member completion', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const expression of ['(word.si', 'pair((word.si', 'word[word.si']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('return 1 + word.size;', `return ${expression};`));
+            await diagnostics(document.uri, values => values.length > 0, 'Missing delimiter diagnostics');
+            const found = await workspace.completion(document, position(document, 'word.si', 7));
+            assert.ok(found.some(item => item.label === 'size'), expression);
+            assert.ok(vscode.languages.getDiagnostics(document.uri).length > 0, 'Cursor queries preserve diagnostics');
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X76', 'missing nested call delimiters retain the innermost signature', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        const expression = 'pair((pair(1, ';
+        await workspace.replace(document, fixture('Advanced.x').replace('return 1 + word.size;', `return ${expression};`));
+        await diagnostics(document.uri, values => values.length > 0, 'Missing nested call diagnostics');
+        const help = await workspace.signature(document, position(document, expression, expression.length));
+        assert.strictEqual(help?.signatures[0].label, 'Int pair(Int first, Int second)');
+        assert.strictEqual(help?.signatures[0].activeParameter, 1);
         await workspace.replace(document, fixture('Advanced.x'));
         await noErrors(document.uri);
     });
