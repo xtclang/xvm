@@ -44,8 +44,6 @@ import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
-import org.xvm.javajit.JitConnector;
-
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
@@ -59,9 +57,8 @@ import static org.xvm.util.Severity.ERROR;
 
 /**
  * A class used to support embedding Ecstasy tools. Interpreter requests use a long-running Ecstasy
- * application (in "Container Zero") to create child application containers. JIT requests use a
- * shared Java-targeting XVM with a fresh container per request. Both runtimes start lazily. Use
- * {@link #create} for an owned session or {@link #instance} for the legacy singleton. Configuration
+ * application (in "Container Zero") to create child application containers. The runtime starts
+ * lazily. Use {@link #create} for an owned session or {@link #instance} for the legacy singleton. Configuration
  * supplies the Module Repository from which to load the core Ecstasy classes. Without configuration,
  * the singleton attempts to locate them using the "XDK_HOME" environment variable.
  *
@@ -103,8 +100,6 @@ public class EmbeddingSupport
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
     private Connector        connector;
-    private JitConnector     jitConnector;
-    private Path             jitBridge;
     private volatile boolean closed;
     private Throwable        cleanupFailure;
 
@@ -148,21 +143,8 @@ public class EmbeddingSupport
      * @return the Connector instance
      */
     public Connector ensureConnector() {
-        return ensureConnector(RunRequest.Backend.INTERPRETER);
-    }
-
-    /**
-     * Obtain the session's lazily created runtime for the selected backend.
-     */
-    public Connector ensureConnector(RunRequest.Backend backend) {
         synchronized (LOCK) {
             verifyConfigured();
-            if (Objects.requireNonNull(backend) == RunRequest.Backend.JIT) {
-                if (jitConnector == null) {
-                    jitConnector = new JitConnector(cfgRepo, jitBridge);
-                }
-                return jitConnector;
-            }
             if (connector == null) {
                 if (runtimeOwner != null && runtimeOwner != this) {
                     throw new IllegalStateException(
@@ -173,6 +155,23 @@ public class EmbeddingSupport
             }
             return connector;
         }
+    }
+
+    /**
+     * Obtain the lazily created runtime for the selected backend.
+     *
+     * @param backend  the requested execution backend
+     *
+     * @return the interpreter connector
+     *
+     * @throws UnsupportedOperationException if JIT is selected; its implementation is deferred
+     *                                       to the JIT branch
+     */
+    public Connector ensureConnector(RunRequest.Backend backend) {
+        if (Objects.requireNonNull(backend) == RunRequest.Backend.JIT) {
+            throw JitControl.unsupported();
+        }
+        return ensureConnector();
     }
 
     // ----- API -----------------------------------------------------------------------------------
@@ -199,18 +198,18 @@ public class EmbeddingSupport
     }
 
     /**
-     * Create a session with an explicit JIT template JAR or class directory. The templates are read
-     * and augmented by the JIT and must not be placed on the application's Java classpath.
+     * Reserved entry point for a session with an explicit JIT template JAR or class directory.
+     * The templates must be augmented by the JIT before loading, not added to the host classpath.
      *
      * @param coreRepo   the repository containing the XDK libraries
      * @param jitBridge  the JIT template JAR or class directory
      *
-     * @return a configured session; neither execution backend is started yet
+     * @return a configured session once the JIT implementation is available
+     *
+     * @throws UnsupportedOperationException always; implemented separately on the JIT branch
      */
     public static EmbeddingSupport create(ModuleRepository coreRepo, Path jitBridge) {
-        EmbeddingSupport session = create(coreRepo);
-        session.jitBridge = Objects.requireNonNull(jitBridge);
-        return session;
+        throw JitControl.unsupported();
     }
 
     /**
@@ -260,12 +259,10 @@ public class EmbeddingSupport
     private void closeSession(Deadline deadline) {
         List<OwnedControl> pending;
         Connector runtime;
-        JitConnector jitRuntime;
         synchronized (LOCK) {
             closed = true;
             pending = List.copyOf(controls);
             runtime = connector;
-            jitRuntime = jitConnector;
         }
 
         Throwable failure = null;
@@ -278,16 +275,6 @@ public class EmbeddingSupport
             }
         }
         boolean stopped = runtime == null;
-        boolean jitStopped = jitRuntime == null;
-        // A failed bounded close can leave a JIT worker running. Keep its templates until it stops.
-        if (jitRuntime != null && controlFailures.isEmpty()) {
-            try {
-                jitRuntime.xvm.close();
-                jitStopped = true;
-            } catch (IOException | RuntimeException | Error e) {
-                failure = collectFailure(failure, e);
-            }
-        }
         try {
             if (runtime instanceof InterpreterConnector interpreter) {
                 try {
@@ -320,9 +307,6 @@ public class EmbeddingSupport
         synchronized (LOCK) {
             if (stopped) {
                 connector = null;
-            }
-            if (jitStopped) {
-                jitConnector = null;
             }
             if (stopped && controls.isEmpty() && runtimeOwner == this) {
                 runtimeOwner = null;
@@ -710,22 +694,28 @@ public class EmbeddingSupport
             String                    customInjector,
             ErrorListener             errs) {
         return run(input, moduleName, version, console, rootDir, injections, customInjector,
-                "run", List.of(), false, RunRequest.Backend.INTERPRETER, errs);
+                "run", List.of(), false, errs);
     }
 
     /**
      * Execute a module with an explicit entry point and host resource context.
+     *
+     * @throws UnsupportedOperationException if the request selects JIT; implemented separately
+     *                                       on the JIT branch
      */
     public Control run(RunRequest request, ErrorListener errs) {
+        if (request.backend() == RunRequest.Backend.JIT) {
+            throw JitControl.unsupported();
+        }
         return run(request.repository(), request.moduleName(), null, request.console(),
                 request.directory(), request.injections(), null, request.method(), request.arguments(),
-                request.hostFileSystem(), request.backend(), errs);
+                request.hostFileSystem(), errs);
     }
 
     private Control run(ModuleRepository input, String moduleName, Version version, PrintWriter console,
                         File rootDir, Map<String, List<String>> injections, String customInjector,
                         String method, List<String> arguments, boolean hostFileSystem,
-                        RunRequest.Backend backend, ErrorListener errs) {
+                        ErrorListener errs) {
         synchronized (LOCK) {
             try (var ignore = ConstantPool.withPool(null)) {
                 verifyConfigured();
@@ -750,13 +740,10 @@ public class EmbeddingSupport
                 }
 
                 try {
-                    Connector connector = ensureConnector(backend);
-                    Control delegate = backend == RunRequest.Backend.JIT
-                            ? JitControl.create((JitConnector) connector, module, repository, console,
-                                    method, arguments, injections == null ? Map.of() : injections, errs)
-                            : InterpreterControl.create(connector, module, repository, console, rootDir,
-                                    method, arguments, hostFileSystem,
-                                    injections == null ? Map.of() : injections, errs);
+                    Connector connector = ensureConnector();
+                    Control delegate = InterpreterControl.create(connector, module, repository, console, rootDir,
+                            method, arguments, hostFileSystem,
+                            injections == null ? Map.of() : injections, errs);
                     var control = new OwnedControl(delegate);
                     controls.add(control);
                     return control;

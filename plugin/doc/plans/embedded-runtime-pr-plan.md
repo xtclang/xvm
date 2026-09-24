@@ -56,13 +56,13 @@ the weak discovery registry and adds strong roots only for outstanding cleanup o
 | 4b | Apply native ownership to channels, sockets, watches, HTTP and callbacks | 4 and 5b for the integration tests | Separate native migration commit; exact six scopes and test boundaries below |
 | 6 | File compilation through the embedding API | 5b (the source-tree execution regression uses `RunRequest`) | Extract the file-compiler API and source-tree tests from `d5947a903` |
 | 7 | Reuse embedding sessions for Gradle DIRECT compile/run/xUnit | 5b and 6 | Extract plugin and bootstrap-consumer changes from `d5947a903` |
-| 8 | Experimental JIT execution through the owned embedding session | 5b; include the small plugin adapter after 7 | Extract JIT changes from `c884779d6`; exclude manual-test rollout |
-| 9 | Make manualTests use DIRECT by default | 4b, 7 and 8 | Manual-test convention, preview startup and removal of automatic mode sweeps |
+| 8 | Experimental JIT execution through the owned embedding session | Reconcile 5b/7 APIs with target branch `JIT` | Deferred; preserved on local `archive/embedded-jit-ownership`, excluded from this branch |
+| 9 | Make manualTests use DIRECT by default | 4b and 7 | Manual-test convention, preview startup and removal of automatic mode sweeps |
 | 10 | Optional PERSISTENT worker across builds | 4b, 7; 9 only for the manualTests convention hunk | Separate branch `lagergren/persistent-xtc-runtime`, diff after `766e17d51` |
 | 11 | Guard ambient pool reads, then make signature compatibility explicitly pool-owned | No embedding/Gradle prerequisite; coordinate with errs I2 | Separate branch `lagergren/constant-pool-ownership`, exactly two implementation commits after `68a7ff6b5` |
 
-PRs 1 and 2 can be submitted independently. PRs 3–8 form an implementation sequence, but PR 6
-does not need JIT and PR 8 does not need the manual-test default. Keep PR 9 separate so reviewers
+PRs 1 and 2 can be submitted independently. PRs 3–7 form the interpreter implementation sequence. PR 8 is deferred to `JIT`; neither PR 6
+nor PR 9 depends on it. Keep PR 9 separate so reviewers
 can approve the capability without also changing which execution mode CI/manual builds exercise.
 The general plugin default stays ATTACHED throughout.
 
@@ -260,14 +260,16 @@ Include:
   request controls and failure state, bounded close, request-local repositories, serialized
   preparation, pool scopes, assembled publication of in-memory compilation, and interpreter run
   overloads. Exclude `FileCompiler` integration and file-compilation overload rewrites until PR 6;
-  exclude all JIT session fields/backend dispatch until PR 8.
+  retain the public JIT signatures as unsupported-operation placeholders. The JIT session
+  fields and execution implementation are deferred to PR 8 on `JIT`.
 - `InterpreterConnector.java` and `InterpreterControl.java`: headless startup, initialization
   failure cleanup, method/argument selection, request consoles/roots/injections, interruption,
   request release and connector close.
-- `RunRequest.java` in its interpreter-only form from `d5947a903`, including injections and host
-  filesystem context. Add the backend field/enum only in PR 8.
-- The minimal `JitControl.close(Duration)` signature adaptation from `d5947a903` so it still
-  implements the changed `Control` interface. This is compilation compatibility, not enabled JIT.
+- `RunRequest.java`, including injections, host filesystem context and the backend selector.
+  The interpreter is the default; selecting JIT throws before module lookup or runtime startup.
+- The `JitControl` placeholder implements the changed `Control` interface and supplies the
+  unsupported-operation exception. Include the three library-independent rejection tests for
+  JIT session creation, connector selection and request submission. No JIT runtime is enabled.
 - `lib_runner/src/main/x/runner.x`: task registration arguments, release even after the entry
   method returns, join before reporting completion, and request resource provider. Include the
   repository/compiler/linker/injector and string-array injections needed for nested xUnit.
@@ -449,9 +451,18 @@ the command above is the recommended extraction gate, not an attestation for a c
 Fresh intermediate validation is still required. Keep DIRECT opt-in and document the resource
 limits; shared-service reuse must not be described as complete automatic native-resource cleanup.
 
-## PR 8 — experimental embedded JIT
+## PR 8 — experimental embedded JIT (deferred to `JIT`)
 
-Include the JIT-specific API/runtime boundary from `c884779d6`:
+The implementation has been removed from the current source tree and preserved on local branch
+`archive/embedded-jit-ownership`. The branch `JIT` is untouched. The archive's
+`doc/embedded-jit-handoff.md` records origin and prerequisites; its `doc/patches/embedded-jit.patch`
+keeps a portable diff. The restoration commit follows a separate snapshot base, so the JIT delta
+can be reviewed without including the unfinished ownership/listener migration in that base.
+Do not cherry-pick the entire archive or the original mixed feature commit. Public embedding
+backend signatures remain here as explicit unsupported-operation placeholders; the three
+library-independent rejection tests belong with those placeholders, not with JIT execution.
+
+The preserved JIT-specific API/runtime boundary comes from `c884779d6`:
 
 - Remaining JIT hunks in `EmbeddingSupport.java`, the backend extension of `RunRequest.java`,
   and the full `JitControl.java` implementation beyond PR 5's signature adaptation.
@@ -462,6 +473,8 @@ Include the JIT-specific API/runtime boundary from `c884779d6`:
 - JIT backend selection, diagnostics and explicit JIT-xUnit rejection in
   `plugin/.../runtime/impl/IsolatedDirectExecutor.java`.
 - The five `jit*` tests and the `runJit`/blocked-worker helpers in `EmbeddingLifecycleTest.java`.
+- JIT-only ownership work from the uncommitted audit: callable conversion in `MethodBody`,
+  generated-name resets and callable-type cache invalidation, with focused constant tests.
 - `doc/jit-embedding.md`, including its current local follow-up additions, and the JIT-specific
   sections of the implementation plan.
 
@@ -491,7 +504,7 @@ root `gradle.properties`, and matching documentation of the manual-test default/
 Preserve existing heap/metaspace settings rather than making an unrelated tuning change.
 
 This changes compilation, interpreter execution and xUnit conventions in manualTests. The existing
-explicit JIT task consequently also uses DIRECT; it must wait for PR 8. A single explicit `runExecutionModeSmoke --mode=<mode>` replaces the all-modes tasks; remove
+explicit JIT task stays ATTACHED and does not require PR 8. A single explicit `runExecutionModeSmoke --mode=<mode>` replaces the all-modes tasks; remove
 their dependencies from the manual CI/full-suite aggregates. Add no new JIT dependencies to build/check/CI, and do not change
 the plugin-wide default.
 
@@ -519,7 +532,7 @@ not a PR body. The user authorized committing and pushing this extension; no PR 
 Required before merging: PR 7's embedding adapter and PR 4b's native cleanup, including the
 later completion, timer, deferred-release, socket-handoff and nested-owner corrections assigned
 above. It does not require JIT or changing any consumer's default to PERSISTENT. In the combined
-branch it preserves PR 8's DIRECT JIT support and rejects JIT only in the new mode.
+branch both DIRECT and PERSISTENT reject JIT; ATTACHED remains available.
 
 Exact included scope:
 

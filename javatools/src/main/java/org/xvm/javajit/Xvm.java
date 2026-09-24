@@ -1,10 +1,6 @@
 package org.xvm.javajit;
 
-import java.io.IOException;
-
 import java.lang.ref.WeakReference;
-
-import java.nio.file.Path;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -34,22 +30,13 @@ import static org.xvm.util.Handy.sorted;
 /**
  * The Ecstasy-to-Java "just-in-time" (JIT) compiler implementation of the XVM specification.
  */
-public class Xvm
-        implements AutoCloseable {
+public class Xvm {
     /**
      * Construct an XVM that JITs to Java bytecode.
      *
      * @param repo  the {@link ModuleRepository} that the XVM system libraries can be loaded from
      */
     public Xvm(ModuleRepository repo) {
-        this(repo, null);
-    }
-
-    /**
-     * Construct an XVM using an explicit template JAR or class directory. A null path selects the
-     * templates beside javatools in the XDK distribution.
-     */
-    public Xvm(ModuleRepository repo, Path jitBridge) {
         for (int i = 0; i < locks.length; ++i) {
             locks[i] = new Object();
         }
@@ -57,7 +44,7 @@ public class Xvm
         primeNameCounters();
 
         this.systemRepo       = repo;
-        this.nativeTypeSystem = NativeTypeSystem.create(this, repo, jitBridge);
+        this.nativeTypeSystem = NativeTypeSystem.create(this, repo);
 
         register(this.nativeTypeSystem);
         this.nativeContainer = createContainer(null, nativeTypeSystem, FailEverythingInjector);
@@ -203,14 +190,6 @@ public class Xvm
     public final ScopedValue<Ctx> Current = ScopedValue.newInstance();
 
     // ----- public API ----------------------------------------------------------------------------
-
-    /**
-     * Release the template loader after all containers have stopped executing.
-     */
-    @Override
-    public void close() throws IOException {
-        nativeTypeSystem.close();
-    }
 
     /**
      * Create a Linker in order to create a new TypeSystem.

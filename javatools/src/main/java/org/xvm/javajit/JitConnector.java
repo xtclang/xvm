@@ -1,11 +1,7 @@
 package org.xvm.javajit;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.UncheckedIOException;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -28,7 +24,6 @@ import java.util.stream.Stream;
 import org.xvm.api.Connector;
 
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
@@ -38,66 +33,25 @@ import org.xvm.asm.constants.TypeConstant;
 public class JitConnector
         extends Connector {
     public JitConnector(ModuleRepository repo) {
-        this(repo, (Path) null);
-    }
-
-    /**
-     * Create a JIT runtime with an optional explicit template location.
-     */
-    public JitConnector(ModuleRepository repo, Path jitBridge) {
-        this(repo, new Xvm(repo, jitBridge), null, true);
-    }
-
-    /**
-     * Create one application connector within an existing runtime. Embedded execution writes only
-     * to the supplied console and does not dump classes into the process working directory.
-     */
-    public JitConnector(ModuleRepository repo, Xvm xvm, PrintWriter console) {
-        this(repo, xvm, console, false);
-    }
-
-    private JitConnector(ModuleRepository repo, Xvm xvm, PrintWriter console, boolean dumpClasses) {
         super(repo);
-        this.xvm         = xvm;
-        this.console     = console;
-        this.dumpClasses = dumpClasses;
+
+        xvm = new Xvm(repo);
     }
 
     @Override
     public void loadModule(String appName) {
-        ModuleStructure loaded = f_repository.loadModule(appName);
-        if (loaded == null) {
+        module = f_repository.loadModule(appName);
+        if (module == null) {
             throw new IllegalStateException("Unable to load module \"" + appName + "\"");
         }
-        loadModule(loaded);
-    }
 
-    /**
-     * Load a private copy: linking and code generation must not mutate the caller's module.
-     */
-    public void loadModule(ModuleStructure loaded) {
-        try {
-            var bytes = new ByteArrayOutputStream();
-            loaded.getFileStructure().writeTo(bytes);
-            var file = new FileStructure(new ByteArrayInputStream(bytes.toByteArray()), true, false);
-            try (var ignore = ConstantPool.withPool(file.getConstantPool())) {
-                var linker = xvm.createLinker().withRepo(f_repository).addModule(file.getModule());
-                ts = linker.link();
-                if (ts == null) {
-                    throw new IllegalStateException("Unable to link module: " + linker.errorList().getErrors());
-                }
-                // A matching type system may already exist. Entry methods must come from the
-                // module that owns its generated classes, not the discarded candidate copy.
-                module = ts.mainModule();
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        ts = xvm.createLinker().addModule(module).link();
+        // TODO add error reporting
     }
 
     @Override
     public ConstantPool getConstantPool() {
-        return ts == null ? xvm.ecstasyPool : ts.pool();
+        return module.getConstantPool();
     }
 
     @Override
@@ -106,8 +60,7 @@ public class JitConnector
             var loader   = xvm.nativeTypeSystem.loader;
             var clz      = loader.loadClass("org.xtclang._native.mgmt.nMainInjector")
                                  .asSubclass(Injector.class);
-            var injector = clz.getDeclaredConstructor(Xvm.class, PrintWriter.class, Map.class)
-                              .newInstance(xvm, console, mapInjections == null ? Map.of() : mapInjections);
+            var injector = clz.getDeclaredConstructor(Xvm.class).newInstance(xvm);
             try (var ignore = ConstantPool.withPool(xvm.nativeTypeSystem.pool())) {
                 clz.getMethod("addNativeResources").invoke(injector);
             }
@@ -121,16 +74,12 @@ public class JitConnector
 
     @Override
     public Set<MethodStructure> findMethods(String sMethodName) {
-        try (var ignore = ConstantPool.withPool(getConstantPool())) {
-            return findMethods(module.getIdentityConstant(), sMethodName);
-        }
+        return findMethods(module.getIdentityConstant(), sMethodName);
     }
 
     @Override
     public void invoke0(MethodStructure methodStructure, String... args) {
-        try (var ignore = ConstantPool.withPool(getConstantPool())) {
-            container.newFiber(() -> invoke0Impl(methodStructure, args));
-        }
+        container.newFiber(() -> invoke0Impl(methodStructure, args));
     }
 
     private void invoke0Impl(MethodStructure methodStructure, String... args) {
@@ -145,11 +94,8 @@ public class JitConnector
             Object module    = mainClass.getDeclaredConstructor(Ctx.class).newInstance(ctx);
 
             // Reflection boxes the optimized Java long as Long, which join() uses as the exit code.
-            String runName = methodStructure.getIdentityConstant().ensureJitMethodName(ts);
-            if (methodStructure.getReturnCount() == 1 &&
-                    methodStructure.getReturn(0).getType().equals(pool.typeInt64())) {
-                runName += "$p";
-            }
+            String runName = methodStructure.getReturnCount() == 1 &&
+                    methodStructure.getReturn(0).getType().equals(pool.typeInt64()) ? "run$p" : "run";
             Object result;
             if (methodStructure.getParamCount() == 0) {
                 Method runMethod = mainClass.getMethod(runName, Ctx.class);
@@ -187,11 +133,12 @@ public class JitConnector
                 case null, default -> this.result = 0;
             }
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
+            e.printStackTrace(System.err);
             throw new RuntimeException("Failed to load class \"" + typeName + '"', e);
         } catch (NoSuchMethodException e) {
-            throw new RuntimeException("No entry method: " + methodStructure.getName(), e);
+            throw new RuntimeException("No \"run()\" method", e);
         } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to invoke " + methodStructure.getName(), e);
+            throw new RuntimeException("Failed to invoke \"run()\" method", e);
         } catch (InvocationTargetException e) {
             Throwable cause = e.getCause();
             String    name  = cause.getClass().getSimpleName();
@@ -200,51 +147,40 @@ public class JitConnector
 
                 this.result = 1;
                 try {
-                    failure = "Unhandled exception: " + cause.getClass().getField("exception").get(cause);
-                } catch (ReflectiveOperationException ignored) {
-                    failure = "Unhandled exception: " + cause;
-                }
-                if (console == null) {
-                    System.out.println(failure);
-                } else {
-                    console.println(failure);
-                    console.flush();
-                }
+                    // TODO: add the service info; see Utils.log()
+                    System.out.println("\nUnhandled exception: " +
+                        cause.getClass().getField("exception").get(cause));
+                } catch (Throwable ignore) {}
             } else {
                 if (cause instanceof VerifyError) {
                     dumpNames.add(extractVerifyErrorClassName(cause.getMessage()));
                 }
+                e.printStackTrace(System.err);
                 throw new RuntimeException(cause);
             }
         } finally {
-            if (dumpClasses) {
-                dumpClasses(loader, dumpNames);
+            // dump the generated classes.
+            // each class will be dumped to a separate file under a directory
+            // ./jasm/<module-name>/<class-name>.jasm
+            Predicate<String> filter     = s -> dumpNames.stream().anyMatch(s::contains);
+            File              curDir     = new File(".").getAbsoluteFile();
+            File              jasmDir    = new File(curDir, "jasm");
+            String            moduleName = loader.typeSystem.mainModule().getSimpleName();
+            File              moduleDir  = new File(jasmDir, moduleName);
+            File              ecstasyDir = new File(jasmDir, "ecstasy");
+
+            // delete the existing jasm directory
+            try (Stream<Path> paths = Files.walk(jasmDir.toPath())) {
+                paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
+            } catch (IOException e) {
+                System.err.println(e.getMessage());
             }
+
+            moduleDir.mkdirs();
+            loader.dump(moduleDir, filter);
+            ecstasyDir.mkdirs();
+            xvm.nativeTypeSystem.loader.dump(ecstasyDir, filter);
         }
-    }
-
-    private void dumpClasses(TypeSystemLoader loader, Set<String> dumpNames) {
-        // dump the generated classes.
-        // each class will be dumped to a separate file under a directory
-        // ./jasm/<module-name>/<class-name>.jasm
-        Predicate<String> filter     = s -> dumpNames.stream().anyMatch(s::contains);
-        File              curDir     = new File(".").getAbsoluteFile();
-        File              jasmDir    = new File(curDir, "jasm");
-        String            moduleName = loader.typeSystem.mainModule().getSimpleName();
-        File              moduleDir  = new File(jasmDir, moduleName);
-        File              ecstasyDir = new File(jasmDir, "ecstasy");
-
-        // delete the existing jasm directory
-        try (Stream<Path> paths = Files.walk(jasmDir.toPath())) {
-            paths.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
-        } catch (IOException e) {
-            System.err.println(e.getMessage());
-        }
-
-        moduleDir.mkdirs();
-        loader.dump(moduleDir, filter);
-        ecstasyDir.mkdirs();
-        xvm.nativeTypeSystem.loader.dump(ecstasyDir, filter);
     }
 
     /**
@@ -271,20 +207,6 @@ public class JitConnector
     }
 
     /**
-     * @return the complete Ecstasy Int result, without narrowing to a process exit code
-     */
-    public long result() {
-        return result;
-    }
-
-    /**
-     * @return an uncaught Ecstasy exception description, or null after normal completion
-     */
-    public String failure() {
-        return failure;
-    }
-
-    /**
      * The XVM within which this TypeSystem exists
      */
     public final Xvm xvm;
@@ -308,10 +230,6 @@ public class JitConnector
      * The result of "main" method invocation.
      */
     private long result = 1;
-
-    private String failure;
-    private final PrintWriter console;
-    private final boolean dumpClasses;
 
     // TEMPORARY: manually added names
     private static final String[] CLASS_DUMP_LIST = new String[] {

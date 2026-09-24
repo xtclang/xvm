@@ -35,8 +35,8 @@ Embedding owns runtime reuse, request isolation, completion, cancellation, and c
 owns the session's build lifetime and maps Gradle inputs and results to that API. Keep `ATTACHED`
 as the plugin default while proving the new `DIRECT` implementation. The `manualTests` build now
 defaults compilation, interpreter execution, and xUnit to `DIRECT`. A single opt-in `runExecutionModeSmoke` task accepts `--mode`; it is not a dependency of
-build/check or the manual CI aggregates. `runSmallFloatsJit` now also uses DIRECT through the experimental JIT
-embedding backend. Use `-PxtcDefaultExecutionMode=ATTACHED` to override the manual-test default, or
+build/check or the manual CI aggregates. `runSmallFloatsJit` explicitly uses ATTACHED; embedded JIT support has moved to
+local branch `archive/embedded-jit-ownership` for later integration on `JIT`. Use `-PxtcDefaultExecutionMode=ATTACHED` to override the manual-test default, or
 `--mode=ATTACHED` on an individual task (including a run task given `--jit`). The root Gradle daemon
 enables preview at startup to satisfy the manual tests' existing JVM option.
 
@@ -119,10 +119,10 @@ the execution runtime only on the first run avoids that dependency cycle.
   now registers asynchronous container cleanup, closes its watch service, and participates in
   bounded termination. Tests inspect thread-local ownership directly and exercise watcher shutdown.
 
-DIRECT also accepts JIT run requests through the same owned session, with a shared JIT Xvm and
-a fresh container per invocation. The JIT is incomplete and can generate placeholder method
-bodies; this is not general runner parity. See [JIT embedding](../../../doc/jit-embedding.md) for
-its supported boundary, failure reporting, shutdown limitations and focused validation.
+DIRECT and PERSISTENT reject JIT requests and direct callers to ATTACHED. The experimental
+embedding backend, its five lifecycle tests and JIT-specific ownership fixes are preserved on
+local branch `archive/embedded-jit-ownership`. See the [extraction record](../../../doc/jit-embedding.md);
+the eventual target branch `JIT` has not been changed.
 Custom injector implementations remain unsupported. JVM startup options must already be present on
 the Gradle JVM; assertions are enabled on the implementation loader. The manual tests request
 `--enable-preview`, so their DIRECT host needs that option too. Cancellation cannot forcibly stop
@@ -132,7 +132,8 @@ native-resource ownership now includes the six integrations described in the
 assertions between requests. Retained-memory behavior under long workloads and fatal-runtime
 recovery need further validation. No automatic JIT test dependencies have been added.
 
-The JIT integration passed all 16 embedding lifecycle tests (including five JIT tests) and all
+Before extraction, the combined JIT integration passed all 16 embedding lifecycle tests (including
+five JIT tests) and all
 20 plugin tests, with no skips. The unchanged small-float suite passed through DIRECT on both
 backends and through ATTACHED with the JIT. All 21 sequential interpreter modules and the 19
 xUnit demo tests also passed. Formatting and whitespace checks passed.
@@ -193,7 +194,8 @@ and metadata project.
    and cancellation of one request while another continues. Keep configuration-cache compatibility
    and demonstrate a throughput benefit on independent Gradle tasks before changing the policy.
 
-5. **JIT diagnostics and capability growth — separate experimental backend work.** Route
+5. **JIT embedding and capability growth — deferred to the `JIT` branch.** The local archive
+   retains the implementation and provenance; do not include it in a master-targeted PR. Route
    code-generation diagnostics to the current request and add an optional mode that fails when
    execution reaches a placeholder method, instead of silently returning its default value.
    Extend dependency linking, resource providers and asynchronous completion semantics before
@@ -850,8 +852,8 @@ Implemented on `lagergren/persistent-xtc-runtime`, as a separately reviewable ex
 `766e17d51`. `DIRECT` still owns its session within one Gradle build. `PERSISTENT` starts or
 connects to a headless Java worker that survives build completion. Both use the same isolated
 embedding adapter for compilation, interpreter execution and xUnit. There is no repeated-launcher
-fallback and no application-container reuse. PERSISTENT currently rejects experimental JIT runs;
-use DIRECT or ATTACHED for the documented JIT subset.
+fallback and no application-container reuse. Both PERSISTENT and DIRECT reject JIT runs;
+use ATTACHED. The embedded JIT experiment is preserved separately.
 
 ```text
 Build A service ---- lease A ----\

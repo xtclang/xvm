@@ -98,7 +98,7 @@ resource input. This does not implement custom injectors or widen default inject
 | Owner | Resources | Required release boundary |
 |---|---|---|
 | Host/caller | Supplied repository, console writer, filesystem root and its existing files | Remain usable after request and session close |
-| Embedding session | Interpreter executors, timer thread, shared native services, watcher dispatcher; JIT runtime and template loader | Session close, after owned requests have stopped |
+| Embedding session | Interpreter executors, timer thread, shared native services, watcher dispatcher | Session close, after owned requests have stopped |
 | Application request | Open channels/sockets, watcher subscriptions and their callbacks, alarms, pending IO, application HTTP clients/servers, generated temporary root | Explicit close/cancel or request close, including failure and cancellation |
 | Individual operation | Short-lived streams, DNS contexts/enumerations, HTTP exchanges | Completion, failure or cancellation of that operation |
 
@@ -242,7 +242,7 @@ restricted provider. Their missing disposal paths predate this branch.
 | Keystores | The audit found that `xRTCertificateManager.loadKey()` passed a new `FileInputStream` to `KeyStore.load()` without closing it. Fixed locally by delegating to the already-scoped `KeyStoreOperations.extractKey()`. |
 | Console | The supplied `PrintWriter` remains caller-owned. Expanded integration tests verify that request/session shutdown do not close it. External/buffered embedding consoles reject input. Legacy terminal input is synchronous, uses process-static terminal state, and has a `System.exit` path; it must not become an embedded-input fallback. |
 | Filesystem roots | Existing integration tests prove generated request roots are deleted and caller roots survive. Deleting a path is not proof that its native channel was closed, especially on Unix. |
-| JIT | The owned template loader closes after the execution worker stops. This does not provide interpreter-native resource parity. Filesystem/network resource scenarios were not run through the incomplete JIT. See [JIT embedding](jit-embedding.md). |
+| JIT | Embedded JIT support and its template-loader cleanup are preserved on local branch `archive/embedded-jit-ownership`, for later work on `JIT`. They are excluded from this branch. The existing ATTACHED launcher remains available. See [the extraction record](jit-embedding.md). |
 
 ## Tests added and their limits
 

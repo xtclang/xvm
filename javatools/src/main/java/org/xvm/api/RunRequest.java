@@ -24,13 +24,14 @@ import org.xvm.asm.ModuleRepository;
  * @param hostFileSystem use host storage, root, home and temporary directories, with the explicit
  *                       working directory; does not change the Java process directory
  * @param injections     request-local String and String[] injections
- * @param backend        execution backend; compilation is shared by both backends
+ * @param backend        execution backend; JIT requests are reserved for the separate JIT branch
  */
 public record RunRequest(ModuleRepository repository, String moduleName, String method,
                          List<String> arguments, PrintWriter console, File directory, boolean hostFileSystem,
                          Map<String, List<String>> injections, Backend backend) {
     /**
-     * Execution backend. JIT is experimental and supports only part of the language and libraries.
+     * Execution backend. Selecting JIT currently throws {@link UnsupportedOperationException}
+     * when the request is submitted; its implementation is maintained on the JIT branch.
      */
     public enum Backend { INTERPRETER, JIT }
 

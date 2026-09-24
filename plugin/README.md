@@ -72,7 +72,7 @@ The plugin default is ATTACHED; this repository's manualTests build defaults to 
 |---|---|---|
 | `ATTACHED` | A child JVM per launch; Gradle waits for completion | Default isolated compile/run/test execution |
 | `DETACHED` | A background child process | Long-running applications; output goes to configured files |
-| `DIRECT` | An isolated embedding session in the Gradle JVM, closed at build completion | Reuse for compile, interpreter run/xUnit and the experimental JIT subset |
+| `DIRECT` | An isolated embedding session in the Gradle JVM, closed at build completion | Reuse for compile and interpreter run/xUnit; use ATTACHED for JIT |
 | `PERSISTENT` | A separate Java worker reused by successive builds | Opt-in compile and interpreter run/xUnit; JIT is currently rejected |
 
 DIRECT and PERSISTENT submit requests through the embedding API. They retain the runtime host,

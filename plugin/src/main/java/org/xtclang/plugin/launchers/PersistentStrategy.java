@@ -48,7 +48,7 @@ public final class PersistentStrategy implements ExecutionStrategy {
 
     private static void rejectJit(final XtcRunTask task) {
         if (task.getJit().get()) {
-            throw new UnsupportedOperationException("PERSISTENT currently supports interpreter execution; use DIRECT or ATTACHED for the experimental JIT");
+            throw new UnsupportedOperationException("PERSISTENT currently supports interpreter execution; use ATTACHED for JIT");
         }
     }
 }

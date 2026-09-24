@@ -68,11 +68,6 @@ public final class IsolatedDirectExecutor implements RuntimeExecutor {
     }
 
     public int executeTest(final DirectTestRequest request, final RuntimeOutput output) {
-        if (request.jit()) {
-            throw new UnsupportedOperationException(
-                "The experimental JIT does not yet support xUnit's reflection and nested containers; "
-                    + "run testXtc with the interpreter.");
-        }
         final var execution = new DirectRunRequest(request.projectDir(), request.stdoutFile(), request.stderrFile(),
             request.modulePath(), request.showVersion(), request.verbose(), request.jit(), request.moduleName(),
             request.methodName(), request.moduleArgs());
@@ -80,6 +75,9 @@ public final class IsolatedDirectExecutor implements RuntimeExecutor {
     }
 
     private int executeRun(final DirectRunRequest request, final File testOutput, final RuntimeOutput output) {
+        if (request.jit()) {
+            throw new UnsupportedOperationException("Embedded execution does not support JIT; use --mode=ATTACHED.");
+        }
         final var errors = new ErrorList(DEFAULT_ERROR_LIMIT);
         try (var console = new RequestConsole(request.stdoutFile(), request.stderrFile(), output)) {
             final var modules = repository(request.modulePath());
@@ -87,7 +85,7 @@ public final class IsolatedDirectExecutor implements RuntimeExecutor {
                 Launcher.showSystemVersion(session.getConfiguredRepository(), console);
             }
             if (request.verbose()) {
-                console.out("Embedded " + (request.jit() ? "JIT: " : "interpreter: ")
+                console.out("Embedded interpreter: "
                     + request.moduleName() + '.' + request.methodName()
                     + " (working directory: " + request.projectDir() + ')');
             }
@@ -120,8 +118,7 @@ public final class IsolatedDirectExecutor implements RuntimeExecutor {
                 moduleName = TestRunner.XUNIT_MODULE;
             }
             final var execution = new RunRequest(modules, moduleName, request.methodName(), request.moduleArgs(),
-                console.output, request.projectDir(), true, injections,
-                request.jit() ? RunRequest.Backend.JIT : RunRequest.Backend.INTERPRETER);
+                console.output, request.projectDir(), true, injections);
             try (var control = session.run(execution, errors)) {
                 if (control == null) {
                     console.err(errors.getErrors());
