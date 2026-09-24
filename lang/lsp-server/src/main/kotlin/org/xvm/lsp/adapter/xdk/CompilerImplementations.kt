@@ -55,13 +55,13 @@ internal fun compilerImplementationTargets(
 }
 
 /**
- * Copy ordinary property composition without constructing a Ref/Var implementation type or generating
- * forwarding methods. Some mixin accessors live only in PropertyBody, not the host's method table.
- * Those bodies already carry their compiler order, accessor structures and field identity.
+ * Copy property composition without constructing a separate Ref/Var implementation type or generating
+ * forwarding methods. The host's nested method chains already include Ref/Var annotation dispatch.
+ * Some mixin accessors live only in PropertyBody, with their compiler order and field identity.
  */
 private fun TypeInfo.propertyImplementationTargets(errors: ErrorListener): Map<IdentityConstant, Set<IdentityConstant>> {
     val targets = linkedMapOf<IdentityConstant, MutableSet<IdentityConstant>>()
-    properties.values.filter { !it.isConstant && !it.isFormalType && !it.isRefAnnotated }.forEach { property ->
+    properties.values.filter { !it.isConstant && !it.isFormalType }.forEach { property ->
         if (errors.isAbortDesired) return emptyMap()
         for (getter in if (property.isVar) listOf(true, false) else listOf(true)) {
             val accessor = if (getter) property.getterId else property.setterId
@@ -131,7 +131,7 @@ private fun TypeInfo.accessorImplementation(
     visited: Set<Pair<TypeConstant, IdentityConstant>> = emptySet(),
 ): IdentityConstant? {
     val key = type to property.identity
-    if (errors.isAbortDesired || key in visited || visited.size >= 64 || property.isRefAnnotated) return null
+    if (errors.isAbortDesired || key in visited || visited.size >= 64) return null
     if (property.isDelegating) {
         val delegate = delegateType(property.delegate, errors) ?: return null
         val selected = delegate.findProperty(property.identity) ?: return null
@@ -146,10 +146,15 @@ private fun TypeInfo.accessorImplementation(
         val body = chain?.firstOrNull() ?: return null
         return when (body.implementation) {
             Implementation.Explicit, Implementation.Default -> body.methodStructure?.identityConstant
-            Implementation.Field -> property.sourceField()
+
+            // Annotation/native storage is not a written accessor (for example Lazy.set).
+            Implementation.Field -> property.takeUnless { it.isRefAnnotated }?.sourceField()
+
             else -> null
         }
     }
+    // An annotated accessor needs its composed method chain; a field/body guess loses dispatch.
+    if (property.isRefAnnotated) return null
     val written = property.writtenAccessors(getter)
     // Explicit accessors precede interface defaults; storage overrides a default accessor.
     val selected = written.firstOrNull { it.first == Implementation.Explicit } ?: written.firstOrNull()

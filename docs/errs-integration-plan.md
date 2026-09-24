@@ -415,8 +415,9 @@ Continue on `errs`, using the existing explicit source graph. The accepted order
   configured graph; unsupported cases are recorded below. No new compiler hooks were needed.
 - [x] **2. Remaining semantic cases.** Ordinary properties, concrete/chained delegation, selected
   `super(...)` source bodies and separate function-value signature facts have implementations and
-  focused consumers. Runtime function targets, interface-valued delegates and annotation dispatch
-  remain explicitly unknown; see the post-L18 record.
+  focused consumers. L22 adds written Ref/Var annotation accessor targets. Runtime function targets,
+  interface-valued delegates and native annotation storage remain explicitly unknown; see the
+  post-L18 and annotation follow-up records.
 - [x] **3. Broader incomplete source.** Binary/conditional expressions and following arguments
   retain real compiler context and original positions. Missing delimiters and arbitrary syntax
   recovery are not made semantically complete by this change.
@@ -491,6 +492,124 @@ The editor run checks provider results, diagnostic navigation and replacement be
 chooser/theme layout remains manual. Ref/Var annotation dispatch, unknown runtime call targets,
 incomplete function/constructor candidates, missing enclosing delimiters, wider workspace indexing
 and automatic discovery remain explicit follow-ups rather than claims of this API checkpoint.
+
+#### Ref/Var annotation accessor follow-up
+
+The next remaining semantic case after `570a7e870` is implemented in the current working tree:
+
+- [x] Resolve written Ref/Var annotation getter/setter targets from the host's existing nested
+  method chains. Preserve annotation order, explicit accessor precedence and generic substitution.
+- [x] Prove inherited and concrete-delegated targets, dependency source-index replacement and
+  binary-only negative cases. Native annotation storage has no invented written accessor.
+- [x] Verify that inspection emits no new diagnostics, preserves compiled bytes and publishes
+  snapshots containing no compiler objects. No extra PropertyClassType TypeInfo is constructed.
+- [x] Add the X72 editor/manual-playbook case and update the adapter capability documents.
+- [x] Complete the integrated server, packaged stdio and 77-case editor verification run.
+
+The production change is confined to `CompilerImplementations.kt`. Existing compiler composition
+already supplies the required facts; no embedding API, AST field, clone rule or listener contract
+changes. Lookup retains the existing compiler-worker cancellation boundary and copies only IDs and
+source locations. A property query returns the combined accessor set, not a read/write-specific
+dispatch result. Binary-only accessors need a host source index; native/generated storage remains
+unavailable. Property rename, capped redirects and workspace-wide implementation discovery stay
+outside this slice.
+
+**Future PR L22:** include the Kotlin annotation-chain consumer, the annotation cases in
+`XdkSemanticLookupTest` and `XdkDependencyTest`, the annotated-output/purity fixture in
+`CompilerBoundaryRequirementsTest`, and playbook X72 with its capability documentation.
+It depends on L18/L13; the concrete-delegation regression also needs L19, and editor acceptance
+uses L16's runner. This is the 43rd extraction group. Commit assignment is pending the next
+checkpoint; development remains on `lagergren/errs`.
+
+Focused verification: **46 cases**, zero failures/errors/skips (27 lookup, 11 dependency and
+eight boundary tests). Integrated verification also passes:
+
+- Full LSP suite: **795 cases, 792 executed, three existing skips**, zero failures/errors.
+- Packaged compiler stdio: **16 cases**, zero failures/errors/skips.
+- VS Code: **77 cases passed**, including X72. Report:
+  `lang/vscode-extension/build/reports/compiler-playbook/run-AX3mSM/results.json`.
+- Retention: **120 cycles / 960 edit requests / 2,401 weak references**, zero retained after
+  close/shutdown; rebuild p50 **216 ms**, p95 **227 ms**, including debounce.
+- TypeScript compilation, Kotlin formatting/checks, root `spotlessCheck` and `git diff --check` pass.
+
+Command: `./gradlew :lang:vscode-extension:testCompilerPlaybook spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain`.
+This is integrated-branch evidence; L22 must still be validated against its own extraction base.
+
+The incomplete function/constructor follow-up is implemented below. The separate atomic binary-
+AST/ToIntExpression audit and broader missing-delimiter recovery remain open; automatic discovery
+and a production persistent index remain later work.
+
+#### Incomplete function and constructor signature help
+
+Implemented on `lagergren/errs`, in the current working tree after `4ceb56477`:
+
+- [x] Function-valued callees expose full parameter/return types while positional arguments are
+  missing. Written arguments use normal compiler validation; candidates retain active slots and
+  expected types, without guessed parameter names, defaults or runtime method targets.
+- [x] Prove generic function properties, flow-narrowed nullable functions, function-producing
+  expressions and captured lambda arguments. Reject unreadable/non-function callees, incompatible
+  values, named function arguments and excess written arguments.
+- [x] Ordinary `new Type(...)` calls expose fitted constructor overloads, declared parameter names,
+  defaults, explicit class type substitution and reordered/pending named slots. Inaccessible,
+  abstract, unknown and incompatible constructions return no candidate.
+- [x] Preserve invalid argument results when the full invocation validator checks return fit.
+  `make(fn)(1, )` must not publish a shortened validated function signature. The one-line
+  `InvocationExpression.testFunction` fix combines validity instead of overwriting it; regressions
+  include a valid complete call and invalid arity/type calls with no function bindings.
+- [x] Add packaged stdio diagnostic/correction cases and editor/manual-playbook X73–X74.
+
+**Ownership and compatibility.** `CursorBinding.FunctionCandidate` copies the function type and
+written argument mappings into immutable attempt-owned records. The collector's existing surviving-
+syntax filter and cleanup still apply. Kotlin copies types and ranges on the compiler worker and
+shares its signature copier with complete function calls; no compiler Context or object survives
+in the semantic model. `CursorBinding` retains its three- and six-argument constructors, but now
+has seven record components. Record-pattern users must add `functions`; the compatibility suite
+contains an executable migration example.
+
+`Parser` shares its existing partial-argument loop with ordinary constructor syntax. The existing
+`NewExpression` type prefix is an `IncompleteStatement` target child, and written arguments remain
+children of the incomplete site. `PartialCallResolver` validates trial clones in child contexts
+while lexical/flow information exists, then uses the normal argument fitter for constructors.
+No new AST fields, mutable semantic caches or clone/reset rules are added. Private speculative
+listeners collect error state so unreadable callees and invalid types are rejected; cancellation
+propagates, explicit TypeInfo errors reach the host, and cursor results never replace normal
+document diagnostics.
+
+**Limits.** No overload winner is claimed for a partial call. Function types do not establish
+named arguments or runtime targets. Virtual/inner/array/annotated construction, omitted constructor
+class-type inference and wider missing-delimiter recovery remain outside the proof. Expected
+argument types are copied but do not yet drive argument-value completion.
+
+**Future extraction boundaries (commit assignment pending):**
+
+| Group | Files / responsibility | Prerequisites |
+|---|---|---|
+| C11 | `CursorBinding.FunctionCandidate`, constructor cursor syntax in `Parser`, `PartialCallResolver` and the `IncompleteStatement` call site; record compatibility regression | C7/C9; preserve old constructors and document seven-component patterns |
+| L23 | `PartialSemanticModel`, shared function-signature copier, `XdkCursorQueries`, function/constructor adapter tests, packaged stdio, X73–X74 and capability docs | C11, L9, E5/L20; expression-callee regression needs I6; editor runner L16 |
+| I6 | Preserve argument failure in `InvocationExpression.testFunction`; positive/negative function-call regression in `CompilerCallSiteTest` | Independent production fix; I3/E1 embedding test harness; no-invalid-binding assertion also needs E5 |
+
+L22 remains a separate extraction group. These three units bring the planned total to **46**.
+No independent PR validation or new commit hashes are claimed for this working-tree checkpoint.
+
+**Verification:** the focused function/constructor/existing-incomplete/call-site run passes **32
+cases**, with zero failures/errors/skips. Java parser/API compatibility passes **29 cases**,
+also with zero skips. The full LSP suite passes **810 cases, 807 executed, three existing skips**;
+packaged compiler stdio passes **18 cases**. The 120-cycle/960-edit retention workload releases all
+**2,401 weak references** after close/shutdown (rebuild p50 **211 ms**, p95 **217 ms**, including
+debounce). All **79 editor cases pass**, including X73–X74; report:
+`lang/vscode-extension/build/reports/compiler-playbook/run-ZugND6/results.json`. TypeScript compilation, Kotlin formatting/checks,
+root `spotlessCheck` and `git diff --check` pass.
+
+Validation commands:
+
+```bash
+./gradlew :javatools:test --tests 'org.xvm.compiler.Parser*' --tests org.xvm.api.EmbeddingApiCompatibilityTest :lang:vscode-extension:testCompilerPlaybook spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
+./gradlew :lang:vscode-extension:testCompilerPlaybook spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
+```
+
+The first editor run passed 78/79: X73's `fn(` locator matched the earlier, complete one-parameter
+call instead of the edited two-parameter call. The test now targets the edited occurrence.
+Compiler and server suites passed before this test-only correction.
 
 #### Configured-graph implementation evidence
 
@@ -652,10 +771,10 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 
 | Priority / area | What is still unproven or absent | POC acceptance evidence |
 |---|---|---|
-| 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
+| 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. I4 fixes the reproduced bound-generic typing/binary-AST failure; atomic binary-AST and ToIntExpression remain separate audit items. Historical capture counts are not an exhaustive audit. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback; `CompilerBoundaryRequirementsTest` checks bound-generic artifact serialization. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; binary/conditional prefixes and arguments following an incomplete member expression are now covered by C10. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Missing delimiters, enclosing-instance member completion, type-valued receiver fallbacks and incomplete function-valued/receiver-rewritten calls remain outside this slice. Completed function calls now have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
-| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation and E5/L20 adds super-call facts. Ref/Var annotation dispatch and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. Missing delimiters, enclosing-instance member completion, type-valued receiver fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and receiver-rewritten calls remain outside this slice. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
+| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation, E5/L20 adds super-call facts, and L22 adds written Ref/Var annotation accessor targets. Native annotation storage and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
 
@@ -748,8 +867,9 @@ against each extracted slice's own prerequisites; the integrated result cannot e
 | `boolean log(ErrorInfo)` to `void log(ErrorInfo)` | Deliberate source/binary break. Recompile listener implementations and clients; report first, then ask `isAbortDesired()`. No return-type-only Java compatibility overload is possible |
 | Null/ambient listeners | Supply an explicit non-null listener at reporting boundaries. Use `ErrorListener.collecting(...)` or `ErrorList` for stateful host reporting; derived `silence(PROBE)` for intentional speculation. Removed ambient setters/lookups have no compatibility shim |
 | Runtime pool name | Deprecated `getConstantPool()` still delegates to `ensureRuntimePool()` and retains its runtime-initialization behavior. Compiler clients use `Compilation.pool()` |
-| `Compilation` record | Original three- and four-argument constructors remain. Current record pattern has five components: module, file, ast, sourceTrees, callBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
-| `PartialAnalysis` record | Three- and four-argument constructors remain; current five-component pattern adds callBindings and cursorBindings to sourceTrees, sites, pool |
+| `Compilation` record | Three-, four- and five-argument constructors remain. Current six-component pattern includes module, file, ast, sourceTrees, callBindings and functionBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
+| `PartialAnalysis` record | Three-, four- and five-argument constructors remain; current six-component pattern adds callBindings, cursorBindings and functionBindings to sourceTrees, sites, pool |
+| `CursorBinding` record | Three- and six-argument constructors remain; the seven-component pattern adds functions to variables, thisType, instance, types, candidates and callsInspected. Each function candidate exposes its type and positional written-argument mapping |
 | `InvocationBinding.Argument` record | Three- and four-argument constructors remain. Current five-component pattern includes `label`; positional and legacy construction has a null label. A legacy `named=true` is not proof that a label span was supplied |
 | LSP rename | Additive, bounded and negotiated through client `documentChanges` support. No unversioned fallback. The default adapter method retains existing synchronous adapters; compiler rename runs asynchronously |
 
@@ -861,7 +981,8 @@ the shipped default. No compiler, embedding API or AST changes were needed for t
 | Visible lexical scope and type names | Attempt-owned `CursorBinding`, captured from compiler Context and normal name lookup | Readable locals/parameters, declaration order, shadowing, narrowed types, imports and enclosing types; Kotlin receives copied facts, never Context. |
 | Typed prefix text and replacement span | Original parser `Token`, copied to `PartialSemanticModel.MemberPrefix` | Decoded prefix filters candidates; the original UTF-16 token range supplies a completion edit, including escaped identifiers. No adapter source scanning or rewriting. |
 | Selected signature and source parameter mapping | Attempt-owned `InvocationBinding`, copied into `SemanticModel.CallSite` | Signature help for resolved qualified/unqualified, generic, named/default and nested calls. No selection is inferred for failed calls. |
-| Incomplete call candidates and argument slots | Ordinary compiler argument fitting, captured in `CursorBinding.Candidate` | Candidate-specific generic signatures, written argument mappings and expected types; positional and named insertion slots. Rejected candidates do not become source diagnostics. No best-overload selection is claimed. |
+| Incomplete call candidates and argument slots | Ordinary compiler argument fitting, captured in `CursorBinding.Candidate` | Method and ordinary-constructor candidates, explicit constructor class type substitution, written mappings/expected types and positional/named slots. No best-overload selection is claimed. |
+| Incomplete function signatures | Trial callee/argument validation, captured in `CursorBinding.FunctionCandidate` | Full function parameter/return types and positional mappings without method targets, names or defaults; private speculative errors reject candidates without replacing document diagnostics. |
 | Current document/module lifetime | Adapter request identity and server `Document` identity | Cancellation reaches query work; edit/close/shutdown reject late responses without canceling shared analysis or replacing diagnostics. |
 
 The cursor syntax follow-up supports `receiver.|`, `receiver.pre|` and `receiver.method(|)` at
@@ -1379,12 +1500,14 @@ index or external hierarchy. Completion/signature help have the bounded support
 described above; formatting, code actions, document links and linked editing remain unavailable.
 Bounded local/private-parameter rename and configured-graph ordinary instance-method override
 rename are available to clients supporting versioned document edits. Exact references span all
-configured sources. Binary contracts, unsupported dispatch chains and register-backed `super`
-calls fail closed; discovery of outside consumers and wider rename remain outside the proven surface. Static call hierarchy, resolved-name tokens and
+configured sources. Binary contracts and unsupported dispatch chains fail closed; ordinary `super`
+calls participate in binding comparison without renaming the keyword. Discovery of outside consumers
+and wider rename remain outside the proven surface. Static call hierarchy, resolved-name tokens and
 bounded inlay hints now have consumers.
 Type-definition and nominal type/method/property implementation lookup now
-have module and indexed-dependency consumers as described above; Ref/Var annotation dispatch and
-synthetic redirect/delegation targets remain outside them.
+have module and indexed-dependency consumers as described above, including written Ref/Var
+annotation accessors and concrete delegation. Native annotation storage, synthetic redirects and
+interface-valued/cyclic delegate targets remain unavailable.
 The snapshot has declared/instantiated call signatures and direct type hierarchy; explicit partial
 inspection copies bounded receiver-member candidates. A persistent workspace identity scheme,
 broader incomplete-call inference and incremental compilation remain open. These are feature
@@ -1482,6 +1605,10 @@ above identify old candidate patches, not additional changes to merge into the i
 | I4 | Correct bound-generic function types and binary AST emission | `570a7e870` (NameExpression fix and regressions) | Independent production fix; I3/E1 test harness |
 | I5 | Attribute annotation warnings to the contributed property | `570a7e870` (PropertyInfo diagnostic ownership) | Independent production fix; C4 replay tests |
 | L21 | Position source-structure diagnostics at declaration tokens | `570a7e870` (source diagnostic positioning) | L1/L5, I5 |
+| L22 | Copy written Ref/Var annotation accessor implementations | Current working tree; annotation follow-up above | L18/L13; concrete-delegation proof L19; editor runner L16 |
+| C11 | Capture incomplete function candidates and ordinary constructor syntax | Current working tree; incomplete-signature follow-up above | C7/C9; constructor and record-pattern migration proof |
+| L23 | Deliver function/constructor signature help while typing | Current working tree; incomplete-signature follow-up above | C11, L9, E5/L20, I6; editor runner L16 |
+| I6 | Preserve argument errors when fitting function-call returns | Current working tree; `InvocationExpression.testFunction` and call-site regression | Independent production fix; I3/E1 harness and E5 binding assertion |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -1493,7 +1620,8 @@ L10, L11 and L12 can follow their listed dependencies independently of the later
 L13 follows with an explicit artifact host API; L14 adds automatic rebuilding for configured source
 modules; L16 exposes those roots/edges through editor configuration. Automatic project/build
 discovery stays separate. L17 adds configured-graph references and method rename. These are
-thirty-five checkpoint PR groups; the seven post-L18 units above bring the working plan to 42. L18 extends property lookup after L10/L13. During current development,
+thirty-five checkpoint PR groups; the seven post-L18 units, L22 and C11/L23/I6 bring the working
+plan to **46**. L18 extends property lookup after L10/L13. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
 
