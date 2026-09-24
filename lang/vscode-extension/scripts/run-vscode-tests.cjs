@@ -34,12 +34,12 @@ function hasCommand(name) {
 
 const needsHeadlessWrapper = process.platform === 'linux' && !process.env.DISPLAY;
 let launcher = process.execPath;
-let launcherArgs = [RUNNER];
+let launcherArgs = [RUNNER, ...process.argv.slice(2)];
 
 if (needsHeadlessWrapper) {
     if (hasCommand('xvfb-run')) {
         launcher = 'xvfb-run';
-        launcherArgs = ['-a', process.execPath, RUNNER];
+        launcherArgs = ['-a', process.execPath, RUNNER, ...process.argv.slice(2)];
         console.log('[test:vscode] Linux without DISPLAY detected — wrapping with xvfb-run for headless mode.');
     } else {
         console.warn('[test:vscode] WARNING: running on Linux without DISPLAY and without xvfb-run on PATH.');
