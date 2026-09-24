@@ -127,6 +127,28 @@ class ConstantPoolOwnershipTest {
     }
 
     @Test
+    void reflectiveHandlesBelongToContainersEvenWhenDefinitionsAreIdentical() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("Handles").getModule());
+            var first = new MainContainer(runtime, root, file.getModuleId());
+            var second = new MainContainer(runtime, root, file.getModuleId());
+            var type = file.getConstantPool().typeString();
+            var firstHandle = type.ensureTypeHandle(first);
+            var secondHandle = type.ensureTypeHandle(second);
+
+            assertNotSame(firstHandle, secondHandle);
+            assertSame(first, firstHandle.getComposition().getContainer());
+            assertSame(second, secondHandle.getComposition().getContainer());
+            assertSame(firstHandle, type.ensureTypeHandle(first));
+            assertSame(secondHandle, type.ensureTypeHandle(second));
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
     void explicitlySharedNestedModulesUseTheHighestOwningAncestor() {
         var runtime = new Runtime();
         try {

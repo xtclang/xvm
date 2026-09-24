@@ -44,7 +44,11 @@ import org.xvm.runtime.template.collections.xArray.Mutability;
 import org.xvm.runtime.template.reflect.xModule;
 import org.xvm.runtime.template.reflect.xPackage;
 
+import org.xvm.runtime.template._native.reflect.xRTType;
+import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
+
 import org.xvm.runtime.template._native.temporal.xNanosTimer;
+
 import org.xvm.util.Lazy;
 
 import org.xvm.util.concurrent.ConcurrentWeakHasherMap;
@@ -98,6 +102,37 @@ public abstract class Container
      */
     public RuntimeTypeContext getTypeContext() {
         return typeContext.get();
+    }
+
+    /**
+     * Obtain this container's reflective handle for a shared type.
+     *
+     * <p>The handle contains a composition and lazy runtime fields. It therefore belongs to this
+     * container, even when another container executes the exact same compiled definition. This
+     * differs from core singleton values, whose owner can be the shared native root. Foreign
+     * types retain their originating descriptor and are not cached here.
+     *
+     * @param type  the type to represent
+     * @return a handle owned by this container, or a foreign type handle
+     */
+    public TypeHandle ensureTypeHandle(TypeConstant type) {
+        ConstantPool pool = getConstantPool();
+        if (!type.isShared(pool)) {
+            return xRTType.makeForeignHandle(type);
+        }
+
+        type = pool.register(type);
+        TypeHandle handle = typeHandles.get(type);
+        if (handle == null) {
+            // Creating a composition can recursively request other handles. Do not construct
+            // inside ConcurrentHashMap.computeIfAbsent(), which rejects recursive updates.
+            handle = xRTType.makeHandle(this, type, true);
+            TypeHandle previous = typeHandles.putIfAbsent(type, handle);
+            if (previous != null) {
+                handle = previous;
+            }
+        }
+        return handle;
     }
 
     // ----- Container API -------------------------------------------------------------------------
@@ -801,6 +836,9 @@ public abstract class Container
 
     private final Lazy<RuntimeTypeContext> typeContext =
             Lazy.of(() -> new RuntimeTypeContext(getConstantPool()));
+
+    /** Reflective values have container lifetime, independently of definition identity. */
+    private final Map<TypeConstant, TypeHandle> typeHandles = new ConcurrentHashMap<>();
 
     /**
      * The service context for the container itself.

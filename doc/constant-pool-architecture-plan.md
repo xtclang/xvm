@@ -573,3 +573,23 @@ emit that operation. Migrate that resolver before moving arbitrary method bodies
 The existing `ModuleStructure.markReadOnly` path also calls `getVersions()` for fingerprints,
 although their `getVersionConstant()` rejects that use with assertions enabled. The focused
 freeze tests use bundled declarations; general fingerprint freezing needs its own fix in stage 5.
+
+## Reflective handle ownership
+
+This is an independent prerequisite to the reflection migration, committed separately from
+descriptor construction and semantic cache changes. `TypeConstant.ensureTypeHandle(container)`
+now delegates to a container-owned handle map. A compiled type no longer retains a composition
+and lazy reflective fields from the first container that requested its handle. Repeated requests
+within one container return the same handle; two containers executing the exact same definition
+receive independent handles. Core singleton value sharing remains unchanged.
+
+This fixes an execution-lifetime mismatch; the old file-per-application arrangement usually
+hid it by giving each application its own type constant. Handle construction occurs outside
+`computeIfAbsent` because composition creation can recursively request other handles; publication
+uses `putIfAbsent`. Foreign handles retain the existing uncached behavior. This commit deliberately
+keeps the existing image registration path; moving the cache alone does not separate descriptors.
+
+`ConstantPoolOwnershipTest.reflectiveHandlesBelongToContainersEvenWhenDefinitionsAreIdentical`
+checks distinct handles and composition owners with the same `FileStructure`, plus repeated
+lookup identity in both containers. The opt-in ownership integration suite passed on 2026-09-24
+with no skipped tests, rebuilding the distribution rather than assuming compiled libraries exist.

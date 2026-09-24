@@ -81,7 +81,6 @@ import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template._native.reflect.xRTType;
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
 
 import org.xvm.util.Handy;
@@ -7974,23 +7973,7 @@ public abstract class TypeConstant
      * @return a handle for the Type object represented by this TypeConstant
      */
     public TypeHandle ensureTypeHandle(Container container) {
-        ConstantPool poolThat = container.getConstantPool();
-        if (isShared(poolThat)) {
-            TypeHandle hType = m_handle;
-            if (hType == null) {
-                if (poolThat == this.getConstantPool()) {
-                    hType = m_handle = xRTType.makeHandle(container, this, true);
-                    assert getConstantPool() == hType.getComposition().getConstantPool();
-                } else {
-                    // don't cache a foreign handle
-                    return poolThat.register(this).ensureTypeHandle(container);
-                }
-            }
-            return hType;
-        }
-
-        // don't cache a "foreign" handle
-        return xRTType.makeForeignHandle(this);
+        return container.ensureTypeHandle(this);
     }
 
     /**
@@ -8126,7 +8109,6 @@ public abstract class TypeConstant
         m_cInvalidations = 0;
         m_typeinfo       = null;
         m_mapRelations   = null;
-        m_handle         = null;
         m_typeNormalized = null;
         m_mapConsumes    = null;
         m_mapProduces    = null;
@@ -8467,11 +8449,6 @@ public abstract class TypeConstant
      * A cache of "produces" responses.
      */
     private transient Map<String, Usage> m_mapProduces;
-
-    /**
-     * Cached TypeHandle.
-     */
-    private transient xRTType.TypeHandle m_handle;
 
     /**
      * Cached JIT class name.
