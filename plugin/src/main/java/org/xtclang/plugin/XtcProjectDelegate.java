@@ -44,12 +44,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.gradle.StartParameter;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.ModuleVersionSelector;
@@ -242,18 +240,30 @@ public class XtcProjectDelegate {
         return exts.getByType(clazz);
     }
 
-    private static Set<String> resolveHiddenTaskNames(final TaskContainer tasks) {
-        final Set<String> hiddenTasks = new HashSet<>(Set.of("jar", "classes"));
-        hiddenTasks.addAll(tasks.stream().map(Task::getName).filter(name -> name.endsWith("java")).collect(Collectors.toSet()));
-        return hiddenTasks;
+    /**
+     * Inherited Java lifecycle task names that XTC has no use for.
+     */
+    private static final Set<String> HIDDEN_TASK_NAMES = Set.of("jar", "classes");
+
+    private static boolean isHiddenTaskName(final String taskName) {
+        return HIDDEN_TASK_NAMES.contains(taskName) || taskName.endsWith("java");
     }
 
-    private void hideAndDisableTask(final String taskName) {
-        tasks.getByName(taskName, task -> {
-            // TODO: Just recreate a better lifecycle specific to XTC instead. This only adds complexity for now.
-            logger.info("[plugin] Hiding and disabling internal task: '{}' (dependencies are still maintained).", taskName);
-            task.setGroup(null);
-            task.setEnabled(false);
+    /**
+     * Hide and disable the inherited Java lifecycle tasks that XTC does not use.
+     *
+     * <p>This reacts to tasks as they are realized rather than iterating the container, which would
+     * realize every task in the project during plugin application.
+     */
+    private void hideAndDisableInternalTasks(final TaskContainer tasks) {
+        tasks.configureEach(task -> {
+            final var taskName = task.getName();
+            if (isHiddenTaskName(taskName)) {
+                // TODO: Just recreate a better lifecycle specific to XTC instead. This only adds complexity for now.
+                logger.info("[plugin] Hiding and disabling internal task: '{}' (dependencies are still maintained).", taskName);
+                task.setGroup(null);
+                task.setEnabled(false);
+            }
         });
     }
 
@@ -283,7 +293,7 @@ public class XtcProjectDelegate {
         //   to semantically conform to what XTC does should not be hard, but we
         //   haven't had the cycles to figure out why the changed build graph
         //   from doing that isn't 100% compatible with our builds.
-        resolveHiddenTaskNames(tasks).forEach(this::hideAndDisableTask);
+        hideAndDisableInternalTasks(tasks);
         if (hasVerboseLogging()) {
             logger.info("[plugin] XTC plugin executing from location: '{}'", getPluginUrl());
         }
@@ -434,7 +444,7 @@ public class XtcProjectDelegate {
         final var processResourcesTaskName = getProcessResourcesTaskName(sourceSet);
         final var processResourcesTask = tasks.register(processResourcesTaskName, Copy.class);
         final var classesTaskName = getClassesTaskName(sourceSet);
-        final var classesTask = tasks.getByName(classesTaskName);
+        final var classesTask = tasks.named(classesTaskName);
 
         // In Java, the classes task would depend on process resources. In XTC, it depends on the compile task, and the compile
         // task needs to work with the output of process resources, so for XTC we attach the process resources task for this source
@@ -475,7 +485,7 @@ public class XtcProjectDelegate {
         // Find the "classes" task in the Java build life cycle that we reuse, and set the dependency correctly. This should
         // wire in process resources too, but for some reason it seems to work differently. Basically this goes to the
         // "assemble" task, but we want to reuse some of the Java life cycle internally.
-        classesTask.dependsOn(compileTask);
+        classesTask.configure(task -> task.dependsOn(compileTask));
 
         logger.info("[plugin] Mapping source set to compile task: {} -> {}", sourceSet.getName(), compileTaskName);
         logger.info("[plugin] Registered and configured source set for compile task '{}' -> sourceSet: {}", compileTaskName, sourceSet.getName());
@@ -807,7 +817,8 @@ public class XtcProjectDelegate {
     }
 
     private void createResolutionStrategy() {
-        configs.all(config -> {
+        // configureEach, not all: "all" realizes every configuration as soon as it is declared
+        configs.configureEach(config -> {
             logger.debug("[plugin] Config '{}'; evaluating dependency resolutions", config.getName());
             config.getResolutionStrategy().eachDependency(dependency -> {
                 final var request = dependency.getRequested();
