@@ -9,9 +9,9 @@
 > bounded completion/signature help, type/implementation lookup, static call hierarchy, resolved-name
 > tokens and bounded inlay hints have working consumers. A dependency host API supplies revisioned
 > artifacts/source indices and consumer invalidation; explicit source roots/edges now support
-> automatic recompilation with overlays. There is no replacement XTC lexer/parser or separate
+> automatic recompilation with overlays and explicit initialization/live editor settings. There is no replacement XTC lexer/parser or separate
 > semantic library. Bounded local/private-parameter rename now validates bindings and returns
-> versioned edits. Wider rename, editor project discovery/configuration, persistent workspace
+> versioned edits. Wider rename, automatic editor project discovery, persistent workspace
 > indexing and finer-grained incremental recompilation remain open. Use
 > [the current feature matrix](plan-ide-integration.md) and
 > [the integration plan](../../../docs/errs-integration-plan.md) for current status and priorities.
