@@ -37,6 +37,8 @@ module SingletonOwnership {
             try {
                 readFailedSingleton();
             } catch (Exception e) {
+                assert e.is(IllegalState);
+                assert e.message == "Expected initialization failure";
                 failed = True;
             }
             assert failed;

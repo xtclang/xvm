@@ -864,8 +864,10 @@ public abstract class Utils {
 
             // the class must have a no-params constructor to call
             MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
+            // No parameters does not imply no locals; construct() takes the complete frame slots.
+            ObjectHandle[] variables = ensureSize(OBJECTS_NONE, constructor.getMaxVars());
             return template.construct(frame, constructor,
-                    template.getCanonicalClass(container), null, OBJECTS_NONE, Op.A_STACK);
+                    template.getCanonicalClass(container), null, variables, Op.A_STACK);
         }
 
         default:
