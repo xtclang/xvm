@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X71 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X74 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1258,7 +1258,7 @@ class Child extends Base<String> {
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
 | X31 | Try Format Document/Selection, quick fixes and code lenses with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets or indentation may still work and do not count as compiler feature passes. |
-| X32 | Try a cursor inside an identifier or `box.pa|ir(...)`, a constructor call, an incomplete call through a function value. | These cursor contexts are outside current completion/candidate coverage. An empty answer is acceptable; a crash, stale answer or incorrect replacement edit is not. |
+| X32 | Try completion inside an identifier or `box.pa|ir(...)`, a constructor call, and a call through a function value. | No invented completion or incorrect replacement edit. Signature help for function values and ordinary constructors is tested separately in X73–X74. |
 
 ### F. Type-definition and implementation lookup
 
@@ -1602,12 +1602,13 @@ module Properties {
 |---|--------|-----------------|
 | X64 | Find Implementations on `name` in `Named`, then in `value.name`. | Stored's `name` field and Computed's `get` body. Inherited adds no duplicate; Unrelated is excluded. |
 | X65 | Query Base's `value`, then its `get` and `set` separately. Query Defaulted's `label`. | Property: Base's getter/setter and Child's getter. Getter: the two getter bodies only. Setter: Base's setter only. Defaulted: its default getter and FieldUser's field. |
-| X66 | Query Missing's `absent`, Delayed's `later`, and `size` in `text.size`. | No invented target for an abstract/delegated property, Ref/Var annotation dispatch or bundled binary source. |
+| X66 | Query Missing's `absent`, Delayed's `later`, and `size` in `text.size`. | No invented target for an abstract/interface-delegated property, binary-only `@Lazy` getter/native storage or bundled binary source. |
 | X67 | Create `Properties/Member.x` containing `class Member implements Named<String> { @Override String name.get() = "member"; }`. Close its tab and query Named's `name`. Open the member, insert two blank lines without saving, break its declaration, then restore it. | The closed member adds its getter. Unsaved positions move by two lines; parse failure clears implementation results; correction restores them. |
 
 Lookup requires successful module analysis and uses copied source identities. It does not enable
 property rename, infer a runtime delegate receiver or search every configured module for additional
-implementations. Ref/Var annotations such as `@Lazy` remain a separate semantic case.
+implementations. Source Ref/Var annotation accessors are covered by X72 below; binary-only
+accessors such as `@Lazy.get` still require an explicit host source index to navigate.
 
 ### K. Delegation, function calls and broader cursor contexts
 
@@ -1628,6 +1629,21 @@ module Advanced {
     Int apply(function Int(Int) fn) = fn(42);
     Int pair(Int first, Int second) = first;
     Int edit(String word, Boolean flag) { return 1 + word.size; }
+    annotation Trace<Referent> into Var<Referent> {
+        @Override Referent get() = super();
+        @Override void set(Referent value) { super(value); }
+    }
+    class Measured {
+        @Trace Int count = 1;
+        @Trace Int computed {
+            @Override Int get() = 3;
+            @Override void set(Int value) {}
+        }
+    }
+    Int readMeasured(Measured meter) = meter.count + meter.computed;
+    Int applyPair(function Int(Int, String) fn) = fn(1, "x");
+    class Packet<T> { construct(T first, T second) {} }
+    Packet<String> buildPacket() = new Packet<String>("a", "b");
 }
 ```
 
@@ -1637,6 +1653,9 @@ module Advanced {
 | X69 | Go to Definition on `super(value)`. Try Prepare Rename there. | Base's `pick` body; the `super` keyword cannot be renamed. Configured-graph method-family rename preserves this call target without editing the keyword. |
 | X70 | Request signature help inside `fn(42)` and Go to Definition on `fn`. | `Int fn(Int)` with no guessed parameter name; definition reaches the function parameter, without claiming its runtime callable target. |
 | X71 | In `edit`, replace `1 + word.size` with `1 + word.`, `flag ? word. : 0`, `flag ? 0 : word.`, and `pair(word., 2)` in turn. Complete after the dot, then restore the original. | `size` is offered in the original lexical context, including when another argument follows the cursor. No stale result or fabricated value for the incomplete expression. |
+| X72 | Find Implementations on `meter.count` and `meter.computed`. | `count` reaches Trace's written `get` and `set`; `computed` reaches its explicit `get` and `set`, which precede the annotation. Property queries return the combined accessor set, not a read/write-specific target. Native annotation storage has no invented source body. |
+| X73 | In `applyPair`, replace the call with `fn()` and then `fn(1, )`; request signature help after `(` and after the comma. Try `fn(True, )`, then restore the original. | `Int fn(Int, String)` with the corresponding parameter highlighted, no invented names/defaults/runtime target. The incompatible Boolean argument produces no candidate. Normal diagnostics clear after restoring the complete call. |
+| X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second="b", first=)`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Virtual/inner/array/annotated construction and omitted class-type inference are outside this proof. |
 
 ## VS Code Extension Playbook
 

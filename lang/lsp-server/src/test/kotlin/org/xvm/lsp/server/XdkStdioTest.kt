@@ -473,6 +473,34 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["function", "constructor"])
+    fun `incomplete function and constructor signatures round trip over stdio`(kind: String) {
+        val prefix =
+            if (kind == "function") {
+                "module Stdio { void run(function Int(Int, String) fn) { fn(1, "
+            } else {
+                "module Stdio { class Box { construct(Int first, String second) {} } void run() { new Box(1, "
+            }
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open("$prefix); } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val help =
+                session.await(
+                    session.server.textDocumentService.signatureHelp(
+                        SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, prefix.length)),
+                    ),
+                )
+            assertThat(help.signatures.single().label)
+                .isEqualTo(if (kind == "function") "Int fn(Int, String)" else "new Box(Int first, String second)")
+            assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            session.change("$prefix\"x\"); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["", "in"])
     fun `module overlays feed completion and root edits invalidate member requests over stdio`(memberPrefix: String) {
         directory = directory.toRealPath()
