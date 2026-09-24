@@ -201,13 +201,16 @@ private class SemanticModelBuilder(
         }
         // Parameters precede synthetic properties that share their source tokens.
         nodes.filterIsInstance<Parameter>().forEach {
+            val method = (it.parent as? MethodDeclarationStatement)?.component as? MethodStructure
             declare(
                 it.nameToken,
                 it.resolvedTarget,
                 if (it.resolvedTarget is Register) SymbolKind.PARAMETER else kind(it.resolvedTarget),
                 it.source,
+                // Abstract methods have no body register. Their resolved method signature
+                // still supplies the declaration's type without inventing a register binding.
+                method?.params?.singleOrNull { parameter -> parameter.name == it.name }?.type,
             )
-            val method = (it.parent as? MethodDeclarationStatement)?.component as? MethodStructure
             val register = normalized(it.resolvedTarget) as? Register
             val id = register?.let(registers::get)
             if (method != null && register != null && id != null) {
@@ -609,12 +612,14 @@ private class SemanticModelBuilder(
         target: Argument?,
         kind: SymbolKind,
         source: Source?,
+        sourceType: TypeConstant? = null,
     ) {
         if (token == null) return
         val location = location(source, token.startPosition, token.endPosition)
         if (location in occurrences) return
         val symbol = symbol(target, token.valueText, kind, location)
-        occurrences[location] = Occurrence(location.range, token.valueText, Role.DECLARATION, symbol, symbols[symbol]?.type)
+        occurrences[location] =
+            Occurrence(location.range, token.valueText, Role.DECLARATION, symbol, symbols[symbol]?.type ?: type(sourceType))
     }
 
     private fun refer(

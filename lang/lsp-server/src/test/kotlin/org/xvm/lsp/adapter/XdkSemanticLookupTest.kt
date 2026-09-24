@@ -130,6 +130,15 @@ class XdkSemanticLookupTest {
     }
 
     @Test
+    fun `abstract parameter declarations expose their compiler signature type without a register`() {
+        val source = "module Lookups { interface Mapper</*formal*/T> { T map(T /*use*/value); String text(String /*library*/value); } }"
+        withSource(source) { adapter ->
+            assertThat(types(adapter, source, "use")).containsExactly(location(source, "formal", "T"))
+            assertThat(types(adapter, source, "library")).isEmpty()
+        }
+    }
+
+    @Test
     fun `library types and unresolved names have no invented source target`() {
         val source = "module Lookups { void run(String value) { /*use*/value.toString(); } }"
         withSource(source) { adapter ->
