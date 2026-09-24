@@ -180,7 +180,11 @@ missing, with active positional slots and no guessed parameter names or runtime 
 `new Type(...)` candidates include overload filtering, explicit class type arguments, named slots
 and defaults. Virtual/inner/array/annotated construction and omitted class-type inference remain
 outside the proven scope. Candidates never claim final overload selection. Requests propagate
-cancellation and reject stale document/module results. The
+cancellation and reject stale document/module results. Missing call/group parentheses and index
+brackets around the cursor retain completion and signature help at statement/outer-delimiter
+boundaries; a cursor at EOF also tolerates missing block braces. Normal compiler diagnostics remain
+visible until the text is repaired. Missing operands, declaration headers and tuple/literal
+delimiters remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module
