@@ -465,6 +465,11 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    that decision. Function candidates copy only type/argument facts; constructor candidates reuse the
    existing method fitter. No new AST semantic state is introduced. See the
    [incomplete-signature audit](errs-audit.md#incomplete-functionconstructor-signatures-2026-09-24).
+   Argument-value completion uses the same cancellable trial path for proposed readable locals
+   and parameters. Rejected proposals stay private; accepted names become immutable cursor facts,
+   without changing the source arguments or normal diagnostics. Compiler inference and conversions
+   remain authoritative, with no type-fitting rules copied into Kotlin. See the
+   [argument-value audit](errs-audit.md#argument-value-completion-2026-09-24).
    No candidate is a selected call. Method
    implementation lookup now copies actual override chains. Explicit dependency artifacts/source
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
