@@ -351,13 +351,19 @@ public class FileStructure
     /**
      * Write the FileStructure to the provided DataOutput stream.
      *
+     * <p>A read-only image is serialized through a mutable copy. Assembly re-registers constants
+     * and can prune or renumber them; it must not change the indices already published to readers.
+     *
      * @param out  the DataOutput stream to write to
      *
      * @throws IOException  if an IOException occurs while writing the FileStructure
      */
     public void writeTo(DataOutput out)
             throws IOException {
-        // this is not considered a "mutation" of the FileStructure
+        if (isReadOnly()) {
+            ensureMutable().writeTo(out);
+            return;
+        }
         reregisterConstants(true);
         assemble(out);
         resetModified();
@@ -1325,6 +1331,7 @@ public class FileStructure
     @Override
     protected void disassemble(DataInput in)
             throws IOException {
+        verifyMutable();
         FileInfo info = readFileInfo(in, false); // TODO true
         m_nMajorVer = info.majorVer;
         m_nMinorVer = info.minorVer;
@@ -1349,10 +1356,17 @@ public class FileStructure
 
     /**
      * Re-registers all referenced constants with the pool.
+     *
+     * <p>This is a compiler/assembly operation on a mutable image. Even without optimization it
+     * updates reference counts and rewrites registered references. A caller with a read-only image
+     * must first obtain {@link #ensureMutable() a mutable copy}; {@link #writeTo(DataOutput)} does
+     * that automatically for serialization.
+     *
+     * @param fOptimize  whether to prune unused constants and optimize their index order
+     * @throws IllegalStateException if this image is read-only
      */
     public void reregisterConstants(boolean fOptimize) {
-        // this is not considered a "mutation" of the FileStructure, although there is the potential
-        // for internal changes
+        verifyMutable();
         ConstantPool pool = m_pool;
         pool.preRegisterAll();
         registerConstants(pool);
@@ -1368,6 +1382,7 @@ public class FileStructure
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
+        verifyMutable();
         writeFileInfo(out);
         m_pool.assemble(out);
         writeMagnitude(out, getModuleId().getPosition());

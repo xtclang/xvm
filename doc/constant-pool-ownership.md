@@ -760,3 +760,10 @@ relations can be cleared; descriptor identity and singleton/handle execution sta
 treated as disposable caches. In-progress recursive relations are calculation state and are never
 published as completed answers. These experimental changes extend the catalogue above; they do
 not claim that the remaining metadata, foreign reflection or generated-method ownership is solved.
+
+The next commit adds an explicit definition-freeze boundary and closes read-only table/index
+mutation gaps. Its [enforcement report and runnable audit](constant-pool-architecture-plan.md#enforced-definition-freeze-boundary)
+distinguish passing boundary tests from full execution: the latter currently fails while entry
+lookup constructs types in the image pool. The report lists the remaining migration commits.
+Do not infer a completely frozen runtime or a universal ownership guarantee from the normal
+suite passing.

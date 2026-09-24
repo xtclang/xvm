@@ -206,6 +206,22 @@ class ConstantPoolOwnershipTest {
             assertTrue(foreignHandle.isForeign());
             assertSame(descriptor, foreignHandle.getUnsafeDataType());
             assertThrows(IncompatibleTypeOwnerException.class, () -> second.resolveClass(descriptor));
+
+            // Freeze after preparing the canonical reflection layout. A new runtime-derived
+            // parameterization and its handle must still use this container's descriptor store.
+            var arrayType = first.getConstantPool().typeArray();
+            var constants = first.getConstantPool().getConstants();
+            var context = first.getTypeContext();
+            context.freezeDefinitions();
+            assertTrue(file.isReadOnly());
+            // This prepared application bundles its definitions; its execution parent is not
+            // automatically part of the linked definition graph being frozen.
+            assertFalse(root.getConstantPool().isReadOnly());
+            assertFalse(context.getDescriptorPool().isReadOnly());
+            var arrayDescriptor = context.parameterize(arrayType, descriptor);
+            assertSame(context.getDescriptorPool(), arrayDescriptor.getConstantPool());
+            assertSame(arrayDescriptor, arrayDescriptor.ensureTypeHandle(first).getDataType());
+            assertArrayEquals(constants, first.getConstantPool().getConstants());
         } finally {
             runtime.shutdownXVM();
         }

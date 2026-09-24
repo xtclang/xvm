@@ -2509,6 +2509,7 @@ public class ConstantPool
      * after serialization.
      */
     void replaceModule(ModuleConstant idOld, ModuleConstant idNew) {
+        verifyMutable();
         for (Constant constant : f_listConst) {
             if (constant instanceof IdentityConstant id && id.getParentConstant() == idOld) {
                 int nPos = id.getPosition();
@@ -2634,6 +2635,7 @@ public class ConstantPool
     protected void disassemble(DataInput in)
             throws IOException {
         requireSerializedIndices();
+        verifyMutable();
         clearTypeRelations();
         f_listConst.clear();
         m_mapConstants.clear();
@@ -2828,6 +2830,7 @@ public class ConstantPool
      */
     protected void preRegisterAll() {
         requireSerializedIndices();
+        verifyMutable();
         assert !m_fRecurseReg;
         m_fRecurseReg = true;
 
@@ -2841,6 +2844,7 @@ public class ConstantPool
      *                  present order
      */
     protected void postRegisterAll(final boolean fOptimize) {
+        verifyMutable();
         assert m_fRecurseReg;
         m_fRecurseReg = false;
 

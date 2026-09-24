@@ -394,8 +394,10 @@ public abstract class Constant
      * Assign a position to the Constant.
      *
      * @param iPos  the position to assign to the Constant
+     * @throws IllegalStateException if this constant has been published as read-only
      */
     protected void setPosition(int iPos) {
+        verifyMutable();
         assert iPos >= -1;
         m_iPos = iPos;
     }
@@ -444,6 +446,7 @@ public abstract class Constant
      * have zero references to them.)
      */
     void resetRefs() {
+        verifyMutable();
         m_cRefs = 0;
     }
 
@@ -453,6 +456,7 @@ public abstract class Constant
      * @return true iff the very first reference has been registered
      */
     boolean addRef() {
+        verifyMutable();
         return m_cRefs++ == 0;
     }
 

@@ -787,9 +787,11 @@ public class ModuleStructure
     @Override
     protected void markReadOnly() {
         if (!isReadOnly()) {
-            getVersions().ensureReadOnly();
             if (isFingerprint()) {
+                // A fingerprint has import constraints, not an actual module's version catalog.
                 m_vtreeImportAllowVers.ensureReadOnly();
+            } else {
+                getVersions().ensureReadOnly();
             }
             if (m_mapDependencies != null) {
                 m_mapDependencies = Collections.unmodifiableMap(new HashMap<>(m_mapDependencies));

@@ -116,6 +116,18 @@ class RuntimeTypeContextTest {
         dependency.setFingerprintOrigin(library.getModule());
         var context = new RuntimeTypeContext(file.getConstantPool());
         var descriptor = context.parameterize(box, value);
+        context.freezeDefinitions();
+        context.freezeDefinitions();
+        assertTrue(file.isReadOnly());
+        assertTrue(library.isReadOnly());
+        assertFalse(context.getDescriptorPool().isReadOnly());
+        assertThrows(IllegalStateException.class,
+                () -> library.getConstantPool().ensureStringConstant("new definition"));
+        assertThrows(IllegalStateException.class,
+                () -> dependency.setFingerprintOrigin(new FileStructure("Library").getModule()));
+        assertSame(descriptor, context.parameterize(box, value));
+        assertThrows(IllegalArgumentException.class,
+                () -> new RuntimeTypeContext(context.getDescriptorPool()));
         assertSame(library.getModule().getChild("Value"),
                 descriptor.getParamType(0).getSingleUnderlyingClass(true).getComponent());
         var replacement = new FileStructure(library);
@@ -262,7 +274,7 @@ class RuntimeTypeContextTest {
         }
 
         void freeze() {
-            markReadOnly();
+            new RuntimeTypeContext(getConstantPool()).freezeDefinitions();
         }
     }
 }

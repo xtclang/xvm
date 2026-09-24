@@ -32,7 +32,29 @@ public final class RuntimeTypeContext {
      * @param definitions  the prepared image's constant pool, with its final dependency graph
      */
     public RuntimeTypeContext(ConstantPool definitions) {
+        if (!definitions.hasSerializedIndices()) {
+            throw new IllegalArgumentException("Runtime type context requires an indexed definition image");
+        }
         descriptors = new DescriptorPool(definitions);
+    }
+
+    /**
+     * Make this context's exact definition graph read-only while leaving its descriptor store
+     * growable. Constant-table membership and indices, module links and guarded declarations can
+     * no longer change. New type combinations must be constructed through this context.
+     *
+     * <p>Call after linking and structural native preparation, with exclusive access to the
+     * definitions and before publishing them to execution threads. This is permanent for those
+     * image objects; compilation or re-linking requires a mutable copy and a new context. A failed
+     * transition can leave some files read-only, so do not publish a graph after failure.
+     *
+     * <p>This is an enforcement boundary for the ongoing migration, not a claim of universal
+     * interpreter support. Unmigrated runtime paths that register in the image will fail hereafter.
+     * Metadata caches and mutable executable state have separate lifetimes and are not made
+     * shareable by this operation.
+     */
+    public void freezeDefinitions() {
+        descriptors.definitions.forEach(pool -> pool.getFileStructure().ensureReadOnly());
     }
 
     /**

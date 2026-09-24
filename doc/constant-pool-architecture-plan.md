@@ -3,8 +3,10 @@
 Status: staged proposal and architectural prototypes, 2026-09-24. The experimental branch
 `lagergren/constant-pool-state-separation` implements the singleton execution-state boundary and
 the first descriptor/index boundary, including late-generated field initializers, local reflective
-parameterization and a separate type-relation table. Broader reflection migration, the remaining
-metadata caches, other generated methods and whole-image freezing remain proposals.
+parameterization, a separate type-relation table and an explicit definition-freeze boundary.
+Broader reflection migration, the remaining metadata caches, other generated methods and
+activation with frozen images remain unfinished. The frozen-execution audit currently fails;
+the passing normal suite is not proof of full runtime immutability.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -719,8 +721,9 @@ at the existing compiler/runtime array APIs and binary I/O boundaries.
 
 Next scopes remain separately reviewable: foreign reflection dispatch and constructor/property/
 method representations; TypeInfo and variance/normalization cache semantics; other generated
-methods and mutable execution flags/Ops; then publication/freeze enforcement (including fingerprint
-versions). Only after those boundaries are enforced should image-copy removal and wider sharing
+methods and mutable execution flags/Ops; then frozen activation. The first enforcement fixes,
+including fingerprint-version handling, are recorded below. Only after those boundaries are
+enforced should image-copy removal and wider sharing
 be attempted. This slice does not guarantee a fully frozen or universally shareable runtime image,
 nor does it establish a performance gain. The general error-listener architecture and native
 resource shutdown remain outside this branch.
@@ -731,3 +734,105 @@ descriptor-context tests. The full opt-in `:xdk:test --rerun` rebuilt every libr
 36 tests without skips. The successful full build took 1m29s on this run; that is validation,
 not a controlled benchmark. Counts were read from JUnit XML. `spotlessCheck` and `git diff --check`
 passed. No CI task dependencies or default execution modes changed.
+
+## Enforced definition-freeze boundary
+
+This is a separate commit after the relation-table and collection cleanup. It adds
+`RuntimeTypeContext.freezeDefinitions()` and closes demonstrated holes in the existing read-only
+mechanism. **It does not complete frozen-image interpreter execution.** The audit below still
+fails before entering `run()`; the remaining plan must not be described as completed.
+
+The context distinguishes the indexed definition image from the growable runtime descriptor
+store. After linking and structural native preparation, a caller with exclusive access can freeze
+the exact definition files captured by the context. Freeze is permanent for those objects;
+recompilation/re-linking requires a mutable copy and a new context. The operation also freezes
+linked dependency files by identity. An execution parent is not automatically a definition
+dependency: a prepared application may bundle its own copies of the parent's definitions.
+No thread may be executing or modifying the graph during this transition. A failed transition
+can leave individual files read-only and must not be published.
+
+The descriptor store is deliberately not frozen. It can still intern new combinations of the
+fixed definitions and own the generated initializer code already migrated there. Constructing a
+new context from another context's descriptor store is rejected: an indexed definition image and
+an execution's descriptor domain are different inputs. Metadata caches, native bindings and
+method execution state are not made universally immutable or shareable by this operation.
+
+### Enforcement fixes and evidence
+
+| Change | Previous behavior | Verification |
+|---|---|---|
+| `ConstantPool` and `FileStructure` bulk/table mutation guards | Re-registration could prune or renumber a read-only pool; direct reload/replacement could bypass the registration guard | Reject before changing membership, indices or reference counts |
+| `Constant.setPosition`, `resetRefs`, `addRef` | Compiler bookkeeping could rewrite a read-only constant | Direct writes fail; cloning/adoption into a mutable owner still works |
+| `FileStructure.writeTo` | Serializing a read-only file modified its published constant table | Serialize a mutable copy; compare original constants and indices and reload the output |
+| `ModuleStructure.markReadOnly` | Freezing a fingerprint queried an actual-module version and asserted | Freeze its import constraints instead; later constraint mutation fails |
+| `RuntimeTypeContext.freezeDefinitions` | Tests could freeze individual files, but there was no explicit context-wide transition | Exact linked dependency is frozen; a replacement generation is rejected; runtime descriptors remain growable |
+| XDK reflection regression | Existing image snapshots did not enforce read-only state during the query | After canonical reflection preparation, create a derived array descriptor and handle with the application image read-only and unchanged |
+
+All four new `FrozenConstantPoolTest` cases failed before the fixes. The direct mutation checks
+also cover protected file-level assembly/reload, so those entry points cannot bypass the public
+serialization behavior. These tests establish the guarded table/definition boundary, not deep
+immutability of every reachable cache or executable object.
+
+### Reproducible full-execution audit
+
+`xdk/src/test/manual/FrozenImageAudit.java` compiles an existing assertion-based `.x` workload,
+reloads the artifact, performs normal native preparation/linking, freezes its definition graph,
+then resolves and invokes `run()`. It does not catch a forbidden write and call that success.
+It exits nonzero with the failing stack. It is outside the automatic test source set and adds
+no Gradle/CI dependencies or JIT runs.
+
+```sh
+./gradlew :xdk:installDist
+java -ea -cp xdk/build/install/xdk/javatools/javatools.jar \
+    xdk/src/test/manual/FrozenImageAudit.java \
+    xdk/build/install/xdk xdk/src/test/resources/ownership/Singletons.x
+```
+
+On 2026-09-24, enabling the boundary before invocation in the existing ownership suite made
+all three programs (`Singletons.x`, `SingletonPaths.x`, `RuntimeDescriptors.x`) fail. The preserved
+manual audit reproduces the `Singletons.x` failure:
+
+```text
+MainContainer.invokeAsync
+  Container.findModuleMethod
+    TypeConstant.ensureTypeInfo / processImplements / asImplementable
+      ConstantPool.ensureAccessTypeConstant -> register
+        IllegalStateException: ConstantPool is read-only
+```
+
+The descriptor workload also exposed module identity `getType()` constructing an image-owned
+terminal type at the entry-method lookup. These are runtime construction paths still using the
+image as a destination. Removing the guard or warming these particular queries to conceal the
+writes would not complete the migration. Normal execution remains on the existing mutable-image
+path; full frozen activation must not be enabled by default yet.
+
+### Remaining commits before frozen activation
+
+1. Move ordinary entry lookup, frame/runtime type construction and cold metadata inputs to the
+   descriptor context. Start with `Container.findModuleMethod` and the contribution processing
+   exposed above. Preserve explicit destinations through nested metadata queries.
+2. Finish TypeInfo, variance/normalization/member cache separation, including diagnostic replay,
+   complete query inputs, recursion and failure/invalidation semantics. The relation table is
+   the first completed slice, not this whole stage.
+3. Move late method/property delegation and accessors into the executable overlay. Finish stable
+   const-helper/native declaration synthesis before publication; generated initializers alone
+   do not cover these cases.
+4. Separate method initialization flags, mutable decoded Ops, frame-layout preparation and
+   debugger instrumentation from shared definitions. Keep per-execution state with its container
+   or service; verify two executions of exactly the same definitions.
+5. Complete foreign/constructor/property/function reflection and captured annotation ownership;
+   audit file-store/file-node handle fields and classloader-wide native values. Read-only constant
+   indices do not decide the lifetime of these values.
+6. Enable freezing at activation only after the real interpreter programs pass with guards on,
+   including cold queries, delegation, reflection, independent containers and unchanged definition
+   trees/indices. Until then there is no whole-runtime freeze or universal ownership guarantee.
+
+Optional wider sharing and copy removal follow that gate. The general error-listener redesign,
+native-resource shutdown and JIT execution remain separate projects.
+
+Validation for this enforcement commit: the full Java suite reports 492 tests (452 passed,
+40 existing skips, no failures/errors); the full XDK suite rebuilt the libraries and reports
+36 passed with no skips. The 19 focused freeze/copy/descriptor cases also passed without skips.
+Counts come from JUnit XML. Formatting and whitespace checks passed. The separate manual frozen
+execution audit exited 1 at the forbidden image write above; that result is an open migration
+failure, not a passing frozen-runtime test.
