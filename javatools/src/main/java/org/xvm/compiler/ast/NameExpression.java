@@ -852,15 +852,15 @@ public class NameExpression
         }
 
         return switch (getMeaning()) {
-            case Variable,
-                 Property,
-                 FormalChildType -> true; // TODO - some of these are traceworthy, right?
-            case Reserved,
-                 Unknown,
-                 Method,
-                 Class,
-                 Type,
-                 Label           -> false;
+            // a Method alias is resolved as part of the invocation, not evaluated separately
+            case Property ->
+                !(getParent() instanceof InvocationExpression && getType().isMethod());
+
+            case Variable, FormalChildType ->
+                true; // TODO - some of these are traceworthy, right?
+
+            case Reserved, Unknown, Method, Class, Type, Label ->
+                false;
         };
     }
 
