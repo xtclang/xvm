@@ -1,9 +1,11 @@
 # Preserved embedded JIT implementation
 
-This local branch, `archive/embedded-jit-ownership`, preserves the JIT work removed from
+The backup branch [`archive/embedded-jit-ownership`](https://github.com/xtclang/xvm/tree/archive/embedded-jit-ownership)
+preserves the JIT work removed from
 `lagergren/constant-pool-ownership` on 2026-09-24. Its eventual integration target is the branch
-named `JIT`. Neither `JIT` nor its remote tracking ref was changed, and this archive was not pushed.
-This is a handoff and preservation branch, not a proposed master-targeted PR.
+named `JIT`. Neither `JIT` nor its remote tracking ref was changed. This branch is retained on
+`origin` as a backup, with no pull request. The extracted implementation is commit `7a27437b4`;
+[`patches/embedded-jit.patch`](patches/embedded-jit.patch) is the standalone source diff.
 
 ## Origin and commit boundaries
 

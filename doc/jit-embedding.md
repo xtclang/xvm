@@ -1,6 +1,6 @@
 # Experimental JIT execution through embedding
 
-Preserved on local branch `archive/embedded-jit-ownership`; excluded from the interpreter
+Preserved on backup branch [`archive/embedded-jit-ownership`](https://github.com/xtclang/xvm/tree/archive/embedded-jit-ownership); excluded from the interpreter
 branch. See [the handoff](embedded-jit-handoff.md) for origin, prerequisites and porting to `JIT`.
 
 `RunRequest.Backend.JIT` selects the existing Java-targeting JIT through the embedding API.
