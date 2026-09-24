@@ -6,6 +6,7 @@ import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
+import { propertyCases } from './properties';
 import { renameCases } from './rename';
 import { semanticCases } from './semantics';
 import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
@@ -30,6 +31,7 @@ suite('XdkAdapter playbook', function () {
     dependencyCases();
     renameCases();
     graphCases();
+    propertyCases();
     configurationCases();
 
     playbook('7a.8', 'compiler-only duplicate annotation warning is delivered exactly once', async workspace => {

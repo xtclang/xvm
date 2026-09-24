@@ -29,7 +29,7 @@ export async function loadFixtures(): Promise<void> {
     const manual = await fs.readFile(manualPath, 'utf8');
     const blocks = [...manual.matchAll(/```xtc\n([\s\S]*?)\n```/g)].map(match => match[1]);
     fixtures = new Map();
-    for (const name of ['Navigation', 'Editing', 'Project', 'Lookups', 'Consumers', 'Library', 'Consumer', 'Rename', 'Contracts', 'Uses', 'Dormant', 'DupAnno']) {
+    for (const name of ['Navigation', 'Editing', 'Project', 'Lookups', 'Consumers', 'Library', 'Consumer', 'Rename', 'Contracts', 'Uses', 'Dormant', 'Properties', 'DupAnno']) {
         const matches = blocks.filter(text => new RegExp(`^module ${name}\\s*\\{`, 'm').test(text));
         assert.strictEqual(matches.length, 1, `One canonical ${name} fixture in playbook`);
         fixtures.set(`${name}.x`, matches[0] + '\n');

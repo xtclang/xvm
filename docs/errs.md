@@ -10,7 +10,7 @@ separates the pre-existing ambient-pool defects from this branch's ownership cha
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X63 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X67 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -37,6 +37,17 @@ anchoring is recorded in the audit, and is not claimed as implemented.
 Validation passes all 68 editor cases, 766 executed LSP tests (three existing skips) and 15 packaged
 stdio tests; the [integration record](errs-integration-plan.md#configured-graph-implementation-evidence)
 contains the report path, commit mapping and remaining manual checks.
+
+**Property/accessor follow-up (2026-09-24).** Implementation lookup now copies ordinary property
+composition: fields, explicit/default/inherited getter/setter bodies, generic contracts and composed
+mixin accessors. It distinguishes the getter and setter declarations and excludes unrelated names.
+Property uses have the same declaration-level set as their property declaration. Closed-file source
+positions follow overlays, failed analysis clears results, and inherited dependency accessors use
+the host source index. Delegation, Ref/Var annotation dispatch and property rename remain separate.
+This extends the Kotlin copier using existing compiler metadata; no Java/AST API or state changed.
+See playbook X64–X67 and the [integration evidence](errs-integration-plan.md#propertyaccessor-implementation-evidence).
+All 72 editor cases, 773 executed LSP tests (three existing skips) and 16 packaged stdio tests pass;
+the integration record maps this checkpoint to L18 for future extraction.
 
 **Current hardening status (2026-09-23).** This document preserves the investigation's chronology;
 some later sections describe limitations that subsequent work removed. The current execution and
@@ -1260,6 +1271,15 @@ Configured source modules now rebuild automatically; editor project discovery/wi
 persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+**Property/accessor follow-up (2026-09-24):** no AST field, accessor, clone rule or Java API change.
+The Kotlin implementation copier uses `PropertyInfo`/`PropertyBody` composition, existing
+`PropertyStructure.getGetter()`/`getSetter()` and written declaration tokens. It reads ordinary
+effective accessor chains and uses the compiler-ordered property bodies for mixin accessors absent
+from the host method table. Field/default precedence follows `PropertyInfo`'s existing rule.
+No synthetic forwarding method or separate Ref/Var TypeInfo is created. The builder also copies
+dependency accessor identities found by inspection, even when no written call registered them in
+the consumer constant table. Only immutable IDs and source locations survive worker inspection.
 
 **Configured-graph follow-up (2026-09-24):** no AST field, accessor, clone rule or Java API change.
 `CompilerMethodRelations` reads existing `MethodConstant`, `MethodInfo`/`MethodBody` chains and
