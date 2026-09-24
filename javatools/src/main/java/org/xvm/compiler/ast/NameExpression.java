@@ -1773,7 +1773,7 @@ public class NameExpression
                         regTarget = code.createRegister(clz.getFormalType());
                         code.add(new MoveThis(cSteps, regTarget));
 
-                        astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, getType());
+                        astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, regTarget.getType());
                         break;
                     }
 
@@ -3182,7 +3182,22 @@ public class NameExpression
      */
     protected MethodConstant findAtomicInPlaceAssignMethod(
                 Context ctx, String sMethod, String sOp, TypeConstant typeArg) {
+        int                 cArgs      = typeArg == null ? 0 : 1;
+        TypeConstant        typeVar    = getAtomicRefType(ctx);
+        Set<MethodConstant> setMethods = typeVar.ensureTypeInfo().findOpMethods(sMethod, sOp, cArgs);
+        return switch (setMethods.size()) {
+            case 0  -> null;
+            case 1  -> setMethods.iterator().next();
+            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
+        };
+    }
+
+    /** Use the same resolved property owner for atomic method lookup and its binary-AST target. */
+    protected TypeConstant getAtomicRefType(Context ctx) {
         TypeConstant typeTarget = switch (calculatePropertyAccess(true)) {
+            case SingletonParent -> m_idSingletonParent.getType();
+            case Outer -> m_targetInfo.getTargetType().ensureAccess(Access.PRIVATE);
+
             // "p += k" -> "&p.addAssign(k)"
             case This -> ctx.getThisType().ensureAccess(Access.PRIVATE);
 
@@ -3190,20 +3205,8 @@ public class NameExpression
             // "f().p += k"  -> "f().&p.addAssign(k)"
             // "a[0].p += k" -> "a[0].&p.addAssign(k)"
             case Left -> getLeftExpression().getType();
-
-            default ->
-                throw new IllegalStateException();
         };
-
-        int                 cArgs      = typeArg == null ? 0 : 1;
-        PropertyConstant    idProp     = (PropertyConstant) m_arg;
-        TypeConstant        typeVar    = idProp.getRefType(typeTarget);
-        Set<MethodConstant> setMethods = typeVar.ensureTypeInfo().findOpMethods(sMethod, sOp, cArgs);
-        return switch (setMethods.size()) {
-            case 0  -> null;
-            case 1  -> setMethods.iterator().next();
-            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
-        };
+        return ((PropertyConstant) m_arg).getRefType(typeTarget);
     }
 
     /**

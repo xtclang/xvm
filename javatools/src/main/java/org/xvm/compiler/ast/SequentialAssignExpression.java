@@ -181,8 +181,8 @@ public class SequentialAssignExpression
                 MethodConstant idOp = exprName.findAtomicInPlaceAssignMethod(ctx, sMethod, sOp, null);
                 if (idOp != null) {
                     ExprAST astVar = new UnaryOpExprAST(
-                            expr.getExprAST(ctx), Operator.Var, idProp.getRefType(null));
-                    return new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar, ExprAST.NO_EXPRS, false);
+                            expr.getExprAST(ctx), Operator.Var, exprName.getAtomicRefType(ctx));
+                    return new InvokeExprAST(idOp, getTypes(), astVar, ExprAST.NO_EXPRS, false);
                 }
             }
         }
