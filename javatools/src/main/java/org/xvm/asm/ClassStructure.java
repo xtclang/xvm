@@ -44,6 +44,8 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.writeMagnitude;
@@ -994,7 +996,7 @@ public class ClassStructure
         if (result == ResolutionResult.UNKNOWN && getFormat() == Format.SERVICE) {
             // look into the Service interface itself
             ClassStructure   clzSvc       = (ClassStructure) getConstantPool().clzService().getComponent();
-            SimpleCollector  collectorSvc = new SimpleCollector(ErrorListener.BLACKHOLE);
+            SimpleCollector  collectorSvc = new SimpleCollector(silent(PROBE));
             ResolutionResult resultSvc    = clzSvc.resolveName(sName, Access.PROTECTED, collectorSvc);
             if (resultSvc == ResolutionResult.RESOLVED) {
                 // only allow child classes; properties and methods are resolved by the TypeInfo
@@ -2700,7 +2702,11 @@ public class ClassStructure
     /**
      * Check recursively if this class contains a matching (substitutable) method or property.
      *
-     * @param pool        the ConstantPool to use
+     * <p>Preserve the caller's target pool while traversing inherited definitions. A method
+     * found in a library class can require application-specific generic resolution; using that
+     * method's source pool would attach the specialization to the library instead of the target.
+     *
+     * @param pool        the destination pool for the target's resolved signatures and types
      * @param signature   the signature to look for the match for (formal parameters resolved)
      * @param access      the access level to limit the check to
      * @param fFunction   if true, the signature represents a function
@@ -2742,7 +2748,7 @@ public class ClassStructure
                         if (!fFunction) {
                             sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
                         }
-                        if (sigMethod.isSubstitutableFor(signature, idClass.getType())) {
+                        if (sigMethod.isSubstitutableFor(pool, signature, idClass.getType())) {
                             return true;
                         }
                     }

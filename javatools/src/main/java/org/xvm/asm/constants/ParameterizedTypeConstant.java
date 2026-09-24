@@ -16,13 +16,14 @@ import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Contribution;
-import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
+import org.xvm.asm.ComponentResolver.ResolutionResult;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
@@ -276,10 +277,10 @@ public class ParameterizedTypeConstant
                 pool == typeResolver.getConstantPool()) {
             fCache       = true;
             typeResolver = typeResolver.removeAccess();
-            long stamp   = m_lockPrev.tryOptimisticRead();
+            long stamp   = resolutionLock.tryOptimisticRead();
             if (stamp != 0) {
                 TypeConstant typeResolvedPrev = m_typeResolvedPrev;
-                if (typeResolver.equals(m_typeResolverPrev) && m_lockPrev.validate(stamp)) {
+                if (typeResolver.equals(m_typeResolverPrev) && resolutionLock.validate(stamp)) {
                     return typeResolvedPrev;
                 }
             }
@@ -313,11 +314,11 @@ public class ParameterizedTypeConstant
                 : pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
 
         if (fCache) {
-            long stamp = m_lockPrev.tryWriteLock();
+            long stamp = resolutionLock.tryWriteLock();
             if (stamp != 0) {
                 m_typeResolvedPrev = typeResolved;
                 m_typeResolverPrev = (TypeConstant) resolver;
-                m_lockPrev.unlockWrite(stamp);
+                resolutionLock.unlockWrite(stamp);
             }
         }
         return typeResolved;
@@ -665,7 +666,7 @@ public class ParameterizedTypeConstant
 
                 return aconstResolved == aconstThis
                         ? this
-                        : getConstantPool().ensureParameterizedTypeConstant(
+                        : pool.ensureParameterizedTypeConstant(
                                 constUnderlyingThis, aconstResolved);
             }
         }
@@ -1040,15 +1041,22 @@ public class ParameterizedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
+    protected void setContaining(XvmStructure pool) {
+        super.setContaining(pool);
+        // A cloned type has independent calculation state, including its synchronization object.
+        resolutionLock = new StampedLock();
+    }
+
+    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType   = pool.register(m_constType);
         m_atypeParams = registerTypeConstants(pool, m_atypeParams);
 
         // invalidate cached types
-        long stamp = m_lockPrev.writeLock();
+        long stamp = resolutionLock.writeLock();
         m_typeResolverPrev = null;
         m_typeResolvedPrev = null;
-        m_lockPrev.unlockWrite(stamp);
+        resolutionLock.unlockWrite(stamp);
     }
 
     @Override
@@ -1117,7 +1125,7 @@ public class ParameterizedTypeConstant
     /**
      * Lock protecting {@link #m_typeResolverPrev} and {@link #m_typeResolvedPrev}
      */
-    private final StampedLock m_lockPrev = new StampedLock();
+    private transient StampedLock resolutionLock = new StampedLock();
 
     /**
      * Cached conversion target.

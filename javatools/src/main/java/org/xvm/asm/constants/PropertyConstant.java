@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.PropertyExprAST;
@@ -387,7 +388,7 @@ public class PropertyConstant
         return getNamespace().isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
-                    : new NestedIdentity(resolver)
+                    : new NestedIdentity(pool, resolver)
                 : getName();
     }
 
@@ -419,6 +420,14 @@ public class PropertyConstant
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
+
+    @Override
+    protected void setContaining(XvmStructure parent) {
+        super.setContaining(parent);
+        // Property metadata belongs to the destination definitions, not the source copy.
+        invalidateCache();
+        m_info = null;
+    }
 
     @Override
     protected void registerConstants(ConstantPool pool) {

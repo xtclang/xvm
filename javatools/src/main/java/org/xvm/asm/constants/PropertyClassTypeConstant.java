@@ -459,6 +459,7 @@ public class PropertyClassTypeConstant
         super.registerConstants(pool);
 
         m_idProp = pool.register(m_idProp);
+        m_info   = null;
     }
 
     @Override

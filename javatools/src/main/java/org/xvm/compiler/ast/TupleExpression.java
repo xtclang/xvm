@@ -7,11 +7,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
 import org.xvm.asm.ast.ConstantExprAST;
@@ -26,10 +26,13 @@ import org.xvm.asm.constants.UnionTypeConstant;
 import org.xvm.asm.op.Var_T;
 import org.xvm.asm.op.Var_TN;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Compiler;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A tuple expression is an expression containing some number (0 or more) expressions.
@@ -147,7 +150,7 @@ public class TupleExpression
     @Override
     public TypeConstant getImplicitType(Context ctx) {
         ConstantPool pool      = pool();
-        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx, null);
+        TypeConstant typeTuple = type == null ? pool.typeTuple() : type.ensureTypeConstant(ctx, silent(PROBE));
 
         if (typeTuple.containsUnresolved() || !typeTuple.isTuple()) {
             // let someone else log an error later, e.g. during validation, if the specified type

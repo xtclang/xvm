@@ -4,8 +4,8 @@ import java.lang.reflect.Field;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -16,8 +16,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
@@ -43,20 +43,23 @@ import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
+import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.asm.op.*;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.Token;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -183,16 +186,12 @@ public class NewExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, null);
+        return calculateTargetType(ctx, silent(PROBE));
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
         if (isValidated()) {
             return getType();
-        }
-
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
         }
 
         TypeConstant typeTarget = null;
@@ -696,7 +695,7 @@ public class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures; force a temp clone of the inner class to go through its validate() stage so
             // that we can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, silent(PROBE));
 
             // the capture information gets collected in a specialized Context that was created with
             // the inner class
@@ -1591,9 +1590,7 @@ public class NewExpression
         @Override
         public boolean requireThis(long lPos, ErrorListener errs) {
             if (getMethod().isStatic()) {
-                if (errs != null) {
-                    errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                }
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
                 return false;
             }
 

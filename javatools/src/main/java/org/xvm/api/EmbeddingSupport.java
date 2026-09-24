@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
@@ -200,24 +202,24 @@ public class EmbeddingSupport {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the non-null listener for compiler diagnostics
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         verifyConfigured();
         try {
             EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
             return compiler.process() == 0
                     ? compiler.getModule()
                     : null;
+        } catch (LauncherException e) {
+            return null;
         } catch (RuntimeException | AssertionError e) {
             // as in run(): the compiler runs over caller-supplied source, so a failure in it is
             // reported here rather than thrown at the caller, who was promised a null instead
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Compilation failed"}, null);
-            }
+            errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
             return null;
         }
     }
@@ -229,25 +231,23 @@ public class EmbeddingSupport {
      *                or the directory containing a single .x file and nested contents thereof
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the non-null listener for compiler diagnostics
      *
      * @return true if the compilation succeeded and the result was placed into the output
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+                           @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         ModuleStructure module;
         try {
             module = compile(new String(readFileChars(file)), input, errs);
         } catch (IOException e) {
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Unable to read module " + file}, null);
-            }
+            errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Unable to read module " + file}, null);
             return false;
         }
 
         if (module == null) {
-            assert errs == null || errs.hasSeriousErrors();
+            assert errs.hasSeriousErrors();
             return false;
         }
 
@@ -255,10 +255,8 @@ public class EmbeddingSupport {
             try {
                 output.storeModule(module);
             } catch (IOException e) {
-                if (errs != null) {
-                    errs.log(ERROR, ERR_INTERNAL,
-                            new Object[] {e, "Unable to store module " + module.getName()}, module);
-                }
+                errs.log(ERROR, ERR_INTERNAL,
+                        new Object[] {e, "Unable to store module " + module.getName()}, module);
                 return false;
             }
         }
@@ -411,7 +409,7 @@ public class EmbeddingSupport {
      *                    task-specific directory under "./.runner" that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     * @param errs        the non-null listener for uncaught exceptions and
      *                    other errors
      *
      * @return a Control object for the running module
@@ -421,7 +419,8 @@ public class EmbeddingSupport {
             PrintWriter               console,
             File                      rootDir,
             Map<String, List<String>> injections,
-            ErrorListener             errs) {
+            @NotNull ErrorListener    errs) {
+        Objects.requireNonNull(errs, "errs");
         return run(new InstantRepository(module), module.getName(), module.getVersion(),
                 console, rootDir, injections, null, errs);
     }
@@ -447,7 +446,7 @@ public class EmbeddingSupport {
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
      *                        ignored
-     * @param errs            (optional) a means for the container to report uncaught exceptions and
+     * @param errs            the non-null listener for uncaught exceptions and
      *                        other errors
      *
      * @return a Control object for the running module, or null if it could not be started, in
@@ -461,7 +460,8 @@ public class EmbeddingSupport {
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
-            ErrorListener             errs) {
+            @NotNull ErrorListener    errs) {
+        Objects.requireNonNull(errs, "errs");
         verifyConfigured();
 
         ModuleRepository repository = input == null || input == cfgRepo
@@ -471,10 +471,8 @@ public class EmbeddingSupport {
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            if (errs != null) {
-                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        new Object[] {moduleName, version}, null);
-            }
+            errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
+                    new Object[] {moduleName, version}, null);
             return null;
         }
 
@@ -494,10 +492,8 @@ public class EmbeddingSupport {
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            if (errs != null) {
-                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                        new Object[] {e, "Unable to start " + moduleName}, module);
-            }
+            errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
+                    new Object[] {e, "Unable to start " + moduleName}, module);
             return null;
         }
     }

@@ -1,5 +1,7 @@
 package org.xvm.compiler.ast;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -11,13 +13,15 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.IdentityConstant;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 
 import org.xvm.compiler.ast.AstNode.ChildIterator;
 
 import org.xvm.util.Severity;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * A Stage Manager is used to shepherd the AST nodes through their various stages.
@@ -29,15 +33,15 @@ public class StageMgr {
      *
      * @param node         the node to process
      * @param stageTarget  the target stage
-     * @param errs         the optional error list to log to
+     * @param errs         the error listener to log to
      */
-    public StageMgr(AstNode node, Stage stageTarget, ErrorListener errs) {
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = Collections.singletonList(node);
         m_target      = stageTarget;
-        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        f_errs        = requireNonNull(errs, "errs");
     }
 
     /**
@@ -46,15 +50,15 @@ public class StageMgr {
      *
      * @param list         the list of nodes to process
      * @param stageTarget  the target stage
-     * @param errs         the optional error list to log to
+     * @param errs         the error listener to log to
      */
-    public StageMgr(List<AstNode> list, Stage stageTarget, ErrorListener errs) {
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
         m_listRevisit = list;
         m_target      = stageTarget;
-        m_errs        = errs == null ? ErrorListener.BLACKHOLE : errs;
+        f_errs        = requireNonNull(errs, "errs");
     }
 
     /**
@@ -73,7 +77,7 @@ public class StageMgr {
      *         target stage
      */
     public boolean processComplete() {
-        ErrorListener errs = m_errs;
+        ErrorListener errs = f_errs;
         if (errs.isAbortDesired()) {
             return false;
         }
@@ -160,7 +164,7 @@ public class StageMgr {
      * @return this Stage Manager's error list
      */
     public ErrorListener getErrorListener() {
-        return m_errs;
+        return f_errs;
     }
 
     /**
@@ -194,7 +198,7 @@ public class StageMgr {
                 node.setStage(stageTarget.getTransitionStage());
                 switch (stageTarget) {
                 case Registered:
-                    node.registerStructures(this, m_errs);
+                    node.registerStructures(this, f_errs);
                     break;
 
                 case Loaded:
@@ -203,15 +207,15 @@ public class StageMgr {
                     return true;
 
                 case Resolved:
-                    node.resolveNames(this, m_errs);
+                    node.resolveNames(this, f_errs);
                     break;
 
                 case Validated:
-                    node.validateContent(this, m_errs);
+                    node.validateContent(this, f_errs);
                     break;
 
                 case Emitted:
-                    node.generateCode(this, m_errs);
+                    node.generateCode(this, f_errs);
                     break;
 
                 default:
@@ -440,7 +444,7 @@ public class StageMgr {
     /**
      * Error list to log processing errors to.
      */
-    private final ErrorListener m_errs;
+    private final ErrorListener f_errs;
 
     /**
      * The current node being processed if processing is occurring.

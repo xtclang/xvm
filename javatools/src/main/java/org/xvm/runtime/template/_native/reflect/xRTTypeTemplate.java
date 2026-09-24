@@ -541,7 +541,7 @@ public class xRTTypeTemplate
                         GenericHandle hArg   = (GenericHandle) haDelegate.get(i);
                         ObjectHandle  hValue = hArg.getField(frame, "value");
 
-                        aconst[i] = new HandleConstant(hValue);
+                        aconst[i] = new HandleConstant(pool, hValue);
                     }
                 } else {
                     aconst = Constant.NO_CONSTS;

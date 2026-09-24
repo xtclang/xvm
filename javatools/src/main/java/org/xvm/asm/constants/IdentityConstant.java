@@ -264,7 +264,10 @@ public abstract class IdentityConstant
      * Obtain an object that identifies this constant relative to the class within which it nests,
      * with generic types resolved using the specified resolver.
      *
-     * @param pool      the ConstantPool to use
+     * <p>The destination is retained for lazy signature resolution during hashing/comparison.
+     * Evaluation may occur after the caller's ambient scope has changed.
+     *
+     * @param pool      the destination pool for resolved nested signatures
      * @param resolver  the {@link GenericTypeResolver} to resolve generic types
      *
      * @return an identifying object or null if this constant refers to a class structure
@@ -273,7 +276,7 @@ public abstract class IdentityConstant
         return isNested()
                 ? resolver == null
                     ? getCanonicalNestedIdentity()
-                    : new NestedIdentity(resolver)
+                    : new NestedIdentity(pool, resolver)
                 : null;
     }
 
@@ -384,10 +387,11 @@ public abstract class IdentityConstant
     public class NestedIdentity
             implements Comparable<NestedIdentity>{
         public NestedIdentity() {
-            this(null);
+            this(getConstantPool(), null);
         }
 
-        public NestedIdentity(GenericTypeResolver resolver) {
+        public NestedIdentity(ConstantPool pool, GenericTypeResolver resolver) {
+            destination = pool;
             m_resolver = resolver;
         }
 
@@ -467,7 +471,7 @@ public abstract class IdentityConstant
         public int compareTo(NestedIdentity that) {
             IdentityConstant idThis = this.getIdentityConstant();
             IdentityConstant idThat = that.getIdentityConstant();
-            if (idThis == idThat) {
+            if (this == that) {
                 return 0;
             }
 
@@ -503,12 +507,12 @@ public abstract class IdentityConstant
         }
 
         private Object resolve(Object element) {
-            ConstantPool pool = ConstantPool.getCurrentPool();
             return m_resolver != null && element instanceof SignatureConstant sig
-                    ? sig.resolveGenericTypes(pool, m_resolver)
+                    ? sig.resolveGenericTypes(destination, m_resolver)
                     : element;
         }
 
+        private final ConstantPool destination;
         private final GenericTypeResolver m_resolver;
     }
 
@@ -693,7 +697,8 @@ public abstract class IdentityConstant
      * Reset any of the cached info.
      */
     public void resetCachedInfo() {
-        m_component = null;
+        m_component    = null;
+        m_canonicalNid = null;
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

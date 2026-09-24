@@ -42,8 +42,8 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Throw;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
@@ -94,7 +94,7 @@ public class TryStatement
     @Override
     public boolean hasLabelVar(String sName) {
         return "exception".equals(sName) &&
-                (m_ctxValidatingFinally != null || m_regFinallyException != null);
+                (m_validatingFinally != null || m_regFinallyException != null);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class TryStatement
                     Id.IDENTIFIER, sRegName);
 
             m_regFinallyException = reg = ctx.createRegister(pool().typeException१(), sRegName);
-            m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
+            m_validatingFinally.ctx().registerVar(tok, reg, m_validatingFinally.errs());
         }
 
         return reg;
@@ -270,11 +270,9 @@ public class TryStatement
             // promote the information gathered by the finally block
             Context ctxFinally = ctxCatchAll.enter();
 
-            m_ctxValidatingFinally  = ctxFinally;
-            m_errsValidatingFinally = errs;
+            m_validatingFinally = new ValidationScope(ctxFinally, errs);
             StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxFinally, errs);
-            m_ctxValidatingFinally  = null;
-            m_errsValidatingFinally = null;
+            m_validatingFinally = null;
 
             ctxFinally.promoteAssignments(ctxOrig);
 
@@ -556,8 +554,7 @@ public class TryStatement
     protected List<CatchStatement>      catches;
     protected StatementBlock            catchall;
 
-    private transient Context       m_ctxValidatingFinally;
-    private transient ErrorListener m_errsValidatingFinally;
+    private transient ValidationScope m_validatingFinally;
     private transient Register      m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,

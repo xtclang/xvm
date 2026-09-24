@@ -7,21 +7,21 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Assignment;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
-import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Register;
-import org.xvm.asm.Assignment;
 
 import org.xvm.asm.ast.BindFunctionAST;
 import org.xvm.asm.ast.BindMethodAST;
@@ -29,8 +29,8 @@ import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.OuterExprAST;
 import org.xvm.asm.ast.PropertyExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
 import org.xvm.asm.ast.UnaryOpExprAST.Operator;
+import org.xvm.asm.ast.UnaryOpExprAST;
 
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -52,10 +52,10 @@ import org.xvm.asm.op.MoveThis;
 import org.xvm.asm.op.MoveVar;
 import org.xvm.asm.op.P_Get;
 
-import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.Token;
+import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.Token;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
@@ -64,6 +64,9 @@ import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -296,7 +299,7 @@ public class LambdaExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        if (!ensurePrepared(ErrorListener.BLACKHOLE)) {
+        if (!ensurePrepared(silent(PROBE))) {
             return null;
         }
 
@@ -320,12 +323,12 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE)) {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, silent(PROBE))) {
             return null;
         }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.BLACKHOLE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, silent(PROBE));
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -333,10 +336,6 @@ public class LambdaExpression
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         if (!ensurePrepared(errs)) {
             return TypeFit.NoFit;
         }
@@ -475,9 +474,8 @@ public class LambdaExpression
         int     cParams     = getParamCount();
 
         if (cReqParams != -1 && cParams != cReqParams) {
-            errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
-                    new Object[]{cReqParams, cParams},
-                    getSource(), getStartPosition(), operator.getStartPosition());
+            errs.error(Compiler.ARGUMENT_WRONG_COUNT, in(getSource(), getStartPosition(), operator.getStartPosition()),
+                    cReqParams, cParams);
             fValid = false;
         }
 
@@ -597,9 +595,8 @@ public class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
-                        getSource(), paramNames.get(0).getStartPosition(),
-                        paramNames.get(cParams-1).getEndPosition());
+                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in(getSource(), paramNames.get(0).getStartPosition(),
+                        paramNames.get(cParams-1).getEndPosition()));
                 fValid = false;
             }
 

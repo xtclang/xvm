@@ -113,12 +113,12 @@ public class Compiler extends Launcher<CompilerOptions> {
     /**
      * Compiler constructor for programmatic use.
      *
-     * @param options     pre-configured compiler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured compiler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Compiler(CompilerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**
@@ -645,8 +645,9 @@ public class Compiler extends Launcher<CompilerOptions> {
     public boolean isAbortDesired() {
         // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
         // Use Compiler's strictness-aware abort threshold
-        return isBadEnoughToAbort(m_sevWorst) ||
-                (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
+        // no sentinel comparison: a silent listener answers false to isAbortDesired anyway, so
+        // the guard could never change the answer - and there is now more than one silent listener
+        return isBadEnoughToAbort(m_sevWorst) || f_errs.isAbortDesired();
     }
 
     // ----- accessors -----------------------------------------------------------------------------

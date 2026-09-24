@@ -256,6 +256,13 @@ public abstract class Container
     }
 
     /**
+     * Resolve a template under the container that can own the type's definitions.
+     *
+     * <p>Delegate upward only when the type is shared with the parent pool. Otherwise this
+     * container must know the type, and registers it in its own pool for the local template cache.
+     * Keeping application-specific types in that local cache avoids retaining a child request's
+     * definitions in its longer-lived parent. The thread's ambient pool does not select this owner.
+     *
      * @return a ClassTemplate for the specified type
      */
     public ClassTemplate getTemplate(TypeConstant type) {
@@ -286,6 +293,11 @@ public abstract class Container
     }
 
     /**
+     * Resolve a class identity using the same parent-sharing rule as {@link #getTemplate(TypeConstant)}.
+     *
+     * <p>If the identity cannot be delegated to the parent, use this container's pool before
+     * retaining it in a local template. The source identity's pool does not select the cache owner.
+     *
      * @return a ClassTemplate for the specified class identity
      */
     public ClassTemplate getTemplate(IdentityConstant idClass) {
@@ -413,14 +425,36 @@ public abstract class Container
     }
 
     /**
-     * @return the closest to the root container that is responsible for holding a singleton
-     *         ObjectHandle for the specified constant
+     * Find the container responsible for a singleton's value and initialization.
+     *
+     * <p>Core definitions are shared with the native root. A nested container can additionally
+     * share explicitly selected modules with its parent. An application's unshared definitions
+     * belong to that application, even when a sibling has an equal constant in its own pool.
+     *
+     * @return the highest ancestor sharing the definition, or this container for an unshared module
      */
     public Container getOriginContainer(SingletonConstant constSingle) {
         IdentityConstant idClz = constSingle.getClassConstant();
         return isShared(idClz.getModuleConstant())
                 ? f_parent.getOriginContainer(constSingle)
                 : this;
+    }
+
+    /**
+     * Resolve a singleton definition to the constant that owns its initialization and value.
+     *
+     * <p>Call this before reading or initializing a singleton received from a method, another
+     * pool or a copied definition. The module-sharing relationship selects the owner, even if
+     * the input already belongs to this container's pool. Registration preserves an existing
+     * canonical value; copying a definition into a different owner starts without live state.
+     * The thread's ambient pool does not participate.
+     *
+     * @param constant  the singleton definition
+     *
+     * @return the canonical constant in its owning container's pool
+     */
+    public SingletonConstant ensureSingletonConstant(SingletonConstant constant) {
+        return getOriginContainer(constant).getConstantPool().register(constant);
     }
 
     /**

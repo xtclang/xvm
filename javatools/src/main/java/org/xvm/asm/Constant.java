@@ -271,7 +271,8 @@ public abstract class Constant
     }
 
     /**
-     * Apply the specified operation to this Constant.
+     * Apply the specified operation to this Constant using its owner pool. No ambient pool
+     * participates; callers compiling into another pool use {@link #apply(ConstantPool, Token.Id, Constant)}.
      *
      * @param op    the token id representing the operation
      * @param that  the Constant on the right side of the operation
@@ -285,6 +286,23 @@ public abstract class Constant
         throw new UnsupportedOperationException("this=" + getClass().getSimpleName()
                 + ", op=" + op.TEXT
                 + (that == null ? "" : ", that=" + that.getClass().getSimpleName()));
+    }
+
+    /**
+     * Fold an operation for a caller that owns a different pool. Adopt the operands before
+     * dispatch so newly constructed values belong to the caller's compilation; register the
+     * result as well because an operation may return an unchanged operand. Non-shareable
+     * types retain their original owner according to {@link ConstantPool#register}.
+     *
+     * @param pool  the destination compilation pool, independent of any ambient binding
+     * @param op    the operation to apply
+     * @param that  the right operand, or null for a unary operation
+     *
+     * @return the result registered with the destination pool
+     */
+    public Constant apply(ConstantPool pool, Token.Id op, Constant that) {
+        Constant left = pool.register(this);
+        return pool.register(left.apply(op, pool.register(that)));
     }
 
     /**

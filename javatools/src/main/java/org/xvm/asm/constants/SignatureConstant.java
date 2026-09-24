@@ -244,10 +244,16 @@ public class SignatureConstant
     /**
      * Create an equivalent signature with generic types resolved based on the specified resolver.
      *
-     * @param pool      the ConstantPool to place a potentially created new constant into
+     * <p>Use the pool of the compilation or target metadata that needs the resolved signature.
+     * For a library signature specialized with an application type, that destination can differ
+     * from this signature's owner: application-specific constants should not accumulate in the
+     * library pool. If resolution changes nothing, the original signature is returned and keeps
+     * its owner; resolution is not an unconditional registration into the destination.
+     *
+     * @param pool      the destination for a changed signature and newly resolved types
      * @param resolver  the resolver
      *
-     * @return a resolved signature
+     * @return a resolved signature, or this signature if nothing changed
      */
     public SignatureConstant resolveGenericTypes(ConstantPool pool, GenericTypeResolver resolver) {
         if (resolver == null) {
@@ -398,10 +404,22 @@ public class SignatureConstant
      *
      * <p>Note: both "this" and "that" signatures must be resolved.
      *
+     * <p>Use the compiler or target metadata pool as the destination for type resolution, even
+     * when the signatures belong to another pool. No ambient binding is required for this
+     * selection; an existing binding does not replace the explicit destination.
+     * The destination must support the types being resolved. For example, a compilation checking
+     * a library method against an application method supplies its application pool, so the
+     * specialization is not retained in the library's pool.
+     *
+     * <p>This parameter governs constants constructed during compatibility resolution. Existing
+     * operand types keep their owners; their assignability checks and derived caches follow
+     * {@link TypeConstant#calculateRelation} rather than moving all metadata to this pool.
+     *
+     * @param pool     the destination pool for type resolution
      * @param that     the signature of the matching method
      * @param typeCtx  the type within which "this" signature is used
      */
-    public boolean isSubstitutableFor(SignatureConstant that, TypeConstant typeCtx) {
+    public boolean isSubstitutableFor(ConstantPool pool, SignatureConstant that, TypeConstant typeCtx) {
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
          *
@@ -440,7 +458,7 @@ public class SignatureConstant
         TypeConstant[] aR1 = that.getRawReturns();
         TypeConstant[] aR2 = this.getRawReturns();
         for (int i = 0, c = Math.min(cR1, cR2); i < c; i++) {
-            if (!aR2[i].isCovariantReturn(aR1[i], typeCtx)) {
+            if (!aR2[i].isCovariantReturn(pool, aR1[i], typeCtx)) {
                 return false;
             }
         }
@@ -448,7 +466,7 @@ public class SignatureConstant
         TypeConstant[] aP1 = that.getRawParams();
         TypeConstant[] aP2 = this.getRawParams();
         for (int i = 0; i < cP1; i++) {
-            if (!aP2[i].isContravariantParameter(aP1[i], typeCtx)) {
+            if (!aP2[i].isContravariantParameter(pool, aP1[i], typeCtx)) {
                 return false;
             }
         }
@@ -588,6 +606,17 @@ public class SignatureConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    protected SignatureConstant adoptedBy(ConstantPool pool) {
+        var copy = (SignatureConstant) super.adoptedBy(pool);
+        // Comparison state belongs to this signature's owner. An adopted copy must not share
+        // the source's lock or retain either of its cached comparison targets.
+        copy.comparisonLock = new StampedLock();
+        copy.m_sigPrev      = null;
+        copy.m_refSigPrev   = null;
+        return copy;
+    }
+
+    @Override
     public Format getFormat() {
         return Format.Signature;
     }
@@ -647,12 +676,12 @@ public class SignatureConstant
 
         WeakReference<SignatureConstant> refPrev = m_refSigPrev;
         if (that == m_sigPrev || refPrev != null && that == refPrev.get()) {
-            long stamp    = m_lockPrev.tryOptimisticRead();
+            long stamp    = comparisonLock.tryOptimisticRead();
             int  nCmpPrev = m_nCmpPrev;
 
             refPrev = m_refSigPrev;
             if ((that == m_sigPrev || refPrev != null && that == refPrev.get())
-                    && m_lockPrev.validate(stamp)) {
+                    && comparisonLock.validate(stamp)) {
                 return nCmpPrev;
             }
         }
@@ -670,12 +699,12 @@ public class SignatureConstant
 
         if (!this.containsUnresolved() && !that.containsUnresolved()) {
             boolean fSamePool = this.getConstantPool() == that.getConstantPool();
-            long    stamp     = m_lockPrev.tryWriteLock();
+            long    stamp     = comparisonLock.tryWriteLock();
             if (stamp != 0) {
                 m_sigPrev    = fSamePool ? that : null;
                 m_refSigPrev = fSamePool ? null : new WeakReference<>(that);
                 m_nCmpPrev   = n;
-                m_lockPrev.unlockWrite(stamp);
+                comparisonLock.unlockWrite(stamp);
             }
         }
         return n;
@@ -749,10 +778,10 @@ public class SignatureConstant
         m_aconstReturns = TypeConstant.registerTypeConstants(pool, m_aconstReturns);
 
         // clear the cache
-        long stamp = m_lockPrev.writeLock();
+        long stamp = comparisonLock.writeLock();
         m_sigPrev    = null;
         m_refSigPrev = null;
-        m_lockPrev.unlockWrite(stamp);
+        comparisonLock.unlockWrite(stamp);
     }
 
     @Override
@@ -943,7 +972,7 @@ public class SignatureConstant
     /**
      * Lock protecting the cached comparison fields.
      */
-    private final StampedLock m_lockPrev = new StampedLock();
+    private transient StampedLock comparisonLock = new StampedLock();
 
     /**
      * Cached comparison target.

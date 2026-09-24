@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -48,6 +50,7 @@ import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
 import static org.xvm.util.Handy.stream;
@@ -2011,8 +2014,8 @@ public abstract class Component
                 }
                 if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
-                    collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                            new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
+                    collector.getErrorListener().fatal(Constants.VE_CYCLICAL_CONTRIBUTION, ErrorListener.at(this),
+                            getName(), contrib.getComposition().toString().toLowerCase());
                     return ResolutionResult.ERROR;
                 }
 
@@ -3527,8 +3530,8 @@ public abstract class Component
      */
     public static class SimpleCollector
             implements ResolutionCollector {
-        public SimpleCollector(ErrorListener errs) {
-            m_errs = errs;
+        public SimpleCollector(@NotNull ErrorListener errs) {
+            f_errs = requireNonNull(errs, "errs");
         }
 
         @Override
@@ -3545,7 +3548,7 @@ public abstract class Component
 
         @Override
         public ErrorListener getErrorListener() {
-            return m_errs;
+            return f_errs;
         }
 
         /**
@@ -3565,7 +3568,7 @@ public abstract class Component
         /**
          * The error listener.
          */
-        private final ErrorListener m_errs;
+        private final ErrorListener f_errs;
     }
 
     // ----- constants -----------------------------------------------------------------------------

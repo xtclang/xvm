@@ -12,8 +12,8 @@ import java.util.function.Predicate;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
@@ -678,7 +678,10 @@ public class PropertyInfo
             // allowable for interfaces
             Component parent = idProp.getNamespace().getComponent();
             if (parent == null) {
-                ConstantPool pool = ConstantPool.getCurrentPool();
+                // Validate the query in this metadata's target, not the query's source or ambient pool.
+                ConstantPool pool = m_infoType == null
+                        ? getIdentity().getConstantPool()
+                        : m_infoType.getType().getConstantPool();
                 if (idProp.isShared(pool)) {
                     idProp = pool.register(idProp);
                     parent = idProp.getNamespace().getComponent();

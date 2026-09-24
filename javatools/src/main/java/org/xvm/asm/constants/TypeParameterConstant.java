@@ -152,6 +152,14 @@ public class TypeParameterConstant
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
+    protected TypeParameterConstant adoptedBy(ConstantPool pool) {
+        var copy = (TypeParameterConstant) super.adoptedBy(pool);
+        // Re-entry into the source's comparison must not suppress a destination-owned comparison.
+        copy.comparisonRecursion = new TransientThreadLocal<>();
+        return copy;
+    }
+
+    @Override
     public TypeConstant getType() {
         return getConstantPool().ensureTerminalTypeConstant(this);
     }
@@ -199,11 +207,11 @@ public class TypeParameterConstant
         }
 
         int nDif = this.f_iReg - that.f_iReg;
-        if (nDif != 0 || f_tloReEntry.get() != null) {
+        if (nDif != 0 || comparisonRecursion.get() != null) {
             return nDif;
         }
 
-        try (var ignore = f_tloReEntry.push(true)) {
+        try (var ignore = comparisonRecursion.push(true)) {
             return getParentConstant().compareTo(that.getParentConstant());
         }
     }
@@ -254,5 +262,5 @@ public class TypeParameterConstant
      */
     private transient TypeConstant m_typeConstraint;
 
-    private final TransientThreadLocal<Boolean> f_tloReEntry = new TransientThreadLocal<>();
+    private transient TransientThreadLocal<Boolean> comparisonRecursion = new TransientThreadLocal<>();
 }

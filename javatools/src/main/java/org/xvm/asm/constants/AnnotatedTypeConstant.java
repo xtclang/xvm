@@ -233,6 +233,13 @@ public class AnnotatedTypeConstant
 
     @Override
     public boolean isShared(ConstantPool poolOther) {
+        // A runtime annotation can capture a service or other request-owned object. Knowing
+        // its class names does not authorize retaining that object in another pool's caches.
+        for (Constant parameter : getAnnotationParams()) {
+            if (parameter instanceof HandleConstant handle && !handle.isShared(poolOther)) {
+                return false;
+            }
+        }
         return super.isShared(poolOther) && getAnnotationClass().isShared(poolOther);
     }
 
