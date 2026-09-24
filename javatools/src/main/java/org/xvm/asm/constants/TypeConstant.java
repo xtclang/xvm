@@ -21,7 +21,6 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -87,7 +86,6 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
-import org.xvm.util.TransientThreadLocal;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -6007,8 +6005,8 @@ public abstract class TypeConstant
      * there and perform the comparison there. If neither pool can use both types, the relation
      * is incompatible. The equality and Object fast paths do not require that registration.
      *
-     * <p>The selected pool canonicalizes the operands, and its right-hand type owns the cached
-     * relation. For example, comparing a library type to an application-only type must move the
+     * <p>The selected pool canonicalizes the operands and owns a separate table of completed
+     * relations. For example, comparing a library type to an application-only type must move the
      * comparison into the application pool when the library pool cannot use that application
      * type. This prevents that relation cache from retaining a downstream application type in the
      * library. The thread's ambient pool does not select this cache owner; an explicit signature
@@ -6020,19 +6018,25 @@ public abstract class TypeConstant
      */
     public Relation calculateRelation(TypeConstant typeLeft) {
         ConstantPool pool = getConstantPool();
+        ConstantPool poolLeft = typeLeft.getConstantPool();
+        if (pool != poolLeft && (!pool.hasSerializedIndices() || !poolLeft.hasSerializedIndices())) {
+            // Runtime comparisons belong to the descriptor context, never to an image cache.
+            // Import before equality shortcuts so another generation cannot match by name.
+            ConstantPool destination = pool.hasSerializedIndices() ? poolLeft : pool;
+            return destination.register(this).calculateRelation(destination.register(typeLeft));
+        }
         if (this.equals(typeLeft) || typeLeft.equals(pool.typeObject())) {
             return Relation.IS_A;
         }
 
-        ConstantPool poolLeft = typeLeft.getConstantPool();
         if (pool != poolLeft && !typeLeft.isShared(pool)) {
             return this.isShared(poolLeft)
                     ? poolLeft.register(this).calculateRelation(typeLeft)
                     : Relation.INCOMPATIBLE;
         }
 
-        // since we're caching the relations on the constant itself, there is no reason to do it
-        // unless it's registered; also make sure the left type is registered to the same pool
+        // Canonicalize both operands before selecting a relation key. Runtime descriptors have no
+        // image positions; registration is idempotent in their owning descriptor context.
         TypeConstant typeRight = this.getPosition() >= 0
                 ? this
                 : pool.register(this);
@@ -6048,47 +6052,21 @@ public abstract class TypeConstant
             return calculateRelation(typeRecursive.getReferredToType());
         }
 
-        Map<TypeConstant, Relation> mapRelations = ensureRelationMap();
-
-        Relation relation = mapRelations.get(typeLeft);
-        if (relation != null) {
-            if (getContext() != null &&
-                    (typeLeft.containsAutoNarrowing(true) || typeRight.containsAutoNarrowing(true))) {
-                // ignore the cached result; the context may have changed
-            } else {
-                return relation;
-            }
+        if (containsUnresolved() || typeLeft.containsUnresolved()) {
+            return pool.getTypeRelations().calculateUnresolved(this, typeLeft,
+                    () -> calculateUncachedRelation(typeLeft));
         }
+        boolean cacheable = getContext() == null
+                || !(typeLeft.containsAutoNarrowing(true) || typeRight.containsAutoNarrowing(true));
+        TypeConstant destination = typeLeft;
+        return pool.getTypeRelations().calculate(this, typeLeft, cacheable,
+                () -> calculateUncachedRelation(destination));
+    }
 
-        Set<TypeConstant> setInProgress = m_tloInProgress.get();
-
-        if (setInProgress != null && setInProgress.contains(typeLeft)) {
-            // we are in recursion; this can only happen for duck-typing, for example:
-            //
-            //    interface I { I! foo(); }
-            //    class C { C! foo(); }
-            //
-            // the check on whether C is assignable to I depends on whether the return value of
-            // C.foo() is assignable to the return value of I.foo(), which causes a recursion
-            //
-            // The soft assertion below assumes that a recursion for a given type always involves
-            // the same ConstantPool. However, there is a possibility that we cycled in to the same
-            // interface type on a different pool and called isInterfaceAssignableFrom again,
-            // checking all the methods and circled back for a non-interface comparison.
-            // Leaving the logging in for now, but no matter what, the answer should be negative.
-            //
-            // Quite naturally, a similar recursion may occur with recursive types.
-            if (!typeLeft.isInterfaceType() &&
-                    !typeLeft.containsRecursiveType() && !typeRight.containsRecursiveType()) {
-                String sRecursion = "left=" + typeLeft.getValueString()
-                                  + "; right=" + typeRight.getValueString();
-                if (s_setRecursions.add(sRecursion)) {
-                    System.err.println("rejecting isA() due to a recursion: " + sRecursion);
-                }
-            }
-            mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
-            return Relation.INCOMPATIBLE;
-        }
+    /** Compute assignability after the owner has canonicalized both operands and entered the query. */
+    private Relation calculateUncachedRelation(TypeConstant typeLeft) {
+        TypeConstant typeRight = this;
+        Relation relation = null;
 
         // check immutability, but exclude formal type parameters and dynamic types that are handled
         // quite specially in other assignability related methods. See for example:
@@ -6096,7 +6074,6 @@ public abstract class TypeConstant
         // TerminalTypeConstant.calculateRelationToLeft()
         if (typeLeft.isImmutable() && !typeRight.isImmutable() &&
                 !typeLeft.isTypeParameter() && !typeLeft.isDynamicType()) {
-            mapRelations.put(typeLeft, Relation.INCOMPATIBLE);
             return Relation.INCOMPATIBLE;
         }
 
@@ -6136,7 +6113,6 @@ public abstract class TypeConstant
                         relation = calculateDuckTypeRelation(typeLeft, typeRight, accessRight);
                     }
                 }
-                mapRelations.put(typeLeft, relation);
                 return relation;
             }
 
@@ -6145,41 +6121,20 @@ public abstract class TypeConstant
                 relation = typeRight.isService()
                         ? typeRight.calculateRelation(typeLeft.getUnderlyingType())
                         : Relation.INCOMPATIBLE;
-                mapRelations.put(typeLeft, relation);
                 return relation;
             }
 
             // then check various "reserved" scenarios
             relation = checkReservedCompatibility(typeLeft, typeRight);
             if (relation != null) {
-                mapRelations.put(typeLeft, relation);
                 return relation;
             }
         }
 
-        // now - a long journey
-        if (setInProgress == null) {
-            m_tloInProgress.set(setInProgress = new HashSet<>());
-        }
-        setInProgress.add(typeLeft);
-        try {
-            relation = typeRight.calculateRelationToLeft(typeLeft);
-
-            if (relation == Relation.INCOMPATIBLE) {
-                relation = calculateDuckTypeRelation(typeLeft, typeRight, Access.PUBLIC);
-            }
-
-            mapRelations.put(typeLeft, relation);
-        } catch (RuntimeException | Error e) {
-            mapRelations.remove(typeLeft);
-            throw e;
-        } finally {
-            setInProgress.remove(typeLeft);
-            if (setInProgress.isEmpty()) {
-                m_tloInProgress.remove();
-            }
-        }
-        return relation;
+        relation = typeRight.calculateRelationToLeft(typeLeft);
+        return relation == Relation.INCOMPATIBLE
+                ? calculateDuckTypeRelation(typeLeft, typeRight, Access.PUBLIC)
+                : relation;
     }
 
     /**
@@ -8108,11 +8063,9 @@ public abstract class TypeConstant
         // clear any cached constants
         m_cInvalidations = 0;
         m_typeinfo       = null;
-        m_mapRelations   = null;
         m_typeNormalized = null;
         m_mapConsumes    = null;
         m_mapProduces    = null;
-        m_tloInProgress  = null;
         m_fValidated     = false;
         recursionDepth   = new AtomicInteger();
     }
@@ -8178,19 +8131,8 @@ public abstract class TypeConstant
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    private Map<TypeConstant, Relation> ensureRelationMap() {
-        Map<TypeConstant, Relation> mapRelations = m_mapRelations;
-        if (mapRelations == null) {
-            s_tloInProgress.compareAndSet(this, null, new TransientThreadLocal<>());
-            mapRelations = m_mapRelations = new ConcurrentHashMap<>();
-        }
-        return mapRelations;
-    }
-
     void clearRelationMap() {
-        if (m_mapRelations != null) {
-            m_mapRelations.clear();
-        }
+        getConstantPool().getTypeRelations().clear(this);
     }
 
     private Map<String, Usage> ensureConsumesMap() {
@@ -8429,18 +8371,6 @@ public abstract class TypeConstant
             AtomicIntegerFieldUpdater.newUpdater(TypeConstant.class, "m_cInvalidations");
 
     /**
-     * A cache of "isA" responses.
-     */
-    private transient volatile Map<TypeConstant, Relation> m_mapRelations;
-
-    /**
-     * The set of "isA() in progress" types.
-     */
-    private transient volatile TransientThreadLocal<Set<TypeConstant>> m_tloInProgress;
-    private static final AtomicReferenceFieldUpdater<TypeConstant, TransientThreadLocal> s_tloInProgress =
-            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TransientThreadLocal.class, "m_tloInProgress");
-
-    /**
      * A cache of "consumes" responses.
      */
     private transient Map<String, Usage> m_mapConsumes;
@@ -8459,16 +8389,6 @@ public abstract class TypeConstant
      * Cached normalized representation.
      */
     private transient TypeConstant m_typeNormalized;
-
-    /**
-     * The cache of recursion pairs.
-     */
-    private static final Set<String> s_setRecursions;
-    static {
-        // add well known recursions
-        s_setRecursions = new HashSet<>();
-        s_setRecursions.add("left=this:class(Array); right=this:class(Hashable)");
-    }
 
     /**
      * Scoped value allowing to get the "current" TypeConstant context out of thin air. A missing

@@ -751,3 +751,12 @@ Existing supporting tests named in the catalogue but unchanged by these ownershi
 not counted as newly modified tests. Documentation on this branch is this file and the separation
 architecture plan. The larger embedding plans and JIT archive documentation remain on their
 original branches.
+
+The state-separation follow-up now also includes container-owned reflective handles, local
+reflection through the runtime descriptor context, and a separate `TypeRelations` semantic table.
+The [separation plan](constant-pool-architecture-plan.md#first-semantic-cache-split-type-relations)
+explains their exact commit boundaries, bug fixes, tests and remaining limitations. Completed
+relations can be cleared; descriptor identity and singleton/handle execution state cannot be
+treated as disposable caches. In-progress recursive relations are calculation state and are never
+published as completed answers. These experimental changes extend the catalogue above; they do
+not claim that the remaining metadata, foreign reflection or generated-method ownership is solved.

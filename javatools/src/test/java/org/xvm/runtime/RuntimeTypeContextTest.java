@@ -93,6 +93,8 @@ class RuntimeTypeContextTest {
         assertThrows(IllegalArgumentException.class, () -> context1.intern(base2));
         assertThrows(IllegalArgumentException.class, () -> context1.parameterize(base1, value2));
         assertThrows(IllegalArgumentException.class, () -> context1.intern(descriptor2));
+        assertThrows(IncompatibleTypeOwnerException.class, () -> context1.calculateRelation(base1, base2));
+        assertThrows(IncompatibleTypeOwnerException.class, () -> descriptor1.calculateRelation(descriptor2));
         assertThrows(IllegalArgumentException.class,
                 () -> context1.getDescriptorPool().getConstant(descriptor2));
         // Checking only the outer constant's owner would miss this foreign argument.

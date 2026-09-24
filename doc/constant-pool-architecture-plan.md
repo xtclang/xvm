@@ -2,8 +2,9 @@
 
 Status: staged proposal and architectural prototypes, 2026-09-24. The experimental branch
 `lagergren/constant-pool-state-separation` implements the singleton execution-state boundary and
-the first descriptor/index boundary, including late-generated field initializers. Broad reflection
-migration, metadata separation, other generated methods and whole-image freezing remain proposals.
+the first descriptor/index boundary, including late-generated field initializers, local reflective
+parameterization and a separate type-relation table. Broader reflection migration, the remaining
+metadata caches, other generated methods and whole-image freezing remain proposals.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -630,3 +631,87 @@ moving foreign dispatch needs an identified source context and remains separate.
 function handles, annotations with captured arguments, property/method reflection and legacy
 image-backed metadata still require migration. No source-image freeze, cross-container descriptor
 sharing or removal of application copies is implied.
+
+## First semantic-cache split: type relations
+
+This is a separate commit after local reflection. `TypeRelations` owns completed assignability
+results. `TypeConstant` retains the type algebra but no longer holds a relation map or a per-type
+thread-local recursion set. Each image pool and runtime descriptor store has an independent table,
+created through a final bound lazy holder. The adapter remains on `ConstantPool`; the semantic
+table is a separate object and is not part of interning or serialization.
+
+The runtime context exposes `calculateRelation(source, destination)` and `clearRelations()`.
+Both operands are imported before equality shortcuts. A mixed image/descriptor comparison also
+selects the descriptor store before any cache lookup, preventing the image table from retaining
+a derived runtime type. Other descriptor contexts and image generations are rejected rather than
+folded by equal names. Compiler comparisons between image pools retain their existing destination
+selection rules.
+
+### Completed results versus calculation state
+
+- A completed result is an immutable `Relation` keyed by ordered, owner-canonical source and
+  destination types. Access modifiers and parameters are included in those types.
+- In-progress queries belong to the current thread's calculation. Recursion returns the existing
+  conservative `INCOMPATIBLE` answer to the immediate caller; it does not publish that provisional
+  answer to other queries or threads.
+- A nested result records which active ancestors it depends on. It cannot be published while
+  those dependencies remain. When the ancestor completes, its self-dependency is resolved and its
+  completed result can be cached. Independent subqueries remain cacheable.
+- Queries affected by the scoped auto-narrowing context bypass caching, and that dependence
+  propagates to their callers. Exceptions remove active state in `finally`; a caught failed
+  subquery also prevents its caller from publishing a transient-failure-dependent result.
+- Clearing completed results detaches their maps without clearing active guards or descriptors.
+  Calculations already running can only publish to detached maps. Existing compiler per-source
+  metadata invalidation detaches that source's bucket; it does not redefine the compiler's broader
+  dependency invalidation rules.
+
+Compiler placeholders are a separate category. Registration deliberately cannot adopt unresolved
+types, and some register placeholders cannot be structurally compared yet. `calculateUnresolved`
+therefore keeps them in calculation-local state only; it can temporarily refer to an application
+operand while evaluating a library contribution, but cannot put it in the library's completed
+cache. Completed keys use canonical **object identity**, via the existing `ConcurrentHasherMap`
+identity hasher. Structural equality is the interner's responsibility. The library compiler exposed
+both cases during validation; they are not reasons to relax runtime descriptor generation checks.
+
+The first implementation discarded memoization for an entire recursive calculation. The real
+Ecstasy library compilation exposed excessive repeated duck-typing work, so that version was
+stopped and replaced with per-query dependency tracking. This distinction matters: recursion
+guards are not completed answers, but a successfully completed recursive root can still be cached.
+The old process-global set used only to print selected recursion diagnostics was removed with the
+old guard; conservative recursion rejection remains part of the type algebra, not an error-listener
+diagnostic. TypeInfo diagnostic replay remains unchanged.
+
+`TypeRelationsTest` coordinates competing calculations with latches and futures: it checks that
+another thread cannot see a provisional result, failures can be retried, dependent inner results
+are not cached, completed recursive roots are reusable, scoped inputs do not poison outer results,
+invalidation cannot be undone by an older calculation, and equal keys from another owner are
+rejected. Timeouts only bound a hung test. No test relies on sleeps or elapsed-time assertions.
+
+The XDK ownership test compares a matrix of actual string, integer, object, generic and nullable
+type relations against the image type algebra with cold, warm and cleared runtime tables. It
+checks unchanged descriptor identity and image constants under an unrelated ambient pool. The
+existing warning-replay test also checks that clearing relations preserves TypeInfo diagnostics.
+
+### Review boundaries and what is still missing
+
+| Separate commit | Scope | Depends on |
+|---|---|---|
+| `6dd461277` — reflective handle ownership | Container-owned handles; exact same-image isolation regression | Singleton/descriptor prototype |
+| `95510d2ab` — local reflection and compositions | Parameterization/relational construction, native declaration binding, owner-aware composition caches and narrow ownership errors | Handle ownership |
+| Type-relation semantic table | Completed results, calculation-local guards, explicit clear operation and equivalence/concurrency tests | Descriptor context; tested together with reflection |
+| Collection-style cleanup | Immutable fixed test collections and transformations at existing array API boundaries | Independent of the ownership architecture |
+
+Next scopes remain separately reviewable: foreign reflection dispatch and constructor/property/
+method representations; TypeInfo and variance/normalization cache semantics; other generated
+methods and mutable execution flags/Ops; then publication/freeze enforcement (including fingerprint
+versions). Only after those boundaries are enforced should image-copy removal and wider sharing
+be attempted. This slice does not guarantee a fully frozen or universally shareable runtime image,
+nor does it establish a performance gain. The general error-listener architecture and native
+resource shutdown remain outside this branch.
+
+Verification on 2026-09-24: `:javatools:test --rerun` completed 486 tests (446 passed,
+40 existing skips, no failures/errors), including all nine `TypeRelationsTest` cases and nine
+descriptor-context tests. The full opt-in `:xdk:test --rerun` rebuilt every library and passed all
+36 tests without skips. The successful full build took 1m18s on this run; that is validation,
+not a controlled benchmark. Counts were read from JUnit XML. `spotlessCheck` and `git diff --check`
+passed. No CI task dependencies or default execution modes changed.

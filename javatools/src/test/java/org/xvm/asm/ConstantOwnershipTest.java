@@ -2,6 +2,8 @@ package org.xvm.asm;
 
 import java.nio.file.attribute.FileTime;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.Component.Format;
@@ -136,17 +138,18 @@ class ConstantOwnershipTest {
         var source = sourceFile.getConstantPool();
         var destination = new FileStructure(sourceFile).getConstantPool();
         var type = source.ensureTupleType(source.typeString());
-        for (var name : new String[] {"ensureConsumesMap", "ensureProducesMap", "ensureRelationMap"}) {
+        for (var name : List.of("ensureConsumesMap", "ensureProducesMap")) {
             var method = TypeConstant.class.getDeclaredMethod(name);
             method.setAccessible(true);
             method.invoke(type);
         }
         var copy = destination.register(type);
-        for (var name : new String[] {"m_mapConsumes", "m_mapProduces", "m_mapRelations", "m_tloInProgress"}) {
+        for (var name : List.of("m_mapConsumes", "m_mapProduces")) {
             var field = TypeConstant.class.getDeclaredField(name);
             field.setAccessible(true);
             assertNull(field.get(copy), name + " must be recomputed in the destination");
         }
+        assertNotSame(source.getTypeRelations(), destination.getTypeRelations());
         var depth = TypeConstant.class.getDeclaredField("recursionDepth");
         depth.setAccessible(true);
         assertNotSame(depth.get(type), depth.get(copy));

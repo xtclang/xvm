@@ -30,6 +30,7 @@ import org.xvm.asm.Op;
 import org.xvm.asm.RuntimeMethodStructure;
 
 import org.xvm.asm.constants.SingletonConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Parser;
@@ -96,6 +97,7 @@ class ConstantPoolOwnershipTest {
                 var application = new MainContainer(runtime, root, file.getModuleId());
                 if (source.equals("RuntimeDescriptors.x")) {
                     verifyLateInitializer(application);
+                    verifyRelationCache(application);
                 }
                 application.start(Map.of());
                 application.invokeAsync("run").join();
@@ -103,6 +105,39 @@ class ConstantPoolOwnershipTest {
         } finally {
             runtime.shutdownXVM();
         }
+    }
+
+    /** Compare actual type algebra with cold, warm and cleared runtime relation tables. */
+    private static void verifyRelationCache(MainContainer application) {
+        var pool = application.getConstantPool();
+        var box = ((ClassStructure) application.getModule().getComponent().getChild("Box"))
+                .getIdentityConstant().getType();
+        var types = List.of(pool.typeString(), pool.typeInt64(), pool.typeObject(),
+                pool.ensureParameterizedTypeConstant(box, pool.typeString()),
+                pool.ensureParameterizedTypeConstant(box, pool.typeInt64()),
+                pool.ensureNullableTypeConstant(pool.typeString()));
+        var expected = types.stream().map(right -> types.stream()
+                .map(right::calculateRelation).toList()).toList();
+        var context = application.getTypeContext();
+        var descriptors = types.stream().map(context::intern).toList();
+        var constants = pool.getConstants();
+        var unrelated = new FileStructure("UnrelatedRelations").getConstantPool();
+        try (var scope = ConstantPool.withPool(unrelated)) {
+            context.clearRelations();
+            for (int pass = 0; pass < 3; pass++) {
+                if (pass == 2) {
+                    context.clearRelations();
+                }
+                var actual = descriptors.stream().map(right -> descriptors.stream()
+                        .map(left -> context.calculateRelation(right, left)).toList()).toList();
+                assertEquals(expected, actual);
+                for (int i = 0; i < types.size(); i++) {
+                    assertSame(descriptors.get(i), context.intern(types.get(i)));
+                }
+                assertSame(unrelated, ConstantPool.getCurrentPool());
+            }
+        }
+        assertArrayEquals(constants, pool.getConstants());
     }
 
     /** Check the boundary before either generic composition's initializer has executed. */
@@ -301,6 +336,14 @@ class ConstantPoolOwnershipTest {
             var count = later.getErrors().size();
             assertSame(info, concrete.ensureTypeInfo(later));
             assertEquals(count, later.getErrors().size());
+
+            var relation = concrete.calculateRelation(pool.typeObject());
+            pool.getTypeRelations().clear();
+            assertEquals(relation, concrete.calculateRelation(pool.typeObject()));
+            var afterClear = new ErrorList(100);
+            assertSame(info, concrete.ensureTypeInfo(afterClear));
+            assertEquals(later.getErrors().stream().map(error -> error.getCode()).toList(),
+                    afterClear.getErrors().stream().map(error -> error.getCode()).toList());
             later.clear();
             assertSame(info, concrete.ensureTypeInfo(later));
             assertEquals(count, later.getErrors().size());

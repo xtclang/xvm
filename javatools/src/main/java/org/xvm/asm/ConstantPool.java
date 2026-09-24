@@ -3014,6 +3014,18 @@ public class ConstantPool
     }
 
     /**
+     * Obtain completed assignability results for this owner. Runtime descriptor stores inherit
+     * this adapter but have their own table; image tables never retain downstream descriptors.
+     * Canonicalize both operands here before querying, and invalidate through the existing
+     * metadata lifecycle when compiler declarations change.
+     *
+     * @return this owner's semantic relation table, separate from descriptor interning
+     */
+    public TypeRelations getTypeRelations() {
+        return typeRelations.get(this);
+    }
+
+    /**
      * Determine what classes have new information since the specified invalidation count.
      *
      * @param cOld  the old invalidation count to start from
@@ -3822,6 +3834,9 @@ public class ConstantPool
      * Storage of Constant objects by index.
      */
     private final ArrayList<Constant> f_listConst = new ArrayList<>();
+
+    /** Semantic memoization is separate from the constant interner and its serialized indices. */
+    private final Lazy.Bound<ConstantPool, TypeRelations> typeRelations = Lazy.ofBound(TypeRelations::new);
 
     /**
      * Reverse lookup structure to find a particular constant by constant.

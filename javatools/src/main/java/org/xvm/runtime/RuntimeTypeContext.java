@@ -80,6 +80,26 @@ public final class RuntimeTypeContext {
     }
 
     /**
+     * Compare types in this definition context. Import before even equality or Object shortcuts,
+     * so equal names from another generation cannot bypass the ownership check.
+     *
+     * @param source       the type of the value being assigned
+     * @param destination  the required type
+     * @return assignability in this context
+     */
+    public TypeConstant.Relation calculateRelation(TypeConstant source, TypeConstant destination) {
+        return intern(source).calculateRelation(intern(destination));
+    }
+
+    /**
+     * Discard completed relation results without changing descriptor identities, metadata or
+     * execution state. Subsequent queries recompute in the same fixed definition context.
+     */
+    public void clearRelations() {
+        descriptors.getTypeRelations().clear();
+    }
+
+    /**
      * Obtain the factory adapter for runtime code generation. Import operands through
      * {@link ConstantPool#register} before calling factories, which may return an operand directly.
      * Use a method's local constant registry for code references; image-index lookup and assembly
@@ -143,6 +163,10 @@ public final class RuntimeTypeContext {
             return result;
         }
 
+        /**
+         * The visited set uses identity: two structurally equal operands can belong to different
+         * generations, so visiting one must never suppress the ownership check on the other.
+         */
         private void validate(Constant constant, Set<Constant> visited) {
             if (registered.contains(constant) || !visited.add(constant)) {
                 return;
@@ -182,8 +206,11 @@ public final class RuntimeTypeContext {
             }
         }
 
+        // NOTE: ConstantPool.equals compares contents, not definition-generation identity.
         private final Set<ConstantPool> definitions =
                 Collections.newSetFromMap(new IdentityHashMap<>());
+
+        // Only this exact adopted object has completed validation; an equal foreign object has not.
         private final Set<Constant> registered =
                 Collections.newSetFromMap(new IdentityHashMap<>());
     }
