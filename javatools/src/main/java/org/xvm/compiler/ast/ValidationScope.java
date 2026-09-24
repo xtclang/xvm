@@ -2,6 +2,8 @@ package org.xvm.compiler.ast;
 
 import org.xvm.asm.ErrorListener;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * The context and error listener in force while a statement is being validated, captured so that a
  * variable created lazily during that validation can still be registered against them.
@@ -15,4 +17,8 @@ import org.xvm.asm.ErrorListener;
  * @param errs  the listener to report against while validating
  */
 record ValidationScope(Context ctx, ErrorListener errs) {
+    ValidationScope {
+        requireNonNull(ctx, "ctx");
+        requireNonNull(errs, "errs");
+    }
 }
