@@ -2,6 +2,7 @@ package org.xvm.api;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
@@ -46,12 +47,14 @@ public class EmbeddingApiCompatibilityTest {
         // Positional nulls intentionally exercise the old source and binary constructor signatures.
         var original = new EmbeddingSupport.Compilation(null, file, null);
         var structural = new EmbeddingSupport.Compilation(null, file, null, List.of());
+        var selectedCalls = new EmbeddingSupport.Compilation(null, file, null, List.of(), Map.of());
         assertEquals(named, original);
         assertEquals(named, structural);
+        assertEquals(named, selectedCalls);
         assertSame(file.getConstantPool(), named.pool());
         assertEquals(0, switch (named) {
             case EmbeddingSupport.Compilation(var module, var structure, var ast,
-                    var trees, var bindings) -> trees.size() + bindings.size();
+                    var trees, var bindings, var functions) -> trees.size() + bindings.size() + functions.size();
         });
     }
 

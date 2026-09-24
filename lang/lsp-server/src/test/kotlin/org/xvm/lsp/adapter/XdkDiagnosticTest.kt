@@ -13,6 +13,23 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkDiagnosticTest {
     @Test
+    fun `binary only structure diagnostics keep the document fallback`() {
+        XdkAdapter { _, errors ->
+            val binary = FileStructure("Binary")
+            errors.error("PARSER-03", ErrorListener.at(binary.module.identityConstant), "identifier")
+            Compilation.forFile(binary)
+        }.use { adapter ->
+            assertThat(
+                adapter
+                    .compile(URI, "module Current {}")
+                    .diagnostics
+                    .single()
+                    .location,
+            ).isEqualTo(Location(URI, 0, 0, 0, 0))
+        }
+    }
+
+    @Test
     fun `foreign source locations retain their identity`() {
         for (name in listOf("file:///Other.x", "untitled:Other.x")) {
             XdkAdapter { _, errs ->

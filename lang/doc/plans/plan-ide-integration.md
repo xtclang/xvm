@@ -148,9 +148,9 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
-| Find implementations | - | - | **Partial** - nominal source types, method bodies and ordinary property fields/accessors from compiler composition, including generic overrides, inherited/default bodies and composed mixins; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
+| Find implementations | - | - | **Partial** - nominal source types, method bodies and ordinary property fields/accessors from compiler composition, including generic overrides, inherited/default bodies, composed mixins and concrete delegation; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
-| Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
+| Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls (including ordinary `super`) with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
 diagnostics untouched. References distinguish overloads and concrete overrides; they do not expand
@@ -159,9 +159,9 @@ contracts, then rejects changed bindings or dispatch relationships. Incomplete g
 results. Edits, close, settings/repository changes and cancellation retire outstanding queries;
 closed source text/membership is checked again before returning. Preparing rename checks only a
 candidate; the final proof can reject it. Binary contracts (including bundled XDK methods),
-properties/accessors, static functions, constructors, mixin/delegating/capped chains and `super(...)`
-remain outside method rename. The `super` case needs register-backed invocation facts and is tracked
-with function-valued calls. This proves closure only over explicitly configured sources, with no
+properties/accessors, static functions, constructors and mixin/delegating/capped chains remain
+outside method rename. Ordinary `super(...)` calls retain the selected written body and participate
+in binding comparison, while the keyword itself is never renamed. This proves closure only over explicitly configured sources, with no
 persistent index or automatic discovery. See playbook X59–X63.
 
 Type-definition returns all available source targets for union/intersection operands, unwraps
@@ -173,8 +173,9 @@ nominal declaration-level implementations (including a concrete type itself), no
 structurally assignable types or generic instantiations. Ordinary properties expose effective written
 getter/setter bodies or backing fields; accessor declarations retain separate chains. A property
 use has the declaration-level set, not a read/write-specific dispatch result. Ref/Var annotation
-dispatch, synthetic delegation/redirect targets and a search across all dependency implementations remain
-unavailable. An inherited dependency body in a current source type's method chain can resolve when
+dispatch, synthetic redirect targets and a search across all dependency implementations remain
+unavailable. Delegation follows compiler-selected signatures through concrete receiver types; interface-
+valued or cyclic delegates have no proven target, and no forwarding code is generated for lookup. An inherited dependency body in a current source type's method chain can resolve when
 the host supplies its declaration source index.
 An explicit reporting inspection runs on the compiler worker; request threads use immutable
 copied locations. See the [manual playbook](../manual-test-plan.md#xdkadapter-playbook).
@@ -248,9 +249,12 @@ parameter types and written argument mapping. A pending `name=|` selects the nam
 each candidate; a slot after named arguments without a new label has no highlight. Even a single
 candidate does not claim final overload selection. Unresolved formals remain formal.
 
-Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
-broader expression prefixes, arguments after the cursor, enclosing-instance member enumeration,
-arbitrary type-valued receiver fallbacks, constructors, function-valued calls and receiver-to-argument
+Explicit cursor analysis now retains binary/conditional expressions and arguments following an
+incomplete member expression. Completed function-valued calls expose signature types and written
+argument slots separately from selected-method calls; their runtime targets and parameter names
+are not guessed. Remaining limits: cursors inside identifiers, further member/call syntax after a
+typed prefix, missing enclosing delimiters, enclosing-instance member enumeration, arbitrary type-
+valued receiver fallbacks, constructors, incomplete function-valued calls and receiver-to-argument
 rewrites. Completion in a missing call-argument value is not yet driven by its expected type.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),

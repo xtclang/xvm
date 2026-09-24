@@ -37,6 +37,12 @@ Tree-sitter remains the shipped default. Build with `-Plsp.adapter=compiler` to 
 settings and the [compiler playbook](../doc/manual-test-plan.md). Project discovery and binary
 artifact configuration are outside this editor setting.
 
+Compiler acceptance also covers concrete delegation, `super` navigation, typed function-call
+signatures and completion inside compound/conditional expressions or before later arguments
+(playbook X68–X71). Problems-view checks locate duplicate-annotation warnings at the redeclared
+property and verify clearing after unsaved edits. Runtime function targets and interface-valued
+delegates remain unknown.
+
 ## Requirements
 
 | Requirement   | Version / Notes                                                    |
@@ -303,7 +309,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X67, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X71, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |

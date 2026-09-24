@@ -2,10 +2,13 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleRepository
+import org.xvm.asm.MultiMethodStructure
 import org.xvm.compiler.BuildRepository
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
@@ -22,6 +25,18 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 class CompilerBoundaryRequirementsTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["id", "&id", "pick", "&pick"])
+    fun `bound generic functions retain binary AST and emit readable artifacts`(reference: String) {
+        val result =
+            compile("module Boundary { static <T> T id(T value)=value; <T> T pick(T value)=value; function Int(Int) make()=$reference; }")
+        val artifact = bytes(result)
+        val restored = FileStructure(ByteArrayInputStream(artifact)).module
+        assertThat(restored.name).isEqualTo("Boundary")
+        assertThat((restored.getChild("make") as MultiMethodStructure).methods().single().ast).isNotNull()
+        assertPure(result.semanticSnapshot())
+    }
+
     @Test
     fun `serialized dependency identities match source declarations without conflating overloads or modules`() {
         val library = compile("module Library { static Int pick(Int n)=n; static String pick(String n)=n; }")
@@ -86,6 +101,8 @@ class CompilerBoundaryRequirementsTest {
                 "class Value implements Reader { @Override Int read()=1; @Override Int value=2; } " +
                 "class Computed implements Reader { @Override Int read()=2; @Override Int value.get()=3; } " +
                 "class Forward(Reader target) delegates Reader(target) {} " +
+                "class Concrete(Value target) delegates Reader(target) {} " +
+                "class Outer(Concrete target) delegates Reader(target) {} " +
                 "Int run(Int captured) { function Int() fn=()->captured; return fn(); } }"
         val baseline = bytes(compile(source))
         val inspected = compile(source)

@@ -1054,7 +1054,9 @@ public class Parser {
 
         if (isMissingStatementSemicolon()) {
             long lPos = expr.getEndPosition();
-            log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
+            if (!(expr instanceof IncompleteExpression)) {
+                log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
+            }
             return new ExpressionStatement(expr);
         }
 
@@ -3112,6 +3114,18 @@ public class Parser {
      * @return an expression
      */
     Expression parsePostfixExpression(boolean fExtended) {
+        try {
+            return parsePostfixValue(fExtended);
+        } catch (IncompleteSyntax e) {
+            if (f_cursor == NO_CURSOR) {
+                throw e;
+            }
+            return new IncompleteExpression(e.statement);
+        }
+    }
+
+    /** Retain a cursor hole as syntax so enclosing operators establish their real contexts. */
+    private Expression parsePostfixValue(boolean fExtended) {
         Expression expr = parsePrimaryExpression(fExtended);
         while (true) {
             switch (peek().getId()) {
@@ -5173,6 +5187,7 @@ public class Parser {
         Token            open       = current();
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
+        boolean          incomplete = false;
         if (canRetainIncomplete()) {
             match(Id.R_PAREN);
             throw incomplete(callee, open, args, separators);
@@ -5192,11 +5207,7 @@ public class Parser {
                 Expression value = argument instanceof LabeledExpression labeled
                         ? labeled.getUnderlyingExpression() : argument;
                 if (value instanceof IncompleteExpression) {
-                    // Keep the enclosing call's intact prefix, but do not attempt overload
-                    // selection using an argument whose type does not exist. A written close
-                    // belongs to this call; its caller will retain its own enclosing context.
-                    match(Id.R_PAREN);
-                    throw incomplete(callee, open, args, separators);
+                    incomplete = true;
                 }
                 Token comma = match(Id.COMMA);
                 if (comma != null) {
@@ -5211,6 +5222,9 @@ public class Parser {
                 }
             }
         }
+        if (incomplete) {
+            throw incomplete(callee, open, args, separators);
+        }
         return new InvocationExpression(callee, open.getId() == Id.ASYNC_PAREN, args,
                 prev().getEndPosition());
     }
@@ -5224,7 +5238,8 @@ public class Parser {
         }
         return prev().getEndPosition() <= f_cursor
                 && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
-                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN));
+                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
+                        || peek(Id.COMMA) || peek(Id.COLON));
     }
 
     private IncompleteSyntax incomplete(Expression target, Token operator,

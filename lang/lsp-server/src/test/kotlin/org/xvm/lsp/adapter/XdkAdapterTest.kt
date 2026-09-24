@@ -209,6 +209,9 @@ class XdkAdapterTest {
             assertThat(warnings).`as`("the annotation warning, once").hasSize(1)
             assertThat(warnings.single().severity).isEqualTo(Diagnostic.Severity.WARNING)
             assertThat(warnings.single().message).contains("Atomic", "duplicates")
+            assertThat(warnings.single().location.startLine).isEqualTo(5)
+            assertThat(warnings.single().location.startColumn).isEqualTo(DUPLICATE_ANNOTATION.lines()[5].indexOf("x ="))
+            assertThat(warnings.single().location.endColumn).isEqualTo(warnings.single().location.startColumn + 1)
         }
     }
 

@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.function.Predicate;
@@ -1298,6 +1299,29 @@ public class MethodInfo
      */
     public boolean hasSuper(TypeInfo infoType) {
         return getSuper(infoType) != null;
+    }
+
+    /**
+     * The written method body selected by super dispatch, when there is one. Field, native,
+     * delegation and into-constraint bodies have no source method target. Inspection uses the
+     * same chain selection as getSuper(), without generating or optimizing forwarding code.
+     */
+    public Optional<MethodConstant> getSuperMethod(TypeInfo infoType) {
+        MethodStructure method = getTopmostMethodStructure(infoType);
+        if (method.getParent().getParent() instanceof PropertyStructure property &&
+                (method == property.getGetter() || method == property.getSetter()) &&
+                infoType.findProperty(property.getIdentityConstant()).hasField()) {
+            return Optional.empty();
+        }
+        MethodBody[] chain = m_aBodyResolved;
+        MethodBody body = chain == null ? findSuper(infoType, getChain())
+                : chain.length > 1 ? chain[1] : null;
+        return Optional.ofNullable(body)
+                .filter(candidate -> candidate.getImplementation() == Implementation.Explicit ||
+                        candidate.getImplementation() == Implementation.Default)
+                .map(MethodBody::getMethodStructure)
+                .filter(target -> !target.isSynthetic())
+                .map(MethodStructure::getIdentityConstant);
     }
 
     /**

@@ -364,13 +364,24 @@ public class EmbeddingSupport {
      *                     these are structural facts, not a promise of semantic validity
      * @param callBindings  immutable call facts keyed by surviving invocation identity; compiler
      *                     objects remain worker-owned and must be copied before concurrent use
+     * @param functionBindings  validated function signatures with no selected runtime method;
+     *                          ownership is the same as for callBindings
      */
     public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
                               List<StatementBlock> sourceTrees,
-                              Map<InvocationExpression, InvocationBinding> callBindings) {
+                              Map<InvocationExpression, InvocationBinding> callBindings,
+                              Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
         public Compilation {
-            sourceTrees  = List.copyOf(sourceTrees);
-            callBindings = Map.copyOf(callBindings);
+            sourceTrees      = List.copyOf(sourceTrees);
+            callBindings     = Map.copyOf(callBindings);
+            functionBindings = Map.copyOf(functionBindings);
+        }
+
+        /** Retain hosts that supply only statically selected method calls. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees,
+                           Map<InvocationExpression, InvocationBinding> callBindings) {
+            this(module, file, ast, sourceTrees, callBindings, Map.of());
         }
 
         /** Retain the construction API for hosts supplying structural source trees. */
@@ -477,13 +488,23 @@ public class EmbeddingSupport {
     public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
                                   Optional<ConstantPool> pool,
                                   Map<InvocationExpression, InvocationBinding> callBindings,
-                                  Map<IncompleteStatement, CursorBinding> cursorBindings) {
+                                  Map<IncompleteStatement, CursorBinding> cursorBindings,
+                                  Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
         public PartialAnalysis {
-            sourceTrees    = List.copyOf(sourceTrees);
-            sites          = List.copyOf(sites);
-            cursorBindings = Map.copyOf(cursorBindings);
+            sourceTrees      = List.copyOf(sourceTrees);
+            sites            = List.copyOf(sites);
+            cursorBindings   = Map.copyOf(cursorBindings);
             requireNonNull(pool, "pool");
-            callBindings = Map.copyOf(callBindings);
+            callBindings     = Map.copyOf(callBindings);
+            functionBindings = Map.copyOf(functionBindings);
+        }
+
+        /** Retain hosts that supply cursor and selected-method facts. */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
+                               Optional<ConstantPool> pool,
+                               Map<InvocationExpression, InvocationBinding> callBindings,
+                               Map<IncompleteStatement, CursorBinding> cursorBindings) {
+            this(sourceTrees, sites, pool, callBindings, cursorBindings, Map.of());
         }
 
         /** Retain the construction API for call/receiver-only results. */
@@ -619,7 +640,7 @@ public class EmbeddingSupport {
         var cursors = new CursorBinding.Collector();
         Compilation attempt = compileModule(listener -> parsed, input, host, cursors);
         return new PartialAnalysis(parsed.sources(), sites, Optional.ofNullable(attempt.pool()),
-                attempt.callBindings(), cursors.finish(parsed.sources()));
+                attempt.callBindings(), cursors.finish(parsed.sources()), attempt.functionBindings());
     }
 
     /** Parsed children exist before parent links; expose the innermost unfinished operations. */
@@ -727,8 +748,8 @@ public class EmbeddingSupport {
          * @return the outcome; never null, though its parts may be
          */
         Compilation result() {
-            return new Compilation(module, file, ast, sourceTrees,
-                    bindings.finish(ast == null ? List.of() : List.of(ast)));
+            var facts = bindings.finishFacts(ast == null ? List.of() : List.of(ast));
+            return new Compilation(module, file, ast, sourceTrees, facts.methods(), facts.functions());
         }
 
         /**

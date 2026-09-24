@@ -1,7 +1,6 @@
 package org.xvm.compiler;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +8,7 @@ import java.util.Optional;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.SignatureConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.Expression;
@@ -23,6 +23,22 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
                                 List<Argument> arguments) {
     public InvocationBinding {
         arguments = List.copyOf(arguments);
+    }
+
+    /** A validated function-valued invocation has a signature, but no statically selected method. */
+    public record FunctionCall(TypeConstant type, List<Argument> arguments) {
+        public FunctionCall {
+            arguments = List.copyOf(arguments);
+        }
+    }
+
+    /** The two kinds of call facts remain separate so a function never claims a method target. */
+    public record Facts(Map<InvocationExpression, InvocationBinding> methods,
+                        Map<InvocationExpression, FunctionCall> functions) {
+        public Facts {
+            methods   = Map.copyOf(methods);
+            functions = Map.copyOf(functions);
+        }
     }
 
     /** A written label copied before argument rewriting, without retaining its mutable token. */
@@ -101,6 +117,7 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         public void begin(InvocationExpression invocation) {
             if (f_enabled) {
                 f_bindings.remove(invocation);
+                f_functions.remove(invocation);
             }
         }
 
@@ -111,9 +128,21 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             }
         }
 
+        public void record(InvocationExpression invocation, FunctionCall binding) {
+            if (f_enabled) {
+                f_functions.put(invocation, binding);
+            }
+        }
+
         /** Finish the attempt, returning immutable facts for the surviving source trees. */
         public Map<InvocationExpression, InvocationBinding> finish(List<? extends AstNode> roots) {
+            return finishFacts(roots).methods();
+        }
+
+        /** Finish both kinds together, releasing discarded or speculative nodes in either map. */
+        public Facts finishFacts(List<? extends AstNode> roots) {
             Map<InvocationExpression, InvocationBinding> result = new IdentityHashMap<>();
+            Map<InvocationExpression, FunctionCall> functions = new IdentityHashMap<>();
             List<AstNode> nodes = new ArrayList<>(roots);
             for (int i = 0; i < nodes.size(); ++i) {
                 AstNode node = nodes.get(i);
@@ -123,11 +152,16 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
                     if (binding != null) {
                         result.put(invocation, binding);
                     }
+                    FunctionCall function = f_functions.get(invocation);
+                    if (function != null) {
+                        functions.put(invocation, function);
+                    }
                 }
                 node.children().forEachRemaining(nodes::add);
             }
             f_bindings.clear();
-            return Collections.unmodifiableMap(result);
+            f_functions.clear();
+            return new Facts(result, functions);
         }
 
         /** Ordinary compiler clients need not collect tooling facts. This instance never writes. */
@@ -136,5 +170,6 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         private final boolean f_enabled;
 
         private final Map<InvocationExpression, InvocationBinding> f_bindings = new IdentityHashMap<>();
+        private final Map<InvocationExpression, FunctionCall> f_functions = new IdentityHashMap<>();
     }
 }

@@ -8,9 +8,24 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Semantic and diagnostic hardening follow-up (2026-09-24, current working tree).**
+The four follow-ups after L18 now have implementations and focused regressions. Concrete delegation
+follows compiler-selected method/property chains, with cycle protection and no generated forwarding
+code. `super(...)` records its selected written parent body. Function-valued calls publish separate
+signature/argument facts without claiming a runtime method target. Cursor analysis retains binary
+and conditional expressions and following call arguments. Structure diagnostics map to their exact
+source declarations; duplicate/superfluous annotation warnings now identify the redeclaration.
+The bound-generic function audit reproduced an emission failure after exposing an earlier hidden-
+parameter type error; both the bound function type and binary AST are now generated consistently.
+Validation passes 788 executed LSP tests (three existing skips), 16 packaged stdio tests, 29
+focused Java tests and all 76 editor cases. The 120-cycle retention workload releases all 2,400
+tracked compiler objects. Full evidence and extraction boundaries are in
+[the integration plan](errs-integration-plan.md#post-l18-hardening).
+Earlier dated checkpoints below preserve what was supported at those commits.
+
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X67 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X71 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1853,3 +1868,15 @@ the code. The prior-art branch found real bugs in this category, not just untidi
 - Completion remains unavailable on incomplete source. Same-document definition and references
   now use retained compiler identities; the earlier statement that the AST cannot expose them was
   superseded by the public accessors and source associations described above.
+
+### AST placement additions after L18
+
+| Change | Placement and ownership |
+|---|---|
+| `InvocationExpression.validateMulti` | Record successful function and `super` calls where validation knows the function type, original arguments and selected super chain. Uses the existing attempt-owned `InvocationBinding.Collector`; no new AST fields or clone bookkeeping. |
+| `InvocationBinding.FunctionCall` and `Facts` | Immutable records outside the AST. Method and function maps are separate so an unknown runtime target cannot be mistaken for a selected method. Finishing releases both scratch maps and filters discarded clones. |
+| `EmbeddingSupport.Compilation` / `PartialAnalysis` | Add immutable `functionBindings()` maps. Old constructors and method-only `callBindings()` remain; record component/pattern compatibility requires the existing unreleased-API policy. |
+| `MethodInfo.getSuperMethod` | Compiler composition metadata belongs in MethodInfo. It shares the compiler's super selection and excludes field/native/delegating/into bodies; Kotlin never duplicates the dispatch algorithm. |
+| `Parser.parsePostfixExpression` | Retain the existing `IncompleteExpression` inside enclosing operators and conditionals. Following call arguments stay real syntax children. The hole never supplies a type or reaches emission. No new incomplete-node state. |
+| `NameExpression` generic binding | A compiler correctness fix in existing name validation/emission, not LSP state. Remove bound hidden parameters from the exposed function type and emit a `BindFunctionAST` for the same arguments as FBind. The existing AST result field is reused. |
+| `PropertyInfo.layerOn` / Kotlin `XdkAst` | The compiler warning names the contributed declaration; Kotlin maps its structure/identity to the existing declaration token. This does not add source positions to runtime structures or retain another compiler graph. |

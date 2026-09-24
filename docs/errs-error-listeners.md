@@ -495,3 +495,16 @@ constructor signatures/current record patterns and the deprecated runtime-pool a
 [compatibility contract](errs-integration-plan.md#compatibility-and-migration-contract) explicitly
 marks the listener return-type change and removed ambient API as breaking. Each extracted PR must
 rerun its examples independently; these tests establish only the integrated branch's behavior.
+
+### Diagnostic ownership and bound functions after L18
+
+A Site.At can carry an identity constant as well as a component. The LSP associates either with the
+written declaration's source token during the same compilation attempt, including closed members.
+It preserves the document fallback for binary-only structures. PropertyInfo now reports duplicate
+and superfluous annotations against the contributed declaration instead of the inherited base.
+Severity, cancellation, replay and ErrorList deduplication are unchanged.
+
+The bound-generic NameExpression audit reproduced a typing/emission defect, not a swallowed
+source diagnostic. The exposed function type incorrectly retained a bound hidden type parameter;
+fixing it reached the missing binary AST and EMB-5. The corrected emitter creates BindFunctionAST
+alongside FBind. This needs a compiler regression PR (I4), not another listener workaround.

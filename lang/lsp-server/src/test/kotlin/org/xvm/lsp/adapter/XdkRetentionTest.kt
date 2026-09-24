@@ -76,7 +76,7 @@ class XdkRetentionTest {
                     XdkSourceModule("Consumer", uri, setOf("Library")),
                 ),
             )
-            repeat(24) { cycle ->
+            repeat(CYCLES) { cycle ->
                 adapter.replaceDependencies(listOf(artifacts[cycle % artifacts.size]))
                 val started = System.nanoTime()
                 val storm = (0..7).map { edit -> adapter.compileAsync(uri, "$CONSUMER // $cycle:$edit") }
@@ -104,7 +104,7 @@ class XdkRetentionTest {
         assertReleased(observed)
         val millis = timings.map(NANOSECONDS::toMillis).sorted()
         println(
-            "Retention workload: cycles=24, edit requests=192, weak references=${observed.size}, retained=0, " +
+            "Retention workload: cycles=$CYCLES, edit requests=${CYCLES * 8}, weak references=${observed.size}, retained=0, " +
                 "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms (includes debounce)",
         )
     }
@@ -119,6 +119,7 @@ class XdkRetentionTest {
     }
 
     private companion object {
+        const val CYCLES = 120
         const val CONSUMER =
             "module Consumer { package lib import Library; " +
                 "Int run() { Int local=lib.value(); return local; } void probe(lib.Box box) {} }"

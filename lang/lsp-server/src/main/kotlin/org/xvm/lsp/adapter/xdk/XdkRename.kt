@@ -64,7 +64,7 @@ internal object XdkRename {
                     val sourceName = view.sourceName ?: return null
                     val text = texts[sourceName] ?: return null
                     sourceName to
-                        view.occurrences.filter { it.symbol in selected }.map { occurrence ->
+                        view.occurrences.filter { it.symbol in selected && it.name != "super" }.map { occurrence ->
                             val start = offset(text, occurrence.range.start) ?: return null
                             val end = offset(text, occurrence.range.end) ?: return null
                             if (text.substring(start, end) != target.name) return null
