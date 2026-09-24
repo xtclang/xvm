@@ -2249,33 +2249,14 @@ public class CommonBuilder
                 .ifeq(returnFalse);
         }
 
-        // create the list of properties to be compared so we can sort them
-        List<PropertyInfo> props = new ArrayList<>();
-        for (PropertyInfo prop : structInfo.getProperties().values()) {
-            TypeConstant propType = prop.getType();
-
-            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
-                throw new UnsupportedOperationException("Union types not yet supported");
-            }
-
-            if (!isConstFormingProperty(prop, baseType)) {
-                continue;
-            }
-            props.add(prop);
-        }
+        List<PropertyInfo> props = collectConstFormingProperties(baseType, false);
 
         int value1Slot    = 2;
         int value2Slot    = 3;
         int nullCheckSlot = 4; // we can use slot 4 to hold the result of the null check
 
-        // iterate over all the properties needed to be compared
-        // we sort by the properties rank and compare in that order
-        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        // iterate over all the properties needed to be compared, in rank order
         for (PropertyInfo prop : props) {
-            if (!isConstFormingProperty(prop, baseType)) {
-                continue;
-            }
-
             PropertyConstant propId     = prop.getIdentity();
             TypeConstant     propType   = prop.getType();
             Label            skipProp   = code.newLabel();
@@ -2461,22 +2442,8 @@ public class CommonBuilder
 
         ConstantPool       pool          = pool();
         TypeConstant       typeOrderable = pool.typeOrderable();
-        List<PropertyInfo> props         = new ArrayList<>();
         TypeConstant       baseType      = getImplementationBase(cmpSig);
-
-        // create the list of properties to be compared so we can sort them
-        for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if (!isConstFormingProperty(prop, baseType)) {
-                continue;
-            }
-
-            TypeConstant propType = prop.getType();
-            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
-                throw new UnsupportedOperationException("Union types not yet supported");
-            }
-
-            props.add(prop);
-        }
+        List<PropertyInfo> props         = collectConstFormingProperties(baseType, false);
 
         if (baseType != null) {
             // found super class with compare method, so call it first
@@ -2501,9 +2468,7 @@ public class CommonBuilder
         int value2Slot    = 3;
         int nullCheckSlot = 4; // we can use slot 4 to hold the result of the null check
 
-        // iterate over all the properties needed to be compared
-        // we sort by the property rank and compare in that order
-        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        // iterate over all the properties needed to be compared, in rank order
         for (PropertyInfo prop : props) {
             PropertyConstant propId     = prop.getIdentity();
             TypeConstant     propType   = prop.getType();
@@ -2761,20 +2726,7 @@ public class CommonBuilder
 
         TypeConstant       baseType    = getImplementationBase(hashSig);
         String             hashOptName = hashSig.getName() + OPT;
-        List<PropertyInfo> props       = new ArrayList<>();
-
-        // create the list of properties to be compared so we can sort them
-        for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if (!isConstFormingProperty(prop, baseType)) {
-                continue;
-            }
-
-            TypeConstant propType = prop.getType();
-            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
-                throw new UnsupportedOperationException("Union types not yet supported");
-            }
-            props.add(prop);
-        }
+        List<PropertyInfo> props       = collectConstFormingProperties(baseType, false);
 
         if (isCaching) {
             // generate the code to check the cached hash code
@@ -2831,7 +2783,6 @@ public class CommonBuilder
         }
 
         // iterate over the properties in rank order to generate a hash code
-        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
         for (PropertyInfo prop : props) {
             // the hash collector should be on the stack
 
@@ -2977,27 +2928,13 @@ public class CommonBuilder
         int               thisSlot        = 0;
         int               resultSlot      = 2;
 
-        // create the list of properties to be compared so we can sort them
-        List<PropertyInfo> props = new ArrayList<>();
-        for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if (!isConstFormingProperty(prop, null, true)) {
-                continue;
-            }
-
-            TypeConstant propType = prop.getType();
-            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
-                throw new UnsupportedOperationException("Union types not yet supported");
-            }
-            props.add(prop);
-        }
+        List<PropertyInfo> props = collectConstFormingProperties(null, true);
 
         // store the initial result (which is 2, for the open/close brackets "()")
         code.loadConstant(2L)
             .lstore(resultSlot);
 
-        // iterate over all the properties
-        // we sort by the property rank and compare in that order
-        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        // iterate over all the properties, in rank order
         boolean addComma = false;
         for (PropertyInfo prop : props) {
             PropertyConstant propId     = prop.getIdentity();
@@ -3121,19 +3058,7 @@ public class CommonBuilder
         int               thisSlot       = 0;
         int               appenderSlot   = 2;
 
-        // create the list of properties to be compared so we can sort them
-        List<PropertyInfo> props = new ArrayList<>();
-        for (PropertyInfo prop : structInfo.getProperties().values()) {
-            if (!isConstFormingProperty(prop, null, true)) {
-                continue;
-            }
-
-            TypeConstant propType = prop.getType();
-            if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
-                throw new UnsupportedOperationException("Union types not yet supported");
-            }
-            props.add(prop);
-        }
+        List<PropertyInfo> props = collectConstFormingProperties(null, true);
 
         // append the open bracket '('
         code.aload(appenderSlot);
@@ -3142,9 +3067,7 @@ public class CommonBuilder
             .invokeinterface(CD_AppenderChar, "add$p", mdAdd)
             .pop();
 
-        // iterate over all the properties
-        // we sort by the property rank and compare in that order
-        props.sort(Comparator.comparingInt(PropertyInfo::getRank));
+        // iterate over all the properties, in rank order
         boolean addComma = false;
         for (PropertyInfo prop : props) {
             PropertyConstant propId     = prop.getIdentity();
@@ -3278,16 +3201,41 @@ public class CommonBuilder
     }
 
     /**
-     * Determine whether the specified property should be used when auto-generating constant
-     * method for Orderable, Hashable, Stringable, Comparable, etc.
+     * Collect the properties that take part in an auto-generated Const method, in the rank order
+     * those methods have to visit them in. Every generated Const method (equals, compare, hashCode,
+     * estimateStringLength, appendTo) walks the same properties in the same order, so they all
+     * share this.
      *
-     * @param prop      the property to check
-     * @param baseType  the base type to check against
+     * @param baseType   the base type whose properties a super call already handles, or null
+     * @param allowLazy  true if lazy properties should be included
      *
-     * @return          true if the property can be used for constant method generation
+     * @return the const-forming properties, sorted by rank
+     *
+     * @throws UnsupportedOperationException  if one of them has a union type
      */
-    protected boolean isConstFormingProperty(PropertyInfo prop, TypeConstant baseType) {
-        return isConstFormingProperty(prop, baseType, false);
+    private List<PropertyInfo> collectConstFormingProperties(TypeConstant baseType,
+                                                             boolean allowLazy) {
+        return structInfo.getProperties().values().stream()
+                .filter(prop -> isConstFormingProperty(prop, baseType, allowLazy))
+                .map(CommonBuilder::requireSupportedConstType)
+                .sorted(Comparator.comparingInt(PropertyInfo::getRank))
+                .toList();
+    }
+
+    /**
+     * @param prop  a property a generated Const method is about to be built over
+     *
+     * @return the property itself
+     *
+     * @throws UnsupportedOperationException  if its type is one the generated methods cannot
+     *                                        handle yet
+     */
+    private static PropertyInfo requireSupportedConstType(PropertyInfo prop) {
+        TypeConstant propType = prop.getType();
+        if (!propType.isNullable() && propType instanceof UnionTypeConstant) {
+            throw new UnsupportedOperationException("Union types not yet supported");
+        }
+        return prop;
     }
 
     /**
@@ -3360,18 +3308,13 @@ public class CommonBuilder
         return null;
     }
 
-    protected static void convertIfUnsignedPrimitive(CodeBuilder code, TypeConstant type) {
+    protected static CodeBuilder convertIfUnsignedPrimitive(CodeBuilder code, TypeConstant type) {
         String name = type.getSingleUnderlyingClass(false).getName();
-        switch (name) {
-            case "UInt32":
-                code.loadConstant(Integer.MIN_VALUE)
-                    .iadd();
-                break;
-            case "UInt64":
-                code.loadConstant(Long.MIN_VALUE)
-                    .ladd();
-                break;
-        }
+        return switch (name) {
+            case "UInt32" -> code.loadConstant(Integer.MIN_VALUE).iadd();
+            case "UInt64" -> code.loadConstant(Long.MIN_VALUE).ladd();
+            default       -> code;
+        };
     }
 
     /**

@@ -178,7 +178,7 @@ public class ArrayBuilder extends AugmentingBuilder {
         for (int i = 0; i < jmdThis.standardParams.length; i++) {
             JitParamDesc stdPd = jmdThis.standardParams[i];
             if (jmdThis.isOptimized) {
-                for (int index : jmdThis.getAllOptimizedParams(i)) {
+                for (int index : jmdThis.getAllOptimizedParamIndexes(i)) {
                     JitParamDesc pd = jmdThis.optimizedParams[index];
                     load(code, pd.cd, code.parameterSlot(param++));
                 }
