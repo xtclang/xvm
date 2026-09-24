@@ -7,6 +7,7 @@ package invocationTests {
     void run() {
 
         testInvokePrivateMethodAfterInterfaceCast();
+        testMethodAlias();
         testNaturalHasher();
         testNaturalHasherPrimitive();
         testOrderable();
@@ -35,6 +36,22 @@ package invocationTests {
                 i = 19;
             }
         }
+    }
+
+    void testMethodAlias() {
+        // toDec is a Method alias declared on FPConvertible; binding it must find toDec64
+        // on that interface and box a primitive receiver before creating the function
+        Dec value  = 42.0;
+        Dec result = value.toDec();
+        assert result == 42.0;
+
+        assert value.toDec() == 42.0;
+
+        // an interface-typed receiver is already boxed
+        Dec convert(ecstasy.numbers.FPConvertible value) {
+            return value.toDec();
+        }
+        assert convert(value) == 42.0;
     }
 
     void testNaturalHasher() {

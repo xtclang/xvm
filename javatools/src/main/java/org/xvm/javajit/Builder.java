@@ -491,6 +491,7 @@ public abstract class Builder {
 
             // 1) ensure the method exists
             TypeConstant containerType = bctx.thisType;
+            ClassDesc    containerCD   = ClassDesc.of(bctx.className);
             String       jitName;
             MethodBody   body;
             TypeConstant sigType; // function or method type
@@ -503,19 +504,31 @@ public abstract class Builder {
                 // generate the method itself
                 bctx.buildMethod(jitName, body);
             } else {
-                MethodInfo method = bctx.typeInfo.getMethodById(methodId);
+                IdentityConstant containerId   = methodId.getClassIdentity();
+                TypeInfo         containerInfo = bctx.typeInfo;
+                boolean          alias         = !containerId.equals(containerInfo.getIdentity());
+                if (alias) {
+                    // an alias can refer to a method on another type, e.g. FPConvertible.toDec
+                    containerType = containerId.getType();
+                    containerCD   = ensureClassDesc(containerType);
+                    containerInfo = bctx.getTypeInfo(containerType);
+                }
+
+                MethodInfo method = containerInfo.getMethodById(methodId);
+                assert method != null;
+
                 jitName = method.ensureJitMethodName(typeSystem);
                 body    = method.getHead();
                 sigType = body.getIdentity().getType();
-                if (body.getIdentity().getNestedDepth() > 2) {
-                    // methods nested inside properties or methods are not visible otherwise
-                    // and need to built on-the-spot
+
+                if (!alias && body.getIdentity().getNestedDepth() > 2) {
+                    // methods nested inside properties or methods are not visible otherwise and
+                    // need to be built on-the-spot
                     bctx.buildMethod(jitName, body);
                 }
             }
 
             // 2) create the MethodHandle(s)
-            ClassDesc     containerCD = ClassDesc.of(bctx.className);
             JitMethodDesc jmd         = body.getJitDesc(this, containerType);
             boolean       isFunction  = body.getMethodStructure().isFunction();
             boolean       isInterface = containerType.isJitInterface();
