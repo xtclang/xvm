@@ -507,7 +507,8 @@ introduce additional override checks that ordinary source compilation did not re
 AST field/accessor or cloning change is needed. Byte-output and compiler-object-exclusion checks
 include the new property path. Packaged stdio and playbook X64–X67 exercise protocol consumers.
 
-Future PR placement is **L18**, based on L10/L13; its editor acceptance follows L16. Property rename,
+The implementation checkpoint is `714042da5`. Future PR placement is **L18**, based on L10/L13;
+its editor acceptance follows L16. Property rename,
 delegation resolution, annotation dispatch, function-valued calls and workspace implementation
 search remain separate requirements. Delegation targets are the next semantic investigation.
 
@@ -1409,7 +1410,7 @@ above identify old candidate patches, not additional changes to merge into the i
 | L15 | Validate local/private-parameter rename and publish versioned edits | `7b13e0980` | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
 | L16 | Configure source graphs from editor initialization and settings | `6372ba07d` | L14; rename acceptance cases additionally require L15 |
 | L17 | Query references and validate method override rename across the configured graph | `332003f0a` | L13/L14/L15 and L4/L5; editor acceptance additionally requires L16 |
-| L18 | Copy ordinary property/accessor implementations and indexed dependency targets | Current working tree; hash pending | L10/L13; editor acceptance additionally requires L16; independent of L17 |
+| L18 | Copy ordinary property/accessor implementations and indexed dependency targets | `714042da5` | L10/L13; editor acceptance additionally requires L16; independent of L17 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
