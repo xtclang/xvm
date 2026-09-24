@@ -23,6 +23,14 @@ The original two ownership commits were:
   behavior was an intermediate step; the later changes remove internal ambient selection.
 - `99a46e385`: pass destination pools explicitly through signature compatibility and variance.
 
+The subsequent combined implementation, tests and audit are committed as `11bc8932a`.
+An ownership-only branch can be extracted onto master without the broad shutdown changes, but
+the singleton failure path needs the small continuation-failure support and waiter-scheduling
+correction identified in the
+[extraction rules](../plugin/doc/plans/embedded-runtime-pr-plan.md#extracting-ownership-without-the-shutdown-series).
+Some test fixtures also require adaptation to master's older APIs. That separate extraction has
+not yet been built or validated.
+
 The catalogue includes those commits and the subsequent local audit fixes. The inventory uses
 `68a7ff6b5`, immediately before them, as its baseline. Earlier embedding, resource-shutdown,
 repository-isolation and PERSISTENT execution changes are prerequisites where named, not new

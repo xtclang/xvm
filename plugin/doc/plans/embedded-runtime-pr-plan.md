@@ -682,6 +682,10 @@ change/evidence catalogue, complete file inventory and explicit limits of each t
 extracting hunks; a source-confirmed correction must not be presented as an independently
 reproduced failure, and a state-isolation test is not proof of general concurrency safety.
 
+The implementation checkpoint is `11bc8932a`, following the original ownership commits
+`9e413ea1e` and `99a46e385`. It preserves the combined audit result; it is not an already
+independent master-based PR. The extraction rules below explain the remaining dependencies.
+
 | Separate review scope | Exact production boundary | Tests and extraction dependencies |
 |---|---|---|
 | 11a: protect registration sources (CP-A1) | `TypeConstant.registerTypeConstants`; `ConstantPool.register` contract | Foreign signature parameter remains source-owned and readable; `ConstantOwnershipTest`. No embedding prerequisite. |
@@ -712,6 +716,41 @@ Keep these boundaries explicit after extraction:
 - Stable definition generations, cross-generation caches, concurrent compiler/metadata reuse and
   retained-memory budgets are separate design/performance work. Request serialization and the
   existing repository boundaries remain in place.
+
+### Extracting ownership without the shutdown series
+
+The ownership work can be submitted on a fresh branch from master without importing the broad
+runtime shutdown/resource-ownership implementation. Branching directly at the current source tip
+would retain all of that history, so extract selected commits/hunks onto master instead.
+
+Source review and a patch-application check against `origin/master` at `601a68e8b` on
+2026-09-24 establish these boundaries. This is **not yet a compiled or tested extraction**:
+
+| Slice | Extraction rule |
+|---|---|
+| Definition ownership, destinations, copying, caches and scopes | Start with `9e413ea1e`, `99a46e385` and the corresponding hunks/tests from `11bc8932a`. These do not require resource shutdown. Resolve the legacy scope and versioned-linking context against master; add ConstantPoolScopeTest as a complete new file where it did not previously exist. |
+| Final listeners and diagnostic replay | Include the coherent final listener API/caller migration or land it first with errs. Removing file-owned listeners while leaving old nullable callers would not be a valid extraction. Adapt the EmbeddingSupport/InterpreterControl listener changes to the APIs present on master. |
+| Singleton failure cleanup | Extract only the Frame and ServiceContext continuation-failure hunks from `e1eb9fb1a`: `addExceptionCleanup`, `Continuation.onException`, chain propagation and failure dispatch. These two files total 53 added lines and one replaced line in that commit; their patch applies cleanly to the checked master. Exclude the socket implementation and embedding resource tests from that commit. |
+| Singleton waiter scheduling | Preserve the small `Frame.waitForExternalCompletion` readiness-before-scheduling correction from `d5947a903`, with its focused regression adapted to master. It is an execution scheduling correction, not the resource/shutdown machinery in that large commit. Do not cherry-pick the whole commit. |
+| Ownership tests using new lifecycle APIs | Adapt fixtures using `Runtime.close()`, `EmbeddingSupport.create`, RunRequest or the new compile overload to master's existing APIs. Preserve pool, singleton, warning and `.x` assertions. Tests specifically about reusable-session lifecycle remain with the embedding PR; their use as a test harness must not pull that product implementation into this branch. |
+| Documentation | Carry the standalone ownership document and adjust its evidence/provenance to the extraction. Keep the overall embedding/shutdown submission plan on this source branch. |
+
+The checked combined source-path patch needs manual adaptation in EmbeddingSupport,
+InterpreterControl, ConstantPool, FileStructure, Container and the pre-existing-on-source-only
+ConstantPoolScopeTest. Those patch conflicts are API/context differences, not evidence that
+shutdown must be included. A clean patch application elsewhere does not replace compilation.
+
+Do not take entire Frame, ServiceContext, Container, NativeContainer or embedding API files from
+the source tip: they also contain earlier lifecycle work. Exclude the JIT extraction commits
+`d8f8b66a9` and `ee8a31523` from the ownership implementation selection; preserve master's JIT
+behavior while adapting shared APIs. No Gradle execution mode, persistent host, resource registry,
+HTTP/socket/file-watcher cleanup or runtime-wide shutdown redesign is a prerequisite for the
+ownership-only implementation.
+
+Before declaring the new branch ready, build it independently, run its unit and XDK ownership
+tests with zero unexpected skips, and verify singleton constructor failure/retry and waiter
+completion. Preserve the `.x` singleton coverage without adding automatic JIT loads. The source
+branch's successful combined test results are a baseline, not proof of the extracted branch.
 
 ## Shared files and extraction rules
 
