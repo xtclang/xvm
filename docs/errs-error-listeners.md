@@ -411,6 +411,13 @@ and existing skips for each pass, including the latest dependency host API check
 An extracted PR still needs its own tests and output-equivalence checks; green
 tests on this integrated branch are not evidence that every proposed subset stands alone.
 
+The [second local extraction batch](errs-integration-plan.md#second-local-extraction-batch-2026-09-24)
+now records independent C1 evidence: executable migration examples, the full compiler test suite
+and unchanged timestamp-normalized XDK output. C1 retains the legacy report/silence entry points
+and null/ambient ownership while introducing the new reporting contract; C2–C4 migrate those
+callers and owners separately. The extracted README explicitly documents the return-type break
+and the requirement to recompile clients at a breaking release boundary.
+
 The three follow-ups from the API probe pass are complete: permanent TypeInfo regressions, module
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
 subsequent Java-only recovery pass supplies structural source trees after parse errors. Remaining work:
