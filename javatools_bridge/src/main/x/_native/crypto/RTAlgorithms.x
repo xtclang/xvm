@@ -9,7 +9,8 @@ import libcrypto.KeyForm;
 service RTAlgorithms {
     typedef Int|Int[] as KeySize;
 
-    enum AlgorithmMethod {Hasher, SymmetricCipher, AsymmetricCipher, MAC, Signature, KeyGen}
+    enum AlgorithmMethod {Hasher, SymmetricCipher, AsymmetricCipher, MAC, Signature, KeyGen,
+                          AuthenticatedCipher, KeyWrappingCipher}
 
     /**
      * Create the Algorithms object based on the supported algorithm information.
@@ -18,7 +19,8 @@ service RTAlgorithms {
      */
     Algorithms createAlgorithms() {
         Algorithm[] algorithms = new Array<Algorithm>
-            (hashers.size + encryptions.size + macs.size + signers.size + keyGenerators.size);
+            (hashers.size + encryptions.size + authenticatedEncryptions.size + keyWrappings.size
+                + macs.size + signers.size + keyGenerators.size);
 
         for ((String name, String hasherName, Int hashSize) : hashers) {
             (_, Object implementation) = getAlgorithmInfo(hasherName, Hasher);
@@ -32,6 +34,20 @@ service RTAlgorithms {
 
             KeyForm   keyForm = method == SymmetricCipher ? Secret : Pair;
             Algorithm alg     = new RTEncryptionAlgorithm(name, blockSize, keySize, keyForm, implementation);
+            algorithms.add(&alg.maskAs(Algorithm));
+        }
+
+        for ((String name, KeySize keySize) : authenticatedEncryptions) {
+            (Int blockSize, _) = getAlgorithmInfo(name, AuthenticatedCipher);
+
+            Algorithm alg = new RTAuthenticatedEncryptionAlgorithm(name, blockSize, keySize);
+            algorithms.add(&alg.maskAs(Algorithm));
+        }
+
+        for ((String name, KeySize keySize) : keyWrappings) {
+            (Int blockSize, _) = getAlgorithmInfo(name, KeyWrappingCipher);
+
+            Algorithm alg = new RTKeyWrappingAlgorithm(name, blockSize, keySize);
             algorithms.add(&alg.maskAs(Algorithm));
         }
 
@@ -113,6 +129,21 @@ service RTAlgorithms {
         // such as shared secret key
         (AsymmetricCipher, "RSA"                 , RSA_SIZES),
         (AsymmetricCipher, "RSA/ECB/PKCS1Padding", RSA_SIZES),
+    ];
+
+    /**
+     * Supported authenticated-encryption algorithms (name, key sizes).
+     */
+    static Tuple<String, KeySize>[] authenticatedEncryptions = [
+        ("AES/GCM/NoPadding", AES_SIZES),
+    ];
+
+    /**
+     * Supported key-wrapping algorithms (name, key-encryption-key sizes).
+     */
+    static Tuple<String, KeySize>[] keyWrappings = [
+        ("AES/KW/NoPadding" , AES_SIZES),
+        ("AES/KWP/NoPadding", AES_SIZES),
     ];
 
     /**

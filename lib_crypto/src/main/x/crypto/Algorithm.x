@@ -55,11 +55,25 @@ interface Algorithm {
      * * * an [Decryptor] uses either a `Secret` key or a public/private key `Pair` to decrypt
      *     the information in the input.
      *
+     * * `AuthenticatedEncryption` algorithms protect both the confidentiality and integrity of
+     *   input data.
+     *
+     * * * an [AuthenticatedEncryptor] seals data and produces an [AuthenticatedCiphertext] with
+     *     a generated nonce and authentication tag.
+     *
+     * * * an [AuthenticatedDecryptor] authenticates a sealed message before returning plaintext.
+     *
      * * `KeyGeneration` algorithms create `Secret` keys that could be used for symmetrical
      *    encryption and decryption.
      *
+     * * `KeyWrapping` algorithms protect secret keys using another secret key.
+     *
+     * * * a [KeyWrapper] protects encoded key material and its integrity.
+     *
+     * * * a [KeyUnwrapper] verifies and recovers a wrapped secret key.
+     *
      */
-    enum Category {Signing, Encryption, KeyGeneration}
+    enum Category {Signing, Encryption, KeyGeneration, AuthenticatedEncryption, KeyWrapping}
 
     /**
      * The category of the cryptographic algorithm.
@@ -94,8 +108,11 @@ interface Algorithm {
      *
      * @return True if the key is valid and an engine was successfully allocated
      * @return (conditional) the configured crypto engine, which is an `Encryptor`, a `Decryptor`,
-     *         a `Verifier`, a `Signer`, or a `KeyGenerator` as indicated by a combination of the
-     *         [category] and [keyRequired] of the `Algorithm`, and the contents of the passed key
+     *         an `AuthenticatedEncryptor`, an `AuthenticatedDecryptor`, a `Verifier`, a `Signer`,
+     *         a `KeyGenerator`, a `KeyWrapper`, or a `KeyUnwrapper` as indicated by a combination
+     *         of the [category] and [keyRequired] of the `Algorithm`, and the contents of the passed
+     *         key
      */
-    Encryptor|Decryptor|Verifier|Signer|KeyGenerator allocate(CryptoKey? key);
+    Encryptor|Decryptor|AuthenticatedEncryptor|AuthenticatedDecryptor|Verifier|Signer|KeyGenerator|
+            KeyWrapper|KeyUnwrapper allocate(CryptoKey? key);
 }
