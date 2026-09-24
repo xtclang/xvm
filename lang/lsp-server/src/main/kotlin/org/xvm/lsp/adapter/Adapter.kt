@@ -292,6 +292,19 @@ interface Adapter : Closeable {
         includeDeclaration: Boolean,
     ): List<Location>
 
+    /** Whole-project compiler queries may require cancellable work on the compiler worker. */
+    fun findReferencesAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
+    ): CompletableFuture<List<Location>> =
+        try {
+            CompletableFuture.completedFuture(findReferences(uri, line, column, includeDeclaration))
+        } catch (failure: Exception) {
+            CompletableFuture.failedFuture(failure)
+        }
+
     // ========================================================================
     // Workspace lifecycle
     // ========================================================================

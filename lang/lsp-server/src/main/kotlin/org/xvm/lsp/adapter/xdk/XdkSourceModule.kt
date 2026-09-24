@@ -68,6 +68,9 @@ internal class XdkProject(
 
     fun sameConfiguration(other: XdkProject): Boolean = configuration == other.configuration
 
+    /** Complete configured source graph, including modules that have never been opened. */
+    fun buildOrder(): List<XdkSourceModule> = ordered
+
     fun buildOrder(scope: String): List<XdkSourceModule> {
         val target = modules.values.firstOrNull { it.uri == scope } ?: return emptyList()
         val names = mutableSetOf<String>()
