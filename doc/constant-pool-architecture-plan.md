@@ -418,3 +418,75 @@ workload from `846bf5315`, which does not exercise that lazy-reference bug.
 The prototype does not remove application/method copies, reset rules for other constants,
 generation-sensitive metadata, native statics or shutdown machinery. Same-definition tests prove
 the singleton boundary only, not safe execution against a fully shared mutable FileStructure.
+
+### Validation and measured outcome (2026-09-24)
+
+The local commits separate the work for review:
+
+- `846bf5315`: constructor register-slot prerequisite and the stronger failure assertion.
+- `d90948de2`: mutation inventory, generated-method plan and opt-in benchmark; production behavior
+  is identical to `846bf5315`, so this is also a convenient checkout for reproducing the baseline.
+- `e6bf7c16d`: owner-local singleton state, migrated readers/writers, focused tests, and the
+  assigned-lazy-referent correction described above.
+- The subsequent measurement commit adds the raw comparison results and optional heap-inspection
+  pause. It does not change production behavior or attach a benchmark task to CI.
+
+Verification of the prototype:
+
+- `:javatools:test`: 468 discovered, **428 executed successfully**, 40 existing disabled/skipped,
+  zero failures/errors. All 10 `SingletonOwnershipTest` cases executed, including barrier-based
+  concurrent lookup; the constant-heap and continuation/failure tests also ran without skips.
+- `RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test --rerun --console=plain`: **all 34 passed**, zero
+  skipped/errors/failures. The ownership class includes both assertion-only `.x` fixtures, each
+  executed in two applications; its stderr is empty.
+- Shared JIT sources and `:javatools_jitbridge:compileJava` compile. No new JIT execution behavior
+  is introduced or claimed. `spotlessCheck` and `git diff --check` pass.
+
+Three alternating baseline/prototype pairs used Java 25 (Corretto 25.0.0), JVM defaults, the same
+installed libraries and the same `Singletons.x` source. Each JVM ran eight fresh applications.
+Iteration 0 is cold; warm results below are the median of iterations 3–7 within each JVM, then
+the median of the three JVM medians. Source compilation and native bootstrap are excluded from
+the preparation/execution rows. Raw measurements are retained in
+[singleton-state-results.csv](../xdk/src/test/benchmarks/singleton-state-results.csv).
+
+| Phase | Baseline wall ms | Prototype wall ms | Baseline CPU ms | Prototype CPU ms | Baseline allocated MB | Prototype allocated MB |
+|---|---:|---:|---:|---:|---:|---:|
+| Native bootstrap | 610.7 | 761.3 | 1678.2 | 1940.8 | 155.72 | 150.71 |
+| Cold preparation | 154.4 | 190.1 | 514.4 | 465.7 | 114.07 | 109.51 |
+| Cold execution | 1067.9 | 1542.8 | 2818.9 | 3379.2 | 686.67 | 673.47 |
+| Warm preparation | 121.6 | 127.3 | 163.0 | 160.2 | 113.65 | 108.30 |
+| Warm execution | 932.5 | 902.1 | 1561.7 | 1497.6 | 681.05 | 664.64 |
+
+These are observations, not a speedup claim or a performance acceptance threshold. Warm execution
+medians ranged **908–1226 ms before** and **867–1078 ms after**; cold execution ranged **1026–2558 ms
+before** and **1079–1644 ms after**. Even allocation varied between JVMs: baseline warm execution
+medians ranged 665.10–681.10 MB, versus 664.59–665.04 MB for the prototype. That baseline variation
+is much larger than the singleton fields/table involved; attributing the median difference to
+singleton storage would be unjustified. Host load/JVM warmup
+and differing metadata work make three pairs insufficient to prove a small regression absent.
+Do not use the slower cold median or faster warm median alone as a conclusion.
+
+Separate JFR profile runs still show constant registration, method/child constant registration,
+definition linking/copying and TypeConstant work among the recurring XVM stacks. Singleton-state
+lookup has too few samples to quantify its cost. Those recordings include startup and compiler
+work and are not a phase-specific CPU attribution; their timings are excluded from the table.
+
+Live heap histograms after eight iterations retained one native `ConstHeap` and 431
+`SingletonConstant` objects. Their shallow footprint fell from **27,584 to 20,688 bytes** (64 to
+48 bytes each). The prototype retained **7 `SingletonState` entries, 224 shallow bytes**, plus
+the new map/table/node overhead. This confirms state is allocated for used definitions rather
+than reserving execution fields in every constant. It is not a whole-process retained-memory
+or leak guarantee; class histograms do not assign transitive retained size to an owner.
+
+For a separate live-heap probe, append `--heap` to the benchmark command. After all iterations it
+prints the PID and waits for Enter while retaining the native root. Run
+`jcmd <pid> GC.class_histogram`, then press Enter. This controlled collection is outside timing measurements
+and outside CI/tests. A profiling run can separately add
+`-XX:StartFlightRecording=filename=singleton.jfr,settings=profile`; do not mix those timing results
+with unprofiled runs.
+
+The result supports keeping this small ownership boundary: definitions no longer need singleton
+handle/waiter reset logic, and identical definitions can coexist with isolated values. It does
+**not** yet justify the larger rewrite for performance. The next design work, if approved, is the
+descriptor/index boundary together with late generated-code ownership. Existing application
+copies remain until method flags, mutable Ops, synthesis and the other inventory rows are handled.

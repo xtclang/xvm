@@ -2,6 +2,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
 import java.lang.management.ManagementFactory;
+import java.lang.ref.Reference;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -46,8 +47,8 @@ public class SingletonStateBenchmark {
             ManagementFactory.getPlatformMXBean(ThreadMXBean.class);
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3) {
-            throw new IllegalArgumentException("Expected: XDK directory, source file, iterations");
+        if (args.length < 3 || args.length > 4 || args.length == 4 && !args[3].equals("--heap")) {
+            throw new IllegalArgumentException("Expected: XDK directory, source file, iterations [--heap]");
         }
         var installed = Path.of(args[0]);
         int iterations = Integer.parseInt(args[2]);
@@ -91,6 +92,13 @@ public class SingletonStateBenchmark {
                 application.start(Map.of());
                 application.invokeAsync("run").join();
                 execute.report(iteration, "execute");
+            }
+            if (args.length == 4) {
+                // Outside measurements: keep the root alive while the operator captures a live
+                // histogram with jcmd. No GC latency or retained-byte count is a test assertion.
+                System.err.println("Ready for heap inspection: " + ProcessHandle.current().pid());
+                System.in.read();
+                Reference.reachabilityFence(root);
             }
         } finally {
             runtime.shutdownXVM();
