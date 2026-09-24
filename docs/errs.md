@@ -1507,7 +1507,7 @@ know whether a diagnostic is a real validation failure, a rejected candidate, or
 | `AstNode`, `Context` | Report through the supplied non-null listener and explicit source/nowhere sites; `AstNode.log` returns void. Reserved-name, `this` and assignment errors no longer invent null-listener behavior. |
 | `NameResolver` | A `Reporting` scope binds callbacks to the current operation and releases the listener when resolution returns, including exceptional paths. Source bindings are separate from this listener lifetime. |
 | `StageMgr` | Requires and retains the supplied non-null listener instead of silently replacing null. Its existing abort checks at stage boundaries now observe that listener. Cancellation is cooperative; this does not make individual compiler stages preemptible. |
-| `ValidationScope`, `ForStatement`, `WhileStatement`, `TryStatement` | Operation-scoped validation listeners replace listener fields retained on statement nodes across attempts. The separate scope helper restores nested state. |
+| `ValidationScope`, `ForStatement`, `ForEachStatement`, `WhileStatement`, `TryStatement` | Group each active label-variable context/listener in one immutable value on the validating statement. The C3 extraction additionally restores the previous value in `finally`; the historical record alone did not provide exceptional cleanup. `Statement.validate` also restores its common context in the extracted slice. |
 | `Expression`, `NameExpression`, `NamedTypeExpression`, `ArrayAccessExpression`, `InvocationExpression`, `LambdaExpression`, `NewExpression`, `TypeExpression` | Replace implicit/blackhole reporting with explicit probe silences where a fit or staging attempt is speculative; real validation continues through its caller's listener. `testFitAsType` has no reporting-listener parameter because its result, not a rejected candidate diagnostic, is the answer. |
 | `AnnotationExpression`, `AnonInnerClass`, `AsExpression`, `AssignmentStatement`, `CaseManager`, `CmpChainExpression`, `CmpExpression`, `ElseExpression`, `ElvisExpression`, `ListExpression`, `MapExpression`, `NonBindingExpression`, `NotNullExpression`, `ParenthesizedExpression`, `RelOpExpression`, `ReturnStatement`, `SequentialAssignExpression`, `StatementExpression`, `TemplateExpression`, `TernaryExpression`, `TraceExpression`, `TupleExpression`, `UnaryComplementExpression`, `UnaryMinusExpression` | Update callers to the explicit reporting/probe contract. These are compiler fit, conversion and validation operations; moving them into the adapter would change compiler behavior according to the host. |
 | `ForEachStatement`, `StatementBlock`, `TypeCompositionStatement`, `MethodDeclarationStatement`, `Parameter` | Update source-site reporting and explicit listeners in loop generation, body validation, declaration synthesis and parameter diagnostics, alongside the separately listed source-binding hooks. |
@@ -1525,13 +1525,14 @@ mutable captures; cloned-node isolation; immutable snapshot queries without an a
 packaged-server queries after edits and close/reopen. Each extracted compiler slice must run its
 own applicable tests before the consumer slice is introduced.
 
-The [local extraction record](errs-integration-plan.md#third-local-extraction-batch-c2-2026-09-24)
-now includes I3's required compiler consumer, C1's listener contract and C2's explicit propagation,
-each validated against its own base/prerequisites. C1 changes the `AstNode.log` return type; C2
+The [local extraction record](errs-integration-plan.md#fourth-local-extraction-batch-c3-2026-09-24)
+now includes I3's required compiler consumer, C1's listener contract, C2's explicit propagation
+and C3's scoped lifetimes, each validated against its own base/prerequisites. C1 changes the `AstNode.log` return type; C2
 removes its silent null handling and names probe/cascade/discard choices throughout the compiler.
 These changes belong to compiler validation and fit decisions and add no persistent AST state.
-Scoped ownership remains in C3, and file/pool ambient ownership remains in C4. The AST inventory
-above describes the integrated final state, not changes to import wholesale into an early slice.
+C3's scoped ownership is recorded in the fourth extraction batch; file/pool ambient ownership
+remains in C4. The AST inventory describes the integrated state except where it explicitly marks
+C3 extraction fixes; it is not a set of changes to import wholesale into an early slice.
 
 ### What this is not
 

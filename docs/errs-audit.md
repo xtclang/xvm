@@ -345,3 +345,28 @@ source-module precedence, transitive replacement and compile/cursor cancellation
 regression verifies that replacing a dependency return type produces an ordinary consumer diagnostic
 at the unchanged document version and that restoring the artifact clears it. This follow-up audits
 the new host boundary; it does not broaden the historical diagnostic-suppression survey.
+
+## C3 extraction lifetime audit, 2026-09-24
+
+The [fourth extraction batch](errs-integration-plan.md#fourth-local-extraction-batch-c3-2026-09-24)
+checks scoped reporting on C2 rather than treating integrated-branch tests as proof of the subset.
+It also corrects two gaps still present in the integrated `9c432f778` reference:
+
+- Grouping label context/listener fields into `ValidationScope` did not itself restore them on
+  exceptions or early returns. The extracted loop/try owners now restore previous state in
+  `finally`; `Statement.validate` restores its common context too. Regressions throw while each
+  scope is active and verify release, including the finally block's own statement context.
+- `Parser.Attempt` implemented reporting but inherited default false state queries. That concealed
+  a caller's abort request from nested attempts. Delegating the queries to its branch preserves
+  the request; the nested-attempt regression verifies it.
+
+The extraction retains `ModuleInfo.Node`'s drain-after-forward behavior and tests against replaying
+already-forwarded diagnostics. `NameResolver` callbacks see the active caller and release it after
+normal, deferred, nested and exceptional exits. These are lifetime guarantees, not concurrent-use
+support. Parser scopes still do not redirect lexical diagnostics; silent module-name scanning must
+supply an explicit discard listener to the lexer/parser constructor.
+
+The C3 fixes and regressions live on `errs/c3-reporting-scopes`, not in the integrated reference's
+Java sources. Its standalone compiler suite, unchanged normalized XDK modules, real loop/exception
+execution and I3 consumer results are recorded in the linked batch. The broader suppression audit
+and TypeInfo ownership work retain their existing scope and later slice assignments.

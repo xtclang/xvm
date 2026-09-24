@@ -422,7 +422,16 @@ The [C2 extraction record](errs-integration-plan.md#third-local-extraction-batch
 adds independently verified explicit listener propagation, named silence and report-site migration
 on top of C1. It retains the deprecated positional overloads and removes the blackhole names.
 Boundary regressions, the full compiler suite, unchanged normalized XDK output and the I3 consumer
-all pass. Parser/resolver scopes remain in C3; ambient ownership and TypeInfo replay remain in C4.
+all pass. C3's parser/resolver scope extraction follows below; ambient ownership and TypeInfo
+replay remain in C4.
+
+The [C3 extraction record](errs-integration-plan.md#fourth-local-extraction-batch-c3-2026-09-24)
+adds independently tested parser/resolver scopes and statement callback lifetimes on C2. Its
+exception/early-return cleanup and nested-attempt abort-query fixes go beyond the historical
+integrated implementation. The new tests exercise those exits, buffer draining and reporting
+restoration; full compiler tests, normalized XDK output, existing loop/exception execution and the
+I3 consumer also pass. `Reporting` permits an inactive null destination and is not thread-safe;
+parser scopes do not redirect the lexer's original listener. C4 remains unextracted.
 
 The three follow-ups from the API probe pass are complete: permanent TypeInfo regressions, module
 sessions and module-local cross-file navigation with direct extends/implements hierarchy. The
