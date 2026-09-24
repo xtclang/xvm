@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.io.File;
 import java.io.IOException;
 
@@ -55,7 +54,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-
 
 /**
  * CENSUS ratchet for the display-purity guarantee: <b>a debugger calling {@code toString()} must

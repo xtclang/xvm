@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.File;
 
 import java.util.List;

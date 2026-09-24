@@ -1,6 +1,5 @@
 package org.xvm.asm;
 
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -17,7 +16,6 @@ import org.xvm.asm.constants.UnresolvedNameConstant;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Gate for the purity of the ASM display methods - {@code toString()}, {@code getValueString()} and

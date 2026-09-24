@@ -262,7 +262,6 @@ public abstract class BinaryAST {
     public static final RegAllocAST[]  NO_ALLOCS = new RegAllocAST[0];
     public static final ExprAST        POISON    = PoisonAST.INSTANCE;
 
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**

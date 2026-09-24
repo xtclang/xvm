@@ -1,6 +1,5 @@
 package org.xvm.runtime;
 
-
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,6 @@ import org.xvm.runtime.template.text.xString.StringHandle;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Focused gate for {@link ObjectHandle#toString()}, the base rendering that nearly every handle in
