@@ -1384,14 +1384,14 @@ public abstract class Builder {
     }
 
     /**
-     * Generate boxing opcodes for a nullable Java primitive on the Java stack.
+     * Generate boxing opcodes for a nullable JIT primitive on the Java stack.
      *
-     * <p>In: the primitive value followed by its "is Null" extension flag<br>
+     * <p>In: the primitive components followed by the "is Null" extension flag<br>
      * Out: the boxed reference, or Ecstasy {@code Null} when that flag was set
      *
-     * <p>This is the inverse of {@link #unboxNullable}. A {@code NullablePrimitive} occupies two
-     * Java slots, so it cannot simply be boxed the way a plain primitive can: the extension flag
-     * decides whether there is a value to box at all.
+     * <p>This is the inverse of {@link #unboxNullable}. Both {@code NullablePrimitive} and
+     * {@code NullableXvmPrimitive} carry an additional flag, so they cannot simply be boxed the
+     * way a plain primitive can: the extension flag decides whether there is a value to box at all.
      *
      * @param type  the nullable primitive type of the value on the stack
      */
@@ -1404,7 +1404,10 @@ public abstract class Builder {
         box(code, sansNull);
         code.goto_(lblDone)
             .labelBinding(lblNull);
-        pop(code, JitTypeDesc.requireJavaPrimitive(sansNull));
+        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(sansNull);
+        for (int i = cds.length - 1; i >= 0; i--) {
+            pop(code, cds[i]);
+        }
         loadNull(code);
         code.labelBinding(lblDone);
     }

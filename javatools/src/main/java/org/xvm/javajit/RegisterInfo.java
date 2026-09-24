@@ -119,20 +119,14 @@ public interface RegisterInfo {
         if (isIgnore()) {
             Builder.pop(code, cd());
         } else {
-            if (type == null) {
-                type = type();
+            if (type != null && !flavor().isOptimized) {
+                if (type.isJavaPrimitive() || type.isXvmPrimitive()) {
+                    Builder.box(code, type);
+                } else if (type.isNullable() && type.isJitPrimitive()) {
+                    // nullable primitives carry their components plus an "is Null" flag
+                    Builder.boxNullable(code, type);
+                }
             }
-            if (type.isJavaPrimitive() && !cd().isPrimitive()) {
-                Builder.box(code, type);
-            } else if (type.isNullable() && type.removeNullable().isJavaPrimitive() &&
-                        !cd().isPrimitive()) {
-                // a NullablePrimitive value is represented as a primitive plus its "is Null" flag
-                Builder.boxNullable(code, type);
-            } else if (type.isXvmPrimitive() && !type().isXvmPrimitive()) {
-                Builder.box(code, type);
-            }
-            // TODO: a NullableXVMPrimitive value carries an additional "is Null" flag
-
             Builder.store(code, cd(), slot());
         }
         return this;
