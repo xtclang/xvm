@@ -746,7 +746,7 @@ integrated-branch evidence; C12 and L24 must still pass on their respective extr
 
 #### Argument-value completion
 
-Implemented on `lagergren/errs` after `6b084731e`; commit assignment is pending the next checkpoint.
+Implemented on `lagergren/errs` in `f2896916b`, following `6b084731e`.
 Empty final positional slots (`call(|)`, `call(1, |)`) and pending named values (`call(name=|)`)
 now offer readable visible locals and parameters that fit at least one incomplete-call candidate.
 Ordinary methods, function values and ordinary constructors share this behavior. No overload is
@@ -796,15 +796,15 @@ this proof. No rewritten source or guessed function parameter names are needed.
 | C13 | `CursorBinding.argumentValues`, `PartialCallResolver` proposed-value fitting and constructor/pattern compatibility regression | C8/C9/C11; preserve old constructors and document eight-component patterns |
 | L25 | Copied argument-value members, cursor insertion edits, `XdkArgumentCompletionTest`, cursor cancellation/retention controls, stdio, X77–X78 and capability/playbook docs | C13, L8/L9/L23; editor runner L16 |
 
-These add two groups, bringing the working plan to **51**. Current changes are uncommitted; map
-the next checkpoint's compiler and host portions here. Each extracted PR still needs its own
-passing prerequisites and tests.
+These add two groups, bringing the working plan to **51**. Source commit `f2896916b` contains
+the C13 compiler portion and L25 host/tests/documentation portion. Each extracted PR still needs
+its own passing prerequisites and tests.
 
 The editor run also exposed an intermittent X25 assertion during fixture setup. Module membership
 changes can expire a hierarchy item between prepare and subtype requests. X25 now uses the runner's
 bounded wait and prepares a fresh item on each attempt until the unsaved member appears. X28 still
-requires stale items to return no results. This test-only synchronization belongs to **L16**, independently of
-C13/L25; it does not change hierarchy production behavior.
+requires stale items to return no results. This test-only synchronization in `f2896916b` belongs
+to **L16**, independently of C13/L25; it does not change hierarchy production behavior.
 
 **Verification (2026-09-24):**
 
@@ -1841,8 +1841,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | I7 | Preserve atomic result/receiver types and handle singleton/outer owners; audit switch metadata | `d0809cd83` production/tests; `aa65860d0` audit documentation | Independent production fix; I3/E1 test harness and C4 warning-replay controls |
 | C12 | Retain missing enclosing delimiters around an explicit cursor | `aa65860d0` compiler portion; delimiter recovery above | C7/C10; no public API shape change |
 | L24 | Prove delimiter recovery through the adapter, protocol and editor | `aa65860d0` host portion; delimiter recovery above | C12, L8/L9, C11/L23; editor runner L16 |
-| C13 | Fit proposed visible argument values in the compiler | Uncommitted after `6b084731e`; argument-value completion above | C8/C9/C11; constructor and eight-component record-pattern migration proof |
-| L25 | Complete compatible locals/parameters at missing argument slots | Uncommitted after `6b084731e`; argument-value completion above | C13, L8/L9/L23; editor runner L16 |
+| C13 | Fit proposed visible argument values in the compiler | `f2896916b` compiler portion; argument-value completion above | C8/C9/C11; constructor and eight-component record-pattern migration proof |
+| L25 | Complete compatible locals/parameters at missing argument slots | `f2896916b` host portion; argument-value completion above | C13, L8/L9/L23; editor runner L16; X25 synchronization in the same commit belongs to L16 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it

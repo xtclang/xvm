@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Argument-value completion (2026-09-24, uncommitted).**
+**Argument-value completion (2026-09-24, `f2896916b`).**
 Empty final positional slots and pending named values now offer compatible readable locals and
 parameters. Compiler trial fitting preserves conversions, inference, narrowing and overload
 alternatives; Kotlin copies the accepted facts and supplies insertion edits. The only Java API
