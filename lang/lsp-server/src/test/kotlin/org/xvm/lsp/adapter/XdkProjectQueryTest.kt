@@ -81,7 +81,7 @@ class XdkProjectQueryTest {
     }
 
     @Test
-    fun `super calls fail closed until register-backed invocation bindings are modeled`() {
+    fun `super calls preserve their selected body while renaming an override family`() {
         val library = source("Library", "module Library { class Base { Int pick(Int value)=value; } }")
         val consumer =
             source(
@@ -92,7 +92,9 @@ class XdkProjectQueryTest {
             )
         val base = artifact("Library", library.readText())
         artifact("Consumer", consumer.readText(), base)
-        assertThat(query(library, consumer).rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose")).isNull()
+        val edit =
+            requireNotNull(query(library, consumer).rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose"))
+        assertThat(apply(consumer, edit)).contains("Int choose(Int value)=super(value)", "child.choose(value=1)")
     }
 
     @Test

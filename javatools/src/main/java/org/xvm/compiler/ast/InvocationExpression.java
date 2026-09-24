@@ -630,6 +630,7 @@ public class InvocationExpression
         InvocationBinding.Collector bindings = ctx.getInvocationBindings();
         List<Expression> writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.of();
         Optional<InvocationBinding> sourceBinding = Optional.empty();
+        Optional<InvocationBinding.FunctionCall> functionBinding = Optional.empty();
         bindings.begin(this);
         // the reason for tracking success (fValid) is that we want to get as many things
         // validated as possible, but if some expressions didn't validate, we can't predictably find
@@ -1047,6 +1048,24 @@ public class InvocationExpression
                 }
 
                 atypeResult = validateFunction(ctx, typeFn, cTypeParams, cDefaults, atypeRequired, errs);
+                if (bindings.isEnabled() && fCall && !(argMethod instanceof Register register && register.isSuper())) {
+                    TypeConstant functionType = typeFn;
+                    functionBinding = InvocationBinding.arguments(writtenArgs, writtenArgs)
+                            .map(arguments -> new InvocationBinding.FunctionCall(functionType, arguments));
+                }
+                if (bindings.isEnabled() && fCall && argMethod instanceof Register register &&
+                        register.isSuper()) {
+                    TypeInfo info = ctx.getThisType().ensureAccess(Access.PRIVATE).ensureTypeInfo(errs);
+                    MethodInfo method = info.getMethodById(ctx.getMethod().getIdentityConstant());
+                    if (method != null) {
+                        TypeConstant functionType = typeFn;
+                        sourceBinding = method.getSuperMethod(info).flatMap(target ->
+                                InvocationBinding.arguments(writtenArgs, writtenArgs).map(arguments ->
+                                        new InvocationBinding(target, pool.ensureSignatureConstant(
+                                                target.getName(), pool.extractFunctionParams(functionType),
+                                                pool.extractFunctionReturns(functionType)), arguments)));
+                    }
+                }
             }
         } else { // the expr is NOT a NameExpression
             // it has to either be a function or convertible to a function
@@ -1069,6 +1088,10 @@ public class InvocationExpression
                 }
 
                 atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
+                if (bindings.isEnabled() && fCall) {
+                    functionBinding = InvocationBinding.arguments(writtenArgs, writtenArgs)
+                            .map(arguments -> new InvocationBinding.FunctionCall(typeFn, arguments));
+                }
             }
         }
 
@@ -1102,6 +1125,7 @@ public class InvocationExpression
         Expression result = finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
         if (result != null) {
             sourceBinding.ifPresent(binding -> bindings.record(this, binding));
+            functionBinding.ifPresent(binding -> bindings.record(this, binding));
         }
         return result;
     }

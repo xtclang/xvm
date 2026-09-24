@@ -161,8 +161,9 @@ or written backing fields; getter/setter declarations have separate implementati
 mixin accessors are included, with no standalone inspection of the mixin's constraint.
 A host-supplied dependency source index also permits
 definition, type-definition and inherited implementation-body links into that dependency. It does
-not supply Ref/Var annotation dispatch, synthetic delegation/redirect targets or a workspace-wide
-implementation search. Old hierarchy items cannot resolve into a new compilation. External type
+not supply Ref/Var annotation dispatch, synthetic redirect targets or a workspace-wide
+implementation search. Concrete delegation follows compiler-selected method/property signatures;
+interface-valued or cyclic delegates remain unresolved. No forwarding code is generated for lookup. Old hierarchy items cannot resolve into a new compilation. External type
 hierarchy remains unsupported. Exact references additionally compile all configured source modules,
 including unopened consumers and source uses of bundled binary members. No persistent index or
 source target for an unindexed binary is invented.
@@ -192,8 +193,14 @@ unsupported for parameter rename. An explicit source graph additionally enables 
 method override rename: it recompiles all configured modules and checks dispatch chains as well as
 written bindings. Generic interface contracts and closed/transitive consumers are covered. Binary
 contracts (including source overrides of bundled XDK methods), properties/accessors, static
-functions, constructors, mixin/delegating/capped chains and `super(...)` fail closed. The graph must
+functions, constructors and mixin/delegating/capped chains fail closed. Ordinary `super(...)` calls
+retain their selected written parent body for navigation/hierarchy and rename proof; the keyword
+itself is not renamed. The graph must
 include every source consumer; there is no automatic discovery or proof about external clients.
+Completed function-valued calls expose signature types without invented runtime targets or parameter
+names. Explicit cursor analysis also retains binary/conditional expressions and following call
+arguments, while incomplete values still cannot emit code. Structure-only diagnostics map to source
+declaration tokens where available; binary-only structures keep the document fallback.
 Formatting, code actions, document links, code lenses and linked editing remain unsupported.
 A member parse failure clears the module's normal semantic answers until a later correction;
 explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser

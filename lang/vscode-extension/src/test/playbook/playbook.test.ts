@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { advancedCases } from './advanced';
 import { completionCases } from './completion';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
@@ -9,7 +10,7 @@ import { navigationCases } from './navigation';
 import { propertyCases } from './properties';
 import { renameCases } from './rename';
 import { semanticCases } from './semantics';
-import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
+import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook, position } from './support';
 
 suite('XdkAdapter playbook', function () {
     suiteSetup(async function () {
@@ -32,6 +33,7 @@ suite('XdkAdapter playbook', function () {
     renameCases();
     graphCases();
     propertyCases();
+    advancedCases();
     configurationCases();
 
     playbook('7a.8', 'compiler-only duplicate annotation warning is delivered exactly once', async workspace => {
@@ -40,8 +42,8 @@ suite('XdkAdapter playbook', function () {
         assert.strictEqual(result.length, 1);
         assert.strictEqual(result[0].severity, vscode.DiagnosticSeverity.Warning);
         assert.strictEqual(result[0].source, 'xtc');
-        // VERIFY-75 currently reports Site.At(structure), without a positioned source span.
-        assert.ok(result[0].range.isEqual(new vscode.Range(0, 0, 0, 0)));
+        const declaration = position(document, '@Atomic @Override Int x', '@Atomic @Override Int '.length);
+        assert.ok(result[0].range.isEqual(new vscode.Range(declaration, declaration.translate(0, 1))));
         await nextProblem(document, result);
         const errorDocument = await workspace.open('Navigation.x');
         await workspace.replace(errorDocument, fixture('Navigation.x').replace('Int value = 2;', 'String value = 2;'));

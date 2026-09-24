@@ -4,6 +4,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
+import org.xvm.asm.XvmStructure
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.lsp.adapter.AbstractAdapter
@@ -727,7 +728,8 @@ class XdkAdapter internal constructor(
         val views = compilation.semanticSnapshots(errs, dependencies)
         val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
         val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
-        val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris) }
+        val declarations = XdkAst.declarationLocations(compilation.sourceTrees(), sourceUris)
+        val diagnostics = heard.errors.map { it.toDiagnostic(fallback, sourceUris, declarations) }
         val documentUris = sources?.documentUris ?: setOf(uri)
         val documents =
             documentUris.associateWith { uri ->
@@ -789,6 +791,7 @@ class XdkAdapter internal constructor(
     private fun ErrorListener.ErrorInfo.toDiagnostic(
         source: Source,
         sourceUris: Map<String, String>,
+        declarations: Map<XvmStructure, Location>,
     ): Diagnostic {
         val uri = source.fileName
         val where = site()
@@ -803,8 +806,7 @@ class XdkAdapter internal constructor(
                 when (where) {
                     is ErrorListener.Site.In -> sourceUri?.let { spanOf(it, where) } ?: wholeDocument(uri)
 
-                    // a structure has no source location of its own
-                    is ErrorListener.Site.At -> wholeDocument(uri)
+                    is ErrorListener.Site.At -> declarations[where.xs()] ?: wholeDocument(uri)
 
                     // a whole-compilation failure belongs to the document, not to a line in it
                     else -> wholeDocument(uri)
@@ -1020,7 +1022,7 @@ class XdkAdapter internal constructor(
         val range =
             model.occurrences
                 .firstOrNull {
-                    it.symbol == symbol.id && SemanticModel.Position(line, column) in it.range
+                    it.symbol == symbol.id && it.name != "super" && SemanticModel.Position(line, column) in it.range
                 }?.range ?: return null
         return PrepareRenameResult(range.toRange(), symbol.name)
     }
