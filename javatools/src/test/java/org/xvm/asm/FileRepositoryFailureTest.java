@@ -30,6 +30,9 @@ class FileRepositoryFailureTest {
         assertTrue(failure.getMessage().contains(file.toString()));
         assertNotNull(failure.getCause());
         assertThrows(UncheckedIOException.class, repository::getModuleNames);
+
+        new FileStructure("Broken").writeTo(file.toFile());
+        assertNotNull(repository.loadModule("Broken"));
     }
 
     @Test
@@ -47,5 +50,9 @@ class FileRepositoryFailureTest {
                 () -> repository.loadModule("Broken"));
         assertTrue(failure.getMessage().contains(file.toString()));
         assertNotNull(failure.getCause());
+        assertThrows(UncheckedIOException.class, () -> repository.loadModule("Broken"));
+
+        new FileStructure("Broken").writeTo(file.toFile());
+        assertNotNull(repository.loadModule("Broken"));
     }
 }
