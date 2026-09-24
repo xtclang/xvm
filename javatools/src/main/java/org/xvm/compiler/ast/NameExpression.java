@@ -1147,7 +1147,7 @@ public class NameExpression
                     }
 
                 if (m_mapTypeParams != null) {
-                    Register regFn = code.createRegister(argRaw.getType());
+                    Register regFn = code.createRegister(getType());
                     bindTypeParameters(ctx, code, argRaw, regFn);
                     return regFn;
                 }
@@ -2690,10 +2690,12 @@ public class NameExpression
                     // resolve the function signature against all the types we know by now
                     typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
-                    // these hidden parameters are bound by FBind, not supplied by callers
-                    assert m_plan == Plan.BindTarget || m_plan == Plan.None;
-                    for (int i = cTypeParams - 1; i >= 0; --i) {
-                        typeFn = pool.bindFunctionParam(typeFn, i);
+                    // These hidden parameters are bound by the generated FBind, not supplied by
+                    // callers of the resulting function.
+                    if (m_plan == Plan.None || m_plan == Plan.BindTarget) {
+                        for (int i = cTypeParams - 1; i >= 0; --i) {
+                            typeFn = pool.bindFunctionParam(typeFn, i);
+                        }
                     }
                 }
 

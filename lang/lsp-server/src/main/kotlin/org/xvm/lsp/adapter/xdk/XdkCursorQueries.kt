@@ -80,15 +80,30 @@ internal object XdkCursorQueries {
         model: SemanticModel,
         position: Position,
     ): SignatureHelp? {
+        val methods =
+            model.calls.mapNotNull { call ->
+                model.symbol(call.method)?.let { SignatureSite(call.range, call.callee, it.name, call.signature, call.arguments) }
+            }
+        val functions =
+            model.functionCalls.map { call ->
+                val name = model.symbolAt(call.callee.end.line, call.callee.end.column - 1)?.name ?: "function"
+                SignatureSite(call.range, call.callee, name, call.signature, call.arguments)
+            }
         val call =
-            model.calls
+            (methods + functions)
                 .filter { position > it.callee.end && position < it.range.end }
-                .minWithOrNull(compareByDescending<SemanticModel.CallSite> { it.range.start }.thenBy { it.range.end })
-                ?: return null
-        val name = model.symbol(call.method)?.name ?: return null
+                .minWithOrNull(compareByDescending<SignatureSite> { it.range.start }.thenBy { it.range.end }) ?: return null
         val active = call.arguments.firstOrNull { position >= it.range.start && position <= it.range.end }?.parameterIndex
-        return SignatureHelp(listOf(signature(model, name, call.signature, active)), activeParameter = active ?: 0)
+        return SignatureHelp(listOf(signature(model, call.name, call.signature, active)), activeParameter = active ?: 0)
     }
+
+    private data class SignatureSite(
+        val range: SemanticModel.Range,
+        val callee: SemanticModel.Range,
+        val name: String,
+        val signature: Signature,
+        val arguments: List<SemanticModel.CallArgument>,
+    )
 
     private fun signature(
         model: SemanticModel,
