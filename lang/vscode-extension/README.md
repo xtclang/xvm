@@ -303,6 +303,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X58, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -316,6 +317,13 @@ The headless test uses `@vscode/test-electron`, which downloads a self-contained
 - **Linux without `DISPLAY` and without `xvfb-run`**: the wrapper prints a clear warning and attempts the launch anyway — it fails fast with a missing-display error rather than hiding the problem.
 
 The wrapper script (`scripts/run-vscode-tests.cjs`) does the platform detection in Node so the Gradle task definition stays platform-independent.
+
+The compiler playbook uses the same launcher and display requirements. It reads fixtures from the
+[XdkAdapter playbook](../doc/manual-test-plan.md#automated-vs-code-run), fails if compiler mode is
+missing, and records remaining visual/manual checks explicitly. `latest-run.txt` points to its
+latest `results.txt`/`results.json` and retained scratch workspace. After assembling the compiler
+extension, `npm run test:playbook` runs only its editor checks; the Gradle command also supplies
+host/protocol regression evidence. The existing default-backend smoke suite remains separate.
 
 **Tests are not auto-attached to `:check`.** The test downloads ~210 MB on first run and requires either a display or `xvfb`; both make it a poor fit for unconditional CI runs. Wire it into your CI pipeline explicitly when you want it.
 

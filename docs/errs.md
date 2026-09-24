@@ -8,6 +8,18 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Automated playbook follow-up (2026-09-24).**
+[`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
+X1–X58 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+Its first complete pass found two Kotlin consumer gaps: redundant file notifications canceled
+queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
+because they have no body register. The server now preserves the authoritative overlay, and the
+semantic builder reads the resolved method signature for that declaration type. Both fixes have
+focused regressions; neither requires another Java embedding/AST accessor or retained compiler state.
+The [integration record](errs-integration-plan.md#automated-compiler-playbook-2026-09-24) maps them
+to L8 and L10, with the full acceptance runner in L16. Visual/editor interaction and prolonged
+memory testing remain separate from automated provider passes.
+
 **Current hardening status (2026-09-23).** This document preserves the investigation's chronology;
 some later sections describe limitations that subsequent work removed. The current execution and
 integration record is [errs-integration-plan.md](errs-integration-plan.md), and the refreshed failure
