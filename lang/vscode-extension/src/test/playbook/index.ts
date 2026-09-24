@@ -52,6 +52,7 @@ export async function run(): Promise<void> {
             'Dependency host API': 'XdkDependencyTest and XdkLanguageServerTest (Gradle test task)',
             'Automatic source recompilation host API': 'XdkProjectTest and XdkProjectServerTest (Gradle test task)',
             'Configured graph and binary contracts': 'XdkProjectQueryTest and X59–X63; includes bundled XDK member resolution and rename rejection',
+            'Property/accessor implementations': 'XdkSemanticLookupTest, XdkDependencyTest, packaged stdio and X64–X67; field/default/mixin bodies, source ownership and unsupported controls',
             'Deterministic rename/cursor races': 'XdkProjectQueryLifecycleTest, XdkCursorServerTest and XdkRenameServerTest (Gradle test task)'
         }
     };

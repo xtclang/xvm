@@ -69,6 +69,39 @@ class XdkStdioTest {
     lateinit var directory: Path
 
     @Test
+    fun `property implementations round trip fields and accessors through the packaged server`() {
+        val source =
+            "module Stdio { interface Named { @RO String name; } " +
+                "class Stored implements Named { @Override String name=\"stored\"; } " +
+                "class Computed implements Named { @Override String name.get()=\"computed\"; } " +
+                "class Unrelated { String name=\"other\"; } Int size(String text)=text.size; }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+
+            fun lookup(at: Int) = session.await(documents.implementation(ImplementationParams(id, Position(0, at)))).left
+            val targets = lookup(source.indexOf("name;"))
+            assertThat(targets.map { it.uri }).containsOnly(URI)
+            assertThat(targets.map { it.range })
+                .containsExactlyInAnyOrder(
+                    Range(Position(0, source.indexOf("name=")), Position(0, source.indexOf("name=") + 4)),
+                    Range(Position(0, source.indexOf("get()")), Position(0, source.indexOf("get()") + 3)),
+                )
+            assertThat(lookup(source.lastIndexOf("size"))).isEmpty()
+            session.change("module Stdio {", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            assertThat(lookup(7)).isEmpty()
+            session.change(source, 3)
+            assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
+            assertThat(lookup(source.indexOf("name;"))).isEqualTo(targets)
+            session.shutdownAndExit()
+        }
+    }
+
+    @Test
     fun `private parameter rename round trips versioned edits and rejects silent capture`() {
         val source = "module Stdio { private Int pick(Int input)=input; Int run()=pick(input=1); }"
         Session(packagedJar(), directory).use { session ->

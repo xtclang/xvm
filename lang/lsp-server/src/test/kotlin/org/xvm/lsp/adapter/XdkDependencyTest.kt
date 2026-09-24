@@ -82,6 +82,27 @@ class XdkDependencyTest {
     }
 
     @Test
+    fun `inherited property accessors use dependency source indices and expire on replacement`() {
+        val text = "module Library { class Base { String name.get()=\"library\"; } }"
+        val library = dependency(text)
+        val source = "module Consumer { package lib import Library; class Child extends lib.Base {} String read(Child child)=child.name; }"
+        XdkAdapter().use { adapter ->
+            adapter.replaceDependencies(listOf(library))
+            assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
+            val target = adapter.findImplementation(CONSUMER, 0, source.indexOf("name")).single()
+            assertThat(target.uri).isEqualTo(LIBRARY_URI)
+            assertThat(target.startColumn).isEqualTo(text.indexOf("get"))
+            adapter.replaceDependencies(listOf(dependency("\n$text")))
+            assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name"))).isEmpty()
+            assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
+            assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name")).single().startLine).isEqualTo(1)
+            adapter.replaceDependencies(listOf(XdkDependency.fromBinary(library.bytes())))
+            assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
+            assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name"))).isEmpty()
+        }
+    }
+
+    @Test
     fun `dependency replacement invalidates consumers but leaves unrelated successful sessions intact`() {
         val first = dependency(LIBRARY)
         val moved = dependency("\n$LIBRARY")
