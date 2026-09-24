@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Semantic and diagnostic hardening follow-up (2026-09-24, current working tree).**
+**Semantic and diagnostic hardening follow-up (2026-09-24, `570a7e870`).**
 The four follow-ups after L18 now have implementations and focused regressions. Concrete delegation
 follows compiler-selected method/property chains, with cycle protection and no generated forwarding
 code. `super(...)` records its selected written parent body. Function-valued calls publish separate
