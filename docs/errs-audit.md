@@ -389,3 +389,21 @@ to their declaration source spans, including warnings emitted for closed member 
 identity/source associations; do not infer locations from diagnostic message strings or invent
 locations for binary-only structures. Preserve the whole-document fallback when no association is
 available, and add controls for the warning's true owner and unrelated file groups.
+
+## Property/accessor inspection follow-up, 2026-09-24
+
+Ordinary source property composition supplies the facts needed by implementation lookup. Host
+method tables can omit composed mixin accessors, but the corresponding `PropertyBody` still carries
+the written getter/setter structure and compiler composition order. The Kotlin copier reads those
+facts and respects field/default precedence; it does not infer an implementation from a name match.
+
+A probe that constructed a separate `PropertyClassTypeConstant` for every custom property was not
+a suitable general inspection path. Valid ordinary source fixtures gained Ref/Var override diagnostics
+(`VERIFY-81`), and some property/host combinations failed the property's ownership assertion. The
+implemented lookup does not require that probe or suppress its diagnostics. Existing host TypeInfo
+and property composition suffice; output/purity tests cover inspection without changing compiled
+bytes. This is an inspection-boundary finding, not a new claim about an upstream compiler defect.
+
+Delegating and Ref/Var-annotated properties remain explicit negative cases. Delegation's optimized
+chain APIs can generate forwarding methods, so resolving their source meaning needs its own consumer
+and output/lifetime checks before enabling it. Property rename remains disabled.

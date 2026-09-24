@@ -148,7 +148,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
-| Find implementations | - | - | **Partial** - concrete nominal source types and method bodies from compiler override chains, including generic overrides, inherited/default/anonymous methods and composed mixins; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
+| Find implementations | - | - | **Partial** - nominal source types, method bodies and ordinary property fields/accessors from compiler composition, including generic overrides, inherited/default bodies and composed mixins; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
 | Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
 
@@ -170,8 +170,10 @@ A written type or formal parameter points to its own declaration. Bundled librar
 source target. Implementation lookup uses declaration identities and compiler method chains;
 it does not match by spelling or arity. It requires successful compilation. Type results are
 nominal declaration-level implementations (including a concrete type itself), not a search for
-structurally assignable types or generic instantiations. Property/accessor implementations,
-synthetic delegation/redirect targets and a search across all dependency implementations remain
+structurally assignable types or generic instantiations. Ordinary properties expose effective written
+getter/setter bodies or backing fields; accessor declarations retain separate chains. A property
+use has the declaration-level set, not a read/write-specific dispatch result. Ref/Var annotation
+dispatch, synthetic delegation/redirect targets and a search across all dependency implementations remain
 unavailable. An inherited dependency body in a current source type's method chain can resolve when
 the host supplies its declaration source index.
 An explicit reporting inspection runs on the compiler worker; request threads use immutable

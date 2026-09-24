@@ -82,8 +82,10 @@ class CompilerBoundaryRequirementsTest {
     @Test
     fun `semantic inspection preserves emitted bytes and copied snapshots contain no compiler objects`() {
         val source =
-            "module Boundary { interface Reader { Int read(); } " +
-                "class Value implements Reader { @Override Int read()=1; } " +
+            "module Boundary { interface Reader { Int read(); @RO Int value { @Override Int get()=1; } } " +
+                "class Value implements Reader { @Override Int read()=1; @Override Int value=2; } " +
+                "class Computed implements Reader { @Override Int read()=2; @Override Int value.get()=3; } " +
+                "class Forward(Reader target) delegates Reader(target) {} " +
                 "Int run(Int captured) { function Int() fn=()->captured; return fn(); } }"
         val baseline = bytes(compile(source))
         val inspected = compile(source)
