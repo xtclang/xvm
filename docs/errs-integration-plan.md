@@ -25,8 +25,8 @@ independent cherry-pick. Preserve the integrated history; regroup changes during
 The [commit grouping record](#commit-grouping-record) supplements the detailed scope descriptions.
 The [PR-to-commit map](#dependencies-and-eventual-landing-order) gives every group's source hashes
 and prerequisites. The [consolidation checkpoint](#consolidation-checkpoint-before-the-user-playbook-run-2026-09-24)
-accounts for the earlier extraction branches. Next, prepare the integrated compiler extension and
-scratch fixtures for the user to run the playbook; no further extraction is scheduled.
+accounts for the earlier extraction branches. The integrated compiler extension and scratch
+fixtures are now ready for the user to run the playbook; no further extraction is scheduled.
 
 The bounded hardening and editor acceptance passes are complete. The initial scope was reliable
 compiler diagnostics and existing LSP features. The subsequently approved
@@ -332,6 +332,27 @@ Every implementation commit is assigned below or explicitly deferred; every mapp
 an ancestor of the integrated checkpoint. The local receipt is
 `build/errs-integration/comparison/errs-pr-source-map.json`. This verifies classification, not that
 each future PR already builds independently.
+
+### User playbook workspace prepared, 2026-09-24
+
+The complete branch and PR map are committed through `a6dbb444d`. The compiler extension was
+assembled from that checkpoint with `-Plsp.adapter=compiler`. The packaged `compilerStdioTest`
+run executed 15 cases with zero failures/errors/skips. VS Code was not launched: the user will
+perform the interactive checks.
+
+Local scratch files are under `build/errs-playbook`, with all ten saved XdkAdapter playbook
+fixtures, explicit Library/Consumer source settings, semantic highlighting/inlay hints enabled,
+Auto Save disabled and `RESULTS.txt` marking X1–X58, 7a.1–7a.14 and configuration checks as NOT RUN.
+`build/open-errs-playbook.command` opens an isolated VS Code development profile using the assembled
+extension. Original fixture copies are under `build/errs-playbook-baseline`.
+
+A separate stdio baseline check used the extension's actual server JAR without XDK_HOME, confirmed
+the XDK backend, and opened every fixture. Nine had no diagnostics; DupAnno had exactly one
+WARNING VERIFY-75. All ten returned nonempty outlines and the server shut down normally. The
+receipt at `build/errs-playbook-baseline/verification.json` records the JAR digest and results.
+These are fixture/setup checks, not manual feature passes. The playbook's stale source-setting and
+read/write-highlight descriptions were corrected; those documentation portions accompany L16 and
+L12 respectively. Interactive findings must be fixed and tested on `errs` before PR preparation.
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
@@ -1124,8 +1145,10 @@ syntax can prevent an assembled module AST; recovered per-file syntax supports s
 while navigation requires current semantic results. Host-indexed dependencies now supply definition,
 type-definition and inherited-body links, but not a persistent cross-module reference/implementation
 index or external hierarchy. Completion/signature help have the bounded support
-described above; rename, formatting, code actions, document links and linked editing remain
-unavailable. Static call hierarchy, resolved-name tokens and bounded inlay hints now have consumers.
+described above; formatting, code actions, document links and linked editing remain unavailable.
+Bounded local/private-parameter rename is available to clients supporting versioned document edits;
+wider rename remains outside the proven surface. Static call hierarchy, resolved-name tokens and
+bounded inlay hints now have consumers.
 Type-definition and nominal type/method implementation lookup now
 have module and indexed-dependency consumers as described above; property/accessor and synthetic
 redirect targets remain outside them.
