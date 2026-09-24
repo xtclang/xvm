@@ -431,8 +431,8 @@ unknown external consumers. Record new implementation commits and future PR boun
 #### Post-L18 hardening
 
 All work remains on `lagergren/errs`. The previous implementation/mapping checkpoint is already
-pushed as `714042da5` / `87eee85b1`. The following source assignments refer to the current working
-tree until its next commit; no extracted PR is claimed independently green.
+pushed as `714042da5` / `87eee85b1`. The following source assignments refer to implementation
+checkpoint `570a7e870`; no extracted PR is claimed independently green.
 
 1. **Delegation:** `CompilerImplementations` follows compiler property and method signatures
    through statically concrete receiver types. Cycles and paths beyond 64 links return no target.
@@ -455,7 +455,7 @@ tree until its next commit; no extracted PR is claimed independently green.
    parameter retention, then the documented binary-AST TODO. NameExpression now emits the bound
    type and BindFunctionAST consistently. The retention workload grows to 120 cycles / 960 edits.
 
-Future additive extraction units (commit hashes pending this working tree's checkpoint):
+Future additive extraction units from `570a7e870` (split by the boundaries below):
 
 | ID | Files / boundary | Prerequisites |
 |---|---|---|
@@ -472,7 +472,7 @@ boundary/purity test contains L19 and I4 sections and must be divided accordingl
 All seven units are additive to the existing 35 groups (42 total); each needs its own build/test
 validation when extracted. Documentation and test fixtures travel with the feature they describe.
 
-Validation on the integrated working tree:
+Validation of the integrated implementation checkpoint `570a7e870`:
 
 - Full LSP suite: **791 cases, 788 executed, three existing skips**, zero failures/errors.
 - Packaged compiler stdio: **16 cases**, zero failures/errors/skips.
@@ -1475,13 +1475,13 @@ above identify old candidate patches, not additional changes to merge into the i
 | L16 | Configure source graphs from editor initialization and settings | `6372ba07d` | L14; rename acceptance cases additionally require L15 |
 | L17 | Query references and validate method override rename across the configured graph | `332003f0a` | L13/L14/L15 and L4/L5; editor acceptance additionally requires L16 |
 | L18 | Copy ordinary property/accessor implementations and indexed dependency targets | `714042da5` | L10/L13; editor acceptance additionally requires L16; independent of L17 |
-| L19 | Follow concrete delegation to written source targets | Working tree; post-L18 assignment above | L18/L13 |
-| E5 | Add function signature facts and selected super bodies | Working tree; post-L18 assignment above | E4 |
-| L20 | Consume function signatures and super calls for navigation/hierarchy/rename proof | Working tree; post-L18 assignment above | E5, L7/L11/L15; graph consumer L17 |
-| C10 | Retain compound/conditional cursor holes and later arguments | Working tree; post-L18 assignment above | C7/C9; editor consumer L8/L9 |
-| I4 | Correct bound-generic function types and binary AST emission | Working tree; post-L18 assignment above | Independent production fix; I3/E1 test harness |
-| I5 | Attribute annotation warnings to the contributed property | Working tree; post-L18 assignment above | Independent production fix; C4 replay tests |
-| L21 | Position source-structure diagnostics at declaration tokens | Working tree; post-L18 assignment above | L1/L5, I5 |
+| L19 | Follow concrete delegation to written source targets | `570a7e870` (delegation; post-L18 assignment above) | L18/L13 |
+| E5 | Add function signature facts and selected super bodies | `570a7e870` (compiler call facts) | E4 |
+| L20 | Consume function signatures and super calls for navigation/hierarchy/rename proof | `570a7e870` (Kotlin call-fact consumers) | E5, L7/L11/L15; graph consumer L17 |
+| C10 | Retain compound/conditional cursor holes and later arguments | `570a7e870` (cursor parser recovery) | C7/C9; editor consumer L8/L9 |
+| I4 | Correct bound-generic function types and binary AST emission | `570a7e870` (NameExpression fix and regressions) | Independent production fix; I3/E1 test harness |
+| I5 | Attribute annotation warnings to the contributed property | `570a7e870` (PropertyInfo diagnostic ownership) | Independent production fix; C4 replay tests |
+| L21 | Position source-structure diagnostics at declaration tokens | `570a7e870` (source diagnostic positioning) | L1/L5, I5 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
