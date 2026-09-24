@@ -111,11 +111,11 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
 | Semantic diagnostics | None | None | Compiler errors and warnings |
 | Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
-| Definition / references | By spelling | Syntax and workspace index | Module identities; definitions also use host-supplied dependency source indices |
+| Definition / references | By spelling | Syntax and workspace index | Module identities; references span configured graphs; definitions also use host-supplied dependency source indices |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope, instance-member and static completion |
-| Rename | Basic | Implemented with syntax limits | Locals/private method parameters; compile and binding validation; versioned edits required |
+| Rename | Basic | Implemented with syntax limits | Locals/private method parameters and configured-graph instance-method overrides; binding/dispatch validation and versioned edits required |
 | Code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
@@ -160,7 +160,9 @@ generic, inherited and default bodies. A host-supplied dependency source index a
 definition, type-definition and inherited implementation-body links into that dependency. It does
 not supply property/accessor implementations, synthetic delegation/redirect targets or a workspace-wide
 implementation search. Old hierarchy items cannot resolve into a new compilation. External type
-hierarchy and references across separately compiled modules remain unsupported.
+hierarchy remains unsupported. Exact references additionally compile all configured source modules,
+including unopened consumers and source uses of bundled binary members. No persistent index or
+source target for an unindexed binary is invented.
 
 Completion supplies visible locals/parameters with flow narrowing, implicit members, imported and
 enclosing types, and static functions/constants. Qualified member prefixes and bare-name/empty
@@ -182,9 +184,14 @@ Rename covers locals and private ordinary-method parameters, including captures 
 argument labels. It recompiles proposed edits and compares all recorded bindings and selected calls;
 untouched names must keep their targets. The client must support versioned document edits. Source
 edits, dependency replacement, cancellation and close invalidate pending rename work. Unknown
-bindings, failed compilation, public/lambda/constructor parameters, method values and member/override/
-workspace rename remain unavailable. Formatting, code actions, document links, code lenses and linked
-editing remain unsupported.
+bindings, failed compilation, public/lambda/constructor parameters and method-value escapes remain
+unsupported for parameter rename. An explicit source graph additionally enables ordinary instance-
+method override rename: it recompiles all configured modules and checks dispatch chains as well as
+written bindings. Generic interface contracts and closed/transitive consumers are covered. Binary
+contracts (including source overrides of bundled XDK methods), properties/accessors, static
+functions, constructors, mixin/delegating/capped chains and `super(...)` fail closed. The graph must
+include every source consumer; there is no automatic discovery or proof about external clients.
+Formatting, code actions, document links, code lenses and linked editing remain unsupported.
 A member parse failure clears the module's normal semantic answers until a later correction;
 explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser
 recovery retains available per-source syntax for outline, folding and selection, including valid

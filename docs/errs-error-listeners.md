@@ -462,7 +462,11 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    discovery and persistent cross-module indexing remain open. No new Java/AST hooks were needed.
    Bounded local/private-parameter rename now captures named labels and checks before/after bindings.
    Its two temporary compiler attempts use cancellable request listeners; rejected edits do not
-   publish temporary diagnostics or change the live analysis. Wider rename remains unavailable.
+   publish temporary diagnostics or change the live analysis. Configured-graph references and
+   ordinary instance-method override rename now use the same isolated listener policy for each
+   module attempt, including TypeInfo dispatch inspection. Binary contracts, unsupported chains
+   and register-backed `super` calls fail closed. These Kotlin consumers add no Java/AST hooks;
+   wider rename remains outside the proven surface.
    Hierarchy currently covers direct extends/implements edges between source types in the same
    compilation, not conditional mixins or external library sources.
 3. The [bounded diagnostic audit](errs-audit.md#annotation-metadata-and-module-source-follow-up-2026-09-23)
