@@ -194,6 +194,54 @@ class XdkSemanticLookupTest {
     }
 
     @Test
+    fun `delegation resolves concrete method and property targets without guessing unrelated bodies`() {
+        val source =
+            """
+            module Lookups {
+                interface Api<T> { T /*api*/map(T value); @RO T /*property*/name; }
+                class Engine implements Api<String> {
+                    @Override String /*method*/map(String value) = value;
+                    String map(Int value) = value.toString();
+                    @Override String name. /*getter*/get() = "engine";
+                }
+                class Forward(Engine target) delegates Api<String>(target) {}
+                class Outer(Forward target) delegates Api<String>(target) {}
+                class Unrelated { String map(String value) = value; String name.get() = "unrelated"; }
+                String read(Outer forward) = forward. /*call*/map(forward. /*use*/name);
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            for (marker in listOf("api", "call")) {
+                assertThat(implementations(adapter, source, marker))
+                    .describedAs(marker)
+                    .containsExactly(location(source, "method", "map"))
+            }
+            for (marker in listOf("property", "use")) {
+                assertThat(implementations(adapter, source, marker))
+                    .describedAs(marker)
+                    .containsExactly(location(source, "getter", "get"))
+            }
+        }
+    }
+
+    @Test
+    fun `interface valued and cyclic delegates have no invented implementation`() {
+        val source =
+            """
+            module Lookups {
+                interface Api { Int /*api*/read(); @RO Int /*property*/value; }
+                class Dynamic(Api target) delegates Api(target) {}
+                class Cyclic(Cyclic target) delegates Api(target) {}
+                class Unrelated { Int read() = 1; Int value = 1; }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            assertThat(implementations(adapter, source, "api")).isEmpty()
+            assertThat(implementations(adapter, source, "property")).isEmpty()
+        }
+    }
+
+    @Test
     fun `property implementations follow generic contracts and exclude unrelated declarations`() {
         val source =
             """

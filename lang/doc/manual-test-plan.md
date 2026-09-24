@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X67 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X71 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1124,11 +1124,10 @@ Ctrl+Shift+M elsewhere). Clear the text filter, enable both Errors and Warnings,
    **Go to Next Problem** (F8); the editor must select that source location.
 2. Correct it without saving. The row, red squiggle and error count must clear after analysis.
 3. Open DupAnno.x from 7a.8. Check exactly one **Warning** row with code `VERIFY-75`. This warning
-   currently has a file-level position (line 1, column 1): the compiler reports a structure without
-   a source span. Following it opens the file, not the derived annotation; an annotation squiggle
-   is not yet supported. Remove only the derived `@Atomic`: the warning row/count must clear
-   without saving. Undo to restore one warning. Precise structure-diagnostic anchoring is a
-   recorded follow-up, not a manual-test pass.
+   selects the derived property's `x` declaration. The compiler reports a structure, and the adapter
+   maps that exact declaration to its source token. Remove only the derived `@Atomic`: the warning
+   row/count must clear without saving. Undo to restore one warning. Binary-only structure
+   diagnostics retain a document-level fallback.
 4. Leave the warning in DupAnno.x and introduce an X2 error in Navigation.x. Both file groups and
    severities must remain visible; correcting one must not remove the other's diagnostic.
 
@@ -1259,7 +1258,7 @@ class Child extends Base<String> {
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
 | X31 | Try Format Document/Selection, quick fixes and code lenses with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets or indentation may still work and do not count as compiler feature passes. |
-| X32 | Try a cursor inside an identifier or `box.pa|ir(...)`, a constructor call, a call through a function value, or a call with arguments after the cursor. | These cursor contexts are outside current completion/candidate coverage. An empty answer is acceptable; a crash, stale answer or incorrect replacement edit is not. |
+| X32 | Try a cursor inside an identifier or `box.pa|ir(...)`, a constructor call, an incomplete call through a function value. | These cursor contexts are outside current completion/candidate coverage. An empty answer is acceptable; a crash, stale answer or incorrect replacement edit is not. |
 
 ### F. Type-definition and implementation lookup
 
@@ -1302,8 +1301,8 @@ their own implementation target. Interface default bodies and mixin bodies from 
 can be source targets; an unused mixin is not an implementation of its `into` constraint.
 A user-written override inside an anonymous class is also a method target, although the synthetic
 class is not listed as a named type implementation.
-Property/accessor implementation checks are in section J. Synthetic delegation/redirect targets
-remain outside the current lookup.
+Property/accessor implementation checks are in section J. Concrete delegation is covered in
+section K; synthetic redirect targets and unknown runtime receivers remain outside lookup.
 
 ### G. Call hierarchy, semantic highlighting and inlay hints
 
@@ -1534,9 +1533,9 @@ Each query captures and compiles the entire explicit graph, including closed mem
 consumers. References use exact compiler identities, including source uses of bundled binary members;
 method rename follows ordinary instance-method override families and checks all written bindings,
 selected calls and dispatch chains before returning edits. Binary ancestors,
-mixin/delegating/capped chains, `super(...)` calls and unknown bindings fail closed.
-`super` uses a predefined function register rather than the copied method-invocation binding;
-extending those facts is recorded with the remaining function-valued call work. Properties,
+mixin/delegating/capped chains and unknown bindings fail closed. Ordinary `super(...)` calls retain
+their selected source body through the attempt's call-binding collector. Function-valued calls
+expose validated signature types separately, without a selected method target. Properties,
 accessors, constructors, static functions and public-parameter renames are outside this pass.
 Preparing a method rename identifies a candidate; the final graph proof can still reject it.
 Modules outside the configuration are not discovered, and this is not a persistent index or a proof
@@ -1609,6 +1608,35 @@ module Properties {
 Lookup requires successful module analysis and uses copied source identities. It does not enable
 property rename, infer a runtime delegate receiver or search every configured module for additional
 implementations. Ref/Var annotations such as `@Lazy` remain a separate semantic case.
+
+### K. Delegation, function calls and broader cursor contexts
+
+Create Advanced.x:
+
+```xtc
+module Advanced {
+    interface Api<T> { T map(T value); @RO T name; }
+    class Engine implements Api<String> {
+        @Override String map(String value) = value;
+        @Override String name.get() = "engine";
+    }
+    class Forward(Engine target) delegates Api<String>(target) {}
+    class Outer(Forward target) delegates Api<String>(target) {}
+    String read(Outer forward) = forward.map(forward.name);
+    class Base<T> { T pick(T value) = value; }
+    class Child extends Base<String> { @Override String pick(String value) = super(value); }
+    Int apply(function Int(Int) fn) = fn(42);
+    Int pair(Int first, Int second) = first;
+    Int edit(String word, Boolean flag) { return 1 + word.size; }
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X68 | Find Implementations on `forward.map` and `forward.name`. | Engine's written `map` and `get` bodies, reached through both delegation layers. No generated forwarding target. Interface-typed and cyclic delegates remain unresolved. |
+| X69 | Go to Definition on `super(value)`. Try Prepare Rename there. | Base's `pick` body; the `super` keyword cannot be renamed. Configured-graph method-family rename preserves this call target without editing the keyword. |
+| X70 | Request signature help inside `fn(42)` and Go to Definition on `fn`. | `Int fn(Int)` with no guessed parameter name; definition reaches the function parameter, without claiming its runtime callable target. |
+| X71 | In `edit`, replace `1 + word.size` with `1 + word.`, `flag ? word. : 0`, `flag ? 0 : word.`, and `pair(word., 2)` in turn. Complete after the dot, then restore the original. | `size` is offered in the original lexical context, including when another argument follows the cursor. No stale result or fabricated value for the incomplete expression. |
 
 ## VS Code Extension Playbook
 
@@ -1794,6 +1822,6 @@ Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
 - Automatic editor project discovery and a persistent cross-module index
 - External/conditional-mixin hierarchy and broader implementation targets
-- Wider member/workspace rename: properties/accessors, static functions, constructors, `super` and
+- Wider member/workspace rename: properties/accessors, static functions, constructors and
   mixin/delegating/capped chains; public-parameter caller closure and consumers outside the graph
 - Diagnostic-driven quick fixes and refactorings
