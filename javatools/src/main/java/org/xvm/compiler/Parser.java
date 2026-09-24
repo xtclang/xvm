@@ -173,10 +173,11 @@ public class Parser {
     /**
      * Quick-scan the source for the name of the module it declares, ignoring everything else.
      *
-     * Everything the scan walks past on the way is genuinely not the caller's business, so it is
-     * parsed against a {@link Silence#DISCARD} silence. The name itself is different: a name that
-     * is malformed is not the same answer as a source that declares no module, so it is parsed
-     * against a listener of its own, and the two outcomes stay distinguishable.
+     * Parser diagnostics from the scan use a {@link ErrorListener.Silence#DISCARD} silence.
+     * The module name itself is parsed against a separate listener so a malformed name is not
+     * accepted. Lexical diagnostics
+     * still use the lexer's original listener; callers performing only this scan should supply
+     * a discard listener when constructing the parser.
      *
      * @return the module's dotted name, or null if the source declares no module - or declares
      *         one whose name does not parse
@@ -199,7 +200,7 @@ public class Parser {
                 }
             }
         } catch (RuntimeException _) {
-            // a quick scan answers or gives up; it never reports, and never propagates
+            // a quick scan answers or gives up without propagating parsing failures
         }
 
         return null;
@@ -5931,6 +5932,21 @@ public class Parser {
                 m_fKeep = false;
                 throw new CompilerException("err=" + err);
             }
+        }
+
+        @Override
+        public boolean isAbortDesired() {
+            return f_branch.isAbortDesired();
+        }
+
+        @Override
+        public boolean hasSeriousErrors() {
+            return f_branch.hasSeriousErrors();
+        }
+
+        @Override
+        public boolean hasError(String sCode) {
+            return f_branch.hasError(sCode);
         }
 
         /**

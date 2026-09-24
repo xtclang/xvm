@@ -159,6 +159,9 @@ jobs:
                         - 'gradle.properties'
                         - 'settings.gradle.kts'
                         - '.github/workflows/commit.yml'
+                        - 'version.properties'
+                        - 'gradlew'
+                        - 'gradlew.bat'
                       lang:
                         - 'lang/**'
                         # Sources that live OUTSIDE lang/ but are synced or bundled INTO the
@@ -535,6 +538,7 @@ jobs:
                   ./gradlew ${{ steps.versions.outputs.gradle-options }} \
                     -PincludeBuildLang=true -PincludeBuildAttachLang=true \
                     :lang:lsp-server:test \
+                    --tests org.xvm.lsp.adapter.CompilerConsumerTest \
                     --tests org.xvm.lsp.adapter.XdkAdapterTest \
                     --tests org.xvm.lsp.adapter.XdkNavigationTest \
                     --tests org.xvm.lsp.adapter.SemanticModelTest \
@@ -653,6 +657,7 @@ jobs:
                   from xml.etree import ElementTree
                   results = Path("lang/lsp-server/build/test-results/test")
                   suites = [
+                      "adapter.CompilerConsumerTest",
                       "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
                       "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest", "adapter.CompilerProjectTest",
                       "adapter.TypeInfoDiagnosticsTest", "adapter.TypeInfoFinalCompositionTest", "adapter.EmbeddingDiagnosticsTest",

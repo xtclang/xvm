@@ -685,9 +685,6 @@ public class MethodBody {
     }
 
     /**
-     * @return the ConstantPool
-     */
-    /**
      * The pool to resolve well-known constants against, such as the {@code @Op} annotation class.
      *
      * The ambient one when there is one - the compiler pushes it for the pool it is working in,

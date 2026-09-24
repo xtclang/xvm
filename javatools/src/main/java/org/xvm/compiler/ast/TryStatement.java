@@ -119,6 +119,18 @@ public class TryStatement
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
+        ValidationScope previous = m_validatingFinally;
+        try {
+            return validateScoped(ctx, errs);
+        } finally {
+            m_validatingFinally = previous;
+        }
+    }
+
+    /**
+     * Validate with callback state restored by {@link #validateImpl} on every exit.
+     */
+    private Statement validateScoped(Context ctx, ErrorListener errs) {
         boolean fValid = true;
 
         if (resources == null) {
@@ -555,7 +567,7 @@ public class TryStatement
     protected StatementBlock            catchall;
 
     private transient ValidationScope m_validatingFinally;
-    private transient Register      m_regFinallyException;
+    private transient Register        m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");

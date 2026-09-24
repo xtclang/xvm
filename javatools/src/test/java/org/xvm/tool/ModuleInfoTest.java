@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,6 +59,31 @@ class ModuleInfoTest {
         var moduleDir = Files.createDirectories(tempDir.resolve(name));
         Files.writeString(moduleDir.resolve("Helper.x"), "class Helper {}");
         return sourceFile;
+    }
+
+    @Test
+    void testNodeOwnsOneDiagnosticBufferFromConstruction() throws IOException {
+        var file = createModuleSource("Diagnostics").toFile();
+        var info = new ModuleInfo(file, false);
+        var node = info.new FileNode(null, file);
+        var buffer = node.errs();
+        assertSame(buffer, node.errs());
+        assertFalse(node.hasSeriousErrors());
+        node.error("TEST", ErrorListener.NOWHERE);
+        assertTrue(node.hasSeriousErrors());
+        assertTrue(node.hasError("TEST"));
+        var diagnostic = buffer.getErrors().getFirst();
+        var caller = new ErrorList();
+        node.logErrors(caller);
+        assertEquals(1, caller.getErrors().size());
+        assertSame(diagnostic, caller.getErrors().getFirst());
+        assertTrue(buffer.getErrors().isEmpty(), "successful forwarding drains the buffer");
+        assertFalse(node.hasSeriousErrors());
+        var nextCaller = new ErrorList();
+        node.logErrors(nextCaller);
+        assertTrue(nextCaller.getErrors().isEmpty(), "drained diagnostics are not replayed");
+        node.fatal("FATAL", ErrorListener.NOWHERE);
+        assertTrue(node.isAbortDesired());
     }
 
     // ----- Basic construction tests --------------------------------------------------------------
