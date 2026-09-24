@@ -853,9 +853,6 @@ public class NameResolver
     private TypeMode m_typeMode;
 
     /**
-     * The ErrorListener to log errors to.
-     */
-    /**
      * Where the callbacks made during a resolution report. Empty outside {@link #resolve}, which
      * holds the caller's listener here for the duration of the call.
      */
