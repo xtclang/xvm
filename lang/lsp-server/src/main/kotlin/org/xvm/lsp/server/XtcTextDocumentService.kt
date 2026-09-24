@@ -149,20 +149,23 @@ class XtcTextDocumentService(
         }
     }
 
-    /** A cursor query owns its backend future, while the module analysis remains shared. */
+    /** A semantic query owns its backend future, while the module analysis remains shared. */
     private fun <T, R> queryAsync(
         method: String,
         uri: String,
         request: () -> CompletableFuture<T>,
+        workspace: Boolean = false,
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
-        val document =
+        val (document, documents) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(contentModified())
                 pendingQueries[result] = uri
-                openDocuments[uri]
+                openDocuments[uri] to if (workspace) openDocuments.toMap() else null
             }
+
+        fun stale(): Boolean = closed || openDocuments[uri] !== document || (documents != null && documents != openDocuments)
         val started = System.nanoTime()
         logger.info("{}: {}", method, uri)
         result.whenComplete { _, failure ->
@@ -182,7 +185,7 @@ class XtcTextDocumentService(
                 val work =
                     synchronized(lifecycle) {
                         if (result.isDone) return@thenRunAsync
-                        if (closed || openDocuments[uri] !== document) throw contentModified()
+                        if (stale()) throw contentModified()
                         request()
                     }
                 // Register after starting work: if cancellation won the race, this runs immediately.
@@ -191,7 +194,7 @@ class XtcTextDocumentService(
                     synchronized(lifecycle) {
                         if (!result.isDone) {
                             when {
-                                closed || openDocuments[uri] !== document -> {
+                                stale() -> {
                                     result.completeExceptionally(contentModified())
                                 }
 
@@ -503,26 +506,19 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.references
      */
     override fun references(params: ReferenceParams): CompletableFuture<List<Location>> =
-        supplyAsync(
+        queryAsync(
             "textDocument/references",
-            "${params.textDocument.uri} at ${params.position.fmt()}",
-            { result ->
-                val preview =
-                    result.take(5).joinToString { loc ->
-                        "${loc.uri.substringAfterLast('/')}@${loc.range.start.fmt()}"
-                    }
-                "${result.size} references${if (preview.isNotEmpty()) " [$preview]" else ""}"
-            },
-            uri = params.textDocument.uri,
-        ) {
-            adapter
-                .findReferences(
+            params.textDocument.uri,
+            {
+                adapter.findReferencesAsync(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
                     params.context.isIncludeDeclaration,
-                ).map { it.toLsp() }
-        }
+                )
+            },
+            workspace = true,
+        ) { references -> references.map { it.toLsp() } }
 
     /**
      * LSP: textDocument/documentSymbol
@@ -720,6 +716,7 @@ class XtcTextDocumentService(
                     params.newName,
                 )
             },
+            workspace = true,
         ) { edit ->
             edit?.takeIf { !it.versioned || server.supportsVersionedEdits }?.let {
                 val changes =

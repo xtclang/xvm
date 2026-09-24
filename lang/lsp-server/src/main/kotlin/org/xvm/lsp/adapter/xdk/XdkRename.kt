@@ -51,10 +51,12 @@ internal object XdkRename {
         line: Int,
         column: Int,
         name: String,
+        targets: Set<SemanticModel.SymbolId>? = null,
     ): Plan? {
         if (!identifier(name) || facts.models.any { it.status != SemanticModel.Status.COMPLETE }) return null
         val model = facts.models.singleOrNull { it.sourceName == source } ?: return null
-        val target = model.symbolAt(line, column)?.takeIf { it.renameable } ?: return null
+        val target = model.symbolAt(line, column)?.takeIf { it.renameable || it.id in targets.orEmpty() } ?: return null
+        val selected = targets ?: setOf(target.id)
         if (name == target.name) return Plan(texts, emptyMap())
         val edits =
             facts.models
@@ -62,7 +64,7 @@ internal object XdkRename {
                     val sourceName = view.sourceName ?: return null
                     val text = texts[sourceName] ?: return null
                     sourceName to
-                        view.occurrences.filter { it.symbol == target.id }.map { occurrence ->
+                        view.occurrences.filter { it.symbol in selected }.map { occurrence ->
                             val start = offset(text, occurrence.range.start) ?: return null
                             val end = offset(text, occurrence.range.end) ?: return null
                             if (text.substring(start, end) != target.name) return null
@@ -81,7 +83,43 @@ internal object XdkRename {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
         val expected = edges(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
         val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
-        return expected == actual
+        if (expected != actual) return false
+        val expectedDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
+        return expectedDispatch == actualDispatch
+    }
+
+    private data class Dispatch(
+        val owner: Target,
+        val methods: List<Target>,
+        val supported: Boolean,
+    )
+
+    /** A compiling rename can add an override without changing any written name or call binding. */
+    private fun dispatch(
+        facts: CompilerRenameFacts,
+        texts: Map<String, String>,
+        translate: (String, Int) -> Int?,
+    ): Set<Dispatch>? {
+        val declarations =
+            facts.models
+                .flatMap { it.symbols }
+                .distinctBy { it.id }
+                .mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
+                .toMap()
+
+        fun target(constant: Constant): Target? {
+            val symbol = declarations[constant] ?: return Target.External(constant)
+            val source = symbol.declarationSource ?: return Target.External(constant)
+            val text = texts[source] ?: return Target.External(constant)
+            val range = symbol.declaration ?: return null
+            val start = offset(text, range.start)?.let { translate(source, it) } ?: return null
+            val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
+            return Target.Declaration(Site(source, start, end), symbol.kind)
+        }
+        return facts.methods.chains.mapTo(linkedSetOf()) { chain ->
+            Dispatch(target(chain.owner) ?: return null, chain.methods.map { target(it) ?: return null }, chain.supported)
+        }
     }
 
     private data class Site(
