@@ -205,7 +205,8 @@ public class xPackage
         Container         container = frame.f_context.f_container;
         SingletonConstant constPkg  = container.getConstantPool().ensureSingletonConstConstant(idPkg);
 
-        ObjectHandle hPkg = constPkg.getHandle();
+        var state = container.ensureSingletonState(constPkg);
+        ObjectHandle hPkg = state.getHandle();
         if (hPkg != null) {
             return frame.pushStack(hPkg);
         }
@@ -215,14 +216,14 @@ public class xPackage
         // make sure we store the constructed ModuleHandle at the corresponding singleton
         switch (createPackageHandle(frame, clazz)) {
         case Op.R_NEXT:
-            constPkg.setHandle(hPkg = frame.popStack());
+            state.setHandle(hPkg = frame.popStack());
             container.f_heap.saveConstHandle(constPkg, hPkg);
             return frame.pushStack(hPkg);
 
         case Op.R_CALL:
             frame.m_frameNext.addContinuation(frameCaller -> {
                 ObjectHandle hP = frameCaller.popStack();
-                constPkg.setHandle(hP);
+                state.setHandle(hP);
                 container.f_heap.saveConstHandle(constPkg, hP);
                 return frameCaller.pushStack(hP);
             });

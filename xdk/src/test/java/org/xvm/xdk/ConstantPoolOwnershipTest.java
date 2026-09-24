@@ -63,12 +63,13 @@ class ConstantPoolOwnershipTest {
     // Master's embedding API exposes one configured compiler. Compiling does not start a runtime.
     private static final EmbeddingSupport COMPILER = EmbeddingSupport.instance().configure(repository(), null);
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x"})
     @Timeout(60)
-    void nestedSingletonsRemainIsolatedAcrossApplicationsInOneRuntime() throws Exception {
+    void singletonProgramsRunInIndependentApplications(String source) throws Exception {
         var repository = repository();
         var runtime = new Runtime();
-        try (var input = getClass().getResourceAsStream("/ownership/Singletons.x")) {
+        try (var input = getClass().getResourceAsStream("/ownership/" + source)) {
             assertNotNull(input);
             var compilation = new ErrorList(100);
             var module = COMPILER.compile(
@@ -111,12 +112,12 @@ class ConstantPoolOwnershipTest {
                     List.of(child.getModule()));
             var original = parent.getConstantPool().ensureSingletonConstConstant(parent.getModule());
             var value = new ObjectHandle(null) {};
-            original.setHandle(value);
+            parent.ensureSingletonState(original).setHandle(value);
             var alias = grandchild.getConstantPool().register(original);
 
             assertSame(parent, grandchild.getOriginContainer(alias));
             assertSame(original, grandchild.ensureSingletonConstant(alias));
-            assertNull(alias.getHandle());
+            assertSame(parent.ensureSingletonState(original), grandchild.ensureSingletonState(alias));
             assertSame(value, grandchild.ensureConstHandle(new TestFrame(grandchild.ensureServiceContext()), alias));
             assertSame(root, grandchild.getOriginContainer(grandchild.getConstantPool().valTrue()));
         } finally {
@@ -140,17 +141,17 @@ class ConstantPoolOwnershipTest {
             for (int i = 0; i < constants.length; i++) {
                 var original = constants[i];
                 var expected = handles[i];
-                assertSame(expected, original.getHandle());
+                assertSame(expected, root.ensureSingletonState(original).getHandle());
                 if (warmHeap) {
                     root.f_heap.saveConstHandle(original, expected);
                 }
                 var alias = child.getConstantPool().register(original);
                 assertNotSame(original, alias);
-                assertNull(alias.getHandle());
+                assertSame(root.ensureSingletonState(original), child.ensureSingletonState(alias));
                 assertSame(root, child.getOriginContainer(alias));
                 assertSame(expected, child.ensureConstHandle(frame, alias));
                 assertSame(expected, child.ensureConstHandle(frame, original));
-                assertSame(expected, original.getHandle());
+                assertSame(expected, root.ensureSingletonState(original).getHandle());
             }
         } finally {
             runtime.shutdownXVM();

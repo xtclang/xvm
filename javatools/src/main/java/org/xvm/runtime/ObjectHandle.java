@@ -898,7 +898,7 @@ public abstract class ObjectHandle
         public int proceed(Frame frameCaller, Frame.Continuation continuation) {
             return Utils.initConstants(frameCaller, Collections.singletonList(f_constSingleton),
                 frame -> {
-                    frame.pushStack(f_constSingleton.getHandle());
+                    frame.pushStack(frame.f_context.f_container.ensureSingletonState(f_constSingleton).getHandle());
                     return continuation.proceed(frame);
                 });
         }
@@ -996,23 +996,27 @@ public abstract class ObjectHandle
     }
 
     /**
-     * A handle that is used during circular singleton initialization process.
+     * A handle used during circular singleton initialization. It follows the selected owner's
+     * state entry, never a live value on the definition constant.
      */
     public static class InitializingHandle
             extends ObjectHandle {
-        private final SingletonConstant f_constSingleton;
+        private final SingletonState state;
 
-        public InitializingHandle(SingletonConstant constSingleton) {
+        /**
+         * @param state  the selected owner's active initialization, not a copied definition
+         */
+        public InitializingHandle(SingletonState state) {
             super(null);
 
-            f_constSingleton = constSingleton;
+            this.state = state;
         }
 
         /**
          * @return the underlying initialized object or null
          */
         public ObjectHandle getInitialized() {
-            ObjectHandle hConst = f_constSingleton.getHandle();
+            ObjectHandle hConst = state.getHandle();
             return hConst == this ? null : hConst;
         }
 
@@ -1021,10 +1025,10 @@ public abstract class ObjectHandle
          * @throws IllegalStateException if the underlying object is not yet initialized
          */
         protected ObjectHandle assertInitialized() {
-            ObjectHandle hConst = f_constSingleton.getHandle();
-            if (hConst instanceof InitializingHandle) {
+            ObjectHandle hConst = state.getHandle();
+            if (hConst == null || hConst instanceof InitializingHandle) {
                 throw new IllegalStateException("Circular initialization \"" +
-                        f_constSingleton.getValue().getValueString() + '"');
+                        state.getDefinition().getValue().getValueString() + '"');
             }
             return hConst;
         }
@@ -1057,7 +1061,7 @@ public abstract class ObjectHandle
         @Override
         public TypeConstant getType() {
             // we don't need to have a handle to answer the "type" question
-            return f_constSingleton.getType();
+            return state.getDefinition().getType();
         }
 
         @Override

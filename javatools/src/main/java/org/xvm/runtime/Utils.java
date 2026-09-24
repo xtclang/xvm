@@ -739,7 +739,7 @@ public abstract class Utils {
      * ambient pool. Initialization and waiter bookkeeping run on that owner's main service.
      * Requests containing constants from several owners return to the caller between owners;
      * they never transfer a child's unshared constants into a parent's pool. Callers that later
-     * read the handle must use {@link Container#ensureSingletonConstant} or the constant heap.
+     * read the handle must use {@link Container#ensureSingletonState} or the constant heap.
      *
      * @param frame           the caller's frame
      * @param listSingletons  the list of singleton constants
@@ -751,8 +751,9 @@ public abstract class Utils {
                                     Frame.Continuation continuation) {
         for (SingletonConstant definition : listSingletons) {
             Container owner = frame.f_context.f_container.getOriginContainer(definition);
-            SingletonConstant constSingleton = owner.getConstantPool().register(definition);
-            ObjectHandle hValue = constSingleton.getHandle();
+            SingletonState state = owner.f_heap.ensureSingletonState(owner.getConstantPool().register(definition));
+            SingletonConstant constSingleton = state.getDefinition();
+            ObjectHandle hValue = state.getHandle();
             if (hValue != null && !(hValue instanceof InitializingHandle)) {
                 continue;
             }
@@ -786,7 +787,7 @@ public abstract class Utils {
 
             if (hValue instanceof InitializingHandle) {
                 CompletableFuture<ObjectHandle> cfInitialized =
-                        constSingleton.getInitializationWaiter(frame.f_fiber);
+                        state.getInitializationWaiter(frame.f_fiber);
                 if (cfInitialized != null) {
                     return frame.waitForExternalCompletion(cfInitialized, Op.A_IGNORE,
                             frameCaller -> initConstants(frameCaller, listSingletons, continuation));
@@ -794,10 +795,10 @@ public abstract class Utils {
                 continue;
             }
 
-            if (!constSingleton.markInitializing(frame.f_fiber)) {
+            if (!state.markInitializing(frame.f_fiber)) {
                 // Same-fiber recursion is circular; another fiber in this owner must wait.
                 CompletableFuture<ObjectHandle> cfInitialized =
-                        constSingleton.getInitializationWaiter(frame.f_fiber);
+                        state.getInitializationWaiter(frame.f_fiber);
                 return cfInitialized == null
                     ? continuation.proceed(frame)
                     : frame.waitForExternalCompletion(cfInitialized, Op.A_IGNORE,
@@ -807,23 +808,23 @@ public abstract class Utils {
             int iResult = constructSingletonHandle(frame, constSingleton);
             switch (iResult) {
             case Op.R_NEXT:
-                constSingleton.setHandle(frame.popStack());
+                state.setHandle(frame.popStack());
                 break; // next constant
 
             case Op.R_CALL:
                 // A failed asynchronous constructor never reaches the success continuation.
                 // Release its owner-local attempt and wake waiters before another call retries.
-                frame.m_frameNext.addExceptionCleanup(() -> constSingleton.abortInitialization(
+                frame.m_frameNext.addExceptionCleanup(() -> state.abortInitialization(
                         new IllegalStateException("Singleton initialization failed: " +
                                 constSingleton.getValueString())));
                 frame.m_frameNext.addContinuation(frameCaller -> {
-                    constSingleton.setHandle(frameCaller.popStack());
+                    state.setHandle(frameCaller.popStack());
                     return initConstants(frameCaller, listSingletons, continuation);
                 });
                 return Op.R_CALL;
 
             case Op.R_EXCEPTION:
-                constSingleton.abortInitialization(frame.m_hException == null
+                state.abortInitialization(frame.m_hException == null
                         ? new IllegalStateException("Singleton initialization failed")
                         : frame.m_hException.getException());
                 return Op.R_EXCEPTION;

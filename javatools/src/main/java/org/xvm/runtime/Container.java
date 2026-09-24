@@ -441,13 +441,13 @@ public abstract class Container
     }
 
     /**
-     * Resolve a singleton definition to the constant that owns its initialization and value.
+     * Resolve a singleton definition to the canonical definition in its value owner's pool.
      *
-     * <p>Call this before reading or initializing a singleton received from a method, another
-     * pool or a copied definition. The module-sharing relationship selects the owner, even if
+     * <p>Use this when collecting definitions for deferred lookup or initialization. State access
+     * uses {@link #ensureSingletonState} directly. Module sharing selects the owner, even if
      * the input already belongs to this container's pool. Registration preserves an existing
-     * canonical value; copying a definition into a different owner starts without live state.
-     * The thread's ambient pool does not participate.
+     * canonical definition. Live values belong to {@link #ensureSingletonState}, not the constant;
+     * sharing a definition object does not share its state. The ambient pool does not participate.
      *
      * @param constant  the singleton definition
      *
@@ -455,6 +455,24 @@ public abstract class Container
      */
     public SingletonConstant ensureSingletonConstant(SingletonConstant constant) {
         return getOriginContainer(constant).getConstantPool().register(constant);
+    }
+
+    /**
+     * Obtain a singleton's state from its selected value owner, without initializing the value.
+     *
+     * <p>Use this for native bootstrap and raw state access; ordinary execution uses
+     * {@link Utils#initConstants} or the constant heap to initialize/defer as necessary. The
+     * module-sharing relationship is consulted even for a definition in this container's pool.
+     * State mutation follows the owner's main-service protocol documented by {@link SingletonState}.
+     * Definition canonicalization retains its existing pool synchronization requirements.
+     *
+     * @param constant  the singleton definition, possibly from another pool
+     *
+     * @return the owning heap's unique state entry for the canonical definition
+     */
+    public SingletonState ensureSingletonState(SingletonConstant constant) {
+        Container owner = getOriginContainer(constant);
+        return owner.f_heap.ensureSingletonState(owner.getConstantPool().register(constant));
     }
 
     /**

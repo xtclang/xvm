@@ -1561,7 +1561,7 @@ public class MethodStructure
             }
 
             // A same-pool alias can still denote a parent-owned singleton. Use the same owner
-            // selection as constant-heap lookup; only that canonical constant owns live state.
+            // selection as constant-heap lookup; live state is stored separately in that owner's heap.
             list.add(frame.f_context.f_container.ensureSingletonConstant(constSingle));
         } else if (constant instanceof ArrayConstant constArray) {
             for (Constant constElement : constArray.getValue()) {

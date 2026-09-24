@@ -4,16 +4,11 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import java.util.concurrent.CompletableFuture;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.runtime.Fiber;
-import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -22,6 +17,9 @@ import static org.xvm.util.Handy.writeMagnitude;
 /**
  * Represent a singleton instance of a const (including enum, package, module) or service class as a
  * constant value.
+ *
+ * <p>This is a definition only. The runtime container selects the owner of its live value and
+ * initialization state; copying or sharing the definition never copies or shares that state.
  */
 public class SingletonConstant
         extends ValueConstant {
@@ -100,117 +98,7 @@ public class SingletonConstant
         return m_constClass;
     }
 
-    // ----- run-time support  ---------------------------------------------------------------------
-
-    /**
-     * Read the live value from an owner's canonical singleton constant.
-     * Callers holding a copied definition first resolve it through
-     * {@link org.xvm.runtime.Container#ensureSingletonConstant}.
-     *
-     * @return the value, an initializing handle, or null before initialization
-     */
-    public ObjectHandle getHandle() {
-        return m_handle;
-    }
-
-    /**
-     * Set the handle for this singleton's value.
-     *
-     * <p>Update only the defining container's canonical constant, on its main service (or during
-     * native bootstrap before execution starts). This completes that owner's pending waiters.
-     *
-     * @param handle  the corresponding handle
-     */
-    public void setHandle(ObjectHandle handle) {
-        // the only scenarios when the singleton value can be reset are when it turns from
-        // INITIALIZING to anything or from a struct to an immutable value
-        assert handle != null;
-
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        m_handle            = handle;
-        m_fiberInitializing = null;
-        m_cfInitialized     = null;
-
-        if (cfInitialized != null) {
-            cfInitialized.complete(handle);
-        }
-    }
-
-    /**
-     * Begin initialization on the defining owner's main service. Other fibers in that service
-     * use {@link #getInitializationWaiter}; copied definitions must not share this bookkeeping.
-     *
-     * @param fiber  the current fiber
-     *
-     * @return false iff the ObjectHandle has already been marked as "initializing"
-     */
-    public boolean markInitializing(Fiber fiber) {
-        assert fiber != null;
-
-        // initialization is entered from the main context; record which fiber owns the attempt, so
-        // other fibers would wait without being mistaken for recursion
-        if (m_fiberInitializing != null) {
-            return false;
-        }
-
-        m_fiberInitializing = fiber;
-        return true;
-    }
-
-    /**
-     * Obtain a future to wait on if this singleton is being initialized by another fiber.
-     *
-     * @param fiber  the current fiber
-     *
-     * @return a future for the initialized handle, or null for recursive initialization
-     */
-    public CompletableFuture<ObjectHandle> getInitializationWaiter(Fiber fiber) {
-        assert fiber != null;
-        Fiber fiberInitializing = m_fiberInitializing;
-
-        assert fiberInitializing != null;
-        if (fiber == fiberInitializing) {
-            // only the initializing fiber represents true recursive initialization; all others
-            // must wait for completion
-            m_handle = new InitializingHandle(this);
-            return null;
-        }
-
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        if (cfInitialized == null) {
-            m_cfInitialized = cfInitialized = new CompletableFuture<>();
-        }
-        return cfInitialized;
-    }
-
-    /**
-     * Abort the current singleton initialization.
-     *
-     * @param e  the exception that prevented initialization
-     */
-    public void abortInitialization(Throwable e) {
-        CompletableFuture<ObjectHandle> cfInitialized = m_cfInitialized;
-        m_handle            = null;
-        m_fiberInitializing = null;
-        m_cfInitialized     = null;
-
-        if (cfInitialized != null) {
-            cfInitialized.completeExceptionally(e);
-        }
-    }
-
     // ----- Constant methods ----------------------------------------------------------------------
-
-    @Override
-    protected SingletonConstant adoptedBy(ConstantPool pool) {
-        var copy = (SingletonConstant) super.adoptedBy(pool);
-        // A definition copied into another pool does not own the source execution's singleton
-        // or its initialization attempt. Container.ensureSingletonConstant selects shared owners.
-        copy.m_handle            = null;
-        copy.m_fiberInitializing = null;
-        copy.m_cfInitialized     = null;
-        return copy;
-    }
 
     @Override
     public Format getFormat() {
@@ -297,20 +185,4 @@ public class SingletonConstant
      * The IdentityConstant for the class of the singleton value.
      */
     private IdentityConstant m_constClass;
-
-    /**
-     * The ObjectHandle representing this singleton's value. Can be observed outside the
-     * main-context fiber.
-     */
-    private transient volatile ObjectHandle m_handle;
-
-    /**
-     * The fiber that is initializing the handle (optional).
-     */
-    private transient Fiber m_fiberInitializing;
-
-    /**
-     * Future completed when a concurrent initialization finishes.
-     */
-    private transient CompletableFuture<ObjectHandle> m_cfInitialized;
 }

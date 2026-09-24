@@ -38,7 +38,7 @@ public class ConstHeap {
      */
     protected ObjectHandle ensureConstHandle(Frame frame, Constant constant) {
         // A local alias of a core/shared singleton still uses its origin container's value.
-        // Resolve ownership before either the heap lookup or the constant's live-state lookup.
+        // Resolve ownership before either the cached-handle or owner-local state lookup.
         Constant constValue = constant instanceof SingletonConstant singleton
                 ? f_container.ensureSingletonConstant(singleton)
                 : constant;
@@ -54,10 +54,10 @@ public class ConstHeap {
         }
 
         if (constValue instanceof SingletonConstant constSingle) {
-            hValue = constSingle.getHandle();
+            hValue = f_container.ensureSingletonState(constSingle).getHandle();
             if (hValue != null) {
-                if (hValue instanceof xLazy.LazyHandle hLazy && !hLazy.isAssigned()) {
-                    // compute the lazy value now
+                if (hValue instanceof xLazy.LazyHandle hLazy) {
+                    // A ref may already have assigned it; constant access still needs the referent.
                     switch (hLazy.getVarSupport().getReferent(frame, hLazy, Op.A_STACK)) {
                     case Op.R_NEXT:
                         hValue = frame.popStack();
@@ -155,6 +155,20 @@ public class ConstHeap {
     }
 
     /**
+     * Obtain a local singleton entry after {@link Container#ensureSingletonState} has selected
+     * this heap as the value owner and canonicalized the definition in its pool. Creating the
+     * entry performs no initialization, so atomic insertion cannot recurse into user code.
+     *
+     * @param definition  the owner-canonical singleton definition
+     *
+     * @return this heap's unique state entry
+     */
+    SingletonState ensureSingletonState(SingletonConstant definition) {
+        assert definition.getConstantPool() == f_container.getConstantPool();
+        return singletonStates.computeIfAbsent(definition, SingletonState::new);
+    }
+
+    /**
      * Save the handle for a constant.
      *
      * @param constValue  the constant
@@ -217,7 +231,7 @@ public class ConstHeap {
                     hConst.getTemplate().ensureClass(f_container, hConst.getType()));
 
             if (c instanceof SingletonConstant constSingleton) {
-                constSingleton.setHandle(hNew);
+                f_container.ensureSingletonState(constSingleton).setHandle(hNew);
             }
             return hNew;
         });
@@ -234,4 +248,9 @@ public class ConstHeap {
      * The cached constants.
      */
     private final Map<Constant, ObjectHandle> f_mapConstants = new ConcurrentHashMap<>();
+
+    /**
+     * Live singleton state for this owner, independent of the definition object's lifetime.
+     */
+    private final Map<SingletonConstant, SingletonState> singletonStates = new ConcurrentHashMap<>();
 }

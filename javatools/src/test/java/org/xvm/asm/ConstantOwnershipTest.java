@@ -52,20 +52,16 @@ class ConstantOwnershipTest {
         var source = new FileStructure("Source");
         var pool = source.getConstantPool();
         var destination = new FileStructure(source).getConstantPool();
-        var singleton = pool.ensureSingletonConstConstant(source.getModule().getIdentityConstant());
         var epoch = FileTime.fromMillis(0);
         var node = pool.register(new FSNodeConstant(pool, "file", epoch, epoch, new byte[] {1}));
         var dir = pool.register(new FSNodeConstant(pool, "dir", epoch, epoch, new FSNodeConstant[] {node}));
         var store = pool.register(new FileStoreConstant(pool, "dir", dir));
         var handle = new ObjectHandle(null) {};
-        singleton.setHandle(handle);
         node.setHandle(handle);
         store.setHandle(handle);
 
-        assertNull(destination.register(singleton).getHandle());
         assertNull(destination.register(node).getHandle());
         assertNull(destination.register(store).getHandle());
-        assertSame(handle, pool.register(singleton).getHandle());
         assertSame(handle, node.getHandle());
         assertSame(handle, store.getHandle());
     }

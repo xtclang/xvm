@@ -1,7 +1,9 @@
 # Separating definitions, type metadata and execution state
 
-Status: proposal for discussion, 2026-09-24. No architectural split is implemented by this
-branch. The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
+Status: staged proposal and singleton-state prototype, 2026-09-24. The experimental branch
+`lagergren/constant-pool-state-separation` implements only the singleton execution-state boundary;
+the descriptor, metadata, generated-code and frozen-image boundaries remain proposals.
+The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
 [The ownership audit](constant-pool-ownership.md) documents its changes, regressions and remaining
@@ -73,8 +75,10 @@ flowchart TD
     C[Compilation and linking workspace] --> I[Immutable linked definition image]
     I --> T[Runtime type context]
     T --> D[Derived descriptors and metadata]
+    T --> G[Runtime generated executable code]
     I --> E[Container execution context]
     T --> E
+    G --> E
     E --> S[Singleton state, handles and method execution state]
 ```
 
@@ -204,6 +208,10 @@ Each row is a scope boundary, not necessarily a single small PR. Stages 3–5 ma
 splits after stage 1's inventory; do not assign reliable effort estimates without that evidence.
 The singleton prototype is the smallest useful architectural experiment, but even it must migrate
 all initialization/failure paths rather than just moving the handle field.
+
+Stage 4a is required because a metadata lookup can synthesize executable methods. It must be
+coordinated with stages 3 and 4; a semantic cache cannot be declared image-pure while its lookup
+still inserts methods into the image. The detailed inventory below identifies those paths.
 
 Stages 2 and 4 should keep definitions usable by existing code through narrow transitional APIs.
 Every intermediate commit must compile both interpreter and the existing shared JIT sources.
@@ -376,3 +384,37 @@ the missing constructor local-variable slots and require the expected exception 
 that prerequisite is isolated from the state-table migration in `846bf5315`. The strengthened
 test fails on `bda7556e7`; all 8 XDK ownership cases and formatting pass with the fix, without the
 array-bounds error on stderr. Use `846bf5315` as the behaviorally valid performance baseline.
+
+### Implemented singleton boundary
+
+`SingletonConstant` now contains definition data only. `Container.ensureSingletonState` selects
+the permitted ancestor, canonicalizes the definition there, and gets its unique `SingletonState`
+from that container's `ConstHeap`. The entry contains the value, initializing fiber and completion
+future. Native enum bootstrap, deferred/recursive handles, lazy refs, package/module creation,
+relocation and initializer completion/failure all use this boundary. The old no-context runtime
+methods on `SingletonConstant` are removed; retaining them would require guessing a value owner.
+`ensureSingletonConstant` remains a definition canonicalization operation, not a value accessor.
+
+The map's atomic insertion only creates an empty entry; it never invokes user code. Initialization
+still runs on the selected owner's main service. Concurrent lookup of an already-canonical key is
+tested; this does not authorize concurrent pool mutation or arbitrary state writers. Success and
+failure clear bookkeeping before notifying waiters. Repeated recursion keeps one placeholder;
+after failure that placeholder reports an uninitialized value instead of dereferencing null.
+
+Tests now exercise two unshared containers using the exact same definition object, as well as
+explicit ancestor sharing, copied definitions, mixed-owner dispatch, multiple waiters, failure
+and retry, recursion, and lookups with no/unrelated ambient binding. The `.x` fixtures run twice
+under one native root with independent application definitions. `SingletonPaths.x` additionally
+covers user/native enums, a static lazy reference and repeated circular initialization failure.
+
+That fixture exposed another baseline bug: after `ref.get()` initializes a static lazy property,
+ordinary constant access skipped dereferencing the already-assigned lazy wrapper. It then failed
+an integer comparison with a Java ClassCastException. The same fixture reproduced this using the
+saved `846bf5315` runtime. The heap now always obtains a lazy property's referent; raw reference
+access still reads the owner's state entry without evaluating it. This is a correctness fix, not
+an architectural performance gain. The before/after benchmark uses the unchanged `Singletons.x`
+workload from `846bf5315`, which does not exercise that lazy-reference bug.
+
+The prototype does not remove application/method copies, reset rules for other constants,
+generation-sensitive metadata, native statics or shutdown machinery. Same-definition tests prove
+the singleton boundary only, not safe execution against a fully shared mutable FileStructure.

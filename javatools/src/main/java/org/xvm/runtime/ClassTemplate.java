@@ -1476,7 +1476,7 @@ public abstract class ClassTemplate
             SingletonConstant constLazy =
                     idProp.getConstantPool().ensureSingletonConstConstant(idProp);
             // we need to avoid to kick the computation logic; they only asked for a ref
-            ObjectHandle hLazy = constLazy.getHandle();
+            ObjectHandle hLazy = frame.f_context.f_container.ensureSingletonState(constLazy).getHandle();
             assert hLazy != null; // it must be there - assigned or not
             return frame.assignDeferredValue(iReturn, hLazy);
         }

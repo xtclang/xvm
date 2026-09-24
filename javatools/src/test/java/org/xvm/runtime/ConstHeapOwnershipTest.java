@@ -22,14 +22,14 @@ class ConstHeapOwnershipTest {
             var child = container(runtime, parent);
             var constant = parent.getConstantPool().ensureSingletonConstConstant(parent.getModule());
             var handle = new ObjectHandle(null) {};
-            constant.setHandle(handle);
+            parent.ensureSingletonState(constant).setHandle(handle);
             parent.f_heap.saveConstHandle(constant, handle);
             var local = child.getConstantPool().register(constant);
 
             assertNull(child.f_heap.getConstHandle(local));
-            assertNull(local.getHandle());
+            assertNull(child.ensureSingletonState(local).getHandle());
             assertSame(handle, parent.f_heap.getConstHandle(constant));
-            assertSame(handle, constant.getHandle());
+            assertSame(handle, parent.ensureSingletonState(constant).getHandle());
         } finally {
             runtime.shutdownXVM();
         }

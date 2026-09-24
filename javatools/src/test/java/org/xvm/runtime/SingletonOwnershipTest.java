@@ -1,13 +1,18 @@
 package org.xvm.runtime;
 
 import java.util.List;
+
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.Op;
 
@@ -15,6 +20,7 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.runtime.ServiceContext.CallLaterRequest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,6 +34,108 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SingletonOwnershipTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
+    void identicalDefinitionObjectsDoNotGrantValueSharing(boolean shared) {
+        var runtime = new Runtime();
+        try {
+            var file = new FileStructure("App");
+            var parent = new TestContainer(runtime, null, file, false);
+            var child = new TestContainer(runtime, parent, file, shared);
+            var definition = file.getConstantPool().ensureSingletonConstConstant(file.getModuleId());
+            var parentState = parent.ensureSingletonState(definition);
+            var childState = child.ensureSingletonState(definition);
+            assertSame(definition, parentState.getDefinition());
+            assertSame(definition, childState.getDefinition());
+            parentState.setHandle(parent.main.value);
+            if (shared) {
+                assertSame(parentState, childState);
+                assertSame(parent.main.value, childState.getHandle());
+            } else {
+                assertNotSame(parentState, childState);
+                assertNull(childState.getHandle());
+                childState.setHandle(child.main.value);
+                assertSame(child.main.value, childState.getHandle());
+                assertSame(parent.main.value, parentState.getHandle());
+            }
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
+    @Timeout(10)
+    void concurrentLookupPublishesOneEntryWithoutAnAmbientPoolDependency() throws Exception {
+        var runtime = new Runtime();
+        try (var threads = Executors.newVirtualThreadPerTaskExecutor()) {
+            var owner = new TestContainer(runtime, null, new FileStructure("App"), false);
+            var definition = owner.getConstantPool().ensureSingletonConstConstant(owner.getModule());
+            var unrelated = new FileStructure("Unrelated").getConstantPool();
+            var ready = new CountDownLatch(2);
+            var start = new CountDownLatch(1);
+            // Canonicalization is completed above; this checks concurrent entry publication, not
+            // unsupported concurrent writes to a mutable pool or parallel initialization.
+            var first = threads.submit(() -> {
+                try (var scope = ConstantPool.withPool(null)) {
+                    ready.countDown();
+                    start.await();
+                    return owner.ensureSingletonState(definition);
+                }
+            });
+            var second = threads.submit(() -> {
+                try (var scope = ConstantPool.withPool(unrelated)) {
+                    ready.countDown();
+                    start.await();
+                    return owner.ensureSingletonState(definition);
+                }
+            });
+            try {
+                ready.await();
+            } finally {
+                start.countDown();
+            }
+            assertSame(first.get(), second.get());
+            assertSame(definition, first.get().getDefinition());
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
+    void recursiveHandleAndMultipleWaitersStayWithTheirSelectedOwner() {
+        var runtime = new Runtime();
+        try {
+            var file = new FileStructure("App");
+            var owner = new TestContainer(runtime, null, file, false);
+            var sibling = new TestContainer(runtime, null, file, false);
+            var definition = file.getConstantPool().ensureSingletonConstConstant(file.getModuleId());
+            var state = owner.ensureSingletonState(definition);
+            var initializer = fiber(owner.main);
+            assertTrue(state.markInitializing(initializer));
+            assertFalse(state.markInitializing(fiber(owner.main)));
+            var waiting = state.getInitializationWaiter(fiber(owner.main));
+            assertSame(waiting, state.getInitializationWaiter(fiber(owner.main)));
+            var first = waiting.thenApply(value -> value);
+            var second = waiting.thenApply(value -> value);
+            assertNull(state.getInitializationWaiter(initializer));
+            var recursive = (InitializingHandle) state.getHandle();
+            assertNull(state.getInitializationWaiter(initializer));
+            assertSame(recursive, state.getHandle());
+            assertNull(recursive.getInitialized());
+            assertThrows(IllegalStateException.class, recursive::assertInitialized);
+
+            sibling.ensureSingletonState(definition).setHandle(sibling.main.value);
+            assertNull(recursive.getInitialized());
+            assertFalse(waiting.isDone());
+            state.setHandle(owner.main.value);
+            assertSame(owner.main.value, first.join());
+            assertSame(owner.main.value, second.join());
+            assertSame(owner.main.value, recursive.getInitialized());
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
     void moduleSharingSelectsTheOwnerEvenForALocalAlias(boolean shared) {
         var runtime = new Runtime();
         try {
@@ -36,18 +144,18 @@ class SingletonOwnershipTest {
             var child = new TestContainer(runtime, parent, new FileStructure(file), shared);
             var original = parent.getConstantPool().ensureSingletonConstConstant(parent.getModule());
             var value = new ObjectHandle(null) {};
-            original.setHandle(value);
+            parent.ensureSingletonState(original).setHandle(value);
             var alias = child.getConstantPool().register(original);
             var selected = child.ensureSingletonConstant(alias);
             assertSame(selected, child.ensureSingletonConstant(original));
             if (shared) {
                 assertSame(original, selected);
-                assertSame(value, selected.getHandle());
+                assertSame(value, child.ensureSingletonState(selected).getHandle());
             } else {
                 assertSame(alias, selected);
-                assertNull(selected.getHandle());
+                assertNull(child.ensureSingletonState(selected).getHandle());
             }
-            assertSame(value, original.getHandle());
+            assertSame(value, parent.ensureSingletonState(original).getHandle());
         } finally {
             runtime.shutdownXVM();
         }
@@ -68,10 +176,10 @@ class SingletonOwnershipTest {
             assertEquals(Op.R_NEXT, Utils.initConstants(frame, definitions, _ -> Op.R_NEXT));
             assertEquals(1, parent.main.requests);
             assertEquals(1, child.main.requests);
-            assertSame(parent.main.value, shared.getHandle());
-            assertSame(child.main.value, local.getHandle());
-            assertNotSame(shared.getHandle(), local.getHandle());
-            assertNull(alias.getHandle(), "The alias must not own a separate initialization");
+            assertSame(parent.main.value, parent.ensureSingletonState(shared).getHandle());
+            assertSame(child.main.value, child.ensureSingletonState(local).getHandle());
+            assertNotSame(parent.ensureSingletonState(shared).getHandle(), child.ensureSingletonState(local).getHandle());
+            assertSame(parent.ensureSingletonState(shared), child.ensureSingletonState(alias));
 
             assertEquals(Op.R_NEXT, Utils.initConstants(frame, definitions, _ -> Op.R_NEXT));
             assertEquals(1, parent.main.requests);
@@ -81,32 +189,36 @@ class SingletonOwnershipTest {
         }
     }
 
-    @Test
-    void adoptingADefinitionDoesNotShareInitializationWaiters() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void unsharedOwnersHaveIndependentInitializationWaiters(boolean copiedDefinition) {
         var runtime = new Runtime();
         try {
             var file = new FileStructure("App");
             var first = new TestContainer(runtime, null, file, false);
-            var second = new TestContainer(runtime, first, new FileStructure(file), false);
+            var second = new TestContainer(runtime, first,
+                    copiedDefinition ? new FileStructure(file) : file, false);
             var original = first.getConstantPool().ensureSingletonConstConstant(first.getModule());
             var firstInitializer = fiber(first.main);
             var firstWaiter = fiber(first.main);
-            assertTrue(original.markInitializing(firstInitializer));
-            var originalCompletion = original.getInitializationWaiter(firstWaiter);
+            var originalState = first.ensureSingletonState(original);
+            assertTrue(originalState.markInitializing(firstInitializer));
+            var originalCompletion = originalState.getInitializationWaiter(firstWaiter);
             assertSame(original, first.getConstantPool().register(original));
-            assertSame(originalCompletion, original.getInitializationWaiter(firstWaiter));
+            assertSame(originalCompletion, originalState.getInitializationWaiter(firstWaiter));
 
             var copy = second.ensureSingletonConstant(original);
-            assertNotSame(original, copy);
-            assertTrue(copy.markInitializing(fiber(second.main)));
-            var copyCompletion = copy.getInitializationWaiter(fiber(second.main));
+            assertEquals(copiedDefinition, original != copy);
+            var copyState = second.ensureSingletonState(copy);
+            assertTrue(copyState.markInitializing(fiber(second.main)));
+            var copyCompletion = copyState.getInitializationWaiter(fiber(second.main));
             assertNotSame(originalCompletion, copyCompletion);
-            original.setHandle(first.main.value);
+            originalState.setHandle(first.main.value);
             assertSame(first.main.value, originalCompletion.join());
             assertFalse(copyCompletion.isDone());
-            copy.setHandle(second.main.value);
+            copyState.setHandle(second.main.value);
             assertSame(second.main.value, copyCompletion.join());
-            assertSame(first.main.value, original.getHandle());
+            assertSame(first.main.value, originalState.getHandle());
         } finally {
             runtime.shutdownXVM();
         }
@@ -117,13 +229,19 @@ class SingletonOwnershipTest {
         var runtime = new Runtime();
         try {
             var owner = new TestContainer(runtime, null, new FileStructure("App"), false);
-            var singleton = owner.getConstantPool().ensureSingletonConstConstant(owner.getModule());
-            assertTrue(singleton.markInitializing(fiber(owner.main)));
+            var singleton = owner.ensureSingletonState(
+                    owner.getConstantPool().ensureSingletonConstConstant(owner.getModule()));
+            var initializer = fiber(owner.main);
+            assertTrue(singleton.markInitializing(initializer));
             var waiting = singleton.getInitializationWaiter(fiber(owner.main));
+            assertNull(singleton.getInitializationWaiter(initializer));
+            var recursive = (InitializingHandle) singleton.getHandle();
             var failure = new IllegalStateException("expected constructor failure");
             singleton.abortInitialization(failure);
             assertSame(failure, assertThrows(CompletionException.class, waiting::join).getCause());
             assertNull(singleton.getHandle());
+            assertNull(recursive.getInitialized());
+            assertThrows(IllegalStateException.class, recursive::assertInitialized);
 
             assertTrue(singleton.markInitializing(fiber(owner.main)));
             var retry = singleton.getInitializationWaiter(fiber(owner.main));
@@ -180,10 +298,11 @@ class SingletonOwnershipTest {
             assertEquals(1, constants.size());
             var constant = constants.getFirst();
             assertSame(f_container.getConstantPool(), constant.getConstantPool());
-            assertTrue(constant.markInitializing(fiber(this)),
+            var state = f_container.ensureSingletonState(constant);
+            assertTrue(state.markInitializing(fiber(this)),
                     "The caller must not claim initialization before reaching the owner's service");
             requests++;
-            constant.setHandle(value);
+            state.setHandle(value);
             return CompletableFuture.completedFuture(value);
         }
     }

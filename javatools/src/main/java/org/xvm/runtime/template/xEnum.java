@@ -67,7 +67,8 @@ public class xEnum
 
                     // native enums don't require any initialization
                     if (!hValue.isStruct()) {
-                        pool().ensureSingletonConstConstant(child.getIdentityConstant()).setHandle(hValue);
+                        f_container.ensureSingletonState(
+                                pool().ensureSingletonConstConstant(child.getIdentityConstant())).setHandle(hValue);
                     }
                 }
             }
@@ -84,7 +85,8 @@ public class xEnum
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof SingletonConstant constValue) {
-            ObjectHandle hValue = constValue.getHandle();
+            var state = frame.f_context.f_container.ensureSingletonState(constValue);
+            ObjectHandle hValue = state.getHandle();
             if (hValue != null) {
                 // Note: this could be an InitializingHandle
                 return frame.pushStack(hValue);
@@ -95,7 +97,7 @@ public class xEnum
             xEnum templateEnum = (xEnum) getSuper();
 
             EnumHandle hEnum = templateEnum.getEnumByConstant(constValue.getClassConstant());
-            constValue.setHandle(hEnum);
+            state.setHandle(hEnum);
 
             return hEnum.isStruct()
                     ? completeConstruction(frame, hEnum)

@@ -5,6 +5,10 @@ Status: extracted on `lagergren/constant-pool-ownership-only` from master `601a6
 the ownership implementation and its minimal execution prerequisites. It excludes the Gradle
 DIRECT/PERSISTENT work and broad resource/shutdown changes.
 The proposed next architectural step is in [the separation plan](constant-pool-architecture-plan.md).
+The experimental branch `lagergren/constant-pool-state-separation`, forked at `bda7556e7`, now
+implements its singleton-state step. Sections C15/C16 below distinguish the original fix from
+that follow-up; the rest of the ownership model remains in place. The plan records the wider
+mutation inventory, including runtime-generated methods and the remaining freeze blockers.
 The original combined work remains on `lagergren/constant-pool-ownership`; its
 [submission plan](https://github.com/xtclang/xvm/blob/lagergren/constant-pool-ownership/plugin/doc/plans/embedded-runtime-pr-plan.md)
 still governs the larger embedded-runtime series.
@@ -72,7 +76,7 @@ Five different concepts must not be conflated:
 | Definition owner | The pool containing this constant and interpreting its index | `constant.getConstantPool()` |
 | Operation destination | The pool in which a caller needs a new or specialized result | An explicit argument, compilation context or target TypeInfo |
 | Ambient binding | A temporary compatibility value associated with the current Java thread | `ConstantPool.withPool(...)`; internal destination selection no longer reads it |
-| Runtime-value owner | The container that owns a singleton's initialization and live handle | `getOriginContainer` followed by canonical registration in that container |
+| Runtime-value owner | The container that owns a singleton's initialization and live handle | `ensureSingletonState`: origin selection, canonical definition, owner-local entry |
 | Diagnostic recipient | The operation that must receive errors and warnings | Its explicit `ErrorListener`, or the existing runtime/silent policy selected by the caller |
 
 `getConstantPool()` remains necessary: it tells us where a definition actually lives. Removing
@@ -82,8 +86,9 @@ that every input from A must be forcibly rebound to B.
 ### Same-pool operations
 
 Registering a definition in its own pool normally returns its canonical entry. It must retain
-valid same-owner caches and singleton initialization state. Registration is not a general cache
-reset. An owner-local operation, such as inspecting a declaration's annotations or folding a
+valid same-owner caches. Singleton initialization state now lives in the owner's heap and is
+unaffected by definition registration. Registration is not a general cache reset. An owner-local
+operation, such as inspecting a declaration's annotations or folding a
 number without an explicit destination, uses that definition's owner.
 
 ### Cross-pool operations
@@ -394,9 +399,14 @@ mostly the try-with-resources indentation around the existing initialization bod
 
 ### C15 — copied definitions do not copy initialized runtime state
 
-Adopted `SingletonConstant`, `FSNodeConstant` and `FileStoreConstant` instances clear materialized
-handles. Singleton copies also clear initializer fiber/future state. These are definition copies,
-not transfers of live application values. Same-pool registration retains canonical live state.
+On the ownership-only baseline, adopted `SingletonConstant`, `FSNodeConstant` and `FileStoreConstant`
+instances clear materialized handles; singleton copies also clear initializer fiber/future state.
+These are definition copies, not transfers of live application values.
+
+On the state-separation branch, `SingletonConstant` has no live state or state-reset override.
+Each selected container's `ConstHeap` owns a `SingletonState` table, independent of definition
+copies. Two unshared containers can use the same definition object and retain different values.
+Same-owner lookup reuses the entry. The FSNode/FileStore reset rules remain unchanged.
 
 **Source-confirmed/preventive isolation:** shallow adoption retained execution objects. Normal
 serialized repository paths did not serialize those Java caches, so they often avoided it.
@@ -407,8 +417,10 @@ They do not establish an observed retained-heap leak in the ordinary serialized 
 ### C16 — canonical singleton owner and initialization context
 
 `Container.ensureSingletonConstant` first finds the defining container, then registers the
-definition in its pool. `ConstHeap.ensureConstHandle` and `MethodStructure.addSingleton` use that
-canonical constant before consulting a handle or scheduling initialization.
+definition in its pool. In the state-separation follow-up, `ensureSingletonState` performs that
+selection and returns the owning heap's entry. `Utils`, constant-heap lookup, deferred handles,
+native enums, package/module construction, lazy reference access and relocation read/write this
+entry. Definition canonicalization alone never grants access to state on a constant object.
 
 `Utils.initConstants` routes each singleton to its owner's main service context. Completed values
 take the fast path; initialization fiber/future state belongs to that owner. Cross-context work
@@ -425,6 +437,15 @@ XDK `nativeSingletonIdentityDoesNotDependOnHeapWarmup` checks exact native handl
 both cold and warm heaps. `SingletonOwnershipTest` checks explicit shared/unshared origins,
 mixed-owner dispatch, independent waiters, abort and retry. Its recording service context is a
 deterministic synchronous stub; it does not simulate every concurrent initializer interleaving.
+
+The prototype additionally tests identical definition objects in separate owners, multiple waiters,
+repeated recursive access and concurrent entry publication with explicit start barriers. The latter
+uses an already-canonical key; it is not a concurrent mutable-pool test. `SingletonPaths.x` exercises
+enum structs, native enum values, lazy references and circular initialization failure. Constructor
+failure tests now require the intended exception type/message: the initial test had accepted an
+array-bounds error caused by missing constructor local slots. That prerequisite is fixed separately
+in `846bf5315`. The lazy reference test also reproduced and fixed returning an assigned LazyHandle
+instead of its referent. Both findings and the before/after protocol are recorded in the plan.
 
 ### C17 — a rejected parent handle must not escape
 
@@ -623,8 +644,9 @@ failure as fixed without a test, or a passing combined test as proof of untested
 2. Use the result of registration. Preserve an unchanged foreign input when adoption is disallowed.
 3. On copying metadata, separate portable definition data from caches, compiler objects, recursion
    guards and live values. Keep valid canonical same-owner state.
-4. For singletons, select the defining container and canonical constant before inspecting a handle,
-   then initialize in that owner's service context. Definition compatibility alone is insufficient.
+4. For singletons, select the defining container and canonical definition, obtain that owner's
+   `SingletonState`, then initialize in its service context. Definition compatibility alone is
+   insufficient, including when two owners use the exact same constant object.
 5. Keep request listeners at operation boundaries. Reusable metadata may retain diagnostic values,
    not a host sink; select any silent/runtime fallback explicitly without consulting an ambient pool.
 6. Scope compatibility bindings on the executing thread. A dispatched task opens its own scope;
@@ -716,7 +738,13 @@ Root: `javatools/src/main/java/org/xvm/`.
 | [xdk/java/org/xvm/xdk/SignatureCompatibilityTest.java](../xdk/src/test/java/org/xvm/xdk/SignatureCompatibilityTest.java) | C02, C12 |
 | [xdk/resources/ownership/Singletons.x](../xdk/src/test/resources/ownership/Singletons.x) | C17, C18; executed by XDK ConstantPoolOwnershipTest |
 
-This inventory accounts for **50 production files and 15 test/resource files**.
+The ownership-only baseline inventory accounts for **50 production files and 15 test/resource
+files**. The state-separation follow-up also changes `runtime/ClassTemplate.java`,
+`runtime/ObjectHandle.java`, `runtime/template/xEnum.java` and `runtime/template/reflect/xPackage.java`,
+adds `runtime/SingletonState.java`, and extends the existing ownership tests. It adds
+`xdk/src/test/resources/ownership/SingletonPaths.x` and the opt-in
+`xdk/src/test/benchmarks/SingletonStateBenchmark.java`. Its implementation, validation and
+measurement record is in the separation plan; baseline test counts above remain historical.
 Existing supporting tests named in the catalogue but unchanged by these ownership commits are
 not counted as newly modified tests. Documentation on this branch is this file and the separation
 architecture plan. The larger embedding plans and JIT archive documentation remain on their
