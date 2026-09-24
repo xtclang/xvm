@@ -32,6 +32,13 @@ public class ArrayᐸUInt8ᐳ
         super(ctx, type);
     }
 
+    /**
+     * Create a constant byte array from packed data.
+     */
+    public ArrayᐸUInt8ᐳ(Ctx ctx, TypeConstant type, long[] data, long size) {
+        super(ctx, type, data, size);
+    }
+
     // ----- Array API -----------------------------------------------------------------------------
 
     /**

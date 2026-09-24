@@ -47,9 +47,19 @@ public class NativeNames {
 
         reservedMethodName.put("numbers.Random/bit/0",     "bit");
         reservedMethodName.put("numbers.Random/bits/1",    "bits");
+        reservedMethodName.put("numbers.Random/bytes/1",   "bytes");
         reservedMethodName.put("numbers.Random/int/1",     "int");
         reservedMethodName.put("numbers.Random/int8/0",    "int8");
+        reservedMethodName.put("numbers.Random/int16/0",   "int16");
+        reservedMethodName.put("numbers.Random/int32/0",   "int32");
+        reservedMethodName.put("numbers.Random/int64/0",   "int64");
         reservedMethodName.put("numbers.Random/uint8/0",   "uint8");
+        reservedMethodName.put("numbers.Random/uint16/0",  "uint16");
+        reservedMethodName.put("numbers.Random/uint32/0",  "uint32");
+        reservedMethodName.put("numbers.Random/uint64/0",  "uint64");
+        reservedMethodName.put("numbers.Random/dec64/0",   "dec64");
+        reservedMethodName.put("numbers.Random/float32/0", "float32");
+        reservedMethodName.put("numbers.Random/float64/0", "float64");
 
         reservedMethodName.put("collections.Array/add/1",        "add");
         reservedMethodName.put("collections.Array/addAll/1",     "addAll");

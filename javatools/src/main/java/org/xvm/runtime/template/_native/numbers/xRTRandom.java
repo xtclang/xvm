@@ -256,9 +256,7 @@ public class xRTRandom
             // it's a power of 2, so avoid the 64-bit modulo
             return rnd.nextLong() & (lMax - 1);
         } else {
-            // this works in theory, but has a slightly weaker guarantee on a perfect distribution
-            // of random values
-            return (rnd.nextLong() % lMax) & ~Long.MIN_VALUE;
+            return rnd.nextLong(lMax);
         }
     }
 
