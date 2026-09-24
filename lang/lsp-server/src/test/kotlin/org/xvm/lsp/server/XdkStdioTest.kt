@@ -469,6 +469,36 @@ class XdkStdioTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["take(first=1, second=", "fn(1, ", "new Box<String>("])
+    fun `argument value edits round trip and clear diagnostics after insertion`(call: String) {
+        val prefix =
+            "module Stdio { void take(Int first, String second) {} class Box<T> { construct(T value) {} } " +
+                "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { /* 😀 */ $call"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open("$prefix); } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(0, prefix.length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).containsExactly("text")
+            val edit = items.single().textEdit.left
+            assertThat(edit.range).isEqualTo(Range(cursor, cursor))
+            assertThat(edit.newText).isEqualTo("text")
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains(if (call.startsWith("fn(")) "runtime target unknown" else "overload not selected")
+            session.change("$prefix${edit.newText}); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
     @Test
     fun `scope completion and inferred named signatures round trip over stdio`() {
         Session(packagedJar(), directory).use { session ->
