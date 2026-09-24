@@ -11,11 +11,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.stream.Collectors;
-
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.Reporting;
 import org.xvm.asm.Version;
 
 import org.xvm.compiler.Token.Id;
@@ -27,11 +24,6 @@ import org.xvm.tool.ResourceDir;
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
-
-import static java.util.Objects.requireNonNull;
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.in;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A recursive descent parser for Ecstasy source code.
@@ -56,7 +48,7 @@ public class Parser {
      * @param atoken  the tokens to parse
      */
     protected Parser(Parser parent, Token[] atoken) {
-        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken));
+        this(parent.m_source, parent.m_errorListener, parent.m_lexer.createLexer(atoken));
     }
 
     private Parser(Source source, ErrorListener errs, Lexer lexer) {
@@ -64,11 +56,13 @@ public class Parser {
             throw new IllegalArgumentException("Source required");
         }
 
-        requireNonNull(errs, "errs");
+        if (errs == null) {
+            throw new IllegalArgumentException("ErrorListener required");
+        }
 
-        m_source = source;
-        f_errs   = new Reporting(requireNonNull(errs, "errs"));
-        m_lexer  = lexer;
+        m_source        = source;
+        m_errorListener = errs;
+        m_lexer         = lexer;
 
         // prime the token stream
         next();
@@ -136,55 +130,45 @@ public class Parser {
     }
 
     /**
-     * Quick-scan the source for the name of the module it declares, ignoring everything else.
+     * Quick-scan the file for the module name.
      *
-     * <p>Everything the scan walks past on the way is genuinely not the caller's business, so it is
-     * parsed against a {@link Silence#DISCARD} silence. The name itself is different: a name that
-     * is malformed is not the same answer as a source that declares no module, so it is parsed
-     * against a listener of its own, and the two outcomes stay distinguishable.
-     *
-     * @return the module's dotted name, or null if the source declares no module - or declares
-     *         one whose name does not parse
+     * @return the module name
      */
     public String parseModuleNameIgnoreEverythingElse() {
-        try (Reporting.Scope quiet = reportingTo(silent(DISCARD))) {
-            while (!eof()) {
-                if (match(Id.MODULE) == null) {
-                    // not a module declaration; skip it, and give up at the first body we meet,
-                    // because a module declaration cannot follow one
-                    Id id = current().getId();
-                    if (id == Id.L_CURLY || id == Id.R_CURLY) {
-                        return null;
+        ErrorListener errsPrev = m_errorListener;
+        try {
+            m_errorListener = ErrorListener.BLACKHOLE;
+
+            Loop: while (!eof()) {
+                if (match(Id.MODULE) != null) {
+                    if (!eof()) {
+                        m_errorListener = new ErrorList(1);
+                        List<Token> tokens = parseQualifiedName();
+                        if (!m_errorListener.hasSeriousErrors()) {
+                            StringBuilder sb = new StringBuilder();
+                            for (int i = 0, c = tokens.size(); i < c; ++i) {
+                                if (i > 0) {
+                                    sb.append('.');
+                                }
+                                sb.append(tokens.get(i).getValueText());
+                            }
+                            return sb.toString();
+                        }
                     }
-                } else if (!eof()) {
-                    String sName = parseModuleName();
-                    if (sName != null) {
-                        return sName;
+                } else {
+                    switch (current().getId()) {
+                    case L_CURLY:
+                    case R_CURLY:
+                        break Loop;
                     }
                 }
             }
-        } catch (RuntimeException _) {
-            // a quick scan answers or gives up; it never reports, and never propagates
+        } catch (RuntimeException ignore) {
+        } finally {
+            m_errorListener = errsPrev;
         }
 
         return null;
-    }
-
-    /**
-     * Parse the qualified name of a module that has just been announced by its keyword.
-     *
-     * @return the dotted name, or null if it did not parse cleanly
-     */
-    private String parseModuleName() {
-        ErrorList   errs = new ErrorList(ErrorList.FIRST_ERROR);
-        List<Token> tokens;
-        try (Reporting.Scope reporting = reportingTo(errs)) {
-            tokens = parseQualifiedName();
-        }
-
-        return errs.hasSeriousErrors()
-                ? null
-                : tokens.stream().map(Token::getValueText).collect(Collectors.joining("."));
     }
 
     /**
@@ -727,7 +711,7 @@ public class Parser {
             // evaluate annotations
             if (annotations != null) {
                 for (AnnotationExpression annotation : annotations) {
-                    annotation.log(f_errs.get(), Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
+                    annotation.log(m_errorListener, Severity.ERROR, Compiler.ANNOTATION_UNEXPECTED);
                 }
             }
 
@@ -745,8 +729,7 @@ public class Parser {
                         }
                         // fall through
                     default:
-                        modifier.log(f_errs.get(), m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED,
-                                modifier.getValueText());
+                        modifier.log(m_errorListener, m_source, Severity.ERROR, Compiler.KEYWORD_UNEXPECTED, modifier.getValueText());
                         break;
                     }
                 }
@@ -856,7 +839,7 @@ public class Parser {
                             if (expr.isLValueSyntax()) {
                                 listLVals.add(expr);
                             } else {
-                                expr.log(f_errs.get(), Severity.ERROR, NOT_ASSIGNABLE);
+                                expr.log(m_errorListener, Severity.ERROR, NOT_ASSIGNABLE);
                             }
                         } else {
                             listLVals.add(new VariableDeclarationStatement(
@@ -1715,16 +1698,16 @@ public class Parser {
             // test for a negated conditional assignment
             Token               tokNot  = null;
             AssignmentStatement stmtAsn = null;
-            try (Attempt attempt = attempt()) {
+            try (SafeLookAhead attempt = new SafeLookAhead()) {
                 tokNot = expect(Id.NOT);
                 if (match(Id.L_PAREN) != null) {
                     AstNode stmtPeek = parseCondition(true);
                     if (attempt.isClean() && stmtPeek instanceof AssignmentStatement) {
                         stmtAsn = (AssignmentStatement) stmtPeek;
-                        attempt.keep();
+                        attempt.keepResults();
                     }
                 }
-            } catch (CompilerException _) {}
+            } catch (CompilerException ignore) {}
 
             if (stmtAsn != null) {
                 stmtAsn.negate(tokNot, expect(Id.R_PAREN));
@@ -2461,7 +2444,7 @@ public class Parser {
      */
     Expression parseLinkerCondition() {
         Expression expr = parseExpression();
-        expr.validateCondition(f_errs.get());
+        expr.validateCondition(m_errorListener);
         return expr;
     }
 
@@ -3105,15 +3088,15 @@ public class Parser {
                     Token tokPeekLT = match(Id.COMP_LT);
                     if (tokPeekLT != null) {
                         putBack(tokPeekLT);
-                        try (Attempt attempt = attempt()) {
+                        try (SafeLookAhead attempt = new SafeLookAhead()) {
                             params = parseTypeParameterTypeList(true, true);
                             if (attempt.isClean()) {
-                                attempt.keep();
+                                attempt.keepResults();
                                 lEndPos = prev().getEndPosition();
                             } else {
                                 params = null;
                             }
-                        } catch (CompilerException _) {}
+                        } catch (CompilerException ignore) {}
                     }
 
                     if (expr instanceof NamedTypeExpression) {
@@ -3453,17 +3436,17 @@ public class Parser {
             Token tokPeekLT = match(Id.COMP_LT);
             if (tokPeekLT != null) {
                 putBack(tokPeekLT);
-                try (Attempt attempt = attempt()) {
+                try (SafeLookAhead attempt = new SafeLookAhead()) {
                     params = parseTypeParameterTypeList(true, true);
                     if (attempt.isClean()
                             // "index<size>>1" is a comparison and a shift, not a type
                             && (peek().getId() != Id.COMP_GT || peek().hasLeadingWhitespace())) {
-                        attempt.keep();
+                        attempt.keepResults();
                         lEndPos = prev().getEndPosition();
                     } else {
                         params = null;
                     }
-                } catch (CompilerException _) {}
+                } catch (CompilerException ignore) {}
             }
 
             // test to see if this is a tuple literal of the form "Tuple:(", or some other
@@ -3687,7 +3670,7 @@ public class Parser {
                     byte[] abData = null;
                     try {
                         abData = m_source.includeBinary(sFile);
-                    } catch (IOException _) {}
+                    } catch (IOException ignore) {}
                     if (abData == null) {
                         abData = new byte[0];
                         fErr   = true;
@@ -3698,7 +3681,7 @@ public class Parser {
                     try {
                         Source source = m_source.includeString(sFile);
                         sData = source == null ? null : source.toRawString();
-                    } catch (IOException _) {}
+                    } catch (IOException ignore) {}
                     if (sData == null) {
                         sData = "";
                         fErr  = true;
@@ -5631,10 +5614,11 @@ public class Parser {
      * @param aoParam
      */
     protected void log(Severity severity, String sCode, long lPosStart, long lPosEnd, Object... aoParam) {
-        f_errs.get().log(severity, sCode, in(m_source, lPosStart, lPosEnd), aoParam);
-        if (f_errs.get().isAbortDesired()) {
+        if (m_lookAhead != null) {
+            m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
+        } else if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
             m_fAvoidRecovery = true;
-            throw new CompilerException("error list is full: " + f_errs.get());
+            throw new CompilerException("error list is full: " + m_errorListener);
         }
     }
 
@@ -5686,95 +5670,53 @@ public class Parser {
         }
     }
 
-    /**
-     * Report to the given listener until the returned scope is closed.
-     *
-     * @param errs  the listener to report to for the duration of the scope
-     */
-    private Reporting.Scope reportingTo(ErrorListener errs) {
-        return f_errs.to(errs);
-    }
-
-    /**
-     * Begin a speculative parse: an attempt whose tokens and whose diagnostics both count only if
-     * it is kept.
-     *
-     * <p>The parser used to hand-roll this, buffering nothing and throwing away every diagnostic
-     * below ERROR even when the attempt was kept - which lost those diagnostics for good, because
-     * a kept attempt is the real parse and nothing re-reads those tokens. An attempt is a
-     * {@link ErrorListener#branch} instead, so keeping it merges what it had to say and dropping
-     * it drops the lot, which is the behaviour the rest of the compiler already gets.
-     */
-    public Attempt attempt() {
-        return new Attempt();
-    }
-
-    /**
-     * The scope opened by {@link #attempt()}.
-     */
-    public class Attempt
-            implements AutoCloseable, ErrorListener {
-        public Attempt() {
-            // read the destination before moving it: the branch buffers into whatever this parser
-            // was reporting to when the attempt began
-            f_branch = f_errs.get().branch(null);
-            f_scope  = f_errs.to(this);
-            f_mark   = mark();
-            ++m_cSpeculating;
+    public class SafeLookAhead
+            implements AutoCloseable {
+        public SafeLookAhead() {
+            m_oldLookAhead = m_lookAhead;
+            m_lookAhead    = this;
+            m_mark         = mark();
         }
 
-        @Override
-        public void log(ErrorInfo err) {
-            f_branch.log(err);
-
-            // an attempt that has gone wrong has answered; abandoning it here is what stops the
-            // parser from trying to recover inside a guess
-            if (err.getSeverity().compareTo(Severity.ERROR) >= 0) {
-                m_fKeep = false;
-                throw new CompilerException("err=" + err);
+        public void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
+            if (severity.ordinal() >= Severity.ERROR.ordinal()) {
+                m_err = new ErrorList.ErrorInfo(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+                m_fKeepResults = false;
+                throw new CompilerException("err=" + m_err);
             }
         }
 
-        /**
-         * @return true iff nothing serious has been reported against this attempt
-         */
         public boolean isClean() {
-            return !f_branch.hasSeriousErrors();
+            return m_err == null;
         }
 
-        /**
-         * Keep what this attempt parsed, and with it whatever it had to say.
-         */
-        public void keep() {
-            m_fKeep = true;
+        public void keepResults() {
+            m_fKeepResults = true;
         }
 
         @Override
         public void close() {
-            assert f_errs.get() == this;
-            f_scope.close();
-            --m_cSpeculating;
+            assert m_lookAhead == this;
+            m_lookAhead = m_oldLookAhead;
 
-            if (m_fKeep) {
-                assert isClean();
-                f_branch.merge();
+            if (m_fKeepResults) {
+                assert m_err == null;
             } else {
-                // the attempt did not happen: its tokens are put back and its branch is dropped
-                restore(f_mark);
+                restore(m_mark);
             }
         }
 
-        private final ErrorListener   f_branch;
-        private final Reporting.Scope f_scope;
-        private final Mark            f_mark;
-        private boolean               m_fKeep;
+        SafeLookAhead       m_oldLookAhead;
+        Mark                m_mark;
+        ErrorList.ErrorInfo m_err;
+        boolean             m_fKeepResults;
     }
 
     /**
      * @return true iff it's ok to try to recover from a parsing error
      */
     protected boolean recoverable() {
-        return !eof() && !m_fAvoidRecovery && m_cSpeculating == 0;
+        return !eof() && !m_fAvoidRecovery && m_lookAhead == null;
     }
 
     // ----- Object methods ------------------------------------------------------------------------
@@ -5950,11 +5892,7 @@ public class Parser {
     /**
      * The ErrorListener to report errors to.
      */
-    /**
-     * Where this parser's diagnostics go: the listener it was handed, or - for as long as a
-     * scope or an {@link Attempt} is open - somewhere else.
-     */
-    private final Reporting f_errs;
+    private ErrorListener m_errorListener;
 
     /**
      * The lexical analyzer.
@@ -6000,9 +5938,5 @@ public class Parser {
     /**
      * Object supporting unpredictable amount of look-ahead.
      */
-    /**
-     * How many speculative attempts are open. Recovery is for the real parse: inside an attempt a
-     * syntax error is an answer, so there is nothing to recover from.
-     */
-    private int m_cSpeculating;
+    private SafeLookAhead m_lookAhead;
 }

@@ -12,8 +12,8 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.ComponentResolver;
 import org.xvm.asm.ConstantPool;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
@@ -28,9 +28,9 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ast.Context;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.StageMgr;
+import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
-import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeExpression;
 
 import org.xvm.runtime.Frame;
@@ -39,6 +39,7 @@ import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
+import org.xvm.util.Severity;
 
 /**
  * The compiler of the "eval" script used by the debugger.
@@ -64,7 +65,7 @@ public class EvalCompiler {
      */
     public MethodStructure createLambda(TypeConstant typeReturn) {
         ConstantPool pool = f_frame.poolContext();
-        ErrorList    errs = f_errs;
+        ErrorList    errs = m_errs = new ErrorList(1);
 
         MethodStructure      method = f_frame.f_function;
         ClassStructure       clz    = method.getContainingClass();
@@ -136,8 +137,8 @@ public class EvalCompiler {
             return lambda;
         } catch (Exception e) {
             if (!errs.hasSeriousErrors()) {
-                errs.fatal(Parser.FATAL_ERROR, ErrorListener.in(
-                    f_source, f_source.getPosition(), f_source.getPosition()));
+                errs.log(Severity.FATAL, Parser.FATAL_ERROR, null,
+                    f_source, f_source.getPosition(), f_source.getPosition());
             }
             return null;
         }
@@ -147,7 +148,7 @@ public class EvalCompiler {
      * @return a list of errors
      */
     public List<ErrorListener.ErrorInfo> getErrors() {
-        return f_errs.getErrors();
+        return m_errs.getErrors();
     }
 
     /**
@@ -211,7 +212,7 @@ public class EvalCompiler {
                             return arg;
                         }
                     }
-                } catch (ExceptionHandle.WrapperException _) {}
+                } catch (ExceptionHandle.WrapperException ignore) {}
             }
             return arg;
         }
@@ -308,12 +309,9 @@ public class EvalCompiler {
     private final Source f_source;
 
     /**
-     * The errors from this evaluation. An EvalCompiler is built per evaluation - the debugger
-     * makes one each time - so the list is the instance's, rather than something createLambda
-     * leaves behind. It used to be assigned there, so getErrors() threw if anything asked before
-     * that ran.
+     * The errors.
      */
-    private final ErrorList f_errs = new ErrorList(ErrorList.FIRST_ERROR);
+    private ErrorList m_errs;
 
     /**
      * A synthetic MethodDeclarationStatement that contains the eval body.

@@ -19,8 +19,6 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.util.PackedInteger;
 import org.xvm.util.Severity;
 
-import static java.util.Objects.requireNonNull;
-import static org.xvm.asm.ErrorListener.in;
 import static org.xvm.util.Handy.hexitValue;
 import static org.xvm.util.Handy.isAsciiLetter;
 import static org.xvm.util.Handy.isDigit;
@@ -41,14 +39,16 @@ public class Lexer
      *
      * @param source  the source to parse
      */
-    public Lexer(Source source, ErrorListener errs) {
+    public Lexer(Source source, ErrorListener errorListener) {
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
-        requireNonNull(errs, "errs");
+        if (errorListener == null) {
+            throw new IllegalArgumentException("ErrorListener required");
+        }
 
         m_source        = source;
-        f_errs = errs;
+        m_errorListener = errorListener;
 
         eatWhitespace();
     }
@@ -58,7 +58,7 @@ public class Lexer
      */
     protected Lexer(Lexer parent) {
         m_source        = parent.m_source;
-        f_errs = parent.f_errs;
+        m_errorListener = parent.m_errorListener;
         m_fWhitespace   = parent.m_fWhitespace;
     }
 
@@ -402,7 +402,7 @@ public class Lexer
             } else if (ch == '_') {
                 if (fFirst) {
                     // it's an error to start with an underscore
-                    log(Severity.ERROR, ILLEGAL_HEX, span(lInitPos), String.valueOf(ch));
+                    log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)}, lInitPos);
                 }
                 // ignore the _ (it's used for spacing within the literal)
             } else if (!fMultiline) {
@@ -417,7 +417,7 @@ public class Lexer
                 }
             } else {
                 // error
-                log(Severity.ERROR, ILLEGAL_HEX, span(lInitPos), String.valueOf(ch));
+                log(Severity.ERROR, ILLEGAL_HEX, new Object[] {String.valueOf(ch)}, lInitPos);
                 source.rewind();
                 break;
             }
@@ -846,7 +846,7 @@ public class Lexer
 
         default:
             if (!isIdentifierStart(chInit)) {
-                log(Severity.ERROR, ILLEGAL_CHAR, span(lInitPos), quotedChar(chInit));
+                log(Severity.ERROR, ILLEGAL_CHAR, new Object[]{quotedChar(chInit)}, lInitPos);
             }
             // fall through
         case 'A':case 'B':case 'C':case 'D':case 'E':case 'F':case 'G':
@@ -1040,8 +1040,9 @@ public class Lexer
                                 case LIT_FLOAT:
                                     if (!fFloat) {
                                         // we were expecting an integer
-                                        log(Severity.ERROR, ILLEGAL_NUMBER, span(lInitPos),
-                                                extractSource(lInitPos, tokNum.getEndPosition()));
+                                        log(Severity.ERROR, ILLEGAL_NUMBER, new Object[] {
+                                            extractSource(lInitPos, tokNum.getEndPosition())},
+                                            lInitPos);
                                         return tokNum;
                                     }
                                     // fall through
@@ -1818,8 +1819,8 @@ public class Lexer
     protected Token eatTime(long lInitPos) {
         Token tokDate = eatDate(lInitPos, true);
         if (!(match('t') || expect('T'))) {
-            log(Severity.ERROR, BAD_TIME,
-                    span(tokDate.getStartPosition(), tokDate.getEndPosition()), tokDate.getValue());
+            log(Severity.ERROR, BAD_TIME, new Object[] {tokDate.getValue()},
+                    tokDate.getStartPosition(), tokDate.getEndPosition());
             return tokDate;
         }
 
@@ -1869,7 +1870,7 @@ public class Lexer
 
         if (nHour >= 0 && nMin >= 0) {
             if (nHour > 16 || nMin > 59) {
-                log(Severity.ERROR, BAD_TIMEZONE, span(lStart, lEnd), sZone);
+                log(Severity.ERROR, BAD_TIMEZONE, new Object[] {sZone}, lStart, lEnd);
             }
         }
 
@@ -1889,7 +1890,7 @@ public class Lexer
         int n = 0;
         for (int i = 0; i < digitCount; ++i) {
             if (!isNextCharDigit(10)) {
-                log(Severity.ERROR, EXPECTED_DIGITS, span(lPosStart), digitCount, i);
+                log(Severity.ERROR, EXPECTED_DIGITS, new Object[] {digitCount, i}, lPosStart);
                 return -n;
             }
 
@@ -2118,7 +2119,7 @@ public class Lexer
         String sDate   = extractSource(lLitPos, lEndPos);
         if (nYear >= 0 && nMonth >= 0 && nDay >= 0) {
             if (nYear < 1582 || nMonth < 1 || nMonth > 12 || nDay < 1 || nDay > 31) {
-                log(Severity.ERROR, BAD_DATE, span(lLitPos, lEndPos), sDate);
+                log(Severity.ERROR, BAD_DATE, new Object[] {sDate}, lLitPos, lEndPos);
             }
         }
 
@@ -2178,7 +2179,7 @@ public class Lexer
         String sTime = extractSource(lStart, lEnd);
         if (nHour >= 0 && nMin >= 0 && nSec >= 0) {
             if (nHour > 23 || nMin > 59 || nSec > 59 && !(nHour == 23 && nMin == 59 && nSec == 60)) {
-                log(Severity.ERROR, BAD_TIME_OF_DAY, span(lStart, lEnd), sTime);
+                log(Severity.ERROR, BAD_TIME_OF_DAY, new Object[] {sTime}, lStart, lEnd);
             }
         }
 
@@ -2325,7 +2326,7 @@ public class Lexer
         String sDuration = extractSource(lStart, lEnd).toUpperCase();
 
         if (fErr) {
-            log(Severity.ERROR, BAD_DURATION, span(lStart, lEnd), sDuration);
+            log(Severity.ERROR, BAD_DURATION, new Object[] {sDuration}, lStart, lEnd);
         } else {
             peekNotIdentifierOrNumber();
         }
@@ -2429,8 +2430,9 @@ public class Lexer
         }
 
         if (chActual != ch) {
-            log(Severity.ERROR, EXPECTED_CHAR, span(m_source.getPosition()),
-                    String.valueOf(ch), String.valueOf(chActual));
+            log(Severity.ERROR, EXPECTED_CHAR,
+                    new Object[] {String.valueOf(ch), String.valueOf(chActual)},
+                    m_source.getPosition());
             return false;
         }
 
@@ -2458,7 +2460,7 @@ public class Lexer
         long lEnd = m_source.getPosition();
         m_source.rewind();
         if (ch >= '0' && ch <= '9' || isIdentifierPart(ch)) {
-            log(Severity.ERROR, UNEXPECTED_CHAR, span(m_source.getPosition(), lEnd), ch);
+            log(Severity.ERROR, UNEXPECTED_CHAR, new Object[] {ch}, m_source.getPosition(), lEnd);
         }
     }
 
@@ -2488,7 +2490,7 @@ public class Lexer
             m_source.next();
         }
 
-        log(severity, sCode, span(lPosStart, lPosEnd), extractSource(lPosPrev, lPosEnd));
+        log(severity, sCode, new Object[]{extractSource(lPosPrev, lPosEnd)}, lPosStart, lPosEnd);
     }
 
     /**
@@ -2502,40 +2504,9 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        log(severity, sCode, span(lPosStart, lPosEnd), aoParam);
-    }
-
-    /**
-     * Log an error, with the message parameters as a trailing varargs.
-     *
-     * <p>The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
-     * parameters can be the tail; taking them as an array in the middle is what forces a call site
-     * to build one by hand.
-     */
-    protected void log(Severity severity, String sCode, ErrorListener.Site site, Object... aoParam) {
-        f_errs.log(severity, sCode, site, aoParam);
-        if (f_errs.isAbortDesired()) {
-            throw new CompilerException("error list is full: " + f_errs);
+        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+            throw new CompilerException("error list is full: " + m_errorListener);
         }
-    }
-
-    /**
-     * @param lPosStart  where the diagnostic starts
-     *
-     * @return the span from there to the current position in the script
-     */
-    protected ErrorListener.Site span(long lPosStart) {
-        return in(m_source, lPosStart, m_source.getPosition());
-    }
-
-    /**
-     * @param lPosStart  where the diagnostic starts
-     * @param lPosEnd    where it ends
-     *
-     * @return that span of the script
-     */
-    protected ErrorListener.Site span(long lPosStart, long lPosEnd) {
-        return in(m_source, lPosStart, lPosEnd);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -2873,7 +2844,7 @@ public class Lexer
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener f_errs;
+    private final ErrorListener m_errorListener;
 
     /**
      * Keeps track of whether whitespace was encountered.

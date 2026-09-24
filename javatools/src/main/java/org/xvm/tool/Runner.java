@@ -29,7 +29,6 @@ import org.xvm.tool.LauncherOptions.RunnerOptions;
 
 import org.xvm.util.Handy;
 
-import static java.util.Objects.requireNonNull;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.tool.ModuleInfo.isExplicitEcstasyFile;
 import static org.xvm.util.Handy.checkReadable;
@@ -39,6 +38,8 @@ import static org.xvm.util.Severity.ERROR;
 import static org.xvm.util.Severity.FATAL;
 import static org.xvm.util.Severity.INFO;
 import static org.xvm.util.Severity.WARNING;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * The "execute" command:
@@ -52,12 +53,12 @@ public class Runner extends Launcher<RunnerOptions> {
     /**
      * Runner constructor for programmatic use.
      *
-     * @param options  pre-configured runner options
-     * @param console  representation of the terminal within which this command is run, or null
-     * @param errs     the ErrorListener to receive errors
+     * @param options     pre-configured runner options
+     * @param console     representation of the terminal within which this command is run, or null
+     * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Runner(RunnerOptions options, Console console, ErrorListener errs) {
-        super(options, console, errs);
+    public Runner(RunnerOptions options, Console console, ErrorListener errListener) {
+        super(options, console, errListener);
     }
 
     /**
@@ -169,7 +170,7 @@ public class Runner extends Launcher<RunnerOptions> {
                         .enableVerbose(opts.isVerbose());
                 outFile.ifPresent(builder::setOutputLocation);
 
-                int exitCode = new Compiler(builder.build(), m_console, f_errs).run();
+                int exitCode = new Compiler(builder.build(), m_console, m_errors).run();
                 if (exitCode != 0) {
                     log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
                     return checkErrors("compilation");

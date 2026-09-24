@@ -22,9 +22,6 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
-
 /**
  * The "Elvis" expression, which is used to optionally substitute the value of the second expression
  * iff the value of the first expression is null.
@@ -73,7 +70,7 @@ public class ElvisExpression
             return null;
         }
 
-        TypeConstant typeResult = Op.selectCommonType(type1, type2, silent(PROBE));
+        TypeConstant typeResult = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
         // hey, wouldn't it be nice if we could just do this?
         //
@@ -87,7 +84,7 @@ public class ElvisExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         // first try the less likely (and more complicated) "conditional" use case
-        ErrorListener  errsTemp  = errs.branch(this);
+        ErrorListener  errsTemp  = errs == null ? ErrorListener.BLACKHOLE : errs.branch(this);
         TypeConstant[] atypeCond = new TypeConstant[]{pool().typeBoolean(), typeRequired};
         TypeFit        fit       = expr1.testFitMulti(ctx, atypeCond, fExhaustive, errsTemp);
         if (fit.isFit()) {
@@ -130,7 +127,7 @@ public class ElvisExpression
         //
         ctx = ctx.enterIf();
 
-        if (expr1.testFitMulti(ctx, atypeCond, true, silent(PROBE)).isFit()) {
+        if (expr1.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit()) {
             m_fCond = fCond = true;
 
             if (typeRequired != null) {
@@ -153,7 +150,7 @@ public class ElvisExpression
                 ? null
                 : Op.selectCommonType(type1.removeNullable(), null, errs);
         if (typeRequired == null) {
-            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, silent(PROBE)).isFit()) {
+            if (type2Req != null && !expr2.testFit(ctx, type2Req, true, null).isFit()) {
                 // there are no requirements from outside and the second expression is not going to
                 // validate against the first expression type. Compute the narrowest type that expr2
                 // has a chance of validating - a union of type1 and the implicit type for expr2
@@ -163,7 +160,7 @@ public class ElvisExpression
                 }
             }
         } else {
-            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, silent(PROBE)).isFit()) {
+            if (type2Req == null || !expr2.testFit(ctx, type2Req, false, null).isFit()) {
                 type2Req = typeRequired;
             }
         }

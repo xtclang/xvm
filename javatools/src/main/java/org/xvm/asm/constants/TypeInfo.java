@@ -2,8 +2,8 @@ package org.xvm.asm.constants;
 
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.xvm.asm.Annotation;
@@ -13,8 +13,8 @@ import org.xvm.asm.Component.Contribution;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 
@@ -47,7 +47,13 @@ public abstract class TypeInfo {
      * repeat queries, while a new request receives its own complete report.
      */
     final void replayDiagnostics(ErrorListener listener) {
-        diagnostics.forEach(listener::log);
+        for (ErrorInfo error : diagnostics) {
+            if (error.getXvmStructure() == null) {
+                listener.log(error);
+            } else {
+                listener.log(error.getSeverity(), error.getCode(), error.getParams(), error.getXvmStructure());
+            }
+        }
     }
 
     private volatile List<ErrorInfo> diagnostics = List.of();

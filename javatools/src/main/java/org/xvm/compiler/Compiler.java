@@ -10,9 +10,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
-import static java.util.Objects.requireNonNull;
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-
 /**
  * A module compiler for Ecstasy code.
  *
@@ -36,10 +33,12 @@ public class Compiler {
         if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
-        requireNonNull(errs, "errs");
+        if (errs == null) {
+            throw new IllegalArgumentException("ErrorListener required");
+        }
 
         m_stmtModule = stmtModule;
-        f_errs       = errs;
+        m_errs       = errs;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -57,7 +56,7 @@ public class Compiler {
      */
     public ErrorListener getErrorListener() {
         validateCompiler();
-        return f_errs;
+        return m_errs;
     }
 
     /**
@@ -92,7 +91,7 @@ public class Compiler {
      * @return true if the compiler has decided to abort the process
      */
     public boolean isAbortDesired() {
-        return f_errs.isAbortDesired();
+        return m_errs.isAbortDesired();
     }
 
     // ----- public API ----------------------------------------------------------------------------
@@ -115,9 +114,9 @@ public class Compiler {
         if (getStage() == Stage.Initial) {
             setStage(Stage.Registering);
 
-            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, f_errs);
+            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, m_errs);
             if (!mgr.processComplete()) {
-                if (f_errs.hasSeriousErrors()) {
+                if (m_errs.hasSeriousErrors()) {
                     return null;
                 }
                 throw new CompilerException("failed to create module");
@@ -188,7 +187,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Resolving)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Resolving);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, f_errs);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
             }
 
             if (fLastAttempt) {
@@ -232,7 +231,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Validating)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Validating);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, f_errs);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
             }
 
             if (fLastAttempt) {
@@ -276,7 +275,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Emitting)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Emitting);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, f_errs);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
             }
 
             if (fLastAttempt) {
@@ -286,11 +285,10 @@ public class Compiler {
             if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                if (!f_errs.hasSeriousErrors()) {
-                    // "purge" the constant pool and do a final validation on the entire module
-                    // structure
+                if (!m_errs.hasSeriousErrors()) {
+                    // "purge" the constant pool and do a final validation on the entire module structure
                     m_structFile.reregisterConstants(true);
-                    m_structFile.validate(f_errs);
+                    m_structFile.validate(m_errs);
                 }
             }
         }
@@ -303,8 +301,8 @@ public class Compiler {
      * method will report any unresolved names as fatal errors.
      */
     public void logRemainingDeferredAsErrors() {
-        if (!f_errs.hasSeriousErrors()) {
-            m_mgr.logDeferredAsErrors(f_errs);
+        if (!m_errs.hasSeriousErrors()) {
+            m_mgr.logDeferredAsErrors(m_errs);
         }
     }
 
@@ -378,7 +376,7 @@ public class Compiler {
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener f_errs;
+    private final ErrorListener m_errs;
 
     /**
      * The FileStructure that this compiler is putting together in a series of passes.

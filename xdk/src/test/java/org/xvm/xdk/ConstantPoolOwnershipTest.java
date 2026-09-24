@@ -30,6 +30,8 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.SingletonConstant;
 
 import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
 
 import org.xvm.runtime.Fiber;
 import org.xvm.runtime.Frame;
@@ -200,7 +202,16 @@ class ConstantPoolOwnershipTest {
         var unrelated = new FileStructure("Unrelated").getConstantPool();
         try (var scope = ConstantPool.withPool(unrelated)) {
             var first = new ErrorList(100);
-            var info = silentFirst ? concrete.ensureTypeInfo() : concrete.ensureTypeInfo(first);
+            var firstSource = new Source("module FirstRequest {}");
+            var firstSite = new Parser(firstSource, new ErrorList(1)).parseSource();
+            var attempt = first.branch(firstSite);
+            var info = silentFirst ? concrete.ensureTypeInfo() : concrete.ensureTypeInfo(attempt);
+            assertFalse(first.hasErrors(), "A speculative query must not report before merge");
+            attempt.merge();
+            if (!silentFirst) {
+                assertSame(firstSource, first.getErrors().stream()
+                        .filter(error -> error.getCode().equals("VERIFY-75")).findFirst().orElseThrow().getSource());
+            }
             var later = new ErrorList(100);
             assertSame(info, concrete.ensureTypeInfo(later));
             assertTrue(later.hasError("VERIFY-75"), later.getErrors()::toString);
@@ -212,6 +223,20 @@ class ConstantPoolOwnershipTest {
             later.clear();
             assertSame(info, concrete.ensureTypeInfo(later));
             assertEquals(count, later.getErrors().size());
+
+            // A cached result must use the new request's branch and source site, not the first's.
+            var nextRequest = new ErrorList(100);
+            var nextSource = new Source("module NextRequest {}");
+            var nextSite = new Parser(nextSource, new ErrorList(1)).parseSource();
+            var discarded = nextRequest.branch(nextSite);
+            assertSame(info, concrete.ensureTypeInfo(discarded));
+            assertTrue(discarded.hasError("VERIFY-75"));
+            assertFalse(nextRequest.hasErrors());
+            var committed = nextRequest.branch(nextSite);
+            assertSame(info, concrete.ensureTypeInfo(committed));
+            committed.merge();
+            assertSame(nextSource, nextRequest.getErrors().stream()
+                    .filter(error -> error.getCode().equals("VERIFY-75")).findFirst().orElseThrow().getSource());
 
             // Invalidating metadata must rebuild both the metadata and its diagnostic snapshot.
             concrete.invalidateTypeInfo();

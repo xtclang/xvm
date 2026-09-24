@@ -9,11 +9,8 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.GP_Compl;
 
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.Token;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
+import org.xvm.compiler.Token.Id;
 
 /**
  * The "~" that precedes a value (or "!" for a Boolean).
@@ -49,7 +46,7 @@ public class UnaryComplementExpression
             // the "!" operator only applies to a boolean
             typeRight = pool().typeBoolean();
             fBoolean  = true;
-        } else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()
+        } else if (typeRequired != null && exprRight.testFit(ctx, typeRequired, false, null).isFit()
                 && !typeRequired.ensureTypeInfo(errs).findOpMethods("not", "~", 0).isEmpty()) {
             typeRight = typeRequired;
             fBoolean  = typeRight.isA(pool().typeBoolean());
@@ -68,7 +65,7 @@ public class UnaryComplementExpression
         } else if (exprRight.isConstant()) {
             try {
                 constVal = exprRight.toConstant().apply(pool(), operator.getId(), null);
-            } catch (RuntimeException _) {}
+            } catch (RuntimeException ignore) {}
         }
 
         return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);

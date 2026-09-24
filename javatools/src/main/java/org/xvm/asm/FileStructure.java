@@ -9,8 +9,8 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 
@@ -23,8 +23,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import java.util.function.Consumer;
@@ -35,7 +35,6 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import static java.util.Objects.requireNonNull;
 import static org.xvm.util.Handy.intToHexString;
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -158,7 +157,7 @@ public class FileStructure
             if (fAutoClose) {
                 try {
                     in.close();
-                } catch (IOException _) {}
+                } catch (IOException ignore) {}
             }
         }
     }
@@ -213,8 +212,8 @@ public class FileStructure
      * Merge the specified module into this FileStructure.
      *
      * <p>This file's pool is the registration destination because the merged structures will be
-     * used and serialized here. Bind that same pool while registering the clones for legacy
-     * helpers that still use ambient selection. The incoming module's pool is the source and
+     * used and serialized here. Maintain that binding for compatibility callers while internal
+     * construction uses explicit destinations. The incoming module's pool is the source and
      * cannot select the destination on behalf of this file.
      *
      * <p>Adopted constants reset owner-bound caches and handles; copied methods decode independent

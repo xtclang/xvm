@@ -7,8 +7,6 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.NOWHERE;
-import static org.xvm.asm.ErrorListener.in;
 import static org.xvm.util.Handy.appendChar;
 import static org.xvm.util.Handy.appendString;
 
@@ -318,15 +316,17 @@ public class Token
      *                   {@link Severity#WARNING}, {@link Severity#ERROR}, or {@link Severity#FATAL}
      * @param sCode      the error code that identifies the error message
      * @param aoParam    the parameters for the error message; may be null
+     *
+     * @return true to attempt to abort the process that reported the error, or false to attempt to
+     *         continue the process
      */
-    public void log(ErrorListener errs, Source source, Severity severity, String sCode, Object... aoParam) {
+    public boolean log(ErrorListener errs, Source source, Severity severity, String sCode, Object... aoParam) {
         if (aoParam == null || aoParam.length == 0) {
             aoParam = new Object[] {source == null ? toString() : getString(source)};
         }
 
-        errs.log(severity, sCode, source == null
-                ? NOWHERE
-                : in(source, getStartPosition(), getEndPosition()), aoParam);
+        return errs.log(severity, sCode, aoParam, source,
+                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
     }
 
     // ----- Object methods ------------------------------------------------------------------------

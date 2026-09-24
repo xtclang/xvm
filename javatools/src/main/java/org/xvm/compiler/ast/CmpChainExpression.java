@@ -43,13 +43,10 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Comparison over a chain of expressions.
@@ -506,7 +503,7 @@ public class CmpChainExpression
         ctx = ctx.enterInferring(type);
 
         for (Expression expr : expressions) {
-            if (!expr.testFit(ctx, type, false, silent(PROBE)).isFit()) {
+            if (!expr.testFit(ctx, type, false, null).isFit()) {
                 return false;
             }
         }

@@ -233,8 +233,7 @@ public class ImmutableTypeConstant
             // type constant
             TypeConstant type = m_constType;
             if (type instanceof ImmutableTypeConstant) {
-                log(errs, Severity.WARNING, VE_IMMUTABLE_REDUNDANT);
-                fHalt |= errs.isAbortDesired();
+                fHalt |= log(errs, Severity.WARNING, VE_IMMUTABLE_REDUNDANT);
             }
 
             // a service type cannot be immutable

@@ -2,9 +2,10 @@
 
 Status: proposal for discussion, 2026-09-24. No architectural split is implemented by this
 branch. The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
-master `601a68e8b` with prerequisite `d8c6c3176` and ownership commit `65e5ce149`;
-[the ownership audit](constant-pool-ownership.md) documents its changes,
-regressions and remaining limits. The original embedding/Gradle/shutdown work remains on
+master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
+narrowing that removes the general listener migration.
+[The ownership audit](constant-pool-ownership.md) documents its changes, regressions and remaining
+limits. The original embedding/Gradle/shutdown work remains on
 `lagergren/constant-pool-ownership`. JIT development remains separate.
 
 ## Recommendation and decision boundary
@@ -18,6 +19,10 @@ The full split is substantial: factories, reflection, method execution, native b
 metadata queries currently use the same object graph. Moving a few cache fields does not freeze
 that graph, and freezing it immediately would break legitimate runtime type construction.
 The stages below are independently reviewable hypotheses, not a commitment to implement them.
+The general error-listener architecture is a separate deferred project, preserved at
+`archive/constant-pool-with-listener-migration` (`e90e5f8f8`) and on the original combined/errs
+branches. It is not a prerequisite for these stages; this branch retains only the definition/cache
+diagnostic ownership boundary using master's listener interface.
 
 The existing ownership fixes remain necessary during migration. A destination must still be
 explicit, and sharing a definition must still be distinguished from sharing a live value.
@@ -78,7 +83,8 @@ flowchart TD
 Keep mutable construction, unresolved constants, validation attempts, register allocation and
 linking here. `FileStructure` and existing builders can initially keep their compiler APIs.
 An explicit finalization step produces a complete linked image after validating references.
-Compilation still owns a non-null request listener; no immutable image retains that listener.
+Compilation owns its request listener; no immutable image retains that listener. A future listener
+API cleanup can tighten general null/branch contracts separately from this ownership boundary.
 
 A compiler may discard or rebuild metadata as declarations change. That invalidation protocol
 must remain distinct from memoization over a frozen runtime image. This design does not enable
@@ -167,7 +173,7 @@ It must integrate with them later without forcing shutdown changes into this cor
 | `xRTType`, `xRTTypeTemplate` | Reflection constructs descriptors and handles on demand | Route descriptors through the type context, handles through the execution context |
 | `HandleConstant`, annotated types | Runtime annotation arguments can capture actual handles | Keep captures in an execution-owned representation; never put them in a globally shareable type key |
 | Native template static `INSTANCE` and cached types/handles | Some state is classloader-wide today | Audit cross-runtime assumptions before publishing reusable images; do not call this solved |
-| `Reporting`, `TypeInfo` diagnostics | Metadata must not capture request sinks | Preserve request replay; inventory payload retention before broad cache sharing |
+| `TypeInfo` diagnostics and its build-local recorder | Metadata must not capture request sinks | Preserve request replay; inventory payload retention before broad cache sharing |
 
 A compatibility facade can temporarily keep familiar methods, but it must require the relevant
 context at construction/runtime boundaries. For example, a definition owner accessor remains a

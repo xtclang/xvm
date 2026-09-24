@@ -13,8 +13,8 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import org.xvm.asm.Component;
-import org.xvm.asm.Constant.Format;
 import org.xvm.asm.Constant;
+import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
@@ -58,12 +58,12 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
     /**
      * Disassembler constructor for programmatic use.
      *
-     * @param options  pre-configured disassembler options
-     * @param console  representation of the terminal within which this command is run, or null
-     * @param errs     the ErrorListener to receive errors
+     * @param options     pre-configured disassembler options
+     * @param console     representation of the terminal within which this command is run, or null
+     * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errs) {
-        super(options, console, errs);
+    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
+        super(options, console, errListener);
     }
 
     /**
@@ -281,7 +281,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         LocalDateTime time = null;
         try {
             time = OffsetDateTime.parse(fsNode.getModified()).toLocalDateTime();
-        } catch (Exception _) {}
+        } catch (Exception ignore) {}
         if (time == null) {
             buf.append("??? ??  ????");
         } else {
@@ -393,7 +393,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         String findString = null;
         try {
             findString = new String(readFileChars(target));
-        } catch (IOException _) {}
+        } catch (IOException ignore) {}
 
         // load the file metadata
         var    findName     = target.getName();

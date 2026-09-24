@@ -15,8 +15,8 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.AssignAST.Operator;
 import org.xvm.asm.ast.AssignAST;
+import org.xvm.asm.ast.AssignAST.Operator;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
@@ -36,17 +36,14 @@ import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Move;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.Expression.Assignable;
 import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
@@ -421,12 +418,12 @@ public class AssignmentStatement
                 // contributions
                 Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
-                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, silent(PROBE));
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, null);
 
                 if (!fit.isFit() && cLeft > 1) {
                     Expression exprUnpack = new UnpackExpression(rvalue, null);
 
-                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, silent(PROBE));
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, null);
                     if (fit.isFit()) {
                         rvalue = exprUnpack;
                     }
@@ -470,7 +467,7 @@ public class AssignmentStatement
                 if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar()) {
                     // test for a future assignment first
                     TypeConstant typeFuture = pool.ensureFuture(typeLeft);
-                    if (rvalue.testFit(ctxRValue, typeFuture, false, silent(PROBE)).isFit()) {
+                    if (rvalue.testFit(ctxRValue, typeFuture, false, null).isFit()) {
                         typeLeft = typeFuture;
                     }
                 }

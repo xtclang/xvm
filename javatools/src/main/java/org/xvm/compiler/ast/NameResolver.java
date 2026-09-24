@@ -6,9 +6,9 @@ import java.util.List;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
+import org.xvm.asm.ComponentResolver;
 import org.xvm.asm.ComponentResolver.ResolutionCollector;
 import org.xvm.asm.ComponentResolver.ResolutionResult;
-import org.xvm.asm.ComponentResolver;
 import org.xvm.asm.CompositeComponent;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -18,7 +18,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
-import org.xvm.asm.Reporting;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
@@ -113,25 +112,10 @@ public class NameResolver
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
     public Result resolve(ErrorListener errs) {
-        // the callbacks this resolution makes - ResolutionCollector.getErrorListener() among them
-        // - have no listener of their own, so the caller's is held for the duration of the call
-        // and given back afterwards. It used to be assigned and left, as the comment here admitted,
-        // which meant the resolver went on holding a listener belonging to a request that had
-        // finished: a later callback reported to it, and a resolver reused for a second name
-        // silently replaced the first caller's.
-        try (Reporting.Scope reporting = f_errs.to(errs)) {
-            return resolveStage(errs);
-        }
-    }
+        // store off the error list for use by call backs
+        // (note: there's no attempt to clean this up later)
+        m_errs = errs;
 
-    /**
-     * The stage machine behind {@link #resolve}, which runs with the caller's listener held.
-     *
-     * @param errs  the listener to report to
-     *
-     * @return the result of advancing the resolution as far as it can go
-     */
-    private Result resolveStage(ErrorListener errs) {
         switch (m_stage) {
         case CHECK_IMPORTS:
             // the first name could be an import, in which case that needs to be evaluated right
@@ -376,7 +360,7 @@ public class NameResolver
                 // for methods (and multi-methods), it is not possible to further resolve the name,
                 // because methods are opaque from the outside, and multi-methods can only be
                 // resolved by analyzing signatures (not names)
-                m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                 m_stage = Stage.ERROR;
                 return null;
             } else {
@@ -465,7 +449,8 @@ public class NameResolver
             }
 
             if (!type.isTypeOfType()) {
-                f_errs.get().error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
+                m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
+                        new Object[] {id.getValueString()}, component);
                 m_stage = Stage.ERROR;
                 return null;
             }
@@ -623,7 +608,7 @@ public class NameResolver
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant id = component.getIdentityConstant();
         if (component instanceof CompositeComponent composite && composite.isAmbiguous()) {
-            m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
+            m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_stage = Stage.ERROR;
             return ResolutionResult.ERROR;
         }
@@ -635,7 +620,7 @@ public class NameResolver
                 // typedef is allowed in type mode, but not in formal type mode
                 if (m_typeMode == TypeMode.FORMAL_TYPE &&
                         !component.getParent().getIdentityConstant().equals(getPool().clzType())) {
-                    m_node.log(f_errs.get(), Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
+                    m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
                             m_sName, id.getParentConstant().getValueString());
                     m_stage = Stage.ERROR;
                     return ResolutionResult.ERROR;
@@ -677,7 +662,7 @@ public class NameResolver
             }
 
             if (fNameMissing) {
-                m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
+                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
                 m_stage = Stage.ERROR;
                 return ResolutionResult.ERROR;
             }
@@ -693,7 +678,7 @@ public class NameResolver
                             ? module.getFingerprintOrigin()
                             : module;
                     if (component == null) {
-                        m_node.log(f_errs.get(), Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
+                        m_node.log(m_errs, Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
                         m_stage = Stage.ERROR;
                         return ResolutionResult.ERROR;
                     }
@@ -747,7 +732,7 @@ public class NameResolver
 
     @Override
     public ErrorListener getErrorListener() {
-        return f_errs.get();
+        return m_errs;
     }
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -841,9 +826,5 @@ public class NameResolver
     /**
      * The ErrorListener to log errors to.
      */
-    /**
-     * Where the callbacks made during a resolution report. Empty outside {@link #resolve}, which
-     * holds the caller's listener here for the duration of the call.
-     */
-    private final Reporting f_errs = new Reporting();
+    private ErrorListener m_errs;
 }

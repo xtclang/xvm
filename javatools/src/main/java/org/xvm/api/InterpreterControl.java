@@ -8,12 +8,8 @@ import java.io.PrintWriter;
 
 import java.time.Instant;
 
-import java.util.Objects;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -64,8 +60,7 @@ class InterpreterControl
      */
     static EmbeddingSupport.Control create(Connector connector, ModuleStructure module,
                                            ModuleRepository repository, PrintWriter console,
-                                           File rootDir, @NotNull ErrorListener errs) {
-        Objects.requireNonNull(errs, "errs");
+                                           File rootDir, ErrorListener errs) {
         if (!(connector instanceof InterpreterConnector interpreter)) {
             throw new IllegalArgumentException("An InterpreterConnector is required");
         }
@@ -148,12 +143,12 @@ class InterpreterControl
     }
 
     private InterpreterControl(InterpreterConnector connector, ModuleStructure module,
-                               File rootDir, @NotNull ErrorListener errs, long taskId, Long consoleId,
+                               File rootDir, ErrorListener errs, long taskId, Long consoleId,
                                Instant started, CompletableFuture<Void> completion) {
         this.connector  = connector;
         this.module     = module;
         this.rootDir    = rootDir;
-        this.errs       = Objects.requireNonNull(errs, "errs");
+        this.errs       = errs;
         this.taskId     = taskId;
         this.consoleId  = consoleId;
         this.started    = started;
@@ -166,7 +161,9 @@ class InterpreterControl
                 this.result = result;
             } else {
                 this.result = null;
-                errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
+                if (errs != null) {
+                    errs.log(ERROR, ERR_UNHANDLED_EXCEPTION, new Object[] {failure}, module);
+                }
             }
         } finally {
             this.stopped = Instant.now();

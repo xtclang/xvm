@@ -1,8 +1,9 @@
 # Constant-pool ownership: contracts, changes and evidence
 
 Status: extracted on `lagergren/constant-pool-ownership-only` from master `601a68e8b` on
-2026-09-24. This branch contains the ownership implementation and its minimal execution
-prerequisites. It excludes the Gradle DIRECT/PERSISTENT work and broad resource/shutdown changes.
+2026-09-24, then narrowed to remove the general error-listener migration. This branch contains
+the ownership implementation and its minimal execution prerequisites. It excludes the Gradle
+DIRECT/PERSISTENT work and broad resource/shutdown changes.
 The proposed next architectural step is in [the separation plan](constant-pool-architecture-plan.md).
 The original combined work remains on `lagergren/constant-pool-ownership`; its
 [submission plan](https://github.com/xtclang/xvm/blob/lagergren/constant-pool-ownership/plugin/doc/plans/embedded-runtime-pr-plan.md)
@@ -28,10 +29,11 @@ The original two ownership commits were:
 
 The subsequent combined implementation, tests and audit were committed as `11bc8932a` on the
 source branch. This extraction applies their final behavior to master's APIs, rather than importing
-the intermediate ambient fallback implementation or the unrelated embedding history. The local
-implementation commit is `65e5ce149`, following prerequisite `d8c6c3176`. The audit and architecture
-proposal are a separate documentation commit. The original source branch remains at `07776fc99`;
-creating this branch neither rewrites it nor removes the embedded-runtime submission plan.
+the intermediate ambient fallback implementation or the unrelated embedding history. The initial
+extraction was `65e5ce149`, following prerequisite `d8c6c3176`; the subsequent narrowing removes
+the general diagnostic architecture while retaining the ownership fixes described below.
+The original source branch remains at `07776fc99`; creating this branch neither rewrites it
+nor removes the embedded-runtime submission plan.
 
 The standalone execution prerequisite is `d8c6c3176`: the Frame/ServiceContext failure-continuation
 support from `e1eb9fb1a`, plus the waiter readiness correction from `d5947a903`. It includes focused
@@ -43,16 +45,23 @@ input. A compiler-linked file has not undergone native preparation; using it dir
 runtime repository template bypassed that preparation and failed on the missing native types.
 They do not need the later session factory, RunRequest, close API or Gradle integration.
 
-The final error-listener migration incorporates the relevant compiler/listener work from
-`lagergren/errs`: the implementation slice at `17d4a15a5` and final listener APIs/tests at
-`f98b0fe87`. It does not import the LSP, semantic snapshots or their build/CI changes.
+The broader error-listener migration is deferred. Its complete prior state is preserved locally
+at `archive/constant-pool-with-listener-migration` (`e90e5f8f8`) and in the original combined
+branch. A later diagnostic project can extract that work together with `lagergren/errs`
+(`17d4a15a5` and `f98b0fe87`). No new diagnostic project or PR is created here.
+
+`ErrorListener` itself is identical to master: `log` still returns boolean, the existing branch
+and BLACKHOLE/runtime policies remain, and parser/AST/tool/embedding nullable-listener contracts
+are not generally migrated. `Reporting`, `ValidationScope`, named silence/budget/cancellation
+policies and their migration tests are removed. The only retained diagnostic changes concern
+reusable definition state and TypeInfo cache results; see D03 and D05.
 
 JIT work remains on
 [archive/embedded-jit-ownership](https://github.com/xtclang/xvm/tree/archive/embedded-jit-ownership).
 See its [handoff](https://github.com/xtclang/xvm/blob/archive/embedded-jit-ownership/doc/embedded-jit-handoff.md).
 CP-A4, JIT callable-type caches and generated-name resets belong there. Neither those fixes nor
 the integration branch's JIT-removal commits are imported here; master's existing JIT behavior
-is preserved. Shared listener API adaptations do not establish JIT execution correctness.
+is preserved. This branch does not establish JIT execution correctness.
 
 ## The ownership model
 
@@ -64,7 +73,7 @@ Five different concepts must not be conflated:
 | Operation destination | The pool in which a caller needs a new or specialized result | An explicit argument, compilation context or target TypeInfo |
 | Ambient binding | A temporary compatibility value associated with the current Java thread | `ConstantPool.withPool(...)`; internal destination selection no longer reads it |
 | Runtime-value owner | The container that owns a singleton's initialization and live handle | `getOriginContainer` followed by canonical registration in that container |
-| Diagnostic recipient | The request that must receive errors and warnings | A non-null `ErrorListener` passed through the operation |
+| Diagnostic recipient | The operation that must receive errors and warnings | Its explicit `ErrorListener`, or the existing runtime/silent policy selected by the caller |
 
 `getConstantPool()` remains necessary: it tells us where a definition actually lives. Removing
 ambient selection does not remove definition ownership. Nor does supplying destination B mean
@@ -332,7 +341,7 @@ Unbound range construction and wrong-owner results are protected by `ConstantPoo
 and `RegistrationOwnershipTest`. The matrix covers absent, source, destination and unrelated
 ambient bindings. Matching launcher bindings previously hid the dependency. CaseManager's numeric
 distance calculation intentionally keeps owner-local folding because it only consumes the numeric
-value. The listener-only changes in that file are separate (D04).
+value. The general listener changes previously mixed into these files are now excluded.
 
 ### C12 — inference results belong to the requested pool
 
@@ -473,91 +482,50 @@ foreign pool. `ConstantOwnershipTest.runtimeAnnotationValuesCannotBePromotedInto
 checks direct/composite types, source preservation and the retained value. This is not a measured
 classloader leak or a `.x` cross-container annotation-execution test.
 
-## Diagnostics: request ownership instead of ambient file state
+## Diagnostic boundaries required by ownership
 
-### D01 — one non-null listener contract
+The general error-listener architecture is outside this branch. These two small boundaries remain
+because reusable definitions and cached metadata must not borrow a previous caller's reporting
+state or silently lose diagnostics on reuse. The D03/D05 identifiers are retained for provenance.
 
-`ErrorListener.log(ErrorInfo)` returns void; callers ask `isAbortDesired()` separately. Named
-budgets replace unexplained limit conventions. Collecting/tee/cancellation/branch behavior is
-explicit. `Silence.PROBE`, `CASCADE` and `DISCARD` replace BLACKHOLE and null-as-policy.
-`ErrorList.clear` also clears diagnostic UID deduplication state, allowing replay after a reset.
-Branch abort state accounts for its parent.
+### D03 — files do not retain or find request listeners (CP-A9)
 
-These are a **contract migration** from the errs work plus fixes to deduplication/abort behavior,
-not dozens of independent constant-pool failures. Compiler, lexer, parser, stage-manager and tool
-listeners are final and non-null where their lifetime is fixed. `@NotNull` documents the API;
-`requireNonNull` enforces key boundaries. Deliberately inactive scope state is not a nullable
-listener accepted by an active operation.
+FileStructure's listener field/accessors are removed, including the field copied by its constructor.
+The compiler no longer installs a BLACKHOLE listener on the file and later clears it. A reusable
+file cannot retain a host callback or ask an unrelated ambient pool where to report.
 
-`ErrorDeduplicationTest`, `ErrorListenerAbortTest`, `ErrorListenerBranchTest`,
-`ErrorListenerCancelTest`, `ErrorListenerSilenceTest` and `ErrorListenerSiteTest` cover the
-listener contract. Existing Java implementers must migrate the changed `log` signature.
+`XvmStructure.log` keeps its boolean return contract. `ensureErrorListener(errs)` uses the supplied
+listener or the existing runtime listener when null is passed, without consulting a file or pool.
+Metadata's no-argument lookup selects BLACKHOLE explicitly; callers responsible for reporting
+pass their current listener. This is a targeted ownership boundary, not a migration of all
+nullable listener arguments elsewhere in the compiler or embedding API.
 
-### D02 — scoped reporting and speculative parsing
+`FileStructureErrorListenerTest` verifies separate source/copy recipients under an unrelated pool,
+boolean abort reporting, explicit/runtime selection with no ambient pool, and the absence of
+listener fields on reusable structures. External users of the removed file listener accessors
+must pass their listener at the operation instead.
 
-New `Reporting` holds a non-null listener only while an operation is active; reading an inactive
-holder fails. Its lexical `to(listener)` scope restores the prior listener or inactive state.
-Parser has a final holder; NameResolver binds it for each resolution, avoiding retention of a
-past request. Parser `Attempt` saves the cursor and a branch listener: commit merges diagnostics,
-while closing an abandoned attempt restores/discards state. Existing nesting restrictions remain.
+### D05 — cached metadata retains diagnostic values (CP-A9)
 
-New `ValidationScope(ctx, errs)` replaces loosely paired mutable validation context/listener
-fields. An absent validation phase may have no scope; an active scope cannot have a null listener.
-Reporting is not a concurrent shared sink. `ReportingTest`, `ParserAttemptTest` and
-`CompilerDiagnosticsTest` cover restoration, speculative rollback and diagnostics.
+TypeInfo stores diagnostic values and merges diagnostic UIDs with synchronized updates and
+volatile publication. TypeConstant captures them at actual TypeInfo build boundaries, including
+deferred/internal construction, and attaches them only to completed results. A later query replays
+the result to its own listener, including when the first lookup was silent.
 
-### D03 — files no longer retain or find request listeners (CP-A9)
+A private `TypeInfoRecorder` adapts the existing listener interface for one metadata build. It
+forwards boolean abort results and status queries to the caller and delegates branching to that
+caller's existing implementation. Branch values are retained only when merged. Definition-relative
+diagnostics are replayed through the listener's structure overload so its current source-location
+policy still applies. Completed metadata retains values, never the recorder or its request sink.
 
-FileStructure's listener state/accessors are removed. XvmStructure logging receives the listener
-explicitly; it cannot borrow one through an ambient file/pool. Cloning reusable definitions must
-not copy a host callback, and a request must not accidentally report into another request's sink.
-
-This boundary is **reproduced/source-confirmed** by the earlier ambient/file behavior and
-`FileStructureErrorListenerTest`. That test checks separate listeners for source/copy under an
-unrelated binding, null rejection, tee branch rollback/commit, abort and replay after clear.
-Callers of the removed file-level listener APIs must pass their request listener instead.
-
-### D04 — explicit reporting policy at every migrated caller
-
-Compiler AST, type-validation, reflection/compiler natives and tools now pass an actual listener
-or an intentional silent policy. PROBE suppresses failed alternatives that are not accepted
-program diagnostics; CASCADE suppresses secondary noise from incomplete metadata. For example,
-`Expression.testFitAsType` no longer stages a speculative type interpretation with the caller's
-real listener. Its answer is the fit result, not leaked speculative diagnostics. Committed
-validation continues to report through the request listener.
-
-Source/Token/AstNode logging uses explicit diagnostic site helpers. Code that previously used a
-boolean return from `log` checks abort state separately. Method signatures, constructor calls and
-tests are migrated together. The many files in this group mostly carry these API/policy updates,
-not independent ownership algorithms. Compiler diagnostic/parser tests and full manual compilation
-cover the combined migration; there is no individual pre-fix regression for every call site.
-
-### D05 — cache diagnostic values, never request listeners (CP-A9)
-
-TypeInfo stores immutable ErrorInfo values and merges diagnostic UIDs with synchronized updates
-and volatile publication. TypeConstant records diagnostics at actual TypeInfo build boundaries,
-including deferred/internal construction, attaches them to completed results, and replays them
-to each later caller. A no-argument/silent build still records values for a subsequent real request.
-Reusing existing TypeInfo views preserves their recorded diagnostics.
+The only ErrorList change clears its UID set alongside its entries in `clear()`. Otherwise a
+recipient reused after clearing would discard the replayed warning as already seen. The wider
+listener API, cancellation, branch-budget and deduplication redesign remains deferred.
 
 **Reproduced:** the first request received duplicate-Atomic warning VERIFY-75, but a later request
-using cached metadata received none. A single compile or rebuilding all metadata hid the bug.
-XDK `cachedMetadataReplaysWarningsToEachRequest` checks two recipients, both normal-first and
-silent-first construction. The listener tests cover deduplication/branch semantics; this one real
-warning is not exhaustive coverage of every error-producing metadata path.
-
-### D06 — embedding and tool boundaries preserve the contract
-
-EmbeddingSupport validates listeners before its failure-conversion try/catch. Caller misuse
-therefore fails explicitly instead of becoming an internal compiler diagnostic. Ordinary reported
-`LauncherException` failures return the documented compile failure result; other runtime failures
-report once. InterpreterControl likewise holds a non-null listener and no longer silently skips
-completion reporting. Launcher/tool defaults choose intentional silence where required.
-
-`EmbeddingListenerContractTest` checks null rejection before configuration or I/O; existing
-compiler and tool suites cover reported failures and normal paths. New final-listener source changes in shared
-classes do not change the JIT implementation. A PROBE replacement in a shared
-class's JIT helper is an API adaptation, not validated new JIT behavior.
+using cached metadata received none. XDK `cachedMetadataReplaysWarningsToEachRequest` checks
+normal-first and silent-first construction, branch commit/discard and per-request source sites,
+repeated queries, replay after clearing the recipient, and invalidation/rebuild. This is coverage of a real warning, not every possible diagnostic path.
 
 ## Tests, results and what they establish
 
@@ -577,27 +545,22 @@ The new tests do not silently skip for missing installed binaries.
 | ConstHeapOwnershipTest / SingletonOwnershipTest | Correct origin, sharing rejection, owner dispatch, abort/retry | Recording dispatch is not a concurrency stress test |
 | XDK SignatureCompatibilityTest | Generic return/parameter/union/inference destination with real library metadata | No stable module-generation cache contract |
 | XDK ConstantPoolOwnershipTest | Bootstrap restoration, root handle identity, explicit shared ancestry, warning replay, nested `.x` state | Unsupported container models remain unsupported |
-| Listener/parser/compiler tests | Non-null sinks, branch/abort/replay and speculative policy | Not every diagnostic category has a separate integration case |
+| FileStructureErrorListenerTest | Explicit operation sinks, source/copy separation, existing boolean abort and runtime fallback | Does not migrate the general listener API |
 
-Validation of this master-based extraction is recorded separately from the source stack:
+Validation after narrowing is recorded separately from the larger source stack and initial extraction:
 
-- The prerequisite commit passed 4 deterministic execution unit tests and `spotlessCheck`.
-- The extracted unit suite passed **507 discovered, 467 executed, 40 existing disabled/skipped**,
-  with zero failures/errors. All new ownership and listener cases executed.
-- The focused XDK ownership/signature suite passed all **16 tests**, including the nested `.x`
-  fixture, with no skips. The full XDK suite first passed with its 8 existing opt-in cases skipped; enabling
-  `RUN_INTEGRATION_TESTS=true` then passed **all 33 tests**, with zero skips/failures/errors.
-- `./gradlew :javatools:test :xdk:test spotlessCheck --console=plain` passed. The final aggregate
-  invocation reused the already-passing unit result and executed the full XDK suite. The subsequent
-  `RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test --rerun --console=plain` forced the test task to
-  execute with its opt-in cases enabled. Counts were read from JUnit XML, not inferred from
-  Gradle's success message.
+- The prerequisite commit passed 4 deterministic execution unit tests.
+- The narrowed unit suite passed **463 discovered, 423 executed, 40 existing disabled/skipped**,
+  with zero failures/errors. Removed listener-migration tests account for the changed count.
+- With `RUN_INTEGRATION_TESTS=true`, the full XDK suite passed **all 33 tests**, with zero skips,
+  failures or errors, on the narrowed implementation. The 16 focused ownership/signature cases
+  then passed again with the strengthened branch/source-site regression; `spotlessCheck` passed.
+- JUnit XML counts were checked directly. Unit tests constructed their own metadata; XDK tests
+  used their task's declared distribution prerequisite. No timing-based success condition was added.
 
-The source stack's earlier 506 passed unit tests, 36 XDK integrations, plugin results and manual
-DIRECT/xUnit results are historical context only. This extraction excludes the lifecycle and
-resource test classes accounting for much of the count difference. Its adapted embedding listener
-test covers only the compile/run overloads available on master. The test for the later file-tree
-compiler overload remains with that API. No inherited success is reported as a new execution.
+The earlier broader branch's 467 passing unit tests and 33 XDK tests are historical results, not
+proof that the narrowed source works. The original combined branch's embedding/Gradle/resource
+results likewise do not apply to this extraction.
 
 Useful focused commands (no standalone distribution assumptions):
 
@@ -662,7 +625,8 @@ failure as fixed without a test, or a passing combined test as proof of untested
    guards and live values. Keep valid canonical same-owner state.
 4. For singletons, select the defining container and canonical constant before inspecting a handle,
    then initialize in that owner's service context. Definition compatibility alone is insufficient.
-5. Pass a non-null request listener. Reusable metadata may retain diagnostic values, not a host sink.
+5. Keep request listeners at operation boundaries. Reusable metadata may retain diagnostic values,
+   not a host sink; select any silent/runtime fallback explicitly without consulting an ambient pool.
 6. Scope compatibility bindings on the executing thread. A dispatched task opens its own scope;
    shared object publication and synchronization remain separate responsibilities.
 7. Test absent and unrelated ambient bindings, source preservation, destination identity, same-owner
@@ -672,8 +636,8 @@ failure as fixed without a test, or a passing combined test as proof of untested
 
 The following inventory maps changed production and test files to the catalogue. Paths are relative
 to their linked source roots. It includes the extracted implementation and minimal prerequisite;
-JIT extraction files are accounted for separately in the handoff above. D04 includes call-site,
-diagnostic-site, explicit silence, abort-check, signature, import and accompanying Javadoc changes.
+JIT extraction files are accounted for separately in the handoff above. The removed listener
+migration is preserved in the archive branch; it is not part of this inventory.
 
 ### Production files
 
@@ -681,21 +645,14 @@ Root: `javatools/src/main/java/org/xvm/`.
 
 | File | Catalogue entries |
 |---|---|
-| [api/EmbeddingSupport.java](../javatools/src/main/java/org/xvm/api/EmbeddingSupport.java) | D06 |
 | [api/InterpreterConnector.java](../javatools/src/main/java/org/xvm/api/InterpreterConnector.java) | C10 |
-| [api/InterpreterControl.java](../javatools/src/main/java/org/xvm/api/InterpreterControl.java) | D06 |
-| [asm/Annotation.java](../javatools/src/main/java/org/xvm/asm/Annotation.java) | D04 |
-| [asm/ClassStructure.java](../javatools/src/main/java/org/xvm/asm/ClassStructure.java) | C02, D04 |
-| [asm/Component.java](../javatools/src/main/java/org/xvm/asm/Component.java) | D04 |
-| [asm/ComponentResolver.java](../javatools/src/main/java/org/xvm/asm/ComponentResolver.java) | D04 |
+| [asm/ClassStructure.java](../javatools/src/main/java/org/xvm/asm/ClassStructure.java) | C02 |
 | [asm/Constant.java](../javatools/src/main/java/org/xvm/asm/Constant.java) | C01, C11 |
 | [asm/ConstantPool.java](../javatools/src/main/java/org/xvm/asm/ConstantPool.java) | C01, C03, C10 |
-| [asm/ErrorList.java](../javatools/src/main/java/org/xvm/asm/ErrorList.java) | D01 |
-| [asm/ErrorListener.java](../javatools/src/main/java/org/xvm/asm/ErrorListener.java) | D01 |
+| [asm/ErrorList.java](../javatools/src/main/java/org/xvm/asm/ErrorList.java) | D05; clear replay deduplication state with entries |
 | [asm/FileStructure.java](../javatools/src/main/java/org/xvm/asm/FileStructure.java) | C04, D03; copy/merge contract documentation |
-| [asm/MethodStructure.java](../javatools/src/main/java/org/xvm/asm/MethodStructure.java) | C05, C16, D04 |
-| [asm/PropertyStructure.java](../javatools/src/main/java/org/xvm/asm/PropertyStructure.java) | C02, D04 |
-| [asm/Reporting.java](../javatools/src/main/java/org/xvm/asm/Reporting.java) | D02 |
+| [asm/MethodStructure.java](../javatools/src/main/java/org/xvm/asm/MethodStructure.java) | C05, C16 |
+| [asm/PropertyStructure.java](../javatools/src/main/java/org/xvm/asm/PropertyStructure.java) | C02 |
 | [asm/XvmStructure.java](../javatools/src/main/java/org/xvm/asm/XvmStructure.java) | D03; owning-pool accessor contract |
 | [asm/constants/AnnotatedTypeConstant.java](../javatools/src/main/java/org/xvm/asm/constants/AnnotatedTypeConstant.java) | C19 |
 | [asm/constants/ByteConstant.java](../javatools/src/main/java/org/xvm/asm/constants/ByteConstant.java) | C11 |
@@ -704,7 +661,6 @@ Root: `javatools/src/main/java/org/xvm/`.
 | [asm/constants/FileStoreConstant.java](../javatools/src/main/java/org/xvm/asm/constants/FileStoreConstant.java) | C15 |
 | [asm/constants/HandleConstant.java](../javatools/src/main/java/org/xvm/asm/constants/HandleConstant.java) | C19 |
 | [asm/constants/IdentityConstant.java](../javatools/src/main/java/org/xvm/asm/constants/IdentityConstant.java) | C07, C13 |
-| [asm/constants/ImmutableTypeConstant.java](../javatools/src/main/java/org/xvm/asm/constants/ImmutableTypeConstant.java) | D04 |
 | [asm/constants/IntConstant.java](../javatools/src/main/java/org/xvm/asm/constants/IntConstant.java) | C11 |
 | [asm/constants/MethodBody.java](../javatools/src/main/java/org/xvm/asm/constants/MethodBody.java) | C10 |
 | [asm/constants/MethodConstant.java](../javatools/src/main/java/org/xvm/asm/constants/MethodConstant.java) | C07 |
@@ -718,116 +674,49 @@ Root: `javatools/src/main/java/org/xvm/`.
 | [asm/constants/SingletonConstant.java](../javatools/src/main/java/org/xvm/asm/constants/SingletonConstant.java) | C15 |
 | [asm/constants/TerminalTypeConstant.java](../javatools/src/main/java/org/xvm/asm/constants/TerminalTypeConstant.java) | C02 |
 | [asm/constants/TypeCollector.java](../javatools/src/main/java/org/xvm/asm/constants/TypeCollector.java) | C12 |
-| [asm/constants/TypeConstant.java](../javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java) | C02, C03, C13, D04, D05; preserved relation-pool contract |
+| [asm/constants/TypeConstant.java](../javatools/src/main/java/org/xvm/asm/constants/TypeConstant.java) | C02, C03, C13, D03, D05 |
 | [asm/constants/TypeInfo.java](../javatools/src/main/java/org/xvm/asm/constants/TypeInfo.java) | D05 |
-| [asm/constants/TypeInfoReal.java](../javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java) | C02, D04 |
+| [asm/constants/TypeInfoReal.java](../javatools/src/main/java/org/xvm/asm/constants/TypeInfoReal.java) | C02 |
 | [asm/constants/TypeParameterConstant.java](../javatools/src/main/java/org/xvm/asm/constants/TypeParameterConstant.java) | C13 |
-| [asm/constants/UnresolvedTypeConstant.java](../javatools/src/main/java/org/xvm/asm/constants/UnresolvedTypeConstant.java) | D04 |
-| [compiler/Compiler.java](../javatools/src/main/java/org/xvm/compiler/Compiler.java) | D01, D03, D04 |
-| [compiler/EvalCompiler.java](../javatools/src/main/java/org/xvm/compiler/EvalCompiler.java) | D01, D04 |
-| [compiler/Lexer.java](../javatools/src/main/java/org/xvm/compiler/Lexer.java) | D01, D04 |
-| [compiler/Parser.java](../javatools/src/main/java/org/xvm/compiler/Parser.java) | D01, D02, D04 |
-| [compiler/Source.java](../javatools/src/main/java/org/xvm/compiler/Source.java) | D04 |
-| [compiler/Token.java](../javatools/src/main/java/org/xvm/compiler/Token.java) | D04 |
-| [compiler/ast/AnnotationExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/AnnotationExpression.java) | D04 |
-| [compiler/ast/AnonInnerClass.java](../javatools/src/main/java/org/xvm/compiler/ast/AnonInnerClass.java) | D04 |
-| [compiler/ast/ArrayAccessExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java) | C02, D04 |
-| [compiler/ast/AsExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/AsExpression.java) | D04 |
-| [compiler/ast/AssignmentStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/AssignmentStatement.java) | D04 |
-| [compiler/ast/AstNode.java](../javatools/src/main/java/org/xvm/compiler/ast/AstNode.java) | C02, D04 |
-| [compiler/ast/CaseManager.java](../javatools/src/main/java/org/xvm/compiler/ast/CaseManager.java) | D04 |
-| [compiler/ast/CmpChainExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/CmpChainExpression.java) | C11, D04 |
-| [compiler/ast/CmpExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/CmpExpression.java) | C11, D04 |
-| [compiler/ast/Context.java](../javatools/src/main/java/org/xvm/compiler/ast/Context.java) | D04 |
-| [compiler/ast/ElseExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/ElseExpression.java) | D04 |
-| [compiler/ast/ElvisExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/ElvisExpression.java) | D04 |
-| [compiler/ast/Expression.java](../javatools/src/main/java/org/xvm/compiler/ast/Expression.java) | D04 |
-| [compiler/ast/ForEachStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/ForEachStatement.java) | D02, D04 |
-| [compiler/ast/ForStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/ForStatement.java) | D02, D04 |
-| [compiler/ast/InvocationExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | D04 |
-| [compiler/ast/LambdaExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java) | D04 |
-| [compiler/ast/ListExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/ListExpression.java) | D04 |
-| [compiler/ast/MapExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/MapExpression.java) | D04 |
-| [compiler/ast/MethodDeclarationStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java) | D04 |
-| [compiler/ast/NameExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | D04 |
-| [compiler/ast/NameResolver.java](../javatools/src/main/java/org/xvm/compiler/ast/NameResolver.java) | D02, D04 |
-| [compiler/ast/NamedTypeExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/NamedTypeExpression.java) | D04 |
-| [compiler/ast/NewExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java) | D04 |
-| [compiler/ast/NonBindingExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/NonBindingExpression.java) | D04 |
-| [compiler/ast/NotNullExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/NotNullExpression.java) | D04 |
-| [compiler/ast/ParenthesizedExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/ParenthesizedExpression.java) | D04 |
+| [compiler/Compiler.java](../javatools/src/main/java/org/xvm/compiler/Compiler.java) | D03; remove file listener installation/removal |
+| [compiler/ast/ArrayAccessExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/ArrayAccessExpression.java) | C02 |
+| [compiler/ast/AstNode.java](../javatools/src/main/java/org/xvm/compiler/ast/AstNode.java) | C02 |
+| [compiler/ast/CmpChainExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/CmpChainExpression.java) | C11 |
+| [compiler/ast/CmpExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/CmpExpression.java) | C11 |
 | [compiler/ast/PrefixExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/PrefixExpression.java) | C02 |
-| [compiler/ast/RelOpExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java) | C02, C11, D04 |
-| [compiler/ast/ReturnStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/ReturnStatement.java) | D04 |
-| [compiler/ast/SequentialAssignExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/SequentialAssignExpression.java) | D04 |
-| [compiler/ast/StageMgr.java](../javatools/src/main/java/org/xvm/compiler/ast/StageMgr.java) | D04 |
-| [compiler/ast/StatementBlock.java](../javatools/src/main/java/org/xvm/compiler/ast/StatementBlock.java) | D04 |
-| [compiler/ast/StatementExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/StatementExpression.java) | D04 |
-| [compiler/ast/TemplateExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/TemplateExpression.java) | D04 |
-| [compiler/ast/TernaryExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/TernaryExpression.java) | D04 |
-| [compiler/ast/TraceExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/TraceExpression.java) | D04 |
-| [compiler/ast/TryStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/TryStatement.java) | D02, D04 |
-| [compiler/ast/TupleExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/TupleExpression.java) | D04 |
-| [compiler/ast/TypeCompositionStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/TypeCompositionStatement.java) | D04 |
-| [compiler/ast/TypeExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/TypeExpression.java) | D04 |
-| [compiler/ast/UnaryComplementExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java) | C11, D04 |
-| [compiler/ast/UnaryMinusExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/UnaryMinusExpression.java) | C11, D04 |
-| [compiler/ast/ValidationScope.java](../javatools/src/main/java/org/xvm/compiler/ast/ValidationScope.java) | D02 |
-| [compiler/ast/WhileStatement.java](../javatools/src/main/java/org/xvm/compiler/ast/WhileStatement.java) | D02, D04 |
+| [compiler/ast/RelOpExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/RelOpExpression.java) | C02, C11 |
+| [compiler/ast/UnaryComplementExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/UnaryComplementExpression.java) | C11 |
+| [compiler/ast/UnaryMinusExpression.java](../javatools/src/main/java/org/xvm/compiler/ast/UnaryMinusExpression.java) | C11 |
 | [runtime/ConstHeap.java](../javatools/src/main/java/org/xvm/runtime/ConstHeap.java) | C16, C17 |
 | [runtime/Container.java](../javatools/src/main/java/org/xvm/runtime/Container.java) | C16; owner/template contract documentation |
 | [runtime/Frame.java](../javatools/src/main/java/org/xvm/runtime/Frame.java) | C16 prerequisite: exception cleanup and external-waiter readiness |
 | [runtime/NativeContainer.java](../javatools/src/main/java/org/xvm/runtime/NativeContainer.java) | C14 |
 | [runtime/ServiceContext.java](../javatools/src/main/java/org/xvm/runtime/ServiceContext.java) | C16 prerequisite: dispatch exception cleanup |
 | [runtime/Utils.java](../javatools/src/main/java/org/xvm/runtime/Utils.java) | C16 |
-| [runtime/template/_native/lang/src/xRTCompiler.java](../javatools/src/main/java/org/xvm/runtime/template/_native/lang/src/xRTCompiler.java) | D04 |
 | [runtime/template/_native/mgmt/xContainerLinker.java](../javatools/src/main/java/org/xvm/runtime/template/_native/mgmt/xContainerLinker.java) | C18 |
-| [runtime/template/_native/reflect/xRTType.java](../javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTType.java) | D04 |
 | [runtime/template/_native/reflect/xRTTypeTemplate.java](../javatools/src/main/java/org/xvm/runtime/template/_native/reflect/xRTTypeTemplate.java) | C19 |
-| [tool/Bundler.java](../javatools/src/main/java/org/xvm/tool/Bundler.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/Compiler.java](../javatools/src/main/java/org/xvm/tool/Compiler.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/Disassembler.java](../javatools/src/main/java/org/xvm/tool/Disassembler.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/Initializer.java](../javatools/src/main/java/org/xvm/tool/Initializer.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/Launcher.java](../javatools/src/main/java/org/xvm/tool/Launcher.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/ModuleInfo.java](../javatools/src/main/java/org/xvm/tool/ModuleInfo.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/Runner.java](../javatools/src/main/java/org/xvm/tool/Runner.java) | D01, D04, D06; explicit listener constructors/defaults |
-| [tool/TestRunner.java](../javatools/src/main/java/org/xvm/tool/TestRunner.java) | D01, D04, D06; explicit listener constructors/defaults |
 
 ### Changed and new tests
 
 | File | Catalogue entries |
 |---|---|
-| [javatools/java/org/xvm/api/EmbeddingListenerContractTest.java](../javatools/src/test/java/org/xvm/api/EmbeddingListenerContractTest.java) | D06 |
 | [javatools/java/org/xvm/asm/ConstantOwnershipTest.java](../javatools/src/test/java/org/xvm/asm/ConstantOwnershipTest.java) | C03, C06, C13, C15, C19 |
 | [javatools/java/org/xvm/asm/ConstantPoolAmbientTest.java](../javatools/src/test/java/org/xvm/asm/ConstantPoolAmbientTest.java) | C01, C11 |
 | [javatools/java/org/xvm/asm/ConstantPoolScopeTest.java](../javatools/src/test/java/org/xvm/asm/ConstantPoolScopeTest.java) | C01 |
-| [javatools/java/org/xvm/asm/ErrorDeduplicationTest.java](../javatools/src/test/java/org/xvm/asm/ErrorDeduplicationTest.java) | D01 |
-| [javatools/java/org/xvm/asm/ErrorListenerAbortTest.java](../javatools/src/test/java/org/xvm/asm/ErrorListenerAbortTest.java) | D01 |
-| [javatools/java/org/xvm/asm/ErrorListenerBranchTest.java](../javatools/src/test/java/org/xvm/asm/ErrorListenerBranchTest.java) | D01 |
-| [javatools/java/org/xvm/asm/ErrorListenerCancelTest.java](../javatools/src/test/java/org/xvm/asm/ErrorListenerCancelTest.java) | D01 |
-| [javatools/java/org/xvm/asm/ErrorListenerSilenceTest.java](../javatools/src/test/java/org/xvm/asm/ErrorListenerSilenceTest.java) | D01 |
-| [javatools/java/org/xvm/asm/ErrorListenerSiteTest.java](../javatools/src/test/java/org/xvm/asm/ErrorListenerSiteTest.java) | D01 |
-| [javatools/java/org/xvm/asm/FileStructureErrorListenerTest.java](../javatools/src/test/java/org/xvm/asm/FileStructureErrorListenerTest.java) | D01, D03, D05 |
+| [javatools/java/org/xvm/asm/FileStructureErrorListenerTest.java](../javatools/src/test/java/org/xvm/asm/FileStructureErrorListenerTest.java) | D03; operation-local reporting with the existing listener API |
 | [javatools/java/org/xvm/asm/FileStructureOwnershipTest.java](../javatools/src/test/java/org/xvm/asm/FileStructureOwnershipTest.java) | C04, C05 |
 | [javatools/java/org/xvm/asm/RegistrationOwnershipTest.java](../javatools/src/test/java/org/xvm/asm/RegistrationOwnershipTest.java) | C03, C11, C13 |
-| [javatools/java/org/xvm/asm/ReportingTest.java](../javatools/src/test/java/org/xvm/asm/ReportingTest.java) | D02 |
 | [javatools/java/org/xvm/asm/constants/DestinationOwnershipTest.java](../javatools/src/test/java/org/xvm/asm/constants/DestinationOwnershipTest.java) | C07, C08, C09 |
 | [javatools/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java](../javatools/src/test/java/org/xvm/asm/constants/MethodBodyAmbientPoolTest.java) | C10 |
-| [javatools/java/org/xvm/compiler/CompilerDiagnosticsTest.java](../javatools/src/test/java/org/xvm/compiler/CompilerDiagnosticsTest.java) | D01, D02, D04 |
-| [javatools/java/org/xvm/compiler/ParserAttemptTest.java](../javatools/src/test/java/org/xvm/compiler/ParserAttemptTest.java) | D02 |
 | [javatools/java/org/xvm/runtime/ConstHeapOwnershipTest.java](../javatools/src/test/java/org/xvm/runtime/ConstHeapOwnershipTest.java) | C17 |
 | [javatools/java/org/xvm/runtime/ExternalCompletionTest.java](../javatools/src/test/java/org/xvm/runtime/ExternalCompletionTest.java) | C16 prerequisite: waiter completes after external readiness |
 | [javatools/java/org/xvm/runtime/FrameExceptionCleanupTest.java](../javatools/src/test/java/org/xvm/runtime/FrameExceptionCleanupTest.java) | C16 prerequisite: cleanup on failure, disarm on success, composed continuations |
 | [javatools/java/org/xvm/runtime/SingletonOwnershipTest.java](../javatools/src/test/java/org/xvm/runtime/SingletonOwnershipTest.java) | C15, C16 |
-| [javatools/java/org/xvm/tool/BundlerTest.java](../javatools/src/test/java/org/xvm/tool/BundlerTest.java) | D06; migrate explicit listener arguments |
-| [javatools/java/org/xvm/tool/LauncherErrorHandlingTest.java](../javatools/src/test/java/org/xvm/tool/LauncherErrorHandlingTest.java) | D06; migrate explicit listener arguments |
-| [javatools/java/org/xvm/tool/LauncherVersionTest.java](../javatools/src/test/java/org/xvm/tool/LauncherVersionTest.java) | D06; migrate explicit listener arguments |
-| [javatools/java/org/xvm/tool/ModuleInfoTest.java](../javatools/src/test/java/org/xvm/tool/ModuleInfoTest.java) | D06; migrate explicit listener arguments |
 | [xdk/java/org/xvm/xdk/ConstantPoolOwnershipTest.java](../xdk/src/test/java/org/xvm/xdk/ConstantPoolOwnershipTest.java) | C14, C16, C18, D05 |
 | [xdk/java/org/xvm/xdk/SignatureCompatibilityTest.java](../xdk/src/test/java/org/xvm/xdk/SignatureCompatibilityTest.java) | C02, C12 |
 | [xdk/resources/ownership/Singletons.x](../xdk/src/test/resources/ownership/Singletons.x) | C17, C18; executed by XDK ConstantPoolOwnershipTest |
 
-This inventory accounts for **111 production files and 29 test/resource files**.
+This inventory accounts for **50 production files and 15 test/resource files**.
 Existing supporting tests named in the catalogue but unchanged by these ownership commits are
 not counted as newly modified tests. Documentation on this branch is this file and the separation
 architecture plan. The larger embedding plans and JIT archive documentation remain on their

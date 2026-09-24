@@ -16,42 +16,9 @@ public class ErrorList
         implements ErrorListener {
     // ----- constructors --------------------------------------------------------------------------
 
-    /**
-     * Construct a list that tolerates {@link #DEFAULT_MAX_ERRORS} serious errors, for a caller
-     * with no reason to choose a number. A caller that has one says so with the other
-     * constructor, naming {@link #UNLIMITED} or {@link #FIRST_ERROR} where those are what it
-     * means.
-     */
-    public ErrorList() {
-        this(DEFAULT_MAX_ERRORS);
-    }
-
-    /**
-     * @param cMaxErrors  the number of serious errors to tolerate before asking for the process to
-     *                    be abandoned, or {@link #UNLIMITED} to tolerate any number
-     */
     public ErrorList(int cMaxErrors) {
         f_cMaxErrors = cMaxErrors;
     }
-
-    /**
-     * Tolerate any number of serious errors: only a FATAL asks for the process to be abandoned.
-     */
-    public static final int UNLIMITED = 0;
-
-    /**
-     * The budget for a caller that wants to stop at the first serious error.
-     */
-    public static final int FIRST_ERROR = 1;
-
-    /**
-     * How many serious errors to tolerate when the caller has no reason to choose a number.
-     *
-     * <p>Enough that a file with a genuine spread of problems reports them all, and few enough that
-     * source which has gone badly wrong - a mismatched brace early on, say - stops rather than
-     * producing a page of consequences.
-     */
-    public static final int DEFAULT_MAX_ERRORS = 100;
 
     // ----- ErrorListener methods -----------------------------------------------------------------
 
@@ -61,7 +28,7 @@ public class ErrorList
     }
 
     @Override
-    public void log(ErrorInfo err) {
+    public boolean log(ErrorInfo err) {
         String uid = err.genUID();
         if (f_setUID.add(uid)) {
             // remember the highest severity encountered
@@ -79,6 +46,8 @@ public class ErrorList
                 ++m_cErrors;
             }
         }
+
+        return isAbortDesired();
     }
 
     @Override
@@ -201,14 +170,11 @@ public class ErrorList
         }
 
         @Override
-        public void log(Severity severity, String sCode, Site site, Object... aoParam) {
-            // a branch taken for a particular node re-anchors at that node: a diagnostic raised
-            // against a structure carries no source location of its own, and the node is the
-            // location the brancher knew about
-            if (f_node != null && site instanceof Site.At) {
-                site = ErrorListener.in(f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
-            }
-            super.log(severity, sCode, site, aoParam);
+        public boolean log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
+            return f_node == null
+                ? super.log(severity, sCode, aoParam, xs)
+                : log(severity, sCode, aoParam,
+                        f_node.getSource(), f_node.getStartPosition(), f_node.getEndPosition());
         }
 
         @Override
@@ -218,11 +184,6 @@ public class ErrorList
             }
 
             return f_listener;
-        }
-
-        @Override
-        public boolean isAbortDesired() {
-            return super.isAbortDesired() || f_listener.isAbortDesired();
         }
 
         @Override

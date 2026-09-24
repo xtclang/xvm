@@ -28,12 +28,12 @@ public class Initializer extends Launcher<InitializerOptions> {
     /**
      * Initializer constructor for programmatic use.
      *
-     * @param options  pre-configured initializer options
-     * @param console  representation of the terminal within which this command is run, or null
-     * @param errs     the ErrorListener to receive errors
+     * @param options     pre-configured initializer options
+     * @param console     representation of the terminal within which this command is run, or null
+     * @param errListener optional ErrorListener to receive errors, or null for no delegation
      */
-    public Initializer(InitializerOptions options, Console console, ErrorListener errs) {
-        super(options, console, errs);
+    public Initializer(InitializerOptions options, Console console, ErrorListener errListener) {
+        super(options, console, errListener);
     }
 
     /**

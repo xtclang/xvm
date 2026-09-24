@@ -31,13 +31,13 @@ import org.xvm.util.Severity;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
-import static org.xvm.asm.ErrorListener.NOWHERE;
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.tool.Launcher.DUP_NAME;
 import static org.xvm.tool.Launcher.MISSING_PKG_NODE;
 import static org.xvm.tool.Launcher.READ_FAILURE;
+
 import static org.xvm.tool.ResourceDir.NoResources;
+
 import static org.xvm.util.Handy.dateString;
 import static org.xvm.util.Handy.getExtension;
 import static org.xvm.util.Handy.listFiles;
@@ -553,7 +553,7 @@ public class ModuleInfo {
                     binaryVersion = struct.getModule().getVersion();
                     binaryContent = Content.Module;
                     return true;
-                } catch (Exception _) {}
+                } catch (Exception ignore) {}
             } else {
                 binaryStatus = Status.NotExists;
             }
@@ -632,7 +632,7 @@ public class ModuleInfo {
      * When working with a source code tree and given a "module file", produce a source tree of
      * the desired processing stage.
      *
-     * @param errs  the non-null error listener
+     * @param errs  an optional error listener
      *
      * @return the root {@link Node} of the tree, or null if the ModuleInfo does not know the source
      *         location, or if serious errors occur loading the source tree
@@ -803,37 +803,41 @@ public class ModuleInfo {
         public abstract TypeCompositionStatement type();
 
         @Override
-        public void log(ErrorInfo err) {
-            errs().log(err);
+        public boolean log(ErrorInfo err) {
+            return errs().log(err);
         }
 
         @Override
         public boolean isAbortDesired() {
-            return f_errs.isAbortDesired();
+            return m_errs != null && m_errs.isAbortDesired();
         }
 
         @Override
         public boolean hasSeriousErrors() {
-            return f_errs.hasSeriousErrors();
+            return m_errs != null && m_errs.hasSeriousErrors();
         }
 
         @Override
         public boolean hasError(String sCode) {
-            return f_errs.hasError(sCode);
+            return m_errs != null && m_errs.hasError(sCode);
         }
 
         /**
          * @return the list containing any errors accumulated on (or under) this node
          */
         public ErrorList errs() {
-            return f_errs;
+            ErrorList errs = m_errs;
+            if (errs == null) {
+                m_errs = errs = new ErrorList(341);
+            }
+            return errs;
         }
 
         /**
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            ErrorList deferred = f_errs;
+            ErrorList deferred = m_errs;
             if (deferred != null) {
                 for (ErrorInfo err : deferred.getErrors()) {
                     errs.log(err);
@@ -860,13 +864,9 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The errors accumulated on (or under) this node. A Node is an ErrorListener, so it has
-         * to be able to answer for what it has seen from the moment it exists: the list used to be
-         * built on first use, which left the three queries above answering "nothing" for a node
-         * nobody had logged to yet, and left two threads able to build two lists and keep
-         * different halves of the errors.
+         * The error list which buffers errors for the file node, if any.
          */
-        private final ErrorList f_errs = new ErrorList();
+        private ErrorList m_errs;
     }
 
     /**
@@ -1028,7 +1028,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    error(DUP_NAME, NOWHERE, name, descriptiveName());
+                    log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
                 } else {
                     children().put(name, node);
                 }
@@ -1039,7 +1039,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                error(MISSING_PKG_NODE, NOWHERE, descriptiveName());
+                log(Severity.ERROR, MISSING_PKG_NODE, new Object[]{descriptiveName()}, null);
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1267,7 +1267,7 @@ public class ModuleInfo {
             try {
                 return readFileChars(m_file);
             } catch (IOException e) {
-                error(READ_FAILURE, NOWHERE, m_file);
+                log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
             }
 
             return new char[0];
@@ -1430,13 +1430,13 @@ public class ModuleInfo {
             if (isExplicitSourceFile(name)) {
                 try {
                     Source source = new Source(file);
-                    Parser parser = new Parser(source, silent(DISCARD));
+                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
                     return parser.parseModuleNameIgnoreEverythingElse();
-                } catch (CompilerException | IOException _) {}
+                } catch (CompilerException | IOException ignore) {}
             } else if (isExplicitCompiledFile(name)) {
                 try {
                     return new FileStructure(file).getModuleId().getName();
-                } catch (IOException _) {}
+                } catch (IOException ignore) {}
             }
         }
 

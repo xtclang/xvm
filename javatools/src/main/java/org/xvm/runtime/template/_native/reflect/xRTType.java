@@ -9,6 +9,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
@@ -32,43 +33,40 @@ import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
+import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
+import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ProxyComposition;
 import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.IndexSupport;
-import org.xvm.runtime.template.Proxy.ProxyHandle;
 import org.xvm.runtime.template.Proxy;
+import org.xvm.runtime.template.Proxy.ProxyHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xConst;
-import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xEnum;
+import org.xvm.runtime.template.xEnum.EnumHandle;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xNullable;
 import org.xvm.runtime.template.xOrdered;
 
-import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray;
+import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 
 import org.xvm.runtime.template.numbers.xInt64;
 
-import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Native RTType implementation.
@@ -673,7 +671,7 @@ public class xRTType
         }
 
         ObjectHandle[] ahFunctions;
-        if (infoTarget.isNewable(false, silent(PROBE))) {
+        if (infoTarget.isNewable(false, ErrorListener.BLACKHOLE)) {
             ConstantPool            pool        = frame.poolContext();
             TypeComposition         clzTarget   = typeTarget.ensureClass(frame);
             ArrayList<ObjectHandle> listHandles = new ArrayList<>();
@@ -1488,7 +1486,7 @@ public class xRTType
             assert !typeParent.equals(pool().typeObject());
         }
 
-        if (!infoTarget.isNewable(false, silent(PROBE))) {
+        if (!infoTarget.isNewable(false, ErrorListener.BLACKHOLE)) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 

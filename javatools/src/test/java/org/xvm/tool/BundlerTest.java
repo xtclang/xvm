@@ -16,8 +16,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.ModuleStructure.ModuleType;
 import org.xvm.asm.Version;
+import org.xvm.asm.ModuleStructure.ModuleType;
 
 import org.xvm.asm.VersionTree;
 import org.xvm.tool.LauncherOptions.BundlerOptions;
@@ -30,8 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Tests for the "bundle" command: options parsing, launcher dispatch, and the multi-module
@@ -82,7 +80,8 @@ class BundlerTest {
     @Test
     void testBundleCommandDispatch() {
         // -h takes the help path through the real Bundler launcher and returns success
-        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"}, new Console() {}, silent(DISCARD));
+        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"},
+                new Console() {}, null);
         assertEquals(0, result);
     }
 
@@ -205,7 +204,7 @@ class BundlerTest {
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {
                 "-o", tempDir.resolve("out.xtc").toString(),
                 fileFirst.getPath(),
-                fileSecond.getPath()}, console, silent(DISCARD));
+                fileSecond.getPath()}, console, null);
 
         assertEquals(1, result);
         var output = console.getAllOutput();
@@ -263,7 +262,8 @@ class BundlerTest {
         for (var input : inputs) {
             args.add(input.getPath());
         }
-        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]), new CaptureConsole(), silent(DISCARD));
+        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]),
+                new CaptureConsole(), null);
     }
 
     private static final class CaptureConsole implements Console {

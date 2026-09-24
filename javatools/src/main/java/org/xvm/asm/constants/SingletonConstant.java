@@ -12,8 +12,8 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.runtime.Fiber;
-import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.InitializingHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;

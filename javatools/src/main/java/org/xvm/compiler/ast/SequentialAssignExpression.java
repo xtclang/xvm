@@ -9,20 +9,17 @@ import org.xvm.asm.PropertyStructure;
 
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 import org.xvm.asm.ast.UnaryOpExprAST;
+import org.xvm.asm.ast.UnaryOpExprAST.Operator;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * The "++" or "--" that precedes or follows an assignable expression of type Sequential.
@@ -166,7 +163,7 @@ public class SequentialAssignExpression
         if (expr instanceof NameExpression exprName &&
                 exprName.getMeaning() == NameExpression.Meaning.Property) {
             PropertyConstant idProp = (PropertyConstant)
-                    exprName.resolveRawArgument(ctx, false, silent(PROBE));
+                    exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
             PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
             if (prop != null && prop.isAtomic()) {
                 String sMethod, sOp;

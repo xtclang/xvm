@@ -37,8 +37,8 @@ import org.xvm.asm.op.Move;
 import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
 
@@ -134,14 +134,14 @@ public class WhileStatement
         Register reg = fFirst ? m_regFirst : m_regCount;
         if (reg == null) {
             // this occurs only during validate()
-            assert m_labelVars != null;
+            assert m_ctxLabelVars != null;
 
             String sLabel   = ((LabeledStatement) getParent()).getName();
             String sRegName = sLabel + '.' + sName;
             Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sRegName);
 
             reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sRegName);
-            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
+            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
 
             if (fFirst) {
                 m_regFirst = reg;
@@ -244,7 +244,8 @@ public class WhileStatement
 
             // the current context and error list are required by getLabelVar() if, in the process
             // of validation, one of the nested AST nodes requires a loop variable
-            m_labelVars = new ValidationScope(ctx, errs);
+            m_ctxLabelVars  = ctx;
+            m_errsLabelVars = errs;
             m_listContinues = null;
 
             // either enter normal or loop, depending on the assumption
@@ -410,7 +411,8 @@ public class WhileStatement
             blockOrig.discard(true);
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_labelVars = null;
+            m_ctxLabelVars  = null;
+            m_errsLabelVars = null;
 
             if (ctxFork != null && !hasBreaks()) {
                 // there are no breaks out of the loop, therefore the only way to get out is for the
@@ -747,7 +749,8 @@ public class WhileStatement
     protected long           lEndPos;
 
     private transient Label         m_labelContinue;
-    private transient ValidationScope m_labelVars;
+    private transient Context       m_ctxLabelVars;
+    private transient ErrorListener m_errsLabelVars;
     private transient Register      m_regFirst;
     private transient Register      m_regCount;
 

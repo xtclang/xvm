@@ -9,7 +9,6 @@ import java.io.StringWriter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -139,7 +138,7 @@ public abstract class XvmStructure
      * An operation constructing constants for another file or target must receive that
      * destination separately instead of deriving it from the source structure.
      *
-     * @return the owning ConstantPool
+     * @return the ConstantPool
      */
     public ConstantPool getConstantPool() {
         return getContaining().getConstantPool();
@@ -483,15 +482,28 @@ public abstract class XvmStructure
     /**
      * Log an error against this structure.
      *
-     * @param errs     the current operation's non-null error listener; pass an explicit
-     *                 non-reporting listener when diagnostics are intentionally discarded
+     * @param errs     the error list to log to, or null to use the runtime ErrorListener
      * @param sev      the severity of the error
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
+    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        Objects.requireNonNull(errs, "errs").log(sev, sCode, ErrorListener.at(this), aoParam);
+        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+    }
+
+    /**
+     * Use the operation's listener, or the runtime policy when none is supplied.
+     *
+     * <p>Reusable structures do not retain a request listener or look one up through a pool.
+     * Callers collecting diagnostics must pass their current listener explicitly.
+     *
+     * @param errs  the operation's listener, or null for runtime reporting
+     *
+     * @return the supplied listener, or the runtime listener
+     */
+    public ErrorListener ensureErrorListener(ErrorListener errs) {
+        return errs == null ? ErrorListener.RUNTIME : errs;
     }
 
     // ----- debugging support ---------------------------------------------------------------------

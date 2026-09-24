@@ -10,9 +10,9 @@ import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
 import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
-import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle;
+import org.xvm.runtime.ObjectHandle.ExceptionHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 
 import org.xvm.util.Hash;
 

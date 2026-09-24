@@ -56,8 +56,8 @@ import org.xvm.runtime.template.collections.xArray;
 
 import org.xvm.runtime.template.reflect.xInjector;
 
-import org.xvm.runtime.template.text.xString.StringHandle;
 import org.xvm.runtime.template.text.xString;
+import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.collections.xBasicHashCollector;
 

@@ -1,7 +1,5 @@
 package org.xvm.tool;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.io.File;
 
 import java.util.Arrays;
@@ -37,13 +35,11 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
 
-import static java.util.Objects.requireNonNull;
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
 import static org.xvm.asm.Constants.VERSION_MAJOR_CUR;
 import static org.xvm.asm.Constants.VERSION_MINOR_CUR;
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.quoted;
 import static org.xvm.util.Handy.resolveFile;
 import static org.xvm.util.Handy.toPathString;
@@ -71,7 +67,7 @@ public abstract class Launcher<T extends LauncherOptions>
      */
     @FunctionalInterface
     private interface CommandHandler {
-        int launch(String[] args, Console console, ErrorListener errs);
+        int launch(String[] args, Console console, ErrorListener errListener);
     }
 
     /**
@@ -129,11 +125,11 @@ public abstract class Launcher<T extends LauncherOptions>
     protected final Console m_console;
 
     /**
-     * Non-null listener receiving both tool and compilation errors for structured access.
-     * Console reporting remains separate; callers that discard diagnostics supply an explicit
-     * {@link ErrorListener#silent} listener.
+     * Optional ErrorListener that receives ALL errors (tool-level and compilation). When
+     * provided (not null), errors are forwarded for external programmatic access. Console
+     * displays errors, but m_errors provides structured access.
      */
-    protected final ErrorListener f_errs;
+    protected final ErrorListener m_errors;
 
     /**
      * The worst severity issue encountered thus far.
@@ -152,11 +148,11 @@ public abstract class Launcher<T extends LauncherOptions>
      * @param options  the pre-configured Options
      * @param console  representation of the terminal within which this command is run (null =
      *                 default)
-     * @param errs     the ErrorListener to receive all errors
+     * @param errors   optional ErrorListener to receive all errors (null = BLACKHOLE)
      */
-    protected Launcher(T options, Console console, @NotNull ErrorListener errs) {
+    protected Launcher(T options, Console console, ErrorListener errors) {
         m_console = console == null ? DEFAULT_CONSOLE : console;
-        f_errs = requireNonNull(errs, "errs");
+        m_errors = errors == null ? ErrorListener.BLACKHOLE : errors;
         m_options = options;
         moduleCache = new HashMap<>();
     }
@@ -198,9 +194,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 stripDebugPrefix(asArg[0]),
                 Arrays.copyOfRange(asArg, 1, asArg.length),
                 console,
-                // the command line has no delegate to forward to: a Launcher is itself an
-                // ErrorListener, and reports through the Console it was given
-                silent(DISCARD));
+                null);
     }
 
     /**
@@ -210,15 +204,14 @@ public abstract class Launcher<T extends LauncherOptions>
      * <p>Supported commands: build, run, test (or --help, --version).
      * Shell scripts call with the command directly (xcc calls with "build", xec with "run").
      *
-     * @param cmd      command name: build, run, or test
-     * @param args     command line arguments (options and files)
-     * @param console  console for output (must not be null)
-     * @param errs     the ErrorListener to receive errors
+     * @param cmd          command name: build, run, or test
+     * @param args         command line arguments (options and files)
+     * @param console      console for output (must not be null)
+     * @param errListener  optional ErrorListener to receive errors, or null
      *
      * @return exit code (0 for success, non-zero for error)
      */
-    public static int launch(String cmd, String[] args, Console console, @NotNull ErrorListener errs) {
-        requireNonNull(errs, "errs");
+    public static int launch(String cmd, String[] args, Console console, ErrorListener errListener) {
         try {
             // Check for global options first
             return switch (cmd) {
@@ -233,7 +226,7 @@ public abstract class Launcher<T extends LauncherOptions>
                 default -> {
                     final var handler = COMMANDS.get(cmd);
                     if (handler != null) {
-                        yield handler.launch(args, console, errs);
+                        yield handler.launch(args, console, errListener);
                     }
                     // If the command looks like an option (e.g., "-L"), no command was provided;
                     // show help without an error message
@@ -293,25 +286,24 @@ public abstract class Launcher<T extends LauncherOptions>
      *
      * @param options      pre-built options (CompilerOptions, RunnerOptions, or
      *                     DisassemblerOptions)
-     * @param console  console for output (must not be null)
-     * @param errs     the ErrorListener to receive errors
+     * @param console      console for output (must not be null)
+     * @param errListener  optional ErrorListener to receive errors, or null
      *
      * @return exit code (0 for success, non-zero for error)
      */
-    public static int launch(LauncherOptions options, Console console, @NotNull ErrorListener errs) {
-        requireNonNull(errs, "errs");
+    public static int launch(LauncherOptions options, Console console, ErrorListener errListener) {
         if (options == null) {
             console.log(ERROR, "Options must not be null");
             return 1;
         }
 
         final var launcher = switch (options) {
-            case final CompilerOptions opts     -> new Compiler(opts, console, errs);
-            case final InitializerOptions opts  -> new Initializer(opts, console, errs);
-            case final TestRunnerOptions opts   -> new TestRunner(opts, console, errs);
-            case final RunnerOptions opts       -> new Runner(opts, console, errs);
-            case final DisassemblerOptions opts -> new Disassembler(opts, console, errs);
-            case final BundlerOptions opts      -> new Bundler(opts, console, errs);
+            case final CompilerOptions opts     -> new Compiler(opts, console, errListener);
+            case final InitializerOptions opts  -> new Initializer(opts, console, errListener);
+            case final TestRunnerOptions opts   -> new TestRunner(opts, console, errListener);
+            case final RunnerOptions opts       -> new Runner(opts, console, errListener);
+            case final DisassemblerOptions opts -> new Disassembler(opts, console, errListener);
+            case final BundlerOptions opts      -> new Bundler(opts, console, errListener);
             default -> {
                 console.log(ERROR, "Unknown options type: {}", options.getClass().getName());
                 yield null;
@@ -594,12 +586,14 @@ public abstract class Launcher<T extends LauncherOptions>
      * Displays via Console and forwards to external ErrorListener if provided.
      *
      * @param err the error information
+     * @return true if compilation should abort
      */
     @Override
-    public void log(ErrorInfo err) {
+    public boolean log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
         log(err.getSeverity(), err.toString());
-        f_errs.log(err);
+        m_errors.log(err);
+        return isAbortDesired();
     }
 
     /**
@@ -789,7 +783,7 @@ public abstract class Launcher<T extends LauncherOptions>
         String sVer = null;
         try {
             sVer = reposLib.loadModule(ECSTASY_MODULE).getVersionString();
-        } catch (Exception _) {}
+        } catch (Exception ignore) {}
 
         // Use version from a single source of truth if the module version is not available
         if (sVer == null) {

@@ -14,8 +14,8 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
-import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypedefConstant;
 import org.xvm.asm.constants.UnresolvedNameConstant;
 import org.xvm.asm.constants.UnresolvedTypeConstant;
@@ -312,8 +312,8 @@ public class Annotation
 
         // it must be an annotation type
         if (getAnnotationType().getExplicitClassFormat() != Component.Format.ANNOTATION) {
-            log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION, getAnnotationClass().getValueString());
-            fHalt |= errs.isAbortDesired();
+            fHalt |= log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
+                    getAnnotationClass().getValueString());
         }
 
         return fHalt;

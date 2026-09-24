@@ -49,6 +49,7 @@ import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
+
 import static org.xvm.util.Handy.checkElementsNonNull;
 import static org.xvm.util.Handy.quotedString;
 import static org.xvm.util.Handy.readMagnitude;
