@@ -648,8 +648,8 @@ That is a source comparison, not an execution claim against a freshly fetched ma
 changes are independent of the embedding API. The source-level tests use I3/E1's compiled-library
 and embedding harness; the exact warning-replay controls require C4. Keep the switch controls with
 the audit even though they need no production change. This is the **47th** planned extraction group;
-production/test commit is `d0809cd83`. The audit documentation accompanies the following cursor
-recovery checkpoint. The preceding L22/C11/L23/I6 mapping remains at `abbc89f88`.
+production/test commit is `d0809cd83`. The audit documentation is in `aa65860d0` alongside the
+cursor recovery checkpoint. The preceding L22/C11/L23/I6 mapping remains at `abbc89f88`.
 
 Focused verification passes **56 cases**, zero failures/errors/skips: 36 new emission-audit cases,
 12 existing TypeInfo diagnostic cases and eight compiler-boundary cases. Full verification passes:
@@ -678,7 +678,7 @@ later work.
 
 #### Missing-delimiter cursor recovery
 
-Implemented in the working tree on `lagergren/errs`, after the `abbc89f88` / `a0ec10840` checkpoint.
+Implemented in `aa65860d0` on `lagergren/errs`, after the `abbc89f88` / `a0ec10840` checkpoint.
 Keep this separate from the I7 emission fixes in `d0809cd83` when extracting PRs.
 
 - [x] Reproduce loss of completion/signature facts under unclosed grouping parentheses and array
@@ -713,7 +713,9 @@ enclosing-instance member enumeration or additional specialized constructor form
 | C12 | `Parser`, `ParserRecoveryTest`, embedding API recovery documentation | C7/C10 cursor syntax; no public API shape change |
 | L24 | `XdkDelimiterRecoveryTest`, updated partial-analysis/completion negative controls, packaged stdio, X75–X76 and capability/playbook docs | C12, L8/L9; function/constructor controls C11/L23; editor runner L16 |
 
-Both commit assignments are pending. These bring the plan to **49** extraction groups, including I7.
+Both source groups are in `aa65860d0`; extract the compiler and host portions separately as listed
+above. These bring the plan to **49** extraction groups, including I7. I7's production/tests are in
+`d0809cd83`; extract its audit documentation from `aa65860d0` with those changes.
 
 **Verification:** all 22 new delimiter adapter/embedding cases pass, as do the 12 parser-recovery
 cases and the existing partial-analysis coverage. The full results are:
@@ -742,7 +744,7 @@ The first full run passed Java and stdio and exposed the obsolete compound-state
 the second command passed the corrected full LSP suite and all editor cases in 5m 48s. This is
 integrated-branch evidence; C12 and L24 must still pass on their respective extraction bases.
 
-**Recommended next slice: completion of missing argument values.** The copied model already
+**Agreed next slice: completion of missing argument values.** The copied model already
 exposes candidate-specific expected types, but `XdkCursorQueries.completions` currently excludes
 call sites. Prove positional and `name=|` completion with visible locals/parameters, generic
 substitution and multiple applicable overloads. Keep compatibility decisions in the compiler;
@@ -1751,9 +1753,9 @@ above identify old candidate patches, not additional changes to merge into the i
 | C11 | Capture incomplete function candidates and ordinary constructor syntax | `abbc89f88` (incomplete signatures); follow-up above | C7/C9; constructor and record-pattern migration proof |
 | L23 | Deliver function/constructor signature help while typing | `abbc89f88` (incomplete signatures); follow-up above | C11, L9, E5/L20, I6; editor runner L16 |
 | I6 | Preserve argument errors when fitting function-call returns | `abbc89f88` (`InvocationExpression.testFunction` and call-site regression) | Independent production fix; I3/E1 harness and E5 binding assertion |
-| I7 | Preserve atomic result/receiver types and handle singleton/outer owners; audit switch metadata | `d0809cd83` production/tests; audit documentation in following cursor checkpoint | Independent production fix; I3/E1 test harness and C4 warning-replay controls |
-| C12 | Retain missing enclosing delimiters around an explicit cursor | Current working tree; delimiter recovery above | C7/C10; no public API shape change |
-| L24 | Prove delimiter recovery through the adapter, protocol and editor | Current working tree; delimiter recovery above | C12, L8/L9, C11/L23; editor runner L16 |
+| I7 | Preserve atomic result/receiver types and handle singleton/outer owners; audit switch metadata | `d0809cd83` production/tests; `aa65860d0` audit documentation | Independent production fix; I3/E1 test harness and C4 warning-replay controls |
+| C12 | Retain missing enclosing delimiters around an explicit cursor | `aa65860d0` compiler portion; delimiter recovery above | C7/C10; no public API shape change |
+| L24 | Prove delimiter recovery through the adapter, protocol and editor | `aa65860d0` host portion; delimiter recovery above | C12, L8/L9, C11/L23; editor runner L16 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it

@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Missing delimiter recovery (2026-09-24, current working tree).**
+**Missing delimiter recovery (2026-09-24, `aa65860d0`).**
 Explicit cursor analysis retains missing call/group parentheses and index brackets around the
 cursor, including nested signatures and member completion. At EOF it also retains unfinished
 blocks. Normal compiler diagnostics and source text remain unchanged. The parser reuses existing
