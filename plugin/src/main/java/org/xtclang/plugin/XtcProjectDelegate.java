@@ -883,7 +883,12 @@ public class XtcProjectDelegate {
      * @param compileTasks the collection of all XtcCompileTask instances in the project
      */
     private void configureCompileTaskResourceDependencies(final TaskCollection<@NotNull XtcCompileTask> compileTasks) {
-        compileTasks.forEach(task -> {
+        // note: configureEach, not forEach. forEach realizes every compile task during plugin
+        // application, which both defeats task configuration avoidance and freezes everything
+        // XtcCompileTask's constructor captures - source set directories, resolved output and
+        // resource directories, and the module dependency configurations - before the build script
+        // has run at all, since a Kotlin DSL "plugins {}" block precedes everything else in it.
+        compileTasks.configureEach(task -> {
             final Set<SourceSet> sourceSets = taskSourceSets.get(task.getName());
             if (sourceSets == null || sourceSets.isEmpty()) {
                 logger.warn("[plugin] WARNING: No specific source set associated with compile task '{}'.", task.getName());
