@@ -104,7 +104,7 @@ class XdkCompletionSignatureTest {
     @Test
     fun `unsupported or unresolved cursor contexts return no invented results`() {
         XdkAdapter().use { adapter ->
-            for (body in listOf("missing.", "box.noSuchPrefix", "noSuchPrefix", "1 + box.")) {
+            for (body in listOf("missing.", "box.noSuchPrefix", "noSuchPrefix", "1 + * box.")) {
                 val prefix = "$BOX void run(Box<String> box) { $body"
                 adapter.compile(URI, "$prefix } }")
                 assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()
