@@ -8,6 +8,23 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Incomplete-call signature help (2026-09-24, current working tree).**
+Function values and ordinary constructors now expose signatures while arguments are missing.
+Compiler probes reject incompatible/unreadable values, retain function parameter types without
+inventing names or runtime targets, and fit constructor overloads with named/default arguments and
+explicit class type substitutions. The parser retains constructor syntax using existing children;
+all candidate facts remain immutable and attempt-owned, with no new AST fields or clone rules.
+A separate invocation-validation fix prevents return-type success from erasing argument failure.
+See [C11/L23/I6, scope and verification](errs-integration-plan.md#incomplete-function-and-constructor-signature-help).
+
+**Ref/Var annotation lookup follow-up (2026-09-24, current working tree).**
+Property implementation lookup now copies source annotation getter/setter targets from the host's
+existing nested method chains. Generic annotations, annotation order, explicit accessor overrides,
+inheritance, concrete delegation and indexed dependency locations have regressions. Native
+annotation storage and binary-only bodies have no invented source target. This is a Kotlin consumer
+change with no new Java/AST API, compiler state or listener suppression. See
+[L22 and its validation record](errs-integration-plan.md#refvar-annotation-accessor-follow-up).
+
 **Semantic and diagnostic hardening follow-up (2026-09-24, `570a7e870`).**
 The four follow-ups after L18 now have implementations and focused regressions. Concrete delegation
 follows compiler-selected method/property chains, with cycle protection and no generated forwarding
@@ -25,7 +42,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X71 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X74 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1287,6 +1304,12 @@ persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
 
+**Ref/Var annotation follow-up (2026-09-24):** no AST or Java change. The compiler already layers
+annotation bodies into the adopting host's nested accessor chains. `CompilerImplementations` reads
+those chains under the existing worker/listener boundary, without constructing a property-class
+TypeInfo or retaining compiler objects in snapshots. Native storage remains unavailable as a source
+body. The output/purity regression now includes annotated and lazy properties.
+
 **Property/accessor follow-up (2026-09-24):** no AST field, accessor, clone rule or Java API change.
 The Kotlin implementation copier uses `PropertyInfo`/`PropertyBody` composition, existing
 `PropertyStructure.getGetter()`/`getSetter()` and written declaration tokens. It reads ordinary
@@ -1478,8 +1501,10 @@ their meaning to normal contextual lookup, preserving imports, shadowing and acc
 | `Compiler` / `StageMgr` | Carry a final collector reference through stages; preserve old constructors with a disabled collector. | The compilation attempt owns facts and cleanup. No ambient thread local. |
 | `AstNode.catchUpChildren`, method/property/lambda/type declarations, `NewExpression` | Forward the collector through existing nested compilation paths. | Mechanical propagation, with no new fields on those AST nodes. |
 | `AstNode` argument-fit helper | Expose tentative matching signatures/mappings to `PartialCallResolver`; existing full-call selection keeps its behavior. | Argument fitting already lives here. The helper reuses its named ordering, conversions and inference, with trial argument clones and a child context. No new clone/reset rule. |
-| `PartialCallResolver` | Inspect accessible qualified, implicit and static call candidates and retain written parameter mappings. | Compiler-side query while Context exists; orchestration is outside AST nodes. Candidates never masquerade as successful invocations. |
-| `CursorBinding` / embedding `PartialAnalysis` | Immutable scope/candidate records and a collector keyed by site identity; publication filters surviving syntax and clears scratch entries. | Attempt ownership avoids phase-assigned node fields and leaking validation contexts. Previous result constructors remain; record-pattern arity changes. |
+| `PartialCallResolver` | Inspect accessible method/ordinary-constructor candidates and function-valued callees; retain written parameter mappings. | Compiler-side query while Context exists; orchestration is outside AST nodes. Trial clones use child contexts and locally collecting speculative listeners. Candidates never masquerade as successful invocations. |
+| `Parser` / `IncompleteStatement` constructor syntax | Reuse the call-argument cursor parser and retain an existing `NewExpression` prefix as the target child. | This is source syntax: the type belongs on the existing constructor node, and arguments on the existing incomplete site. No new AST field, semantic cache or clone/reset rule. |
+| `InvocationExpression.testFunction` | Preserve argument validity when checking return fit (`fValid &= fit.isFit()`). | The existing full-call validator owns the correctness decision. Successful return fitting must not publish a failed call as validated; no new state or listener suppression. |
+| `CursorBinding` / embedding `PartialAnalysis` | Immutable scope/candidate records and a collector keyed by site identity; publication filters surviving syntax and clears scratch entries. | Attempt ownership avoids phase-assigned node fields and leaking validation contexts. Previous result constructors remain; `CursorBinding` now has seven record components, adding function candidates. Record patterns must migrate. |
 | `ConstantPool.getImplicitImportNames()` | Copy the existing language import-name set without resolving components. | The compiler owns this vocabulary; the LSP must not maintain another built-in type list. |
 
 The Kotlin LSP module copies these records to compiler-free scope/member/candidate values. Expected

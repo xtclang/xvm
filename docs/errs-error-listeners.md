@@ -458,7 +458,14 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    actual instantiated signature and argument mapping. Incomplete calls now reuse compiler argument
    fitting on trial copies, with candidate-specific generic types and named mappings. Candidate
    mismatches are speculative and discarded; explicit TypeInfo inspection reports through the host
-   listener and all probes observe cancellation. No candidate is a selected call. Method
+   listener and all probes observe cancellation. Function-valued and ordinary constructor probes
+   additionally use a locally collecting silent PROBE listener: private errors must still reject an
+   unreadable callee or invalid type, even though they are not published to the document. A successful
+   return-type fit must not erase failed argument fitting; the independent I6 invocation fix preserves
+   that decision. Function candidates copy only type/argument facts; constructor candidates reuse the
+   existing method fitter. No new AST semantic state is introduced. See the
+   [incomplete-signature audit](errs-audit.md#incomplete-functionconstructor-signatures-2026-09-24).
+   No candidate is a selected call. Method
    implementation lookup now copies actual override chains. Explicit dependency artifacts/source
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
    Explicit source roots/edges now support automatic dependency builds from edited sources.
@@ -508,3 +515,8 @@ The bound-generic NameExpression audit reproduced a typing/emission defect, not 
 source diagnostic. The exposed function type incorrectly retained a bound hidden type parameter;
 fixing it reached the missing binary AST and EMB-5. The corrected emitter creates BindFunctionAST
 alongside FBind. This needs a compiler regression PR (I4), not another listener workaround.
+
+Ref/Var annotation implementation lookup now reads the adopting host's existing nested accessor
+chains under the same explicit listener/cancellation boundary. It does not construct a separate
+property TypeInfo or discard its diagnostics. This Kotlin-only consumer adds no listener or AST
+contract; annotated-output and snapshot-purity regressions guard the inspection boundary.

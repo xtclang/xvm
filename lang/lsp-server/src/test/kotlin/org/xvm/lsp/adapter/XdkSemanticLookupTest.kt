@@ -336,6 +336,93 @@ class XdkSemanticLookupTest {
     }
 
     @Test
+    fun `annotated property implementations use the composed generic getter and setter`() {
+        val source =
+            """
+            module Lookups {
+                interface HasValue<T> { T /*api*/value; }
+                annotation Tracked<T> into Var<T> {
+                    @Override T /*getter*/get() = super();
+                    @Override void /*setter*/set(T value) { super(value); }
+                }
+                annotation Unused<T> into Var<T> { @Override T get() = super(); }
+                class Holder implements HasValue<Int> { @Override @Tracked Int /*property*/value = 1; }
+                class Child extends Holder {}
+                Int read(Holder holder) = holder. /*use*/value;
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
+            for (marker in listOf("api", "property", "use")) {
+                assertThat(implementations(adapter, source, marker))
+                    .describedAs(marker)
+                    .containsExactlyInAnyOrder(location(source, "getter", "get"), location(source, "setter", "set"))
+            }
+        }
+    }
+
+    @Test
+    fun `annotation order and explicit accessors retain their effective source targets`() {
+        val source =
+            """
+            module Lookups {
+                annotation First<T> into Var<T> {
+                    @Override T /*firstGet*/get() = super();
+                    @Override void /*firstSet*/set(T value) { super(value); }
+                }
+                annotation Second<T> into Var<T> {
+                    @Override T /*secondGet*/get() = super();
+                    @Override void /*secondSet*/set(T value) { super(value); }
+                }
+                class Holder {
+                    @First @Second Int /*forward*/value = 1;
+                    @Second @First Int /*reverse*/other = 2;
+                    @First @Second Int /*custom*/written {
+                        @Override Int /*explicitGet*/get() = 3;
+                        @Override void /*explicitSet*/set(Int value) {}
+                    }
+                }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
+            for ((property, getter, setter) in listOf(
+                Triple("forward", "firstGet", "firstSet"),
+                Triple("reverse", "secondGet", "secondSet"),
+                Triple("custom", "explicitGet", "explicitSet"),
+            )) {
+                assertThat(implementations(adapter, source, property))
+                    .describedAs(property)
+                    .containsExactlyInAnyOrder(location(source, getter, "get"), location(source, setter, "set"))
+            }
+            assertThat(implementations(adapter, source, "explicitGet")).containsExactly(location(source, "explicitGet", "get"))
+            assertThat(implementations(adapter, source, "explicitSet")).containsExactly(location(source, "explicitSet", "set"))
+        }
+    }
+
+    @Test
+    fun `Ref annotations and concrete delegates reach the written getter`() {
+        val source =
+            """
+            module Lookups {
+                interface Named { @RO String /*api*/name; }
+                annotation Read<T> into Ref<T> { @Override T /*getter*/get() = super(); }
+                class Holder implements Named { @Override @Read String /*property*/name = "value"; }
+                class Forward(Holder target) delegates Named(target) {}
+                String read(Forward forward) = forward. /*use*/name;
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
+            for (marker in listOf("api", "property", "use")) {
+                assertThat(implementations(adapter, source, marker))
+                    .describedAs(marker)
+                    .containsExactly(location(source, "getter", "get"))
+            }
+        }
+    }
+
+    @Test
     fun `abstract delegated and annotated properties have no invented implementation`() {
         val source =
             """
