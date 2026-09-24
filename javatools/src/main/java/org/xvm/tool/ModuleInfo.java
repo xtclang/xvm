@@ -932,13 +932,10 @@ public class ModuleInfo {
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            ErrorList deferred = f_errs;
-            if (deferred != null) {
-                for (ErrorInfo err : deferred.getErrors()) {
-                    errs.log(err);
-                }
-                deferred.clear();
+            for (ErrorInfo err : f_errs.getErrors()) {
+                errs.log(err);
             }
+            f_errs.clear();
         }
 
         // ----- fields ------------------------------------------------------------------------

@@ -3,24 +3,15 @@ package org.xvm.asm;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Where something's diagnostics go, and a way to send them somewhere else for a while.
+ * A diagnostic destination that can be diverted for a lexical scope.
  *
- * Several things in the compiler report through a destination rather than through a parameter -
- * the parser, because threading a listener through two hundred parse methods is not a refactor;
- * a file structure, because an interned TypeConstant asked to build a TypeInfo has no caller to
- * ask; a name resolver, because the callbacks it makes have no listener of their own. Each of
- * them needs to point that destination somewhere else for a stretch of work and then give it
- * back.
+ * The parser and name resolver use this when callbacks cannot take a listener parameter.
+ * Scopes must be closed in reverse order, normally by try-with-resources. Each scope restores
+ * its predecessor even when the operation throws. An inactive resolver has a null destination;
+ * an active scope always has a listener.
  *
- * Each used to do that with a mutable field and its own copy of the save-and-restore, which is
- * three chances to forget the restoring and three fields that could not be final. The mutation
- * lives here instead: holders are final fields, the destination moves only inside a scope, and
- * the scope puts it back on every exit path including an exception.
- *
- * This is deliberately not a fix for ownership. The destination is still reachable by anything
- * holding the owner, so two threads working through one owner still interfere; what a scope
- * fixes is lifetime, not who decides. Ownership is fixed by passing a listener as a parameter,
- * which is what the rest of the compiler does and what these three cannot yet afford.
+ * This holder controls lifetime, not ownership or concurrency. Owners remain confined to one
+ * compiler operation; sharing a holder across threads is not supported.
  */
 public final class Reporting {
     /**
@@ -47,14 +38,6 @@ public final class Reporting {
      */
     public Scope to(ErrorListener errs) {
         return new Scope(errs);
-    }
-
-    /**
-     * Answer the way another holder does. For a structure being copied, which has no scope of its
-     * own to inherit but must still report where the structure it was copied from reports.
-     */
-    void adoptFrom(Reporting that) {
-        m_errs = that.m_errs;
     }
 
     /**

@@ -56,8 +56,9 @@ GROUPS = (
     )),
     ("build", (
         "lang/**",
-        "build-logic/settings-plugins/**",
-        "build-logic/common-plugins/**",
+        "build-logic/**",
+        ".github/workflows/commit.yml",
+        ".github/scripts/ci-changes.py",
         "gradlew",
         "gradlew.bat",
         "gradle/wrapper/**",

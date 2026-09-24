@@ -27,11 +27,11 @@ import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RangeConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -49,10 +49,10 @@ import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.util.Handy.indentLines;
-
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
+
+import static org.xvm.util.Handy.indentLines;
 
 /**
  * An "Iterable"-based "for" statement.
@@ -268,6 +268,18 @@ public class ForEachStatement
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
+        ValidationScope previous = m_labelVars;
+        try {
+            return validateScoped(ctx, errs);
+        } finally {
+            m_labelVars = previous;
+        }
+    }
+
+    /**
+     * Validate with callback state restored by {@link #validateImpl} on every exit.
+     */
+    private Statement validateScoped(Context ctx, ErrorListener errs) {
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
         // original error listener
@@ -1357,7 +1369,7 @@ public class ForEachStatement
     private transient Expression       m_exprLValue;
     private transient Expression       m_exprRValue;
     private transient Plan             m_plan;
-    private transient ValidationScope m_labelVars;
+    private transient ValidationScope  m_labelVars;
     private transient Register         m_regFirst;
     private transient Register         m_regLast;
     private transient Register         m_regCount;
