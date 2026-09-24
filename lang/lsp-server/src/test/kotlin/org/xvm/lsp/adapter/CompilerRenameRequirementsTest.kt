@@ -11,6 +11,17 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 /** Compiler facts required by bounded rename: successful recompilation alone is insufficient. */
 class CompilerRenameRequirementsTest {
     @Test
+    fun `bodyless method parameters have source declaration identities without invented registers`() {
+        val text = "module Rename { interface Mapper<T> { T map(T value); } }"
+        val model = compile(text)
+        val parameter = requireNotNull(model.symbolAt(0, text.indexOf("value")))
+        assertThat(parameter.kind).isEqualTo(SemanticModel.SymbolKind.PARAMETER)
+        assertThat(parameter.declaration?.start?.column).isEqualTo(text.indexOf("value"))
+        assertThat(parameter.renameable).isFalse()
+        assertThat(model.occurrences).noneMatch { it.symbol == null }
+    }
+
+    @Test
     fun `identity edits rename captures without touching a shadowing lambda parameter`() {
         val source =
             "module Rename { Int run() { Int local=1; function Int() f=()->local; " +

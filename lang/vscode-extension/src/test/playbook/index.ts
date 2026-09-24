@@ -51,7 +51,8 @@ export async function run(): Promise<void> {
             '7a.10–7a.14': 'X3–X4, X6–X20 and X33–X42',
             'Dependency host API': 'XdkDependencyTest and XdkLanguageServerTest (Gradle test task)',
             'Automatic source recompilation host API': 'XdkProjectTest and XdkProjectServerTest (Gradle test task)',
-            'Deterministic rename/cursor races': 'XdkCursorServerTest and XdkRenameServerTest (Gradle test task)'
+            'Configured graph and binary contracts': 'XdkProjectQueryTest and X59–X63; includes bundled XDK member resolution and rename rejection',
+            'Deterministic rename/cursor races': 'XdkProjectQueryLifecycleTest, XdkCursorServerTest and XdkRenameServerTest (Gradle test task)'
         }
     };
     await fs.writeFile(path.join(directory, 'results.json'), JSON.stringify(report, null, 2) + '\n');

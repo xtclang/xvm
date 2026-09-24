@@ -40,8 +40,10 @@ selected call signatures and bounded receiver-member candidates. Completion/sign
 reach the server, including typed member prefixes and calls with existing closing parentheses.
 Subsequent passes add scope completion, candidate argument fitting, type/implementation lookup,
 static call hierarchy, tokens, hints and the explicit dependency artifact/source host API. Broader
-incomplete-source analysis, member/workspace rename and persistent cross-module indexing remain open.
-Bounded local/private-parameter rename is implemented in the follow-up below. The numbered
+incomplete-source analysis and persistent cross-module indexing remain open.
+Bounded local/private-parameter rename is implemented in the follow-up below; L17 adds exact
+configured-graph references and ordinary instance-method override rename. Wider member/workspace
+rename still has explicit unsupported cases. The numbered
 passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
 
 ### Editor acceptance and extraction follow-through, 2026-09-24
@@ -356,7 +358,7 @@ L12 respectively. Interactive findings must be fixed and tested on `errs` before
 
 ### Automated compiler playbook, 2026-09-24
 
-The follow-up on `errs` adds `:lang:vscode-extension:testCompilerPlaybook`, using the existing
+Commit **`31a02c74d` (L16)** adds `:lang:vscode-extension:testCompilerPlaybook`, using the existing
 TypeScript/Mocha extension-host runner. It registers X1–X58 against fixtures read from the manual
 playbook, adds configuration/diagnostic checks, uses an isolated workspace/profile and records
 per-case results and manual limitations. The aggregate task also runs server and packaged-JAR tests
@@ -406,20 +408,83 @@ checks into manual passes. The recording launcher was temporary and is not a shi
 
 Continue on `errs`, using the existing explicit source graph. The accepted order is:
 
-- [ ] **1. Cross-module references and member/override rename.** Prove reference closure, compiler
+- [x] **1. Cross-module references and member/override rename.** Prove reference closure, compiler
   identity across artifacts, override relationships and binding preservation across all affected
   configured modules. Include closed sources, unsaved overlays, dependency changes, overloads,
-  silent capture and stale/canceled requests. Add compiler hooks only for demonstrated missing facts.
+  silent capture and stale/canceled requests. Complete for ordinary instance methods within the
+  configured graph; unsupported cases are recorded below. No new compiler hooks were needed.
 - [ ] **2. Remaining semantic cases.** Probe property/accessor implementation, delegation targets
-  and function-valued calls with positive and negative consumers.
+  and function-valued calls with positive and negative consumers. Include the `super(...)` predefined
+  register found in step 1: the current method-call binding collector does not describe it.
 - [ ] **3. Broader incomplete source.** Probe compound/conditional expressions and arguments after
   the cursor while retaining the original compiler context and source positions.
 - [ ] **4. Remaining hardening.** Reproduce the bound-generic binary-AST diagnostic case and run a
-  prolonged editing/cancellation/retention workload.
+  prolonged editing/cancellation/retention workload. Add source attribution for structure-only
+  diagnostics such as `VERIFY-75`, including closed-member ownership and binary-only controls.
 
 Automatic discovery and a production persistent index are later work. The completed bounded POC
 remains the baseline; broader queries must distinguish complete configured-graph evidence from
 unknown external consumers. Record new implementation commits and future PR boundaries here.
+
+#### Configured-graph implementation evidence
+
+Step 1 is implemented and validated on the integrated branch. References compile every
+configured module in dependency order from a captured set of
+source texts and memberships. Each attempt opens fresh serialized dependencies; source declarations
+join by their compiler-associated source location and binary members by exact compiler constant.
+No spelling/arity match, persistent index or compiler object is retained. References preserve exact
+target identity; method rename separately computes the complete ordinary override family from
+compiler-composed chains, including abstract/generic contracts.
+
+Rename recompiles all proposed sources and compares every recorded occurrence binding, selected
+call and dispatch chain against their original declaration sites with translated offsets. Tests
+include edits that compile yet capture an untouched overload call or merge two independent abstract
+contracts. Both must be rejected. A graph containing errors gives no results; proof diagnostics do
+not replace normal editor diagnostics. All work stays on the serialized compiler worker. Source,
+configuration, dependency and client cancellation retire queries; server publication checks every
+open document's lifetime and preserves versions for all edited files. Closed source text and
+membership are recaptured before returning to catch delayed filesystem notifications.
+
+The bundled XDK is always in the compilation repository chain. Tests resolve the real
+`String.indexOf(Char, Int)` signature and source references across modules, then reject renaming
+that binary method and a source override of `Object.toString`. The binary source-location absence
+is separate from successful type/member resolution. An additional external artifact fixture checks
+that the policy is not special-cased to the core library.
+
+The missing fact found so far is `super(...)`: compilation succeeds, but its predefined function
+register has no copied method invocation binding or declaration site for the all-binding proof.
+It safely rejects rename and is tracked in step 2. Properties/accessors, static functions,
+constructors, mixin/delegating/capped chains and consumers outside the configured graph remain
+unsupported. Preparing rename is a candidate check; the worker can reject its final proof.
+Bodyless parameters had another Kotlin copying gap: their resolved method signature and original
+span now supply a declaration identity even without a body register. No Java embedding/AST API,
+AST state or clone rule changed.
+
+Future PR placement is **L17**, after L13/L14/L15 (and L16 for editor cases). Keep graph identity/
+dispatch collection, bodyless parameter copying, adapter/server lifecycle guards and their tests
+together. Playbook X59–X63 and the Problems-view additions follow the complete acceptance runner.
+The checkpoint is titled `Validate references and method rename across configured source modules`;
+its source commit belongs in the L17 table below. Extraction still requires independent validation.
+
+The Problems-view acceptance also pins a remaining diagnostic-location limit: `VERIFY-75`
+arrives once with warning severity and its compiler code, but uses a file-level `(0,0)` range.
+`Site.At` retains the compiler structure rather than a source span, and the current adapter maps
+that case to the requesting document. Source errors with `Site.In` retain exact ranges. A follow-up
+must associate source-owned structure diagnostics with their actual declaration/file (including
+closed members) without guessing from message text or falsely locating binary structures. This is
+not fixed by marking the warning as a visual pass; the playbook records the limitation explicitly.
+
+Validation on 2026-09-24: the complete LSP suite reports 769 cases (766 executed, three existing
+skips, zero failures/errors); all 15 packaged compiler stdio cases pass with zero skips. The query
+suite has 11 cases, query lifecycle has eight, cursor server has 24 and rename server has three.
+The isolated VS Code run passes all 68 cases (X1–X63, CFG1–CFG3 and 7a.8–7a.9), including real
+bundled-XDK resolution, binary rename rejection, generic override edits and Problems diagnostics.
+Its report is `lang/vscode-extension/build/reports/compiler-playbook/run-FE1WFH/results.json`.
+The final `testCompilerPlaybook spotlessCheck` invocation reused the configuration cache and passed;
+unchanged host/protocol test results were reused for that editor rerun. Problems icons, counts,
+filter rendering and mouse interaction remain manual checks. This is integrated-branch evidence;
+L17 still needs its own clean validation when extracted.
+
 
 ### Remaining work to establish the full API POC, 2026-09-23
 
@@ -491,7 +556,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. Historical capture counts are not an exhaustive audit; bound-generic binary-AST generation still needs a reproducer. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback. The audit classifies the remaining inspected families separately. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; compound/conditional prefixes and arguments following the cursor remain unavailable. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
 | 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Broader syntax, enclosing-instance member completion, type-valued receiver fallbacks and function-valued/receiver-rewritten calls remain outside this slice. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
-| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation; member/override rename, property/accessor implementation and dynamic dispatch remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
+| 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 now adds configured-graph exact references and ordinary instance-method override rename with dispatch checks; property/accessor implementation and register-backed calls remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
 
@@ -1206,15 +1271,17 @@ is explicitly historical. Its Kotlin lexer/parser, member index, flow-analysis A
 and schedules do not describe the current snapshot. `errs-audit.md` remains the classified failure
 backlog; its historical counts are not fresh measurements of this worktree.
 
-**Current capability limits (updated 2026-09-23).** Deferred capabilities are still visible outages
+**Current capability limits (updated 2026-09-24).** Deferred capabilities are still visible outages
 when choosing the compiler backend: incomplete
 syntax can prevent an assembled module AST; recovered per-file syntax supports structural features,
 while navigation requires current semantic results. Host-indexed dependencies now supply definition,
 type-definition and inherited-body links, but not a persistent cross-module reference/implementation
 index or external hierarchy. Completion/signature help have the bounded support
 described above; formatting, code actions, document links and linked editing remain unavailable.
-Bounded local/private-parameter rename is available to clients supporting versioned document edits;
-wider rename remains outside the proven surface. Static call hierarchy, resolved-name tokens and
+Bounded local/private-parameter rename and configured-graph ordinary instance-method override
+rename are available to clients supporting versioned document edits. Exact references span all
+configured sources. Binary contracts, unsupported dispatch chains and register-backed `super`
+calls fail closed; discovery of outside consumers and wider rename remain outside the proven surface. Static call hierarchy, resolved-name tokens and
 bounded inlay hints now have consumers.
 Type-definition and nominal type/method implementation lookup now
 have module and indexed-dependency consumers as described above; property/accessor and synthetic
@@ -1307,6 +1374,7 @@ above identify old candidate patches, not additional changes to merge into the i
 | L14 | Rebuild configured source dependencies and refresh consumers automatically | `266b48784` | L5 and L13; Kotlin host scheduling only |
 | L15 | Validate local/private-parameter rename and publish versioned edits | `7b13e0980` | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
 | L16 | Configure source graphs from editor initialization and settings | `6372ba07d` | L14; rename acceptance cases additionally require L15 |
+| L17 | Query references and validate method override rename across the configured graph | Current working tree; hash pending | L13/L14/L15 and L4/L5; editor acceptance additionally requires L16 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -1317,7 +1385,8 @@ C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotl
 L10, L11 and L12 can follow their listed dependencies independently of the later completion/scope slices.
 L13 follows with an explicit artifact host API; L14 adds automatic rebuilding for configured source
 modules; L16 exposes those roots/edges through editor configuration. Automatic project/build
-discovery stays separate. These are thirty-three eventual PR groups. During current development,
+discovery stays separate. L17 adds configured-graph references and method rename. These are
+thirty-four eventual PR groups. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
 
@@ -1330,7 +1399,7 @@ prerequisites above; these are not batches to open simultaneously.
 | Module semantics | E2, L3, L4, E3, L5, L6 | Source bindings, immutable snapshots, module overlays/navigation and direct hierarchy. |
 | Incomplete editing | C5, C6, E4, L7, C7, L8, C8, C9, L9 | Recovery, partial compiler facts, bounded completion and signature help. |
 | Other semantic consumers | L10, L11, L12 | Type/implementation lookup, call hierarchy and semantic presentation; these can land once their listed prerequisites are ready. |
-| Source projects and editing | L13, L14, L15, L16 | Versioned dependencies, automatic recompilation, bounded rename and editor configuration. |
+| Source projects and editing | L13, L14, L15, L16, L17 | Versioned dependencies, automatic recompilation, bounded rename, editor configuration and configured-graph reference/method-rename proof. |
 
 When preparing each PR, record its actual base, new branch/commit hashes and validation alongside
 its source group. Keep code, regression tests and applicable migration notes together. Resolve any
@@ -1839,6 +1908,23 @@ graphs preserve cached analysis. VS Code provides the workspace setting and live
 other clients can use the same protocol. IntelliJ has no dedicated graph settings UI yet. Include
 strict parsing, relative/multi-root policy, server regressions and actual VS Code acceptance. No
 Java/AST changes, automatic discovery or binary repository settings belong here.
+
+### L17 — Configured-graph references and method rename
+
+**Contract:** exact references and ordinary instance-method override rename over all explicitly
+configured source modules, including unopened/transitive consumers and unsaved buffers. Temporary
+compiler attempts supply constant identities and dispatch chains; successful before/after
+compilation plus unchanged occurrence/call/dispatch bindings are required for edits. Source
+membership/text, cancellation and every open-buffer version must remain current. Bundled/library
+binary contracts cannot be renamed; unsupported chains, `super` and incomplete graphs fail closed.
+No persistent workspace index, automatic discovery or outside-consumer closure is claimed.
+
+Prerequisites: L13/L14 for artifact/source graph ownership, L15 for replay and binding comparison,
+L4/L5 for copied semantics and lifecycle, L16 for the editor configuration/acceptance cases. Include
+`XdkProjectQueries`, `CompilerMethodRelations`, the bodyless parameter copy correction, asynchronous
+reference API/default, server guards, graph/lifecycle/version tests and X59–X63. All additions are
+Kotlin/TypeScript; the Java embedding/AST contract is unchanged. Problems-view assertions accompany
+the full playbook acceptance rather than modifying diagnostic production.
 
 ## Next investigations after the diagnostic milestone
 

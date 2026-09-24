@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { diagnostics, diagnosticCode, fixture, hover, noErrors, playbook, position, symbolNames, symbols, targets } from './support';
+import { diagnostics, diagnosticCode, fixture, hover, nextProblem, noErrors, playbook, position, symbolNames, symbols, targets } from './support';
 
 export function navigationCases(): void {
     playbook('X1', 'diagnostics, outline, folding and selection', async workspace => {
@@ -27,12 +27,14 @@ export function navigationCases(): void {
             const errors = await diagnostics(document.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Expected compiler errors');
             assert.ok(errors.every(item => /^COMPILER-/.test(diagnosticCode(item))));
             assert.ok(errors.every(item => item.range.start.line > 0));
+            assert.ok(errors.every(item => !item.range.isEmpty && item.source === 'xtc'));
+            await nextProblem(document, errors);
             await workspace.replace(document, fixture('Navigation.x'));
             await noErrors(document.uri);
         }
         await workspace.replace(document, fixture('Navigation.x') + '// ERROR: test\n');
         await noErrors(document.uri);
-    });
+    }, ['Problems rows/icons/filter/count rendering and clicking a row; automated next-problem navigation is checked']);
 
     playbook('X3', 'narrowed hover preserves declaration identity', async workspace => {
         const document = await workspace.open('Navigation.x');
