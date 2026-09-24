@@ -41,6 +41,13 @@ class PartialSemanticModel internal constructor(
         val member: Member,
         val arguments: List<SemanticModel.CallArgument>,
         val converting: Boolean,
+        val constructor: Boolean = false,
+    )
+
+    @ConsistentCopyVisibility
+    data class FunctionCandidate internal constructor(
+        val signature: Signature,
+        val arguments: List<SemanticModel.CallArgument>,
     )
 
     /** Members describe accessible names; callCandidates separately records compiler argument fitting. */
@@ -59,6 +66,7 @@ class PartialSemanticModel internal constructor(
         val memberPrefix: MemberPrefix? = null,
         val callCandidates: List<CallCandidate>? = null,
         val pendingArgumentName: String? = null,
+        val functions: List<FunctionCandidate> = emptyList(),
     ) {
         /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
         fun argumentIndexAt(position: Position): Int? =
@@ -72,11 +80,22 @@ class PartialSemanticModel internal constructor(
         fun parameterAt(
             candidate: CallCandidate,
             position: Position,
+        ): Int? = candidate.member.signature?.let { parameterAt(it, candidate.arguments, position) }
+
+        fun parameterAt(
+            candidate: FunctionCandidate,
+            position: Position,
+        ): Int? = parameterAt(candidate.signature, candidate.arguments, position)
+
+        private fun parameterAt(
+            signature: Signature,
+            mapping: List<SemanticModel.CallArgument>,
+            position: Position,
         ): Int? {
             val slot = argumentIndexAt(position) ?: return null
-            val parameters = candidate.member.signature?.parameters ?: return null
+            val parameters = signature.parameters
             if (slot < arguments.size) {
-                return candidate.arguments.singleOrNull { it.range == arguments[slot].range }?.parameterIndex
+                return mapping.singleOrNull { it.range == arguments[slot].range }?.parameterIndex
             }
             if (pendingArgumentName != null) {
                 return parameters.indexOfFirst { it.name == pendingArgumentName }.takeIf { it >= 0 }
@@ -93,6 +112,16 @@ class PartialSemanticModel internal constructor(
                 candidate.member.signature
                     ?.parameters
                     ?.getOrNull(it)
+                    ?.type
+            }
+
+        fun expectedTypeAt(
+            candidate: FunctionCandidate,
+            position: Position,
+        ): TypeId? =
+            parameterAt(candidate, position)?.let {
+                candidate.signature.parameters
+                    .getOrNull(it)
                     ?.type
             }
     }
