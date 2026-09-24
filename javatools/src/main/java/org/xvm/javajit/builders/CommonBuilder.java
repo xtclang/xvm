@@ -4223,7 +4223,10 @@ public class CommonBuilder
                 methodId = enclosingId;
             }
 
-            if (NO_JIT_METHODS.getOrDefault(className, Set.of()).contains(methodId.getName())) {
+            // a signature entry exempts one overload without disabling the others
+            Set<String> excluded = NO_JIT_METHODS.get(className);
+            if (excluded != null && (excluded.contains(methodId.getName()) ||
+                    excluded.contains(methodId.getSignature().getValueString()))) {
                 if (METHOD_SKIP_SET.add(className)) {
                     System.err.println("*** Skipping some methods for " + className);
                 }
@@ -4339,6 +4342,7 @@ public class CommonBuilder
             "org.xtclang.ecstasy.maps.CopyableMap",
             "org.xtclang.ecstasy.maps.CursorEntry",
             "org.xtclang.ecstasy.maps.DiscreteEntry*",
+            "org.xtclang.ecstasy.maps.HashMap",
             "org.xtclang.ecstasy.maps.KeyEntry",
             "org.xtclang.ecstasy.maps.ListMapCollector",
             "org.xtclang.ecstasy.maps.Map",
@@ -4383,8 +4387,7 @@ public class CommonBuilder
             // temporal
             "org.xtclang.ecstasy.temporal.Date*",
             "org.xtclang.ecstasy.temporal.Duration",
-            "org.xtclang.ecstasy.temporal.Time",
-            "org.xtclang.ecstasy.temporal.TimeZone",
+            "org.xtclang.ecstasy.temporal.Time*",
 
             // _native.io
             "_native.io.TerminalConsole",
@@ -4405,12 +4408,19 @@ public class CommonBuilder
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
+        Map.entry("org.xtclang.ecstasy.maps.HashMap",
+            Set.of("clear",       // TODO: virtual construction result is incompatible with ReplicableCopier
+                   "duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "map",              // TODO: incompatible formal result types in TypeMatrix
                    "removeAll")),      // TODO: key's formal type is tracked as Object
         Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
             Set.of("fromEntry")),      // TODO: A_SUPER argument for a virtual construction
+        Map.entry("org.xtclang.ecstasy.temporal.Time",
+            Set.of("void construct(String)")), // TODO: a ternary's conditional-return slot is uninitialized
+        Map.entry("org.xtclang.ecstasy.temporal.TimeOfDay",
+            Set.of("void construct(Int, Int, Int, Int)")), // TODO: uninitialized local in short-circuit assertion message
         Map.entry("org.xtclang.ecstasy.Timeout",
             Set.of("construct")), // TODO: native Service is a Java class, but the call expects an interface
         Map.entry("org.xtclang.ecstasy.numbers.Number",
