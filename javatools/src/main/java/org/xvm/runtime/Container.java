@@ -872,7 +872,11 @@ public abstract class Container
     /** Keep image preparation compositions separate from runtime-derived compositions. */
     private final Map<TypeConstant, ClassComposition> runtimeCompositions = new ConcurrentHashMap<>();
 
-    /** Structural equality alone must not collapse the image and descriptor domains. */
+    /**
+     * Structural equality alone must not collapse the image and descriptor domains. Pool equality
+     * compares contents, so the owner uses reference equality and System.identityHashCode; within
+     * that owner the resolved type retains its normal structural equality.
+     */
     record TypeKey(ConstantPool pool, TypeConstant type) {
         @Override
         public int hashCode() {

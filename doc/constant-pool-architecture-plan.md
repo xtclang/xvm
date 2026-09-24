@@ -674,7 +674,9 @@ types, and some register placeholders cannot be structurally compared yet. `calc
 therefore keeps them in calculation-local state only; it can temporarily refer to an application
 operand while evaluating a library contribution, but cannot put it in the library's completed
 cache. Completed keys use canonical **object identity**, via the existing `ConcurrentHasherMap`
-identity hasher. Structural equality is the interner's responsibility. The library compiler exposed
+identity hasher. This adapter uses the JDK `ConcurrentHashMap` as its backing store; it supplies
+the key equality that the JDK map does not let callers configure. Structural equality is the
+interner's responsibility. The library compiler exposed
 both cases during validation; they are not reasons to relax runtime descriptor generation checks.
 
 The first implementation discarded memoization for an entire recursive calculation. The real
@@ -699,6 +701,12 @@ type relations against the image type algebra with cold, warm and cleared runtim
 checks unchanged descriptor identity and image constants under an unrelated ambient pool. The
 existing warning-replay test also checks that clearing relations preserves TypeInfo diagnostics.
 
+The branch's identity-based maps and sets now explain their individual invariants in code:
+canonical relation operands, exact definition generations, validation of each distinct operand,
+and composition keys that distinguish image and descriptor owners. The collection cleanup uses
+immutable lists and maps for fixed test cases and streams for transformations. Typed arrays remain
+at the existing compiler/runtime array APIs and binary I/O boundaries.
+
 ### Review boundaries and what is still missing
 
 | Separate commit | Scope | Depends on |
@@ -706,7 +714,7 @@ existing warning-replay test also checks that clearing relations preserves TypeI
 | `6dd461277` — reflective handle ownership | Container-owned handles; exact same-image isolation regression | Singleton/descriptor prototype |
 | `95510d2ab` — local reflection and compositions | Parameterization/relational construction, native declaration binding, owner-aware composition caches and narrow ownership errors | Handle ownership |
 | `ddc9ad868` — type-relation semantic table | Completed results, calculation-local guards, explicit clear operation and equivalence/concurrency tests | Descriptor context; tested together with reflection |
-| Relation-table lifecycle cleanup | Release completed relation keys on constant-table optimization and reload; deterministic retention regressions | Type-relation semantic table |
+| `fd9035dbb` — relation-table lifecycle cleanup | Release completed relation keys on constant-table optimization and reload; deterministic retention regressions | Type-relation semantic table |
 | Collection-style cleanup and identity comments | Immutable fixed test collections, transformations at existing array API boundaries, and rationale for identity-based keys | Independent of the ownership architecture |
 
 Next scopes remain separately reviewable: foreign reflection dispatch and constructor/property/

@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.xvm.api.EmbeddingSupport;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.DirRepository;
@@ -28,9 +29,6 @@ import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
 import org.xvm.asm.RuntimeMethodStructure;
-
-import org.xvm.asm.constants.SingletonConstant;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Parser;
@@ -149,7 +147,7 @@ class ConstantPoolOwnershipTest {
         // Composition and metadata preparation are still image-backed. The new boundary starts
         // at descriptor construction and executable generation, not at all metadata queries yet.
         var constants = pool.getConstants();
-        var positions = Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray();
+        var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
         var context = application.getTypeContext();
         var descriptor = context.parameterize(box, pool.typeString());
         assertEquals(-1, descriptor.getPosition());
@@ -158,14 +156,14 @@ class ConstantPoolOwnershipTest {
         assertSame(context.getDescriptorPool(), initializer.getConstantPool());
         assertTrue(Arrays.stream(initializer.getLocalConstants()).allMatch(c -> c.getPosition() == -1));
         assertArrayEquals(constants, pool.getConstants());
-        assertArrayEquals(positions, Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray());
+        assertEquals(positions, Arrays.stream(constants).map(Constant::getPosition).toList());
         assertFalse(application.getModule().getComponent().children().contains(initializer));
 
         // Warm the canonical reflective layout, then request a parameterization unused by the
         // compiled program. The handle must not send its descriptor back through the image pool.
         pool.typeObject().ensureTypeHandle(application);
         constants = pool.getConstants();
-        positions = Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray();
+        positions = Arrays.stream(constants).map(Constant::getPosition).toList();
         var reflected = context.adoptParameters(box, pool.typeBoolean());
         var handle = reflected.ensureTypeHandle(application);
         assertSame(reflected, handle.getDataType());
@@ -175,7 +173,7 @@ class ConstantPoolOwnershipTest {
         assertSame(context.getDescriptorPool(), reflectedComposition.getType().getConstantPool());
         assertSame(reflectedComposition, application.resolveClass(reflected));
         assertArrayEquals(constants, pool.getConstants());
-        assertArrayEquals(positions, Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray());
+        assertEquals(positions, Arrays.stream(constants).map(Constant::getPosition).toList());
 
         var arrayType = context.adoptParameters(pool.typeArray(), reflected);
         var arrayComposition = application.resolveClass(arrayType);
@@ -250,12 +248,11 @@ class ConstantPoolOwnershipTest {
             var child = new MainContainer(runtime, root, file.getModuleId());
             var frame = new TestFrame(child.ensureServiceContext());
             var pool = root.getConstantPool();
-            var constants = new SingletonConstant[] {
-                    pool.valTrue(), pool.valFalse(), pool.valNull()};
-            var handles = new ObjectHandle[] {xBoolean.TRUE, xBoolean.FALSE, xNullable.NULL};
-            for (int i = 0; i < constants.length; i++) {
-                var original = constants[i];
-                var expected = handles[i];
+            var cases = Map.of(pool.valTrue(), xBoolean.TRUE, pool.valFalse(), xBoolean.FALSE,
+                    pool.valNull(), xNullable.NULL);
+            for (var entry : cases.entrySet()) {
+                var original = entry.getKey();
+                var expected = entry.getValue();
                 assertSame(expected, root.ensureSingletonState(original).getHandle());
                 if (warmHeap) {
                     root.f_heap.saveConstHandle(original, expected);

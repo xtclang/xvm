@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Timeout;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component.Format;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
 import org.xvm.asm.Constants.Access;
@@ -47,7 +48,7 @@ class RuntimeTypeContextTest {
         var argument = file.type("Value");
         var image = file.getConstantPool();
         var constants = image.getConstants();
-        var positions = Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray();
+        var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
         file.freeze();
 
         var context = new RuntimeTypeContext(image);
@@ -60,7 +61,7 @@ class RuntimeTypeContextTest {
             assertSame(unrelated, ConstantPool.getCurrentPool());
         }
         assertArrayEquals(constants, image.getConstants());
-        assertArrayEquals(positions, Arrays.stream(constants).mapToInt(c -> c.getPosition()).toArray());
+        assertEquals(positions, Arrays.stream(constants).map(Constant::getPosition).toList());
         assertTrue(Arrays.stream(context.getDescriptorPool().getConstants())
                 .allMatch(c -> c.getPosition() == -1));
         assertFalse(context.getDescriptorPool().hasSerializedIndices());

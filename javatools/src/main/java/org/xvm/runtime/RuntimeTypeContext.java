@@ -1,5 +1,6 @@
 package org.xvm.runtime;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
@@ -54,10 +55,7 @@ public final class RuntimeTypeContext {
      */
     public TypeConstant parameterize(TypeConstant type, TypeConstant... parameters) {
         TypeConstant base = intern(type);
-        TypeConstant[] arguments = new TypeConstant[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
-            arguments[i] = intern(parameters[i]);
-        }
+        var arguments = Arrays.stream(parameters).map(this::intern).toArray(TypeConstant[]::new);
         return descriptors.ensureParameterizedTypeConstant(base, arguments);
     }
 
@@ -72,10 +70,7 @@ public final class RuntimeTypeContext {
      */
     public TypeConstant adoptParameters(TypeConstant type, TypeConstant... parameters) {
         TypeConstant base = intern(type);
-        TypeConstant[] arguments = new TypeConstant[parameters.length];
-        for (int i = 0; i < parameters.length; i++) {
-            arguments[i] = intern(parameters[i]);
-        }
+        var arguments = Arrays.stream(parameters).map(this::intern).toArray(TypeConstant[]::new);
         return intern(base.adoptParameters(descriptors, arguments));
     }
 

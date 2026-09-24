@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +48,7 @@ class FileStructureErrorListenerTest {
 
     @Test
     void reusableStructuresDoNotStoreListeners() {
-        for (var type : new Class<?>[] {FileStructure.class, XvmStructure.class}) {
+        for (var type : List.of(FileStructure.class, XvmStructure.class)) {
             assertFalse(Arrays.stream(type.getDeclaredFields())
                     .anyMatch(field -> ErrorListener.class.isAssignableFrom(field.getType())));
         }

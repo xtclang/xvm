@@ -2,6 +2,8 @@ package org.xvm.asm;
 
 import java.lang.ref.WeakReference;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -28,7 +30,7 @@ class RegistrationOwnershipTest {
     void registrationAndFoldingUseTheExplicitPool(Ambient binding) {
         var source = new FileStructure("Source");
         var owner = source.getConstantPool();
-        for (var destination : new ConstantPool[] {owner, new FileStructure(source).getConstantPool()}) {
+        for (var destination : List.of(owner, new FileStructure(source).getConstantPool())) {
             var ambient = switch (binding) {
                 case NONE -> null;
                 case SOURCE -> owner;
