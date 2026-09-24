@@ -80,6 +80,29 @@ public class Int64 extends IntNumber {
         return BigDecimal.valueOf($value);
     }
 
+    // ----- conversion ----------------------------------------------------------------------------
+
+    /**
+     * Native implementation of: "Float16 toFloat16()"
+     */
+    public static float toFloat16$p(long thi$, Ctx ctx) {
+        return Float.float16ToFloat(Float.floatToFloat16((float) thi$));
+    }
+
+    /**
+     * Native implementation of: "Float32 toFloat32()"
+     */
+    public static float toFloat32$p(long thi$, Ctx ctx) {
+        return (float) thi$;
+    }
+
+    /**
+     * Native implementation of: "Float64 toFloat64()"
+     */
+    public static double toFloat64$p(long thi$, Ctx ctx) {
+        return thi$;
+    }
+
     // ----- primitive helpers ---------------------------------------------------------------------
 
     public static long $next(Ctx ctx, long n) {
