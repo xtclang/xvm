@@ -31,7 +31,8 @@ class DateTests {
     }
 
     void testCreateDateFromString() {
-// TODO fails calling String.split$p()
+// TODO fails calling String.split$p(): missing Array<Object>.freeze$p(Ctx, boolean, boolean)
+// Also review the original slash-separated input: Date(String) expects ISO-8601
 //        Date d = new Date("1976/6/20");
 //        assert d.year == 1976;
 //        assert d.month == 6;
@@ -132,12 +133,11 @@ class DateTests {
     }
 
     void testToTime() {
-// TODO requires TimeZone
-//        Date d = new Date(1966, 5, 7);
-//        Time t = d.toTime();
-//        assert t.date == d;
-//        assert t.timeOfDay == MIDNIGHT;
-//        assert t.timezone.isNoTZ;
+        Date d = new Date(1966, 5, 7);
+        Time t = d.toTime();
+        assert t.date == d;
+        assert t.timeOfDay == MIDNIGHT;
+        assert t.timezone.isNoTZ;
     }
 
     void testToString() {
