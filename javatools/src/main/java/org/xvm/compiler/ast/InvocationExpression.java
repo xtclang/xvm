@@ -2821,7 +2821,7 @@ public class InvocationExpression
             TypeFit fit = calculateReturnFit(atypeFnRet, expr.toString(), m_fCall,
                                 atypeReturn, ctx.getThisType(), errs);
             m_fPack = fit.isPacking();
-            fValid  = fit.isFit();
+            fValid &= fit.isFit();
         }
 
         if (fValid) {

@@ -3325,7 +3325,10 @@ public class Parser {
                     lEndPos = prev().getEndPosition();
                 }
             } else {
-                args    = parseArgumentList(true, false, false);
+                args    = f_partialAnalysis && left == null
+                        ? parsePartialArguments(new NewExpression(null, keyword, type, List.of(),
+                                -1, null, type.getEndPosition()), false)
+                        : parseArgumentList(true, false, false);
                 lEndPos = prev().getEndPosition();
             }
 
@@ -5184,7 +5187,14 @@ public class Parser {
                     parseArgumentList(true, true, false), prev().getEndPosition());
         }
 
-        Token            open       = current();
+        boolean          async = peek(Id.ASYNC_PAREN);
+        List<Expression> args  = parsePartialArguments(callee, true);
+        return new InvocationExpression(callee, async, args, prev().getEndPosition());
+    }
+
+    /** Shared cursor syntax for ordinary calls and explicit, non-array construction. */
+    private List<Expression> parsePartialArguments(Expression callee, boolean allowBindings) {
+        Token            open       = allowBindings && peek(Id.ASYNC_PAREN) ? current() : expect(Id.L_PAREN);
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
         boolean          incomplete = false;
@@ -5196,7 +5206,7 @@ public class Parser {
             while (true) {
                 Expression argument;
                 try {
-                    argument = parseArgument(true, false, f_cursor != NO_CURSOR);
+                    argument = parseArgument(allowBindings, false, f_cursor != NO_CURSOR);
                 } catch (IncompleteArgument e) {
                     match(Id.R_PAREN);
                     log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
@@ -5225,8 +5235,7 @@ public class Parser {
         if (incomplete) {
             throw incomplete(callee, open, args, separators);
         }
-        return new InvocationExpression(callee, open.getId() == Id.ASYNC_PAREN, args,
-                prev().getEndPosition());
+        return args;
     }
 
     private boolean canRetainIncomplete() {

@@ -103,6 +103,8 @@ class CompilerBoundaryRequirementsTest {
                 "class Forward(Reader target) delegates Reader(target) {} " +
                 "class Concrete(Value target) delegates Reader(target) {} " +
                 "class Outer(Concrete target) delegates Reader(target) {} " +
+                "annotation Tracked<T> into Var<T> { @Override T get()=super(); @Override void set(T value) { super(value); } } " +
+                "class Annotated { @Tracked Int value=1; @Lazy Int later.calc()=2; } " +
                 "Int run(Int captured) { function Int() fn=()->captured; return fn(); } }"
         val baseline = bytes(compile(source))
         val inspected = compile(source)
