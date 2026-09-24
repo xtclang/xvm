@@ -153,13 +153,15 @@ module TestModule {
 > **"Both adapters" means mock and tree-sitter**, which is how this document was written when
 > there were two. The compiler adapter now answers diagnostics (§7), the outline (§6), hover
 > (§2), go-to-definition (§4), find-references (§5), document highlights (§8), selection ranges
-> (§9) and folding (§10), plus type hierarchy. Definition/reference queries span the active module,
-> including closed members. Workspace-symbol search covers completed module sessions.
+> (§9) and folding (§10), plus type hierarchy. Definition queries span the active module;
+> references also span configured source graphs, including unopened consumers. Workspace-symbol
+> search covers completed module sessions.
 >
 > Compiler completion and signature help are available for the supported cursor contexts, along
 > with type-definition, type/method implementation lookup, static call hierarchy, resolved-name
 > semantic tokens, read/write highlights, bounded inlay hints and validated local/private-parameter
-> rename (versioned-edit clients). Formatting, code actions,
+> rename, plus ordinary instance-method override rename over explicit source graphs (versioned-edit
+> clients; see section I). Formatting, code actions,
 > code lenses, document links and linked editing are not advertised. Definition/type-definition
 > and inherited implementation bodies can also resolve into explicitly host-indexed dependencies;
 > ordinary editor launch does not configure those artifacts. Compiler mode stays Java-only.
@@ -1018,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X58 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X63 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1113,6 +1115,27 @@ annotation produces exactly one `VERIFY-75` warning. Rows **7a.1–7a.7** cover 
 timings, queued/superseded edits and memory. Timings depend on hardware and module size; record them
 rather than treating the illustrative numbers as pass thresholds.
 
+**Problems view checks (X2 and 7a.8).** In VS Code, open **View → Problems** (Cmd+Shift+M on macOS,
+Ctrl+Shift+M elsewhere). Clear the text filter, enable both Errors and Warnings, and disable
+“Active File Only” while comparing files.
+
+1. Make each X2 edit. Check that the row belongs to Navigation.x, has **Error** severity, the
+   compiler message/code and a line/column matching the marked source range. Click the row or use
+   **Go to Next Problem** (F8); the editor must select that source location.
+2. Correct it without saving. The row, red squiggle and error count must clear after analysis.
+3. Open DupAnno.x from 7a.8. Check exactly one **Warning** row with code `VERIFY-75`. This warning
+   currently has a file-level position (line 1, column 1): the compiler reports a structure without
+   a source span. Following it opens the file, not the derived annotation; an annotation squiggle
+   is not yet supported. Remove only the derived `@Atomic`: the warning row/count must clear
+   without saving. Undo to restore one warning. Precise structure-diagnostic anchoring is a
+   recorded follow-up, not a manual-test pass.
+4. Leave the warning in DupAnno.x and introduce an X2 error in Navigation.x. Both file groups and
+   severities must remain visible; correcting one must not remove the other's diagnostic.
+
+The automated cases check diagnostic severity, code, source range, unsaved clearing and the
+editor's next-problem command. They open the Problems view; inspecting its rendered rows, severity
+icons, filters, counts and clicking a row remains a visual/manual check.
+
 ### B. Typed and scope-aware completion
 
 Save this as `Editing.x`:
@@ -1146,6 +1169,14 @@ module Editing {
 
 Use **Trigger Completion / Basic Completion**, not just the popup triggered by typing. Replace
 the body of `run` for X6–X10 and X12; for X11 use `Box.inspect`. Undo after each row.
+
+These rows deliberately contain unfinished names. For example, `.si` is the partially typed
+`.size` in X7/X8/X14. `COMPILER-36: Could not find name "si" within "String"` is expected at that
+point: `String` is the receiver's type, and `si` is not one of its members. (`COMPILER-38` is the
+related `Name "..." is unresolvable` diagnostic.) The completion probe
+offers `size` while normal compilation still reports the unfinished source. The test checks that
+the diagnostic clears after accepting the completion; it is not a failure merely to see it while
+the runner is typing.
 
 | # | Temporary body / action | Expected result |
 |---|-------------------------|-----------------|
@@ -1450,15 +1481,77 @@ accepted edits before continuing. These are bounded semantic edits, not general 
 | X53 | Rename `local` to `renamed`. | Declaration and captured use change; `value` and unrelated names do not. Recompilation has no errors. |
 | X54 | Rename `input` to `number`, first at its declaration, then after undo at `input=1`. | Declaration, method body and named label all change; `=` and argument value remain intact. |
 | X55 | Rename `local` to `value`. | No edits: the untouched property use would silently bind to the local even though compilation would succeed. |
-| X56 | Try renaming `pick`, module `Rename`, property `value`, or a public method's parameter. | Rename unavailable. Public/lambda/constructor parameters, method-value escapes and member/override changes are outside the proven scope. |
+| X56 | Without registering Rename.x in a source graph, try renaming `pick`, module `Rename`, property `value`, or a public method's parameter. | Rename unavailable. Public/lambda/constructor parameters, properties and module names remain unsupported. Ordinary instance methods require the explicit graph and checks in section I. |
 | X57 | Start a rename and edit another file in the same module, close/reopen the target, or change its version before applying. | Pending work is canceled or rejected as changed; an edit for an old open-buffer version is not applied. Fast machines may need the controlled server regression below to exercise this race. |
 | X58 | Introduce a syntax error, try rename, fix it and retry. Try an invalid identifier or an existing local name. | Broken/unsupported/conflicting requests give no edits or temporary diagnostics. A valid rename works again after correction. |
+
+### I. Configured-graph references and method rename
+
+Save these three files in one scratch folder. Register `Contracts` at `Contracts.x`, `Uses` at
+`Uses.x` depending on `Contracts`, and `Dormant` at `Dormant.x` depending on `Contracts`, using
+`xtc.compiler.sourceModules` as in section G. Start with only Contracts.x open.
+
+```xtc
+module Contracts {
+    interface Mapper<T> { T map(T value); }
+    class Base {
+        Int pick(Int value) = value;
+        Int choose(Object value) = 0;
+    }
+}
+```
+
+```xtc
+module Uses {
+    package api import Contracts;
+    class Mapper implements api.Mapper<String> {
+        @Override String map(String value) = value;
+    }
+    String run(api.Mapper<String> contract, Mapper impl) = contract.map("a") + impl.map("b");
+    Int choose(api.Base box) = box.choose(1);
+    conditional Int library(String text) = text.indexOf('a');
+    class Named { @Override String toString() = "name"; }
+}
+```
+
+```xtc
+module Dormant {
+    package api import Contracts;
+    String run(api.Mapper<String> mapper) = mapper.map("c");
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X59 | Find References on the interface's `map` in Contracts.x, with Uses.x and Dormant.x unopened. | The declaration and the two calls through `api.Mapper<String>` appear. The concrete override and `impl.map` have their own identity and are excluded from this exact reference query. |
+| X60 | Rename that `map` to `convert`; inspect the preview, apply, then undo. | Five edits across all three files: the contract, concrete override, and all three calls. No diagnostics after recompilation. Closed files have null edit versions; open buffers carry their current versions. |
+| X61 | Rename Contracts.Base's `pick` to `choose`. | No edit. The unchanged `box.choose(1)` would select a different overload even though the edited graph compiles. |
+| X62 | Open Uses.x, invoke signature help inside `indexOf('a')`, then try renaming `indexOf`. Separately try renaming Named's `toString` override. | The bundled XDK supplies the Char overload's signature; binary `String.indexOf` cannot be renamed. The source override also cannot be renamed because its contract belongs to the bundled XDK. These are resolved binary targets, not missing dependencies. |
+| X63 | Add a second `mapper.map("d")` call to Dormant's return expression without saving, query references/rename, then temporarily replace its body with `MissingType broken;`. Restore the fixture. | Queries include the unsaved call and rename uses its current buffer version. An incomplete configured graph gives no reference list or rename edit; proof compilations add no diagnostics of their own. Restoring it restores results. |
+
+Each query captures and compiles the entire explicit graph, including closed members and transitive
+consumers. References use exact compiler identities, including source uses of bundled binary members;
+method rename follows ordinary instance-method override families and checks all written bindings,
+selected calls and dispatch chains before returning edits. Binary ancestors,
+mixin/delegating/capped chains, `super(...)` calls and unknown bindings fail closed.
+`super` uses a predefined function register rather than the copied method-invocation binding;
+extending those facts is recorded with the remaining function-valued call work. Properties,
+accessors, constructors, static functions and public-parameter renames are outside this pass.
+Preparing a method rename identifies a candidate; the final graph proof can still reject it.
+Modules outside the configuration are not discovered, and this is not a persistent index or a proof
+about external clients of an exported API. Keep every source consumer in the configured graph.
+
+Controlled regressions in `XdkProjectQueryLifecycleTest` and `XdkCursorServerTest` cover changes in
+another module, close/reopen, configuration/dependency replacement, canceled/superseded queries and
+late disk changes before returning results. These races are hard to trigger reliably by hand.
 
 For closed-member input checks, version conversion, cancellation and the repeated retention workload:
 
 ```bash
 ./gradlew :lang:lsp-server:test \
     --tests 'org.xvm.lsp.adapter.XdkRenameTest' \
+    --tests 'org.xvm.lsp.adapter.XdkProjectQueryTest' \
+    --tests 'org.xvm.lsp.adapter.XdkProjectQueryLifecycleTest' \
     --tests 'org.xvm.lsp.server.XdkRenameServerTest' \
     --tests 'org.xvm.lsp.server.XdkCursorServerTest' \
     --tests 'org.xvm.lsp.adapter.XdkRetentionTest' \
@@ -1629,10 +1722,12 @@ Tree-sitter supplies cross-file go-to-definition, workspace symbols and import l
 workspace index. The compiler supplies definition and references across the current module by
 resolved identity, including closed member files; workspace symbols cover current module sessions.
 Explicit host-indexed dependency sources also supply definition/type-definition and inherited
-method-body targets. They do not add cross-module references.
+method-body targets. Reference queries now compile the complete configured source graph; they
+include unopened consumers and source uses of binary XDK members without inventing source targets.
 Still remaining:
-- References across other workspace modules and dependency sources
-- Cross-file rename refactoring
+
+- Reference indexing/discovery for sources outside the configured graph
+- Broader member rename and external-consumer closure
 
 ### Full Compiler Integration (partly done)
 
@@ -1653,5 +1748,6 @@ Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
 - Automatic editor project discovery and a persistent cross-module index
 - External/conditional-mixin hierarchy and broader implementation targets
-- Member/override/workspace rename and public-parameter caller closure
+- Wider member/workspace rename: properties/accessors, static functions, constructors, `super` and
+  mixin/delegating/capped chains; public-parameter caller closure and consumers outside the graph
 - Diagnostic-driven quick fixes and refactorings

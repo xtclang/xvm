@@ -373,3 +373,19 @@ also restores C1's legacy structure-report source attribution and brings over mi
 regressions. Standalone slice validation and integrated-branch validation are recorded separately.
 The broader suppression audit and TypeInfo ownership work retain their existing scope and later
 slice assignments.
+
+
+## Problems-view source positioning follow-up, 2026-09-24
+
+The automated warning check confirms one `VERIFY-75` with warning severity and code, but its
+location is the requesting file's `(0,0)` range. This is the existing `Site.At` conversion in
+`XdkAdapter`, which has no source-span association; positioned `Site.In` source errors do retain
+their precise ranges. The warning's delivery/deduplication fix is valid, but an annotation-level
+squiggle or jump has not been implemented. The playbook now checks the actual file-level location
+and unsaved clearing, rather than claiming annotation navigation works.
+
+Should fix before claiming complete diagnostic positioning: map source-owned compiler structures
+to their declaration source spans, including warnings emitted for closed member files. Use compiler
+identity/source associations; do not infer locations from diagnostic message strings or invent
+locations for binary-only structures. Preserve the whole-document fallback when no association is
+available, and add controls for the warning's true owner and unrelated file groups.

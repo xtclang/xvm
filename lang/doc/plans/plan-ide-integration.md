@@ -125,7 +125,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
-| Find references (cross-file) | - | - | **Done** - across the current module, including closed member files |
+| Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
 | Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
@@ -135,8 +135,8 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
 | Signature help | - | Same-file | **Partial** - exact selected signatures for resolved calls; incomplete qualified/implicit/static calls filter candidates using compiler argument fitting, generic inference and named parameter mapping, including before an existing closing parenthesis |
-| Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; recompilation plus all-binding checks; client versioned-edit support required |
-| Rename (cross-file) | - | - | Member/override/workspace rename unavailable; bounded rename analyzes the whole module, including closed files |
+| Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; ordinary instance methods additionally require an explicit source graph; client versioned-edit support required |
+| Rename (cross-file) | - | - | **Partial** - ordinary instance-method override families across the configured graph; full recompilation plus binding/call/dispatch checks; no discovery of outside consumers |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
 | Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | Not implemented |
 | Range formatting | Trailing WS in range | Structural formatting in range | Not implemented |
@@ -151,6 +151,18 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Find implementations | - | - | **Partial** - concrete nominal source types and method bodies from compiler override chains, including generic overrides, inherited/default/anonymous methods and composed mixins; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
 | Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
+
+Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
+diagnostics untouched. References distinguish overloads and concrete overrides; they do not expand
+to an entire override family. Method rename does expand that family, including generic interface
+contracts, then rejects changed bindings or dispatch relationships. Incomplete graphs return no
+results. Edits, close, settings/repository changes and cancellation retire outstanding queries;
+closed source text/membership is checked again before returning. Preparing rename checks only a
+candidate; the final proof can reject it. Binary contracts (including bundled XDK methods),
+properties/accessors, static functions, constructors, mixin/delegating/capped chains and `super(...)`
+remain outside method rename. The `super` case needs register-backed invocation facts and is tracked
+with function-valued calls. This proves closure only over explicitly configured sources, with no
+persistent index or automatic discovery. See playbook X59–X63.
 
 Type-definition returns all available source targets for union/intersection operands, unwraps
 modifiers and follows aliases for value types without navigating into generic argument types.
