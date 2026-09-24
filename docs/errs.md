@@ -8,6 +8,25 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Missing delimiter recovery (2026-09-24, current working tree).**
+Explicit cursor analysis retains missing call/group parentheses and index brackets around the
+cursor, including nested signatures and member completion. At EOF it also retains unfinished
+blocks. Normal compiler diagnostics and source text remain unchanged. The parser reuses existing
+syntax children and zero-width end markers; no AST fields, semantic caches, clone rules or public
+record components are added. Scope, limits and extraction groups C12/L24 are recorded in
+[the recovery checkpoint](errs-integration-plan.md#missing-delimiter-cursor-recovery).
+
+**Atomic emission audit (2026-09-24, `d0809cd83`).**
+Atomic increment/decrement binary ASTs now retain their value type; singleton and enclosing-instance
+owners no longer hit an unhandled lookup case, and generic Ref/Var receiver types remain concrete.
+The outer assignment AST now uses its owner's register type instead of the property's value type.
+These are existing code-generation defects also present in the local master source, not new listener
+requirements. Dense-switch conversion metadata probes pass without changing `ToIntExpression`.
+No AST fields, clone rules or embedding record components were added. The 36 new audit cases,
+469 executed Java tests, 843 executed LSP tests and 18 packaged stdio tests pass; existing skips
+and retained-object checks are recorded in the
+[I7 audit and validation](errs-integration-plan.md#atomic-binary-ast-and-switch-conversion-audit).
+
 **Incomplete-call signature help (2026-09-24, `abbc89f88`).**
 Function values and ordinary constructors now expose signatures while arguments are missing.
 Compiler probes reject incompatible/unreadable values, retain function parameter types without
@@ -42,7 +61,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X74 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X76 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1504,6 +1523,7 @@ their meaning to normal contextual lookup, preserving imports, shadowing and acc
 | `PartialCallResolver` | Inspect accessible method/ordinary-constructor candidates and function-valued callees; retain written parameter mappings. | Compiler-side query while Context exists; orchestration is outside AST nodes. Trial clones use child contexts and locally collecting speculative listeners. Candidates never masquerade as successful invocations. |
 | `Parser` / `IncompleteStatement` constructor syntax | Reuse the call-argument cursor parser and retain an existing `NewExpression` prefix as the target child. | This is source syntax: the type belongs on the existing constructor node, and arguments on the existing incomplete site. No new AST field, semantic cache or clone/reset rule. |
 | `InvocationExpression.testFunction` | Preserve argument validity when checking return fit (`fValid &= fit.isFit()`). | The existing full-call validator owns the correctness decision. Successful return fitting must not publish a failed call as validated; no new state or listener suppression. |
+| `NameExpression`, `SequentialAssignExpression`, `AssignmentStatement` atomic emission | Reuse a computed property-owner Ref/Var type for lookup and binary ASTs; preserve sequential result types and the outer register's owner type. | These correct existing emission logic. The protected helper reads the established access plan and retains no Context or new state; there are no clone/reset changes or new embedding hooks. |
 | `CursorBinding` / embedding `PartialAnalysis` | Immutable scope/candidate records and a collector keyed by site identity; publication filters surviving syntax and clears scratch entries. | Attempt ownership avoids phase-assigned node fields and leaking validation contexts. Previous result constructors remain; `CursorBinding` now has seven record components, adding function candidates. Record patterns must migrate. |
 | `ConstantPool.getImplicitImportNames()` | Copy the existing language import-name set without resolving components. | The compiler owns this vocabulary; the LSP must not maintain another built-in type list. |
 
@@ -1903,5 +1923,6 @@ the code. The prior-art branch found real bugs in this category, not just untidi
 | `EmbeddingSupport.Compilation` / `PartialAnalysis` | Add immutable `functionBindings()` maps. Old constructors and method-only `callBindings()` remain; record component/pattern compatibility requires the existing unreleased-API policy. |
 | `MethodInfo.getSuperMethod` | Compiler composition metadata belongs in MethodInfo. It shares the compiler's super selection and excludes field/native/delegating/into bodies; Kotlin never duplicates the dispatch algorithm. |
 | `Parser.parsePostfixExpression` | Retain the existing `IncompleteExpression` inside enclosing operators and conditionals. Following call arguments stay real syntax children. The hole never supplies a type or reaches emission. No new incomplete-node state. |
+| `Parser.expectPartialClose`, call/statement endings and EOF containers | Retain existing grouping/index/call syntax only around the selected cursor hole at a statement or outer delimiter. Missing ends use zero-width positions in the unchanged source. This is parser recovery, not new AST semantics: existing child adoption/cloning and failed validation prevent emission. No AST class or collector changes are needed. |
 | `NameExpression` generic binding | A compiler correctness fix in existing name validation/emission, not LSP state. Remove bound hidden parameters from the exposed function type and emit a `BindFunctionAST` for the same arguments as FBind. The existing AST result field is reused. |
 | `PropertyInfo.layerOn` / Kotlin `XdkAst` | The compiler warning names the contributed declaration; Kotlin maps its structure/identity to the existing declaration token. This does not add source positions to runtime structures or retain another compiler graph. |
