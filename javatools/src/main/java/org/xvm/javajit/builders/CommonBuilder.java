@@ -3308,18 +3308,13 @@ public class CommonBuilder
         return null;
     }
 
-    protected static void convertIfUnsignedPrimitive(CodeBuilder code, TypeConstant type) {
+    protected static CodeBuilder convertIfUnsignedPrimitive(CodeBuilder code, TypeConstant type) {
         String name = type.getSingleUnderlyingClass(false).getName();
-        switch (name) {
-            case "UInt32":
-                code.loadConstant(Integer.MIN_VALUE)
-                    .iadd();
-                break;
-            case "UInt64":
-                code.loadConstant(Long.MIN_VALUE)
-                    .ladd();
-                break;
-        }
+        return switch (name) {
+            case "UInt32" -> code.loadConstant(Integer.MIN_VALUE).iadd();
+            case "UInt64" -> code.loadConstant(Long.MIN_VALUE).ladd();
+            default       -> code;
+        };
     }
 
     /**
