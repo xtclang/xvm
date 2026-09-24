@@ -169,6 +169,22 @@
                     "default": 120,
                     "description": "Maximum line width (right margin)"
                 },
+                "xtc.compiler.sourceModules": {
+                    "type": "array",
+                    "default": [],
+                    "scope": "window",
+                    "description": "Source modules for automatic compilation in the compiler backend. Changes apply without restarting. Relative URIs require a single workspace folder.",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "uri"],
+                        "additionalProperties": false,
+                        "properties": {
+                            "name": { "type": "string", "minLength": 1, "description": "Declared Ecstasy module name." },
+                            "uri": { "type": "string", "minLength": 1, "description": "Module .x root: a file URI or URI relative to the workspace folder." },
+                            "dependencies": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "default": [], "description": "Names of source modules this module imports." }
+                        }
+                    }
+                },
                 "xtc.sourceRoots": {
                     "type": "array",
                     "items": {
@@ -269,7 +285,7 @@
         "@vscode/vsce": "^4.1.1",
         "esbuild": "^0.28.2",
         "eslint": "^10.15.0",
-        "glob": "^14.0.6",
+        "glob": "^13.0.7",
         "mocha": "^12.0.3",
         "sharp": "^0.35.5",
         "typescript": "^6.0.3",
@@ -278,13 +294,6 @@
     "overrides": {
         "diff": "^8.0.3",
         "js-yaml": "^4.3.2",
-        "@vscode/vsce": {
-            "minimatch": "^11.0.9"
-        },
-        "mocha": {
-            "glob": "$glob",
-            "minimatch": "^11.0.9"
-        },
         "serialize-javascript": "^7.1.3"
     },
     "allowScripts": {

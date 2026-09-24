@@ -24,6 +24,16 @@ export function getClient(): LanguageClient | undefined {
     return client;
 }
 
+function compilerConfiguration(): { sourceModules: unknown[] } {
+    return { sourceModules: vscode.workspace.getConfiguration('xtc.compiler').get<unknown[]>('sourceModules', []) };
+}
+
+export async function updateCompilerConfiguration(): Promise<void> {
+    if (client?.state === State.Running) {
+        await client.sendNotification('workspace/didChangeConfiguration', { settings: { xtc: { compiler: compilerConfiguration() } } });
+    }
+}
+
 /** Stop the client safely, swallowing any state-related throws. */
 async function safeStop(): Promise<void> {
     const c = client;
@@ -71,12 +81,16 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
         },
         initializationOptions: {
             inlayHintsEnabled: vscode.workspace.getConfiguration('xtc').get<boolean>('inlayHints.enabled', true),
-            xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', [])
+            xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', []),
+            xtcCompiler: compilerConfiguration()
         },
         middleware: {
             workspace: {
                 configuration: (params: ConfigurationParams) => {
                     return params.items.map(item => {
+                        if (item.section === 'xtc.compiler') {
+                            return compilerConfiguration();
+                        }
                         if (item.section === 'xtc.formatting') {
                             const config = vscode.workspace.getConfiguration('xtc.formatting');
                             return {
