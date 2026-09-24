@@ -268,7 +268,8 @@
         "watch": "node scripts/bundle.cjs out/extension.js --watch",
         "package": "vsce package",
         "lint": "eslint src/",
-        "test:vscode": "node ./scripts/run-vscode-tests.cjs"
+        "test:vscode": "node ./scripts/run-vscode-tests.cjs",
+        "test:playbook": "node ./scripts/run-vscode-tests.cjs --playbook"
     },
     "dependencies": {
         "jdk-utils": "^0.7.0",
