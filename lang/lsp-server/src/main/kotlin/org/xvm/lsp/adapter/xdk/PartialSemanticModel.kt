@@ -67,6 +67,7 @@ class PartialSemanticModel internal constructor(
         val callCandidates: List<CallCandidate>? = null,
         val pendingArgumentName: String? = null,
         val functions: List<FunctionCandidate> = emptyList(),
+        val argumentValues: List<Member> = emptyList(),
     ) {
         /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
         fun argumentIndexAt(position: Position): Int? =

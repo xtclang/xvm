@@ -14,14 +14,19 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 /** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
 internal object XdkCursorQueries {
     fun completions(model: PartialSemanticModel): List<CompletionItem> {
-        val site = model.sites.singleOrNull()?.takeIf { it.kind != PartialSemanticModel.Kind.CALL } ?: return emptyList()
-        val prefix = site.memberPrefix ?: return emptyList()
+        val site = model.sites.singleOrNull() ?: return emptyList()
+        val prefix =
+            when (site.kind) {
+                PartialSemanticModel.Kind.CALL -> PartialSemanticModel.MemberPrefix("", SemanticModel.Range(site.range.end, site.range.end))
+                else -> site.memberPrefix ?: return emptyList()
+            }
         val range =
             Range(
                 AdapterPosition(prefix.range.start.line, prefix.range.start.column),
                 AdapterPosition(prefix.range.end.line, prefix.range.end.column),
             )
-        return site.members
+        val members = if (site.kind == PartialSemanticModel.Kind.CALL) site.argumentValues else site.members
+        return members
             .filter { it.name.startsWith(prefix.text) }
             .map { member ->
                 CompletionItem(

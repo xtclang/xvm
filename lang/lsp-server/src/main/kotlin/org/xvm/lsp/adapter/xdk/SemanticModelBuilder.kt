@@ -22,6 +22,7 @@ import org.xvm.asm.constants.SingletonConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.TypedefConstant
+import org.xvm.compiler.CursorBinding
 import org.xvm.compiler.InvocationBinding
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
@@ -462,6 +463,11 @@ private class SemanticModelBuilder(
 
     private fun validatedType(expression: Expression?): TypeConstant? = expression?.takeIf { it.isValidated && it.typeFit.isFit }?.type
 
+    private fun sourceVariable(variable: CursorBinding.Variable): PartialSemanticModel.Member? {
+        val id = symbol(variable.register(), variable.name(), SymbolKind.VARIABLE) ?: return null
+        return PartialSemanticModel.Member(id, variable.name(), symbols[id]!!.kind, type(variable.type()), null)
+    }
+
     fun buildPartial(
         analysis: EmbeddingSupport.PartialAnalysis,
         errors: ErrorListener,
@@ -497,10 +503,11 @@ private class SemanticModelBuilder(
                     }
                 val callee = (site.target as? NameExpression)?.name.takeIf { site.isCall }
                 val locals =
-                    cursor?.variables().orEmpty().filter { it.readable() }.mapNotNull { variable ->
-                        val id = symbol(variable.register(), variable.name(), SymbolKind.VARIABLE) ?: return@mapNotNull null
-                        PartialSemanticModel.Member(id, variable.name(), symbols[id]!!.kind, type(variable.type()), null)
-                    }
+                    cursor
+                        ?.variables()
+                        .orEmpty()
+                        .filter { it.readable() }
+                        .mapNotNull(::sourceVariable)
                 val scopeMembers =
                     if (cursor != null && owner != null && (site.isNameCompletion || receiver == null)) {
                         receiverMembers(cursor.thisType(), owner, errors, if (cursor.instance()) Lookup.IMPLICIT else Lookup.STATIC)
@@ -610,6 +617,7 @@ private class SemanticModelBuilder(
                             )
                         },
                     ),
+                    immutableList(cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable)),
                 )
             }
         return if (errors.isAbortDesired) {

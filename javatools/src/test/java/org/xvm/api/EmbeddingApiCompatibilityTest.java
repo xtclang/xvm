@@ -60,14 +60,16 @@ public class EmbeddingApiCompatibilityTest {
     }
 
     @Test
-    public void cursorConstructorsRemainAvailableWhileRecordPatternsIncludeFunctions() {
+    public void cursorConstructorsRemainAvailableWhileRecordPatternsIncludeArgumentValues() {
         var type = new FileStructure("Compatibility").getModule().getIdentityConstant().getType();
         var original = new CursorBinding(List.of(), type, true);
         var candidates = new CursorBinding(List.of(), type, true, List.of(), List.of(), false);
+        var functions = new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of());
         assertEquals(original, candidates);
+        assertEquals(original, functions);
         assertEquals(0, switch (candidates) {
             case CursorBinding(var variables, var thisType, var instance, var types,
-                    var methods, var inspected, var functions) -> functions.size();
+                    var methods, var inspected, var callable, var argumentValues) -> argumentValues.size();
         });
     }
 

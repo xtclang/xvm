@@ -2,6 +2,7 @@ package org.xvm.compiler.ast;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import org.xvm.asm.ClassStructure;
@@ -18,6 +19,8 @@ import org.xvm.asm.constants.TypedefConstant;
 
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
+import org.xvm.compiler.Token;
+import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
@@ -38,7 +41,7 @@ final class PartialCallResolver {
         };
         if (target == null || errs.isAbortDesired()) {
             return site.getTarget() instanceof NewExpression
-                    ? scope : scope.withFunctions(function(site, ctx, probe));
+                    ? scope : functionScope(site, ctx, scope, probe);
         }
         String methodName = site.getTarget() instanceof NameExpression callee ? callee.getName() : "construct";
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(errs::log), errs::isAbortDesired);
@@ -51,13 +54,15 @@ final class PartialCallResolver {
         }
         // InvocationExpression gives a property precedence over methods of the same name.
         if (target.kind() != MethodKind.Constructor && info.findProperty(methodName) != null) {
-            return scope.withFunctions(function(site, ctx, probe));
+            return functionScope(site, ctx, scope, probe);
         }
-        return scope.withCandidates(info.findMethods(methodName, -1, target.kind()).stream()
+        var methods = info.findMethods(methodName, -1, target.kind()).stream()
                 .filter(method -> method.isTopLevel() && (target.kind() == MethodKind.Constructor
                         || !info.getMethodById(method).isCtorOrValidator()))
                 .filter(method -> info.getType().getAccess() == Access.PRIVATE
                         || info.getMethodById(method).isVisible(ctx.getThisClassId()))
+                .toList();
+        var candidates = methods.stream()
                 .takeWhile(method -> !errs.isAbortDesired())
                 .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
                         site.getArguments(), probe).stream())
@@ -70,7 +75,48 @@ final class PartialCallResolver {
                     int index = parameter.getIndex() - method.getTypeParamCount();
                     return candidate.arguments().stream().noneMatch(argument -> argument.parameterIndex() == index);
                 }).orElse(true))
-                .toList());
+                .toList();
+        var result = scope.withCandidates(candidates);
+        return candidates.isEmpty() ? result : result.withArgumentValues(argumentValues(site, scope, probe,
+                arguments -> methods.stream().takeWhile(method -> !errs.isAbortDesired())
+                        .anyMatch(method -> !site.probeCallCandidate(ctx, target.type(), info,
+                                method, arguments, probe).isEmpty())));
+    }
+
+    private static CursorBinding functionScope(IncompleteStatement site, Context ctx,
+                                              CursorBinding scope, ErrorListener errs) {
+        var functions = function(site, ctx, site.getArguments(), errs);
+        var result = scope.withFunctions(functions);
+        return functions.isEmpty() ? result : result.withArgumentValues(argumentValues(site, scope, errs,
+                arguments -> !function(site, ctx, arguments, errs).isEmpty()));
+    }
+
+    /**
+     * Probe proposed source names in the ordinary argument fitter. Trials have lexical parentage
+     * for resolution, but are never installed in the source tree or selected as complete calls.
+     * This preserves generic inference and conversions without copying type rules into the host.
+     */
+    private static List<CursorBinding.Variable> argumentValues(IncompleteStatement site,
+            CursorBinding scope, ErrorListener errs, Predicate<List<Expression>> fits) {
+        var written = site.getArguments();
+        if (site.getPendingArgumentName().isEmpty()
+                && (written.size() != site.getSeparators().size()
+                    || written.stream().anyMatch(LabeledExpression.class::isInstance))) {
+            return List.of();
+        }
+        return scope.variables().stream().filter(CursorBinding.Variable::readable)
+                .takeWhile(variable -> !errs.isAbortDesired())
+                .filter(variable -> {
+                    long cursor = site.getEndPosition();
+                    Expression value = new NameExpression(new Token(cursor, cursor, Id.IDENTIFIER, variable.name()));
+                    Expression argument = site.getPendingArgumentName()
+                            .<Expression>map(name -> new LabeledExpression(name, value)).orElse(value);
+                    argument.setParent(site);
+                    argument.introduceParentage();
+                    var arguments = new ArrayList<>(written);
+                    arguments.add(argument);
+                    return fits.test(arguments);
+                }).toList();
     }
 
     /** Ordinary named construction only; virtual/inner/annotated construction needs its own proof. */
@@ -91,11 +137,11 @@ final class PartialCallResolver {
                 ? null : new Target(type, MethodKind.Constructor);
     }
 
-    /** Validate only trial copies and the written arguments, never a fabricated complete call. */
+    /** Validate trial copies of the callee and arguments without fabricating a complete call. */
     private static List<CursorBinding.FunctionCandidate> function(
-            IncompleteStatement site, Context ctx, ErrorListener errs) {
+            IncompleteStatement site, Context ctx, List<Expression> written, ErrorListener errs) {
         if (errs.isAbortDesired() || site.getPendingArgumentName().isPresent()
-                || site.getArguments().stream().anyMatch(argument -> argument instanceof LabeledExpression
+                || written.stream().anyMatch(argument -> argument instanceof LabeledExpression
                         || argument instanceof NonBindingExpression)) {
             return List.of();
         }
@@ -110,18 +156,18 @@ final class PartialCallResolver {
             return List.of();
         }
         var parameters = site.pool().extractFunctionParams(type);
-        if (parameters == null || parameters.length < site.getArguments().size()) {
+        if (parameters == null || parameters.length < written.size()) {
             return List.of();
         }
-        var arguments = new ArrayList<>(site.getArguments().stream()
+        var arguments = new ArrayList<>(written.stream()
                 .map(argument -> (Expression) argument.clone()).toList());
         if (site.validateExpressions(trial, arguments, parameters, validation) == null
                 || validation.hasSeriousErrors() || validation.isAbortDesired()
                 || arguments.stream().anyMatch(argument -> !argument.isSingle() || !argument.getTypeFit().isFit())) {
             return List.of();
         }
-        var mapping = IntStream.range(0, site.getArguments().size()).mapToObj(index -> {
-            var argument = site.getArguments().get(index);
+        var mapping = IntStream.range(0, written.size()).mapToObj(index -> {
+            var argument = written.get(index);
             return new InvocationBinding.Argument(argument.getStartPosition(), argument.getEndPosition(), index);
         }).toList();
         return List.of(new CursorBinding.FunctionCandidate(type, mapping));

@@ -114,7 +114,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Definition / references | By spelling | Syntax and workspace index | Module identities; references span configured graphs; definitions also use host-supplied dependency source indices |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
-| Completion | Basic | Context-aware | Bounded scope, instance-member and static completion |
+| Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
 | Rename | Basic | Implemented with syntax limits | Locals/private method parameters and configured-graph instance-method overrides; binding/dispatch validation and versioned edits required |
 | Code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST |
@@ -172,7 +172,11 @@ source target for an unindexed binary is invented.
 
 Completion supplies visible locals/parameters with flow narrowing, implicit members, imported and
 enclosing types, and static functions/constants. Qualified member prefixes and bare-name/empty
-statement cursors return exact replacement edits. Signature help uses exact selected signatures
+statement cursors return exact replacement edits. Empty final positional and pending named
+argument slots offer compatible readable locals/parameters, fitted by the compiler with inference,
+conversions and narrowing. Suggestions combine applicable overloads without selecting one; they
+insert at the cursor. Typed argument prefixes keep ordinary scope/member completion without
+argument-type filtering, and literals/implicit properties are not suggested. Signature help uses exact selected signatures
 for completed calls. Incomplete qualified/implicit/static calls expose compiler-fitted candidates,
 generic expected types and named parameter mappings, including a pending `name=|` and an existing
 closing parenthesis. Function-valued calls also show their full function type while arguments are
