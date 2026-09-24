@@ -41,7 +41,8 @@ immutable artifact sets and invalidates direct/transitive consumers, with server
 at unchanged document versions. Definition/type-definition and inherited implementation bodies can
 resolve into host-indexed sources. An explicit source graph now rebuilds dependencies and affected
 consumers automatically on editor/file events, including unsaved overlays, failures and recovery at
-unchanged consumer versions. Editor project discovery/configuration, external hierarchy and a
+unchanged consumer versions. Initialization options and live `xtc.compiler` settings now configure
+explicit source graphs, with a VS Code workspace setting. Automatic discovery, external hierarchy and a
 persistent cross-module reference index remain open.
 Class/method type parameters and anonymous-class capture origins now have regressions; see the
 AST placement inventory below. Tree-sitter remains the shipped default and compiler use is opt-in.

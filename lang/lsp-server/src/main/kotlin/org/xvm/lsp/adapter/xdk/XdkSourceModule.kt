@@ -27,6 +27,7 @@ internal class XdkProject(
     modules: List<XdkSourceModule>,
 ) {
     val modules = immutableMap(modules.associateBy { it.name })
+    private val configuration = modules.map { Triple(it.name, it.uri, it.dependencies) }.toSet()
     private val ordered: List<XdkSourceModule>
 
     init {
@@ -64,6 +65,8 @@ internal class XdkProject(
             .maxByOrNull { it.root.path.length }
             ?.uri
     }
+
+    fun sameConfiguration(other: XdkProject): Boolean = configuration == other.configuration
 
     fun buildOrder(scope: String): List<XdkSourceModule> {
         val target = modules.values.firstOrNull { it.uri == scope } ?: return emptyList()

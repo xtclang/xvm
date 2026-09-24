@@ -36,8 +36,9 @@ class XtcWorkspaceService(
      * @see org.eclipse.lsp4j.services.WorkspaceService.didChangeConfiguration
      */
     override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
-        logger.info("workspace/didChangeConfiguration: re-requesting formatting config")
+        logger.info("workspace/didChangeConfiguration: updating editor configuration")
         server.requestFormattingConfig()
+        server.changeCompilerConfig(params.settings)
     }
 
     /**
