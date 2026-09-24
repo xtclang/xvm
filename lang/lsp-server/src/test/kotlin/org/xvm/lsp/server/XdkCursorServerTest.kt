@@ -3,8 +3,12 @@ package org.xvm.lsp.server
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SignatureHelpParams
@@ -143,6 +147,28 @@ class XdkCursorServerTest {
 
         override fun close() {
             server.shutdown().get(10, SECONDS)
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(Feature::class)
+    fun `filesystem notifications for an open overlay preserve pending queries`(feature: Feature) {
+        val backend = Backend()
+        Session(backend).use { session ->
+            session.open()
+            val response = session.request(feature)
+            val work = backend.next()
+            // Created, changed and deleted disk files are all masked by the open buffer.
+            for (kind in FileChangeType.values()) {
+                session.server.workspaceService.didChangeWatchedFiles(
+                    DidChangeWatchedFilesParams(listOf(FileEvent(URI, kind))),
+                )
+            }
+            session.documents.didSave(DidSaveTextDocumentParams(TextDocumentIdentifier(URI)))
+            assertThat(backend.analyses).hasSize(1)
+            assertThat(work.future.isCancelled).isFalse()
+            work.finish()
+            assertThat(response.get(10, SECONDS)).isNotNull()
         }
     }
 
