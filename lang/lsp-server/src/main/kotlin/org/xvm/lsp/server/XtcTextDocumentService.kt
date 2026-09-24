@@ -372,7 +372,10 @@ class XtcTextDocumentService(
     /** Re-read closed files and module membership after filesystem notifications. */
     fun refreshForFile(uri: String) {
         synchronized(lifecycle) {
-            if (closed) return
+            // An open buffer is authoritative, including when its disk file is created or
+            // deleted. Recompiling identical overlays here cancels otherwise current queries.
+            // didChange already propagates edits; didClose re-reads disk and membership.
+            if (closed || openDocuments.containsKey(uri)) return
             refreshScopes(adapter.affectedAnalysisScopes(uri) + publishedByScope.filterValues { uri in it }.keys)
         }
     }
