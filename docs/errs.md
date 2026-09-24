@@ -10,8 +10,8 @@ separates the pre-existing ambient-pool defects from this branch's ownership cha
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X58 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
-Its first complete pass found two Kotlin consumer gaps: redundant file notifications canceled
+X1–X63 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
 semantic builder reads the resolved method signature for that declaration type. Both fixes have
@@ -19,6 +19,24 @@ focused regressions; neither requires another Java embedding/AST accessor or ret
 The [integration record](errs-integration-plan.md#automated-compiler-playbook-2026-09-24) maps them
 to L8 and L10, with the full acceptance runner in L16. Visual/editor interaction and prolonged
 memory testing remain separate from automated provider passes.
+
+**Configured-graph query follow-up (2026-09-24).** References now compile the complete explicit
+source graph and join exact compiler identities across artifacts, including unopened/transitive
+consumers and uses of bundled binary members. Ordinary instance-method rename follows compiler
+override families, including generic contracts, and validates every written binding, selected call
+and dispatch chain after replaying proposed edits. Binary contracts cannot be renamed, including
+source overrides of bundled XDK methods. No Java embedding/AST change is needed: dispatch metadata
+already exists. The Kotlin copier now gives bodyless parameters a source declaration identity from
+the resolved signature and original span, rather than requiring a nonexistent body register.
+`super(...)` exposed a remaining register-backed invocation gap; rename fails closed and that case
+belongs to the next function-valued-call pass. See the [L17 integration record](errs-integration-plan.md#l17--configured-graph-references-and-method-rename)
+and manual playbook X59–X63. Problems-view checks now explicitly cover error/warning severity,
+compiler codes, source navigation, independent file groups and clearing after unsaved corrections.
+`VERIFY-75` still has a file-level position from `Site.At`; precise structure-diagnostic source
+anchoring is recorded in the audit, and is not claimed as implemented.
+Validation passes all 68 editor cases, 766 executed LSP tests (three existing skips) and 15 packaged
+stdio tests; the [integration record](errs-integration-plan.md#configured-graph-implementation-evidence)
+contains the report path, commit mapping and remaining manual checks.
 
 **Current hardening status (2026-09-23).** This document preserves the investigation's chronology;
 some later sections describe limitations that subsequent work removed. The current execution and
@@ -1242,6 +1260,16 @@ Configured source modules now rebuild automatically; editor project discovery/wi
 persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+**Configured-graph follow-up (2026-09-24):** no AST field, accessor, clone rule or Java API change.
+`CompilerMethodRelations` reads existing `MethodConstant`, `MethodInfo`/`MethodBody` chains and
+`ClassStructure` metadata on the worker under the compilation pool with an explicit listener.
+These temporary compiler objects never enter published snapshots, artifacts or caches. Source
+capture/replay, override-family closure, binding/dispatch comparison and cancellation belong in
+Kotlin's `XdkProjectQueries`/`XdkRename` and adapter/server lifecycle. Bodyless parameter identities
+are copied from existing signature slots and source tokens in `SemanticModelBuilder`; no register
+or retained field is fabricated. Register-backed `super` call provenance remains an explicit gap,
+not an accessor added speculatively to the AST.
 
 **Rename follow-up (2026-09-23):** no AST field, accessor or clone rule was added. The existing
 attempt-owned `InvocationBinding.Argument` now carries a nullable immutable `Label(name, start, end)`

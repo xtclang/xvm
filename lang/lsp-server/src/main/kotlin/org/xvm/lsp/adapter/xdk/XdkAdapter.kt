@@ -228,10 +228,31 @@ class XdkAdapter internal constructor(
         val kind: CursorKind,
     )
 
-    private sealed interface QueryRequest {
-        val compilation: Request
+    private sealed interface QueryWork {
         val result: CompletableFuture<*>
         val task: Runnable
+    }
+
+    private sealed interface QueryRequest : QueryWork {
+        val compilation: Request
+    }
+
+    private enum class ProjectQueryKind { REFERENCES, RENAME }
+
+    private data class ProjectQueryKey(
+        val uri: String,
+        val kind: ProjectQueryKind,
+    )
+
+    private class ProjectRequest<T>(
+        val key: ProjectQueryKey,
+        val project: XdkProject,
+        val dependencies: XdkDependencies,
+        val overlays: Map<String, String>,
+        work: (ProjectRequest<T>) -> Unit,
+    ) : QueryWork {
+        override val result = CompletableFuture<T>()
+        override val task = Runnable { work(this) }
     }
 
     private class CursorRequest(
@@ -258,14 +279,71 @@ class XdkAdapter internal constructor(
     }
 
     /** Called under lifecycle; future callbacks must run after releasing it. */
-    private fun retireQueries(scope: String): List<QueryRequest> =
+    private fun retireQueries(scope: String): List<QueryWork> =
         (cursors.values + renames.values).filter { it.compilation.scope == scope }.onEach {
             when (it) {
                 is CursorRequest -> cursors.remove(it.key, it)
                 is RenameRequest -> renames.remove(it.uri, it)
             }
             compiles.remove(it.task)
+        } + retireProjectQueries()
+
+    /** Every graph query owns a complete configured snapshot, so any source change retires it. */
+    private fun retireProjectQueries(): List<QueryWork> =
+        projectQueries.values.toList().also { retired ->
+            projectQueries.clear()
+            retired.forEach { compiles.remove(it.task) }
         }
+
+    private fun <T> projectQuery(
+        key: ProjectQueryKey,
+        unavailable: T,
+        query: (XdkProjectQueries) -> T,
+    ): CompletableFuture<T> {
+        val (request, previous) =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                if (project.scope(key.uri) == null) return CompletableFuture.completedFuture(unavailable)
+                val request =
+                    ProjectRequest(key, project, dependencies, overlays.toMap()) { work: ProjectRequest<T> ->
+                        fun stale(): Boolean = projectQueries[key] !== work || work.result.isCancelled
+                        try {
+                            if (stale()) throw CancellationException()
+                            val result =
+                                try {
+                                    query(XdkProjectQueries(work.project, work.overlays, work.dependencies, compileTree, ::stale))
+                                } catch (_: IOException) {
+                                    unavailable
+                                }
+                            synchronized(lifecycle) { if (stale()) throw CancellationException() }
+                            work.result.complete(result)
+                        } catch (_: CancellationException) {
+                            work.result.cancel(false)
+                        } catch (failure: Exception) {
+                            work.result.completeExceptionally(failure)
+                        } catch (failure: Error) {
+                            work.result.completeExceptionally(failure)
+                            throw failure
+                        } finally {
+                            projectQueries.remove(key, work)
+                        }
+                    }
+                request.result.whenComplete { _, _ ->
+                    if (request.result.isCancelled) {
+                        synchronized(lifecycle) {
+                            projectQueries.remove(key, request)
+                            compiles.remove(request.task)
+                        }
+                    }
+                }
+                val previous = projectQueries.put(key, request)
+                previous?.let { compiles.remove(it.task) }
+                compiles.execute(request.task)
+                request to previous
+            }
+        previous?.result?.cancel(false)
+        return request.result
+    }
 
     private fun isStale(request: CursorRequest): Boolean =
         cursors[request.key] !== request || request.result.isCancelled || isStale(request.compilation)
@@ -402,11 +480,11 @@ class XdkAdapter internal constructor(
     }
 
     /** Called under lifecycle. Compiler-owned objects never enter the artifact cache. */
-    private fun retireRequests(scopes: Set<String>): Pair<List<Request>, List<QueryRequest>> {
+    private fun retireRequests(scopes: Set<String>): Pair<List<Request>, List<QueryWork>> {
         val retired = scopes.mapNotNull { requests.remove(it) }
         scopes.forEach(completed::remove)
         retired.forEach(::removeQueued)
-        return retired to scopes.flatMap(::retireQueries)
+        return retired to (scopes.flatMap(::retireQueries) + retireProjectQueries())
     }
 
     private fun removeQueued(request: Request) {
@@ -442,7 +520,7 @@ class XdkAdapter internal constructor(
                         completed.remove(request.scope)
                         removeQueued(request)
                         retireQueries(request.scope)
-                    }
+                    } + retireProjectQueries()
                 retired to probes
             }
         retired.forEach { it.result.cancel(false) }
@@ -468,10 +546,13 @@ class XdkAdapter internal constructor(
         val pending =
             synchronized(lifecycle) {
                 closed = true
-                val pending = requests.values.map { it.result } + cursors.values.map { it.result } + renames.values.map { it.result }
+                val pending =
+                    requests.values.map { it.result } + cursors.values.map { it.result } +
+                        renames.values.map { it.result } + projectQueries.values.map { it.result }
                 requests.clear()
                 cursors.clear()
                 renames.clear()
+                projectQueries.clear()
                 overlays.clear()
                 scopes.clear()
                 completed.clear()
@@ -893,6 +974,27 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
         includeDeclaration: Boolean,
+    ): List<Location> = findReferencesAsync(uri, line, column, includeDeclaration).join()
+
+    override fun findReferencesAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
+    ): CompletableFuture<List<Location>> =
+        if (synchronized(lifecycle) { project.scope(uri) != null }) {
+            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.REFERENCES), emptyList()) {
+                it.references(uri, line, column, includeDeclaration)
+            }
+        } else {
+            CompletableFuture.completedFuture(moduleReferences(uri, line, column, includeDeclaration))
+        }
+
+    private fun moduleReferences(
+        uri: String,
+        line: Int,
+        column: Int,
+        includeDeclaration: Boolean,
     ): List<Location> {
         val module = module(uri) ?: return emptyList()
         val symbol = module.document(uri)?.semantics?.symbolAt(line, column) ?: return emptyList()
@@ -914,7 +1016,7 @@ class XdkAdapter internal constructor(
         column: Int,
     ): PrepareRenameResult? {
         val model = module(uri)?.takeIf { it.succeeded }?.document(uri)?.semantics ?: return null
-        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable } ?: return null
+        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectMethod(uri, it) } ?: return null
         val range =
             model.occurrences
                 .firstOrNull {
@@ -922,6 +1024,17 @@ class XdkAdapter internal constructor(
                 }?.range ?: return null
         return PrepareRenameResult(range.toRange(), symbol.name)
     }
+
+    /** Full method-family eligibility is checked by the compiler-worker graph proof. */
+    private fun isProjectMethod(
+        uri: String,
+        symbol: SemanticModel.Symbol,
+    ): Boolean =
+        symbol.kind == SemanticModel.SymbolKind.METHOD && symbol.name != "construct" &&
+            SemanticModel.Modifier.STATIC !in symbol.modifiers &&
+            symbol.declarationSource?.let {
+                synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
+            } == true
 
     override fun rename(
         uri: String,
@@ -936,6 +1049,18 @@ class XdkAdapter internal constructor(
         column: Int,
         newName: String,
     ): CompletableFuture<WorkspaceEdit?> {
+        if (synchronized(lifecycle) {
+                module(uri)
+                    ?.document(uri)
+                    ?.semantics
+                    ?.symbolAt(line, column)
+                    ?.let { isProjectMethod(uri, it) } == true
+            }
+        ) {
+            return projectQuery<WorkspaceEdit?>(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null) {
+                it.rename(uri, line, column, newName)
+            }
+        }
         val (request, previous) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
@@ -1161,6 +1286,7 @@ class XdkAdapter internal constructor(
     private val requests = ConcurrentHashMap<String, Request>()
     private val cursors = ConcurrentHashMap<CursorKey, CursorRequest>()
     private val renames = ConcurrentHashMap<String, RenameRequest>()
+    private val projectQueries = ConcurrentHashMap<ProjectQueryKey, ProjectRequest<*>>()
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps

@@ -29,7 +29,7 @@ export async function loadFixtures(): Promise<void> {
     const manual = await fs.readFile(manualPath, 'utf8');
     const blocks = [...manual.matchAll(/```xtc\n([\s\S]*?)\n```/g)].map(match => match[1]);
     fixtures = new Map();
-    for (const name of ['Navigation', 'Editing', 'Project', 'Lookups', 'Consumers', 'Library', 'Consumer', 'Rename', 'DupAnno']) {
+    for (const name of ['Navigation', 'Editing', 'Project', 'Lookups', 'Consumers', 'Library', 'Consumer', 'Rename', 'Contracts', 'Uses', 'Dormant', 'DupAnno']) {
         const matches = blocks.filter(text => new RegExp(`^module ${name}\\s*\\{`, 'm').test(text));
         assert.strictEqual(matches.length, 1, `One canonical ${name} fixture in playbook`);
         fixtures.set(`${name}.x`, matches[0] + '\n');
@@ -99,6 +99,17 @@ export async function diagnostics(uri: vscode.Uri, accept: (values: vscode.Diagn
 
 export function diagnosticCode(item: vscode.Diagnostic): string {
     return String(typeof item.code === 'object' ? item.code.value : item.code);
+}
+
+export async function nextProblem(document: vscode.TextDocument, values: vscode.Diagnostic[]): Promise<void> {
+    await vscode.commands.executeCommand('workbench.actions.view.problems');
+    const editor = await vscode.window.showTextDocument(document, { preview: false });
+    editor.selection = new vscode.Selection(0, 0, 0, 0);
+    await vscode.commands.executeCommand('editor.action.marker.nextInFiles');
+    await eventually(async () => vscode.window.activeTextEditor,
+        current => current?.document.uri.toString() === document.uri.toString() && values.some(item => item.range.contains(current.selection.start)),
+        'Next problem selects the diagnostic source location');
+    await vscode.commands.executeCommand('closeMarkersNavigation');
 }
 
 export class Workspace {

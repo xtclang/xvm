@@ -91,12 +91,24 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<
 internal class CompilerRenameFacts(
     val models: List<SemanticModel>,
     val constants: Map<SymbolId, Constant>,
+    val methods: CompilerMethodRelations = CompilerMethodRelations(emptySet(), emptyList()),
 )
 
 internal fun EmbeddingSupport.Compilation.renameFacts(): CompilerRenameFacts =
     ConstantPool.withPool(pool()).use {
         val builder = SemanticModelBuilder()
         CompilerRenameFacts(builder.build(this), builder.constantBindings())
+    }
+
+/** Graph proof facts retain dependency declaration associations and actual dispatch chains. */
+internal fun EmbeddingSupport.Compilation.projectRenameFacts(
+    dependencies: XdkDependencies.Open,
+    errors: ErrorListener,
+): CompilerRenameFacts =
+    ConstantPool.withPool(pool()).use {
+        val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
+        val models = builder.build(this)
+        CompilerRenameFacts(models, builder.constantBindings(), builder.methodRelations(this, errors))
     }
 
 /** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
@@ -151,6 +163,11 @@ private class SemanticModelBuilder(
 
     fun constantBindings(): Map<SymbolId, Constant> = constants.entries.associate { (constant, id) -> id to constant }
 
+    fun methodRelations(
+        compilation: EmbeddingSupport.Compilation,
+        errors: ErrorListener,
+    ): CompilerMethodRelations = compilerMethodRelations(nodesIn(requireNotNull(compilation.parsed())), errors)
+
     fun declarations(): Map<IdentityConstant, SourceLocation> =
         constants.entries
             .mapNotNull { (constant, id) ->
@@ -202,14 +219,23 @@ private class SemanticModelBuilder(
         // Parameters precede synthetic properties that share their source tokens.
         nodes.filterIsInstance<Parameter>().forEach {
             val method = (it.parent as? MethodDeclarationStatement)?.component as? MethodStructure
+            val parameter = method?.params?.singleOrNull { parameter -> parameter.name == it.name }
+            if (it.resolvedTarget == null && method != null && parameter != null) {
+                // A bodyless method has no register. Its written parameter is still a real source
+                // declaration, identified by its resolved signature slot and original source span.
+                val at = location(it.source, it.nameToken.startPosition, it.nameToken.endPosition)
+                val symbol = SymbolId(id, symbols.size)
+                val kind = if (parameter.isTypeParameter) SymbolKind.TYPE_PARAMETER else SymbolKind.PARAMETER
+                symbols[symbol] = Symbol(symbol, it.name, kind, at.range, type(parameter.type), null, at.sourceName)
+                occurrences[at] = Occurrence(at.range, it.name, Role.DECLARATION, symbol, symbols.getValue(symbol).type)
+                parameters[method.identityConstant to (parameter.index - method.typeParamCount)] = symbol
+                return@forEach
+            }
             declare(
                 it.nameToken,
                 it.resolvedTarget,
                 if (it.resolvedTarget is Register) SymbolKind.PARAMETER else kind(it.resolvedTarget),
                 it.source,
-                // Abstract methods have no body register. Their resolved method signature
-                // still supplies the declaration's type without inventing a register binding.
-                method?.params?.singleOrNull { parameter -> parameter.name == it.name }?.type,
             )
             val register = normalized(it.resolvedTarget) as? Register
             val id = register?.let(registers::get)
@@ -612,14 +638,12 @@ private class SemanticModelBuilder(
         target: Argument?,
         kind: SymbolKind,
         source: Source?,
-        sourceType: TypeConstant? = null,
     ) {
         if (token == null) return
         val location = location(source, token.startPosition, token.endPosition)
         if (location in occurrences) return
         val symbol = symbol(target, token.valueText, kind, location)
-        occurrences[location] =
-            Occurrence(location.range, token.valueText, Role.DECLARATION, symbol, symbols[symbol]?.type ?: type(sourceType))
+        occurrences[location] = Occurrence(location.range, token.valueText, Role.DECLARATION, symbol, symbols[symbol]?.type)
     }
 
     private fun refer(
