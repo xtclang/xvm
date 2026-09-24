@@ -12,12 +12,20 @@ the two Markdown files above.
 
 ## Recommendation
 
-**Current execution order:** the bounded hardening and editor acceptance passes are complete;
-extract and validate the local PR slices in the batches recorded below. **`lagergren/errs` remains
-the complete development branch. Fixes and regressions found during extraction must also be kept
-there; the smaller worktrees are independently validated publication candidates, not the sole home
-of new development.** The initial scope
-was reliable compiler diagnostics and existing LSP features. The subsequently approved
+**Current workflow:** develop, fix, test and commit directly on **`lagergren/errs`**. Record which
+commits belong together in future PRs in this plan, including prerequisites and portions of mixed
+commits. Preparing separate branches and validating each PR against its own base is a later step,
+when submission preparation is explicitly requested. Existing extraction branches and their test
+receipts remain historical references; do not keep parallel implementations up to date.
+
+Prefer one future PR group per new implementation commit when practical. Keep each fix with its
+regression tests, and record its hash and validation evidence here after committing. If a change
+crosses groups, record the file or behavior boundary instead of treating the whole commit as an
+independent cherry-pick. Preserve the integrated history; regroup changes during later PR preparation.
+The [commit grouping record](#commit-grouping-record) supplements the detailed scope descriptions.
+
+The bounded hardening and editor acceptance passes are complete. The initial scope was reliable
+compiler diagnostics and existing LSP features. The subsequently approved
 [eighth pass](#eighth-pass-module-sessions-and-hierarchy-2026-09-22) now adds permanent final-TypeInfo
 regressions, module sessions with overlays, cross-file navigation and direct type hierarchy.
 The [ninth pass](#ninth-pass-java-parser-recovery-2026-09-22) keeps compiler mode Java-only and retains
@@ -247,9 +255,10 @@ Ignored receipts live under `build/errs-integration/comparison/`: `c3-tests.json
 API break: `Parser.SafeLookAhead`/`keepResults()` becomes `Parser.Attempt`/`keep()`. Migrate source
 clients and recompile at the already-required breaking release boundary before publication.
 
-**Next: E1**, useful embedding compilation results, with I1/C2/R1 and I3's consumer evidence as
-specified below. C4 follows with the ambient-listener and TypeInfo-replay work. Each still needs
-independent extraction and validation against its actual prerequisites.
+**Future PR preparation order:** E1, useful embedding compilation results, follows the already
+explored slices, with I1/C2/R1 and I3's consumer evidence as specified below. C4 follows with the
+ambient-listener and TypeInfo-replay work. Both are already implemented on `errs`; this is a proposed
+grouping and validation order, not an instruction to resume extraction now.
 
 ### Synchronize extraction improvements back into errs, 2026-09-24
 
@@ -259,8 +268,8 @@ evidence only; implementation work for I1/I2/R1, I3/C1, C2 and C3 happened in th
 Most extracted code was already present on `errs`, but leaving newly discovered fixes and tests
 only in those worktrees was a workflow error.
 
-The main checkout now includes the missing improvements while retaining its later embedding,
-parser recovery, semantic and LSP implementation:
+Commit `855ec569f` on `lagergren/errs` includes the missing improvements while retaining its later
+embedding, parser recovery, semantic and LSP implementation. Its changes belong to these future PRs:
 
 | Slice | Reconciliation with the integrated branch |
 |---|---|
@@ -270,12 +279,13 @@ parser recovery, semantic and LSP implementation:
 | I3 | Keep the integrated Gradle module bundling and broader consumer/stdio checks. Add its legacy embedding compilation smoke test and wrapper/version compiler triggers; require the new suite in the existing XML gate. |
 | C1 | Fix legacy structure-report dispatch to preserve branch source attribution; add executable migration/budget regressions. |
 | C2 | Explicit-listener behavior and cascade handling already present; add the seven boundary regressions. |
-| C3 | Add validation cleanup on exceptional/early exits, nested parser state-query forwarding, non-null active validation pairs, scope regressions and accurate helper documentation. Keep final source-node buffers and their drain behavior. |
+| C3 | Add validation cleanup on exceptional/early exits, nested parser state-query forwarding, non-null active validation pairs and scope regressions. Keep final source-node buffers and their drain behavior. Include parser/lexical reporting and scope-lifetime documentation. |
+| C4 | Remove the unused `Reporting.adoptFrom` method and describe Reporting as parser/resolver-only after removing FileStructure's ambient listener ownership. This part of the Reporting cleanup requires C4, even though it shares a file with C3. |
 
 All implementation changes above are directly in `lagergren/errs`. The extracted branches retain
-their commits and independent validation; they are not merged wholesale, which would also import
-their older compiler baseline. Future fixes should be made and tested on `errs`, then carried into
-the applicable extraction and independently revalidated there.
+their commits and historical independent validation. Future fixes and tests belong on `errs`, with
+their commit assignments recorded here. Do not port each new change into the old extraction
+branches. Reconstruct and independently validate the PR groups when submission preparation begins.
 
 Validation on the integrated branch: the full XDK rebuild and 134 focused Java cases pass with
 zero failures/errors/skips. Forced full runs pass: Java has **508 cases, 468 executed and 40
@@ -1098,6 +1108,33 @@ tests that warning loss.
 occur because the source commits were written on top of the whole branch. Commit IDs identify
 provenance, not a promise that an unedited cherry-pick compiles.
 
+### Commit grouping record
+
+The detailed PR sections below identify the earlier source commits and the intended final behavior.
+This table records the later integrated commits that extend those groups. Rows with several IDs
+require splitting by the stated responsibility during PR preparation, with tests accompanying the
+behavior they exercise. The dependency table remains authoritative for prerequisites.
+
+| Commits on `lagergren/errs` | Future PR groups | Grouping boundary |
+|---|---|---|
+| `28e9fd540` | C4, E3, C7, L8 | Annotation TypeInfo diagnostics and their regressions go to C4; module-root diagnostic forwarding goes to E3; cursor/module partial-analysis APIs go to C7. The Kotlin partial-model extension for module sources accompanies L8 because it requires C7. |
+| `32ac93a5a`, `24b8f5910`, `c97c36a88` | C7, L8 | Combine compiler value-context, typed-prefix and closing-parenthesis support in C7. Combine serialized cursor requests, completion/signature consumers and server tests in L8. |
+| `672bc130b` | C8, C9, L9 | Separate cursor-scope capture from incomplete-call argument fitting; put copied Kotlin scope/candidate queries and protocol consumers in L9. |
+| `cdd9bf67f` | E4, L10, L11, L12 | Written named-argument provenance belongs to E4; type/implementation lookup, call hierarchy and tokens/hints form their respective consumer PRs. Assign boundary and rename-requirement probes to the source-binding/snapshot behavior they verify. |
+| `39f7862bb` | L13 | Versioned dependency artifacts, source lookup, repository replacement and their adapter/server regressions. |
+| `266b48784` | L14 | Configured source graphs, automatic dependency recompilation and consumer invalidation, with project/server regressions. |
+| `7b13e0980` | E4, L15; compatibility/lifetime checks with their owning APIs | Label provenance and preserved InvocationBinding constructors belong to E4; bounded rename and its protocol tests belong to L15. Split EmbeddingApiCompatibilityTest by the API each assertion covers; keep the combined retention workload after L14/L15. |
+| `6372ba07d` | L16 | Editor initialization/settings, configuration validation and VS Code acceptance; rename acceptance additionally requires L15. |
+| `855ec569f` | I2, R1, I3, C1, C2, C3, C4 | Split the synchronization fixes and regressions by the [assignment table](#synchronize-extraction-improvements-back-into-errs-2026-09-24). In particular, defer the unused Reporting method removal to C4. I1 already had equivalent coverage and receives no new code from this commit. |
+| `5c0a3dce8`, `a663b5511`, `9c432f778`, `643ca65f0` | Planning history | These record earlier extraction evidence. They are not implementation commits to cherry-pick into compiler PRs. |
+
+Documentation changes within implementation commits accompany the relevant capability or API;
+consolidate historical progress notes into accurate final documentation for each future PR. Add
+new commit assignments here as development continues on `errs`. The existing extraction hashes
+above identify old candidate patches, not additional changes to merge into the integrated branch.
+
+### Dependencies and eventual landing order
+
 | ID | Scope | Prerequisites |
 |---|---|---|
 | I1 | Preserve distinct diagnostics and name in-memory sources | Independent |
@@ -1143,9 +1180,9 @@ C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotl
 L10, L11 and L12 can follow their listed dependencies independently of the later completion/scope slices.
 L13 follows with an explicit artifact host API; L14 adds automatic rebuilding for configured source
 modules; L16 exposes those roots/edges through editor configuration. Automatic project/build
-discovery stays separate. These are thirty-three eventual PRs, not simultaneous open branches.
-Keep only the next few ready for review, and update dependent patches
-after their prerequisites land.
+discovery stays separate. These are thirty-three eventual PR groups. During current development,
+maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
+the next few for review and update dependent patches after their prerequisites land.
 
 ### I1 — Preserve distinct diagnostics and name in-memory sources
 
