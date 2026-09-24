@@ -10,6 +10,8 @@ import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.ReferenceContext
+import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
@@ -32,6 +34,7 @@ import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.CompilationResult
+import org.xvm.lsp.model.Location
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
@@ -40,7 +43,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
 class XdkCursorServerTest {
-    enum class Feature { COMPLETION, SIGNATURE, RENAME }
+    enum class Feature { COMPLETION, SIGNATURE, RENAME, REFERENCES }
 
     private class Pending(
         val future: CompletableFuture<*>,
@@ -113,6 +116,13 @@ class XdkCursorServerTest {
             column: Int,
             newName: String,
         ): CompletableFuture<WorkspaceEdit?> = query(WorkspaceEdit(emptyMap()))
+
+        override fun findReferencesAsync(
+            uri: String,
+            line: Int,
+            column: Int,
+            includeDeclaration: Boolean,
+        ): CompletableFuture<List<Location>> = query(listOf(Location(uri, line, column, line, column + 1)))
     }
 
     private class Session(
@@ -140,9 +150,23 @@ class XdkCursorServerTest {
             uri: String = URI,
         ): CompletableFuture<*> =
             when (feature) {
-                Feature.COMPLETION -> documents.completion(CompletionParams(TextDocumentIdentifier(uri), Position(0, 0)))
-                Feature.SIGNATURE -> documents.signatureHelp(SignatureHelpParams(TextDocumentIdentifier(uri), Position(0, 0)))
-                Feature.RENAME -> documents.rename(RenameParams(TextDocumentIdentifier(uri), Position(0, 0), "renamed"))
+                Feature.COMPLETION -> {
+                    documents.completion(CompletionParams(TextDocumentIdentifier(uri), Position(0, 0)))
+                }
+
+                Feature.SIGNATURE -> {
+                    documents.signatureHelp(SignatureHelpParams(TextDocumentIdentifier(uri), Position(0, 0)))
+                }
+
+                Feature.RENAME -> {
+                    documents.rename(RenameParams(TextDocumentIdentifier(uri), Position(0, 0), "renamed"))
+                }
+
+                Feature.REFERENCES -> {
+                    documents.references(
+                        ReferenceParams(TextDocumentIdentifier(uri), Position(0, 0), ReferenceContext(true)),
+                    )
+                }
             }
 
         override fun close() {
@@ -237,6 +261,23 @@ class XdkCursorServerTest {
             session.change()
             work.finish()
             assertModified(old)
+        }
+    }
+
+    @Test
+    fun `cross-module queries reject changed consumers even when the backend ignores cancellation`() {
+        for (feature in listOf(Feature.REFERENCES, Feature.RENAME)) {
+            val backend = Backend(ignoreCancellation = true)
+            Session(backend).use { session ->
+                session.open()
+                val consumer = "file:///Consumer.x"
+                session.open(consumer)
+                val old = session.request(feature)
+                val work = backend.next()
+                session.change(consumer)
+                work.finish()
+                assertModified(old)
+            }
         }
     }
 
