@@ -126,12 +126,13 @@ public interface RegisterInfo {
                 Builder.box(code, type);
             } else if (type.isNullable() && type.removeNullable().isJavaPrimitive() &&
                         !cd().isPrimitive()) {
-                // a NullablePrimitive value arrives as the primitive plus its "is Null" flag, so
-                // the flag has to pick between boxing the value and storing Ecstasy Null
+                // a NullablePrimitive value is represented as a primitive plus its "is Null" flag
                 Builder.boxNullable(code, type);
             } else if (type.isXvmPrimitive() && !type().isXvmPrimitive()) {
                 Builder.box(code, type);
             }
+            // TODO: a NullableXVMPrimitive value carries an additional "is Null" flag
+
             Builder.store(code, cd(), slot());
         }
         return this;

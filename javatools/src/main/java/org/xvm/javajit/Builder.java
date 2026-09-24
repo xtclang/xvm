@@ -1396,15 +1396,15 @@ public abstract class Builder {
      * @param type  the nullable primitive type of the value on the stack
      */
     public static void boxNullable(CodeBuilder code, TypeConstant type) {
-        TypeConstant typeSansNull = type.removeNullable();
-        Label        lblNull      = code.newLabel();
-        Label        lblDone      = code.newLabel();
+        TypeConstant sansNull = type.removeNullable();
+        Label        lblNull  = code.newLabel();
+        Label        lblDone  = code.newLabel();
 
         code.ifne(lblNull);
-        box(code, typeSansNull);
+        box(code, sansNull);
         code.goto_(lblDone)
             .labelBinding(lblNull);
-        pop(code, JitTypeDesc.requireJavaPrimitive(typeSansNull));
+        pop(code, JitTypeDesc.requireJavaPrimitive(sansNull));
         loadNull(code);
         code.labelBinding(lblDone);
     }
@@ -1532,32 +1532,32 @@ public abstract class Builder {
                           .getName();
 
         switch (name) {
-            case "Bit"     -> code.invokestatic(CD_Bit,       "$box", MD_Bit_box);
-            case "Boolean" -> code.invokestatic(CD_Boolean,   "$box", MD_Boolean_box);
-            case "Char"    -> code.invokestatic(CD_Char,      "$box", MD_Char_box);
-            case "Dec32"   -> code.invokestatic(CD_Dec32,     "$box", MD_Dec32_box);
-            case "Dec64"   -> code.invokestatic(CD_Dec64,     "$box", MD_Dec64_box);
-            case "Dec128"  -> code.invokestatic(CD_Dec128,    "$box", MD_Dec128_box);
+            case "Bit"      -> code.invokestatic(CD_Bit,      "$box", MD_Bit_box);
+            case "Boolean"  -> code.invokestatic(CD_Boolean,  "$box", MD_Boolean_box);
+            case "Char"     -> code.invokestatic(CD_Char,     "$box", MD_Char_box);
+            case "Dec32"    -> code.invokestatic(CD_Dec32,    "$box", MD_Dec32_box);
+            case "Dec64"    -> code.invokestatic(CD_Dec64,    "$box", MD_Dec64_box);
+            case "Dec128"   -> code.invokestatic(CD_Dec128,   "$box", MD_Dec128_box);
             case "Float8e4" -> code.invokestatic(CD_Float8e4, "$box", MD_Float8e4_box);
             case "Float8e5" -> code.invokestatic(CD_Float8e5, "$box", MD_Float8e5_box);
             case "BFloat16" -> code.invokestatic(CD_BFloat16, "$box", MD_BFloat16_box);
-            case "Float16" -> code.invokestatic(CD_Float16,   "$box", MD_Float16_box);
-            case "Float32" -> code.invokestatic(CD_Float32,   "$box", MD_Float32_box);
-            case "Float64" -> code.invokestatic(CD_Float64,   "$box", MD_Float64_box);
-            case "Int8"    -> code.invokestatic(CD_Int8,      "$box", MD_Int8_box);
-            case "Int16"   -> code.invokestatic(CD_Int16,     "$box", MD_Int16_box);
-            case "Int32"   -> code.invokestatic(CD_Int32,     "$box", MD_Int32_box);
-            case "Int64"   -> code.invokestatic(CD_Int64,     "$box", MD_Int64_box);
-            case "Int128"  -> code.invokestatic(CD_Int128,    "$box", MD_Int128_box);
-            case "Nibble"  -> code.invokestatic(CD_Nibble,    "$box", MD_Nibble_box);
-            case "UInt8"   -> code.invokestatic(CD_UInt8,     "$box", MD_UInt8_box);
-            case "UInt16"  -> code.invokestatic(CD_UInt16,    "$box", MD_UInt16_box);
-            case "UInt32"  -> code.invokestatic(CD_UInt32,    "$box", MD_UInt32_box);
-            case "UInt64"  -> code.invokestatic(CD_UInt64,    "$box", MD_UInt64_box);
-            case "UInt128" -> code.invokestatic(CD_UInt128,   "$box", MD_UInt128_box);
-            case "Date"    -> code.invokestatic(CD_Date,      "$box", MD_Date_box);
+            case "Float16"  -> code.invokestatic(CD_Float16,  "$box", MD_Float16_box);
+            case "Float32"  -> code.invokestatic(CD_Float32,  "$box", MD_Float32_box);
+            case "Float64"  -> code.invokestatic(CD_Float64,  "$box", MD_Float64_box);
+            case "Int8"     -> code.invokestatic(CD_Int8,     "$box", MD_Int8_box);
+            case "Int16"    -> code.invokestatic(CD_Int16,    "$box", MD_Int16_box);
+            case "Int32"    -> code.invokestatic(CD_Int32,    "$box", MD_Int32_box);
+            case "Int64"    -> code.invokestatic(CD_Int64,    "$box", MD_Int64_box);
+            case "Int128"   -> code.invokestatic(CD_Int128,   "$box", MD_Int128_box);
+            case "Nibble"   -> code.invokestatic(CD_Nibble,   "$box", MD_Nibble_box);
+            case "UInt8"    -> code.invokestatic(CD_UInt8,    "$box", MD_UInt8_box);
+            case "UInt16"   -> code.invokestatic(CD_UInt16,   "$box", MD_UInt16_box);
+            case "UInt32"   -> code.invokestatic(CD_UInt32,   "$box", MD_UInt32_box);
+            case "UInt64"   -> code.invokestatic(CD_UInt64,   "$box", MD_UInt64_box);
+            case "UInt128"  -> code.invokestatic(CD_UInt128,  "$box", MD_UInt128_box);
+            case "Date"     -> code.invokestatic(CD_Date,     "$box", MD_Date_box);
             case "Duration" -> code.invokestatic(CD_Duration, "$box", MD_Duration_box);
-            default        -> throw new UnsupportedOperationException("Cannot box " + name);
+            default         -> throw new UnsupportedOperationException("Cannot box " + name);
         }
     }
 

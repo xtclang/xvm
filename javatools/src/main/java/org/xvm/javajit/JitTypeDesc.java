@@ -213,17 +213,11 @@ public class JitTypeDesc {
      * {@code Byte}, {@code Int8}, {@code UInt8}, {@code Int16}, {@code UInt16}, {@code Float8e4}
      * and {@code Float8e5} as an {@code int}, while the field declares the narrow carrier
      * ({@code boolean}, {@code byte} or {@code short}) that {@link #getPrimitiveFieldClass}
-     * returns, so that instances stay small. Every other flavor, {@code Specific}, {@code Widened}
-     * and the multi-slot XVM primitives, uses the very same ClassDesc in both places, which is why
-     * the register carrier can be passed straight through for those.
+     * returns, to reduce the memory footprint. Every other flavor uses the very same ClassDesc in
+     * both places.
      *
-     * <p>This replaces the {@code type.removeNullable().isJavaPrimitive() ? ... : cdSlot} ternary
-     * that used to be spelled out at every call site. The test does not have to be repeated here:
-     * {@link #getPrimitiveFieldClass} strips the Nullable itself, because a {@code Byte?} field
-     * carries its value in a {@code byte} and its "assigned" flag in a separate boolean extension
-     * field, and it returns null for precisely the types that have no narrow carrier. So its null
-     * result <i>is</i> the ternary's false branch, and a caller that has already established the
-     * type is a Java primitive never has to answer for a null it cannot get.
+     * <p>Note: {@link #getPrimitiveFieldClass} strips the Nullable part and returns the carrier
+     * of the "base" field.
      *
      * @param type    the property type; a nullable form is accepted
      * @param cdSlot  the register carrier, used for any type without a narrower field carrier

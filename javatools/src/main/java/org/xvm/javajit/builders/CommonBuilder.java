@@ -1187,8 +1187,6 @@ public class CommonBuilder
                 assemblePropertySetter(classBuilder, prop);
             }
         } else {
-            // note: this is the *setter's* implementation; the getter may be absent entirely, as it
-            // is for a property that only declares set()
             switch (setterInfo.getHead().getImplementation()) {
             case Field:
                 generateTrivialSetter(classBuilder, prop);
