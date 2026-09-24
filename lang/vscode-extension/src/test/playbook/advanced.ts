@@ -1,0 +1,63 @@
+import * as assert from 'node:assert';
+import * as vscode from 'vscode';
+import { CallHierarchyItem, CallHierarchyOutgoingCall } from 'vscode-languageclient/node';
+import { client, fixture, noErrors, playbook, position, targets } from './support';
+
+export function advancedCases(): void {
+    playbook('X68', 'concrete chained delegation reaches written method and getter bodies', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const [use, offset, declaration, declarationOffset, length] of [
+            ['forward.map', 8, 'String map(String value) = value', 7, 3],
+            ['forward.name', 8, 'String name.get()', 12, 3]
+        ] as const) {
+            const found = await targets(document, 'Implementation', position(document, use, offset));
+            const at = position(document, declaration, declarationOffset);
+            assert.strictEqual(found.length, 1);
+            assert.strictEqual(found[0].uri.toString(), document.uri.toString());
+            assert.ok(found[0].range.isEqual(new vscode.Range(at, at.translate(0, length))));
+        }
+    });
+
+    playbook('X69', 'super navigation reaches its inherited body', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        const found = await targets(document, 'Definition', position(document, 'super(value)'));
+        const at = position(document, 'T pick(T value)', 2);
+        assert.strictEqual(found.length, 1);
+        assert.ok(found[0].range.isEqual(new vscode.Range(at, at.translate(0, 4))));
+        const items = await client().sendRequest<CallHierarchyItem[]>('textDocument/prepareCallHierarchy', {
+            textDocument: { uri: document.uri.toString() }, position: position(document, 'String pick(String value)', 7)
+        });
+        assert.strictEqual(items.length, 1);
+        const outgoing = await client().sendRequest<CallHierarchyOutgoingCall[]>('callHierarchy/outgoingCalls', { item: items[0] });
+        assert.strictEqual(outgoing.length, 1);
+        assert.strictEqual(outgoing[0].to.selectionRange.start.line, at.line);
+        assert.strictEqual(outgoing[0].to.selectionRange.start.character, at.character);
+        await assert.rejects(client().sendRequest('textDocument/prepareRename', {
+            textDocument: { uri: document.uri.toString() }, position: position(document, 'super(value)')
+        }), { message: 'Rename not allowed at this position' });
+    });
+
+    playbook('X70', 'function calls show signature types without guessed parameter names', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        const help = await workspace.signature(document, position(document, 'fn(42)', 4));
+        assert.strictEqual(help?.signatures[0].label, 'Int fn(Int)');
+        const found = await targets(document, 'Definition', position(document, 'fn(42)'));
+        assert.strictEqual(found.length, 1);
+        assert.strictEqual(document.getText(found[0].range), 'fn');
+    });
+
+    playbook('X71', 'compound conditional and trailing argument edits preserve completion scope', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const expression of ['1 + word.', 'flag ? word. : 0', 'flag ? 0 : word.', 'pair(word., 2)']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('return 1 + word.size;', `return ${expression};`));
+            const found = await workspace.completion(document, position(document, 'word.', 5));
+            assert.ok(found.some(item => item.label === 'size'), expression);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+}
