@@ -18,6 +18,7 @@ class SemanticModel internal constructor(
     occurrences: List<Occurrence>,
     expressions: List<ExpressionType>,
     calls: List<CallSite> = emptyList(),
+    functionCalls: List<FunctionCallSite> = emptyList(),
 ) {
     enum class Status { UNAVAILABLE, PARTIAL, COMPLETE }
 
@@ -159,6 +160,15 @@ class SemanticModel internal constructor(
         val caller: SymbolId? = null,
     )
 
+    /** Validated function signature without an invented runtime target or parameter names. */
+    @ConsistentCopyVisibility
+    data class FunctionCallSite internal constructor(
+        val range: Range,
+        val callee: Range,
+        val signature: Signature,
+        val arguments: List<CallArgument>,
+    )
+
     /** Source callable boundaries, including lambdas whose compiler methods have synthetic names. */
     data class Callable(
         val symbol: SymbolId,
@@ -184,6 +194,7 @@ class SemanticModel internal constructor(
     val occurrences: List<Occurrence> = immutableList(occurrences)
     val expressions: List<ExpressionType> = immutableList(expressions)
     val calls: List<CallSite> = immutableList(calls)
+    val functionCalls: List<FunctionCallSite> = immutableList(functionCalls)
     val typeDeclarations: Map<SymbolId, TypeDeclaration> = facts.typeDeclarations
     val callables: Map<SymbolId, Callable> = facts.callables
 
