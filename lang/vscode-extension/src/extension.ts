@@ -11,7 +11,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
-import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig } from './lsp-client';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration } from './lsp-client';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
@@ -123,6 +123,9 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('xtc.trace.server')) {
                 void applyTraceConfig();
+            }
+            if (event.affectsConfiguration('xtc.compiler.sourceModules')) {
+                void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler configuration update failed: ${error}`));
             }
             const needsRestart = serverExists && (
                 event.affectsConfiguration('xtc.java.home') ||
