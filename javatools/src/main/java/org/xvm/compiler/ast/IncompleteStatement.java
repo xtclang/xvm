@@ -153,7 +153,7 @@ public final class IncompleteStatement extends Statement {
             }
         });
         if (bindings.isEnabled() && isCall() && !errs.isAbortDesired()) {
-            bindings.record(this, ctx.cursorBinding().withCandidates(PartialCallResolver.inspect(this, ctx, errs)));
+            bindings.record(this, PartialCallResolver.inspect(this, ctx, errs));
         }
         for (int i = 0; i < arguments.size() && !errs.isAbortDesired(); ++i) {
             Expression argument = arguments.get(i);

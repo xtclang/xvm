@@ -46,6 +46,19 @@ internal object XdkCursorQueries {
     ): SignatureHelp? {
         val site = model.sites.singleOrNull() ?: return null
         val slot = site.argumentIndexAt(position) ?: return null
+        if (site.functions.isNotEmpty()) {
+            val signatures =
+                site.functions.map { candidate ->
+                    signature(
+                        model.semantics,
+                        site.calleeName ?: "function",
+                        candidate.signature,
+                        site.parameterAt(candidate, position),
+                        "Function signature; written arguments fit, runtime target unknown.",
+                    )
+                }
+            return SignatureHelp(signatures, activeParameter = signatures.first().activeParameter ?: 0)
+        }
         site.callCandidates?.let { candidates ->
             val signatures =
                 candidates
@@ -58,6 +71,7 @@ internal object XdkCursorQueries {
                                 it,
                                 site.parameterAt(candidate, position),
                                 "Candidate signature; written arguments fit, overload not selected.",
+                                candidate.constructor,
                             )
                         }
                     }.distinctBy { it.label }
@@ -111,6 +125,7 @@ internal object XdkCursorQueries {
         signature: Signature,
         active: Int? = null,
         documentation: String? = null,
+        constructor: Boolean = false,
     ): SignatureInfo {
         val parameters =
             signature.parameters.map { parameter ->
@@ -123,8 +138,14 @@ internal object XdkCursorQueries {
         val returnTypes = if (signature.conditional) signature.returns.drop(1) else signature.returns
         val returns = returnTypes.joinToString(", ") { model.type(it)?.displayName ?: "?" }
         val result = if (returnTypes.size > 1) "($returns)" else returns.ifEmpty { "void" }
+        val returnLabel =
+            when {
+                constructor -> ""
+                signature.conditional -> "conditional $result "
+                else -> "$result "
+            }
         return SignatureInfo(
-            "${if (signature.conditional) "conditional " else ""}$result $name(${parameters.joinToString { it.label }})",
+            "$returnLabel$name(${parameters.joinToString { it.label }})",
             documentation,
             // LSP defaults an absent/out-of-range active index to parameter zero. Keeping the
             // signature label but omitting parameter metadata avoids a fabricated highlight.

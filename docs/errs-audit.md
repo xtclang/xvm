@@ -432,3 +432,42 @@ warning range, all 788 executed LSP tests (three existing skips), 16 packaged st
 focused Java tests. The 120-cycle editing/cancellation workload releases 2,400 tracked attempts,
 pools and source roots; p50/p95 rebuild times were 217/231 ms including debounce. This bounded
 run does not substitute for a multi-hour editor soak or remaining manual visual checks.
+
+## Ref/Var annotation lookup follow-up, 2026-09-24
+
+The previous extra-PropertyClassType probe is unnecessary for annotation accessors. The compiler's
+`TypeConstant.explodeProperty` already layers Ref/Var annotation bodies into the adopting host's
+nested method chains. The Kotlin implementation copier now reads those chains through its existing
+explicit listener and cancellation boundary. Generic substitutions, annotation order and explicit
+property accessor precedence come from compiler composition; no standalone property TypeInfo is
+constructed and no diagnostics are suppressed.
+
+The initial regression compiled successfully but returned no targets for the annotated property.
+Removing the blanket annotation exclusion exposed the written getter/setter identities. The broader
+lookup suite then caught native `@Lazy` storage being mapped to the property declaration. Annotated
+field/native fallbacks are now excluded: only proven written accessor bodies are copied. Binary
+annotation bodies require the host's source index, just like other dependency implementations.
+Focused lookup/dependency/purity regressions pass with unchanged emitted bytes and no new diagnostics.
+Full verification is recorded in the integration plan's L22 follow-up.
+
+## Incomplete function/constructor signatures, 2026-09-24
+
+Function-valued probes exposed two distinct validity issues. A silent PROBE listener alone does not
+remember serious errors, so validating an unreadable function variable could leave a usable-looking
+type. The probe now uses a locally collecting silent listener and rejects serious errors, while
+forwarding cancellation. Constructor type validation uses the same policy. These private speculative
+errors never replace normal source diagnostics; explicit TypeInfo lookup still reports to the host.
+
+The expression `make(fn)(1, )`, for a function type with `Int, String` parameters, also exposed
+`InvocationExpression.testFunction` overwriting failed argument fitting with successful return
+fitting. The invalid invocation could then publish a shortened, apparently validated signature.
+The validator now combines both results. Positive complete calls and invalid arity/type regressions
+check compilation outcomes and absence of invalid function bindings. This is an ordinary compiler
+validation fix (future I6), not another listener suppression or a cursor-only workaround.
+
+Function candidates have no guessed runtime target, parameter names or defaults. Constructor
+candidates cover ordinary named types, explicit class type substitution, overload fitting, named
+slots and defaults. Virtual/inner/array/annotated construction and omitted class-type inference
+remain outside the proof. No AST semantic fields or clone/reset machinery were added. The
+[integration record](errs-integration-plan.md#incomplete-function-and-constructor-signature-help)
+separates C11 compiler facts, L23 consumers and I6, and records full verification.
