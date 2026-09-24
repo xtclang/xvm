@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X63 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X67 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1302,7 +1302,8 @@ their own implementation target. Interface default bodies and mixin bodies from 
 can be source targets; an unused mixin is not an implementation of its `into` constraint.
 A user-written override inside an anonymous class is also a method target, although the synthetic
 class is not listed as a named type implementation.
-Property/accessor implementations and synthetic delegation/redirect targets are not provided.
+Property/accessor implementation checks are in section J. Synthetic delegation/redirect targets
+remain outside the current lookup.
 
 ### G. Call hierarchy, semantic highlighting and inlay hints
 
@@ -1563,6 +1564,51 @@ The retention test repeatedly replaces dependencies, rebuilds an explicit source
 rename/cursor proofs and closes/reopens the consumer. It reports actual latency and checks release
 of compiler results, AST roots and pools after close and shutdown. This is a bounded automated
 workload; record interactive and prolonged editor tests separately.
+
+### J. Property and accessor implementations
+
+Save this as `Properties.x`. Use **Go to Implementations** on the indicated property or accessor
+name. A property query lists its effective getter/setter bodies or backing-field declarations;
+an accessor query follows only that accessor. The query is declaration-level: a read of a property
+has the same implementation set as its declaration, rather than selecting only its getter.
+
+```xtc
+module Properties {
+    interface Named<T> { T name; }
+    class Stored implements Named<String> { @Override String name = "stored"; }
+    class Computed implements Named<String> { @Override String name.get() = "computed"; }
+    class Inherited extends Stored {}
+    class Unrelated { String name = "other"; }
+    String read(Named<String> value) = value.name;
+
+    class Base {
+        Int value {
+            Int get() = 1;
+            void set(Int value) {}
+        }
+    }
+    class Child extends Base { @Override Int value.get() = 2; }
+    interface Defaulted { @RO String label { @Override String get() = "default"; } }
+    class DefaultUser implements Defaulted {}
+    class FieldUser implements Defaulted { @Override String label = "field"; }
+
+    interface Missing { @RO String absent; }
+    class Forward(Missing target) delegates Missing(target) {}
+    class Delayed { @Lazy Int later.calc() = 1; }
+    Int size(String text) = text.size;
+}
+```
+
+| # | Action | Expected result |
+|---|--------|-----------------|
+| X64 | Find Implementations on `name` in `Named`, then in `value.name`. | Stored's `name` field and Computed's `get` body. Inherited adds no duplicate; Unrelated is excluded. |
+| X65 | Query Base's `value`, then its `get` and `set` separately. Query Defaulted's `label`. | Property: Base's getter/setter and Child's getter. Getter: the two getter bodies only. Setter: Base's setter only. Defaulted: its default getter and FieldUser's field. |
+| X66 | Query Missing's `absent`, Delayed's `later`, and `size` in `text.size`. | No invented target for an abstract/delegated property, Ref/Var annotation dispatch or bundled binary source. |
+| X67 | Create `Properties/Member.x` containing `class Member implements Named<String> { @Override String name.get() = "member"; }`. Close its tab and query Named's `name`. Open the member, insert two blank lines without saving, break its declaration, then restore it. | The closed member adds its getter. Unsaved positions move by two lines; parse failure clears implementation results; correction restores them. |
+
+Lookup requires successful module analysis and uses copied source identities. It does not enable
+property rename, infer a runtime delegate receiver or search every configured module for additional
+implementations. Ref/Var annotations such as `@Lazy` remain a separate semantic case.
 
 ## VS Code Extension Playbook
 

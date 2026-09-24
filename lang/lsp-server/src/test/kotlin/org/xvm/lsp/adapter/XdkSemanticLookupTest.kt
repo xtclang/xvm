@@ -194,6 +194,147 @@ class XdkSemanticLookupTest {
     }
 
     @Test
+    fun `property implementations follow generic contracts and exclude unrelated declarations`() {
+        val source =
+            """
+            module Lookups {
+                interface Named<T> { T /*api*/name; }
+                class Stored implements Named<String> { @Override String /*field*/name = "stored"; }
+                class Computed implements Named<String> { @Override String name { String /*getter*/get() = "computed"; } }
+                class Inherited extends Stored {}
+                class Unrelated { String name = "other"; }
+                String read(Named<String> value) = value. /*use*/name;
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            for (use in listOf("api", "use")) {
+                assertThat(implementations(adapter, source, use))
+                    .describedAs(use)
+                    .containsExactlyInAnyOrder(location(source, "field", "name"), location(source, "getter", "get"))
+            }
+        }
+    }
+
+    @Test
+    fun `property and accessor queries retain separate effective getter and setter chains`() {
+        val source =
+            """
+            module Lookups {
+                class Base {
+                    Int /*property*/value {
+                        Int /*get*/get() = 1;
+                        void /*set*/set(Int value) {}
+                    }
+                }
+                class Child extends Base {
+                    @Override Int value { Int /*override*/get() = 2; }
+                }
+                class Unrelated { Int value { Int get() = 3; void set(Int value) {} } }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            assertThat(implementations(adapter, source, "property"))
+                .containsExactlyInAnyOrder(
+                    location(source, "get", "get"),
+                    location(source, "set", "set"),
+                    location(source, "override", "get"),
+                )
+            assertThat(implementations(adapter, source, "get"))
+                .containsExactlyInAnyOrder(location(source, "get", "get"), location(source, "override", "get"))
+            assertThat(implementations(adapter, source, "set")).containsExactly(location(source, "set", "set"))
+        }
+    }
+
+    @Test
+    fun `default property getters yield to fields and deduplicate inherited bodies`() {
+        val source =
+            """
+            module Lookups {
+                interface Named { @RO String /*api*/name { @Override String /*default*/get() = "default"; } }
+                class First implements Named {}
+                class Inherited extends First {}
+                class Stored implements Named { @Override String /*field*/name = "stored"; }
+                interface Missing { @RO String /*missing*/name; }
+                Int size(String value) = value. /*binary*/size;
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            for (use in listOf("api", "default")) {
+                assertThat(implementations(adapter, source, use))
+                    .containsExactlyInAnyOrder(location(source, "default", "get"), location(source, "field", "name"))
+            }
+            assertThat(implementations(adapter, source, "missing")).isEmpty()
+            assertThat(implementations(adapter, source, "binary")).isEmpty()
+        }
+    }
+
+    @Test
+    fun `short property accessors and composed mixins retain written getter targets`() {
+        val source =
+            """
+            module Lookups {
+                class Base { Int /*field*/value = 1; }
+                mixin Loud into Base { @Override Int value. /*getter*/get() = 2; }
+                mixin Unused into Base { @Override Int value.get() = 3; }
+                class Host extends Base incorporates Loud {}
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
+            assertThat(implementations(adapter, source, "field"))
+                .containsExactlyInAnyOrder(location(source, "field", "value"), location(source, "getter", "get"))
+            assertThat(implementations(adapter, source, "getter")).containsExactly(location(source, "getter", "get"))
+        }
+    }
+
+    @Test
+    fun `abstract delegated and annotated properties have no invented implementation`() {
+        val source =
+            """
+            module Lookups {
+                interface Named { @RO String /*api*/name; }
+                class Forward(Named target) delegates Named(target) {}
+                @Abstract class Missing { @Abstract Int /*abstract*/value; }
+                class Delayed { @Lazy Int /*lazy*/value.calc() = 1; }
+            }
+            """.trimIndent()
+        withSource(source) { adapter ->
+            for (use in listOf("api", "abstract", "lazy")) {
+                assertThat(implementations(adapter, source, use)).describedAs(use).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `property implementations in closed members track overlays and disappear after failure`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("Lookups.x").toFile()
+        val member = directory.resolve("Lookups/Child.x").toFile()
+        val source = "module Lookups { interface Named { @RO String /*api*/name; } }"
+        val original = "class Child implements Named { @Override String name { String /*getter*/get() = \"child\"; } }"
+        root.writeText(source)
+        member.parentFile.mkdirs()
+        member.writeText(original)
+        val rootUri = root.toURI().toString()
+        val memberUri = member.toURI().toString()
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(rootUri, source).diagnostics).isEmpty()
+            assertThat(implementations(adapter, source, "api", rootUri))
+                .containsExactly(location(original, "getter", "get", memberUri))
+            val changed = "\n\n$original"
+            assertThat(adapter.compile(memberUri, changed).diagnostics).isEmpty()
+            assertThat(implementations(adapter, source, "api", rootUri))
+                .containsExactly(location(changed, "getter", "get", memberUri))
+            assertThat(adapter.compile(memberUri, "class Child {").success).isFalse()
+            assertThat(implementations(adapter, source, "api", rootUri)).isEmpty()
+            adapter.closeDocument(memberUri)
+            assertThat(adapter.compile(rootUri, source).diagnostics).isEmpty()
+            assertThat(implementations(adapter, source, "api", rootUri))
+                .containsExactly(location(original, "getter", "get", memberUri))
+        }
+    }
+
+    @Test
     fun `default interface bodies are source implementations and inherited results are deduplicated`() {
         val source =
             """
