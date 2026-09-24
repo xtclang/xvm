@@ -354,6 +354,73 @@ These are fixture/setup checks, not manual feature passes. The playbook's stale 
 read/write-highlight descriptions were corrected; those documentation portions accompany L16 and
 L12 respectively. Interactive findings must be fixed and tested on `errs` before PR preparation.
 
+### Automated compiler playbook, 2026-09-24
+
+The follow-up on `errs` adds `:lang:vscode-extension:testCompilerPlaybook`, using the existing
+TypeScript/Mocha extension-host runner. It registers X1–X58 against fixtures read from the manual
+playbook, adds configuration/diagnostic checks, uses an isolated workspace/profile and records
+per-case results and manual limitations. The aggregate task also runs server and packaged-JAR tests
+for deterministic cancellation, retention and host-only dependency APIs. The prepared user workspace
+above remains separate; automated provider results do not count as visual/manual passes.
+
+Future PR placement: keep the complete runner and report format with **L16**, after all compiler
+features it exercises are present. Its navigation, cursor, semantic-consumer and rename cases
+correspond to the earlier L groups, but the full runner is an integrated acceptance gate and cannot
+be cherry-picked onto those earlier partial implementations. No compiler/AST API changes are needed
+for the automation itself. Two findings from the first complete run have focused regressions:
+
+- **L8, `ee9de8c4a`:** `XtcTextDocumentService.refreshForFile` ignores filesystem/save notifications for an
+  already open buffer. Its overlay is authoritative; `didChange` propagates edits and `didClose`
+  restores disk/membership. Delayed creation/save events previously canceled current completion,
+  signature and rename requests. `XdkCursorServerTest` covers all three with controlled pending work;
+  closed-file watcher coverage remains in `XdkModuleServerTest` and X27/X49/X50.
+- **L10, `e53dc6266`:** `SemanticModelBuilder` copies a parameter declaration's type from the resolved method
+  signature when no register exists, as in an abstract interface method. X35 and
+  `XdkSemanticLookupTest` cover navigation to the formal type and the library-only negative control.
+  This uses existing method/parameter metadata; it adds no AST fields or Java API.
+
+The four new regression executions failed before the fixes and passed afterward (34 focused tests,
+zero failures/errors/skips). Keep these two small fixes with their respective future PR groups;
+keep the complete automated acceptance runner with L16.
+
+Final validation on the working tree at `f2b7c4f9e`: **63/63** editor cases passed in VS Code
+1.139.0 (X1–X58, CFG1–CFG3, 7a.8–7a.9). The supporting XDK suites executed **247 adapter/server
+tests plus 15 packaged-JAR tests**, with zero failures/errors/skips. The broader server task
+reported 742 cases with zero failures/errors and three existing disabled non-XDK cases. The final
+aggregate run reused the unchanged host-test results; its editor cases ran again. `spotlessCheck`,
+`:lang:lsp-server:ktlintCheck`, TypeScript compilation and configuration-cache reuse passed.
+The final local report is
+`lang/vscode-extension/build/reports/compiler-playbook/run-dC2D2P/results.json`; its text companion
+lists the visual/manual checks still outstanding. Reports include dirty paths because these changes
+were not yet committed at validation time. The playbook also corrects X6's bare-expression expectation
+and X28's invalid `extends Object` example. The runner and documentation form the L16 checkpoint
+commit titled `Automate the complete bounded compiler playbook`.
+
+A subsequent recorded run passed all 63 editor cases again. Its report is
+`lang/vscode-extension/build/reports/compiler-playbook/run-UdYn7d/results.json` and its window-only
+video is `playbook.mp4` in the same directory (89 seconds). The supporting host results were reused.
+The recording shows the automated provider workload; it does not turn outstanding visual/menu/key
+checks into manual passes. The recording launcher was temporary and is not a shipped runner option.
+
+### Broader API proof after the bounded checkpoint, 2026-09-24
+
+Continue on `errs`, using the existing explicit source graph. The accepted order is:
+
+- [ ] **1. Cross-module references and member/override rename.** Prove reference closure, compiler
+  identity across artifacts, override relationships and binding preservation across all affected
+  configured modules. Include closed sources, unsaved overlays, dependency changes, overloads,
+  silent capture and stale/canceled requests. Add compiler hooks only for demonstrated missing facts.
+- [ ] **2. Remaining semantic cases.** Probe property/accessor implementation, delegation targets
+  and function-valued calls with positive and negative consumers.
+- [ ] **3. Broader incomplete source.** Probe compound/conditional expressions and arguments after
+  the cursor while retaining the original compiler context and source positions.
+- [ ] **4. Remaining hardening.** Reproduce the bound-generic binary-AST diagnostic case and run a
+  prolonged editing/cancellation/retention workload.
+
+Automatic discovery and a production persistent index are later work. The completed bounded POC
+remains the baseline; broader queries must distinguish complete configured-graph evidence from
+unknown external consumers. Record new implementation commits and future PR boundaries here.
+
 ### Remaining work to establish the full API POC, 2026-09-23
 
 Execution checklist (complete each item with the evidence specified below):
