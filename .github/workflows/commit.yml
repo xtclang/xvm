@@ -20,8 +20,11 @@ on:
         # Only run on master (after PRs are merged)
         branches: [master]
     pull_request:
-        # Test all PRs before merging
-        branches: [master]
+        # Test all PRs before merging. JIT is included because it is a long-running integration
+        # branch that feature work is targeted at, and this filter matches the *base* branch, so
+        # without it nothing aimed at JIT is ever built. Publishing steps are separately gated on
+        # "push to master", so this cannot trigger a release of any kind.
+        branches: [master, JIT]
     # Manual trigger - optionally triggers publishing workflows after successful completion
     # This allows testing the full publishing pipeline from any branch
     # without pushing to master.
