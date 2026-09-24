@@ -1310,9 +1310,22 @@ establishes a persistent workspace reference index.
 
 ### Automatic source recompilation host checks
 
-This section needs a host configured with source roots and dependency edges; the standard editor
-launcher does not discover them yet. In the host that constructs the compiler language server,
-register the following graph before opening the files (substitute actual absolute file URIs):
+For VS Code with the compiler build, open the folder containing Library.x and Consumer.x and add
+this to workspace settings (`.vscode/settings.json`):
+
+```json
+{
+  "xtc.compiler.sourceModules": [
+    { "name": "Library", "uri": "Library.x" },
+    { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
+  ]
+}
+```
+
+No restart is needed. Relative URIs require one workspace folder; use absolute file URIs for
+multi-root workspaces. Other clients can supply `initializationOptions.xtcCompiler` or the
+`xtc.compiler` configuration section; IntelliJ has no dedicated source-graph settings UI yet.
+Automatic discovery remains separate. An embedding host can still register the graph directly:
 
 ```kotlin
 server.replaceCompilerSourceModules(
@@ -1361,6 +1374,15 @@ cursor cancellation, snapshot timing and binary replacement:
     --rerun --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
+
+### Configuration update checks
+
+After X45–X52, set `xtc.compiler.sourceModules` to `[]`: Consumer should report its unavailable
+Library dependency. Restore the list and expect diagnostics to clear without editing Consumer.
+Introduce a cycle by adding Consumer as a dependency of Library: expect a configuration error and
+the old working graph to remain active. Restore valid settings, repeat the same list, and verify
+that existing semantic results remain available. These checks exercise the ordinary editor bridge;
+the host-only binary-artifact section above still requires a Kotlin host.
 
 ### G. Compiler-validated rename
 
@@ -1585,10 +1607,11 @@ Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-s
 - Static call hierarchy, resolved-name tokens, read/write highlights and bounded inlay hints
 - Explicit dependency artifacts/source indices, consumer invalidation and server diagnostic refresh
 - Automatic dependency recompilation for explicitly configured roots/edges, including unsaved overlays
+- Initialization/live source-graph settings, exposed in VS Code as `xtc.compiler.sourceModules`
 
 Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
-- Editor project discovery/configuration and a persistent cross-module index
+- Automatic editor project discovery and a persistent cross-module index
 - External/conditional-mixin hierarchy and broader implementation targets
 - Member/override/workspace rename and public-parameter caller closure
 - Diagnostic-driven quick fixes and refactorings

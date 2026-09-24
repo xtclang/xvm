@@ -168,6 +168,22 @@
                     "default": 120,
                     "description": "Maximum line width (right margin)"
                 },
+                "xtc.compiler.sourceModules": {
+                    "type": "array",
+                    "default": [],
+                    "scope": "window",
+                    "description": "Source modules for automatic compilation in the compiler backend. Changes apply without restarting. Relative URIs require a single workspace folder.",
+                    "items": {
+                        "type": "object",
+                        "required": ["name", "uri"],
+                        "additionalProperties": false,
+                        "properties": {
+                            "name": { "type": "string", "minLength": 1, "description": "Declared Ecstasy module name." },
+                            "uri": { "type": "string", "minLength": 1, "description": "Module .x root: a file URI or URI relative to the workspace folder." },
+                            "dependencies": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "default": [], "description": "Names of source modules this module imports." }
+                        }
+                    }
+                },
                 "xtc.sourceRoots": {
                     "type": "array",
                     "items": {

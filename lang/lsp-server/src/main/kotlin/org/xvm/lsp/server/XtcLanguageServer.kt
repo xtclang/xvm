@@ -56,6 +56,8 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ParameterInformation
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameDefaultBehavior
@@ -91,8 +93,11 @@ import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.Either3
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
@@ -118,6 +123,7 @@ import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
 
 /**
@@ -155,6 +161,16 @@ class XtcLanguageServer(
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
+
+    /** One immutable context per configuration request; late replies cannot replace newer settings. */
+    private data class CompilerSettings(
+        val folders: List<String> = emptyList(),
+        val canRequest: Boolean = false,
+        val revision: Long = 0,
+        val closed: Boolean = false,
+    )
+
+    private val compilerSettings = AtomicReference(CompilerSettings())
 
     companion object {
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
@@ -220,6 +236,25 @@ class XtcLanguageServer(
         logWorkspaceFolders(params)
         logClientCapabilities(params)
 
+        if (adapter is XdkAdapter) {
+            val folders = params.workspaceFolders?.map { it.uri }.orEmpty()
+            val settings = CompilerSettings(folders, params.capabilities?.workspace?.configuration == true)
+            synchronized(compilerSettings) {
+                compilerSettings.set(settings)
+                try {
+                    CompilerConfiguration
+                        .modules(CompilerConfiguration.initial(params.initializationOptions), folders)
+                        ?.let(::replaceCompilerSourceModules)
+                } catch (e: IllegalArgumentException) {
+                    return CompletableFuture.failedFuture(
+                        ResponseErrorException(
+                            ResponseError(ResponseErrorCode.InvalidParams, "Invalid ${CompilerConfiguration.SECTION}: ${e.message}", null),
+                        ),
+                    )
+                }
+            }
+        }
+
         supportsVersionedEdits = params.capabilities
             ?.workspace
             ?.workspaceEdit
@@ -273,6 +308,59 @@ class XtcLanguageServer(
     override fun initialized(params: InitializedParams?) {
         logger.info("initialized: handshake complete, requesting editor configuration")
         requestFormattingConfig()
+        requestCompilerConfig()
+    }
+
+    /** Apply explicit notification settings, or pull them from configuration-capable clients. */
+    fun changeCompilerConfig(raw: Any?) {
+        if (adapter !is XdkAdapter) return
+        val settings = nextCompilerSettings()
+        val value =
+            try {
+                CompilerConfiguration.changed(raw)
+            } catch (e: IllegalArgumentException) {
+                reportCompilerConfigError(e)
+                return
+            }
+        if (value == null) requestCompilerConfig(settings) else applyCompilerConfig(value, settings)
+    }
+
+    private fun nextCompilerSettings(): CompilerSettings =
+        synchronized(compilerSettings) {
+            compilerSettings.updateAndGet { it.copy(revision = it.revision + 1) }
+        }
+
+    private fun requestCompilerConfig(settings: CompilerSettings = nextCompilerSettings()) {
+        if (adapter !is XdkAdapter) return
+        val currentClient = client ?: return
+        if (settings.closed || !settings.canRequest) return
+        currentClient
+            .configuration(ConfigurationParams(listOf(ConfigurationItem().apply { section = CompilerConfiguration.SECTION })))
+            .thenAccept { values -> applyCompilerConfig(values?.firstOrNull(), settings) }
+            .exceptionally { failure ->
+                logger.warn("workspace/configuration: compiler settings request failed: {}", failure.message)
+                null
+            }
+    }
+
+    private fun applyCompilerConfig(
+        raw: Any?,
+        settings: CompilerSettings,
+    ) {
+        synchronized(compilerSettings) {
+            if (settings.closed || compilerSettings.get() !== settings) return
+            try {
+                CompilerConfiguration.modules(raw, settings.folders)?.let(::replaceCompilerSourceModules)
+            } catch (e: IllegalArgumentException) {
+                reportCompilerConfigError(e)
+            }
+        }
+    }
+
+    private fun reportCompilerConfigError(failure: IllegalArgumentException) {
+        val message = "Invalid ${CompilerConfiguration.SECTION}; previous source configuration retained: ${failure.message}"
+        logger.warn(message)
+        client?.showMessage(MessageParams(MessageType.Error, message))
     }
 
     /**
@@ -577,6 +665,7 @@ class XtcLanguageServer(
         logger.info("shutdown: shutting down Ecstasy Language Server")
         shutdownRequested = true
         initialized = false
+        synchronized(compilerSettings) { compilerSettings.updateAndGet { it.copy(closed = true) } }
         textDocumentService.close()
         adapter.close()
         return CompletableFuture.completedFuture(null)

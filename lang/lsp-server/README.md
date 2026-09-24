@@ -201,6 +201,34 @@ views even when parsing errors prevent an assembled `parsed()` tree. See the
 [branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
 remaining limits.
 
+### Editor source-module configuration
+
+With a compiler build, VS Code can configure automatic source dependency compilation in workspace
+settings, without a custom Kotlin host:
+
+```json
+{
+  "xtc.compiler.sourceModules": [
+    { "name": "Library", "uri": "Library.x" },
+    { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
+  ]
+}
+```
+
+A root is an absolute `file:` URI or a URI relative to the sole workspace folder. Multi-root
+workspaces use absolute file URIs; URI-encode spaces. Names must match the module declarations.
+Settings changes apply without restarting and reanalyse open consumers at their existing versions.
+Malformed, cyclic, overlapping or duplicate graphs are rejected as a whole, preserving the previous
+graph and showing an error. Identical graphs preserve current analyses; an empty list clears the
+configured graph. No Gradle process or automatic project scan is started.
+
+Other LSP clients can send the same `{ "sourceModules": [...] }` object in
+`initializationOptions.xtcCompiler`, answer `workspace/configuration` for `xtc.compiler`, or send
+`workspace/didChangeConfiguration` with `{ "xtc": { "compiler": { "sourceModules": [...] } } }`.
+Absent settings preserve the current host graph; late replies and replies after shutdown are ignored.
+This configures source graphs only; binary artifacts/source indices still use the host API below.
+Tree-sitter remains the default and ignores compiler settings.
+
 ### Dependency artifacts supplied by a host
 
 The Kotlin `Compilation.toDependency()` extension exports a successful module as immutable bytes
