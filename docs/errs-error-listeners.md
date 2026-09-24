@@ -428,7 +428,9 @@ replay remain in C4.
 The [C3 extraction record](errs-integration-plan.md#fourth-local-extraction-batch-c3-2026-09-24)
 adds independently tested parser/resolver scopes and statement callback lifetimes on C2. Its
 exception/early-return cleanup and nested-attempt abort-query fixes go beyond the historical
-integrated implementation. The new tests exercise those exits, buffer draining and reporting
+integrated implementation. Those fixes and missing C1/C2 regressions are now also on `errs`, as
+recorded in the [synchronization pass](errs-integration-plan.md#synchronize-extraction-improvements-back-into-errs-2026-09-24).
+The new tests exercise those exits, buffer draining and reporting
 restoration; full compiler tests, normalized XDK output, existing loop/exception execution and the
 I3 consumer also pass. `Reporting` permits an inactive null destination and is not thread-safe;
 parser scopes do not redirect the lexer's original listener. C4 remains unextracted.

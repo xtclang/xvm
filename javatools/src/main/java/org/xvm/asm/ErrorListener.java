@@ -82,7 +82,7 @@ public interface ErrorListener {
      */
     @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
-        log(new ErrorInfo(severity, sCode, aoParam, xs));
+        log(severity, sCode, at(xs), aoParam);
     }
 
     // ----- reporting -----------------------------------------------------------------------------
@@ -611,8 +611,8 @@ public interface ErrorListener {
     // ----- inner class: Runtime ErrorListener ----------------------------------------------------
 
     /**
-     * A simple implementation of the ErrorListener that can be used at runtime. Errors will throw,
-     * and non-errors will go to standard out.
+     * A runtime sink that prints diagnostics and records an abort request for ERROR or FATAL.
+     * Reporting itself does not throw; callers query isAbortDesired() to decide whether to stop.
      */
     class RuntimeErrorListener
             implements ErrorListener {

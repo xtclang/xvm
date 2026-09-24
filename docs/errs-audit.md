@@ -350,7 +350,8 @@ the new host boundary; it does not broaden the historical diagnostic-suppression
 
 The [fourth extraction batch](errs-integration-plan.md#fourth-local-extraction-batch-c3-2026-09-24)
 checks scoped reporting on C2 rather than treating integrated-branch tests as proof of the subset.
-It also corrects two gaps still present in the integrated `9c432f778` reference:
+It found two gaps in the integrated `9c432f778` reference, now fixed in both C3 and the
+integrated branch by the subsequent synchronization pass:
 
 - Grouping label context/listener fields into `ValidationScope` did not itself restore them on
   exceptions or early returns. The extracted loop/try owners now restore previous state in
@@ -366,7 +367,9 @@ normal, deferred, nested and exceptional exits. These are lifetime guarantees, n
 support. Parser scopes still do not redirect lexical diagnostics; silent module-name scanning must
 supply an explicit discard listener to the lexer/parser constructor.
 
-The C3 fixes and regressions live on `errs/c3-reporting-scopes`, not in the integrated reference's
-Java sources. Its standalone compiler suite, unchanged normalized XDK modules, real loop/exception
-execution and I3 consumer results are recorded in the linked batch. The broader suppression audit
-and TypeInfo ownership work retain their existing scope and later slice assignments.
+The C3 fixes and regressions now live on both `errs/c3-reporting-scopes` and `lagergren/errs`.
+The [synchronization pass](errs-integration-plan.md#synchronize-extraction-improvements-back-into-errs-2026-09-24)
+also restores C1's legacy structure-report source attribution and brings over missing earlier
+regressions. Standalone slice validation and integrated-branch validation are recorded separately.
+The broader suppression audit and TypeInfo ownership work retain their existing scope and later
+slice assignments.
