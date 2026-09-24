@@ -80,8 +80,12 @@ export function moduleCases(): void {
                 uri: uri.toString(), languageId: 'xtc', version: 1, text: 'class Added extends Base<String> {}'
             } });
             await symbols(root);
-            const [base] = await hierarchy(root, position(root, 'Base<Element>'));
-            assert.ok((await edges(base, 'subtypes')).some(item => item.name === 'Added'));
+            // Fixture filesystem notifications can rebuild the module between these two
+            // requests. Reprepare each time: hierarchy items deliberately expire on rebuild.
+            await eventually(async () => {
+                const [base] = await hierarchy(root, position(root, 'Base<Element>'));
+                return base ? edges(base, 'subtypes') : [];
+            }, children => children.some(item => item.name === 'Added'), 'Unsaved member in current hierarchy');
             assert.strictEqual(await fs.stat(uri.fsPath).catch(() => undefined), undefined);
             await noErrors(uri);
         } finally {

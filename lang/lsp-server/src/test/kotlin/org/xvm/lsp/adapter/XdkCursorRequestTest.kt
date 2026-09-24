@@ -3,6 +3,8 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
@@ -124,19 +126,23 @@ class XdkCursorRequestTest {
         }
     }
 
-    @Test
-    fun `canceling converted completion results cancels their compiler request`() {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `canceling converted completion results cancels their compiler request`(argumentSlot: Boolean) {
         val compiler = PausedCursor()
+        val prefix =
+            if (argumentSlot) "module Editing { void take(String value) {} void run(String text) { take(" else prefix("String")
+        val source = "$prefix } }"
         compiler.adapter().use { adapter ->
-            adapter.compile(URI, text("String"))
-            val running = adapter.getCompletionsAsync(URI, 0, prefix("String").length)
+            adapter.compile(URI, source)
+            val running = adapter.getCompletionsAsync(URI, 0, prefix.length)
             try {
                 compiler.awaitStart()
                 assertThat(running.cancel(false)).isTrue()
                 compiler.release.countDown()
                 adapter.compileAsync("untitled:Barrier.x", text("String")).get(10, SECONDS)
                 assertThat(running.isCancelled).isTrue()
-                assertThat(adapter.getCompletions(URI, 0, prefix("String").length).map { it.label }).contains("size")
+                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains(if (argumentSlot) "text" else "size")
             } finally {
                 compiler.release.countDown()
             }
