@@ -28,6 +28,40 @@ incomplete-source analysis, member/workspace rename and persistent cross-module 
 Bounded local/private-parameter rename is implemented in the follow-up below. The numbered
 passes below preserve chronology; the PR slices describe eventual integration, not a current work queue.
 
+### Editor acceptance and extraction follow-through, 2026-09-24
+
+- [x] Commit the verified rename/lifetime/API checkpoint: `7b13e0980`.
+- [x] Expose explicit source graphs through initialization/options and live editor settings; validate
+  strict parsing, atomic replacement, unchanged configurations and stale response rejection.
+- [x] Run actual editor diagnostics/navigation/completion/rename/recompilation and repeated editing;
+  fix observed failures and distinguish UI observations from automated editor-host checks.
+- [ ] Freeze the documented embedding/AST contract for this scope and prepare the first independent
+  local PR slices. Preserve the integrated branch and verify slices against their own base. Remote
+  publication remains separate.
+
+The editor bridge uses `xtcCompiler` initialization options and `xtc.compiler` settings. VS Code
+exposes `xtc.compiler.sourceModules` and sends live updates. Relative roots require one workspace
+folder; multi-root workspaces use absolute file URIs. Invalid settings retain the previous graph,
+late replies (including replies superseded by malformed updates) cannot restore old settings, and
+identical graphs preserve existing analysis. IntelliJ has no dedicated source-graph settings UI.
+
+Editor evidence on 2026-09-24: all eight VS Code extension-host tests passed. The compiler case
+exercised settings changes, unsaved dependency rebuilding at an unchanged consumer version,
+dependency definition, selected signature help, incomplete-member completion, versioned parameter
+rename, silent-capture rejection and close/reopen. Forty error/recovery cycles retained working
+hover: median 618 ms and p95 721 ms. This is a bounded editing workload, not a multi-hour soak.
+JUnit XML additionally reports 737 LSP cases (three existing skips) and 15 packaged stdio cases
+(zero skips), with no failures/errors: 749 executed JUnit cases. A separate visible development-host
+check used F2 on a private parameter and verified all three
+edits (declaration, body reference, named argument); the fixture was then restored and closed.
+
+The proposed Java embedding/AST contract is frozen for extraction within the bounded POC scope:
+the compatibility table and requirements matrix below, together with the AST placement inventory
+in `errs.md`, define its ownership and limits. Editor configuration adds no Java or AST API.
+Future feature requirements can extend that contract additively; unsupported syntax, wider rename,
+workspace indexing and discovery are explicit follow-ups. Each extracted slice must still pass
+against its own base, including the applicable migration and output checks.
+
 ### Remaining work to establish the full API POC, 2026-09-23
 
 Execution checklist (complete each item with the evidence specified below):
@@ -71,7 +105,8 @@ Execution checklist (complete each item with the evidence specified below):
     replacement and reverse invalidation into the adapter, including transitive dependencies and
     pending cursor/compile cancellation. Server reanalysis preserves current document versions.
   - The automatic recompilation pass below now adds source-overlay builds for explicit roots/edges.
-    Editor project discovery/configuration and a persistent workspace reference index remain separate.
+    Explicit editor configuration is now available; automatic discovery and a persistent workspace
+    reference index remain separate.
 - [x] **6. Lifetime and compatibility — bounded integrated API gate.** Repeated edits/cancellation/
   retention, output comparison, migration examples and the API requirements matrix.
   - [x] Repeated fresh snapshots, concurrent pool-free queries, recursive compiler-object exclusion,
@@ -98,7 +133,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; compound/conditional prefixes and arguments following the cursor remain unavailable. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
 | 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. Broader syntax, enclosing-instance member completion, type-valued receiver fallbacks and function-valued/receiver-rewritten calls remain outside this slice. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation; member/override rename, property/accessor implementation and dynamic dispatch remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
-| 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor project discovery/configuration and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions. |
+| 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
 
 Use these consumers to close an API requirements matrix: required fact, existing accessor or new
@@ -175,10 +210,12 @@ Validation: JUnit XML reports 479 compiler tests (40 existing skips), 733 LSP te
 skips), and 15 packaged stdio tests (zero skips), with no failures/errors: **1,184 executed tests**.
 The new rename, retention and migration regressions all ran. `spotlessCheck` passed. The stdio
 client reconstructs an omitted `WorkspaceEdit.changes` as an empty map; its assertion permits that
-while requiring actual versioned `documentChanges`. No remote CI or interactive editor run was made.
+while requiring actual versioned `documentChanges`. No remote CI or interactive editor run was made
+in that pass; the editor follow-through above adds later evidence.
 
 The canonical capability matrix and playbook now include the bounded rename policy and X53–X58.
-Interactive editor cases remain unrun. Per-PR output comparison and migration tests must still run
+The later editor follow-through covers the visible parameter rename and automated editor workload.
+Per-PR output comparison and migration tests must still run
 against each extracted slice's own prerequisites; the integrated result cannot establish that.
 
 #### Compatibility and migration contract
@@ -406,9 +443,10 @@ recover. Correction rebuilds consumers without requiring an edit in them. Shared
 diagnostics remain while another open consumer owns them. Artifact-only external diagnostics keep
 the existing related-information policy.
 
-This completes an explicit host-configured build loop, not automatic project discovery. There is
-no JSON-RPC/settings endpoint for these roots yet, no cyclic multi-module compilation, no persistent
-workspace reference index and no stage-level incremental compiler. Hosts must keep declared source
+This completes an explicit host-configured build loop, not automatic project discovery. Initialization
+and live editor settings now supply these roots (see the editor follow-through above).
+Cyclic multi-module compilation, a persistent workspace reference index and stage-level incremental
+compilation remain unsupported. Hosts must keep declared source
 dependency edges accurate; missing source edges are not inferred from unresolved imports. Filesystem
 changes require the normal client notifications. Compiler mode remains Java-only and opt-in.
 
@@ -467,8 +505,8 @@ This artifact API alone does not discover projects, watch binary repositories or
 dependency source. Its subsequent source-graph integration above now handles source builds and
 overlays for explicitly configured modules. Artifact-only hosts still own matching source/artifact
 versions and must replace them together. Old artifact ranges are not a promise about independently
-edited text. Standard editor launch supplies only bundled libraries until a host installs project
-artifacts or source modules; automatic project discovery remains open.
+edited text. Standard editor launch supplies bundled libraries plus any explicit source modules in editor
+settings. Binary artifacts still require the host API; automatic project discovery remains open.
 
 Evidence: nine `XdkDependencyTest` cases cover detached keys, mutable-byte isolation, overloads,
 generics, inherited bodies, source-less artifacts, multi-file sources, source-module precedence,
@@ -870,6 +908,7 @@ provenance, not a promise that an unedited cherry-pick compiles.
 | L13 | Export versioned dependency source indices and replace host repositories | L4, L8 and L10; no new Java/AST API |
 | L14 | Rebuild configured source dependencies and refresh consumers automatically | L5 and L13; Kotlin host scheduling only |
 | L15 | Validate local/private-parameter rename and publish versioned edits | E4 label provenance, L4/L5/L8; L13/L14 for dependency invalidation coverage |
+| L16 | Configure source graphs from editor initialization and settings | L14; rename acceptance cases additionally require L15 |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -879,8 +918,8 @@ the partial compiler API; L8 proves the asynchronous editor consumer and protoco
 C8/C9 isolate live scope capture from tentative call fitting; L9 adds their Kotlin/protocol consumers.
 L10, L11 and L12 can follow their listed dependencies independently of the later completion/scope slices.
 L13 follows with an explicit artifact host API; L14 adds automatic rebuilding for configured source
-modules. Automatic project/build discovery stays separate. These are thirty-two eventual PRs,
-not thirty-two simultaneous open branches.
+modules; L16 exposes those roots/edges through editor configuration. Automatic project/build
+discovery stays separate. These are thirty-three eventual PRs, not simultaneous open branches.
 Keep only the next few ready for review, and update dependent patches
 after their prerequisites land.
 
@@ -1376,6 +1415,16 @@ clients. Include adapter/server/stdio regressions and playbook X53–X58; exclud
 rename and unsupported targets. The combined retention workload follows L14/L15, while its component
 lifecycle checks accompany the respective prerequisites.
 
+### L16 — Editor source configuration
+
+**Contract:** explicit module names, file roots and dependency edges enter through `xtcCompiler`
+initialization options, `xtc.compiler` configuration or direct settings notifications. Invalid graphs
+retain the previous configuration, obsolete replies cannot replace newer settings, and unchanged
+graphs preserve cached analysis. VS Code provides the workspace setting and live notification;
+other clients can use the same protocol. IntelliJ has no dedicated graph settings UI yet. Include
+strict parsing, relative/multi-root policy, server regressions and actual VS Code acceptance. No
+Java/AST changes, automatic discovery or binary repository settings belong here.
+
 ## Next investigations after the diagnostic milestone
 
 The fourth branch pass makes the packaged stdio checks permanent regression tests and adds
@@ -1838,7 +1887,7 @@ logging, and the real server correctly handles open, edit, correction, supersess
 Known module, dependency and source-location limits must be visible in the usage documentation.
 
 Full workspace/editor support is a later milestone: broader partial syntax, project dependency
-discovery/configuration, persistent cross-module indexing and member/workspace rename. Module overlays, module source
+discovery, persistent cross-module indexing and member/workspace rename. Module overlays, module source
 navigation, direct source hierarchy, bounded completion/signature help, lookup/call/presentation
 consumers, an explicit versioned dependency host API and automatic builds for configured source
 modules and bounded local/private-parameter rename are implemented. Repeated lifecycle and
