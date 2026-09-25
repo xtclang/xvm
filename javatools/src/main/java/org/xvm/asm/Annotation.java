@@ -136,6 +136,31 @@ public class Annotation
     }
 
     /**
+     * The display-safe counterpart of {@link #getAnnotationClass()}. It performs the same
+     * resolution and the same typedef unwrapping and returns the same constant, but does not write
+     * the result back into {@code m_constClass}. That write-back is the only difference between the
+     * two, and it is what makes rendering an annotation - which happens implicitly, from a log line
+     * or a debugger's Variables view - advance name-resolution state mid-compilation.
+     *
+     * @return the constant {@link #getAnnotationClass()} would return, without caching it
+     */
+    private Constant peekAnnotationClass() {
+        Constant resolved = m_constClass.resolve();
+        if (resolved == null || resolved == m_constClass) {
+            return m_constClass;
+        }
+
+        if (resolved instanceof TypedefConstant constTypedef) {
+            // as in getAnnotationClass(): a typedef that does not name a single class is left alone
+            TypeConstant typeRef = constTypedef.getReferredToType();
+            return typeRef.isSingleUnderlyingClass(true)
+                    ? typeRef.getSingleUnderlyingClass(true)
+                    : m_constClass;
+        }
+        return resolved;
+    }
+
+    /**
      * @return the type of the annotation (which is always the terminal type constant of the
      *         annotation class)
      */
@@ -262,20 +287,7 @@ public class Annotation
 
     @Override
     public String getValueString() {
-        var sb = new StringBuilder();
-
-        sb.append('@')
-          .append(getAnnotationClass().getValueString());
-
-        if (m_aParams.length > 0) {
-            sb.append('(')
-              .append(Arrays.stream(m_aParams)
-                      .map(Constant::getValueString)
-                      .collect(Collectors.joining(", ")))
-              .append(')');
-        }
-
-        return sb.toString();
+        return "@" + peekAnnotationClass().getValueString() + renderParams("(", ")");
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
@@ -321,26 +333,21 @@ public class Annotation
 
     @Override
     public String getDescription() {
-        StringBuilder sb = new StringBuilder();
-        int cParams = m_aParams.length;
+        return "class=" + peekAnnotationClass().getValueString()
+             + ", params=" + m_aParams.length
+             + renderParams(", values=(", ")");
+    }
 
-        sb.append("class=")
-          .append(getAnnotationClass().getValueString())
-          .append(", params=")
-          .append(cParams);
-
-        if (cParams > 0) {
-            sb.append(", values=(");
-            for (int i = 0; i < cParams; ++i) {
-                if (i > 0) {
-                    sb.append(", ");
-                }
-                sb.append(m_aParams[i].getValueString());
-            }
-            sb.append(')');
-        }
-
-        return sb.toString();
+    /**
+     * @return the annotation's arguments joined with ", " and wrapped in the given prefix and
+     *         suffix, or "" when there are none
+     */
+    private String renderParams(String sPrefix, String sSuffix) {
+        return m_aParams.length == 0
+                ? ""
+                : Arrays.stream(m_aParams)
+                        .map(Constant::getValueString)
+                        .collect(Collectors.joining(", ", sPrefix, sSuffix));
     }
 
     // ----- Object methods ------------------------------------------------------------------------
