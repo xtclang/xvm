@@ -197,6 +197,11 @@ sourceSets {
 // Defaults inherited and overridable by all xtcCompile tasks
 xtcCompile {
     /*
+     * Keep test modules unversioned so JIT class names are the same in Gradle and manual runs.
+     */
+    xtcVersion.set("")
+
+    /*
      * Execution mode controls how the compiler runs:
      *   - DIRECT: In-process via ServiceLoader (fastest, shares JVM)
      *   - ATTACHED: Forked JVM with inherited I/O (default, isolated)
