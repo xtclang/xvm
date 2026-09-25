@@ -4,13 +4,12 @@ Status: staged implementation in progress, 2026-09-25. The experimental branch
 `lagergren/constant-pool-state-separation` implements the singleton execution-state boundary and
 the first descriptor/index boundary, including late-generated field initializers, local reflective
 parameterization, a separate type-relation table and an explicit definition-freeze boundary.
-Broader reflection migration, other generated methods and activation with frozen images remain
-unfinished. Scope 2 now separates semantic metadata from descriptors; its completion and validation
-record is below. Scope 1 routes ordinary entry, frame and construction metadata through runtime
-descriptors. Cold generic construction and singleton-path
-workloads run with frozen definition graphs. Broader frozen execution reaches late delegation
-synthesis and native method marking, which belong to scope 3. Freezing is still opt-in; this is
-not a merge-ready activation change. See the scope-1 completion boundary and validation below.
+Scope 3 extends that boundary to late method/property delegation and prepares template-defined
+native rebases before application publication. The completion records below distinguish these
+changes from general method execution state, broader reflection and default frozen activation,
+which remain unfinished. Scope 2 separates semantic metadata from descriptors; scope 1 routes
+ordinary entry, frame and construction metadata through runtime descriptors. Freezing is still
+opt-in; this is not a merge-ready activation change.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -822,9 +821,10 @@ path; full frozen activation must not be enabled by default yet.
    substitution and declaration-derived member types now have explicit table owners; recursion,
    failure, invalidation and diagnostic replay are covered below. Executable preparation within
    metadata remains in scopes 3 and 4; this does not authorize cross-container TypeInfo sharing.
-3. Move late method/property delegation and accessors into the executable overlay. Finish stable
-   const-helper/native declaration synthesis before publication; generated initializers alone
-   do not cover these cases.
+3. **Implemented for runtime descriptor callers.** Late method/property delegation and accessors
+   use an execution-lifetime table, and template-defined native rebases are prepared before
+   publication. Existing const-helper synthesis remains at linking/preparation. See the scope-3
+   record below for cold helper checks and the remaining execution/reflection limits.
 4. Separate method initialization flags, mutable decoded Ops, frame-layout preparation and
    debugger instrumentation from shared definitions. Keep per-execution state with its container
    or service; verify two executions of exactly the same definitions.
@@ -1230,3 +1230,76 @@ execution cases passed without skips; `spotlessCheck` and `git diff --check` pas
 fresh-process manual audit passes after this change.
 Delegation/accessor executable ownership is the next slice; general method execution state,
 native static lifetimes and default frozen activation remain outside this preparation change.
+
+### Delegation and accessor executable ownership
+
+`RuntimeTypeContext` now retains `RuntimeMethods` through its descriptor adapter, separately from
+`TypeMetadata`. The table canonicalizes receiver, host signature, delegated declaration and target
+property before lookup. The exact context selects both definitions and prepared native bindings;
+equal signatures from another context cannot bypass that ownership check. Clearing semantic
+metadata retains the generated method, its initialization and its execution state. A new context
+over the same frozen image gets independent generated methods and Ops.
+
+`ClassStructure.ensureMethodDelegation` and `ensurePropertyDelegation` retain their compiler
+insertion path. Runtime callers in `MethodInfo` and `PropertyInfo` use the executable table instead.
+`RuntimeMethodStructure` now supports instance methods, parameters and returns, with an unattached
+multimethod parent that preserves the declaring class. Delegated accessors use an unattached
+property namespace for lexical lookup, without inserting a semantic property into the host.
+Parameters are cloned and adopted before assembly; the original declaration parameters keep
+their containing methods. Code operands use the generated method's local constant table, and
+every new descriptor keeps position `-1`.
+
+Generation happens in a private attempt, without holding a table lock across metadata queries.
+Only successfully assembled candidates are published with `putIfAbsent`. Concurrent attempts
+select one completed winner; failed attempts leave no executable entry and can retry. Attempts
+may intern descriptors, but cannot edit the image. Runtime optimized chains reference a new body
+instead of attaching the generated method to their raw semantic body, and completed method/getter/
+setter chains are published through volatile references. These are publication guarantees for
+this table, not permission to mutate compiled or generated execution state concurrently.
+
+Cold const-helper checks exposed two additional destination omissions. Default-argument super
+matching in `TypeConstant.collectPotentialSuperMethods` now adopts a declaration signature before
+truncating it, and imports an `into` identity before deriving its type. `xConst.HashCode` obtains
+the Hashable signature from the executing descriptor pool instead of a classloader-wide source
+signature. The latter removes only that signature cache; the other native static handles and
+method caches remain scope 5. Neither correction relaxes cross-context ownership checks.
+
+`RuntimeMethodsTest` covers independent parameters/accessor namespaces, unchanged image tables and
+positions, all key fields, cross-context rejection, metadata clears, failure/retry and latch-based
+concurrent publication. `DestinationOwnershipTest` covers cold default-argument matching against
+a frozen Java-built image under absent and unrelated ambient pools. These unit tests do not need
+an installed XDK.
+
+`RuntimeDelegation.x` exercises getters and setters, generic receivers and methods, inherited
+delegation, a bound method, atomic delegation, const equality/ordering/hashing, and generated
+Stringable helpers for a custom `toString`. Setters are invoked through interface-typed method
+parameters. The XDK checks freeze before entry in two independent applications, compare constant
+membership/positions and declaration object trees, and check signature agreement for method/getter/setter metadata.
+They also verify that semantic clears reuse generated executables and that another context over
+the same frozen image receives independent bodies. Execution of shared compiled bodies is still
+scope 4; only generated executable isolation is asserted for those same-image contexts.
+
+The native root is not frozen by these application audits. Legacy indexed reflection adapters,
+captured annotations/functions, method initialization flags, decoded compiled Ops, frame-layout
+preparation and debugger instrumentation remain scopes 4–5. Default frozen activation remains
+scope 6. No application copies are removed, no JIT execution or Gradle task wiring is added,
+and no general concurrency or performance guarantee is inferred from these checks.
+
+### Scope-3 validation and completion
+
+- Native preparation is commit `b7c6f5378`; the following commit contains the executable owner,
+  the two destinations exposed by const helpers, regressions and this completion record.
+- The focused `RuntimeMethodsTest` and `DestinationOwnershipTest` run passed all 13 cases without
+  skips. `NativeDeclarationPreparationTest` passed its additional case without skips.
+- The focused XDK ownership run passed all 24 cases without skips, including cold frozen
+  `RuntimeDescriptors.x`, `RuntimeConstruction.x`, `Singletons.x` and `RuntimeDelegation.x` in two
+  application images each. Fresh-process Java 25 audits also passed for the two original failures
+  and the new delegation fixture.
+- `RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test --rerun :javatools:test --rerun --console=plain`
+  passed on 2026-09-25: **527 Java cases, 491 passed and 36 existing skips; 49 XDK cases passed
+  without skips; no failures or errors**. All eight added Java cases executed. Counts are from
+  the JUnit XML reports. The distribution was rebuilt successfully for the focused checks.
+- `spotlessCheck` and `git diff --check` passed.
+
+Scope 3 is complete within the runtime-descriptor and prepared-application boundary above.
+Scopes 4–6 remain open; general frozen activation is still disabled.

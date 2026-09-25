@@ -11,10 +11,10 @@ Continue work on `xtclang/xvm`, branch **`lagergren/constant-pool-state-separati
 The user wants a complete, enforced separation of definition images, runtime descriptors, semantic
 metadata, and execution state, implemented in reviewable stages and separate commits.
 
-**Scopes 1 and 2 are implemented and verified within their documented boundaries. The next task is
-scope 3: finish generated delegation/accessor handling and stable declaration/native preparation.**
-Start by reproducing the remaining frozen-execution failures, inspect the existing initializer
-implementation, then implement the next bounded slice with focused regressions. Continue the
+**Scopes 1–3 are implemented within their documented boundaries. The next task is scope 4:
+separate compiled method execution state from shared definitions.** Start by reproducing mutable
+method initialization, decoded Ops and frame-layout state when two contexts execute the exact
+same definitions, then implement the next bounded slice with focused regressions. Continue the
 existing architecture; do not restart the ownership work or broaden this into the embedding,
 Gradle, error-listener, or JIT projects.
 
@@ -39,10 +39,10 @@ preserve local work. Use the checked-in Gradle wrapper and Java 25. The wrapper 
 Gradle 9.7.1; let the repository's toolchain configuration select/provision its dependencies.
 Do not copy build outputs from the previous machine as a prerequisite.
 
-The latest implementation commit before this handoff file is **`37bbeab30`**. A subsequent
-documentation commit contains this prompt. The user requested that all four commits be pushed to
-the existing branch. Check the actual remote tip when resuming; this file cannot contain its own
-commit hash.
+The original handoff commit was **`f63473dfd`**. Scope 3 begins with **`b7c6f5378`** (stable native
+preparation); the following delegation/accessor ownership commit updates this prompt. Check the
+actual local and remote tips when resuming; this file cannot contain its own commit hash. The
+scope-3 commits are local: do not push or open a PR without an explicit new user request.
 
 ## Essential references and branch boundaries
 
@@ -51,7 +51,8 @@ Read these in order:
 1. [AGENTS.md](AGENTS.md): local operating rules, composite build semantics, style, and test caveats.
 2. [Architecture plan](doc/constant-pool-architecture-plan.md): the active staged plan. Focus on
    "Generated methods and other freeze blockers", "Remaining commits before frozen activation",
-   "Scope-1 completion: ordinary runtime destinations", and "Scope 2: owner-specific semantic metadata".
+   "Scope-1 completion: ordinary runtime destinations", "Scope 2: owner-specific semantic metadata",
+   and "Scope 3: stable preparation and generated executables".
    Earlier sections are historical snapshots; use the later completion records for current status.
 3. [Ownership audit](doc/constant-pool-ownership.md): original same-pool, cross-pool and ambient-pool
    fixes, singleton semantics, diagnostic handling, evidence, and explicit limits.
@@ -73,14 +74,15 @@ larger branch at `plugin/doc/plans/embedded-runtime-pr-plan.md`; it is not this 
 ## User preferences and operating constraints
 
 - **Gradle and `jcmd` are already authorized. Do not ask for permission for each invocation or flag
-  variation.** Honor any enforced tool sandbox requirements without inventing another approval flow.
+  variation, including `RUN_INTEGRATION_TESTS=true`.** Local repository edits are also authorized.
+  Honor any enforced tool sandbox requirements without inventing another approval flow.
 - Do not use SICS AI / ai-dev skills or plugins for this repository. The user restricted those to
   their `zombiesnack` repository.
 - Keep distinct architectural changes in separate commits. Update the existing architecture and
   ownership documents as stages complete, explaining ownership, why each change is needed, tests,
   and remaining limits. This root handoff file was explicitly requested.
-- Follow `AGENTS.md` for remote operations. This handoff push was authorized; that is not blanket
-  authorization to open a PR, force-push, or publish later unrelated work. Do not open a PR here.
+- Follow `AGENTS.md` for remote operations. The original handoff push was authorized; the scope-3
+  work is explicitly local. Do not push or open a PR without a new user request.
 - Use modern Java 25 where it improves touched code: records, generics, immutable collections,
   obvious `var` assignments, and suitable `Lazy` / `Lazy.Bound` holders. No new Hungarian field
   names, unnecessary fully qualified names, or arrays where a collection is the better API.
@@ -148,6 +150,16 @@ Important APIs and rules:
 | `a02d9124b` | Fixed shared-value destinations exposed by the new interpreter regression |
 | `e59d5b597` | Separated semantic metadata from canonical descriptors, with deterministic unit regressions |
 | `37bbeab30` | Completed member lookup keys, integration tests and scope 2 documentation |
+| `b7c6f5378` | Prepared template-defined native rebases before frozen application execution |
+
+The following scope-3 commit gives late delegation/accessor bodies a `RuntimeMethods` owner in
+the runtime descriptor context. It extends `RuntimeMethodStructure` with independent parameters
+and unattached lexical parents, publishes assembled candidates only, and keeps generated bodies
+across semantic clears. `RuntimeDelegation.x` covers generic receivers/methods, getter/setter,
+inherited and atomic delegation, bound methods and stable const/Stringable helpers. Cold helper
+checks also corrected signature truncation before descriptor adoption and replaced the foreign
+static hash signature with the executing pool's signature. See the scope-3 architecture record
+for the ownership and publication limits.
 
 `a02d9124b` changes five runtime boundaries: `OpCallable.constructChild`, `MoveRef`,
 `xRTDelegate.GenericArrayDelegate.checkAssign`, `xRef.ensureClassHandle`, and `UnionTypeConstant`
@@ -179,10 +191,10 @@ Property queries consult current owner metadata after a clear. Integration regre
 public/private variance, runtime matches not contaminating compiler lookup, cold independent contexts,
 property refresh and warning replay.
 
-Scope 2 is not a claim that all `TypeInfo`-owned member graphs are immutable. `MethodInfo`,
-`PropertyInfo` and their optimized/generated executable paths still contain scope 3/4 work.
+Scope 2 is not a claim that all `TypeInfo`-owned member graphs are immutable. Scope 3 separates
+generated delegation bodies; shared compiled execution state remains scope 4.
 
-## Verification at the handoff
+## Verification at the original handoff
 
 Final combined implementation passed on 2026-09-25:
 
@@ -229,14 +241,30 @@ all access-qualified Object bootstrap views, keeping unresolved variance reuse l
 and supplying a system-module stub in Java-only descriptor fixtures. Do not resurrect those failures
 by copying an earlier intermediate implementation or temporary probe jar.
 
-## Scope 3: concrete starting point
+## Scope-3 verification
 
-Inspect:
+The combined implementation passed on 2026-09-25 using the full verification command above:
+
+- Java: **527 cases; 491 passed, 36 existing skips; no failures or errors**. All eight added cases
+  executed without skips, including native preparation, executable publication and cold signature
+  truncation with a frozen image.
+- XDK: **49 passed, no skips**, including **24 ownership cases**. Frozen application regressions
+  cover both original failures and the new delegation fixture, each in two independent images.
+- Fresh-process Java 25 audits passed for `Singletons.x`, `RuntimeConstruction.x` and
+  `RuntimeDelegation.x`. The distribution rebuilt successfully; `spotlessCheck` and
+  `git diff --check` passed.
+
+These results establish the scope-3 boundary described in the architecture plan, not universal
+frozen execution or safe execution of shared compiled bodies.
+
+## Scope 3: completed work and reproduction record
+
+Implementation paths:
 
 - `javatools/src/main/java/org/xvm/asm/RuntimeMethodStructure.java` and
-  `javatools/src/main/java/org/xvm/runtime/ClassComposition.java` for the already separated late
-  field-initializer mechanism. Extend that boundary where appropriate instead of creating a parallel
-  generated-code system.
+  `javatools/src/main/java/org/xvm/asm/RuntimeMethods.java` for generated executable ownership.
+  `javatools/src/main/java/org/xvm/runtime/ClassComposition.java` retains the previously separated
+  field-initializer mechanism through the same runtime method structure.
 - `MethodInfo.ensureOptimizedMethodChain` -> `ClassStructure.ensureMethodDelegation`.
 - `PropertyInfo.createDelegatingChain` -> `ClassStructure.ensurePropertyDelegation`.
 - `TypeConstant.createMemberInfo` -> `MethodStructure.markNative`, plus native marking in
@@ -244,17 +272,18 @@ Inspect:
 - Stable const/helper synthesis (`FileStructure.synthesizeChildren`,
   `ClassStructure.synthesizeConstInterface`, `synthesizeAppendTo`) and native preparation order.
 
-Last recorded manual freeze results at the scope-1 checkpoint:
+The original failures were reproduced at `f63473dfd` before changing code:
 
-| Program | Recorded result |
-|---|---|
-| `RuntimeDescriptors.x` | Passed with frozen application definitions |
-| `SingletonPaths.x` | Passed with frozen application definitions |
-| `Singletons.x` | Failed at `ClassStructure.ensureMethodDelegation`, inserting declarations into the image |
-| `RuntimeConstruction.x` | Failed at `TypeConstant.createMemberInfo` -> `MethodStructure.markNative` for a cold rebased member |
+| Program | Original result | Scope-3 result |
+|---|---|---|
+| `RuntimeDescriptors.x` | Passed with frozen application definitions | Passes in the frozen XDK regression |
+| `SingletonPaths.x` | Passed with frozen application definitions | No new frozen claim; normal ownership regression retained |
+| `Singletons.x` | Failed at `ClassStructure.ensureMethodDelegation` | Passes in the frozen XDK regression |
+| `RuntimeConstruction.x` | Failed at `TypeConstant.createMemberInfo` → `MethodStructure.markNative` | Passes in the frozen XDK regression |
+| `RuntimeDelegation.x` | New scope-3 fixture | Passes in the frozen XDK regression and fresh-process audit |
 
-Reproduce on the current tip before changing code; scope 2 may alter the first failure reached.
-The manual harness is committed, independent of temporary scripts:
+The manual harness is committed, independent of temporary scripts. These direct invocations need
+Java 25 selected for `java`; unlike Gradle, they do not select a toolchain themselves:
 
 ```sh
 ./gradlew :xdk:installDist --console=plain
@@ -271,19 +300,19 @@ artifact, performs native preparation/linking, freezes before cold entry/metadat
 on forbidden writes. The native root is not frozen by this application audit. An expected failing
 audit is still an open failure, not a passing test.
 
-For the implementation, distinguish stable declarations completed before publication from late
+The implementation distinguishes stable declarations completed before publication from late
 specialization-dependent executable bodies. Put late method/property delegation and accessors in
 an explicitly owned executable overlay. Preserve identity/signature lookup, reflection/dispatch
 agreement, generic substitution, native binding and frame/local-constant correctness. Do not insert
 methods/properties into frozen image classes, assign descriptor image indices, prewarm queries to
 hide writes, weaken owner/read-only guards, or fall back to ambient pools.
 
-Use separate commits for bounded changes such as stable native preparation versus delegation/body
-ownership when the actual dependencies permit. Add focused Java tests and assertion-only `.x`
-regressions covering method delegation, getter/setter delegation, generics, cold native rebasing,
-failure/retry and independent contexts as appropriate. Test unchanged declaration trees and constant
-membership/positions around frozen execution. Use deterministic synchronization if testing concurrent
-first lookup; existing semantic-table isolation does not prove generated-body publication safe.
+Native preparation and delegation/body ownership are separate commits. Focused Java and
+assertion-only `.x` regressions cover method/getter/setter delegation, generics, cold native rebasing,
+failure/retry, deterministic concurrent publication and independent contexts. Frozen application
+checks compare declaration trees and constant membership/positions. Same-image tests establish
+generated-body isolation; they do not execute shared compiled bodies in two contexts or establish
+general execution concurrency safety.
 
 After each slice, update the plan with exact changed paths, why the owner is correct, actual checks,
 and remaining failures. Do not silently absorb scopes 4–6 merely to claim scope 3 is complete.

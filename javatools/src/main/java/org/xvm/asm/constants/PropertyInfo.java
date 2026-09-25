@@ -1418,8 +1418,11 @@ public class PropertyInfo
         PropertyStructure propDelegate = getHead().getStructure();
         PropertyStructure propTarget   = (PropertyStructure) getDelegate().getComponent();
         ClassStructure    clz          = propTarget.getContainingClass();
-        MethodStructure   method       = clz.ensurePropertyDelegation(propDelegate, propTarget,
-                                            idMethod.getSignature());
+        ConstantPool      pool         = infoType.getType().getConstantPool();
+        MethodStructure   method       = pool.hasSerializedIndices()
+                ? clz.ensurePropertyDelegation(propDelegate, propTarget, idMethod.getSignature())
+                : pool.getRuntimeMethods().ensurePropertyDelegation(infoType, idMethod,
+                        propDelegate, propTarget);
         MethodConstant    idDelegate   = method.getIdentityConstant();
         SignatureConstant sigDelegate  = idDelegate.getSignature();
         MethodBody        body         = new MethodBody(idDelegate, sigDelegate,
@@ -1624,12 +1627,12 @@ public class PropertyInfo
     /**
      * Cached "get" chain.
      */
-    private MethodBody[] m_chainGet;
+    private volatile MethodBody[] m_chainGet;
 
     /**
      * Cached "set" chain.
      */
-    private MethodBody[] m_chainSet;
+    private volatile MethodBody[] m_chainSet;
 
     /**
      * Cached "annotation" chain.

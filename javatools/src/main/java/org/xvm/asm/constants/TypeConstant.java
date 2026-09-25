@@ -4838,8 +4838,11 @@ public abstract class TypeConstant
             MethodInfo              methodInfo,
             Object                  nidSub,
             Map<Object, MethodInfo> mapSupers) {
+        ConstantPool      pool       = getConstantPool();
         MethodStructure   method     = methodInfo.getHead().getMethodStructure();
-        SignatureConstant sigSub     = methodInfo.getSignature();
+        // Default-argument matching can truncate even an unchanged declaration signature.
+        // Adopt it before deriving that signature, so cold runtime lookup cannot extend the image.
+        SignatureConstant sigSub     = pool.register(methodInfo.getSignature());
         int               cDefaults  = method == null ? 0 : method.getDefaultParamCount();
         List<Object>      listMatch  = null;
         boolean           fAnyCapped = false;
@@ -4859,7 +4862,8 @@ public abstract class TypeConstant
                     }
 
                     if (head.isInto()) {
-                        TypeConstant typeInto = head.getIntoMethodInfo().getIdentity().getClassIdentity().getType();
+                        TypeConstant typeInto = pool.register(
+                                head.getIntoMethodInfo().getIdentity().getClassIdentity()).getType();
                         if (sigSub.isSubstitutableFor(getConstantPool(), head.getSignature(), typeInto) ||
                                 sigSub.isSubstitutableFor(getConstantPool(), head.getIntoMethodInfo().getSignature(), typeInto)) {
                             listMatch   = lazyAdd(listMatch, nidCandidate);

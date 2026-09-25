@@ -18,7 +18,6 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.RangeConstant;
 import org.xvm.asm.constants.LiteralConstant;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.ByteConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
@@ -116,9 +115,6 @@ public class xConst
 
             PATH_CONSTRUCT = f_container.getClassStructure("fs.Path").
                 findMethod("construct", 1, pool.typeString());
-
-            HASH_SIG = f_container.getClassStructure("collections.Hashable").
-                findMethod("hashCode", 2).getIdentityConstant().getSignature();
         }
     }
 
@@ -727,7 +723,7 @@ public class xConst
                 if (typeProp instanceof UnionTypeConstant && typeProp.isA(pool.typeHashable())) {
                     iResult = typeProp.callHashCode(frameCaller, hProp, Op.A_STACK);
                 } else {
-                    MethodStructure methodHash = typeProp.findCallable(HASH_SIG);
+                    MethodStructure methodHash = typeProp.findCallable(pool.sigHashCode());
                     if (methodHash == null) {
                         // ignore this field
                         continue;
@@ -793,6 +789,4 @@ public class xConst
     private static MethodStructure DURATION_CONSTRUCT;
     private static MethodStructure VERSION_CONSTRUCT;
     private static MethodStructure PATH_CONSTRUCT;
-
-    private static SignatureConstant HASH_SIG;
 }

@@ -3028,6 +3028,14 @@ public class ConstantPool
         return typeMetadata.get(this);
     }
 
+    /**
+     * Obtain runtime-generated executables. Indexed compiler/image pools have no execution
+     * owner; only the runtime descriptor adapter supplies this table. Semantic clears retain it.
+     */
+    public RuntimeMethods getRuntimeMethods() {
+        throw new UnsupportedOperationException("Definition pools do not own runtime executables");
+    }
+
     private void clearTypeMetadata() {
         if (typeMetadata.isComputed()) {
             getTypeMetadata().clear();

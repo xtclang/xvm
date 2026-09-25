@@ -776,8 +776,12 @@ records the remaining migration scopes and the narrower limits of those passing 
 Do not infer a completely frozen runtime or a universal ownership guarantee from the normal
 suite passing.
 
-Scope 3 now prepares native rebases discovered from registered templates, including Tuple and
-Identity, before application publication. This closes the reproduced cold native-marking failure
-in `RuntimeConstruction.x`; it does not finish generated delegation or shared method execution
-state. The [scope-3 record](constant-pool-architecture-plan.md#scope-3-stable-preparation-and-generated-executables)
-documents the exact preparation boundary and its regressions.
+Scope 3 prepares native rebases discovered from registered templates, including Tuple and
+Identity, before application publication, and gives late delegation/accessor bodies an explicit
+runtime owner. `RuntimeMethods` survives semantic clears; generated parameters, local constants
+and unattached accessor namespaces do not alter the image. This closes the reproduced cold
+native-marking and delegation failures in the application audits. Cold const-helper checks also
+correct default-argument signature truncation and remove the foreign static hash signature from
+`xConst` lookup. Shared compiled execution state, the other native static caches and broad
+reflection remain unfinished. The [scope-3 record](constant-pool-architecture-plan.md#scope-3-stable-preparation-and-generated-executables)
+documents the exact ownership boundary, publication rules, regressions and limits.

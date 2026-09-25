@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.xvm.api.EmbeddingSupport;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -28,6 +30,7 @@ import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
+import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
 import org.xvm.asm.RuntimeMethodStructure;
@@ -73,14 +76,14 @@ class ConstantPoolOwnershipTest {
     private static final EmbeddingSupport COMPILER = EmbeddingSupport.instance().configure(repository(), null);
 
     @ParameterizedTest
-    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x", "RuntimeConstruction.x", "MetadataQueries.x"})
+    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x", "RuntimeConstruction.x", "MetadataQueries.x", "RuntimeDelegation.x"})
     @Timeout(60)
     void ownershipProgramsRunInIndependentApplications(String source) throws Exception {
         runOwnershipProgram(source, false);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"RuntimeDescriptors.x", "RuntimeConstruction.x"})
+    @ValueSource(strings = {"RuntimeDescriptors.x", "RuntimeConstruction.x", "Singletons.x", "RuntimeDelegation.x"})
     @Timeout(60)
     void coldEntryAndGenericConstructionRunOverFrozenDefinitions(String source) throws Exception {
         runOwnershipProgram(source, true);
@@ -116,6 +119,7 @@ class ConstantPoolOwnershipTest {
                 }
                 var constants = file.getConstantPool().getConstants();
                 var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
+                var declarations = freeze ? declarations(file) : List.<Component>of();
                 if (freeze) {
                     // Freeze before entry/type queries, not after warming metadata. The second
                     // execution uses another prepared image while retaining the native root.
@@ -123,14 +127,69 @@ class ConstantPoolOwnershipTest {
                 }
                 application.start(Map.of());
                 application.invokeAsync("run").join();
+                if (freeze && source.equals("RuntimeDelegation.x")) {
+                    verifyGeneratedDelegation(application);
+                }
                 if (freeze) {
                     assertArrayEquals(constants, file.getConstantPool().getConstants());
                     assertEquals(positions, Arrays.stream(constants).map(Constant::getPosition).toList());
+                    var after = declarations(file);
+                    assertEquals(declarations.size(), after.size());
+                    for (int index = 0; index < declarations.size(); index++) {
+                        assertSame(declarations.get(index), after.get(index));
+                    }
                 }
             }
         } finally {
             runtime.shutdownXVM();
         }
+    }
+
+    private static List<Component> declarations(Component component) {
+        var result = new ArrayList<Component>();
+        result.add(component);
+        component.children().forEach(child -> result.addAll(declarations(child)));
+        return result;
+    }
+
+    /** Metadata clears retain generated executables, while another owner gets independent bodies. */
+    private static void verifyGeneratedDelegation(MainContainer application) {
+        var first = delegationBodies(application);
+        application.getTypeContext().clearMetadata();
+        var rebuilt = delegationBodies(application);
+        var second = new MainContainer(application.f_runtime, (NativeContainer) application.f_parent,
+                application.getModule());
+        var independent = delegationBodies(second);
+        for (int index = 0; index < first.size(); index++) {
+            var method = first.get(index);
+            assertTrue(method instanceof RuntimeMethodStructure);
+            assertSame(method, rebuilt.get(index));
+            assertNotSame(method, independent.get(index));
+            assertNotSame(method.getOps(), independent.get(index).getOps());
+            assertSame(application.getTypeContext().getDescriptorPool(), method.getConstantPool());
+            assertTrue(Arrays.stream(method.getLocalConstants()).allMatch(c -> c.getPosition() == -1));
+        }
+    }
+
+    private static List<MethodStructure> delegationBodies(MainContainer application) {
+        var context = application.getTypeContext();
+        var pool = context.getDescriptorPool();
+        var host = (ClassStructure) application.getModule().getComponent().getChild("Proxy");
+        var type = context.parameterize(context.typeOf(host.getIdentityConstant()), pool.typeInt64());
+        var info = type.ensureTypeInfo();
+        var signature = pool.ensureSignatureConstant("echo", new TypeConstant[] {pool.typeInt64()},
+                new TypeConstant[] {pool.typeInt64()});
+        var propertyInfo = info.findProperty("value");
+        var property = propertyInfo.getIdentity();
+        assertNull(host.getChild("echo"));
+        assertNull(host.getChild("value"));
+        var methods = List.of(info.getOptimizedMethodChain(signature)[0].getMethodStructure(),
+                info.getOptimizedGetChain(property)[0].getMethodStructure(),
+                info.getOptimizedSetChain(property)[0].getMethodStructure());
+        assertEquals(signature, methods.get(0).resolveSignature(pool, type));
+        assertEquals(propertyInfo.getGetterId().getSignature(), methods.get(1).resolveSignature(pool, type));
+        assertEquals(propertyInfo.getSetterId().getSignature(), methods.get(2).resolveSignature(pool, type));
+        return methods;
     }
 
     /** Compare actual type algebra with cold, warm and cleared runtime relation tables. */

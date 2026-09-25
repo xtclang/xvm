@@ -1,6 +1,8 @@
 package org.xvm.asm.constants;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -16,12 +18,50 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.MethodBody.Implementation;
 
+import org.xvm.runtime.RuntimeTypeContext;
+
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class DestinationOwnershipTest {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void defaultArgumentSuperMatchingDoesNotTruncateInAFrozenImage(boolean bindAmbient) {
+        var source = new FileStructure(Constants.ECSTASY_MODULE);
+        var pool = source.getConstantPool();
+        var object = source.getModule().createClass(Access.PUBLIC, Format.CLASS, "Object", null);
+        var type = object.getIdentityConstant().getType();
+        var host = source.getModule().createClass(Access.PUBLIC, Format.CLASS, "Host", null);
+        var method = host.createMethod(false, Access.PUBLIC, null,
+                new Parameter[] {new Parameter(pool, type, null, null, true, 0, false)}, "call",
+                new Parameter[] {new Parameter(pool, type, "first", null, false, 0, false),
+                        new Parameter(pool, type, "second", pool.ensureStringConstant("default"), false, 1, false)},
+                true, false);
+        var base = object.createMethod(false, Access.PUBLIC, null, Parameter.NO_PARAMS, "call",
+                new Parameter[] {new Parameter(pool, type, "value", null, false, 0, false)}, true, false);
+        var subSignature = method.getIdentityConstant().getSignature();
+        var baseSignature = base.getIdentityConstant().getSignature();
+        var subInfo = new MethodInfo(new MethodBody(method.getIdentityConstant(), subSignature,
+                Implementation.Explicit), 0);
+        var baseInfo = new MethodInfo(new MethodBody(base.getIdentityConstant(), baseSignature,
+                Implementation.Explicit), 0);
+        var context = new RuntimeTypeContext(pool);
+        var constants = pool.getConstants();
+        var positions = Arrays.stream(constants).map(c -> c.getPosition()).toList();
+        context.freezeDefinitions();
+        var ambient = bindAmbient ? new FileStructure("Unrelated").getConstantPool() : null;
+        try (var scope = ConstantPool.withPool(ambient)) {
+            var receiver = context.typeOf(host.getIdentityConstant());
+            assertEquals(List.of(baseSignature), receiver.collectPotentialSuperMethods(subInfo,
+                    subSignature, Map.of(baseSignature, baseInfo)));
+        }
+        assertArrayEquals(constants, pool.getConstants());
+        assertEquals(positions, Arrays.stream(constants).map(c -> c.getPosition()).toList());
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void delayedNestedResolutionKeepsItsExplicitDestination(boolean bindAmbient) {

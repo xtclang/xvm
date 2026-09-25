@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.RuntimeMethods;
 
 import org.xvm.asm.constants.FrameDependentConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -226,6 +227,11 @@ public final class RuntimeTypeContext {
             return false;
         }
 
+        @Override
+        public RuntimeMethods getRuntimeMethods() {
+            return methods;
+        }
+
         private synchronized <T extends Constant> T importShared(T constant, Set<Constant> operands,
                                                                 Predicate<ModuleConstant> shared) {
             for (Constant operand : operands) {
@@ -342,6 +348,8 @@ public final class RuntimeTypeContext {
         // Guarded by this pool's monitor. Non-empty only during an explicit shared-reference import;
         // identity membership prevents equal but unapproved foreign operands from being admitted.
         private Set<Constant> sharedOperands = Set.of();
+
+        private final RuntimeMethods methods = new RuntimeMethods(this);
     }
 
     private final DescriptorPool descriptors;

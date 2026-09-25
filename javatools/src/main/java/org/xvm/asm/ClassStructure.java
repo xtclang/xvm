@@ -3031,18 +3031,30 @@ public class ClassStructure
      */
     public MethodStructure ensurePropertyDelegation(
             PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor) {
-        PropertyStructure propHost = (PropertyStructure) getChild(prop.getName());
+        return ensurePropertyDelegation(getConstantPool(), prop, propTarget, sigAccessor);
+    }
+
+    /** Generate in the selected owner; runtime accessors are never attached to image properties. */
+    MethodStructure ensurePropertyDelegation(ConstantPool pool,
+            PropertyStructure prop, PropertyStructure propTarget, SignatureConstant sigAccessor) {
+        boolean runtime = !pool.hasSerializedIndices();
+        PropertyStructure propHost = runtime ? null : (PropertyStructure) getChild(prop.getName());
         if (propHost == null) {
             assert !prop.isStatic();
-            propHost = createProperty(false, prop.getAccess(), prop.getVarAccess(),
-                    prop.getType(), prop.getName());
-            propHost.setSynthetic(true);
+            if (runtime) {
+                var identity = pool.ensurePropertyConstant(pool.register(getIdentityConstant()), prop.getName());
+                propHost = RuntimeMethodStructure.accessorNamespace(this, identity, prop,
+                        pool.register(prop.getType()));
+            } else {
+                propHost = createProperty(false, prop.getAccess(), prop.getVarAccess(),
+                        prop.getType(), prop.getName());
+                propHost.setSynthetic(true);
+            }
         }
 
-        MethodStructure methodDelegate = propHost.findMethod(sigAccessor);
+        MethodStructure methodDelegate = runtime ? null : propHost.findMethod(sigAccessor);
         if (methodDelegate == null) {
-            ConstantPool pool     = getConstantPool();
-            TypeConstant typeProp = prop.getType();
+            TypeConstant typeProp = pool.register(prop.getType());
 
             boolean      fGet;
             Parameter[]  aParams;
@@ -3059,15 +3071,21 @@ public class ClassStructure
                 aReturns = Parameter.NO_PARAMS;
             }
 
-            methodDelegate = propHost.createMethod(false, prop.getAccess(), null,
-                    aReturns, sigAccessor.getName(), aParams, true, false);
+            methodDelegate = runtime
+                    ? new RuntimeMethodStructure(propHost,
+                            pool.ensureMethodConstant(propHost.getIdentityConstant(), sigAccessor.getName(),
+                                    Arrays.stream(aParams).map(Parameter::getType).toArray(TypeConstant[]::new),
+                                    Arrays.stream(aReturns).map(Parameter::getType).toArray(TypeConstant[]::new)),
+                            prop.getAccess(), false, Annotation.NO_ANNOTATIONS, aReturns, aParams)
+                    : propHost.createMethod(false, prop.getAccess(), null,
+                            aReturns, sigAccessor.getName(), aParams, true, false);
             methodDelegate.setSynthetic(true);
 
             Code             code       = methodDelegate.createCode();
-            PropertyConstant idDelegate = prop.getIdentityConstant();
+            PropertyConstant idDelegate = pool.register(prop.getIdentityConstant());
 
-            Register regTarget = code.createRegister(propTarget.getType());
-            code.add(new L_Get(propTarget.getIdentityConstant(), regTarget));
+            Register regTarget = code.createRegister(pool.register(propTarget.getType()));
+            code.add(new L_Get(pool.register(propTarget.getIdentityConstant()), regTarget));
 
             if (fGet) {
                 Register regReturn = code.createRegister(typeProp, prop.getIdentityConstant().getName());
@@ -3096,11 +3114,16 @@ public class ClassStructure
      * @return a synthetic MethodStructure that has the auto-generated delegating code
      */
     public MethodStructure ensureMethodDelegation(MethodStructure method, String sDelegate) {
-        SignatureConstant sig            = method.getIdentityConstant().getSignature();
-        MethodStructure   methodDelegate = findMethod(sig);
+        return ensureMethodDelegation(getConstantPool(), method, sDelegate);
+    }
+
+    /** Generate in the selected owner; runtime methods are never attached to this class. */
+    MethodStructure ensureMethodDelegation(ConstantPool pool, MethodStructure method, String sDelegate) {
+        boolean           runtime        = !pool.hasSerializedIndices();
+        SignatureConstant sig            = pool.register(method.getIdentityConstant().getSignature());
+        MethodStructure   methodDelegate = runtime ? null : findMethod(sig);
         if (methodDelegate == null) {
-            ConstantPool pool         = getConstantPool();
-            TypeConstant typeFormal   = getFormalType();
+            TypeConstant typeFormal   = getFormalType(pool);
             TypeConstant typePrivate  = typeFormal.ensureAccess(Access.PRIVATE);
             TypeInfo     infoPrivate  = typePrivate.ensureTypeInfo();
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
@@ -3110,9 +3133,17 @@ public class ClassStructure
             Parameter[]  aParams      = method.getParamArray().clone();
             Parameter[]  aReturns     = method.getReturnArray().clone();
 
-            methodDelegate = createMethod(false, method.getAccess(), aAnnos,
-                    aReturns, method.getName(), aParams, true, false);
+            methodDelegate = runtime
+                    ? new RuntimeMethodStructure(this,
+                            pool.ensureMethodConstant(pool.register(getIdentityConstant()), sig),
+                            method.getAccess(), false, aAnnos, aReturns, aParams)
+                    : createMethod(false, method.getAccess(), aAnnos,
+                            aReturns, method.getName(), aParams, true, false);
             methodDelegate.setSynthetic(true);
+
+            // Runtime methods clone and adopt parameters; registers must use those same types.
+            aParams  = methodDelegate.getParamArray();
+            aReturns = methodDelegate.getReturnArray();
 
             Code           code       = methodDelegate.createCode();
             MethodInfo     infoMethod = typeDelegate.ensureTypeInfo().getMethodBySignature(sig);

@@ -1242,9 +1242,22 @@ public class MethodInfo
 
                         IdentityConstant idHost  = body.getIdentity().getNamespace();
                         ClassStructure   clzHost = (ClassStructure) idHost.getComponent();
-                        method = clzHost.ensureMethodDelegation(
-                                getTopmostMethodStructure(infoType),
-                                body.getPropertyConstant().getName());
+                        ConstantPool pool = infoType.getType().getConstantPool();
+                        if (pool.hasSerializedIndices()) {
+                            method = clzHost.ensureMethodDelegation(
+                                    getTopmostMethodStructure(infoType),
+                                    body.getPropertyConstant().getName());
+                        } else {
+                            method = pool.getRuntimeMethods().ensureMethodDelegation(infoType,
+                                    body.getIdentity(), getTopmostMethodStructure(infoType),
+                                    body.getPropertyConstant());
+                            // Keep generated execution state out of the raw semantic body. An
+                            // independently rebuilt TypeInfo will retrieve this same executable.
+                            if (listNew == null) {
+                                listNew = startList(chain, i);
+                            }
+                            body = new MethodBody(body, impl).forMethod(this);
+                        }
                         body.setMethodStructure(method);
                     }
                     // it's possible the method was marked as "native" after the body
@@ -1286,8 +1299,8 @@ public class MethodInfo
                         : listNew.toArray(MethodBody.NO_BODIES);
             }
 
-            // cache the optimized chain (no worries about race conditions, as the result is
-            // idempotent)
+            // Publish only a complete chain. Runtime synthesis publishes its assembled method
+            // separately; concurrent chain calculations select that same executable.
             m_aBodyResolved = chain;
         }
 
@@ -1666,5 +1679,5 @@ public class MethodInfo
     /**
      * The "optimized" (resolved) method chain.
      */
-    private transient MethodBody[] m_aBodyResolved;
+    private transient volatile MethodBody[] m_aBodyResolved;
 }
