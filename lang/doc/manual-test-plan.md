@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X80 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X82 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1234,8 +1234,8 @@ Parameter Info** at `|`; leave the closing `)` in place, as an editor normally d
 
 The candidate label/documentation does not mean an unfinished overload has been selected. Ecstasy
 allows trailing commas in valid calls: such a call can already have a selected signature.
-Empty final positional slots and pending named values also offer compiler-fitted readable locals
-and parameters, including direct final typed argument prefixes (X77–X80). Normal diagnostics may
+Empty final positional slots and pending named values also offer compiler-fitted readable locals,
+parameters and implicit properties/constants, including direct final typed argument prefixes (X77–X82). Normal diagnostics may
 remain while these deliberately incomplete calls
 still provide useful hints; accepting a valid value clears them.
 
@@ -1688,6 +1688,14 @@ module Advanced {
     void choose(String value) {}
     void alternatives(Int number, String text, Boolean flag) { choose(text); }
     void prefixes(Int valueNumber, String valueText, Boolean valueFlag) { choose(valueText); }
+    class ArgumentValues {
+        private String valueText = "text";
+        static String valueConstant = "constant";
+        Int valueNumber = 1;
+        static void takeValue(String value) {}
+        void inspectValues() { takeValue(valueText); }
+        static void inspectConstants() { takeValue(valueConstant); }
+    }
 }
 ```
 
@@ -1702,14 +1710,18 @@ module Advanced {
 | X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second="b", first=)`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Virtual/inner/array/annotated construction and omitted class-type inference are outside this proof. |
 | X75 | In `edit`, replace `1 + word.size` with `(word.si`, `pair((word.si`, and `word[word.si` in turn, leaving the semicolon and method/module braces. Trigger completion after `si`, then restore. | `size` is offered despite missing `)`/`]`. The edit replaces only `si`; Problems continues showing the normal compiler errors until the source is repaired. No missing operand or value is invented. |
 | X76 | In `edit`, replace `1 + word.size` with `pair((pair(1, `, leaving the semicolon and braces. Request signature help after the comma, then restore. | The innermost `Int pair(Int first, Int second)` candidate highlights `second` despite the missing call/group delimiters. Problems clears after restoring the original source. |
-| X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first=1, second=)` and `new Packet<String>(second="b", first=)`. Accept `text`, then restore before the next edit. | The compiler offers only the compatible parameter `text`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
-| X78 | In `alternatives`, remove `text` from `choose(text)` and complete inside `choose()`. Request signature help before accepting `number`. Restore and repeat with `text`. | Both `number` and `text` are offered, but `flag` is excluded. Signature help retains both overload candidates until a value is inserted. Either accepted completion compiles and clears Problems. |
+| X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first=1, second=)` and `new Packet<String>(second="b", first=)`. Accept `text`, then restore before the next edit. | The compiler offers compatible `text` plus the bundled module properties `simpleName` and `qualifiedName`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
+| X78 | In `alternatives`, remove `text` from `choose(text)` and complete inside `choose()`. Request signature help before accepting `number`. Restore and repeat with `text`. | Both `number` and `text` are offered, along with compatible module properties `simpleName` and `qualifiedName`; `flag` is excluded. Signature help retains both overload candidates until a value is inserted. Either accepted completion compiles and clears Problems. |
 | X79 | In `values`, shorten `text` to `te` in each of the three calls and invoke completion at its end. Also try `take(first=1, second=te)` and `new Packet<String>(second="b", first=te)`. Accept `text`, restoring between edits. | Only compatible `text` is offered; same-prefix `Int textNumber` is excluded. The edit replaces exactly `te`, preserving the label, commas and closing delimiter. The completed source compiles and Problems clears. |
 | X80 | In `prefixes`, shorten `choose(valueText)` to `choose(va)` and invoke completion after `va`. Request signature help, then accept `valueNumber`; restore and repeat accepting `valueText`. | Both compatible names are offered; `valueFlag` is excluded. Both overload signatures remain until acceptance. Exactly `va` is replaced, the completed call compiles and Problems clears. |
+| X81 | In `ArgumentValues.inspectValues`, shorten `takeValue(valueText)` to `takeValue(va)`, then try `takeValue(value=va)`. Complete after `va`, accept `valueText`, and restore between edits. | The compatible property `valueText` and constant `valueConstant` are offered with String types; `valueNumber` is excluded. Exactly `va` is replaced, preserving the label and delimiter. Acceptance clears Problems. |
+| X82 | In `ArgumentValues.inspectConstants`, shorten `takeValue(valueConstant)` to `takeValue(va)` and invoke completion. Accept `valueConstant`. | Only the compatible constant is offered; instance properties require an instance receiver. The completed call restores the original source and clears Problems. |
 
-Argument-value suggestions cover visible readable locals and parameters in empty final positional
-slots, pending named values, and direct final bare-name prefixes in either form. They use compiler
-inference, conversions and narrowing; they do not synthesize literals or suggest implicit properties.
+Argument-value suggestions cover visible readable locals/parameters and implicit properties/constants
+in empty final positional slots, pending named values and direct final bare-name prefixes. They use
+compiler inference, conversions and receiver-specific types. Locals retain flow narrowing; ordinary
+property reads do not gain that narrowing. Literal synthesis and enumeration of arbitrary enclosing
+instances or imported constants remain unsupported.
 Qualified/grouped/compound expressions and prefixes before later written arguments retain ordinary
 scope/member completion without argument-type filtering. Empty slots before later written arguments
 and specialized construction forms remain outside this proof.

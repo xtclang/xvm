@@ -173,11 +173,14 @@ source target for an unindexed binary is invented.
 Completion supplies visible locals/parameters with flow narrowing, implicit members, imported and
 enclosing types, and static functions/constants. Qualified member prefixes and bare-name/empty
 statement cursors return exact replacement edits. Empty final positional and pending named
-argument slots, including direct final bare-name prefixes, offer compatible readable locals/parameters,
-fitted by the compiler with inference, conversions and narrowing. Suggestions combine applicable
-overloads without selecting one; edits insert at empty slots or replace the original prefix token.
+argument slots, including direct final bare-name prefixes, offer compatible readable locals/parameters
+and implicit properties/constants, fitted by the compiler with inference, conversions and
+receiver-specific types. Suggestions combine applicable overloads without selecting one; edits
+insert at empty slots or replace the original prefix token.
 Qualified/grouped/compound expressions and prefixes before later written arguments retain ordinary
-scope/member completion without argument-type filtering. Literals/implicit properties are not suggested.
+scope/member completion without argument-type filtering. Literal values are not synthesized.
+Property reads follow compiler narrowing rules; ordinary properties do not gain local-variable flow
+narrowing. Enclosing-instance and imported-constant enumeration remain follow-ups.
 Signature help uses exact selected signatures
 for completed calls. Incomplete qualified/implicit/static calls expose compiler-fitted candidates,
 generic expected types and named parameter mappings, including a pending `name=|` and an existing
