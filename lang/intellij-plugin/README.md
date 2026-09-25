@@ -126,18 +126,19 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 94 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 95 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It runs startup and thirty scenarios: seventeen fully and thirteen partially. This includes diagnostics,
+It runs startup and thirty-one scenarios: seventeen fully and fourteen partially. This includes diagnostics,
 definition navigation, dependencies/configuration, completion/scope/imports, and delimiter/declaration
-recovery, plus method and constructor signature help. Parameter Info checks inspect the native
+recovery, plus method and constructor signature help. X90 checks array size hints, accepted completion
+edits and missing-bracket diagnostics/repair. Parameter Info checks inspect the native
 request result, visible parameter text and bold argument; invalid calls must clear an earlier hint.
 LSP4IJ 0.21.0 displays `<no parameters>` for ambiguous named slots that deliberately suppress
 parameter metadata (X20); this remains a documented display limitation.
 The error/warning cases open **Problems → Current File**, verify row locations/counts,
 and verify clearing after corrections. Layout and clicking a Problems row remain manual.
 
-Every report lists all 94 scenario IDs, including the 64 unimplemented entries with concrete
+Every report lists all 95 scenario IDs, including the 64 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
