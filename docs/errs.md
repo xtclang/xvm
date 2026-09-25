@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Array dimension cursors (2026-09-25, working tree after `3f46568af`).**
+**Array dimension cursors (2026-09-25, `0b800c392`).**
 Single-dimensional size slots now retain empty/prefix cursors and missing brackets. The compiler
 fits proposed names against the real fixed-size Array constructor, including narrowing and read
 access checks. Existing cursor facts and Kotlin mappings suffice; no API component, AST field or
