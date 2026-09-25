@@ -553,3 +553,20 @@ the source of published Problems entries. Other syntax errors, cancellation and 
 still stop semantic analysis. No suppression rule or listener API changes are needed. Parser tests,
 adapter/cache checks and packaged/editor round trips are tracked in the
 [delimiter recovery checkpoint](errs-integration-plan.md#missing-delimiter-cursor-recovery).
+
+
+## Specialized constructors and declaration recovery (2026-09-25)
+
+Constructor preparation and value-fitting trials retain private failure state and cancellation;
+final candidate TypeInfo lookup uses an explicit forwarding listener. The normal document
+compilation remains the source of published diagnostics. Provisional signatures do not select an
+overload or replace those diagnostics, and copied array argument offsets carry no compiler objects.
+
+Declaration recovery keeps the existing `PARSER-30` cursor boundary. Only explicit cursor analysis
+defers it for assembly; unrelated parser errors and abort budgets still stop the attempt. A property
+initializer containing the hole is validated as source-owned syntax with the attempt's collectors
+and listener, instead of losing facts in its disposable constant-evaluation clone. This uses the
+existing synthetic initializer method and failure gate, so no incomplete initializer is emitted.
+Normal compilation, normal constant probes and their listener policy are unchanged. Tests assert
+one boundary diagnostic, original source, no emitted method AST, cancellation/budget handling and
+preserved cached diagnostics. See [the implementation record](errs-integration-plan.md#specialized-constructors-and-declarationliteral-cursor-recovery).

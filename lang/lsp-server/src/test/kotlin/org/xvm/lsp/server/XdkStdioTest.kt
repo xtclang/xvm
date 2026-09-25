@@ -436,14 +436,15 @@ class XdkStdioTest {
         }
     }
 
-    @Test
-    fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`() {
-        val header = "module Stdio { Int pair(Int first, Int second) = first; Int run(String value, Int[] values) { return "
+    @ParameterizedTest
+    @ValueSource(strings = ["(values[value.si", "(1, value.si", "[1=value.si", "Tuple<Int,Int>:(1, value.si"])
+    fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`(expression: String) {
+        val header = "module Stdio { Int pair(Int first, Int second) = first; Object run(String value, Int[] values) { return "
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             val service = session.server.textDocumentService
             val document = TextDocumentIdentifier(URI)
-            val prefix = "$header(values[value.si"
+            val prefix = header + expression
             session.open("$prefix; } }")
             val diagnostics = session.diagnosticsAt(1).diagnostics
             assertThat(diagnostics).isNotEmpty()
@@ -474,11 +475,13 @@ class XdkStdioTest {
         strings = [
             "take(first=1, second=", "fn(1, ", "new Box<String>(",
             "take(1, te", "take(first=1, second=te", "fn(1, te", "new Box<String>(te", "new Box<String>(value=te",
+            "new String[2](te", "new String[2](supply=te", "Box<String> box = new Box(te", "new @Tagged Box<String>(te",
         ],
     )
     fun `argument value edits round trip and clear diagnostics after acceptance`(call: String) {
         val prefix =
-            "module Stdio { void take(Int first, String second) {} class Box<T> { construct(T value) {} } " +
+            "module Stdio { annotation Tagged into Object {} void take(Int first, String second) {} " +
+                "class Box<T> { construct(T value) {} } " +
                 "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { Int textNumber=1; /* 😀 */ $call"
         val typed = if (call.endsWith("te")) 2 else 0
         Session(packagedJar(), directory).use { session ->
@@ -501,6 +504,7 @@ class XdkStdioTest {
                     .single()
                     .documentation.left,
             ).contains(if (call.startsWith("fn(")) "runtime target unknown" else "overload not selected")
+            if (call.startsWith("new String[2]")) assertThat(help.signatures.single().activeParameter).isEqualTo(1)
             session.change("${prefix.dropLast(typed)}${edit.newText}); } }", 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             session.shutdownAndExit()

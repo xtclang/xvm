@@ -416,6 +416,15 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
+                    if (mgr.getCursorBindings().isEnabled() && IncompleteStatement.isWithin(value)) {
+                        // A cursor hole cannot become a constant. Validate the source-owned
+                        // initializer so its facts survive; disposable clones are never published.
+                        initializer = createAstNodeFor(createInitializer());
+                        value = null;
+                        new StageMgr(initializer, Stage.Emitted, errs,
+                                mgr.getInvocationBindings(), mgr.getCursorBindings()).fastForward(10);
+                        return;
+                    }
                     // create a clone of ourselves
                     PropertyDeclarationStatement stmtClone = (PropertyDeclarationStatement) clone();
 
