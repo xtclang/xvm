@@ -35,18 +35,17 @@ class TimeTests {
     }
 
     void testCreateTimeFromString() {
-        // TODO: String.split calls a missing Array<Object>.freeze$p(Ctx, boolean, boolean) bridge
-        // Time utc = new Time("1970-01-01T00:00:01Z");
-        // assert utc.epochPicos == Duration.Second.picoseconds;
-        // assert utc.date == new Date(1970, 1, 1);
-        // assert utc.timeOfDay.picos == TimeOfDay.PicosPerSecond;
-        // assert utc.timezone.isUTC;
-        // assert utc.toString(True) == "1970-01-01T00:00:01Z";
-        //
-        // Time noZone = new Time("1970-01-01 00:00:01");
-        // assert noZone.epochPicos == Duration.Second.picoseconds;
-        // assert noZone.timezone.isNoTZ;
-        // assert noZone.toString() == "1970-01-01 00:00:01";
+        Time utc = new Time("1970-01-01T00:00:01Z");
+        assert utc.epochPicos == Duration.Second.picoseconds;
+        assert utc.date == new Date(1970, 1, 1);
+        assert utc.timeOfDay.picos == TimeOfDay.PicosPerSecond;
+        assert utc.timezone.isUTC;
+        assert utc.toString(True) == "1970-01-01T00:00:01Z";
+
+        Time noZone = new Time("1970-01-01 00:00:01");
+        assert noZone.epochPicos == Duration.Second.picoseconds;
+        assert noZone.timezone.isNoTZ;
+        assert noZone.toString() == "1970-01-01 00:00:01";
     }
 
     void testBeforeEpoch() {

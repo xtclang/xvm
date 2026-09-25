@@ -2,9 +2,11 @@ package org.xtclang.ecstasy.collections;
 
 import java.util.Arrays;
 
+import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
 import org.xtclang.ecstasy.Iterator;
 import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.Service;
 import org.xtclang.ecstasy.nObject;
 import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nType;
@@ -201,6 +203,38 @@ public class ArrayᐸObjectᐳ
      */
     public Iterator iterator(Ctx ctx) {
         return new nIterator(ctx);
+    }
+
+    /**
+     * Native implementation of "immutable Array<Element> freeze(Boolean inPlace = False)".
+     */
+    @Override
+    public ArrayᐸObjectᐳ freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
+        if ($delegate != null) {
+            return $delegate.freeze$p(ctx, inPlace, inPlace$dflt);
+        }
+        if ($isImmut()) {
+            return this;
+        }
+
+        int size = $sizeEtc & $SIZE_MASK;
+        for (int i = 0; i < size; i++) {
+            Object element = $storage[i];
+            if (!nObject.$isImmut(element) && !(element instanceof Service)) {
+                // TODO: freeze mutable Freezable elements before making the array immutable
+                throw Exception.$unsupported(ctx, "Array.freeze() with mutable elements");
+            }
+        }
+
+        ArrayᐸObjectᐳ result = this;
+        if (inPlace$dflt || !inPlace) {
+            ctx.alloc(64 + size * 8L);
+            result = new ArrayᐸObjectᐳ(ctx, $type);
+            result.$storage = size == 0 ? new Object[0] : Arrays.copyOf($storage, size);
+            result.$size(size);
+        }
+        result.$mut($CONSTANT);
+        return result;
     }
 
     @Override
