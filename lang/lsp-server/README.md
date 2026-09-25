@@ -194,7 +194,11 @@ written dimension arguments and highlight the supplier parameter correctly. Anon
 uses constructors declared inside the retained body or accessible superclass constructors, including
 abstract and interface bases. Its declaration is source-owned within the cursor attempt; signature
 queries do not emit forwarding constructors or run capture analysis. Repaired normal compilation
-still checks the body and its captures. Array-dimension cursors and multidimensional construction
+still checks the body and its captures. Single-dimensional array brackets support empty/final-name
+size completion and signature help, including a missing closing bracket. Proposals fit the real
+fixed-size Array constructor's Int parameter. A following supplier is parsed for recovery but is
+outside that prefix proof; normal compilation still validates suppliers and element defaults.
+Multidimensional construction
 remain unsupported. Candidates never claim final overload selection. Requests propagate cancellation
 and reject stale document/module results. Missing call/group parentheses and index
 brackets around the cursor retain completion and signature help at statement/outer-delimiter
