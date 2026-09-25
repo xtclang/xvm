@@ -3500,6 +3500,17 @@ public class ConstantPool
         return f_mapRefTypes.computeIfAbsent(typeReferent, this::computeNakedRefInfo);
     }
 
+    /**
+     * Bind the bootstrap prototype's declaration for a metadata query. Compiler pools use the
+     * supplied out-of-context prototype. Runtime descriptor stores override this to select the
+     * prepared declaration in their exact image, without importing another image generation.
+     *
+     * @return the formal NakedRef type used by the resulting metadata
+     */
+    protected TypeConstant getNakedRefMetadataType() {
+        return m_typeNakedRef;
+    }
+
     private TypeInfo computeNakedRefInfo(TypeConstant typeReferent) {
         GenericTypeResolver resolver =
                 constFormal -> "Referent".equals(constFormal.getName()) ? typeReferent : null;
@@ -3509,7 +3520,7 @@ public class ConstantPool
         }
 
         TypeInfo info = m_typeNakedRef.ensureTypeInfo();
-        return info.asNakedRef(this, typeReferent, resolver);
+        return info.asNakedRef(this, getNakedRefMetadataType(), typeReferent, resolver);
     }
 
     /**

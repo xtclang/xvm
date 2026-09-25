@@ -616,6 +616,7 @@ public class TypeInfoReal
     @Override
     public TypeInfo asNakedRef(
             ConstantPool        pool,
+            TypeConstant        typeNakedRef,
             TypeConstant        typeReferent,
             GenericTypeResolver resolver) {
         Map<Object, ParamInfo> mapTypeParams = new HashMap<>();
@@ -624,7 +625,8 @@ public class TypeInfoReal
         MethodConstant    id        = findMethods("get", 0, TypeInfo.MethodKind.Method).iterator().next();
         SignatureConstant sig       = id.getSignature();
         SignatureConstant sigNew    = pool.register(sig.resolveGenericTypes(pool, resolver));
-        MethodConstant    idNew     = pool.ensureMethodConstant(getIdentity(), sigNew);
+        MethodConstant    idNew     = pool.ensureMethodConstant(
+                typeNakedRef.getSingleUnderlyingClass(true), sigNew);
         MethodInfo        method    = getMethodById(id);
         MethodBody        body      = method.getHead();
         MethodBody        bodyNew   = new MethodBody(idNew, sigNew, body.getImplementation(), null);
@@ -639,7 +641,7 @@ public class TypeInfoReal
         mapVirtMethods.put(sigNew, methodNew);
 
         return new TypeInfoReal(
-            getType(),              // unresolved formal type from the "native" pool
+            typeNakedRef,            // formal prototype in the selected definition context
             0,                      // cInvals
             null,                   // struct
             0,                      // depth

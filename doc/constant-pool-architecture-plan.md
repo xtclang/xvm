@@ -886,3 +886,22 @@ the independent NakedRef bootstrap binding. This does not complete cold metadata
 
 Validation: 495 Java tests (455 passed, 40 existing skips), 11 XDK ownership tests passed without
 skips, full library rebuild, read-only formatting check and whitespace check passed.
+
+### Explicit NakedRef bootstrap adaptation
+
+The NakedRef prototype is a deliberate cross-image input: the native root supplies its metadata
+shape, while `NativeContainer.createFileStructure` copies its declaration into the application's
+prepared image. `asNakedRef` now accepts the selected formal prototype type separately from the
+source metadata. The descriptor adapter selects the prepared declaration and builds that formal
+type locally; the synthesized getter identity and metadata type no longer retain the native
+root's type identity. Compiler pools retain their existing out-of-context prototype behavior.
+The getter's abstract method structure remains the bootstrap declaration supplying its shape;
+this adaptation neither executes it nor initializes singleton state in it.
+
+The XDK regression freezes the application first, obtains NakedRef metadata for a referent,
+checks the prepared declaration, getter/result owners and unchanged image constants, and proves
+that directly importing the root's prototype identity is still rejected. This is an explicit
+bootstrap adapter, not a relaxation of generation validation. All 12 ownership integration tests
+pass without skips, the library rebuild and 495 Java tests pass (40 existing skips), and formatting
+passes. The frozen audit advances to a late `MethodStructure.markNative` in rebase metadata;
+structural native preparation must address that before activation.

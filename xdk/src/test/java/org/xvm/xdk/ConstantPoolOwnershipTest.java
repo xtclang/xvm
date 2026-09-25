@@ -30,6 +30,8 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
 import org.xvm.asm.RuntimeMethodStructure;
 
+import org.xvm.asm.constants.TypeInfo.MethodKind;
+
 import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
@@ -179,6 +181,38 @@ class ConstantPoolOwnershipTest {
         var arrayComposition = application.resolveClass(arrayType);
         assertSame(context.getDescriptorPool(), arrayComposition.getType().getConstantPool());
         assertSame(context.getDescriptorPool(), arrayComposition.getConstantPool());
+    }
+
+    @Test
+    void frozenBootstrapMetadataUsesThePreparedNakedRefDeclaration() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("BootstrapMetadata").getModule());
+            var application = new MainContainer(runtime, root, file.getModuleId());
+            var image = file.getConstantPool();
+            var context = application.getTypeContext();
+            var referent = context.intern(image.typeString());
+            var prototype = image.getNakedRefType().getSingleUnderlyingClass(true);
+            var local = file.getModule(prototype.getModuleConstant()).getChild(prototype.getName());
+            assertNotSame(prototype.getComponent(), local);
+            var constants = image.getConstants();
+            context.freezeDefinitions();
+
+            var info = context.getDescriptorPool().getNakedRefInfo(referent);
+            assertSame(context.getDescriptorPool(), info.getType().getConstantPool());
+            assertSame(local, info.getType().getSingleUnderlyingClass(true).getComponent());
+            var method = info.findMethods("get", 0, MethodKind.Method)
+                    .iterator().next();
+            assertSame(context.getDescriptorPool(), method.getConstantPool());
+            assertSame(referent, method.getSignature().getReturns().getFirst());
+            assertSame(info, context.getDescriptorPool().getNakedRefInfo(referent));
+            assertThrows(IncompatibleTypeOwnerException.class,
+                    () -> context.getDescriptorPool().register(prototype));
+            assertArrayEquals(constants, image.getConstants());
+        } finally {
+            runtime.shutdownXVM();
+        }
     }
 
     @Test

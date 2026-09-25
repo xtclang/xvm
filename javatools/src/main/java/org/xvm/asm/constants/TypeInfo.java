@@ -93,6 +93,7 @@ public abstract class TypeInfo {
      * Create a NakedRef TypeInfo for the specified referent type.
      *
      * @param pool          the ConstantPool creating this NakedRef (required)
+     * @param typeNakedRef  the formal prototype type in the selected definition context
      * @param typeReferent  the "referent type" (required)
      * @param resolver      the TypeResolver to use, or null
      *
@@ -100,6 +101,7 @@ public abstract class TypeInfo {
      */
     public abstract TypeInfo asNakedRef(
             ConstantPool        pool,
+            TypeConstant        typeNakedRef,
             TypeConstant        typeReferent,
             GenericTypeResolver resolver);
 

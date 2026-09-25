@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
+import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
@@ -165,6 +166,21 @@ public final class RuntimeTypeContext {
         @Override
         public boolean hasSerializedIndices() {
             return false;
+        }
+
+        @Override
+        protected TypeConstant getNakedRefMetadataType() {
+            // The configured bootstrap prototype supplies the shape of get(). Its module has
+            // already been copied into the prepared image; bind the synthetic metadata to that
+            // declaration. This explicit bootstrap adaptation does not admit arbitrary foreign
+            // constants into the descriptor interner.
+            var identity = getNakedRefType().getSingleUnderlyingClass(true);
+            var module = getFileStructure().getModule(identity.getModuleConstant());
+            if (module == null || module.isFingerprint()) {
+                throw new IllegalStateException("Prepared image is missing the NakedRef prototype");
+            }
+            var declaration = (ClassStructure) module.getChild(identity.getName());
+            return declaration.getFormalType(this);
         }
 
         @Override
