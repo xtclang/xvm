@@ -190,9 +190,13 @@ candidates include overload filtering, named slots and defaults. Qualified/impli
 virtual, annotated and formal construction reuse compiler preparation. Expected assignment/return
 types constrain omitted class parameters; written arguments provide provisional class inference
 that can change as more arguments are supplied. Parenthesized array initializers retain their
-written dimension arguments and highlight the supplier parameter correctly. Anonymous construction,
-array-dimension cursors and multidimensional construction remain unsupported. Candidates never
-claim final overload selection. Requests propagate cancellation and reject stale document/module results. Missing call/group parentheses and index
+written dimension arguments and highlight the supplier parameter correctly. Anonymous construction
+uses constructors declared inside the retained body or accessible superclass constructors, including
+abstract and interface bases. Its declaration is source-owned within the cursor attempt; signature
+queries do not emit forwarding constructors or run capture analysis. Repaired normal compilation
+still checks the body and its captures. Array-dimension cursors and multidimensional construction
+remain unsupported. Candidates never claim final overload selection. Requests propagate cancellation
+and reject stale document/module results. Missing call/group parentheses and index
 brackets around the cursor retain completion and signature help at statement/outer-delimiter
 boundaries; a cursor at EOF also tolerates missing block braces. Normal compiler diagnostics remain
 visible until the text is repaired. Tuple, typed-tuple, list/set/collection and map closers also
