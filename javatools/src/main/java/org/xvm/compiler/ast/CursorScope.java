@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -22,6 +23,35 @@ import static org.xvm.asm.ErrorListener.silent;
 /** Enumerate type-name candidates, then let normal contextual lookup establish their meaning. */
 final class CursorScope {
     static List<CursorBinding.NamedType> types(IncompleteStatement site, Context ctx, ErrorListener errs) {
+        String prefix = site.getMemberName().map(Token::getValueText).orElse("");
+        var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
+        return names(site).stream().filter(name -> name.startsWith(prefix)).sorted()
+                .takeWhile(name -> !errs.isAbortDesired())
+                .map(name -> {
+                    var token = new Token(site.getEndPosition(), site.getEndPosition(), Id.IDENTIFIER, name);
+                    var target = ctx.resolveName(token, probe);
+                    return namedType(name, target);
+                }).filter(Objects::nonNull).toList();
+    }
+
+    /** Header lookup uses the real enclosing declaration; no method Context is invented. */
+    static List<CursorBinding.NamedType> declarationTypes(IncompleteStatement site, ErrorListener errs) {
+        String prefix = site.getMemberName().map(Token::getValueText).orElse("");
+        var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
+        return names(site).stream().filter(name -> name.startsWith(prefix)).sorted()
+                .takeWhile(name -> !errs.isAbortDesired())
+                .map(name -> namedType(name, new NameResolver(site, name).forceResolve(probe)))
+                .filter(Objects::nonNull).toList();
+    }
+
+    private static CursorBinding.NamedType namedType(String name, Argument target) {
+        return target instanceof IdentityConstant identity
+                && (identity.getComponent() instanceof ClassStructure
+                    || identity.getComponent() instanceof TypedefStructure)
+                ? new CursorBinding.NamedType(name, identity) : null;
+    }
+
+    private static Set<String> names(IncompleteStatement site) {
         Set<String> names = new HashSet<>(ConstantPool.getImplicitImportNames());
         Stream.iterate(site.getParent(), Objects::nonNull, AstNode::getParent).forEach(node -> {
             if (node.isComponentNode() && node.getComponent() != null) {
@@ -41,17 +71,6 @@ final class CursorScope {
                 }
             }
         });
-        String prefix = site.getMemberName().map(Token::getValueText).orElse("");
-        var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
-        return names.stream().filter(name -> name.startsWith(prefix)).sorted()
-                .takeWhile(name -> !errs.isAbortDesired())
-                .map(name -> {
-                    var token = new Token(site.getEndPosition(), site.getEndPosition(), Id.IDENTIFIER, name);
-                    var target = ctx.resolveName(token, probe);
-                    return target instanceof IdentityConstant identity
-                            && (identity.getComponent() instanceof ClassStructure
-                                || identity.getComponent() instanceof TypedefStructure)
-                            ? new CursorBinding.NamedType(name, identity) : null;
-                }).filter(Objects::nonNull).toList();
+        return names;
     }
 }

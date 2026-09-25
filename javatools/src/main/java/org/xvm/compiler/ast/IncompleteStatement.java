@@ -139,6 +139,11 @@ public final class IncompleteStatement extends Statement {
         return operator.getId() == Id.IDENTIFIER;
     }
 
+    /** A type query in an unfinished declaration, with no value or parameter-name completion. */
+    public boolean isTypeCompletion() {
+        return getParent() instanceof IncompleteDeclarationStatement;
+    }
+
     /** Explicit receiver only; an unqualified call does not invent an implicit receiver. */
     public Optional<Expression> getReceiver() {
         if (isNameCompletion()) {
