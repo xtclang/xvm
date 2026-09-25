@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Typed argument-prefix completion (2026-09-25, working tree after `70a26b1d9`).**
+**Typed argument-prefix completion (2026-09-25, `dc3218d81`).**
 Direct final argument prefixes, including named values, now use the compiler's argument fitter.
 The editor replaces the exact original token, preserving labels and delimiters. Overload alternatives,
 inference, conversions and narrowing remain compiler decisions. The AST adds only a final syntax
