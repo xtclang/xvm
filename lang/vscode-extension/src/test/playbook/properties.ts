@@ -2,9 +2,9 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { noErrors, playbook, position, targets } from './support';
 
-function locations(document: vscode.TextDocument, anchors: [string, number, number][]): vscode.Location[] {
-    return anchors.map(([text, offset, length]) => {
-        const at = position(document, text, offset);
+function locations(document: vscode.TextDocument, anchors: { anchor: string; offset: number; length: number }[]): vscode.Location[] {
+    return anchors.map(({ anchor, offset, length }) => {
+        const at = position(document, anchor, offset);
         return new vscode.Location(document.uri, new vscode.Range(at, at.translate(0, length)));
     });
 }
@@ -15,56 +15,48 @@ function assertLocations(actual: vscode.Location[], expected: vscode.Location[])
 }
 
 export function propertyCases(): void {
-    playbook('X64', 'property implementations preserve generic identity and written accessor targets', async workspace => {
-        const document = await workspace.open('Properties.x');
+    playbook('X64', async (workspace, data) => {
+        const document = await workspace.open(data.file);
         await noErrors(document.uri);
-        const expected = locations(document, [['String name = "stored"', 7, 4], ['String name.get()', 12, 3]]);
-        for (const at of [position(document, 'T name', 2), position(document, 'value.name', 6)]) {
+        const expected = locations(document, data.locations);
+        for (const at of [position(document, data.anchor2, data.offset2), position(document, data.anchor, data.offset)]) {
             assertLocations(await targets(document, 'Implementation', at), expected);
         }
-    }, ['Implementation chooser/peek rendering and clicking the selected getter']);
+    });
 
-    playbook('X65', 'property getters setters and default field overrides have distinct implementation sets', async workspace => {
-        const document = await workspace.open('Properties.x');
+    playbook('X65', async (workspace, data) => {
+        const document = await workspace.open(data.file);
         await noErrors(document.uri);
-        const getter: [string, number, number] = ['Int get()', 4, 3];
-        const setter: [string, number, number] = ['void set(', 5, 3];
-        const override: [string, number, number] = ['Int value.get()', 10, 3];
-        for (const [anchor, offset, expected] of [
-            ['Int value {', 4, [getter, setter, override]],
-            ['Int get()', 4, [getter, override]],
-            ['void set(', 5, [setter]],
-            ['String label {', 7, [['String get()', 7, 3], ['String label =', 7, 5]]]
-        ] as [string, number, [string, number, number][]][]) {
+        for (const { anchor, offset, expected } of data.variants) {
             assertLocations(await targets(document, 'Implementation', position(document, anchor, offset)), locations(document, expected));
         }
     });
 
-    playbook('X66', 'abstract delegated annotated and binary properties have no invented source targets', async workspace => {
-        const document = await workspace.open('Properties.x');
+    playbook('X66', async (workspace, data) => {
+        const document = await workspace.open(data.file);
         await noErrors(document.uri);
-        for (const [anchor, offset] of [['String absent', 7], ['Int later', 4], ['text.size', 5]] as const) {
+        for (const { anchor, offset } of data.variants) {
             assert.deepStrictEqual(await targets(document, 'Implementation', position(document, anchor, offset)), []);
         }
     });
 
-    playbook('X67', 'closed property accessors track unsaved positions and recover after parse failure', async workspace => {
-        const original = 'class Member implements Named<String> { @Override String name.get() = "member"; }';
-        await workspace.write('Properties/Member.x', original);
-        const document = await workspace.open('Properties.x');
+    playbook('X67', async (workspace, data) => {
+        const original = data.original;
+        await workspace.write(data.memberFile, original);
+        const document = await workspace.open(data.rootFile);
         await noErrors(document.uri);
-        const lookup = () => targets(document, 'Implementation', position(document, 'T name', 2));
+        const lookup = () => targets(document, 'Implementation', position(document, data.anchor, data.lineShift));
         const initial = await lookup();
-        assert.strictEqual(initial.length, 3);
-        const memberUri = workspace.uri('Properties/Member.x');
+        assert.strictEqual(initial.length, data.targetCount);
+        const memberUri = workspace.uri(data.memberFile);
         const closed = initial.find(item => item.uri.toString() === memberUri.toString());
         assert.ok(closed);
-        assert.ok(closed.range.isEqual(new vscode.Range(0, original.indexOf('get'), 0, original.indexOf('get') + 3)));
-        const member = await workspace.open('Properties/Member.x');
+        assert.ok(closed.range.isEqual(new vscode.Range(data.declarationLine, original.indexOf(data.getter), data.declarationLine, original.indexOf(data.getter) + data.targetCount)));
+        const member = await workspace.open(data.memberFile);
         await workspace.replace(member, '\n\n' + original);
         const moved = (await lookup()).find(item => item.uri.toString() === memberUri.toString());
-        assert.ok(moved?.range.isEqual(new vscode.Range(closed.range.start.translate(2), closed.range.end.translate(2))));
-        await workspace.replace(member, 'class Member {');
+        assert.ok(moved?.range.isEqual(new vscode.Range(closed.range.start.translate(data.lineShift), closed.range.end.translate(data.lineShift))));
+        await workspace.replace(member, data.replaceWith);
         assert.deepStrictEqual(await lookup(), []);
         await workspace.replace(member, original);
         await noErrors(member.uri);
