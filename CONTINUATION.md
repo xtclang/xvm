@@ -1,0 +1,305 @@
+# Continue the constant-pool state-separation work
+
+Snapshot: 2026-09-25. This file is a continuation prompt for a fresh session on another machine.
+All paths below are relative to the repository root. No files from the previous machine's temporary
+folders are needed.
+
+## Task to continue
+
+Continue work on `xtclang/xvm`, branch **`lagergren/constant-pool-state-separation`**. Read
+`AGENTS.md`, this file, and the current completion records in the architecture plan before editing.
+The user wants a complete, enforced separation of definition images, runtime descriptors, semantic
+metadata, and execution state, implemented in reviewable stages and separate commits.
+
+**Scopes 1 and 2 are implemented and verified within their documented boundaries. The next task is
+scope 3: finish generated delegation/accessor handling and stable declaration/native preparation.**
+Start by reproducing the remaining frozen-execution failures, inspect the existing initializer
+implementation, then implement the next bounded slice with focused regressions. Continue the
+existing architecture; do not restart the ownership work or broaden this into the embedding,
+Gradle, error-listener, or JIT projects.
+
+The ultimate goal is genuinely frozen runtime definition graphs. It has **not** been achieved yet.
+Do not describe the branch as universally safe for frozen execution, concurrent executable
+synthesis, arbitrary metadata sharing, or removal of application copies.
+
+## Get the branch on the new machine
+
+For a fresh checkout:
+
+```sh
+git clone --branch lagergren/constant-pool-state-separation \
+    git@github.com:xtclang/xvm.git xvm-state-separation
+cd xvm-state-separation
+git status --short --branch
+git log -5 --oneline
+```
+
+For an existing checkout, inspect its working tree and branches before fetching or switching;
+preserve local work. Use the checked-in Gradle wrapper and Java 25. The wrapper currently uses
+Gradle 9.7.1; let the repository's toolchain configuration select/provision its dependencies.
+Do not copy build outputs from the previous machine as a prerequisite.
+
+The latest implementation commit before this handoff file is **`37bbeab30`**. A subsequent
+documentation commit contains this prompt. The user requested that all four commits be pushed to
+the existing branch. Check the actual remote tip when resuming; this file cannot contain its own
+commit hash.
+
+## Essential references and branch boundaries
+
+Read these in order:
+
+1. [AGENTS.md](AGENTS.md): local operating rules, composite build semantics, style, and test caveats.
+2. [Architecture plan](doc/constant-pool-architecture-plan.md): the active staged plan. Focus on
+   "Generated methods and other freeze blockers", "Remaining commits before frozen activation",
+   "Scope-1 completion: ordinary runtime destinations", and "Scope 2: owner-specific semantic metadata".
+   Earlier sections are historical snapshots; use the later completion records for current status.
+3. [Ownership audit](doc/constant-pool-ownership.md): original same-pool, cross-pool and ambient-pool
+   fixes, singleton semantics, diagnostic handling, evidence, and explicit limits.
+
+Keep these branches distinct:
+
+| Branch | Purpose |
+|---|---|
+| `lagergren/constant-pool-state-separation` | Current experimental architecture work; continue here |
+| `lagergren/constant-pool-ownership-only` | Narrow ownership correctness baseline, excluding the general error-listener redesign |
+| `lagergren/constant-pool-ownership` | Original larger embedding/Gradle/reuse/shutdown work and its PR extraction plan |
+| `JIT` | Destination for JIT development; do not add JIT execution work to this branch |
+
+The baseline was extracted from master `601a68e8b`, with prerequisite `d8c6c3176` and initial
+extraction `65e5ce149`, then narrowed. Do not rebase, merge the larger branch, or reintroduce its
+listener/runtime lifecycle changes as incidental cleanup. The original submission plan is on the
+larger branch at `plugin/doc/plans/embedded-runtime-pr-plan.md`; it is not this branch's active task.
+
+## User preferences and operating constraints
+
+- **Gradle and `jcmd` are already authorized. Do not ask for permission for each invocation or flag
+  variation.** Honor any enforced tool sandbox requirements without inventing another approval flow.
+- Do not use SICS AI / ai-dev skills or plugins for this repository. The user restricted those to
+  their `zombiesnack` repository.
+- Keep distinct architectural changes in separate commits. Update the existing architecture and
+  ownership documents as stages complete, explaining ownership, why each change is needed, tests,
+  and remaining limits. This root handoff file was explicitly requested.
+- Follow `AGENTS.md` for remote operations. This handoff push was authorized; that is not blanket
+  authorization to open a PR, force-push, or publish later unrelated work. Do not open a PR here.
+- Use modern Java 25 where it improves touched code: records, generics, immutable collections,
+  obvious `var` assignments, and suitable `Lazy` / `Lazy.Bound` holders. No new Hungarian field
+  names, unnecessary fully qualified names, or arrays where a collection is the better API.
+  Existing array-based APIs can still require arrays. Keep imports sorted and formatting consistent.
+- Add useful Javadocs explaining ownership and API call order, using `<p>` for paragraphs. Prefer
+  existing ownership abstractions to repeated field traversal. Avoid unrelated modernization.
+- Tests must not depend on timing, GC luck, or sleeps. Use explicit synchronization for concurrency
+  tests; timeouts are hang guards, not pass criteria. Ecstasy tests should assert, without success logs.
+- Java unit tests must build their own fixtures. Do not add tests that quietly skip unless an XDK
+  binary or installed library happens to exist. Put real compiler/interpreter integration tests
+  under the distribution-provisioned XDK test task.
+- Do not add automatic JIT runs or expensive new CI/Gradle dependencies. Configuration cache must
+  keep working. Do not change execution modes or heap/metaspace flags as part of this work.
+- Avoid multiple simultaneous builds in the same checkout. Settle focused failures before starting
+  a long full verification run. The previous session restarted full runs too early and cancelled
+  its own superseded builds; the user questioned this. Do not kill unrelated JVMs, other checkouts'
+  builds, or shared daemons. Establish process ownership before stopping a task you started.
+- No AI attribution in commits, documentation, issues, or PR text.
+
+## Architecture and invariants already established
+
+There are different ownership domains; structural equality alone never grants interchangeability:
+
+1. **Definition image:** prepared `FileStructure` / declaration graph and indexed constants.
+   Serialized positions belong to this image. Linking, stable synthesis and native preparation
+   must finish before publication. Compiler workspaces remain mutable.
+2. **Runtime descriptors:** `RuntimeTypeContext`, retained by its container, captures the exact
+   linked definition graph. Its `DescriptorPool` is a transitional `ConstantPool` factory adapter,
+   with no serialized indices. Runtime combinations may grow here without extending image tables.
+3. **Semantic results:** owner-specific `TypeRelations` and `TypeMetadata`. These can be cleared
+   without changing canonical descriptor identity. They are not the interner or execution state.
+4. **Execution state:** singleton initialization, handles, generated bodies, frame layouts, decoded
+   Ops, instrumentation and native bindings have their own lifetimes. Several of these migrations
+   are still open; do not treat them as disposable semantic memoization.
+
+Important APIs and rules:
+
+- `RuntimeTypeContext.intern` / `getDescriptorPool()` accept operands from the exact captured image
+  graph or the same descriptor context. A same-name replacement image or sibling context is rejected.
+- `Container.importSharedType` / `importSharedConstant` translate references using the known source
+  container and actual module-sharing ancestry. Core/simple values can be owned by a sharing ancestor.
+  Same definitions or equal module names do not authorize singleton or handle sharing.
+- `Frame.runtimeConstant` imports compiled operands through the executing body/receiver boundary.
+  `Frame.runtimeTypeOf` describes a shared runtime value in the frame's descriptor context using its
+  composition owner. Preserve inception versus exposed/masked type semantics at each call site.
+- `Frame.poolContext()` is a runtime descriptor destination. Decode compiled operand indices from
+  the method's local constant table. Never use descriptor positions as compiled/image indices.
+- `RuntimeTypeContext.freezeDefinitions()` freezes the exact linked definition graph. It is an
+  explicit enforcement/test boundary and is **not enabled by default for general activation**.
+- `RuntimeTypeContext.clearMetadata()` clears semantic answers and relations, retaining descriptors,
+  images and execution state. Already acquired completed metadata can finish serving its callers.
+- Ambient pool bindings are scoped compatibility plumbing, not a cache-owner selection policy.
+  Preserve the existing restoration/worker-isolation tests. Do not introduce another ambient owner.
+- Compiler normalization/substitution can temporarily return an upstream operand before adoption is
+  possible. It is returned uncached. Runtime results must belong to the selected descriptor owner.
+- Canonical operand keys use identity equality where needed. `ConcurrentHasherMap<>(Hasher.identity())`
+  wraps JDK concurrency with that equality policy; replacing it with structural-key `ConcurrentHashMap`
+  changes semantics. Existing comments explain this choice.
+
+## Most recent commits and what changed
+
+| Commit | Scope |
+|---|---|
+| `8333d0560` | Completed scope 1 ordinary runtime descriptor destinations and recorded remaining freeze failures |
+| `a02d9124b` | Fixed shared-value destinations exposed by the new interpreter regression |
+| `e59d5b597` | Separated semantic metadata from canonical descriptors, with deterministic unit regressions |
+| `37bbeab30` | Completed member lookup keys, integration tests and scope 2 documentation |
+
+`a02d9124b` changes five runtime boundaries: `OpCallable.constructChild`, `MoveRef`,
+`xRTDelegate.GenericArrayDelegate.checkAssign`, `xRef.ensureClassHandle`, and `UnionTypeConstant`
+equality/ordering/hash dispatch. They import shared operands through existing ownership APIs.
+The assertion-only `xdk/src/test/resources/ownership/MetadataQueries.x` exercises covariance,
+contravariance, generic array insertion and exception rendering in two independent applications.
+These were missed destinations in this branch's runtime migration; no master reproduction is claimed.
+
+`e59d5b597` introduces `javatools/src/main/java/org/xvm/asm/TypeMetadata.java`, obtained through a
+final lazy holder on `ConstantPool`, separately for each compiler pool/runtime descriptor owner.
+It moves TypeInfo, validation, normalization, bounded generic-substitution results, formal variance,
+NakedRef specialization and declaration-derived types off constants. Relevant adapters are in
+`TypeConstant`, `ParameterizedTypeConstant`, `PropertyConstant`, `PropertyClassTypeConstant`,
+`FormalTypeChildConstant`, `TypeParameterConstant`, `MethodConstant`, and `AnnotatedTypeConstant`.
+
+TypeInfo placeholders, partial results, deferred work and retry depths are calculation-local.
+Only successful outer calculations publish complete, error-free results. Nested failure prevents
+publication even if caught. Clears detach publication maps, and compiler invalidation keeps its
+existing class-dependency/watermark protocol. Variance includes access, name, direction and receiver;
+recursive assumptions remain provisional, with calculation-local reuse for unresolved compiler
+queries. TypeInfo ignores a caller's temporary relation-probe scope and restores that scope on exit.
+Diagnostic values still replay to the current request; completed metadata never retains its listener.
+The general error-listener redesign was not imported.
+
+`37bbeab30` separates inferred matches from declaration indices in `TypeInfoReal`. Lookup keys
+include receiver and compiler/runtime mode where applicable, and structural name/operator/arity/kind/
+parent inputs. Foreign, unresolved or contextual queries are not retained as reusable matches.
+Property queries consult current owner metadata after a clear. Integration regressions cover actual
+public/private variance, runtime matches not contaminating compiler lookup, cold independent contexts,
+property refresh and warning replay.
+
+Scope 2 is not a claim that all `TypeInfo`-owned member graphs are immutable. `MethodInfo`,
+`PropertyInfo` and their optimized/generated executable paths still contain scope 3/4 work.
+
+## Verification at the handoff
+
+Final combined implementation passed on 2026-09-25:
+
+- Java suite: **519 cases; 483 passed, 36 existing skips; no failures or errors**.
+- All **18 `TypeMetadataTest` cases** executed without skips. The focused run together with
+  `ConstantOwnershipTest` had **24 passing cases**, no skips.
+- XDK suite: **45 passed, no skips**, including **20 ownership cases**. The new `.x` program ran
+  through the interpreter in two independent applications; no JIT was used.
+- The full XDK distribution rebuilt successfully. `spotlessCheck` and `git diff --check` passed.
+- These are correctness results, not a performance benchmark or a universal frozen-runtime proof.
+
+Useful commands, from the repository root:
+
+```sh
+# Focused unit tests, without an installed-XDK assumption:
+./gradlew :javatools:test --tests org.xvm.asm.TypeMetadataTest \
+    --tests org.xvm.asm.ConstantOwnershipTest --rerun --console=plain
+
+# Build the distribution needed for interpreter integration/manual freeze audits:
+./gradlew :xdk:installDist --console=plain
+
+# Focused integration tests:
+RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test \
+    --tests org.xvm.xdk.ConstantPoolOwnershipTest --rerun --console=plain
+
+# Full verification used for scope 2:
+RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test --rerun \
+    :javatools:test --rerun --console=plain
+
+./gradlew spotlessCheck --console=plain
+git diff --check
+git status --short --branch
+```
+
+Check that the requested tests actually execute instead of being `UP-TO-DATE` or restored/skipped.
+Read counts and failure stacks from `javatools/build/test-results/test/TEST-*.xml` and
+`xdk/build/test-results/test/TEST-*.xml`. The `--rerun` task option forced the named test tasks in the
+recorded runs. `AGENTS.md` also documents `--rerun-tasks --no-build-cache` for forcing the whole graph;
+do not routinely disable caches or rebuild everything for each small edit. Run `clean` alone if it
+is ever necessary; never combine it with other tasks.
+
+The final test failures during development were fixed. Important migration lessons were preserving
+all access-qualified Object bootstrap views, keeping unresolved variance reuse local to a calculation,
+and supplying a system-module stub in Java-only descriptor fixtures. Do not resurrect those failures
+by copying an earlier intermediate implementation or temporary probe jar.
+
+## Scope 3: concrete starting point
+
+Inspect:
+
+- `javatools/src/main/java/org/xvm/asm/RuntimeMethodStructure.java` and
+  `javatools/src/main/java/org/xvm/runtime/ClassComposition.java` for the already separated late
+  field-initializer mechanism. Extend that boundary where appropriate instead of creating a parallel
+  generated-code system.
+- `MethodInfo.ensureOptimizedMethodChain` -> `ClassStructure.ensureMethodDelegation`.
+- `PropertyInfo.createDelegatingChain` -> `ClassStructure.ensurePropertyDelegation`.
+- `TypeConstant.createMemberInfo` -> `MethodStructure.markNative`, plus native marking in
+  `MethodInfo` and `ClassTemplate` preparation.
+- Stable const/helper synthesis (`FileStructure.synthesizeChildren`,
+  `ClassStructure.synthesizeConstInterface`, `synthesizeAppendTo`) and native preparation order.
+
+Last recorded manual freeze results at the scope-1 checkpoint:
+
+| Program | Recorded result |
+|---|---|
+| `RuntimeDescriptors.x` | Passed with frozen application definitions |
+| `SingletonPaths.x` | Passed with frozen application definitions |
+| `Singletons.x` | Failed at `ClassStructure.ensureMethodDelegation`, inserting declarations into the image |
+| `RuntimeConstruction.x` | Failed at `TypeConstant.createMemberInfo` -> `MethodStructure.markNative` for a cold rebased member |
+
+Reproduce on the current tip before changing code; scope 2 may alter the first failure reached.
+The manual harness is committed, independent of temporary scripts:
+
+```sh
+./gradlew :xdk:installDist --console=plain
+java -ea -cp xdk/build/install/xdk/javatools/javatools.jar \
+    xdk/src/test/manual/FrozenImageAudit.java \
+    xdk/build/install/xdk xdk/src/test/resources/ownership/Singletons.x
+java -ea -cp xdk/build/install/xdk/javatools/javatools.jar \
+    xdk/src/test/manual/FrozenImageAudit.java \
+    xdk/build/install/xdk xdk/src/test/resources/ownership/RuntimeConstruction.x
+```
+
+Run audits in fresh processes when checking cold startup. The harness compiles and reloads the
+artifact, performs native preparation/linking, freezes before cold entry/metadata lookup, and fails
+on forbidden writes. The native root is not frozen by this application audit. An expected failing
+audit is still an open failure, not a passing test.
+
+For the implementation, distinguish stable declarations completed before publication from late
+specialization-dependent executable bodies. Put late method/property delegation and accessors in
+an explicitly owned executable overlay. Preserve identity/signature lookup, reflection/dispatch
+agreement, generic substitution, native binding and frame/local-constant correctness. Do not insert
+methods/properties into frozen image classes, assign descriptor image indices, prewarm queries to
+hide writes, weaken owner/read-only guards, or fall back to ambient pools.
+
+Use separate commits for bounded changes such as stable native preparation versus delegation/body
+ownership when the actual dependencies permit. Add focused Java tests and assertion-only `.x`
+regressions covering method delegation, getter/setter delegation, generics, cold native rebasing,
+failure/retry and independent contexts as appropriate. Test unchanged declaration trees and constant
+membership/positions around frozen execution. Use deterministic synchronization if testing concurrent
+first lookup; existing semantic-table isolation does not prove generated-body publication safe.
+
+After each slice, update the plan with exact changed paths, why the owner is correct, actual checks,
+and remaining failures. Do not silently absorb scopes 4–6 merely to claim scope 3 is complete.
+
+## Work that still follows scope 3
+
+4. Separate method initialization flags, mutable decoded Ops, frame-layout preparation and debugger
+   instrumentation from shared definitions. Verify two executions of the exact same definitions.
+5. Finish foreign/constructor/property/function reflection and captured annotation ownership; audit
+   file-store/file-node handles and classloader-wide native values. Shared core types and singleton
+   ancestry do not make every native static cache safe across runtimes.
+6. Enable freezing at activation only after the interpreter workloads pass with guards enabled,
+   including cold metadata, delegation, reflection, independent contexts and unchanged images.
+
+Optional wider sharing and image-copy removal require their own correctness and retention evidence.
+General error-listener migration, embedding/Gradle/shutdown work and JIT execution remain separate.
+
+When reporting progress, state what is complete, what was actually tested, commit boundaries, and
+what is still open. A metadata-cache move alone cannot guarantee complete runtime state separation.
