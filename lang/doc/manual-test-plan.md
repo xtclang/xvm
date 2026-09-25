@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X82 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X87 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1677,6 +1677,17 @@ module Advanced {
     Int applyPair(function Int(Int, String) fn) = fn(1, "x");
     class Packet<T> { construct(T first, T second) {} }
     Packet<String> buildPacket() = new Packet<String>("a", "b");
+    annotation Marked into Object {}
+    class Envelope<T> { class Part { construct(T first, T second) {} } }
+    void constructions(Envelope<String> outer, Packet<String> packet, String text, Int textNumber) {
+        outer.new Part("a", text);
+        packet.new("a", text);
+        new @Marked Packet<String>("a", text);
+        Packet<String> inferred = new Packet("a", text);
+        new Packet("a", text);
+        new String[2](text);
+    }
+    Object literal(String word) = [word.size];
     void take(Int first, String second) {}
     void values(Int number, String text, Boolean flag, function Int(Int, String) fn) {
         Int textNumber = 1;
@@ -1707,7 +1718,7 @@ module Advanced {
 | X71 | In `edit`, replace `1 + word.size` with `1 + word.`, `flag ? word. : 0`, `flag ? 0 : word.`, and `pair(word., 2)` in turn. Complete after the dot, then restore the original. | `size` is offered in the original lexical context, including when another argument follows the cursor. No stale result or fabricated value for the incomplete expression. |
 | X72 | Find Implementations on `meter.count` and `meter.computed`. | `count` reaches Trace's written `get` and `set`; `computed` reaches its explicit `get` and `set`, which precede the annotation. Property queries return the combined accessor set, not a read/write-specific target. Native annotation storage has no invented source body. |
 | X73 | In `applyPair`, replace the call with `fn()` and then `fn(1, )`; request signature help after `(` and after the comma. Try `fn(True, )`, then restore the original. | `Int fn(Int, String)` with the corresponding parameter highlighted, no invented names/defaults/runtime target. The incompatible Boolean argument produces no candidate. Normal diagnostics clear after restoring the complete call. |
-| X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second="b", first=)`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Virtual/inner/array/annotated construction and omitted class-type inference are outside this proof. |
+| X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second="b", first=)`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Specialized constructions are exercised separately in X83–X85. |
 | X75 | In `edit`, replace `1 + word.size` with `(word.si`, `pair((word.si`, and `word[word.si` in turn, leaving the semicolon and method/module braces. Trigger completion after `si`, then restore. | `size` is offered despite missing `)`/`]`. The edit replaces only `si`; Problems continues showing the normal compiler errors until the source is repaired. No missing operand or value is invented. |
 | X76 | In `edit`, replace `1 + word.size` with `pair((pair(1, `, leaving the semicolon and braces. Request signature help after the comma, then restore. | The innermost `Int pair(Int first, Int second)` candidate highlights `second` despite the missing call/group delimiters. Problems clears after restoring the original source. |
 | X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first=1, second=)` and `new Packet<String>(second="b", first=)`. Accept `text`, then restore before the next edit. | The compiler offers compatible `text` plus the bundled module properties `simpleName` and `qualifiedName`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
@@ -1716,6 +1727,12 @@ module Advanced {
 | X80 | In `prefixes`, shorten `choose(valueText)` to `choose(va)` and invoke completion after `va`. Request signature help, then accept `valueNumber`; restore and repeat accepting `valueText`. | Both compatible names are offered; `valueFlag` is excluded. Both overload signatures remain until acceptance. Exactly `va` is replaced, the completed call compiles and Problems clears. |
 | X81 | In `ArgumentValues.inspectValues`, shorten `takeValue(valueText)` to `takeValue(va)`, then try `takeValue(value=va)`. Complete after `va`, accept `valueText`, and restore between edits. | The compatible property `valueText` and constant `valueConstant` are offered with String types; `valueNumber` is excluded. Exactly `va` is replaced, preserving the label and delimiter. Acceptance clears Problems. |
 | X82 | In `ArgumentValues.inspectConstants`, shorten `takeValue(valueConstant)` to `takeValue(va)` and invoke completion. Accept `valueConstant`. | Only the compatible constant is offered; instance properties require an instance receiver. The completed call restores the original source and clears Problems. |
+| X83 | In `constructions`, shorten the final `text` to `te` in `outer.new Part`, `packet.new`, and `new @Marked Packet<String>` in turn. Request completion and signature help; accept `text`, then restore. | String constructor parameters and active parameter `second`; only `text` fits the prefix, not `textNumber`. Acceptance replaces exactly `te` and clears Problems. |
+| X84 | Shorten `text` in the two constructions with omitted `<String>`. Request completion and signature help, then accept `text`. | The declaration's `Packet<String>` expected type constrains completion to `text`. The standalone construction also permits `textNumber`: its provisional String signature can change as more arguments determine the omitted class type. Neither unfinished call selects an overload. |
+| X85 | Replace `new String[2](text)` with `new String[2](te)`, then `new String[2](supply=te)`. Request help and accept `text`. | Parameter `supply` is active (index 1), since `[2]` supplies `size`. Only the compatible String value is offered. Acceptance clears Problems. |
+| X86 | In `literal`, replace `[word.size]` with `(1, word.si`, `Tuple<Int, Int>:(1, word.si`, `[word.si`, and `["key"=word.si` in turn, leaving the semicolon. Complete `size`, then restore. | Member completion survives missing tuple/list/map closers and replaces only `si`. Accepting the member alone leaves delimiter diagnostics; restoring the complete expression clears Problems. |
+| X87 | Before the module's final brace, add `Int declaredSize(String word) = word.si`, `Int declaredSize = "x".si`, or `void defaults(Int size = Int64.Ma {}` in turn. Complete at the prefix, then repair the missing `;` or `)`, and remove the added declaration. | `size`/`MaxValue` is offered in the declaration's real compiler context. The missing terminator remains a normal diagnostic until repaired. Method defaults must still be constants. Shorthand constructor defaults have backend coverage. |
+
 
 Argument-value suggestions cover visible readable locals/parameters and implicit properties/constants
 in empty final positional slots, pending named values and direct final bare-name prefixes. They use
@@ -1724,7 +1741,9 @@ property reads do not gain that narrowing. Literal synthesis and enumeration of 
 instances or imported constants remain unsupported.
 Qualified/grouped/compound expressions and prefixes before later written arguments retain ordinary
 scope/member completion without argument-type filtering. Empty slots before later written arguments
-and specialized construction forms remain outside this proof.
+remain outside this proof. X83–X87 add specialized constructors and bounded declaration/literal recovery.
+Anonymous construction, cursors in array dimensions, multidimensional construction, unfinished declaration
+names/types and missing operands remain unsupported; no literal value or declaration token is invented.
 
 ## VS Code Extension Playbook
 
