@@ -6,6 +6,7 @@ import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.IterableᐸCharᐳ;
 import org.xtclang.ecstasy.IteratorᐸCharᐳ;
 import org.xtclang.ecstasy.Object;
+import org.xtclang.ecstasy.nRangeᐸInt64ᐳ;
 import org.xtclang.ecstasy.nType;
 
 import org.xtclang.ecstasy.numbers.Int64;
@@ -181,6 +182,42 @@ public class ArrayᐸCharᐳ
     @Override
     public ArrayᐸCharᐳ freeze$p(Ctx ctx, boolean inPlace, boolean inPlace$dflt) {
         return (ArrayᐸCharᐳ) super.freeze$p(ctx, inPlace, inPlace$dflt);
+    }
+
+    /**
+     * Native implementation of "Char[] slice(Range<Int> indexes)" for immutable arrays.
+     */
+    @Override
+    public ArrayᐸCharᐳ slice$p(Ctx ctx, long n1, long n2) {
+        long lower = nRangeᐸInt64ᐳ.$effectiveLowerBound(ctx, n1, n2);
+        long upper = nRangeᐸInt64ᐳ.$effectiveUpperBound(ctx, n1, n2);
+        if (lower < 0) {
+            throw $oob(ctx, lower);
+        }
+        if (upper >= size$get$p(ctx)) {
+            throw $oob(ctx, upper);
+        }
+        if (!$isImmut()) {
+            // TODO: mutable slices must share writes with the original array, not copy its data
+            throw Exception.$unsupported(ctx, "Mutable Char[] slicing");
+        }
+
+        int    size         = (int) Math.max(0, upper - lower + 1);
+        int    charsPerLong = $utf21 ? 3 : 8;
+        int    bitsPerChar  = $utf21 ? 21 : 8;
+        long[] data         = new long[(size + charsPerLong - 1) / charsPerLong];
+
+        ctx.alloc(data.length * 8L);
+
+        // repack at index zero so String construction can directly use the slice's storage
+        boolean descending = nRangeᐸInt64ᐳ.$descending(n1, n2);
+        long    index      = descending ? upper : lower;
+        int     step       = descending ? -1 : 1;
+        for (int i = 0; i < size; i++, index += step) {
+            data[i / charsPerLong] |= (long) getElement$pi(ctx, index)
+                    << ((charsPerLong - 1 - i % charsPerLong) * bitsPerChar);
+        }
+        return new ArrayᐸCharᐳ(ctx, $type, data, size, $utf21);
     }
 
     // ----- Array internals -----------------------------------------------------------------------
