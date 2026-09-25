@@ -571,7 +571,11 @@ public class EmbeddingSupport {
      * capture analysis. Single-dimensional array brackets fit the size parameter of the fixed-size
      * constructor, including an empty/final-name slot and a missing closing bracket. A following
      * supplier is parsed for recovery but is outside this prefix proof. Multidimensional
-     * construction remains unsupported.
+     * construction remains unsupported. Simple unqualified member/return and method-parameter
+     * type prefixes (including empty parameter slots) query types through the enclosing compiler
+     * scope. An unfinished header retains its written declaration name and range but registers
+     * no method/property component or parameters. Generic-method headers, qualified/compound
+     * types and type-composition headers do not participate in this type-prefix query.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,

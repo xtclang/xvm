@@ -989,7 +989,15 @@ public class Parser {
 
                 type = expr.toTypeExpression();
             } else {
-                type = parseTypeExpression();
+                Mark header = mark();
+                try {
+                    type = parseDeclarationType();
+                } catch (IncompleteHeader e) {
+                    Token name = matchNameOrAny();
+                    var kind = peek(Id.L_PAREN) ? IncompleteDeclarationStatement.Kind.METHOD
+                            : IncompleteDeclarationStatement.Kind.PROPERTY;
+                    return retainDeclaration(header, lStartPos, name, kind, List.of(e.site), e);
+                }
             }
 
             if (type instanceof BadTypeExpression) {
@@ -1141,13 +1149,25 @@ public class Parser {
      *     StatementBlock
      * </pre></code>
      *
-     * @return a MethodDeclarationStatement
+     * @return a method declaration, or retained incomplete header syntax after a parse error
      */
-    MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos, Expression exprCondition,
+    Statement parseMethodDeclarationAfterName(long lStartPos, Expression exprCondition,
             Token doc, List<Token> modifiers, List<AnnotationExpression> annotations,
             List<Parameter> typeVars, Token conditional, List<Parameter> returns, Token name) {
-        List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false, true);
-        List<Parameter>      params           = parseParameterList(true);
+        Mark header = mark();
+        List<TypeExpression> redundantReturns;
+        List<Parameter> params;
+        try {
+            redundantReturns = parseTypeParameterTypeList(false, true);
+            params = parseParameterList(true);
+        } catch (IncompleteHeader e) {
+            // This incomplete method has no registered type parameters or own scope yet.
+            return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
+                    typeVars == null || typeVars.isEmpty() ? List.of(e.site) : List.of(), e);
+        } catch (CompilerException e) {
+            return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
+                    List.of(), e);
+        }
         long                 lEndPos          = prev().getEndPosition();
         StatementBlock       body;
         switch (peek().getId()) {
@@ -5058,21 +5078,98 @@ public class Parser {
         List<Parameter> params = null;
         if (match(Id.L_PAREN, required) != null) {
             params = new ArrayList<>();
+            if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+                throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+            }
             if (match(Id.R_PAREN) == null) {
-                do {
-                    TypeExpression type  = parseTypeExpression();
+                while (true) {
+                    TypeExpression type  = parseDeclarationType();
                     Token          name  = expect(Id.IDENTIFIER);
                     Expression     value = null;
                     if (match(Id.ASN) != null) {
                         value = parseExpression();
                     }
                     params.add(new Parameter(type, name, value));
-                } while ((match(Id.COMMA) == null
-                        ? expectPartialClose(Id.R_PAREN, params)
-                        : match(Id.R_PAREN)) == null);
+                    Token comma = match(Id.COMMA);
+                    if (comma != null && f_cursor != NO_CURSOR && canRetainIncomplete()) {
+                        throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+                    }
+                    if ((comma == null ? expectPartialClose(Id.R_PAREN, params) : match(Id.R_PAREN)) != null) {
+                        break;
+                    }
+                }
             }
         }
         return params;
+    }
+
+    /** A header type prefix is queried in its enclosing declaration, never as a value. */
+    private TypeExpression parseDeclarationType() {
+        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+            throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+        }
+        TypeExpression type = parseTypeExpression();
+        if (f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired() && type instanceof NamedTypeExpression named
+                && named.getNames().length == 1 && named.getModule() == null
+                && named.getNameToken().getEndPosition() == f_cursor && type.getEndPosition() == f_cursor) {
+            throw incompleteHeader(named.getNameToken());
+        }
+        return type;
+    }
+
+    private IncompleteHeader incompleteHeader(Token prefix) {
+        log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+        return new IncompleteHeader(new IncompleteStatement(prefix, f_cursor, INCOMPLETE_EXPRESSION));
+    }
+
+    private static class IncompleteHeader extends CompilerException {
+        private IncompleteHeader(IncompleteStatement site) {
+            super("Incomplete declaration header");
+            this.site = site;
+        }
+
+        private final IncompleteStatement site;
+    }
+
+    /**
+     * Retain only the known declaration name and source extent. A brace or semicolon bounds
+     * this recovery; the body is skipped as one unit so its names cannot leak into the owner.
+     * Unfinished parameter syntax never registers a partial method signature.
+     */
+    private IncompleteDeclarationStatement retainDeclaration(Mark header, long start, Token name,
+            IncompleteDeclarationStatement.Kind kind, List<IncompleteStatement> sites, CompilerException error) {
+        if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            throw error;
+        }
+        restore(header);
+        while (!eof() && !peek(Id.R_CURLY)) {
+            if (f_errs.get().isAbortDesired()) {
+                throw error;
+            }
+            if (peek(Id.L_CURLY)) {
+                current();
+                // Consume the body by brace depth so missing parameter delimiters cannot eat
+                // its siblings. current() also preserves the actual closing token's range.
+                int depth = 1;
+                while (depth > 0 && !eof()) {
+                    if (f_errs.get().isAbortDesired()) {
+                        throw error;
+                    }
+                    switch (current().getId()) {
+                    case L_CURLY -> ++depth;
+                    case R_CURLY -> --depth;
+                    default -> {}
+                    }
+                }
+                break;
+            }
+            if (match(Id.SEMICOLON) != null) {
+                break;
+            }
+            current();
+        }
+        return new IncompleteDeclarationStatement(kind, name, start, prev().getEndPosition(), sites);
     }
 
     /**

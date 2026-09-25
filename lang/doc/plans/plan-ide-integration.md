@@ -126,7 +126,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes; simple unqualified member/return and parameter-header type prefixes use the enclosing compiler scope |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -210,10 +210,17 @@ again before returning edits. The full scope and manual cases are in the rename 
 Semantic results can be partial when validation fails. Parse errors prevent semantic compilation,
 but `Compilation.sourceTrees()` retains available per-file syntax for outline, folding and selection.
 Statement-boundary recovery omits malformed statements and preserves surrounding declarations;
-missing braces retain completed method/module headers. Broken headers or lexer failures can still
-leave gaps. Selection ranges retain one response per cursor, with a cursor-only fallback if no
+missing braces retain completed method/module headers. Malformed method parameter headers retain
+their written name and body extent for outline/folding, without exposing body locals or registering
+a method signature. Unbounded headers and lexer failures can still leave gaps. Selection ranges retain one response per cursor, with a cursor-only fallback if no
 syntax covers that position. An edit invalidates the old analysis; queries do not reuse semantic
 positions from an older document version. No Tree-sitter fallback is used in compiler mode.
+
+Simple unqualified property/return and method-parameter type prefixes, including empty parameter
+type slots, use the enclosing compiler name resolver. Imports, aliases, nested types, typedefs,
+shadowing and module overlays are respected; value names and fabricated parameter names are not
+proposed. Shared X91–X92 verify completion, structure and diagnostic repair. Generic-method,
+multi-return, qualified/compound and type-composition headers remain outside this bounded slice.
 
 The separate embedding `analyzeIncomplete` probe can validate intact receivers and ordinary
 arguments in one standalone incomplete statement. The original overload handles trailing EOF;

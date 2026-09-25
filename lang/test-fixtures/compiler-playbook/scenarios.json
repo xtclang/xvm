@@ -2278,6 +2278,59 @@
         ]
       }
     },
+    "X91": {
+      "title": "declaration type prefixes resolve compiler types and replace only the written prefix",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { String StringValue=\"x\"; ${0} Int later=1; }",
+        "variants": [
+          "void damaged(Str| value) {}",
+          "void damaged(Int first, Str| second) {}",
+          "Str| property;",
+          "Str| damaged() = \"x\";"
+        ],
+        "include": [
+          "String"
+        ],
+        "exclude": [
+          "StringValue"
+        ],
+        "selected": "String",
+        "prefixLength": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X92": {
+      "title": "unfinished method headers retain outline and folds without leaking body declarations",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing {\n void damaged(${0}) {\n Int hidden=1;\n }\n Int later=1; }",
+        "parameters": [
+          "Int",
+          "Int value, Str"
+        ],
+        "symbols": [
+          "Editing",
+          "damaged",
+          "later"
+        ],
+        "excludedSymbol": "hidden",
+        "foldStart": 1,
+        "foldEnd": 3,
+        "repairedParameters": "Int value"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Native diagnostics, Problems rows and repair are checked; native outline and folding assertions are not yet implemented."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

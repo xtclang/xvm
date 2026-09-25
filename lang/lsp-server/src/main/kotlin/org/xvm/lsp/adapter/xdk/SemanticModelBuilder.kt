@@ -515,7 +515,7 @@ private class SemanticModelBuilder(
                         .filter { it.readable() }
                         .mapNotNull(::sourceVariable)
                 val scopeMembers =
-                    if (cursor != null && owner != null && (site.isNameCompletion || receiver == null)) {
+                    if (cursor != null && owner != null && !site.isTypeCompletion && (site.isNameCompletion || receiver == null)) {
                         receiverMembers(cursor.thisType(), owner, errors, if (cursor.instance()) Lookup.IMPLICIT else Lookup.STATIC)
                             .filter { member -> cursor.variables().none { it.name() == member.name } }
                     } else {
@@ -527,7 +527,9 @@ private class SemanticModelBuilder(
                         PartialSemanticModel.Member(id, named.name(), symbols[id]!!.kind, type(named.identity().type), null)
                     }
                 val members =
-                    if (site.isNameCompletion) {
+                    if (site.isTypeCompletion) {
+                        scopeTypes
+                    } else if (site.isNameCompletion) {
                         locals + scopeMembers.filter { member -> scopeTypes.none { it.name == member.name } } + scopeTypes
                     } else if (site.isCall && receiver == null) {
                         scopeMembers.filter { it.kind == SymbolKind.METHOD && it.name == callee }
