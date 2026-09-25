@@ -785,3 +785,10 @@ correct default-argument signature truncation and remove the foreign static hash
 `xConst` lookup. Shared compiled execution state, the other native static caches and broad
 reflection remain unfinished. The [scope-3 record](constant-pool-architecture-plan.md#scope-3-stable-preparation-and-generated-executables)
 documents the exact ownership boundary, publication rules, regressions and limits.
+
+Scope 4 starts by moving method singleton-initialization completion out of shared declarations
+into exact-body entries retained by each `ServiceContext`. The same frozen method previously
+caused a second container to skip its singleton initialization. Canonical values and in-flight
+construction still use the existing container owner; service completion survives metadata clears
+and failed initialization can retry. The [scope-4 record](constant-pool-architecture-plan.md#scope-4-compiled-method-execution-ownership)
+records the reproduction and the remaining decoded-code/frame/debugger work.

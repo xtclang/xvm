@@ -28,7 +28,6 @@ import org.xvm.asm.Op.Prefix;
 import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
-import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.FormalConstant;
@@ -38,7 +37,6 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PendingTypeConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.SignatureConstant;
-import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -55,12 +53,6 @@ import org.xvm.compiler.Compiler;
 
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.TypeCompositionStatement;
-
-import org.xvm.runtime.Container;
-import org.xvm.runtime.Fiber;
-import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -1522,85 +1514,6 @@ public class MethodStructure
     }
 
     /**
-     * Ensure that all SingletonConstants used by this method are initialized before the next
-     * frame is called.
-     *
-     * @param frame      the caller's frame
-     * @param frameNext  the frame that is about to execute this method
-     *
-     * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
-     */
-    public int ensureInitialized(Frame frame, Frame frameNext) {
-        return m_fInitialized ? frame.call(frameNext) : initialize(frame, frameNext);
-    }
-
-    private int initialize(Frame frame, Frame frameNext) {
-        Constant[] aconstLocal = getLocalConstants();
-        if (aconstLocal != null && aconstLocal.length > 0) {
-            List<SingletonConstant> listSingletons = null;
-            for (Constant constant : aconstLocal) {
-                listSingletons = addSingleton(frame, constant, listSingletons);
-            }
-
-            if (listSingletons != null) {
-                Fiber        fiber      = frame.f_fiber;
-                long         ldtTimeout = fiber.getTimeoutStamp();
-                ObjectHandle hTimeout   = fiber.getTimeoutHandle();
-                Container    container  = frame.f_context.f_container;
-                long         ldtPaused  = ldtTimeout <= 0 ? 0 : container.currentTimeMillis();
-
-                // we may need to call another service to complete the initialization, but it must
-                // not be allowed to timeout; it may cause a circular initialization error
-                if (ldtTimeout > 0) {
-                    fiber.clearTimeout();
-                }
-
-                return Utils.initConstants(frame, listSingletons, frameCaller -> {
-                    if (ldtTimeout > 0) {
-                        // adjust the original deadline forward by the time spent in initialization
-                        long cMillisPaused = container.currentTimeMillis() - ldtPaused;
-                        fiber.setTimeoutHandle(hTimeout, ldtTimeout + Math.max(0, cMillisPaused));
-                    }
-                    m_fInitialized = true;
-                    return frameCaller.call(frameNext);
-                });
-            }
-        }
-
-        // all is done;
-        // if on the main context, we are entitled to set the flag;
-        // otherwise, we didn't do anything, so even if other threads don't immediately see the flag
-        // (since it's not volatile) they will simply repeat the "do nothing" loop
-        m_fInitialized = true;
-        return frame.call(frameNext);
-    }
-
-    /**
-     * Add SingletonConstant(s) to the specified list.
-     *
-     * @param constant  the constant to check
-     * @param list      the list to add to (could be null)
-     *
-     * @return the resulting list
-     */
-    private List<SingletonConstant> addSingleton(Frame frame, Constant constant, List<SingletonConstant> list) {
-        if (constant instanceof SingletonConstant constSingle) {
-            if (list == null) {
-                list = new ArrayList<>(7);
-            }
-
-            // A same-pool alias can still denote a parent-owned singleton. Use the same owner
-            // selection as constant-heap lookup; live state is stored separately in that owner's heap.
-            list.add(frame.f_context.f_container.ensureSingletonConstant(constSingle));
-        } else if (constant instanceof ArrayConstant constArray) {
-            for (Constant constElement : constArray.getValue()) {
-                list = addSingleton(frame, constElement, list);
-            }
-        }
-        return list;
-    }
-
-    /**
      * Calculate the line number for a given op counter.
      *
      * @return the corresponding line number (one-based) of zero if the line cannot be calculated
@@ -1865,7 +1778,6 @@ public class MethodStructure
         }
 
         that.m_code         = null;
-        that.m_fInitialized = false;
         that.m_ast          = null;
         that.m_aAstParams    = null;
         that.m_registry     = null;
@@ -3275,12 +3187,6 @@ public class MethodStructure
     private transient ConcurrencySafety m_safety;
 
     public enum ConcurrencySafety {Safe, Unsafe, Instance}
-
-    /**
-     * Cached information about whether any singleton constants used by this method have been
-     * fully initialized.
-     */
-    private transient boolean m_fInitialized;
 
     /**
      * Cached method for the construct-finally that goes with this method, iff this method is a

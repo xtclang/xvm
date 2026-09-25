@@ -62,6 +62,9 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.NativeFunctionHandle
 
 import org.xvm.runtime.template._native.temporal.xLocalClock;
 
+import org.xvm.util.Hasher;
+
+import org.xvm.util.concurrent.ConcurrentHasherMap;
 import org.xvm.util.concurrent.VarHandles;
 
 /**
@@ -232,6 +235,14 @@ public class ServiceContext {
     }
 
     // ----- Op support ----------------------------------------------------------------------------
+
+    /**
+     * Retain execution state for the exact body selected by dispatch. Equal signatures and shared
+     * definition objects do not share service state. Semantic metadata clears leave this table intact.
+     */
+    public MethodExecution getMethodExecution(MethodStructure method) {
+        return methodExecutions.computeIfAbsent(method, MethodExecution::new);
+    }
 
     /**
      * Retrieve an Op specific info.
@@ -2296,6 +2307,9 @@ public class ServiceContext {
      * To prevent leaks, the values in the EnumMap are WeakRef objects.
      */
     private final Map<Op, EnumMap> f_mapOpInfo = new WeakHashMap<>();
+
+    private final Map<MethodStructure, MethodExecution> methodExecutions =
+            new ConcurrentHasherMap<>(Hasher.identity());
 
     /**
      * A "service-local" cache for transient field values.

@@ -1303,3 +1303,27 @@ and no general concurrency or performance guarantee is inferred from these check
 
 Scope 3 is complete within the runtime-descriptor and prepared-application boundary above.
 Scopes 4–6 remain open; general frozen activation is still disabled.
+
+## Scope 4: compiled method execution ownership
+
+### Reproduction and singleton initialization
+
+Java-only regressions at `2087e376a` reproduced two independent problems using the exact same
+frozen method declaration in two containers. Frozen `getOps()` returned separate arrays whose
+elements were the same mutable Op objects. After the first container initialized a method's
+singleton operands, `MethodStructure.m_fInitialized` caused the second container to skip its own
+singleton initialization entirely (zero initialization requests instead of one). These tests
+build their own method and system-module stub; they do not depend on installed XDK artifacts.
+
+`ServiceContext` now retains `MethodExecution` entries keyed by method object identity. The
+completion flag and operand-initialization protocol have moved out of `MethodStructure`. Each
+service completes its own check, while canonical singleton values, waiters and construction
+remain with the existing container/main-service owner. Completion is published only after the
+existing initialization continuation succeeds; failure leaves the method execution retryable.
+Metadata clears do not discard these entries. This table retains the body selected by dispatch;
+it does not grant module or value sharing based on equal signatures.
+
+`MethodExecutionTest` checks independent containers, independent service completion, retention
+across metadata clears and failure/retry. The existing singleton routing regressions also pass.
+Decoded Ops, frame sizing and debugger isolation remain the next scope-4 slice; this change alone
+does not establish safe execution of a shared compiled image.
