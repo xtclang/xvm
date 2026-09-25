@@ -160,18 +160,30 @@ package charArrayTests {
         Char c = ++array[1];
         assert c == 'c';
         assert array[1] == 'c';
+
+        // crossing 255 promotes the whole array from eight to three characters per storage word
+        array = "ab\u00FFdefghij".chars.toArray(Mutable);
+        c = ++array[2];
+        assert c == '\u0100';
+        assert new String(array) == "ab\u0100defghij";
+
+        // an existing 21-bit slot must be replaced without leaving bits from its previous value
+        array[3] = '\u01FF';
+        c = ++array[3];
+        assert c == '\u0200';
+        assert new String(array) == "ab\u0100\u0200efghij";
     }
 
-// TODO requires utf21 support in ArrayᐸCharᐳ.java
     void shouldPreIncOutOfBounds() {
-//        Char[] array = ['a', 'b', 'z'];
-//        array[1] = maxChar();
-//        try {
-//            Char c = ++array[1];
-//            assert as "expected OutOfBounds to be thrown";
-//        } catch (OutOfBounds e) {
-//            // expected
-//        }
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
+        array[1] = maxChar();
+        try {
+            Char c = ++array[1];
+            assert as "expected OutOfBounds to be thrown";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        assert array[0] == 'a' && array[1] == maxChar() && array[2] == 'z';
     }
 
     void shouldPostInc() {
@@ -179,18 +191,29 @@ package charArrayTests {
         Char c = array[1]++;
         assert c == 'b';
         assert array[1] == 'c';
+
+        // promote a character beyond the first eight-character storage word
+        array = "abcdefgh\u00FFj".chars.toArray(Mutable);
+        c = array[8]++;
+        assert c == '\u00FF';
+        assert new String(array) == "abcdefgh\u0100j";
+
+        array[9] = '\u01FF';
+        c = array[9]++;
+        assert c == '\u01FF';
+        assert new String(array) == "abcdefgh\u0100\u0200";
     }
 
-// TODO requires utf21 support in ArrayᐸCharᐳ.java
     void shouldPostIncOutOfBounds() {
-//        Char[] array = ['a', 'b', 'z'];
-//        array[1] = maxChar();
-//        try {
-//            Char c = array[1]++;
-//            assert as "expected OutOfBounds to be thrown";
-//        } catch (OutOfBounds e) {
-//            // expected
-//        }
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
+        array[1] = maxChar();
+        try {
+            Char c = array[1]++;
+            assert as "expected OutOfBounds to be thrown";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        assert array[0] == 'a' && array[1] == maxChar() && array[2] == 'z';
     }
 
     void shouldPreDec() {
@@ -235,16 +258,16 @@ package charArrayTests {
         assert array[1] == 'g';
     }
 
-// TODO requires utf21 support in ArrayᐸCharᐳ.java
     void shouldAddInPlaceOutOfBounds() {
-//        Char[] array = ['a', 'b', 'z'];
-//        array[1] = maxChar();
-//        try {
-//            array[1] += 5;
-//            assert as "expected OutOfBounds to be thrown";
-//        } catch (OutOfBounds e) {
-//            // expected
-//        }
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
+        array[1] = maxChar();
+        try {
+            array[1] += 5;
+            assert as "expected OutOfBounds to be thrown";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        assert array[0] == 'a' && array[1] == maxChar() && array[2] == 'z';
     }
 
     void shouldSubInPlace() {

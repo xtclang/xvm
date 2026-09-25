@@ -242,15 +242,29 @@ public class ArrayᐸCharᐳ
 
     @Override
     protected void $setElement(Ctx ctx, long index, long value) {
+        if (index < 0) {
+            throw $oob(ctx, index);
+        }
         if (!$utf21) {
             if (value < 0x100) {
                 $set8bitElement(index, value);
                 return;
             }
-            // TODO convert from 8-bit format to 21-bit format
+
+            // preserve character capacity when converting from eight to three characters per long;
+            // an append may be writing the new character before the logical size is incremented
+            long[] storage = new long[(int) $cap2len21bits($storageCapacity8bit())];
+            ctx.alloc(storage.length * 8L);
+            for (int i = 0, size = $sizeEtc & $SIZE_MASK; i < size; i++) {
+                storage[i / 3] |= $get8bitUnsignedElement(i) << (21 * (2 - i % 3));
+            }
+            $storage = storage;
+            $utf21   = true;
         }
-        // 21-bit version of: $storage[(int) index] = value;
-        throw Exception.$unsupported(ctx, null); // TODO
+
+        int slot  = (int) (index / 3);
+        int shift = 21 * (2 - (int) (index % 3));
+        $storage[slot] = $storage[slot] & ~(0x1FFFFFL << shift) | ((value & 0x1FFFFFL) << shift);
     }
 
     @Override
