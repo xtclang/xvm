@@ -1009,17 +1009,19 @@ public class UnionTypeConstant
 
     // ----- run-time support ----------------------------------------------------------------------
 
+    // Values may be shared from an ancestor; union branches and actual value types must both
+    // be interpreted in the executing frame before relation lookup or dispatch.
     @Override
     public int callEquals(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        TypeConstant typeV1 = hValue1.getType();
-        TypeConstant typeV2 = hValue2.getType();
+        TypeConstant typeV1 = frame.runtimeTypeOf(hValue1);
+        TypeConstant typeV2 = frame.runtimeTypeOf(hValue2);
 
-        TypeConstant type1 = m_constType1;
+        TypeConstant type1 = frame.runtimeConstant(m_constType1);
         if (typeV1.isA(type1) && typeV2.isA(type1)) {
             return type1.callEquals(frame, hValue1, hValue2, iReturn);
         }
 
-        TypeConstant type2 = m_constType2;
+        TypeConstant type2 = frame.runtimeConstant(m_constType2);
         if (typeV1.isA(type2) && typeV2.isA(type2)) {
             return type2.callEquals(frame, hValue1, hValue2, iReturn);
         }
@@ -1030,15 +1032,15 @@ public class UnionTypeConstant
 
     @Override
     public int callCompare(Frame frame, ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
-        TypeConstant typeV1 = hValue1.getType();
-        TypeConstant typeV2 = hValue2.getType();
+        TypeConstant typeV1 = frame.runtimeTypeOf(hValue1);
+        TypeConstant typeV2 = frame.runtimeTypeOf(hValue2);
 
-        TypeConstant type1 = m_constType1;
+        TypeConstant type1 = frame.runtimeConstant(m_constType1);
         if (typeV1.isA(type1) && typeV2.isA(type1)) {
             return type1.callCompare(frame, hValue1, hValue2, iReturn);
         }
 
-        TypeConstant type2 = m_constType2;
+        TypeConstant type2 = frame.runtimeConstant(m_constType2);
         if (typeV1.isA(type2) && typeV2.isA(type2)) {
             return type2.callCompare(frame, hValue1, hValue2, iReturn);
         }
@@ -1049,14 +1051,14 @@ public class UnionTypeConstant
 
     @Override
     public int callHashCode(Frame frame, ObjectHandle hValue, int iReturn) {
-        TypeConstant typeV = hValue.getType();
+        TypeConstant typeV = frame.runtimeTypeOf(hValue);
 
-        TypeConstant type1 = m_constType1;
+        TypeConstant type1 = frame.runtimeConstant(m_constType1);
         if (typeV.isA(type1)) {
             return type1.callHashCode(frame, hValue, iReturn);
         }
 
-        TypeConstant type2 = m_constType2;
+        TypeConstant type2 = frame.runtimeConstant(m_constType2);
         if (typeV.isA(type2)) {
             return type2.callHashCode(frame, hValue, iReturn);
         }

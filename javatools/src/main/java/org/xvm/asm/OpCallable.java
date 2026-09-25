@@ -492,6 +492,11 @@ public abstract class OpCallable extends Op {
         TypeConstant    typeParent  = hParent.getComposition().getInceptionType().removeAccess();
         TypeConstant    typeTarget;
 
+        // The parent may be a shared value whose composition belongs to an ancestor. Preserve
+        // its inception type, but construct the child descriptor in this frame's context.
+        typeParent = frame.f_context.getContainer().importSharedType(
+                typeParent, hParent.getComposition().getContainer());
+
         if (structChild.isVirtualChild()) {
             typeTarget = pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName());
             if (typeChild != null) {
@@ -509,7 +514,7 @@ public abstract class OpCallable extends Op {
         } else if (typeChild == null) {
             typeTarget = structChild.isInnerChild()
                     ? pool.ensureInnerChildTypeConstant(typeParent,
-                        (ClassConstant) structChild.getIdentityConstant())
+                        frame.runtimeConstant((ClassConstant) structChild.getIdentityConstant()))
                     : structChild.getCanonicalType(pool);
         } else {
             typeTarget = typeChild;

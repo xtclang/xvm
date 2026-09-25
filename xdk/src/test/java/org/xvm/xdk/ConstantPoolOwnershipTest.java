@@ -72,7 +72,7 @@ class ConstantPoolOwnershipTest {
     private static final EmbeddingSupport COMPILER = EmbeddingSupport.instance().configure(repository(), null);
 
     @ParameterizedTest
-    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x", "RuntimeConstruction.x"})
+    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x", "RuntimeConstruction.x", "MetadataQueries.x"})
     @Timeout(60)
     void ownershipProgramsRunInIndependentApplications(String source) throws Exception {
         runOwnershipProgram(source, false);

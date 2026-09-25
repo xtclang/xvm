@@ -880,7 +880,11 @@ public class xRTDelegate
 
         @Override
         public boolean checkAssign(ObjectHandle hValue) {
-            return hValue.getType().isA(getType().getParamType(0));
+            // Shared elements can come from an ancestor composition. Compare both types in the
+            // array's owner, using the value's actual owner to validate the sharing boundary.
+            Container owner = getComposition().getContainer();
+            TypeConstant type = owner.importSharedType(hValue.getType(), hValue.getComposition().getContainer());
+            return type.isA(getType().getParamType(0));
         }
 
         @Override

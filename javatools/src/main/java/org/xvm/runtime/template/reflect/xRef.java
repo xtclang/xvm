@@ -192,6 +192,9 @@ public class xRef
                     xException.invalidType(frame, "Unsupported type: " + type.getValueString()));
         }
 
+        // This is the ordinary shared-class path; keep masked/foreign handling above separate.
+        // The referent's composition is the authority for importing its type into this frame.
+        type = frame.f_context.getContainer().importSharedType(type, hTarget.getComposition().getContainer());
         if (type.isImmutabilitySpecified()) {
             type = type.removeImmutable();
         }
