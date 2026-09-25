@@ -85,8 +85,8 @@ class XdkRetentionTest {
                 timings += System.nanoTime() - started
                 val renamed = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed").get(30, SECONDS)
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
-                val prefix = if (cycle % 2 == 0) "box." else "take("
-                val expected = if (cycle % 2 == 0) "number" else "box"
+                val prefix = listOf("box.", "take(", "take(bo")[cycle % 3]
+                val expected = if (cycle % 3 == 0) "number" else "box"
                 val incomplete = CONSUMER.replace("box) {}", "box) { $prefix }")
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
                 val column = incomplete.lastIndexOf(prefix) + prefix.length
