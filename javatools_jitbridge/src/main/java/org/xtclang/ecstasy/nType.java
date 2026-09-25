@@ -16,12 +16,17 @@ import org.xtclang.ecstasy.text.String;
 import org.xtclang.ecstasy.temporal.Duration;
 import org.xtclang.ecstasy.temporal.Date;
 
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ByteHashCollector;
+
+import static org.xvm.javajit.Builder.NEW;
 
 /**
  * All Ecstasy `Type` types must extend this class.
@@ -85,6 +90,42 @@ public class nType
     @Override
     public Boolean structConstructor(Ctx ctx, Type OuterType, Object outer) {
         throw Exception.$unsupported(ctx, "Type " + $dataType);
+    }
+
+    /**
+     * Native implementation of "conditional Hasher<DataType> hashed()".
+     *
+     * TODO: this is temporary - it needs to be removed here and naturally generated
+     */
+    public boolean hashed$p(Ctx ctx) {
+        ConstantPool pool = ctx.pool();
+        if (!$dataType.isA(pool.typeHashable())) {
+            return false;
+        }
+        if (!$dataType.isSingleUnderlyingClass(true)) {
+            throw Exception.$unsupported(ctx, "Type.hashed() for " + $dataType.getValueString());
+        }
+        if ($dataType.findCallable(pool.sigHashCode()) == null ||
+                $dataType.findCallable(pool.sigEquals()) == null) {
+            return false;
+        }
+
+        TypeConstant hasherType = pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("collections.NaturalHasher"), $dataType);
+        TypeSystem       typeSystem = ctx.container.typeSystem;
+        MethodConstant   ctorId     = hasherType.ensureTypeInfo().findConstructor();
+        java.lang.String newName    = ctorId.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        try {
+            // use the generated factory so the hasher implements the correct specialized interface
+            java.lang.Class<?> hasherClass = typeSystem.loader.loadClass(
+                    hasherType.getCallableJitType().ensureJitClassName(typeSystem));
+            ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, TypeConstant.class)
+                    .invoke(null, ctx, hasherType);
+            return true;
+        } catch (ReflectiveOperationException e) {
+            throw new Exception(ctx).$init(ctx,
+                    "Failed to create a natural hasher for " + $dataType.getValueString(), e);
+        }
     }
 
     // TODO: Stringable methods below are temporary; remove when we can compile Type.x

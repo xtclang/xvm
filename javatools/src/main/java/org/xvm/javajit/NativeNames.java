@@ -30,6 +30,7 @@ public class NativeNames {
 
         reservedMethodName.put("reflect.Ref/get/0", "get");
         reservedMethodName.put("reflect.Ref/peek/0", "peek");
+        reservedMethodName.put("reflect.Type/hashed/0", "hashed"); // TEMPORARY
         reservedMethodName.put("reflect.Var/set/1", "set");
 
         reservedMethodName.put("Boolean/not/0",    "not");
