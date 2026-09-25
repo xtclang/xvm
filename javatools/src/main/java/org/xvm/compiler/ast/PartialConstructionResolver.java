@@ -16,6 +16,7 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.compiler.CursorBinding;
+import org.xvm.compiler.Token.Id;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
@@ -54,6 +55,12 @@ final class PartialConstructionResolver {
         }
         var methods = targets.stream().flatMap(target -> target.findMethods("construct", -1,
                         MethodKind.Constructor).stream()
+                // Brackets select the size slot of the real fixed-size array constructor.
+                // Other Array overloads (copy, mutability, capacity) are not dimension syntax.
+                .filter(method -> site.getOperator().getId() != Id.L_SQUARE
+                        || trial.type instanceof ArrayTypeExpression array
+                            && target.getMethodById(method).getTopmostMethodStructure(target)
+                                    .getIdentityConstant().equals(array.getSupplyConstructor()))
                 .filter(method -> anonymous || target.getType().getAccess() == Access.PRIVATE
                         || target.getMethodById(method).isVisible(ctx.getThisClassId()))
                 // A class shell's generated default is only a placeholder for superclass

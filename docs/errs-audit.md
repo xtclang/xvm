@@ -642,8 +642,8 @@ constructors with normal compilation. Repaired programs exercise read-only and m
 cursor attempts must have one owned class shell, no capture bindings, no method AST or operations,
 original source text and exactly the cursor boundary diagnostic.
 
-The probe does not validate the entire anonymous body or claim a selected overload. Cursors in
-array dimensions and unfinished declaration headers remain next. See
+The probe does not validate the entire anonymous body or claim a selected overload. Array cursors
+were the next item at this checkpoint and are covered by C19 below; unfinished headers remain. See
 [C18/L31](errs-integration-plan.md#anonymous-constructor-cursor-support) for verification and extraction.
 
 Validation: 473 executed Java tests, 986 executed LSP tests, 38 packaged-stdio tests and all 94
@@ -651,3 +651,25 @@ VS Code editor cases pass. Existing skips remain 40 Java/three LSP; no editor or
 The retention workload releases all 2,421 observed objects. The integration record preserves the
 initial startup timeout, the corrected fixture-anchor collision and final report paths. It also
 tracks the observed X76 semantic-token overlap warning as a separate L12 follow-up.
+
+## Array dimension cursor audit (2026-09-25)
+
+C19/L34 is in the working tree after `3f46568af`. Type parsing previously read size expressions
+to count dimensions before rewinding for `NewExpression`; a cursor could unwind before its owner
+existed. The existing listener branch now isolates that lookahead, and the owning bracket parse
+retains the cursor. A non-deduplicating collector checks one diagnostic, so ErrorList deduplication
+cannot hide a duplicate. FIRST_ERROR and cancellation prevent semantic results.
+
+Array candidates must compare the underlying declaration identity: TypeInfo's specialized method
+ID differs from `ArrayTypeExpression.getSupplyConstructor()`. Resolving that existing declaration
+avoids hard-coded Int/type-fit rules and unrelated Array overloads. Fourteen adapter cases cover
+empty/prefix/complete size slots, missing brackets, following suppliers, narrowing/readability,
+properties, invalidation, invalid literals and unsupported multidimensional forms. Following
+supplier expressions are consumed for parser recovery but are outside the prefix fitting proof.
+Ordinary compilation still requires a supplier for String, which has no element default.
+
+No new public API component, AST cache or clone remapping is needed. The embedding test checks
+the compiler-established source parentage; the parser-only test checks independent cloned children
+because parentage is introduced later in the pipeline. Shared X90 and packaged stdio exercise the
+original UTF-16 edit range and diagnostic repair. Final validation is recorded under
+[C19/L34](errs-integration-plan.md#array-dimension-cursors).

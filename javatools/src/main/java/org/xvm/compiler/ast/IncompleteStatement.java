@@ -95,7 +95,7 @@ public final class IncompleteStatement extends Statement {
         return target;
     }
 
-    /** The dot or opening parenthesis, at its original source position. */
+    /** The dot or opening call/dimension delimiter, at its original source position. */
     public Token getOperator() {
         return operator;
     }
@@ -131,7 +131,8 @@ public final class IncompleteStatement extends Statement {
     }
 
     public boolean isCall() {
-        return operator.getId() == Id.L_PAREN || operator.getId() == Id.ASYNC_PAREN;
+        return operator.getId() == Id.L_PAREN || operator.getId() == Id.ASYNC_PAREN
+                || operator.getId() == Id.L_SQUARE && target instanceof NewExpression;
     }
 
     public boolean isNameCompletion() {
@@ -222,7 +223,7 @@ public final class IncompleteStatement extends Statement {
     @Override
     public String toString() {
         String syntax = isNameCompletion() ? getMemberName().map(Token::getValueText).orElse("")
-                : target + (isCall() ? "(" + arguments
+                : target + (isCall() ? (operator.getId() == Id.L_SQUARE ? "[" : "(") + arguments
                         : "." + getMemberName().map(Token::getValueText).orElse(""));
         return syntax + " <incomplete>";
     }
