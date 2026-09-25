@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.IncompleteDeclarationStatement
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
@@ -102,6 +103,13 @@ internal object XdkSymbols {
 
             is PropertyDeclarationStatement -> {
                 SymbolInfo.of(node.name, SymbolKind.PROPERTY, rangeOf(uri, node))
+            }
+
+            is IncompleteDeclarationStatement -> {
+                node.nameToken.orElse(null)?.let {
+                    val kind = if (node.kind == IncompleteDeclarationStatement.Kind.METHOD) SymbolKind.METHOD else SymbolKind.PROPERTY
+                    SymbolInfo.of(it.valueText, kind, rangeOf(uri, node))
+                }
             }
 
             else -> {
