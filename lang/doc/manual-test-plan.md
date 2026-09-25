@@ -1058,6 +1058,24 @@ are compiler-output checks that the editor UI cannot establish. To run them with
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
+### Automated IntelliJ run
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+The initial Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate
+features disabled. It reads the fixtures below and exercises startup, X2, X4's definition
+portion, X7, X45–X46, CFG1's clear/restore transition and 7a.8. It drives editor actions and
+checks the diagnostics and completion items delivered to IntelliJ. Remaining rows and the
+Problems tool-window layout are not yet automated in IntelliJ; VS Code's complete case list
+must not be interpreted as IntelliJ coverage.
+
+Results are under `lang/intellij-plugin/build/reports/compiler-playbook/run-*/results.json`.
+`ide-paths.txt` identifies the separate IDE profile/log directory. A graphical desktop is
+required. See the [IntelliJ test and configuration instructions](../intellij-plugin/README.md#compiler-playbook-in-intellij).
+
 ### Launch and confirm the backend
 
 From the repository root, choose one command. Keep `-Plsp.adapter=compiler` on the editor launch
@@ -1407,7 +1425,10 @@ this to workspace settings (`.vscode/settings.json`):
 
 No restart is needed. Relative URIs require one workspace folder; use absolute file URIs for
 multi-root workspaces. Other clients can supply `initializationOptions.xtcCompiler` or the
-`xtc.compiler` configuration section; IntelliJ has no dedicated source-graph settings UI yet.
+`xtc.compiler` configuration section. In IntelliJ, use LSP4IJ's XTC Language Server
+**Configuration** JSON with nested `xtc.compiler.sourceModules`, as shown in the
+[IntelliJ instructions](../intellij-plugin/README.md#compiler-source-module-configuration).
+These are IDE-wide server settings; there is no dedicated XTC project graph UI.
 Automatic discovery remains separate. An embedding host can still register the graph directly:
 
 ```kotlin

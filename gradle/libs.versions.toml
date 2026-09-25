@@ -73,7 +73,7 @@ lang-node-gradle-plugin = "7.1.0"
 # =============================================================================
 # Lang tooling - IntelliJ plugin
 # =============================================================================
-lang-intellij-ide = "2026.1"
+lang-intellij-ide = "2026.2.3"
 lang-intellij-platform-gradle-plugin = "2.19.0"
 # JUnit 4.x is required at RUNTIME by the IntelliJ Platform test harness
 # (com.intellij.testFramework). IntelliJ's test infrastructure internally depends on JUnit 4
@@ -81,7 +81,11 @@ lang-intellij-platform-gradle-plugin = "2.19.0"
 # on the testRuntimeOnly classpath, IntelliJ platform tests fail with ClassNotFoundException
 # for org.junit.Test or org.junit.runners.BlockJUnit4ClassRunner.
 lang-intellij-junit4-compat = "4.13.2"
-lang-intellij-lsp4ij = "0.19.4"
+lang-intellij-lsp4ij = "0.21.0"
+# Test launcher libraries aligned with the Starter framework for the selected IDE.
+lang-intellij-kodein = "7.26.1"
+lang-intellij-coroutines = "1.10.2-intellij-2"
+lang-intellij-service-messages = "2024.07"
 
 # =============================================================================
 # Lang tooling - Tree-sitter native library
@@ -208,6 +212,9 @@ lang-slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "lang-slf
 # =============================================================================
 # JUnit 4 runtime compat for IntelliJ Platform test harness (see version comment above)
 lang-intellij-junit4-compat = { module = "junit:junit", version.ref = "lang-intellij-junit4-compat" }
+lang-intellij-kodein = { module = "org.kodein.di:kodein-di-jvm", version.ref = "lang-intellij-kodein" }
+lang-intellij-coroutines = { module = "org.jetbrains.intellij.deps.kotlinx:kotlinx-coroutines-core-jvm", version.ref = "lang-intellij-coroutines" }
+lang-intellij-service-messages = { module = "org.jetbrains.teamcity:serviceMessages", version.ref = "lang-intellij-service-messages" }
 
 # =============================================================================
 # Lang tooling - Tree-sitter native library

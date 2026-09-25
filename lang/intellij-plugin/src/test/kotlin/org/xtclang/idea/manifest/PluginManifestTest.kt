@@ -105,6 +105,24 @@ class PluginManifestTest {
     }
 
     @Test
+    @DisplayName("requires only Community platform plugins and LSP4IJ")
+    fun communityDependencies() {
+        val elements = pluginXml.getElementsByTagName("depends")
+        val required =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .filter { it.getAttribute("optional") != "true" }
+                .map { it.textContent.trim() }
+        assertThat(required).containsExactlyInAnyOrder(
+            "com.intellij.modules.platform",
+            "com.intellij.modules.java",
+            "com.intellij.gradle",
+            "org.jetbrains.plugins.textmate",
+            "com.redhat.devtools.lsp4ij",
+        )
+    }
+
+    @Test
     @DisplayName("LSP server registration points at xtcLanguageServer and maps *.x")
     fun lspServerWiring() {
         // The LSP server element lives inside <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">.

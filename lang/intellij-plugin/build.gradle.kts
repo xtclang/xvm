@@ -6,6 +6,7 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 import java.time.Instant
@@ -342,6 +343,15 @@ val lspVersionProperties =
         }
     }
 
+val integrationTestSourceSet =
+    sourceSets.create("integrationTest") {
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
+    }
+
+configurations[integrationTestSourceSet.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[integrationTestSourceSet.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+
 dependencies {
     // Test dependencies
     testImplementation(platform(libs.junit.bom))
@@ -349,6 +359,12 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
     testRuntimeOnly(libs.lang.intellij.junit4.compat)
     testImplementation(libs.assertj)
+    add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.kodein)
+    add(integrationTestSourceSet.implementationConfigurationName, libs.lang.intellij.coroutines)
+    // The standalone Starter JVM has no IDE classloader to supply Kotlin's standard library.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, kotlin("stdlib"))
+    // Starter 262 reports run metadata through this API even for local, non-TeamCity runs.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.intellij.service.messages)
 
     // LSP server fat JAR for out-of-process execution
     lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
@@ -374,6 +390,7 @@ dependencies {
                 .get(),
         )
         pluginVerifier()
+        testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
     }
 
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
@@ -852,3 +869,36 @@ val test =
             events("failed")
         }
     }
+
+// Launch the packaged plugin in an isolated IDE using JetBrains' Starter/Driver test task.
+// This suite is opt-in; ordinary plugin tests do not open an IDE window.
+intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
+    task {
+        description = "Run the compiler playbook's IntelliJ acceptance cases in an isolated IDE"
+        testClassesDirs = integrationTestSourceSet.output.classesDirs
+        classpath = integrationTestSourceSet.runtimeClasspath
+        useJUnitPlatform()
+        systemProperty("xtc.playbook.ideVersion", ideVersion)
+        systemProperty(
+            "xtc.playbook.lsp4ijVersion",
+            libs.versions.lang.intellij.lsp4ij
+                .get(),
+        )
+        systemProperty("xtc.playbook.adapter", providers.gradleProperty("lsp.adapter").getOrElse("treesitter"))
+        inputs.file(rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"))
+        systemProperty(
+            "xtc.playbook.manual",
+            rootProject.layout.projectDirectory
+                .file("doc/manual-test-plan.md")
+                .asFile.absolutePath,
+        )
+        systemProperty(
+            "xtc.playbook.reports",
+            layout.buildDirectory
+                .dir("reports/compiler-playbook")
+                .get()
+                .asFile.absolutePath,
+        )
+        testLogging.events("passed", "skipped", "failed")
+    }
+}
