@@ -11,14 +11,15 @@ Continue work on `xtclang/xvm`, branch **`lagergren/constant-pool-state-separati
 The user wants a complete, enforced separation of definition images, runtime descriptors, semantic
 metadata, and execution state, implemented in reviewable stages and separate commits.
 
-**Scopes 1–4 are implemented within their documented boundaries. Scope 5 is in progress.**
-Captured annotation values now live in their container's constant heap, behind non-transferable
-descriptor tokens. The reflection migration passes five focused frozen interpreter/ownership
-cases, including generic/child constructors, properties, bound functions, foreign dispatch and
-annotation source rejection. Finish the file-store/file-node materialization audit and final
-verification; the current remaining reproduction reaches frozen metadata while parsing file
-timestamps. See the scope-5 architecture record and current local changes. Preserve the
-service-owned method execution boundary and same-image regressions established in scope 4.
+**Scopes 1–5 are implemented and verified within their documented boundaries.**
+Captured annotation values now live in their container's constant heap, behind
+non-transferable descriptor tokens. Reflection values have requesting owners, and foreign Type
+handles retain their exact source execution. File-system definitions no longer retain handles;
+their native adapters select constructors from each application's prepared declarations. All six
+focused frozen reflection/file-system cases pass without skips. The architecture record audits
+remaining classloader-wide native values and does not claim independent native-root isolation.
+Scope 6 is the next activation gate; it has not been enabled. Preserve the service-owned method
+execution boundary and same-image regressions established in scopes 4 and 5.
 Continue the existing architecture; do not broaden this into the embedding, Gradle, error-listener
 or JIT projects.
 
@@ -47,8 +48,10 @@ The original handoff commit was **`f63473dfd`**. Scope 3 is **`b7c6f5378`** (sta
 preparation) and **`2087e376a`** (delegation/accessor ownership). Scope 4 starts with
 **`703ed5f40`** (service-owned initialization); the following decoded-code/layout commit updates
 this prompt. Check the actual local and remote tips when resuming; this file cannot contain its
-own commit hash. The user requested a push on 2026-09-25; scopes 3 and 4 are now published through
-`8d857af9e`. Subsequent scope-5 work is local. Do not push it or open a PR without a new request.
+own commit hash. Scopes 3 and 4 were published through `8d857af9e`. The user also requested
+publication of scope 5 on 2026-09-25, including the captured-value and reflection commits below
+and the following file-system/native-audit commit. Check the actual remote tip when resuming.
+Do not push subsequent work or open a PR without a new request.
 
 ## Essential references and branch boundaries
 
@@ -59,7 +62,8 @@ Read these in order:
    "Generated methods and other freeze blockers", "Remaining commits before frozen activation",
    "Scope-1 completion: ordinary runtime destinations", "Scope 2: owner-specific semantic metadata",
    "Scope 3: stable preparation and generated executables", and
-   "Scope 4: compiled method execution ownership".
+   "Scope 4: compiled method execution ownership", and "Scope 5: reflection and native-value
+   ownership".
    Earlier sections are historical snapshots; use the later completion records for current status.
 3. [Ownership audit](doc/constant-pool-ownership.md): original same-pool, cross-pool and ambient-pool
    fixes, singleton semantics, diagnostic handling, evidence, and explicit limits.
@@ -89,8 +93,8 @@ larger branch at `plugin/doc/plans/embedded-runtime-pr-plan.md`; it is not this 
 - Keep distinct architectural changes in separate commits. Update the existing architecture and
   ownership documents as stages complete, explaining ownership, why each change is needed, tests,
   and remaining limits. This root handoff file was explicitly requested.
-- Follow `AGENTS.md` for remote operations. The requested scope-3/4 push is complete through
-  `8d857af9e`. Do not push subsequent work or open a PR without a new user request.
+- Follow `AGENTS.md` for remote operations. The user requested publication through scope 5.
+  Do not push subsequent work or open a PR without a new user request.
 - Use modern Java 25 where it improves touched code: records, generics, immutable collections,
   obvious `var` assignments, and suitable `Lazy` / `Lazy.Bound` holders. No new Hungarian field
   names, unnecessary fully qualified names, or arrays where a collection is the better API.
@@ -161,6 +165,9 @@ Important APIs and rules:
 | `b7c6f5378` | Prepared template-defined native rebases before frozen application execution |
 | `2087e376a` | Owned generated delegation/accessor bodies in runtime descriptor contexts |
 | `703ed5f40` | Moved method singleton-initialization completion into each executing service |
+| `8d857af9e` | Owned decoded method bodies and frame layouts in each service; pushed |
+| `40743698e` | Owned captured annotation values in container heaps |
+| `1078cf248` | Owned reflective values and foreign dispatch in execution contexts |
 
 `2087e376a` gives late delegation/accessor bodies a `RuntimeMethods` owner in
 the runtime descriptor context. It extends `RuntimeMethodStructure` with independent parameters
@@ -365,13 +372,56 @@ cases passed without skips**, including 28 ownership cases. All new scope-4 test
 `spotlessCheck` and `git diff --check` passed. See the architecture plan's scope-4 validation
 record for commands and the corrected older copy test.
 
-## Work that still follows scope 4
+## Scope 5: implementation and reproduction record
 
-5. Finish foreign/constructor/property/function reflection and captured annotation ownership; audit
-   file-store/file-node handles and classloader-wide native values. Shared core types and singleton
-   ancestry do not make every native static cache safe across runtimes.
-6. Enable freezing at activation only after the interpreter workloads pass with guards enabled,
-   including cold metadata, delegation, reflection, independent contexts and unchanged images.
+`40743698e` separates capture tokens from their live values. `ConstHeap` owns captured annotation
+arguments, and exact-context resolution rejects unknown or foreign tokens, including tokens nested
+in otherwise shared types. Semantic clears retain captures. Three self-contained Java regressions
+cover these rules, with 24 passing focused Java cases and no skips at that checkpoint.
+
+`1078cf248` moves runtime reflection helpers, signature results and empty member arrays into the
+requesting descriptor/composition tables and heap. Foreign Type handles retain their exact source;
+reflective operations require an owner that can import every operand before constructing a result.
+Five focused XDK cases pass without skips. Three interpreter programs exercise generic/child
+constructors, properties and Ref round trips, bound methods/functions, annotations and foreign
+reflection, each in two applications over the same frozen image. Explicit source-dispatch and
+helper tests cover metadata clears and same-image ambiguity/rejection.
+
+The following file-system commit removes unused handle slots from FSNodeConstant/FileStoreConstant
+and native-root constructor caches from CPFile/CPDirectory/CPFileStore. Materialization now selects
+the composition's prepared application declaration. Cold timestamp parsing also exposed literal
+construction, diagnostic formatting, function compatibility and operator argument comparisons
+using the wrong owner; those paths now adopt or import before deriving/comparing runtime types.
+The new file-system test materializes file, directory and store values in two applications over
+one frozen image, checks their owners and distinct identities, and verifies retained heap values
+after metadata clears. All six focused XDK scope-5 cases pass without skips.
+
+The architecture plan's native-state table distinguishes migrated application values from remaining
+bootstrap/native-root static bindings, core values, compiler-template helpers and native callback
+arrays. It is an audit, not a claim that multiple independent NativeContainers can run concurrently
+without interference. The native root is not frozen, and existing unimplemented reflection
+features remain unsupported. No ownership guard was relaxed to make these tests pass.
+
+Final scope-5 verification on 2026-09-25 used:
+
+```sh
+env RUN_INTEGRATION_TESTS=true ./gradlew :javatools:test --rerun \
+    :xdk:test --rerun spotlessCheck --console=plain
+git diff --check
+```
+
+JUnit XML reports **538 Java cases: 502 passed, 36 existing skips, no failures/errors**; all
+**59 XDK cases passed without skips**, including 33 ConstantPoolOwnershipTest cases and the new
+FileSystemConstantOwnershipTest. All new scope-5 cases executed. The distribution rebuilt,
+`spotlessCheck` and whitespace checks passed, and Gradle stored the configuration cache.
+The user requested publication of all three scope-5 commits after verification.
+
+## Work that follows scope 5
+
+Scope 6 enables freezing at activation only after the interpreter workloads pass with guards
+enabled, including cold metadata, delegation, reflection, independent contexts and unchanged
+images. It must respect the native-root limits recorded above; a successful bounded application
+audit does not automatically authorize wider runtime sharing.
 
 Optional wider sharing and image-copy removal require their own correctness and retention evidence.
 General error-listener migration, embedding/Gradle/shutdown work and JIT execution remain separate.

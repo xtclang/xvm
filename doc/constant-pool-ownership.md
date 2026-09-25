@@ -806,8 +806,7 @@ Scope 5 now gives captured annotation arguments an execution owner. `HandleConst
 opaque token; the captured handle lives in `ConstHeap`, survives semantic clears, and can be
 resolved only by its capturing container. Same-image sibling contexts and explicit shared-module
 imports cannot acquire the token's value. The [scope-5 record](constant-pool-architecture-plan.md#scope-5-reflection-and-native-value-ownership)
-records the reproduced guard failure and the 24 passing focused Java cases. Broader reflection
-and the native-state audit remain in progress.
+records the reproduced guard failure and the 24 passing focused Java cases at that checkpoint.
 
 The following reflection migration gives runtime signature/array/map helpers and MethodTemplate
 handles explicit requesting owners. Foreign Type handles retain their exact source execution;
@@ -817,3 +816,18 @@ function introspection waits for annotated-function construction, and captured a
 are exercised through the interpreter. Cold shared-value and union-metadata destinations are
 corrected without weakening the descriptor or image guards. See the scope-5 architecture record
 for the test cases, retention policy and final verification.
+
+File-system constants no longer retain handle fields or expose handle getter/setter APIs. The
+executing heap remains their materialization owner, and native adapters now obtain constructors
+from each composition's prepared application declaration. The frozen materialization regression
+exposed additional cold timestamp/operator destinations; they now adopt or import their operands
+before derived type queries and comparisons. Six focused XDK scope-5 cases pass without skips.
+
+The scope-5 native-state table records remaining classloader-wide template bindings, core values,
+compiler-template helpers and callback arrays. These retain a bootstrap/native-root restriction;
+the audit does not establish independent native-root isolation or enable default frozen activation.
+
+Final scope-5 verification: **538 Java cases, 502 passed and 36 existing skips; 59 XDK cases
+passed without skips; no failures or errors**. All new scope-5 cases executed. The distribution
+rebuilt, `spotlessCheck` and `git diff --check` passed. Commands and exact coverage are recorded
+in the architecture plan; scope 6 remains the separate activation gate.

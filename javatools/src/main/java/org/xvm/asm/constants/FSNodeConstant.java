@@ -11,8 +11,6 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.runtime.ObjectHandle;
-
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 
@@ -209,27 +207,6 @@ public class FSNodeConstant
         return (FSNodeConstant) m_constData;
     }
 
-    // ----- run-time support  ---------------------------------------------------------------------
-
-    /**
-     * @return an ObjectHandle representing this singleton value
-     */
-    public ObjectHandle getHandle() {
-        return m_handle;
-    }
-
-    /**
-     * Set the handle for this singleton's value.
-     *
-     * @param handle  the corresponding handle
-     */
-    public void setHandle(ObjectHandle handle) {
-        assert handle != null;
-        assert m_handle == null;
-
-        m_handle = handle;
-    }
-
     // ----- ValueConstant methods -----------------------------------------------------------------
 
     @Override
@@ -303,14 +280,6 @@ public class FSNodeConstant
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected FSNodeConstant adoptedBy(ConstantPool pool) {
-        var copy = (FSNodeConstant) super.adoptedBy(pool);
-        // The destination runtime constructs its own handle from the copied definition.
-        copy.m_handle = null;
-        return copy;
-    }
 
     @Override
     protected void registerConstants(ConstantPool pool) {
@@ -414,9 +383,4 @@ public class FSNodeConstant
      * </li></ul>
      */
     private Constant m_constData;
-
-    /**
-     * The ObjectHandle representing this singleton's value.
-     */
-    private transient ObjectHandle m_handle;
 }

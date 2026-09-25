@@ -29,26 +29,22 @@ public class xCPDirectory
     }
 
     @Override
-    public void initNative() {
-        s_constructor = getStructure().findConstructor(f_container.getConstantPool().typeObject());
-    }
-
-    @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof FSNodeConstant constDir && constant.getFormat() == Format.FSDir) {
             TypeComposition clz    = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeDirectory());
             GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(s_constructor));
+
+            // The constructor must belong to the composition's prepared application declaration.
+            ClassStructure structure = (ClassStructure) clz.getInceptionType()
+                    .getSingleUnderlyingClass(true).getComponent();
+            MethodStructure constructor = structure.findConstructor(frame.poolContext().typeObject());
+            ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(constructor));
             ahVar[0] = new ConstantHandle(constDir);
 
-            return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);
+            return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
         }
 
         return super.createConstHandle(frame, constant);
     }
-
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static MethodStructure s_constructor;
 }

@@ -1835,7 +1835,8 @@ public abstract class ClassTemplate
      * @return a call chain for the specified op and argument or null if none exists
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sName, String sOp, ObjectHandle hArg) {
-        TypeInfo info = hTarget.getType().ensureTypeInfo();
+        Container container = hTarget.getComposition().getContainer();
+        TypeInfo  info      = hTarget.getType().ensureTypeInfo();
 
         Set<MethodConstant> setMethods = info.findOpMethods(sName, sOp, hArg == null ? 0 : 1);
         switch (setMethods.size()) {
@@ -1846,7 +1847,8 @@ public abstract class ClassTemplate
             MethodConstant    idMethod = setMethods.iterator().next();
             SignatureConstant sig      = idMethod.getSignature();
             if (hArg != null) {
-                TypeConstant typeArg   = hArg.getType();
+                TypeConstant typeArg   = container.importSharedType(hArg.getType(),
+                                            hArg.getComposition().getContainer());
                 TypeConstant typeParam = sig.getRawParams()[0];
 
                 if (!typeArg.isA(typeParam)) {
@@ -1862,7 +1864,8 @@ public abstract class ClassTemplate
         default: {
             if (hArg != null) {
                 SignatureConstant sigBest = null;
-                TypeConstant      typeArg = hArg.getType();
+                TypeConstant      typeArg = container.importSharedType(hArg.getType(),
+                                                hArg.getComposition().getContainer());
                 for (MethodConstant idMethod : setMethods) {
                     SignatureConstant sig       = idMethod.getSignature();
                     TypeConstant      typeParam = sig.getRawParams()[0];
@@ -1912,8 +1915,9 @@ public abstract class ClassTemplate
      * @return a call chain for the specified op and arguments or null if none exists
      */
     public CallChain findOpChain(ObjectHandle hTarget, String sOp, ObjectHandle[] ahArg) {
-        TypeInfo info  = hTarget.getType().ensureTypeInfo();
-        int      cArgs = ahArg.length;
+        Container container = hTarget.getComposition().getContainer();
+        TypeInfo  info      = hTarget.getType().ensureTypeInfo();
+        int       cArgs     = ahArg.length;
 
         Set<MethodConstant> setMethods = info.findOpMethods(sOp, sOp, cArgs);
         switch (setMethods.size()) {
@@ -1932,7 +1936,8 @@ public abstract class ClassTemplate
 
                 for (int i = 0; i < cArgs; i++) {
                     ObjectHandle hArg      = ahArg[i];
-                    TypeConstant typeArg   = hArg.getType();
+                    TypeConstant typeArg   = container.importSharedType(hArg.getType(),
+                                                hArg.getComposition().getContainer());
                     TypeConstant typeParam = sig.getRawParams()[i];
 
                     if (!typeArg.isA(typeParam)) {

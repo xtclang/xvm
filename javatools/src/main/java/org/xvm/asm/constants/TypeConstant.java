@@ -4407,7 +4407,7 @@ public abstract class TypeConstant
                     } else if (fSelf && bodyContribTail.isOverride() &&
                             !constId.equals(pool.clzObject())) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                                methodContrib.getIdentity().getPathString(),
+                                pool.register(methodContrib.getIdentity()).getPathString(),
                                 constId.getValueString());
                     } else if (!methodContrib.isFunction() && contribSource.OnTop) {
                         // ignore private methods that came from any "onTop" contribution
@@ -4470,7 +4470,7 @@ public abstract class TypeConstant
                         mapVirtMods.put(nidContrib, methodContrib);
                     } else if (fSelf) {
                         log(errs, Severity.ERROR, VE_SUPER_MISSING,
-                                methodContrib.getIdentity().getPathString(),
+                                pool.register(methodContrib.getIdentity()).getPathString(),
                                 constId.getValueString());
                         // we've reported an error already, but put the method in as-is just in case
                         // anything downstream is depending on it

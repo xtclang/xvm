@@ -13,9 +13,9 @@ import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.runtime.ObjectHandle;
-
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConstantOwnershipTest {
     @Test
-    void adoptingDefinitionsDoesNotCopyExecutionHandles() {
+    void adoptingFileSystemDefinitionsPreservesTheirContents() {
         var source = new FileStructure("Source");
         var pool = source.getConstantPool();
         var destination = new FileStructure(source).getConstantPool();
@@ -31,14 +31,15 @@ class ConstantOwnershipTest {
         var node = pool.register(new FSNodeConstant(pool, "file", epoch, epoch, new byte[] {1}));
         var dir = pool.register(new FSNodeConstant(pool, "dir", epoch, epoch, new FSNodeConstant[] {node}));
         var store = pool.register(new FileStoreConstant(pool, "dir", dir));
-        var handle = new ObjectHandle(null) {};
-        node.setHandle(handle);
-        store.setHandle(handle);
-
-        assertNull(destination.register(node).getHandle());
-        assertNull(destination.register(store).getHandle());
-        assertSame(handle, node.getHandle());
-        assertSame(handle, store.getHandle());
+        var copiedNode = destination.register(node);
+        var copiedStore = destination.register(store);
+        assertSame(destination, copiedNode.getConstantPool());
+        assertSame(destination, copiedStore.getConstantPool());
+        assertNotSame(node, copiedNode);
+        assertNotSame(store, copiedStore);
+        assertArrayEquals(node.getFileBytes(), copiedNode.getFileBytes());
+        assertEquals(store.getPath(), copiedStore.getPath());
+        assertSame(copiedNode, copiedStore.getValue().getDirectoryContents()[0]);
     }
 
     @Test

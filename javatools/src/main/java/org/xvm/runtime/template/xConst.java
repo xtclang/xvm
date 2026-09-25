@@ -149,7 +149,7 @@ public class xConst
         Literal:
         if (constant instanceof LiteralConstant constLiteral) {
             ConstantPool    pool      = frame.poolContext();
-            Container       container = f_container;
+            Container       container = frame.f_context.f_container;
             TypeComposition clz;
             MethodStructure constructor;
             switch (constant.getFormat()) {

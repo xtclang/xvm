@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.runtime.ObjectHandle;
 import org.xvm.util.Hash;
 
 import static org.xvm.util.Handy.readMagnitude;
@@ -94,27 +93,6 @@ public class FileStoreConstant
         return m_constDir;
     }
 
-    // ----- run-time support  ---------------------------------------------------------------------
-
-    /**
-     * @return an ObjectHandle representing this singleton value
-     */
-    public ObjectHandle getHandle() {
-        return m_handle;
-    }
-
-    /**
-     * Set the handle for this singleton's value.
-     *
-     * @param handle  the corresponding handle
-     */
-    public void setHandle(ObjectHandle handle) {
-        assert handle != null;
-        assert m_handle == null;
-
-        m_handle = handle;
-    }
-
     // ----- Constant methods ----------------------------------------------------------------------
 
     @Override
@@ -157,14 +135,6 @@ public class FileStoreConstant
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
-
-    @Override
-    protected FileStoreConstant adoptedBy(ConstantPool pool) {
-        var copy = (FileStoreConstant) super.adoptedBy(pool);
-        // The destination runtime constructs its own handle from the copied definition.
-        copy.m_handle = null;
-        return copy;
-    }
 
     @Override
     protected void registerConstants(ConstantPool pool) {
@@ -214,9 +184,4 @@ public class FileStoreConstant
      * The FSNodeConstant for the root directory of the FileStore.
      */
     private FSNodeConstant m_constDir;
-
-    /**
-     * The ObjectHandle representing this singleton's value.
-     */
-    private transient ObjectHandle m_handle;
 }

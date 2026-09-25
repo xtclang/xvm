@@ -3143,7 +3143,7 @@ public class ConstantPool
      * @return one of {@link Relation} constants
      */
     public Relation checkFunctionCompatibility(TypeConstant typeLeft, TypeConstant typeRight) {
-        IdentityConstant idRight = typeRight.getSingleUnderlyingClass(true);
+        IdentityConstant idRight = register(typeRight.getSingleUnderlyingClass(true));
         if (!idRight.equals(clzFunction())) {
             // compare the "naked" contribution
             ClassStructure clzRight = (ClassStructure) idRight.getComponent();

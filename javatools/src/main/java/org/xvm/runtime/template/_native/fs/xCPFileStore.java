@@ -3,7 +3,6 @@ package org.xvm.runtime.template._native.fs;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constant.Format;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
@@ -41,10 +40,6 @@ public class xCPFileStore
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
-        s_constructor = getStructure().findConstructor(pool.typeString(), pool.typeObject());
-
         markNativeMethod("loadNode"     , null, null);
         markNativeMethod("loadDirectory", null, null);
         markNativeMethod("loadFile"     , null, null);
@@ -58,12 +53,18 @@ public class xCPFileStore
             TypeComposition clz = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeFileStore());
 
-            GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(s_constructor));
+            GenericHandle hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
+
+            // The constructor must belong to the composition's prepared application declaration.
+            ClassStructure structure = (ClassStructure) clz.getInceptionType()
+                    .getSingleUnderlyingClass(true).getComponent();
+            MethodStructure constructor = structure.findConstructor(
+                    frame.poolContext().typeString(), frame.poolContext().typeObject());
+            ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(constructor));
             ahVar[0] = xString.makeHandle(constStore.getPath());
             ahVar[1] = new ConstantHandle(constStore.getValue());
 
-            return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);
+            return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
         }
 
         return super.createConstHandle(frame, constant);
@@ -150,7 +151,4 @@ public class xCPFileStore
         }
     }
 
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static MethodStructure s_constructor;
 }

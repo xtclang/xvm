@@ -830,9 +830,11 @@ path; full frozen activation must not be enabled by default yet.
    Ops, frame layouts and debugger instrumentation belong to the executing service. Same-image
    frozen interpreter regressions verify two applications using the exact same definitions.
    See the scope-4 record for preparation, cold-query, retention and concurrency limits.
-5. Complete foreign/constructor/property/function reflection and captured annotation ownership;
-   audit file-store/file-node handle fields and classloader-wide native values. Read-only constant
-   indices do not decide the lifetime of these values.
+5. **Implemented for the bounded interpreter reflection paths and native-state audit.** Foreign
+   sources, constructors, properties, functions and captured annotation values have explicit
+   requesting/source/heap owners. File-system definitions retain no handles, and their adapters
+   use prepared application constructors. The scope-5 record inventories remaining native-root
+   static state and its limits. Read-only constant indices do not decide these values' lifetimes.
 6. Enable freezing at activation only after the real interpreter programs pass with guards on,
    including cold queries, delegation, reflection, independent containers and unchanged definition
    trees/indices. Until then there is no whole-runtime freeze or universal ownership guarantee.
@@ -1482,3 +1484,66 @@ skips, failures or errors. The three interpreter programs run in two application
 frozen image; their assertions include the cases above. File-system materialization and final
 scope-5 verification remain in progress. This work does not add previously unimplemented
 reflection operations, freeze the native root, or enable default frozen activation.
+
+### File-system definitions and native-state audit
+
+FSNodeConstant and FileStoreConstant no longer have transient handle fields, getter/setter APIs
+or copy-time handle resets. Production materialization already uses ConstHeap; retaining a second,
+unused slot on the definition would leave an invalid ownership mechanism available. The definition
+copy regression now checks copied contents and destination references. FSNodeConstant's derived
+path literal is definition data, not a live file-system handle.
+
+Actual frozen materialization exposed native-root CPFile/CPDirectory/CPFileStore constructors
+running against application compositions. These adapters now select the constructor from the
+composition's prepared declaration, removing their classloader-wide constructor caches. Time/path
+literal construction uses the executing container. A cold method diagnostic also adopts its method
+identity before formatting a signature, preventing diagnostic rendering from normalizing types in
+the frozen definition pool. Function compatibility similarly adopts an underlying class before
+deriving its type. Operator lookup translates shared arguments into the receiver's composition
+owner before comparing them with candidate signatures; the selected chain stays with that receiver.
+
+FileSystemConstantOwnershipTest materializes a file, directory and store in two applications using
+one frozen image. It checks distinct application-owned handles, stable heap values after metadata
+clears, unchanged file bytes and unchanged image constants. It uses the installed distribution
+provided by the XDK task; the test neither requires external files nor silently skips.
+
+The native audit distinguishes the following lifetimes. This table describes the current code;
+it is not permission to share these values across arbitrary native roots.
+
+| State | Current owner and remaining restriction |
+|---|---|
+| Reflection descriptors, signature results and empty member arrays migrated above | Requesting descriptor/composition tables and ConstHeap; semantic clears retain their identities and values |
+| Captured annotation values and foreign source references | Capturing heap and the live foreign handle respectively; retention lasts as long as the owning execution/handle |
+| Template INSTANCE aliases, Utils.CONST_HELPER/STRING_VALUE_OF and prepared signature fields; xRTFunction.TO_ARRAY; xConst literal constructors and xString/xArray helper methods; remaining OS-file constructors/event bindings | Bootstrap/native-root bindings still exposed through classloader-wide fields; several independently active NativeContainers are not established as safe |
+| xBoolean/xNullable/xOrdered values, xString small/empty values, primitive/object array compositions and empty byte array, no-op function handles, timer Duration composition | Native-root runtime objects with classloader-wide access paths; shared core definitions alone do not make their mutable fields or composition caches globally independent |
+| Remaining compiler-template browsing helpers, package/module map types and version defaults; network byte-array types, crypto NamedPassword type and management resource signature | Bootstrap-scoped types/compositions or prepared definitions; they remain part of the native-root audit boundary and are not application capture storage |
+| Frame.WAIT_FOR_FUTURE, Frame.WAIT_FOR_IO and Utils.WAIT_FOR_RELIEF | Hand-authored native callback arrays; their process methods read frame/service state and retain no per-invocation cache. The Java arrays are not claimed immutable or covered by compiled-method decoding isolation |
+| Empty Java arrays, stateless predicates, capture-token identity sequence | Process-wide data without an execution owner/value reference; the sequence supplies identity only |
+
+The bounded scope-5 interpreter migration and native audit do not claim classloader isolation,
+concurrent execution within one service, arbitrary compiler-template operations, or native-root
+freezing. Existing unimplemented operations, including Type.annotate with arguments and unsupported
+pure-type operations, remain feature limits. Default activation freezing is still scope 6; image
+copy removal, multi-native-root support and wider sharing require separate evidence and ownership
+work. No Gradle lifecycle, JIT, embedding, error-listener API or shutdown redesign is included.
+
+### Scope-5 verification
+
+The final combined implementation passed on 2026-09-25:
+
+```sh
+env RUN_INTEGRATION_TESTS=true ./gradlew :javatools:test --rerun \
+    :xdk:test --rerun spotlessCheck --console=plain
+git diff --check
+```
+
+- Java XML reports **538 cases: 502 passed, 36 existing skips, zero failures/errors**. All three
+  new capture cases executed; the file-system definition-copy test remains self-contained.
+- XDK XML reports **59 passed, zero skips/failures/errors**, including **33 ConstantPoolOwnershipTest
+  cases** and the separate file-system case. All six new scope-5 cases executed, following their
+  focused passing run.
+- The full distribution rebuilt successfully. `spotlessCheck` and whitespace checks passed;
+  Gradle stored the configuration cache. No build logic changed.
+
+Scope 5 is complete within the interpreter migration and native-audit boundary above. This
+verification does not enable scope-6 activation freezing or remove the native-root restrictions.
