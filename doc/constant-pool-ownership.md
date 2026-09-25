@@ -775,3 +775,9 @@ the broader audit reaches late delegation synthesis and native marking in scope 
 records the remaining migration scopes and the narrower limits of those passing workloads.
 Do not infer a completely frozen runtime or a universal ownership guarantee from the normal
 suite passing.
+
+Scope 3 now prepares native rebases discovered from registered templates, including Tuple and
+Identity, before application publication. This closes the reproduced cold native-marking failure
+in `RuntimeConstruction.x`; it does not finish generated delegation or shared method execution
+state. The [scope-3 record](constant-pool-architecture-plan.md#scope-3-stable-preparation-and-generated-executables)
+documents the exact preparation boundary and its regressions.

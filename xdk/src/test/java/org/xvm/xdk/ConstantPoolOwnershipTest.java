@@ -79,10 +79,11 @@ class ConstantPoolOwnershipTest {
         runOwnershipProgram(source, false);
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"RuntimeDescriptors.x", "RuntimeConstruction.x"})
     @Timeout(60)
-    void coldEntryAndGenericConstructionRunOverFrozenDefinitions() throws Exception {
-        runOwnershipProgram("RuntimeDescriptors.x", true);
+    void coldEntryAndGenericConstructionRunOverFrozenDefinitions(String source) throws Exception {
+        runOwnershipProgram(source, true);
     }
 
     private void runOwnershipProgram(String source, boolean freeze) throws Exception {

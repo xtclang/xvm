@@ -1202,3 +1202,31 @@ The new `.x` program also passed in a direct interpreter reproduction, including
 rendering, before the final full run. No JIT execution, Gradle lifecycle changes or new automatic
 CI task dependencies were added. Scope 2 is complete within the boundary above; scope 3 (remaining
 generated declarations and delegation/accessor executable overlays) is next. Scopes 4–6 remain open.
+
+## Scope 3: stable preparation and generated executables
+
+### Template-defined native rebases
+
+Fresh-process Java 25 audits at `f63473dfd` reproduced both remaining failures before editing:
+`Singletons.x` failed in `ClassStructure.ensureMethodDelegation` while deriving an image-owned
+private type, and `RuntimeConstruction.x` failed in `TypeConstant.createMemberInfo` while marking
+a cold rebased method native. Neither failure depended on the shell's default Java version;
+Gradle uses its configured toolchain, while the manual harness invokes Java directly.
+
+`NativeContainer.prepareRebaseMethods` now includes the registered templates' native inception
+identities, in addition to the language's implicit bases. The old fixed list omitted interfaces
+such as Tuple and Identity whose native implementation is selected by a template. Each identity
+is rebound to the exclusively owned prepared image before its bodyless methods and accessors are
+marked. Explicit bodies and nested class declarations retain their existing classification.
+This is declaration preparation, without prewarming TypeInfo or weakening read-only checks.
+Accessor changes invalidate the containing class, as required by `invalidateTypeInfos`, rather
+than passing a property identity to that class-only API.
+
+The Java-only `NativeDeclarationPreparationTest` constructs its own declarations and verifies
+bodyless methods, getter/setter preparation, explicit/nested exclusions and a read-only second
+pass (one case passed, no skips). The XDK frozen execution regression now also includes
+`RuntimeConstruction.x`, in two independent application images. Both parameterized frozen
+execution cases passed without skips; `spotlessCheck` and `git diff --check` passed. The
+fresh-process manual audit passes after this change.
+Delegation/accessor executable ownership is the next slice; general method execution state,
+native static lifetimes and default frozen activation remain outside this preparation change.
