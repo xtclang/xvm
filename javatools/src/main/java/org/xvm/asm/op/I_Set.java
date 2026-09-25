@@ -124,7 +124,7 @@ public class I_Set
             saveOpChain(frame, hTarget.getType(), chain);
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[Math.max(chain.getMaxVars(), 2)];
+        ObjectHandle[] ahVar = new ObjectHandle[Math.max(chain.getMaxVars(frame), 2)];
         ahVar[0] = hIndex;
         ahVar[1] = hValue;
 

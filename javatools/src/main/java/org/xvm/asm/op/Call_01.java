@@ -106,7 +106,7 @@ public class Call_01
                     invokeNativeN(frame, function, null, Utils.OBJECTS_NONE, m_nRetValue);
             }
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
             return frame.call1(function, null, ahVar, m_nRetValue);
         }
 
@@ -125,7 +125,7 @@ public class Call_01
     private int complete(Frame frame, FunctionHandle hFunction) {
         checkReturnRegister(frame, hFunction.getMethod());
 
-        return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], m_nRetValue);
+        return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount(frame)], m_nRetValue);
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

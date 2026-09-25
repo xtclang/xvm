@@ -1689,7 +1689,7 @@ public class xRTType
             REGISTER_CONSTRUCT = ctor = REGISTER_CLZCOMP.getTemplate().getStructure().findMethod("construct", 1);
         }
 
-        ObjectHandle[] ahArg = new ObjectHandle[ctor.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(ctor)];
         ahArg[0] = xInt64.makeHandle(nRegister);
 
         switch (clz.getTemplate().construct(frame, ctor, clz, null, ahArg, Op.A_STACK)) {

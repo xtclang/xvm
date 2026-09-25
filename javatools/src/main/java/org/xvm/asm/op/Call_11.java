@@ -131,7 +131,7 @@ public class Call_11
                 invokeNative1(frame, function, null, hArg, m_nRetValue);
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
         ahVar[0] = hArg;
         return frame.call1(function, null, ahVar, m_nRetValue);
     }
@@ -139,7 +139,7 @@ public class Call_11
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction) {
         checkReturnRegister(frame, hFunction.getMethod());
 
-        ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount(frame)];
         ahVar[0] = hArg;
 
         return hFunction.call1(frame, null, ahVar, m_nRetValue);

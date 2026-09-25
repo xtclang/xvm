@@ -311,7 +311,7 @@ public class xString
      */
     public static int callAppendTo(Frame frame, StringHandle hString,
                                    ObjectHandle hAppender, int iReturn) {
-        ObjectHandle[] ahArg = new ObjectHandle[METHOD_APPEND_TO.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(METHOD_APPEND_TO)];
         ahArg[0] = hAppender;
 
         return frame.call1(METHOD_APPEND_TO, hString, ahArg, iReturn);

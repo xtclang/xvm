@@ -164,6 +164,29 @@ class RuntimeMethodsTest {
         assertEquals(positions, Arrays.stream(constants).map(Constant::getPosition).toList());
     }
 
+    @Test
+    void generatedReferenceInitializersDecodeAtTheirOriginalAddresses() {
+        var fixture = new Fixture();
+        var pool = new RuntimeTypeContext(fixture.pool).getDescriptorPool();
+        var key = fixture.key(pool);
+        fixture.file.ensureReadOnly();
+        var method = new RuntimeMethodStructure(key.host());
+        var original = new RuntimeMethodStructure.InitRef(key.delegate());
+        method.createCode().add(original).add(new Return_0());
+        method.forceAssembly(pool);
+        var first = method.createExecutionCode();
+        var second = method.createExecutionCode();
+        assertEquals(2, first.ops().length);
+        assertTrue(first.ops()[0] instanceof RuntimeMethodStructure.InitRef);
+        assertTrue(first.ops()[1] instanceof Return_0);
+        assertNotSame(original, first.ops()[0]);
+        assertNotSame(first.ops()[0], second.ops()[0]);
+        assertEquals(0, first.ops()[0].getAddress());
+        assertEquals(1, first.ops()[1].getAddress());
+        assertEquals(0, first.maxVars());
+        assertEquals(1, first.maxScopes());
+    }
+
     private static RuntimeMethodStructure assembled(RuntimeMethods.Key key) {
         var method = new RuntimeMethodStructure(key.host());
         method.createCode().add(new Return_0());

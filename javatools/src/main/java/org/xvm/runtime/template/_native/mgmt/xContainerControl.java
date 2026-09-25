@@ -177,7 +177,7 @@ public class xContainerControl
             return Op.R_NEXT;
         }
 
-        ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
+        ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars(frame)];
         ahVars[0] = xNullable.NULL;
         return chain.invoke(frame, hProvider, ahVars, Op.A_IGNORE);
     }

@@ -114,7 +114,7 @@ public class NewV_N
             frame.introduceResolvedVar(nReturn, typeTarget);
         }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, constructor.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, frame.getMaxVars(constructor));
         if (anyDeferred(ahVar)) {
             Frame.Continuation stepNext = frameCaller ->
                 clzTarget.getTemplate().

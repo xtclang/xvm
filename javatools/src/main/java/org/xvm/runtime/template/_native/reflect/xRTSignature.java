@@ -416,9 +416,9 @@ public class xRTSignature
             return typeFn.getConstantPool().extractFunctionReturns(typeFn);
         }
 
-        public int getVarCount() {
+        public int getVarCount(Frame frame) {
             MethodStructure method = getMethod();
-            return method == null ? 0 : method.getMaxVars();
+            return method == null ? 0 : frame.getMaxVars(method);
         }
 
         public boolean isAsync() {

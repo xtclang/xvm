@@ -11,12 +11,13 @@ Continue work on `xtclang/xvm`, branch **`lagergren/constant-pool-state-separati
 The user wants a complete, enforced separation of definition images, runtime descriptors, semantic
 metadata, and execution state, implemented in reviewable stages and separate commits.
 
-**Scopes 1–3 are implemented within their documented boundaries. The next task is scope 4:
-separate compiled method execution state from shared definitions.** Start by reproducing mutable
-method initialization, decoded Ops and frame-layout state when two contexts execute the exact
-same definitions, then implement the next bounded slice with focused regressions. Continue the
-existing architecture; do not restart the ownership work or broaden this into the embedding,
-Gradle, error-listener, or JIT projects.
+**Scopes 1–4 are implemented within their documented boundaries. The next task is scope 5:
+complete reflection and native-value ownership.** Reproduce the remaining foreign, constructor,
+property and function reflection issues, captured annotation ownership, file-store/file-node
+handles and classloader-wide native caches before implementing bounded fixes. Preserve the
+service-owned method execution boundary and same-image regressions established in scope 4.
+Continue the existing architecture; do not broaden this into the embedding, Gradle, error-listener
+or JIT projects.
 
 The ultimate goal is genuinely frozen runtime definition graphs. It has **not** been achieved yet.
 Do not describe the branch as universally safe for frozen execution, concurrent executable
@@ -39,10 +40,11 @@ preserve local work. Use the checked-in Gradle wrapper and Java 25. The wrapper 
 Gradle 9.7.1; let the repository's toolchain configuration select/provision its dependencies.
 Do not copy build outputs from the previous machine as a prerequisite.
 
-The original handoff commit was **`f63473dfd`**. Scope 3 begins with **`b7c6f5378`** (stable native
-preparation); the following delegation/accessor ownership commit updates this prompt. Check the
-actual local and remote tips when resuming; this file cannot contain its own commit hash. The
-scope-3 commits are local: do not push or open a PR without an explicit new user request.
+The original handoff commit was **`f63473dfd`**. Scope 3 is **`b7c6f5378`** (stable native
+preparation) and **`2087e376a`** (delegation/accessor ownership). Scope 4 starts with
+**`703ed5f40`** (service-owned initialization); the following decoded-code/layout commit updates
+this prompt. Check the actual local and remote tips when resuming; this file cannot contain its
+own commit hash. These commits are local: do not push or open a PR without an explicit new request.
 
 ## Essential references and branch boundaries
 
@@ -52,7 +54,8 @@ Read these in order:
 2. [Architecture plan](doc/constant-pool-architecture-plan.md): the active staged plan. Focus on
    "Generated methods and other freeze blockers", "Remaining commits before frozen activation",
    "Scope-1 completion: ordinary runtime destinations", "Scope 2: owner-specific semantic metadata",
-   and "Scope 3: stable preparation and generated executables".
+   "Scope 3: stable preparation and generated executables", and
+   "Scope 4: compiled method execution ownership".
    Earlier sections are historical snapshots; use the later completion records for current status.
 3. [Ownership audit](doc/constant-pool-ownership.md): original same-pool, cross-pool and ambient-pool
    fixes, singleton semantics, diagnostic handling, evidence, and explicit limits.
@@ -75,13 +78,14 @@ larger branch at `plugin/doc/plans/embedded-runtime-pr-plan.md`; it is not this 
 
 - **Gradle and `jcmd` are already authorized. Do not ask for permission for each invocation or flag
   variation, including `RUN_INTEGRATION_TESTS=true`.** Local repository edits are also authorized.
+  Use `env RUN_INTEGRATION_TESTS=true ./gradlew ...` consistently for integration-enabled runs.
   Honor any enforced tool sandbox requirements without inventing another approval flow.
 - Do not use SICS AI / ai-dev skills or plugins for this repository. The user restricted those to
   their `zombiesnack` repository.
 - Keep distinct architectural changes in separate commits. Update the existing architecture and
   ownership documents as stages complete, explaining ownership, why each change is needed, tests,
   and remaining limits. This root handoff file was explicitly requested.
-- Follow `AGENTS.md` for remote operations. The original handoff push was authorized; the scope-3
+- Follow `AGENTS.md` for remote operations. The original handoff push was authorized; the scope-3/4
   work is explicitly local. Do not push or open a PR without a new user request.
 - Use modern Java 25 where it improves touched code: records, generics, immutable collections,
   obvious `var` assignments, and suitable `Lazy` / `Lazy.Bound` holders. No new Hungarian field
@@ -151,8 +155,10 @@ Important APIs and rules:
 | `e59d5b597` | Separated semantic metadata from canonical descriptors, with deterministic unit regressions |
 | `37bbeab30` | Completed member lookup keys, integration tests and scope 2 documentation |
 | `b7c6f5378` | Prepared template-defined native rebases before frozen application execution |
+| `2087e376a` | Owned generated delegation/accessor bodies in runtime descriptor contexts |
+| `703ed5f40` | Moved method singleton-initialization completion into each executing service |
 
-The following scope-3 commit gives late delegation/accessor bodies a `RuntimeMethods` owner in
+`2087e376a` gives late delegation/accessor bodies a `RuntimeMethods` owner in
 the runtime descriptor context. It extends `RuntimeMethodStructure` with independent parameters
 and unattached lexical parents, publishes assembled candidates only, and keeps generated bodies
 across semantic clears. `RuntimeDelegation.x` covers generic receivers/methods, getter/setter,
@@ -192,7 +198,7 @@ public/private variance, runtime matches not contaminating compiler lookup, cold
 property refresh and warning replay.
 
 Scope 2 is not a claim that all `TypeInfo`-owned member graphs are immutable. Scope 3 separates
-generated delegation bodies; shared compiled execution state remains scope 4.
+generated delegation bodies; the scope-4 record below covers shared compiled execution state.
 
 ## Verification at the original handoff
 
@@ -317,10 +323,46 @@ general execution concurrency safety.
 After each slice, update the plan with exact changed paths, why the owner is correct, actual checks,
 and remaining failures. Do not silently absorb scopes 4–6 merely to claim scope 3 is complete.
 
-## Work that still follows scope 3
+## Scope 4: completed implementation and reproduction record
 
-4. Separate method initialization flags, mutable decoded Ops, frame-layout preparation and debugger
-   instrumentation from shared definitions. Verify two executions of the exact same definitions.
+The original Java-only reproductions at `2087e376a` showed the same mutable Ops in two containers'
+arrays and a shared initialization flag causing the second container to skip its singleton operands.
+`703ed5f40` moves the completion flag/protocol into `ServiceContext` entries keyed by exact
+`MethodStructure` identity. Canonical singleton values and construction still use container owners.
+
+The next commit gives each `MethodExecution` a final lazy decoded body, local operand array,
+frame layout and original line map. `Frame`, calls, constructors, function handles and native
+adapters size arguments through the executing service. `MethodStructure` no longer owns execution
+frame counts or automatic runtime assembly. Failed decoding remains retryable; generated methods
+must be assembled before use. Metadata clears retain service execution entries and generated bodies.
+
+Two additional issues appeared during integration:
+
+- An inflated-reference initializer's anonymous Java Op wrote no bytes, causing EOF when its
+  generated body was freshly decoded. `RuntimeMethodStructure.InitRef` now uses a private NOP
+  placeholder plus prepared callback operands, restoring independent Ops before simulation.
+  The XTC format and the initializer's instruction order are unchanged.
+- Cold super-use queries installed compiler Code on getter declarations. Super-use, no-op and
+  injection queries now inspect code without installing it; interpreter frames use their own
+  decoded body. Compiler/tooling Code remains available through its existing APIs.
+
+`MethodExecutionTest` has eight self-contained cases covering cold decoding/layout, independent
+services/containers, debugger reset isolation, concurrent publication, native argument sizing and
+initialization/preparation retry. `RuntimeMethodsTest` adds a generated-callback decoding regression.
+The four new XDK cases execute `RuntimeDescriptors.x`, `RuntimeConstruction.x`, `Singletons.x`
+and `RuntimeDelegation.x` twice against the exact same frozen image, without a second copy/relink.
+Frozen checks compare compiler-Code identity, declaration trees and constant membership/positions.
+
+Per-service decoding deliberately retains more code for isolation. This is not a performance
+benchmark, a new service scheduling model, or a claim of arbitrary concurrent execution within
+one service. Native-root freezing, static native caches and captured reflection values remain open.
+Final XML results on 2026-09-25: **536 Java cases, 500 passed and 36 existing skips; all 53 XDK
+cases passed without skips**, including 28 ownership cases. All new scope-4 tests executed.
+`spotlessCheck` and `git diff --check` passed. See the architecture plan's scope-4 validation
+record for commands and the corrected older copy test.
+
+## Work that still follows scope 4
+
 5. Finish foreign/constructor/property/function reflection and captured annotation ownership; audit
    file-store/file-node handles and classloader-wide native values. Shared core types and singleton
    ancestry do not make every native static cache safe across runtimes.

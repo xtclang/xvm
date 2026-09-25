@@ -200,7 +200,7 @@ public class xRTNetwork
         ClassTemplate    templateSvc  = xRTNameService.INSTANCE;
         ClassComposition clz          = templateSvc.getCanonicalClass();
         MethodStructure  constructor  = templateSvc.getStructure().findConstructor(getCanonicalType());
-        ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]   ahParams     = new ObjectHandle[frame.getMaxVars(constructor)];
         ahParams[0] = hNetwork;
 
         switch (templateSvc.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {

@@ -84,7 +84,7 @@ public class Construct_1
                 return reportNonExtendable(frame, constructor);
             }
 
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
             ahVar[0] = hArg;
 
             if (isDeferred(hArg)) {

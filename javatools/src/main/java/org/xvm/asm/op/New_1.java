@@ -105,7 +105,7 @@ public class New_1
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
         ahVar[0] = hArg;
 
         return template.construct(frame, constructor, clzTarget, null, ahVar, m_nRetValue);

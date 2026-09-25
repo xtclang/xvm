@@ -174,7 +174,7 @@ public class xOSFile
                                 getCanonicalType(), frame.poolContext().typeFile());
         NodeHandle hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
                                 path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(s_constructor));
 
         return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
     }

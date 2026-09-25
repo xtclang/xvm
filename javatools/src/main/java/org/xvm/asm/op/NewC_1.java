@@ -91,7 +91,7 @@ public class NewC_1
             }
 
             ObjectHandle[] ahVar = frame.getArguments(
-                    new int[]{m_nArgValue}, constructor.getMaxVars());
+                    new int[]{m_nArgValue}, frame.getMaxVars(constructor));
 
             return isDeferred(hParent)
                     ? hParent.proceed(frame, frameCaller ->

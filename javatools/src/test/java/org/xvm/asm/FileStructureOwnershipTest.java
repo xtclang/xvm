@@ -86,7 +86,7 @@ class FileStructureOwnershipTest {
     }
 
     @Test
-    void copyingUnassembledCodeCreatesIndependentOperations() throws Exception {
+    void copyingUnassembledCodeCreatesIndependentOperations() {
         var source = new FileStructure("Source");
         var pool = source.getConstantPool();
         var method = source.getModule().createMethod(true, Access.PUBLIC, null,
@@ -95,14 +95,9 @@ class FileStructureOwnershipTest {
         var value = pool.ensureStringConstant("test");
         var original = new Return_1(value);
         method.createCode().add(original);
-        var initialized = MethodStructure.class.getDeclaredField("m_fInitialized");
-        initialized.setAccessible(true);
-        initialized.setBoolean(method, true);
         var copy = new FileStructure(source);
         var copiedMethod = (MethodStructure) method.findThisIn(copy);
         assertNotSame(original, copiedMethod.ensureCode().getAssembledOps()[0]);
-        assertEquals(false, initialized.getBoolean(copiedMethod));
-        assertEquals(true, initialized.getBoolean(method));
         assertSame(pool, value.getConstantPool());
         copiedMethod.forceAssembly(copy.getConstantPool());
         assertSame(original, method.ensureCode().getAssembledOps()[0]);

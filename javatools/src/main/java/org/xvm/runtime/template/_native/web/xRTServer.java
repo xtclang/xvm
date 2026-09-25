@@ -140,7 +140,7 @@ public class xRTServer
         ServiceContext  context = f_container.createServiceContext("HttpServer");
 
         int iResult = context.sendConstructRequest(frame, clz, ctor, null,
-                            new ObjectHandle[ctor.getMaxVars()], Op.A_STACK);
+                            new ObjectHandle[frame.getMaxVars(ctor)], Op.A_STACK);
         return frame.popResult(iResult);
     }
 

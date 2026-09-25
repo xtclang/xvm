@@ -831,7 +831,7 @@ public abstract class Container
             ClassTemplate    templateTS  = getTemplate("reflect.TypeSystem");
             ClassComposition clzTS       = templateTS.getCanonicalClass();
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
-            ObjectHandle[]   ahArg       = new ObjectHandle[constructor.getMaxVars()];
+            ObjectHandle[]   ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
 
             ahArg[1] = xArray.makeArrayHandle(xArray.getBooleanArrayComposition(),
                         ahShared.length, ahShared, Mutability.Constant);

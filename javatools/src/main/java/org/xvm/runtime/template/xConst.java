@@ -130,7 +130,7 @@ public class xConst
             TypeComposition clzRange    = typeRange.ensureClass(frame);
             MethodStructure constructor = RANGE_CONSTRUCT;
 
-            ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
+            ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(constructor)];
             ahArg[0] = h1;
             ahArg[1] = h2;
             ahArg[2] = f1;
@@ -192,7 +192,7 @@ public class xConst
                 break Literal;
             }
 
-            ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
+            ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(constructor)];
             ahArg[0] = xString.makeHandle(constLiteral.getValue());
 
             return construct(frame, constructor, clz, null, ahArg, Op.A_STACK);
@@ -201,7 +201,7 @@ public class xConst
         if (constant.getFormat() == Format.Nibble) {
             byte[] abValue = new byte[] {(byte) (((ByteConstant) constant).getValue().byteValue() << 4)};
 
-            ObjectHandle[] ahArg = new ObjectHandle[NIBBLE_CONSTRUCT.getMaxVars()];
+            ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(NIBBLE_CONSTRUCT)];
             ahArg[0] = xArray.makeBitArrayHandle(abValue, 4, Mutability.Constant);
 
             return construct(frame, NIBBLE_CONSTRUCT,
@@ -259,7 +259,7 @@ public class xConst
                     ArrayHandle    haValues    =
                         xArray.makeObjectArrayHandle(ahFreezable, Mutability.Fixed);
 
-                    ObjectHandle[] ahVars = new ObjectHandle[FN_FREEZE.getMaxVars()];
+                    ObjectHandle[] ahVars = new ObjectHandle[frame.getMaxVars(FN_FREEZE)];
                     ahVars[0] = haValues;
 
                     Frame frameFreeze = frame.createFrame1(FN_FREEZE, null, ahVars, Op.A_IGNORE);
@@ -430,7 +430,7 @@ public class xConst
             ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
             // estimateStringLength(String[] names, Object[] fields)
-            ObjectHandle[] ahVars = new ObjectHandle[FN_ESTIMATE_LENGTH.getMaxVars()];
+            ObjectHandle[] ahVars = new ObjectHandle[frame.getMaxVars(FN_ESTIMATE_LENGTH)];
             ahVars[0] = hNames;
             ahVars[1] = hValues;
 
@@ -461,7 +461,7 @@ public class xConst
         ObjectHandle hValues = xArray.makeObjectArrayHandle(ahFields, Mutability.Constant);
 
         // appendTo(Appender<Char> appender, String[] names, Object[] fields)
-        ObjectHandle[] ahVars = new ObjectHandle[FN_APPEND_TO.getMaxVars()];
+        ObjectHandle[] ahVars = new ObjectHandle[frame.getMaxVars(FN_APPEND_TO)];
         ahVars[0] = hAppender; // appender
         ahVars[1] = hNames;
         ahVars[2] = hValues;
@@ -733,7 +733,7 @@ public class xConst
                         iResult = hProp.getTemplate().invokeNativeN(frameCaller, methodHash, null,
                             new ObjectHandle[] {typeProp.ensureTypeHandle(container), hProp}, Op.A_STACK);
                     } else {
-                        ObjectHandle[] ahVar = new ObjectHandle[methodHash.getMaxVars()];
+                        ObjectHandle[] ahVar = new ObjectHandle[frameCaller.getMaxVars(methodHash)];
                         ahVar[0] = typeProp.ensureTypeHandle(container);
                         ahVar[1] = hProp;
                         iResult = frameCaller.call1(methodHash, null, ahVar, Op.A_STACK);

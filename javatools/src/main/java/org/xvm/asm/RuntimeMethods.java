@@ -13,10 +13,11 @@ import org.xvm.asm.constants.TypeInfo;
 /**
  * Generated delegation executables for one runtime descriptor owner.
  *
- * <p>This table has execution lifetime: clearing semantic metadata must not discard initialized
- * methods, decoded Ops or frame layouts. Keys contain the receiver, host signature, delegated
- * declaration and target property, all canonicalized by the exact descriptor owner before lookup.
- * Native bindings are fixed by the prepared image and its container.
+ * <p>This table retains prepared bodies across semantic clears. Services key their own decoded
+ * Ops, frame layouts and initialization completion by these exact method objects. Keys contain
+ * the receiver, host signature, delegated declaration and target property, all canonicalized by
+ * the exact descriptor owner before lookup. Native bindings are fixed by the prepared image
+ * and its container.
  *
  * <p>Build attempts are private. Only a fully assembled method is published, and failed attempts
  * leave no entry. Concurrent callers may assemble independent candidates, then use the same

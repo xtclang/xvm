@@ -120,7 +120,7 @@ public class xEnum
         assert hStruct.isStruct();
 
         MethodStructure ctor  = hStruct.getStructure().findConstructor(TypeConstant.NO_TYPES);
-        ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, ctor.getMaxVars());
+        ObjectHandle[]  ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(ctor));
 
         switch (proceedConstruction(frame, ctor, true, hStruct, ahVar, Op.A_STACK)) {
         case Op.R_NEXT:

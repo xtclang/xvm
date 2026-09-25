@@ -5,20 +5,49 @@ import java.util.List;
 
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
+import org.xvm.asm.MethodStructure.ExecutionCode;
+import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.SingletonConstant;
+
+import org.xvm.util.Lazy;
 
 /**
  * Execution state for an exact method body in one service.
  *
  * <p>Retained by ServiceContext, independently of semantic metadata. The definition supplies
- * code and constants; executing it must not record initialization on the shared declaration.
- * Singleton values and in-flight initialization remain with their existing container owners.
+ * prepared code and constants. This service owns decoded Ops, frame layout, line mapping and
+ * initialization completion; none are published back to the shared declaration. Mutable Op
+ * caches and debugger wrappers stay with the service. Singleton values and in-flight
+ * initialization remain with their existing container owners.
  */
 public final class MethodExecution {
     MethodExecution(MethodStructure method) {
-        this.method = method;
+        code = Lazy.of(method::createExecutionCode);
+    }
+
+    /** @return this service's fully decoded Ops; failed decoding remains retryable */
+    public Op[] getOps() {
+        return code.get().ops();
+    }
+
+    public int getMaxVars() {
+        return code.get().maxVars();
+    }
+
+    public int getMaxScopes() {
+        return code.get().maxScopes();
+    }
+
+    Constant[] localConstants() {
+        return code.get().constants();
+    }
+
+    /** Line mapping is captured before debugger instrumentation can replace any Op. */
+    public int calculateLineNumber(int pc) {
+        var lines = code.get().lines();
+        return pc < 0 || pc >= lines.length ? 0 : lines[pc];
     }
 
     /**
@@ -31,7 +60,7 @@ public final class MethodExecution {
         }
 
         var singletons = new ArrayList<SingletonConstant>();
-        var constants = method.getLocalConstants();
+        var constants = localConstants();
         if (constants != null) {
             for (var constant : constants) {
                 collectSingletons(frame, constant, singletons);
@@ -75,6 +104,6 @@ public final class MethodExecution {
         return initialized;
     }
 
-    private final MethodStructure method;
+    private final Lazy<ExecutionCode> code;
     private volatile boolean initialized;
 }

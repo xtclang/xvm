@@ -141,7 +141,7 @@ public class Call_1N
                 invokeNativeNN(frame, function, null, new ObjectHandle[] {hArg}, m_anRetValue);
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
         ahVar[0] = hArg;
         return frame.callN(function, null, ahVar, m_anRetValue);
     }
@@ -149,7 +149,7 @@ public class Call_1N
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction) {
         checkReturnRegisters(frame, hFunction.getMethod());
 
-        ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount(frame)];
         ahVar[0] = hArg;
 
         return hFunction.callN(frame, null, ahVar, m_anRetValue);

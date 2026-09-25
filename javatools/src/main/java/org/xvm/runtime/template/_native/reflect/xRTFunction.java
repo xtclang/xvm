@@ -215,7 +215,7 @@ public class xRTFunction
             }
         };
 
-        ObjectHandle[] ahArg = new ObjectHandle[TO_ARRAY.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(TO_ARRAY)];
         ahArg[0] = hArg;
 
         Frame frameNext = frame.createFrameN(TO_ARRAY, null, ahArg, new int[] {Op.A_STACK, Op.A_STACK});
@@ -245,7 +245,7 @@ public class xRTFunction
         ObjectHandle[] ahArg   = hTuple.m_ahValue;
         int            cArgs   = ahArg.length;
         int            cParams = hFunc.getParamCount();
-        int            cVars   = hFunc.getVarCount();
+        int            cVars   = hFunc.getVarCount(frame);
         ObjectHandle[] ahVar   = cArgs == cVars ? ahArg.clone() : Utils.ensureSize(ahArg, cVars);
 
         if (cArgs != cParams) {
@@ -430,7 +430,7 @@ public class xRTFunction
         // call with one return value to be placed into the specified slot
         // return either R_CALL, R_NEXT or R_EXCEPTION
         public int call1(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn) {
-            ObjectHandle[] ahVar = prepareVars(ahArg);
+            ObjectHandle[] ahVar = prepareVars(frame, ahArg);
 
             addBoundArguments(ahVar);
 
@@ -439,7 +439,7 @@ public class xRTFunction
 
         // call with one return Tuple value to be placed into the specified slot
         public int callT(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int iReturn) {
-            ObjectHandle[] ahVar = prepareVars(ahArg);
+            ObjectHandle[] ahVar = prepareVars(frame, ahArg);
 
             addBoundArguments(ahVar);
 
@@ -448,7 +448,7 @@ public class xRTFunction
 
         // calls with multiple return values
         public int callN(Frame frame, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
-            ObjectHandle[] ahVar = prepareVars(ahArg);
+            ObjectHandle[] ahVar = prepareVars(frame, ahArg);
 
             addBoundArguments(ahVar);
 
@@ -527,8 +527,8 @@ public class xRTFunction
 
         // ----- internal implementation -----------------------------------------------------------
 
-        protected ObjectHandle[] prepareVars(ObjectHandle[] ahArg) {
-            return Utils.ensureSize(ahArg, getVarCount());
+        protected ObjectHandle[] prepareVars(Frame frame, ObjectHandle[] ahArg) {
+            return Utils.ensureSize(ahArg, getVarCount(frame));
         }
 
         // invoke with zero or one return to be placed into the specified register;
@@ -684,8 +684,8 @@ public class xRTFunction
         }
 
         @Override
-        public int getVarCount() {
-            return m_hDelegate.getVarCount();
+        public int getVarCount(Frame frame) {
+            return m_hDelegate.getVarCount(frame);
         }
 
         @Override
@@ -1444,8 +1444,8 @@ public class xRTFunction
         }
 
         @Override
-        public int getVarCount() {
-            int cVars = super.getVarCount();
+        public int getVarCount(Frame frame) {
+            int cVars = super.getVarCount(frame);
             return Math.max(cVars, f_aParams.length);
         }
 

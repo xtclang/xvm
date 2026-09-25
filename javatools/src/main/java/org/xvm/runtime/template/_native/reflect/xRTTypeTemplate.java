@@ -835,7 +835,7 @@ public class xRTTypeTemplate
             TypeComposition clzArray = xRTClassTemplate.
                     ensureAnnotationTemplateArrayComposition(frameCaller.f_context.f_container);
 
-            ObjectHandle[] ahVar = new ObjectHandle[CREATE_COMPOSITION_METHOD.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frameCaller.getMaxVars(CREATE_COMPOSITION_METHOD)];
             ahVar[0] = hClass;
             ahVar[1] = xArray.createImmutableArray(clzArray, ahAnno);
 

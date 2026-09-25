@@ -223,7 +223,7 @@ public class xRTFileTemplate
                     : frame.raiseException("Missing dependent module: " + idMissing.getName());
         }
 
-        ObjectHandle[] ahArg = new ObjectHandle[LINK_MODULES_METHOD.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(LINK_MODULES_METHOD)];
         ahArg[0] = hRepo;
 
         FileStructure fileUnlinked = file;

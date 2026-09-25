@@ -138,7 +138,7 @@ public class Call_TT
                 invokeNativeT(frame, function, null, ahArg, m_nRetValue);
         }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, frame.getMaxVars(function));
         return frame.callT(function, null, ahVar, m_nRetValue);
     }
 
@@ -150,7 +150,7 @@ public class Call_TT
             return frame.raiseException("Invalid tuple argument");
         }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount(frame));
 
         return hFunction.callT(frame, null, ahVar, m_nRetValue);
     }

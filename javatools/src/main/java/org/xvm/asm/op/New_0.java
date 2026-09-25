@@ -78,7 +78,7 @@ public class New_0
             return R_EXCEPTION;
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
 
         IdentityConstant constClz  = constructor.getParent().getParent().getIdentityConstant();
         ClassTemplate    template  = frame.ensureTemplate(constClz);

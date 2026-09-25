@@ -775,7 +775,7 @@ public class ServiceContext {
 
                 aOp = frame.f_aOp;
                 iPC = frame.m_iPC;
-                insertBreakPointOp(aOp, iPC);
+                insertBreakPointOp(frame, iPC);
                 break;
 
             default:
@@ -787,7 +787,11 @@ public class ServiceContext {
     /**
      * Replace an op at the specified index with a synthetic "checkBreakPoint" op.
      */
-    private void insertBreakPointOp(Op[] aOp, int iPC) {
+    void insertBreakPointOp(Frame target, int iPC) {
+        if (target.f_context != this) {
+            throw new IllegalArgumentException("Breakpoint frame belongs to another service");
+        }
+        Op[] aOp = target.f_aOp;
         Op opReset = aOp[iPC];
         aOp[iPC] = new Op() {
             @Override

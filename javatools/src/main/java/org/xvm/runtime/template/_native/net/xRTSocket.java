@@ -223,7 +223,7 @@ public class xRTSocket
         MethodStructure  constructor  = template.getStructure().findConstructor(
                 pool.typeByteArray(), pool.typeUInt16(),
                 pool.typeByteArray(), pool.typeUInt16());
-        ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]   ahParams     = new ObjectHandle[frame.getMaxVars(constructor)];
         ahParams[0] = xArray.makeByteArrayHandle(abLocal, Mutability.Constant);
         ahParams[1] = xUInt16.INSTANCE.makeJavaLong(nLocalPort);
         ahParams[2] = xArray.makeByteArrayHandle(abRemote, Mutability.Constant);

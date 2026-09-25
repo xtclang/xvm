@@ -84,7 +84,7 @@ public class NewC_0
                 return reportMissingConstructor(frame, hParent);
             }
 
-            ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
             return isDeferred(hParent)
                     ? hParent.proceed(frame, frameCaller ->
                         constructChild(frameCaller, constructor, frameCaller.popStack(), ahVar))

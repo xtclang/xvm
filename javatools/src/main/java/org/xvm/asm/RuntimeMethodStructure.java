@@ -1,12 +1,23 @@
 package org.xvm.asm;
 
+import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.IOException;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.asm.op.Nop;
+
+import org.xvm.runtime.Frame;
+import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 /**
  * A generated executable owned by a runtime descriptor context, outside the image's declarations.
@@ -101,10 +112,67 @@ public final class RuntimeMethodStructure extends MethodStructure {
             throw new IllegalArgumentException("Generated code must use its owning descriptor pool");
         }
         super.forceAssembly(pool);
+        var initializers = new HashMap<Integer, PropertyConstant>();
+        var ops = getOps();
+        for (int index = 0; index < ops.length; index++) {
+            if (ops[index].ensureOp() instanceof InitRef init) {
+                initializers.put(index, init.field);
+            }
+        }
+        refInitializers = Map.copyOf(initializers);
+    }
+
+    @Override
+    protected Op[] readCodeOps(DataInput in, Constant[] constants) throws IOException {
+        var ops = super.readCodeOps(in, constants);
+        refInitializers.forEach((index, field) -> {
+            if (!(ops[index] instanceof Nop nop) || nop.getLineCount() != 0) {
+                throw new IllegalStateException("Missing initializer placeholder at " + index);
+            }
+            ops[index] = new InitRef(field);
+        });
+        return ops;
     }
 
     @Override
     protected void assemble(DataOutput out) {
         throw new UnsupportedOperationException("Runtime methods are not image declarations");
+    }
+
+    /**
+     * Non-serializable operands at their assembled addresses. Set during preparation, before
+     * this executable is published; execution reads it to recreate callbacks for each service.
+     */
+    private Map<Integer, PropertyConstant> refInitializers = Map.of();
+
+    /**
+     * Assign an inflated field's outer reference at its original initializer position.
+     * A NOP occupies that position in the private encoding; readCodeOps restores this callback
+     * before scope simulation. Runtime method encodings never enter an XTC image.
+     */
+    static final class InitRef extends Op {
+        InitRef(PropertyConstant field) {
+            this.field = field;
+        }
+
+        @Override
+        public int process(Frame frame, int pc) {
+            var target = (GenericHandle) frame.getThis();
+            var ref = (RefHandle) target.getField(frame, field);
+            ref.setField(frame, GenericHandle.OUTER, target);
+            return pc + 1;
+        }
+
+        @Override
+        public void write(DataOutput out, ConstantRegistry registry) throws IOException {
+            out.writeByte(OP_NOP);
+        }
+
+        @Override
+        public String toString() {
+            return "initRef: " + field;
+        }
+
+        private final PropertyConstant field;
     }
 }

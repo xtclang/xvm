@@ -519,7 +519,7 @@ public final class DebugConsole
     }
 
     private BreakPoint makeBreakPointPC(Frame frame, int iPC) {
-        int nLine = frame.f_function.calculateLineNumber(iPC);
+        int nLine = frame.calculateLineNumber(iPC);
 
         return nLine > 0
                 ? makeBreakPointLine(frame, nLine, false)
@@ -865,7 +865,7 @@ public final class DebugConsole
             switch (cArgs) {
             case 0:
                 if (iPC >= 0) {
-                    int nLine = frame.f_function.calculateLineNumber(iPC);
+                    int nLine = frame.calculateLineNumber(iPC);
                     if (nLine > 0) {
                         addBP(makeBreakPointLine(frame, nLine, true));
                         m_stepMode = StepMode.None;
@@ -1376,7 +1376,7 @@ public final class DebugConsole
      * Obtain the lambda's captures.
      */
     private ObjectHandle[] getArguments(Frame frame, MethodStructure lambda, int[] aiArgs) {
-        ObjectHandle[] ahArg = new ObjectHandle[lambda.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(lambda)];
         for (int i = 0, c = aiArgs.length; i < c; i++) {
             try {
                 ahArg[i] = frame.getArgument(aiArgs[i]);
@@ -1450,7 +1450,7 @@ public final class DebugConsole
 
             int iFirst;
             int cLines;
-            int nLine = method.calculateLineNumber(m_frameFocus.m_iPC); // 1-based
+            int nLine = m_frameFocus.calculateLineNumber(m_frameFocus.m_iPC); // 1-based
             if (nLine > 0) {
                 // default to showing the entire method
                 iFirst = method.getSourceLineNumber();
@@ -2128,7 +2128,7 @@ public final class DebugConsole
 
             MethodStructure method = frame.f_function;
             if (className.equals(method.getContainingClass().getName()) &&
-                   lineNumber == method.calculateLineNumber(iPC)) {
+                   lineNumber == frame.calculateLineNumber(iPC)) {
                 if (condition != null) {
                     PrintWriter writer = xTerminalConsole.CONSOLE_OUT;
                     if (lambda == null) {

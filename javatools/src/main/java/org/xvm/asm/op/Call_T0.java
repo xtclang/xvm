@@ -130,7 +130,7 @@ public class Call_T0
                 invokeNativeN(frame, function, null, ahArg, A_IGNORE);
         }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, function.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, frame.getMaxVars(function));
         return frame.call1(function, null, ahVar, A_IGNORE);
     }
 
@@ -140,7 +140,7 @@ public class Call_T0
             return frame.raiseException("Invalid tuple argument");
         }
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, hFunction.getVarCount(frame));
 
         return hFunction.call1(frame, null, ahVar, A_IGNORE);
     }

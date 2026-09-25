@@ -77,7 +77,7 @@ public class Call_N0
                     throw new IllegalStateException();
                 }
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(chain.getSuper(frame)));
 
                 if (anyDeferred(ahVar)) {
                     Frame.Continuation stepNext = frameCaller ->
@@ -95,7 +95,7 @@ public class Call_N0
                     return R_EXCEPTION;
                 }
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(function));
 
                 if (anyDeferred(ahVar)) {
                     Frame.Continuation stepNext = frameCaller ->
@@ -125,7 +125,7 @@ public class Call_N0
 
     protected int complete(Frame frame, FunctionHandle hFunction) {
         try {
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount(frame));
             if (anyDeferred(ahVar)) {
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.call1(frameCaller, null, ahVar, A_IGNORE);

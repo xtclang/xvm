@@ -97,7 +97,7 @@ public class Construct_T
         }
 
         ObjectHandle    hStruct = frame.getThis();
-        ObjectHandle[]  ahVar   = Utils.ensureSize(ahArg, constructor.getMaxVars());
+        ObjectHandle[]  ahVar   = Utils.ensureSize(ahArg, frame.getMaxVars(constructor));
 
         frame.chainFinalizer(Utils.makeFinalizer(frame, constructor, ahVar));
 

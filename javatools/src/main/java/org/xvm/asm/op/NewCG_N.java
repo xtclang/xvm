@@ -105,7 +105,7 @@ public class NewCG_N
 
         TypeConstant typeChild = frame.resolveType(m_nTypeValue);
 
-        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, constructor.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(ahArg, frame.getMaxVars(constructor));
         if (anyDeferred(ahVar)) {
             Frame.Continuation stepNext = frameCaller ->
                 constructChild(frameCaller, constructor, hParent, typeChild, ahVar);

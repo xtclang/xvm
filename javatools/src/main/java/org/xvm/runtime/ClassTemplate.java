@@ -837,7 +837,7 @@ public abstract class ClassTemplate
         }
 
         MethodStructure method = chain.getTop();
-        ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
+        ObjectHandle[]  ahVar  = new ObjectHandle[frame.getMaxVars(method)];
         FieldInfo       field  = clzTarget.getFieldInfo(idProp);
 
         if (field != null && field.isInflated()) {
@@ -922,7 +922,7 @@ public abstract class ClassTemplate
                 if (methodInit != null) {
                     TransientId    hId   = (TransientId) hThis.getField(field.getIndex());
                     ObjectHandle   hInit = methodInit.isFunction() ? null : hThis;
-                    ObjectHandle[] ahVar = new ObjectHandle[methodInit.getMaxVars()];
+                    ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(methodInit)];
 
                     switch (frame.call1(methodInit, hInit, ahVar, Op.A_STACK)) {
                     case Op.R_NEXT:
@@ -1087,7 +1087,7 @@ public abstract class ClassTemplate
         }
 
         MethodStructure method = chain.getTop();
-        ObjectHandle[]  ahVar  = new ObjectHandle[method.getMaxVars()];
+        ObjectHandle[]  ahVar  = new ObjectHandle[frame.getMaxVars(method)];
         ahVar[0] = hValue;
 
         FieldInfo field = clzTarget.getFieldInfo(idProp);
@@ -1590,7 +1590,7 @@ public abstract class ClassTemplate
         // we need to call it
         CallChain chain = clazz.getMethodCallChain(clazz.getConstantPool().sigEquals());
         if (chain != null && !chain.isNative()) {
-            ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
+            ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars(frame)];
             ahVars[0] = clazz.getType().ensureTypeHandle(frame.f_context.f_container);
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
@@ -1641,7 +1641,7 @@ public abstract class ClassTemplate
         // if there is a "compare" function, we need to call it
         CallChain chain = clazz.getMethodCallChain(clazz.getConstantPool().sigCompare());
         if (chain != null && !chain.isNative()) {
-            ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars()];
+            ObjectHandle[] ahVars = new ObjectHandle[chain.getMaxVars(frame)];
             ahVars[0] = clazz.getType().ensureTypeHandle(frame.f_context.f_container);
             ahVars[1] = hValue1;
             ahVars[2] = hValue2;
@@ -1967,14 +1967,14 @@ public abstract class ClassTemplate
 
         MethodStructure method   = chain.getTop();
         Frame           frameTop = frame.createFrame1(method, hStruct,
-                                        new ObjectHandle[method.getMaxVars()], Op.A_IGNORE);
+                                        new ObjectHandle[frame.getMaxVars(method)], Op.A_IGNORE);
         if (chain.getDepth() > 1) {
             Frame.Continuation nextStep = new Frame.Continuation() {
                 @Override
                 public int proceed(Frame frameCaller) {
                     MethodStructure methodNext = chain.getMethod(index);
                     Frame           frameNext  = frameCaller.createFrame1(methodNext, hStruct,
-                                new ObjectHandle[methodNext.getMaxVars()], Op.A_IGNORE);
+                                new ObjectHandle[frameCaller.getMaxVars(methodNext)], Op.A_IGNORE);
                     if (++index < chain.getDepth()) {
                         frameNext.addContinuation(this);
                     }
@@ -2395,7 +2395,7 @@ public abstract class ClassTemplate
                         if (ctorAnno.isNoOp()) {
                             iResult = Op.R_NEXT;
                         } else {
-                            ObjectHandle[] ahArgs = new ObjectHandle[ctorAnno.getMaxVars()];
+                            ObjectHandle[] ahArgs = new ObjectHandle[frameCaller.getMaxVars(ctorAnno)];
 
                             Frame frameCtor = frameCaller.createFrame1(
                                 ctorAnno, hStruct, ahArgs, Op.A_IGNORE);

@@ -89,7 +89,18 @@ class ConstantPoolOwnershipTest {
         runOwnershipProgram(source, true);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"RuntimeDescriptors.x", "RuntimeConstruction.x", "Singletons.x", "RuntimeDelegation.x"})
+    @Timeout(90)
+    void independentApplicationsExecuteTheExactSameFrozenImage(String source) throws Exception {
+        runOwnershipProgram(source, true, true);
+    }
+
     private void runOwnershipProgram(String source, boolean freeze) throws Exception {
+        runOwnershipProgram(source, freeze, false);
+    }
+
+    private void runOwnershipProgram(String source, boolean freeze, boolean shareImage) throws Exception {
         var repository = repository();
         var runtime = new Runtime();
         try (var input = getClass().getResourceAsStream("/ownership/" + source)) {
@@ -108,10 +119,16 @@ class ConstantPoolOwnershipTest {
             modules.storeModule(module);
             var runtimeRepository = new LinkedRepository(modules, repository);
             var root = new NativeContainer(runtime, runtimeRepository);
+            FileStructure shared = null;
             for (int i = 0; i < 2; i++) {
-                // Reuse the native root while each application starts with independent definitions.
-                var file = root.createFileStructure(new FileStructure(module.getFileStructure()).getModule());
-                assertNull(file.linkModules(runtimeRepository, true));
+                var file = shared;
+                if (file == null) {
+                    file = root.createFileStructure(new FileStructure(module.getFileStructure()).getModule());
+                    assertNull(file.linkModules(runtimeRepository, true));
+                    if (shareImage) {
+                        shared = file;
+                    }
+                }
                 var application = new MainContainer(runtime, root, file.getModuleId());
                 if (!freeze && source.equals("RuntimeDescriptors.x")) {
                     verifyLateInitializer(application);
@@ -120,9 +137,10 @@ class ConstantPoolOwnershipTest {
                 var constants = file.getConstantPool().getConstants();
                 var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
                 var declarations = freeze ? declarations(file) : List.<Component>of();
+                var codeState = freeze ? methodCodeState(declarations) : List.<MethodCodeState>of();
                 if (freeze) {
-                    // Freeze before entry/type queries, not after warming metadata. The second
-                    // execution uses another prepared image while retaining the native root.
+                    // Freeze before entry/type queries. The sharing regression reuses these exact
+                    // objects in the second application, without copying or relinking the image.
                     application.getTypeContext().freezeDefinitions();
                 }
                 application.start(Map.of());
@@ -138,6 +156,16 @@ class ConstantPoolOwnershipTest {
                     for (int index = 0; index < declarations.size(); index++) {
                         assertSame(declarations.get(index), after.get(index));
                     }
+                    var afterCode = methodCodeState(after);
+                    assertEquals(codeState.size(), afterCode.size());
+                    for (int index = 0; index < codeState.size(); index++) {
+                        var expected = codeState.get(index);
+                        var actual = afterCode.get(index);
+                        assertSame(expected.method(), actual.method());
+                        assertTrue(expected.code() == actual.code(),
+                                () -> "Compiler Code changed during execution: " +
+                                        expected.method().getIdentityConstant().getPathString());
+                    }
                 }
             }
         } finally {
@@ -151,6 +179,21 @@ class ConstantPoolOwnershipTest {
         component.children().forEach(child -> result.addAll(declarations(child)));
         return result;
     }
+
+    /** Cold runtime execution must not install compiler Code on declarations. */
+    private static List<MethodCodeState> methodCodeState(List<Component> declarations) throws Exception {
+        var code = MethodStructure.class.getDeclaredField("m_code");
+        code.setAccessible(true);
+        var result = new ArrayList<MethodCodeState>();
+        for (var declaration : declarations) {
+            if (declaration instanceof MethodStructure method) {
+                result.add(new MethodCodeState(method, code.get(method)));
+            }
+        }
+        return result;
+    }
+
+    private record MethodCodeState(MethodStructure method, Object code) {}
 
     /** Metadata clears retain generated executables, while another owner gets independent bodies. */
     private static void verifyGeneratedDelegation(MainContainer application) {

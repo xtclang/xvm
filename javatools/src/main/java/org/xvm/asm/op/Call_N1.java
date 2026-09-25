@@ -89,7 +89,7 @@ public class Call_N1
 
                 checkReturnRegister(frame, methodSuper);
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, methodSuper.getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(methodSuper));
 
                 if (anyDeferred(ahVar)) {
                     Frame.Continuation stepNext = frameCaller ->
@@ -107,7 +107,7 @@ public class Call_N1
                     return R_EXCEPTION;
                 }
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(function));
 
                 checkReturnRegister(frame, function);
 
@@ -139,7 +139,7 @@ public class Call_N1
 
     protected int complete(Frame frame, FunctionHandle hFunction) {
         try {
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount(frame));
             if (anyDeferred(ahVar)) {
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.call1(frameCaller, null, ahVar, m_nRetValue);

@@ -59,7 +59,7 @@ public class xCPFileStore
                                         getCanonicalType(), frame.poolContext().typeFileStore());
 
             GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(s_constructor));
             ahVar[0] = xString.makeHandle(constStore.getPath());
             ahVar[1] = new ConstantHandle(constStore.getValue());
 

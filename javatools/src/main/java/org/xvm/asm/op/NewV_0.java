@@ -106,7 +106,7 @@ public class NewV_0
             frame.introduceResolvedVar(nReturn, typeTarget);
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
 
         return clzTarget.getTemplate().
                         construct(frame, constructor, clzTarget, null, ahVar, nReturn);

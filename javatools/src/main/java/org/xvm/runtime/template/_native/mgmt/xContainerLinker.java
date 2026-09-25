@@ -286,7 +286,7 @@ public class xContainerLinker
                 CallChain    chain = hProvider.getComposition().getMethodCallChain(
                         frameCaller.f_context.getContainer(), frameCaller.runtimeConstant(GET_RESOURCE));
 
-                ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
+                ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars(frameCaller)];
                 ahArg[0] = hType;
                 ahArg[1] = hName;
 

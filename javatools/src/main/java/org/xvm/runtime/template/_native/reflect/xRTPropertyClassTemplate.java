@@ -166,7 +166,7 @@ public class xRTPropertyClassTemplate
             MethodStructure methodCreateContrib = xRTClassTemplate.CREATE_CONTRIB_METHOD;
             xEnum           enumAction          = xRTClassTemplate.ACTION_TEMPLATE;
 
-            ObjectHandle[] ahVar = new ObjectHandle[methodCreateContrib.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(methodCreateContrib)];
             ahVar[0] = Utils.ensureInitializedEnum(frameCaller, enumAction.getEnumByName(sAction));
             ahVar[1] = typeContrib.ensureTypeHandle(frameCaller.f_context.f_container);
             ahVar[2] = hDelegatee;

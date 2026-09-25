@@ -112,7 +112,7 @@ public class NewV_1
             frame.introduceResolvedVar(nReturn, typeTarget);
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
         ahVar[0] = hArg;
 
         return isDeferred(hArg)

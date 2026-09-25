@@ -606,6 +606,9 @@ public class MethodStructure
      * been created, then the Code will be empty. If the Code was already created, then that
      * previous Code will be returned.
      *
+     * <p>This is the compiler/tooling representation. Interpreter frames use
+     * {@link #createExecutionCode()} and retain its mutable Ops with their service.
+     *
      * @return a Code object, or null iff this MethodStructure has been marked as native
      */
     public Code ensureCode() {
@@ -630,7 +633,7 @@ public class MethodStructure
 
         Code code;
 
-        resetRuntimeInfo();
+        resetCode();
 
         m_fNative     = false;
         m_aconstLocal = null;
@@ -652,7 +655,7 @@ public class MethodStructure
     }
 
     /**
-     * @return the op-code array for this method
+     * @return this method's compiler/tooling Op array; interpreter execution owns a separate body
      */
     public Op[] getOps() {
         Code code = ensureCode();
@@ -663,6 +666,47 @@ public class MethodStructure
 
         return code.getAssembledOps();
     }
+
+    /**
+     * Decode a private executable from prepared bytes without installing compiler Code or frame
+     * sizes on this declaration. Callers retain the result with their execution owner. Image and
+     * generated bodies must finish assembly before this boundary; runtime lookup never assembles
+     * or registers constants in a shared definition pool.
+     */
+    public ExecutionCode createExecutionCode() {
+        Constant[] constants = m_aconstLocal == null ? Constant.NO_CONSTS : m_aconstLocal.clone();
+        if (isNative() || !hasCode()) {
+            return new ExecutionCode(Op.NO_OPS, constants, getParamCount(), 1, new int[0]);
+        }
+        if (m_abOps == null) {
+            throw new IllegalStateException("Method has not been assembled: " + getIdentityConstant());
+        }
+        Code code = new Code(this);
+        Op[] ops = code.m_aop;
+        int[] lines = new int[ops.length];
+        int line = 1;
+        for (int index = 0; index < ops.length; index++) {
+            if (ops[index].ensureOp() instanceof Nop nop) {
+                line += nop.getLineCount();
+            }
+            lines[index] = line == 1 ? 0 : line;
+        }
+        return new ExecutionCode(ops, constants, code.maxVars, code.maxScopes, lines);
+    }
+
+    /**
+     * Decode prepared Ops. Runtime-only methods also restore their non-serializable callbacks
+     * here, before address resolution and scope simulation.
+     */
+    protected Op[] readCodeOps(DataInput in, Constant[] constants) throws IOException {
+        return Op.readOps(in, constants);
+    }
+
+    /**
+     * A private decoded body and its matching layout, local operands and original line map.
+     * The arrays belong to the receiving execution owner; they are never image/compiler arrays.
+     */
+    public record ExecutionCode(Op[] ops, Constant[] constants, int maxVars, int maxScopes, int[] lines) {}
 
     /**
      * @return the root BinaryAST, or null if none
@@ -1036,7 +1080,7 @@ public class MethodStructure
         return sigResolved;
     }
 
-    // ----- run-time support ----------------------------------------------------------------------
+    // ----- code preparation ----------------------------------------------------------------------
 
     /**
      * @return a scope containing just the parameters to the method
@@ -1050,30 +1094,11 @@ public class MethodStructure
     }
 
     /**
-     * Initialize the runtime information. This is done automatically.
+     * Discard the compiler body before replacing code or marking a native declaration.
      */
-    public void ensureRuntimeInfo() {
-        if (m_cScopes == 0) {
-            Code code = ensureCode();
-            if (code == null) {
-                Scope scope = createInitialScope();
-                m_cVars   = scope.getMaxVars();
-                m_cScopes = scope.getMaxDepth();
-            } else if (needsReassembly()) {
-                forceAssembly(getConstantPool());
-                assert m_cScopes > 0;
-            }
-        }
-    }
-
-    /**
-     * Discard any runtime information.
-     */
-    public void resetRuntimeInfo() {
+    private void resetCode() {
         verifyMutable();
         m_code    = null;
-        m_cVars   = 0;
-        m_cScopes = 0;
         m_fNative = false;
     }
 
@@ -1151,23 +1176,6 @@ public class MethodStructure
     }
 
     /**
-     * @return the number of variables (registers) necessary for a frame running this method's code
-     *         (including the parameters)
-     */
-    public int getMaxVars() {
-        ensureRuntimeInfo();
-        return m_cVars;
-    }
-
-    /**
-     * @return the number of scopes necessary for a frame running this method's code
-     */
-    public int getMaxScopes() {
-        ensureRuntimeInfo();
-        return m_cScopes;
-    }
-
-    /**
      * Specifies whether the method is implemented at this virtual level.
      *
      * @param fAbstract  pass true to mark the method as abstract
@@ -1201,7 +1209,7 @@ public class MethodStructure
     public void markNative() {
         verifyMutable();
         setAbstract(false);
-        resetRuntimeInfo();
+        resetCode();
 
         if (getName().equals("compare") && getIdentityConstant().getNamespace().getName().equals("Const")) {
             int q= 0;
@@ -1400,12 +1408,8 @@ public class MethodStructure
             return m_FUsesSuper;
         }
 
-        Code code = ensureCode();
-        if (code == null) {
-            return false;
-        }
-
-        return m_FUsesSuper = code.usesSuper();
+        Code code = codeForQuery();
+        return code != null && code.usesSuper();
     }
 
     /**
@@ -1421,8 +1425,13 @@ public class MethodStructure
         }
 
         // a no-op constructor that has a finalizer cannot be trivially optimized out
-        return ensureCode().isNoOp() &&
+        return codeForQuery().isNoOp() &&
             (!isConstructor() || getConstructFinally() == null);
+    }
+
+    /** Cold semantic reads must not install a compiler body on a shared declaration. */
+    private Code codeForQuery() {
+        return isNative() || !hasCode() ? null : m_code == null ? new Code(this) : m_code;
     }
 
     /**
@@ -1819,7 +1828,7 @@ public class MethodStructure
         if (fFound) {
             // at least one injection is found; scan all VAR_DN ops to collect all
             // (multiple ops could use the same annotation type, pointing to different names)
-            for (Op op : ensureCode().getAssembledOps()) {
+            for (Op op : codeForQuery().getAssembledOps()) {
                 if (op instanceof Var_DN opVar &&
                         opVar.getType(aconst) instanceof AnnotatedTypeConstant typeAnno &&
                         typeAnno.getAnnotationClass().equals(pool.clzInject())) {
@@ -2217,7 +2226,7 @@ public class MethodStructure
                 try {
                     aop = abOps.length == 0
                             ? Op.NO_OPS
-                            : Op.readOps(new DataInputStream(new ByteArrayInputStream(abOps)), aconst);
+                            : method.readCodeOps(new DataInputStream(new ByteArrayInputStream(abOps)), aconst);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -2707,8 +2716,8 @@ public class MethodStructure
                 op.resolveAddresses(aop);
             }
 
-            f_method.m_cVars   = scope.getMaxVars();
-            f_method.m_cScopes = scope.getMaxDepth();
+            maxVars   = scope.getMaxVars();
+            maxScopes = scope.getMaxDepth();
         }
 
         protected void registerConstants(ConstantRegistry registry) {
@@ -2758,6 +2767,9 @@ public class MethodStructure
          * The containing method.
          */
         protected final MethodStructure f_method;
+
+        private int maxVars;
+        private int maxScopes;
 
         /**
          * List of ops being assembled.
@@ -3148,16 +3160,6 @@ public class MethodStructure
      * The method's parameters.
      */
     private transient RegisterAST[] m_aAstParams;
-
-    /**
-     * The max number of registers used by the method. Calculated from the ops.
-     */
-    transient int m_cVars;
-
-    /**
-     * The max number of scopes used by the method. Calculated from the ops.
-     */
-    transient int m_cScopes;
 
     /**
      * True iff the method has been marked as "native". This is not part of the persistent method

@@ -104,7 +104,7 @@ public class NewCG_1
 
         TypeConstant typeChild = frame.resolveType(m_nTypeValue);
 
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
         ahVar[0] = hArg;
 
         return isDeferred(hArg)

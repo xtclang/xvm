@@ -5,11 +5,12 @@ Status: staged implementation in progress, 2026-09-25. The experimental branch
 the first descriptor/index boundary, including late-generated field initializers, local reflective
 parameterization, a separate type-relation table and an explicit definition-freeze boundary.
 Scope 3 extends that boundary to late method/property delegation and prepares template-defined
-native rebases before application publication. The completion records below distinguish these
-changes from general method execution state, broader reflection and default frozen activation,
-which remain unfinished. Scope 2 separates semantic metadata from descriptors; scope 1 routes
-ordinary entry, frame and construction metadata through runtime descriptors. Freezing is still
-opt-in; this is not a merge-ready activation change.
+native rebases before application publication. Scope 4 moves method initialization, decoded Ops,
+frame layouts and debugger instrumentation into service-owned execution state, with same-image
+interpreter regressions. Broader reflection and default frozen activation remain unfinished.
+Scope 2 separates semantic metadata from descriptors; scope 1 routes ordinary entry, frame and
+construction metadata through runtime descriptors. Freezing is still opt-in; this is not a
+merge-ready activation change.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -825,9 +826,10 @@ path; full frozen activation must not be enabled by default yet.
    use an execution-lifetime table, and template-defined native rebases are prepared before
    publication. Existing const-helper synthesis remains at linking/preparation. See the scope-3
    record below for cold helper checks and the remaining execution/reflection limits.
-4. Separate method initialization flags, mutable decoded Ops, frame-layout preparation and
-   debugger instrumentation from shared definitions. Keep per-execution state with its container
-   or service; verify two executions of exactly the same definitions.
+4. **Implemented for interpreter method execution.** Initialization completion, mutable decoded
+   Ops, frame layouts and debugger instrumentation belong to the executing service. Same-image
+   frozen interpreter regressions verify two applications using the exact same definitions.
+   See the scope-4 record for preparation, cold-query, retention and concurrency limits.
 5. Complete foreign/constructor/property/function reflection and captured annotation ownership;
    audit file-store/file-node handle fields and classloader-wide native values. Read-only constant
    indices do not decide the lifetime of these values.
@@ -1302,7 +1304,8 @@ and no general concurrency or performance guarantee is inferred from these check
 - `spotlessCheck` and `git diff --check` passed.
 
 Scope 3 is complete within the runtime-descriptor and prepared-application boundary above.
-Scopes 4–6 remain open; general frozen activation is still disabled.
+At that checkpoint scopes 4–6 remained open. The scope-4 work follows; general frozen activation
+is still disabled.
 
 ## Scope 4: compiled method execution ownership
 
@@ -1325,5 +1328,76 @@ it does not grant module or value sharing based on equal signatures.
 
 `MethodExecutionTest` checks independent containers, independent service completion, retention
 across metadata clears and failure/retry. The existing singleton routing regressions also pass.
-Decoded Ops, frame sizing and debugger isolation remain the next scope-4 slice; this change alone
-does not establish safe execution of a shared compiled image.
+Commit `703ed5f40` contains this initialization slice. The following slice adds decoded Ops,
+frame sizing and debugger isolation for execution of shared compiled images.
+
+### Service-owned decoded code, layout and instrumentation
+
+The next slice extends each exact-body `MethodExecution` with a final `Lazy<ExecutionCode>`.
+`MethodStructure.createExecutionCode()` reads prepared bytes into fresh Ops, resolves addresses,
+simulates scopes and returns the body with its register/scope counts, copied local-constant array
+and original line map. It does not install compiler `Code` or layout on the declaration. Only a
+complete decode publishes through the holder; failed decoding leaves it retryable. The declaration's
+`m_cVars`, `m_cScopes`, `ensureRuntimeInfo()` and ownerless sizing APIs are removed.
+
+`Frame` retains that service entry and uses its Ops, operands and layout together. Call, invocation,
+construction, native-adapter and function-handle argument sizing all select the executing frame's
+service. Native methods expose parameter counts for argument preparation but cannot create an
+interpreted frame. Compiler assembly still has its own mutable `Code`; executing a body requires
+its assembly to have finished. Cold no-op, super-use and injection metadata queries decode
+temporarily without installing compiler Code on a declaration. The strengthened frozen checks
+exposed super-use queries installing Code on `Array.capacity.get()` and `Base.label.get()`; that
+query no longer writes its computed flag back to the declaration either.
+
+The service lifetime is deliberate: mutable Op caches and debugger reset wrappers must not cross
+services, even within one container. Repeated calls in one service reuse the same decoded body.
+`ServiceContext.insertBreakPointOp` accepts a frame, checks its owner and edits that frame's private
+array. Source lines come from the execution's original map, so a temporary wrapper cannot change
+line lookup. Semantic clears retain decoded bodies and initialization completion.
+
+Fresh decoding exposed a previously in-memory-only field initializer. The anonymous Op that sets
+an inflated reference's outer field wrote no bytes, although assembly counted it as an instruction;
+three frozen interpreter programs consequently failed with EOF during first execution. The named
+`RuntimeMethodStructure.InitRef` preserves its execution position and behavior. Its private encoding
+contains a NOP placeholder and a prepared, immutable address-to-property map. Decoding restores a
+fresh callback before address/scope simulation. Runtime methods already reject image serialization;
+this does not introduce an XTC opcode or put runtime descriptors into image tables. Generated methods
+remain retained by their scope-3 owners, while each service owns the Ops it actually executes.
+
+### Validation and limits
+
+The Java regressions serialize and reload a minimal method before the cold-definition checks.
+They compare individual Op identities, local arrays, register/scope layout and source-Code state
+across containers; cover ordinary mutable-image debugger isolation, first-use concurrency with
+explicit synchronization, native layout, and failed preparation followed by retry; and verify that
+generated reference callbacks decode independently at their original addresses.
+
+The XDK regression runs `RuntimeDescriptors.x`, `RuntimeConstruction.x`, `Singletons.x` and
+`RuntimeDelegation.x` twice against the exact same prepared, frozen application image. The second
+application neither copies nor relinks that image. Existing frozen checks additionally compare
+compiler-Code identities before and after execution, alongside declaration identity, constant
+membership and positions.
+
+Per-service decoding increases retained code in proportion to the methods each service uses.
+This is a correctness boundary, not a memory or performance improvement claim; wider immutable
+code sharing requires a separate design for mutable Op caches and instrumentation. Interpreter
+services retain their existing scheduling model. These tests do not establish arbitrary concurrent
+execution within one service, JIT code ownership, native-root freezing, classloader-wide native
+cache isolation, or captured reflection-value ownership. Hand-authored native callback arrays and
+bindings remain part of the native-state audit. Scopes 5 and 6 remain separate.
+
+Final verification on 2026-09-25:
+
+- The focused Java run passed all 14 cases in `MethodExecutionTest` and `RuntimeMethodsTest`,
+  without skips. The four exact-shared-image interpreter cases also passed without skips.
+- The full `:xdk:test` task in the integration-enabled combined run passed **53 cases, no skips,
+  failures or errors**, including all **28 ownership cases**. The distribution rebuilt successfully.
+- The combined run exposed an older copy test that reflected on the removed initialization flag.
+  Its code-copy assertions remain; initialization ownership is now checked by the service tests.
+  After updating that test, `env RUN_INTEGRATION_TESTS=true ./gradlew :javatools:test --rerun
+  --console=plain` passed **536 cases: 500 passed, 36 existing skips, no failures or errors**.
+  All nine scope-4 Java additions executed, as did all eight file-copy ownership cases.
+- Counts come from the JUnit XML reports. `spotlessCheck` and `git diff --check` passed.
+
+Scope 4 is complete within this interpreter-method boundary. Scope 5 covers remaining reflection
+and native state; scope 6 remains the gate for enabling frozen activation by default.

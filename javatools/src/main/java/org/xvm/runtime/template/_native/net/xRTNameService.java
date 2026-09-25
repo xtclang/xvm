@@ -85,7 +85,7 @@ public class xRTNameService
                              ObjectHandle hArg, int iReturn) {
         ServiceHandle  hService = (ServiceHandle) hTarget;
 
-        ObjectHandle[] ahArg = new ObjectHandle[method.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(method)];
         ahArg[0] = hArg;
 
         if (frame.f_context != hService.f_context) {

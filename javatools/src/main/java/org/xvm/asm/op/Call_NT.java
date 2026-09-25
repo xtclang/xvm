@@ -92,7 +92,7 @@ public class Call_NT
 
                 checkReturnTupleRegister(frame, chain.getSuper(frame));
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, chain.getSuper(frame).getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(chain.getSuper(frame)));
 
                 if (anyDeferred(ahVar)) {
                     Frame.Continuation stepNext = frameCaller ->
@@ -110,7 +110,7 @@ public class Call_NT
                     return R_EXCEPTION;
                 }
 
-                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, function.getMaxVars());
+                ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(function));
 
                 checkReturnTupleRegister(frame, function);
 
@@ -142,7 +142,7 @@ public class Call_NT
 
     protected int complete(Frame frame, FunctionHandle hFunction) {
         try {
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, hFunction.getVarCount(frame));
             if (anyDeferred(ahVar)) {
                 Frame.Continuation stepNext = frameCaller ->
                     hFunction.callT(frameCaller, null, ahVar, m_nRetValue);

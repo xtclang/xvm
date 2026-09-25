@@ -101,7 +101,7 @@ public class Invoke_NT
         CallChain chain = getCallChain(frame, hTarget);
 
         try {
-            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, chain.getMaxVars());
+            ObjectHandle[] ahArg = frame.getArguments(m_anArgValue, chain.getMaxVars(frame));
 
             if (anyDeferred(ahArg)) {
                 Frame.Continuation stepNext = frameCaller ->

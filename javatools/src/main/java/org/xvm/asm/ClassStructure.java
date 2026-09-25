@@ -35,10 +35,6 @@ import org.xvm.asm.op.*;
 import org.xvm.compiler.Constants;
 
 import org.xvm.runtime.ClassComposition.FieldInfo;
-import org.xvm.runtime.Frame;
-import org.xvm.runtime.ObjectHandle.GenericHandle;
-
-import org.xvm.runtime.template.reflect.xRef.RefHandle;
 
 import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
@@ -2988,25 +2984,7 @@ public class ClassStructure
             if (field.isInflated()) {
                 // assign the ref's OUTER property; the auto-initializer will be called
                 // by the constructor (see ClassTemplate#proceedConstruction)
-                code.add(new Op() {
-                    @Override
-                    public int process(Frame frame, int iPC) {
-                        GenericHandle hStruct = (GenericHandle) frame.getThis();
-                        RefHandle     hRef    = (RefHandle) hStruct.getField(frame, idField);
-
-                        hRef.setField(frame, GenericHandle.OUTER, hStruct);
-                        return iPC + 1;
-                    }
-
-                    @Override
-                    public void write(DataOutput out, ConstantRegistry registry) {
-                    }
-
-                    @Override
-                    public String toString() {
-                        return "initRef: " + idField;
-                    }
-                });
+                code.add(new RuntimeMethodStructure.InitRef(pool.register(idField)));
             }
         }
 

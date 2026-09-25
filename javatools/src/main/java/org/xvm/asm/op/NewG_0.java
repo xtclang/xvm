@@ -88,7 +88,7 @@ public class NewG_0
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(constructor)];
 
         return clzTarget.getTemplate().
                 construct(frame, constructor, clzTarget, hParent, ahVar, m_nRetValue);

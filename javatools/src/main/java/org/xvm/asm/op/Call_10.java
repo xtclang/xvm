@@ -123,13 +123,13 @@ public class Call_10
                 invokeNative1(frame, function, null, hArg, A_IGNORE);
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
         ahVar[0] = hArg;
         return frame.call1(function, null, ahVar, A_IGNORE);
     }
 
     protected int complete(Frame frame, ObjectHandle hArg, FunctionHandle hFunction) {
-        ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount()];
+        ObjectHandle[] ahVar = new ObjectHandle[hFunction.getVarCount(frame)];
         ahVar[0] = hArg;
 
         return hFunction.call1(frame, null, ahVar, A_IGNORE);

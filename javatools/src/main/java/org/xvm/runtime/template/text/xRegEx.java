@@ -230,7 +230,7 @@ public class xRegEx
 
         ObjectHandle   hGroups = xArray.makeArrayHandle(m_clzRangeArray, ah.length, ah, Mutability.Fixed);
         ObjectHandle[] ahArgs  = new ObjectHandle[]{hRegEx, hText, hGroups};
-        ObjectHandle[] ahVar   = Utils.ensureSize(ahArgs, constructor.getMaxVars());
+        ObjectHandle[] ahVar   = Utils.ensureSize(ahArgs, frame.getMaxVars(constructor));
         GenericHandle  hMatch  = new GenericHandle(clzStruct);
 
         return proceedConstruction(frame, constructor, true, hMatch, ahVar, iReturn);

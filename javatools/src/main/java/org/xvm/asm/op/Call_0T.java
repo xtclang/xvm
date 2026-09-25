@@ -122,7 +122,7 @@ public class Call_0T
                     invokeNativeT(frame, function, null, Utils.OBJECTS_NONE, m_nRetValue);
             }
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
             return frame.callT(function, null, ahVar, m_nRetValue);
         }
 
@@ -141,7 +141,7 @@ public class Call_0T
     private int complete(Frame frame, FunctionHandle hFunction) {
         checkReturnTupleRegister(frame, hFunction.getMethod());
 
-        return hFunction.callT(frame, null, new ObjectHandle[hFunction.getVarCount()], m_nRetValue);
+        return hFunction.callT(frame, null, new ObjectHandle[hFunction.getVarCount(frame)], m_nRetValue);
     }
 
     @Override

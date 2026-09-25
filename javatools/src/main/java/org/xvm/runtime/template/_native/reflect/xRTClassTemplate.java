@@ -360,7 +360,7 @@ public class xRTClassTemplate
                                          String sAction, TypeConstant typeContrib,
                                          ObjectHandle haParams, ObjectHandle hDelegatee,
                                          ObjectHandle haNames, ObjectHandle haTypes) {
-        ObjectHandle[] ahVar = new ObjectHandle[CREATE_CONTRIB_METHOD.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(CREATE_CONTRIB_METHOD)];
         ahVar[0] = Utils.ensureInitializedEnum(frame, ACTION_TEMPLATE.getEnumByName(sAction));
         ahVar[1] = typeContrib.ensureTypeHandle(frame.f_context.f_container);
         ahVar[2] = haParams;
@@ -468,7 +468,7 @@ public class xRTClassTemplate
             ahType[i++] = xRTTypeTemplate.makeHandle(container, entry.getValue());
         }
 
-        ObjectHandle[] ahVar = new ObjectHandle[CREATE_TYPE_PARAMETERS_METHOD.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(CREATE_TYPE_PARAMETERS_METHOD)];
         ahVar[0] = xArray.makeStringArrayHandle(ahName);
         ahVar[1] = xArray.createImmutableArray(
                     xRTTypeTemplate.ensureArrayClassComposition(container), ahType);

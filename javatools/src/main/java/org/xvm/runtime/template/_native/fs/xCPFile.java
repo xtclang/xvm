@@ -39,7 +39,7 @@ public class xCPFile
             TypeComposition clz    = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeFile());
             GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, frame.getMaxVars(s_constructor));
             ahVar[0] = new ConstantHandle(constFile);
 
             return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);

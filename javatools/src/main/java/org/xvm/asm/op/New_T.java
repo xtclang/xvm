@@ -105,7 +105,7 @@ public class New_T
         }
 
         return template.construct(frame, constructor, clzTarget, null,
-            Utils.ensureSize(ahArg, constructor.getMaxVars()), m_nRetValue);
+            Utils.ensureSize(ahArg, frame.getMaxVars(constructor)), m_nRetValue);
     }
 
     @Override

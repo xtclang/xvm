@@ -112,7 +112,7 @@ public class xListMap
                 : xArray.createImmutableArray(clzValArray, ahVal);
 
         MethodStructure constructor = resolveMethod(frame.f_context.getContainer(), ensureConstructor());
-        ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
 

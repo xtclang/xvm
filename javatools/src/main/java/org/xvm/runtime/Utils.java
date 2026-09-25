@@ -166,7 +166,7 @@ public abstract class Utils {
      * @return R_CALL value
      */
     public static int callValueOf(Frame frame, ObjectHandle hValue) {
-        ObjectHandle[] ahVar = new ObjectHandle[STRING_VALUE_OF.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(STRING_VALUE_OF)];
         ahVar[0] = hValue;
         return frame.call1(STRING_VALUE_OF, null, ahVar, Op.A_STACK);
     }
@@ -284,7 +284,7 @@ public abstract class Utils {
                     "\" on " + hInjector.getType().getValueString()));
             }
 
-            ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
+            ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars(frame)];
             ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
             ahArg[1] = xString.makeHandle(sName);
 
@@ -330,7 +330,7 @@ public abstract class Utils {
                                 "\" on " + hInjector.getType().getValueString()));
             }
 
-            ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
+            ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars(frame)];
             ahArg[0] = type.ensureTypeHandle(frame.f_context.f_container);
             ahArg[1] = ahArg[0];
             ahArg[2] = xString.makeHandle(sName);
@@ -869,7 +869,7 @@ public abstract class Utils {
             // the class must have a no-params constructor to call
             MethodStructure constructor = clz.findConstructor(TypeConstant.NO_TYPES);
             // No parameters does not imply no locals; construct() takes the complete frame slots.
-            ObjectHandle[] variables = ensureSize(OBJECTS_NONE, constructor.getMaxVars());
+            ObjectHandle[] variables = ensureSize(OBJECTS_NONE, frame.getMaxVars(constructor));
             return template.construct(frame, constructor,
                     template.ensureClass(container, clz.getCanonicalType(frame.poolContext())),
                     null, variables, Op.A_STACK);
@@ -933,7 +933,7 @@ public abstract class Utils {
                         prop.getIdentityConstant().getPathString());
             }
 
-            ObjectHandle[] ahVar = ensureSize(OBJECTS_NONE, methodInit.getMaxVars());
+            ObjectHandle[] ahVar = ensureSize(OBJECTS_NONE, frame.getMaxVars(methodInit));
             switch (frame.call1(methodInit, null, ahVar, Op.A_STACK)) {
             case Op.R_CALL:
                 frame.m_frameNext.addContinuation(frameCaller -> {
@@ -1570,7 +1570,7 @@ public abstract class Utils {
                 TypeComposition clzParam  = frameCaller.f_context.f_container.ensureClassComposition(typeParam, template);
 
                 MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
-                ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
+                ObjectHandle[]   ahArg     = new ObjectHandle[frameCaller.getMaxVars(construct)];
                 ahArg[0] = xInt64.makeHandle(index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
                 ahArg[2] = xBoolean.makeHandle(fFormal);
@@ -1614,7 +1614,7 @@ public abstract class Utils {
     public static int constructListMap(Frame frame, TypeComposition clzMap,
                                        ObjectHandle haKeys, ObjectHandle haValues, int iReturn) {
         MethodStructure constructor = LIST_MAP_CONSTRUCT;
-        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]  ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = haKeys;
         ahArg[1] = haValues;
 
@@ -1634,7 +1634,7 @@ public abstract class Utils {
     public static int constructArgument(Frame frame, TypeConstant typeReferent,
                                         ObjectHandle hValue, String sName) {
         MethodStructure constructor = ARGUMENT_CONSTRUCT;
-        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]  ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = hValue;
         ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
 
@@ -1656,7 +1656,7 @@ public abstract class Utils {
     public static int constructAnnotation(Frame frame, ClassHandle hAnno,
                                           ObjectHandle[] ahAnnoArg, int iReturn) {
         MethodStructure constructor = ANNOTATION_CONSTRUCT;
-        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]  ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = hAnno;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
@@ -1678,7 +1678,7 @@ public abstract class Utils {
     public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle hClass,
                                                   ObjectHandle[] ahAnnoArg, int iReturn) {
         MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
-        ObjectHandle[]  ahArg = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]  ahArg = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = hClass;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 

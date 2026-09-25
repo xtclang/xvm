@@ -87,7 +87,7 @@ public class xRTAlgorithms
         ServiceContext  context = f_container.createServiceContext(f_sName);
 
         switch (context.sendConstructRequest(frame, clz, ctor, null,
-                    new ObjectHandle[ctor.getMaxVars()], Op.A_STACK)) {
+                    new ObjectHandle[frame.getMaxVars(ctor)], Op.A_STACK)) {
         case Op.R_NEXT:
             return invokeCreateAlgorithms(frame);
 

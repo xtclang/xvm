@@ -99,7 +99,7 @@ public class Call_0N
                     invokeNativeNN(frame, function, null, Utils.OBJECTS_NONE, m_anRetValue);
             }
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
             return frame.callN(function, null, ahVar, m_anRetValue);
         }
 

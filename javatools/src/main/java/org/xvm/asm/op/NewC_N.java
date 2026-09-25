@@ -90,7 +90,7 @@ public class NewC_N
                 return reportMissingConstructor(frame, hParent);
             }
 
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(constructor));
 
             return isDeferred(hParent)
                     ? hParent.proceed(frame, frameCaller ->

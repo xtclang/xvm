@@ -317,7 +317,7 @@ public class xArray
                     }
 
                     FunctionHandle      hfnSupplier = (FunctionHandle) hValue;
-                    int                 cArgs       = hfnSupplier.getVarCount();
+                    int                 cArgs       = hfnSupplier.getVarCount(frame);
                     ObjectHandle[]      ahArg       = new ObjectHandle[cArgs];
                     Utils.ValueSupplier supplier    = (frameCaller, index) -> {
                         ahArg[0] = xInt64.makeHandle(index);
@@ -344,7 +344,7 @@ public class xArray
                 : 0;
 
         ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
-        ObjectHandle[] ahArg = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
+        ObjectHandle[] ahArg = new ObjectHandle[frame.getMaxVars(FILL_FROM_ITERABLE)];
         ahArg[0] = clzArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
         ahArg[1] = hArray;
         ahArg[2] = hIterable;
@@ -545,7 +545,7 @@ public class xArray
                     }
                 }
                 return frame.callN(LIST_INDEX_OF, hTarget,
-                    Utils.ensureSize(ahArg, LIST_INDEX_OF.getMaxVars()), aiReturn);
+                    Utils.ensureSize(ahArg, frame.getMaxVars(LIST_INDEX_OF)), aiReturn);
             }}
         }
 
@@ -593,7 +593,7 @@ public class xArray
         JavaLong hHash = hTarget.m_hHash;
         if (hHash == null) {
             frame.call1(CALCULATE_HASH, hTarget,
-                new ObjectHandle[CALCULATE_HASH.getMaxVars()], Op.A_STACK);
+                new ObjectHandle[frame.getMaxVars(CALCULATE_HASH)], Op.A_STACK);
             frame.m_frameNext.addContinuation(frameCaller -> {
                 JavaLong hValue = (JavaLong) frameCaller.popStack();
                 frameCaller.assignValue(iReturn, hValue);
@@ -710,7 +710,7 @@ public class xArray
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
     public static int createListSet(Frame frame, ArrayHandle hArray, int iResult) {
-        ObjectHandle[] ahVar = new ObjectHandle[CREATE_LIST_SET.getMaxVars()];
+        ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(CREATE_LIST_SET)];
         ahVar[0] = hArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
         ahVar[1] = hArray;
 

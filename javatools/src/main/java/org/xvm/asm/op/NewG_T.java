@@ -106,7 +106,7 @@ public class NewG_T
         }
 
         return clzTarget.getTemplate().construct(frame, constructor, clzTarget, hParent,
-            Utils.ensureSize(ahArg, constructor.getMaxVars()), m_nRetValue);
+            Utils.ensureSize(ahArg, frame.getMaxVars(constructor)), m_nRetValue);
     }
 
     @Override

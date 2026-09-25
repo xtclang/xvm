@@ -65,6 +65,7 @@ public class Frame
     public final MethodStructure    f_function;
 
     protected final Op[]            f_aOp;          // the op-codes
+    private final MethodExecution   execution;      // service-owned decoded body and layout
     protected final ObjectHandle    f_hTarget;      // the passed in target
     protected final ObjectHandle    f_hThis;        // the "inception" view of the target
 
@@ -121,6 +122,11 @@ public class Frame
                     ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn, int[] aiReturn) {
         assert framePrev != null && function != null;
 
+        if (function.isNative() || !function.hasCode()) {
+            throw new IllegalStateException("Method has not been compiled: " +
+                    function.getIdentityConstant().getPathString());
+        }
+
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
         f_nDepth    = framePrev.f_nDepth + 1;
@@ -128,17 +134,18 @@ public class Frame
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
         f_function  = function;
-        f_aOp       = function.getOps();
+        execution   = f_context.getMethodExecution(function);
+        f_aOp       = execution.getOps();
         f_hTarget   = hTarget;
         f_hThis     = hTarget == null
                     ? null
                     : hTarget.isStruct()
                         ? hTarget
                         : hTarget.revealOrigin();
-        f_ahVar     = ahVar;
-        f_aInfo     = new VarInfo[ahVar.length];
+        f_ahVar     = Utils.ensureSize(ahVar, execution.getMaxVars());
+        f_aInfo     = new VarInfo[f_ahVar.length];
 
-        int cScopes = function == null ? 1 : function.getMaxScopes();
+        int cScopes = execution.getMaxScopes();
         f_anNextVar = new int[cScopes];
         f_anNextVar[0] = function == null ? 0 : function.getParamCount();
 
@@ -158,6 +165,7 @@ public class Frame
         f_framePrev = null;
         f_iPCPrev   = iCallerPC;
         f_function  = null;
+        execution   = null;
         f_aOp       = aopNative;
         f_hTarget   = f_hThis = null;
         f_ahVar     = ahVar;
@@ -178,6 +186,7 @@ public class Frame
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
         f_function  = null;
+        execution   = null;
         f_aOp       = aopNative;
         f_hTarget   = framePrev.f_hTarget;
         f_hThis     = framePrev.f_hThis;
@@ -355,7 +364,7 @@ public class Frame
     protected int ensureInitialized(Frame frameNext) {
         return frameNext.f_nDepth > 128
                 ? raiseException(xException.stackOverflow(this))
-                : f_context.getMethodExecution(frameNext.f_function).ensureInitialized(this, frameNext);
+                : frameNext.execution.ensureInitialized(this, frameNext);
     }
 
     /**
@@ -1322,7 +1331,16 @@ public class Frame
      */
     public Constant[] localConstants() {
         assert f_function != null;
-        return f_function.getLocalConstants();
+        return execution.localConstants();
+    }
+
+    /** Size arguments using the same service-owned body that frame construction will execute. */
+    public int getMaxVars(MethodStructure method) {
+        return f_context.getMethodExecution(method).getMaxVars();
+    }
+
+    public int calculateLineNumber(int pc) {
+        return execution == null ? 0 : execution.calculateLineNumber(pc);
     }
 
     /**
@@ -2136,7 +2154,7 @@ public class Frame
                 sb.append(function.getContainingClass().getSourceFileName());
 
                 if (iPC >= 0) {
-                    int nLine = function.calculateLineNumber(iPC);
+                    int nLine = frame.f_context.getMethodExecution(function).calculateLineNumber(iPC);
                     if (nLine > 0) {
                         sb.append(':').append(nLine);
                     } else {
@@ -2313,7 +2331,7 @@ public class Frame
         if (iPC >= 0) {
             int nLine = 0;
             if (function != null) {
-                nLine = function.calculateLineNumber(iPC);
+                nLine = ctx.getMethodExecution(function).calculateLineNumber(iPC);
             }
 
             sb.append(" (");

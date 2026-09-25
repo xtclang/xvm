@@ -786,9 +786,18 @@ correct default-argument signature truncation and remove the foreign static hash
 reflection remain unfinished. The [scope-3 record](constant-pool-architecture-plan.md#scope-3-stable-preparation-and-generated-executables)
 documents the exact ownership boundary, publication rules, regressions and limits.
 
-Scope 4 starts by moving method singleton-initialization completion out of shared declarations
+Scope 4 moves method singleton-initialization completion out of shared declarations
 into exact-body entries retained by each `ServiceContext`. The same frozen method previously
 caused a second container to skip its singleton initialization. Canonical values and in-flight
 construction still use the existing container owner; service completion survives metadata clears
-and failed initialization can retry. The [scope-4 record](constant-pool-architecture-plan.md#scope-4-compiled-method-execution-ownership)
-records the reproduction and the remaining decoded-code/frame/debugger work.
+and failed initialization can retry. Each service also owns the method's freshly decoded Ops,
+frame layout, local operand array and original line map. Frame sizing and debugger instrumentation
+use that same entry. Cold super-use, no-op and injection queries no longer install compiler Code
+on declarations. Generated reference initializers recreate their callbacks when decoded, preserving
+instruction positions without changing the XTC format.
+
+The new frozen interpreter tests execute four programs in two applications using the exact same
+prepared image, checking unchanged compiler-Code identities, declaration trees and constant
+membership/positions. The [scope-4 record](constant-pool-architecture-plan.md#scope-4-compiled-method-execution-ownership)
+records the initial failures, implementation, verification and retention costs. Broader reflection,
+native static cache ownership and default frozen activation remain scopes 5 and 6.

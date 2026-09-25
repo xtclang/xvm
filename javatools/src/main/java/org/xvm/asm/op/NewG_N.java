@@ -89,7 +89,7 @@ public class NewG_N
                 return R_EXCEPTION;
             }
 
-            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, constructor.getMaxVars());
+            ObjectHandle[] ahVar = frame.getArguments(m_anArgValue, frame.getMaxVars(constructor));
 
             if (anyDeferred(ahVar)) {
                 Frame.Continuation stepNext = frameCaller ->

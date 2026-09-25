@@ -72,7 +72,7 @@ public class Call_00
                     invokeNativeN(frame, function, null, Utils.OBJECTS_NONE, A_IGNORE);
             }
 
-            ObjectHandle[] ahVar = new ObjectHandle[function.getMaxVars()];
+            ObjectHandle[] ahVar = new ObjectHandle[frame.getMaxVars(function)];
             return frame.call1(function, null, ahVar, A_IGNORE);
         }
 
@@ -88,7 +88,7 @@ public class Call_00
     }
 
     private static int callFunction(Frame frame, FunctionHandle hFunction) {
-        return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount()], A_IGNORE);
+        return hFunction.call1(frame, null, new ObjectHandle[hFunction.getVarCount(frame)], A_IGNORE);
     }
 
     // ----- JIT support ---------------------------------------------------------------------------
