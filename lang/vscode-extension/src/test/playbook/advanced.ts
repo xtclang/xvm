@@ -358,4 +358,29 @@ export function advancedCases(): void {
         }
     });
 
+    playbook('X90', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        for (const variant of data.variants) {
+            const text = fixture(data.file).replace(data.original, data.prefix + variant.suffix);
+            await workspace.replace(document, text);
+            await diagnostics(document.uri, values => values.length > 0, 'Incomplete array size');
+            const at = position(document, data.prefix, data.prefix.length);
+            const help = await workspace.signature(document, at);
+            assert.strictEqual(help?.signatures[0].label, data.signature);
+            assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, data.activeParameter);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(label), data.labels);
+            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at.translate(0, data.replacementStartDelta), at)));
+            await workspace.accept(document, items[0]);
+            const accepted = data.prefix.slice(0, data.replacementStartDelta) + data.labels[0];
+            assert.strictEqual(document.getText(), fixture(data.file).replace(data.original, accepted + variant.suffix));
+            if (variant.validAfterAcceptance) await noErrors(document.uri);
+            else await diagnostics(document.uri, values => values.length > 0, 'Missing bracket remains a diagnostic');
+            await workspace.replace(document, fixture(data.file).replace(data.original, accepted + variant.repairedSuffix));
+            await noErrors(document.uri);
+            await workspace.replace(document, fixture(data.file));
+            await noErrors(document.uri);
+        }
+    });
+
 }
