@@ -177,4 +177,49 @@ export function advancedCases(): void {
         await workspace.replace(document, fixture('Advanced.x'));
         await noErrors(document.uri);
     });
+
+    playbook('X79', 'typed argument prefixes fit values and replace exactly the identifier', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const [original, prefix] of [
+            ['take(1, text)', 'take(1, te'],
+            ['take(1, text)', 'take(first=1, second=te'],
+            ['fn(1, text)', 'fn(1, te'],
+            ['new Packet<String>("a", text)', 'new Packet<String>("a", te'],
+            ['new Packet<String>("a", text)', 'new Packet<String>(second="b", first=te']
+        ] as const) {
+            await workspace.replace(document, fixture('Advanced.x').replace(original, `${prefix})`));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved argument prefix diagnostics');
+            const at = position(document, prefix, prefix.length, true);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(item => item.label), ['text'], prefix);
+            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at.translate(0, -2), at)));
+            const before = document.getText();
+            await workspace.accept(document, items[0]);
+            assert.strictEqual(document.getText(), before.replace(`${prefix})`, `${prefix.slice(0, -2)}text)`));
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X80', 'typed argument prefixes preserve compatible overload alternatives', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await noErrors(document.uri);
+        for (const selected of ['valueNumber', 'valueText']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('choose(valueText);', 'choose(va);'));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved overloaded prefix diagnostics');
+            const at = position(document, 'choose(va);', 9);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(item => item.label).sort(), ['valueNumber', 'valueText']);
+            assert.strictEqual((await workspace.signature(document, at))?.signatures.length, 2);
+            const chosen = items.find(item => item.label === selected)!;
+            assert.ok(chosen.range instanceof vscode.Range && chosen.range.isEqual(new vscode.Range(at.translate(0, -2), at)));
+            await workspace.accept(document, chosen);
+            assert.ok(document.getText().includes(`choose(${selected});`));
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
 }

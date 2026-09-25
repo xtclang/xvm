@@ -470,11 +470,17 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["take(first=1, second=", "fn(1, ", "new Box<String>("])
-    fun `argument value edits round trip and clear diagnostics after insertion`(call: String) {
+    @ValueSource(
+        strings = [
+            "take(first=1, second=", "fn(1, ", "new Box<String>(",
+            "take(1, te", "take(first=1, second=te", "fn(1, te", "new Box<String>(te", "new Box<String>(value=te",
+        ],
+    )
+    fun `argument value edits round trip and clear diagnostics after acceptance`(call: String) {
         val prefix =
             "module Stdio { void take(Int first, String second) {} class Box<T> { construct(T value) {} } " +
-                "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { /* 😀 */ $call"
+                "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { Int textNumber=1; /* 😀 */ $call"
+        val typed = if (call.endsWith("te")) 2 else 0
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             session.open("$prefix); } }")
@@ -485,7 +491,7 @@ class XdkStdioTest {
             val items = session.await(service.completion(CompletionParams(document, cursor))).left
             assertThat(items.map { it.label }).containsExactly("text")
             val edit = items.single().textEdit.left
-            assertThat(edit.range).isEqualTo(Range(cursor, cursor))
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - typed), cursor))
             assertThat(edit.newText).isEqualTo("text")
             val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
             assertThat(
@@ -493,7 +499,7 @@ class XdkStdioTest {
                     .single()
                     .documentation.left,
             ).contains(if (call.startsWith("fn(")) "runtime target unknown" else "overload not selected")
-            session.change("$prefix${edit.newText}); } }", 2)
+            session.change("${prefix.dropLast(typed)}${edit.newText}); } }", 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             session.shutdownAndExit()
         }

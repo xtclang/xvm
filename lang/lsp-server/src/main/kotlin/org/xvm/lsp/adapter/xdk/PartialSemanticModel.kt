@@ -30,7 +30,7 @@ class PartialSemanticModel internal constructor(
         val type: TypeId?,
     )
 
-    /** Decoded identifier text and its original UTF-16 replacement range; empty after a bare dot. */
+    /** Decoded identifier and its original UTF-16 replacement range; empty at an insertion slot. */
     data class MemberPrefix(
         val text: String,
         val range: Range,

@@ -5177,7 +5177,7 @@ public class Parser {
                 break;
             }
         } else {
-            expr = parseExpression();
+            expr = partial ? parsePartialValue() : parseExpression();
         }
 
         return label == null ? expr : new LabeledExpression(label, expr);
@@ -5216,9 +5216,20 @@ public class Parser {
                     throw new IncompleteSyntax(IncompleteStatement.forNamedArgument(
                             callee, open, args, separators, f_cursor, e.name));
                 }
-                args.add(argument);
                 Expression value = argument instanceof LabeledExpression labeled
                         ? labeled.getUnderlyingExpression() : argument;
+                // A direct final argument prefix belongs to this call's fitting context. Keep
+                // its token rather than validating it as a value or retaining a second site.
+                // Compound/member expressions and slots before later arguments keep their sites.
+                if (value instanceof IncompleteExpression partial && partial.getSite().isNameCompletion()
+                        && canRetainIncomplete() && !peek(Id.COMMA)) {
+                    match(Id.R_PAREN);
+                    throw new IncompleteSyntax(IncompleteStatement.forArgumentPrefix(callee, open,
+                            args, separators, f_cursor,
+                            argument instanceof LabeledExpression labeled ? labeled.getNameToken() : null,
+                            partial.getSite().getMemberName().orElseThrow()));
+                }
+                args.add(argument);
                 if (containsCursorHole(value)) {
                     incomplete = true;
                 }

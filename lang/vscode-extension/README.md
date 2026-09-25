@@ -42,8 +42,9 @@ signatures, completion inside compound/conditional expressions or before later a
 Ref/Var annotation accessor implementations, and signature help while typing function-valued and
 ordinary constructor calls (playbook X68–X74). Function signatures have unnamed parameter types;
 constructor candidates retain declared names, defaults and explicit generic substitutions.
-X75–X76 cover missing enclosing delimiters; X77–X78 accept compiler-fitted argument values in
-empty positional/named slots and verify overload alternatives and clearing diagnostics.
+X75–X76 cover missing enclosing delimiters; X77–X80 accept compiler-fitted argument values in
+empty positional/named slots and direct final bare-name prefixes, verifying exact token replacement,
+overload alternatives and clearing diagnostics.
 Problems-view checks locate duplicate-annotation warnings at the redeclared property and verify
 clearing after unsaved edits. Runtime function targets and interface-valued delegates remain unknown.
 
@@ -313,7 +314,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X78, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X80, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |

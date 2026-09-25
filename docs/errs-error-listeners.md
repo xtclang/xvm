@@ -1,8 +1,9 @@
 # Error listeners in the compiler and embedding API
 
 This document explains why the `lagergren/errs` branch changes reporting throughout the compiler,
-and which changes an LSP host actually needs. It describes the implementation as of 2026-09-22,
-including module sessions, cross-file navigation, type hierarchy and Java parser recovery.
+and which changes an LSP host actually needs. It describes the implementation as of 2026-09-25,
+including module sessions, cross-file navigation, type hierarchy, Java parser recovery and
+compiler-fitted argument completion.
 The chronological investigation is in
 [errs.md](errs.md); the [integration plan](errs-integration-plan.md) records verification and
 eventual PR boundaries.
@@ -470,6 +471,12 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    without changing the source arguments or normal diagnostics. Compiler inference and conversions
    remain authoritative, with no type-fitting rules copied into Kotlin. See the
    [argument-value audit](errs-audit.md#argument-value-completion-2026-09-24).
+   Direct final bare-name argument prefixes now use that same fitter. The explicit cursor parser
+   retains the source token on its call site and reports `PARSER-30` once; it never validates the
+   unfinished spelling as an actual argument. Trial errors remain private and cannot replace normal
+   diagnostics. Accepting an editor replacement triggers an ordinary compilation. This requires
+   syntax metadata, not another listener policy or semantic cache; see the
+   [typed-prefix audit](errs-audit.md#typed-argument-prefix-completion-2026-09-25).
    No candidate is a selected call. Method
    implementation lookup now copies actual override chains. Explicit dependency artifacts/source
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
