@@ -654,7 +654,7 @@ tracks the observed X76 semantic-token overlap warning as a separate L12 follow-
 
 ## Array dimension cursor audit (2026-09-25)
 
-C19/L34 is in the working tree after `3f46568af`. Type parsing previously read size expressions
+C19/L34 is implemented in `0b800c392`, after `3f46568af`. Type parsing previously read size expressions
 to count dimensions before rewinding for `NewExpression`; a cursor could unwind before its owner
 existed. The existing listener branch now isolates that lookahead, and the owning bracket parse
 retains the cursor. A non-deduplicating collector checks one diagnostic, so ErrorList deduplication
