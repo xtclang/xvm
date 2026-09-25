@@ -33,7 +33,9 @@ import org.xvm.asm.InjectionKey;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
+import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Op;
+import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.TypedefStructure;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -216,6 +218,7 @@ public class NativeContainer
                 template.initNative();
             }
 
+            prepareRebaseMethods(pool);
             ensureServiceContext();
         }
         return pool;
@@ -761,8 +764,38 @@ public class NativeContainer
 
         fileApp.merge(moduleApp, true, true);
 
+        prepareRebaseMethods(fileApp.getConstantPool());
         assert fileApp.validateConstants();
         return fileApp;
+    }
+
+    /**
+     * Finish the stable native implementation flags for the language's built-in rebase types.
+     * Their body-less declarations are supplied by the runtime, as TypeInfo construction also
+     * recognizes during compilation. Do this on each exclusively owned prepared image before
+     * descriptor queries or read-only publication; a cold metadata query must not change a method.
+     *
+     * @param pool  the linked native image, or an application image containing its prepared copies
+     */
+    private static void prepareRebaseMethods(ConstantPool pool) {
+        for (var identity : List.of(pool.clzRef(), pool.clzVar(), pool.clzConst(), pool.clzService(),
+                                    pool.clzModule(), pool.clzPackage(), pool.clzEnum())) {
+            prepareRebaseMethods(identity.getComponent(), pool);
+        }
+    }
+
+    private static void prepareRebaseMethods(Component declaration, ConstantPool pool) {
+        for (var child : declaration.children()) {
+            if (child instanceof MethodStructure method) {
+                if (!method.hasCode() && !method.isNative()) {
+                    method.markNative();
+                    pool.invalidateTypeInfos(method.getIdentityConstant().getNamespace());
+                }
+            } else if (child instanceof MultiMethodStructure || child instanceof PropertyStructure) {
+                // Accessors belong to the rebased declaration; nested classes do not.
+                prepareRebaseMethods(child, pool);
+            }
+        }
     }
 
     // ----- helpers -------------------------------------------------------------------------------

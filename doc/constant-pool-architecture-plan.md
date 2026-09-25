@@ -905,3 +905,19 @@ bootstrap adapter, not a relaxation of generation validation. All 12 ownership i
 pass without skips, the library rebuild and 495 Java tests pass (40 existing skips), and formatting
 passes. The frozen audit advances to a late `MethodStructure.markNative` in rebase metadata;
 structural native preparation must address that before activation.
+
+### Stable native rebase preparation
+
+`NativeContainer` now finishes native implementation flags for the built-in Ref, Var, Const,
+Service, Module, Package and Enum rebase declarations before publishing either its own image or
+an application copy. It walks methods and property accessors, excluding nested classes, and
+invalidates affected metadata when a flag changes. This moves the existing stable classification
+out of the first runtime metadata query; it does not warm TypeInfo to conceal table writes.
+Compiler metadata retains its existing preparation behavior.
+
+A new XDK regression creates two contexts over the exact same image, freezes before either
+context requests its module type, and builds complete cold and warm TypeInfo in each. Metadata
+objects are independent, while all definition constants and their indices remain unchanged.
+The full XDK suite passes 38 tests with no skips; the libraries rebuild and formatting checks pass.
+The manual audit now completes its cold descriptor-metadata query and fails later in the legacy
+image-owned invocation lookup. Runtime entry/frame migration and the other stages remain open.

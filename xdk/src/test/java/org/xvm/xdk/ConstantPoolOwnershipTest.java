@@ -30,6 +30,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
 import org.xvm.asm.RuntimeMethodStructure;
 
+import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.compiler.BuildRepository;
@@ -181,6 +182,35 @@ class ConstantPoolOwnershipTest {
         var arrayComposition = application.resolveClass(arrayType);
         assertSame(context.getDescriptorPool(), arrayComposition.getType().getConstantPool());
         assertSame(context.getDescriptorPool(), arrayComposition.getConstantPool());
+    }
+
+    @Test
+    void coldModuleMetadataCanBeBuiltInTwoContextsOverOneFrozenImage() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("ColdMetadata").getModule());
+            var first = new MainContainer(runtime, root, file.getModuleId());
+            var second = new MainContainer(runtime, root, file.getModuleId());
+            var constants = file.getConstantPool().getConstants();
+            var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
+            first.getTypeContext().freezeDefinitions();
+
+            var firstType = first.getTypeContext().typeOf(file.getModuleId());
+            var secondType = second.getTypeContext().typeOf(file.getModuleId());
+            var firstInfo = firstType.ensureTypeInfo();
+            var secondInfo = secondType.ensureTypeInfo();
+            assertTrue(TypeConstant.isComplete(firstInfo));
+            assertTrue(TypeConstant.isComplete(secondInfo));
+            assertNotSame(firstInfo, secondInfo);
+            assertSame(firstInfo, firstType.ensureTypeInfo());
+            assertSame(secondInfo, secondType.ensureTypeInfo());
+            assertArrayEquals(constants, file.getConstantPool().getConstants());
+            assertEquals(positions, Arrays.stream(file.getConstantPool().getConstants())
+                    .map(Constant::getPosition).toList());
+        } finally {
+            runtime.shutdownXVM();
+        }
     }
 
     @Test
