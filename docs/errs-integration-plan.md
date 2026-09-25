@@ -12,7 +12,7 @@ the two Markdown files above.
 
 ## Array dimension cursors
 
-Implemented in the `lagergren/errs` working tree after pushed checkpoint `3f46568af`.
+Implemented on `lagergren/errs` in `0b800c392`, after checkpoint `3f46568af`.
 `ec85fcb98` and `3f46568af` contain the preceding native-signature implementation and commit map.
 
 - [x] Retain empty/final-name size slots and a missing `]`, without changing source text.
@@ -42,8 +42,8 @@ operands or declaration names are invented. Unfinished declaration headers are n
 | C19 | Parser dimension lookahead/recovery, IncompleteStatement delimiter interpretation, constructor identity filter, ParserRecoveryTest, embedding contract documentation | C16 and the existing C12/C14 cursor/listener foundations |
 | L34 | Array adapter/embedding tests, stdio/retention controls, bracket trigger, shared X90 and both editor consumers, docs | C19, L29, L32; native signature assertions also need L33 |
 
-These add two groups to the extraction map, bringing it to **67**. Both groups are currently
-uncommitted; map their final commit before future extraction. Do not transplant the integrated
+These add two groups to the extraction map, bringing it to **67**. Commit `0b800c392` contains
+both groups; split it by the responsibilities above during extraction. Do not transplant the integrated
 green status to either extracted PR: each must pass on its own prerequisite stack.
 
 Validation on 2026-09-25:
