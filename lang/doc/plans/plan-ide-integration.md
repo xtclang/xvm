@@ -126,7 +126,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters in empty final positional and pending named argument slots |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters in empty final positional and pending named argument slots, including direct final bare-name prefixes |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -262,16 +262,19 @@ Missing enclosing call/group parentheses and index brackets now retain the curso
 syntax and scope at statement/outer-delimiter boundaries. An explicit cursor at EOF also retains
 missing block braces. This uses the existing incomplete syntax children, with no new AST state or
 public API components; normal compiler diagnostics remain cached and visible. X75–X76 cover the
-editor behavior. X77–X78 cover argument-value insertion and overload alternatives: empty final
-positional slots and pending named values offer compatible readable locals/parameters, including
+editor behavior. X77–X80 cover argument-value insertion, typed-prefix replacement and overload
+alternatives: empty final positional slots, pending named values and direct final bare-name prefixes
+offer compatible readable locals/parameters, including
 generic inference, substitutions and conversions. The compiler probes proposed names in trial
 contexts; Kotlin consumes immutable accepted-value facts. Missing operands, declaration headers
 and tuple/literal delimiters remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
 enclosing-instance member enumeration, arbitrary type-valued receiver
 fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and
-receiver-to-argument rewrites. Argument completion does not yet filter typed prefixes by parameter
-type, suggest literals/implicit properties, or fill empty slots before later written arguments.
+receiver-to-argument rewrites. Qualified/grouped/compound expressions and prefixes before later
+written arguments retain ordinary scope/member completion without argument-type filtering.
+Argument completion does not yet suggest literals/implicit properties or fill empty slots before
+later written arguments.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The
