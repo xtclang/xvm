@@ -558,3 +558,17 @@ conversions, narrowing, unsaved signatures and cancellation have regression cove
 edits include escaped identifiers, UTF-16 and CRLF. The
 [C14/L26 record](errs-integration-plan.md#typed-argument-prefix-completion) documents syntax ownership,
 unsupported contexts and host/editor verification.
+
+## IntelliJ diagnostic-delivery checkpoint, 2026-09-25
+
+The initial real-IDE compiler playbook now checks type/unresolved-name errors and clearing,
+source-dependency recompilation, and the inherited-annotation warning from 7a.8. The warning
+arrives once with Warning severity and clears after removing the duplicate annotation.
+The test runs IDEA 2026.2.3's free feature set with LSP4IJ 0.21.0 and asserts Ultimate remains
+unloaded. It inspects editor diagnostic highlighters; the rendered Problems tool-window layout
+and the remaining IntelliJ playbook rows are still separate checks.
+
+`XtcLanguageClient` previously returned null for all configuration sections except formatting.
+It now delegates compiler settings to LSP4IJ's existing lookup/lifecycle, so source graphs can
+arrive at startup and change live. No listener, compiler pipeline or AST API change was needed
+for this client fix. See [I8/L27 and validation](errs-integration-plan.md#intellij-compiler-playbook-and-client-configuration).
