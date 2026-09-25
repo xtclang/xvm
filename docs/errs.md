@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Property/constant argument completion (2026-09-25, uncommitted).**
+**Property/constant argument completion (2026-09-25, `ace732d5c`).**
 Implicit properties and constants now join locals in compiler-fitted argument suggestions. Normal
 name validation supplies their identities and receiver-substituted types; access, static context,
 shadowing and conversions remain compiler decisions. Bundled module properties participate too.
