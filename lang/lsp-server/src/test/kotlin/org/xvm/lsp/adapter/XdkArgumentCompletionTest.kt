@@ -38,8 +38,9 @@ class XdkArgumentCompletionTest {
             adapter.compile(URI, "$prefix); Int later = 1; } }")
             val cached = adapter.getCachedResult(URI)
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            assertThat(items.map { it.label }).describedAs(call).containsExactly(expected)
-            assertThat(items.single().textEdit).isEqualTo(
+            val names = listOf(expected) + if (expected == "text") MODULE_NAMES else emptyList()
+            assertThat(items.map { it.label }).describedAs(call).containsExactlyInAnyOrderElementsOf(names)
+            assertThat(items.single { it.label == expected }.textEdit).isEqualTo(
                 TextEdit(Range(Position(0, prefix.length), Position(0, prefix.length)), expected),
             )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
@@ -56,7 +57,8 @@ class XdkArgumentCompletionTest {
         val prefix = "$HEADER choose("
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).containsExactlyInAnyOrder("text", "number")
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .containsExactlyInAnyOrderElementsOf(listOf("text", "number") + MODULE_NAMES)
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(2)
         }
     }
@@ -134,7 +136,7 @@ class XdkArgumentCompletionTest {
             adapter.compile(URI, "$prefix); } }")
             val offered = adapter.getCompletions(URI, 0, prefix.length).map { it.label }
             val compilable =
-                listOf("number", "text", "flag", "box", "fn")
+                (listOf("number", "text", "flag", "box", "fn", "classByName", "classes", "modulesByPath", "version") + MODULE_NAMES)
                     .filter { it.startsWith(typed) }
                     .filter { variable -> adapter.compile(URI, "$before$variable); } }").diagnostics.isEmpty() }
             assertThat(offered).describedAs(call).isNotEmpty().containsExactlyInAnyOrderElementsOf(compilable)
@@ -157,7 +159,7 @@ class XdkArgumentCompletionTest {
                 adapter.compile(URI, prefix + suffix)
                 assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                     .describedAs(setup)
-                    .containsExactlyInAnyOrderElementsOf(expected.filter { it.startsWith(typed) })
+                    .containsExactlyInAnyOrderElementsOf((expected + MODULE_NAMES).filter { it.startsWith(typed) })
             }
         }
     }
@@ -200,7 +202,7 @@ class XdkArgumentCompletionTest {
                             .argumentValues
                             .map { it.name }
                     }.get(),
-            ).containsExactly("text")
+            ).containsExactlyInAnyOrderElementsOf(listOf("text") + MODULE_NAMES.filter { it.startsWith(typed) })
         }
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }
@@ -261,6 +263,7 @@ class XdkArgumentCompletionTest {
 
     private companion object {
         const val URI = "untitled:Editing.x"
+        val MODULE_NAMES = listOf("qualifiedName", "simpleName")
         const val HEADER =
             "module Editing { void pair(Int first, String second) {} " +
                 "void choose(Int value) {} void choose(String value) {} " +

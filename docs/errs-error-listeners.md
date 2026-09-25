@@ -477,6 +477,12 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    diagnostics. Accepting an editor replacement triggers an ordinary compilation. This requires
    syntax metadata, not another listener policy or semantic cache; see the
    [typed-prefix audit](errs-audit.md#typed-argument-prefix-completion-2026-09-25).
+   Implicit property/constant proposals now follow normal read validation in discarded child
+   contexts before argument fitting. Their TypeInfo inspection forwards host diagnostics; rejected
+   reads use collecting silent PROBE listeners and still observe cancellation. Accepted identity/type
+   facts are immutable `CursorBinding.argumentProperties`, with no AST state or clone obligations.
+   Ordinary property narrowing is not invented by the host; see the
+   [property-value audit](errs-audit.md#propertyconstant-argument-completion-2026-09-25).
    No candidate is a selected call. Method
    implementation lookup now copies actual override chains. Explicit dependency artifacts/source
    indices provide definition/type-definition and inherited-body links plus consumer invalidation.
