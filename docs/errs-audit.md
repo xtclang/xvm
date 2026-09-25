@@ -676,7 +676,7 @@ original UTF-16 edit range and diagnostic repair. Final validation is recorded u
 
 ## Unfinished declaration-header audit (2026-09-25)
 
-C20/L35 retains incomplete method headers structurally and completes simple member/parameter type
+Commit `68a291c0f` (C20/L35) retains incomplete method headers structurally and completes simple member/parameter type
 prefixes. A syntax-only `IncompleteDeclarationStatement` is preferable to a partial
 `MethodDeclarationStatement`: registration of a fabricated signature could leak parameters,
 methods and invalid type identities into normal compiler stages. The new node owns only original

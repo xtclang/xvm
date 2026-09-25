@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Unfinished declaration headers (2026-09-25, working tree after `b17a9adec`).**
+**Unfinished declaration headers (2026-09-25, `68a291c0f`).**
 Malformed method parameter headers now retain a written outline name and source extent. Explicit
 cursor queries complete simple unqualified member/return and parameter types through the actual
 enclosing compiler scope, including imports, aliases and shadowing. The syntax node registers no
