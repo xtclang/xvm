@@ -572,3 +572,24 @@ and the remaining IntelliJ playbook rows are still separate checks.
 It now delegates compiler settings to LSP4IJ's existing lookup/lifecycle, so source graphs can
 arrive at startup and change live. No listener, compiler pipeline or AST API change was needed
 for this client fix. See [I8/L27 and validation](errs-integration-plan.md#intellij-compiler-playbook-and-client-configuration).
+
+### Property/constant argument completion, 2026-09-25
+
+The cursor argument fitter now checks implicit property and constant reads as well as locals.
+Explicit TypeInfo inspection forwards diagnostics; speculative name validation uses collecting
+silent PROBE listeners so rejected reads remain private without losing failure/cancellation state.
+Immutable `CursorBinding.argumentProperties` records identity and validated type. Kotlin copies
+these while on the compiler worker; no AST fields, cloning rules or listener policies were added.
+
+The initial seven property regressions failed on the previous implementation. Additional checks
+cover inherited access, static receivers, unreadable shadowing locals, generic substitution,
+overload alternatives, detached facts and unsaved inherited property types. Bundled module
+`simpleName`/`qualifiedName` are valid String suggestions. Ordinary `Object` properties still fail
+String arguments after an `is(String)` guard; normal compilation reports `COMPILER-150`. This
+confirms the completion must not invent the local-variable narrowing that the compiler declines
+for ordinary properties. See [C15/L28 and validation](errs-integration-plan.md#property-and-constant-argument-completion).
+
+Verification: 19 property regressions pass; the complete run reports 472 executed Java tests,
+928 executed LSP tests, 29 packaged-stdio tests and 87 editor cases, all with zero failures/errors.
+The prior 40 Java and three LSP skips remain. The retention workload includes property proposals
+and releases all 2,402 observed references; no AST ownership changes were needed.

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { CallHierarchyItem, CallHierarchyOutgoingCall } from 'vscode-languageclient/node';
-import { client, diagnostics, fixture, noErrors, playbook, position, targets } from './support';
+import { client, diagnostics, fixture, label, noErrors, playbook, position, targets } from './support';
 
 export function advancedCases(): void {
     playbook('X68', 'concrete chained delegation reaches written method and getter bodies', async workspace => {
@@ -152,9 +152,10 @@ export function advancedCases(): void {
             await diagnostics(document.uri, values => values.length > 0, 'Missing argument diagnostics');
             const at = position(document, prefix, prefix.length, true);
             const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
-            assert.deepStrictEqual(items.map(item => item.label), ['text'], prefix);
-            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at, at)));
-            await workspace.accept(document, items[0]);
+            assert.deepStrictEqual(items.map(item => item.label).sort(), ['qualifiedName', 'simpleName', 'text'], prefix);
+            const selected = items.find(item => item.label === 'text')!;
+            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at, at)));
+            await workspace.accept(document, selected);
             await noErrors(document.uri);
         }
         await workspace.replace(document, fixture('Advanced.x'));
@@ -169,7 +170,7 @@ export function advancedCases(): void {
             await diagnostics(document.uri, values => values.length > 0, 'Missing overloaded argument diagnostics');
             const at = position(document, 'choose();', 7);
             const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
-            assert.deepStrictEqual(items.map(item => item.label).sort(), ['number', 'text']);
+            assert.deepStrictEqual(items.map(item => item.label).sort(), ['number', 'qualifiedName', 'simpleName', 'text']);
             assert.strictEqual((await workspace.signature(document, at))?.signatures.length, 2);
             await workspace.accept(document, items.find(item => item.label === selected)!);
             await noErrors(document.uri);
@@ -221,5 +222,37 @@ export function advancedCases(): void {
         }
         await workspace.replace(document, fixture('Advanced.x'));
         await noErrors(document.uri);
+    });
+
+    playbook('X81', 'implicit property and constant values fit positional and named arguments', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        for (const prefix of ['takeValue(va', 'takeValue(value=va']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('takeValue(valueText)', `${prefix})`));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved property argument prefix');
+            const at = position(document, prefix, prefix.length);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(label).sort(), ['valueConstant', 'valueText']);
+            const selected = items.find(item => label(item) === 'valueText')!;
+            assert.strictEqual(selected.kind, vscode.CompletionItemKind.Property);
+            assert.match(selected.detail ?? '', /String/);
+            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -2), at)));
+            await workspace.accept(document, selected);
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X82', 'static argument completion offers compatible constants without an instance receiver', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        await workspace.replace(document, fixture('Advanced.x').replace('takeValue(valueConstant)', 'takeValue(va)'));
+        await diagnostics(document.uri, values => values.length > 0, 'Unresolved constant argument prefix');
+        const at = position(document, 'takeValue(va)', 12);
+        const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+        assert.deepStrictEqual(items.map(label), ['valueConstant']);
+        assert.strictEqual(items[0].kind, vscode.CompletionItemKind.Property);
+        await workspace.accept(document, items[0]);
+        await noErrors(document.uri);
+        assert.strictEqual(document.getText(), fixture('Advanced.x'));
     });
 }
