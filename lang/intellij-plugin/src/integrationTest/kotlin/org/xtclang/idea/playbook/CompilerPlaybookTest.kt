@@ -1,0 +1,105 @@
+package org.xtclang.idea.playbook
+
+import com.google.gson.GsonBuilder
+import com.intellij.ide.starter.ci.CIServer
+import com.intellij.ide.starter.ci.NoCIServer
+import com.intellij.ide.starter.di.di
+import com.intellij.ide.starter.driver.engine.runIdeWithDriver
+import com.intellij.ide.starter.models.IdeInfo
+import com.intellij.ide.starter.models.TestCase
+import com.intellij.ide.starter.path.GlobalPaths
+import com.intellij.ide.starter.plugins.PluginConfigurator
+import com.intellij.ide.starter.project.LocalProjectInfo
+import com.intellij.ide.starter.runner.Starter
+import com.intellij.platform.testFramework.teamCity.TeamCityReporter.SyntheticTestKind
+import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
+import org.junit.jupiter.api.Test
+import org.kodein.di.DI
+import org.kodein.di.bindSingleton
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+
+/** Opt-in acceptance tests against the packaged plugin, a real IDE and the bundled compiler. */
+class CompilerPlaybookTest {
+    @Test
+    fun compilerPlaybook() {
+        require(System.getProperty("xtc.playbook.adapter") == "compiler") { "Run with -Plsp.adapter=compiler" }
+        val reports = Files.createDirectories(Path.of(System.getProperty("xtc.playbook.reports")))
+        val run = Files.createTempDirectory(reports, "run-")
+        val workspace = Files.createDirectory(run.resolve("workspace"))
+        val manual = Files.readString(Path.of(System.getProperty("xtc.playbook.manual")))
+        val fixtures =
+            listOf("Navigation", "Editing", "DupAnno", "Library", "Consumer").associateWith { name ->
+                val source =
+                    Regex("```xtc\\n(?:[^`]*?\\n)?(module $name \\{[\\s\\S]*?)\\n```")
+                        .find(manual)
+                        ?.groupValues
+                        ?.get(1)
+                requireNotNull(source) { "Missing $name fixture in manual-test-plan.md" }
+                "$source\n".also { Files.writeString(workspace.resolve("$name.x"), it) }
+            }
+        val ideVersion = System.getProperty("xtc.playbook.ideVersion")
+        val lsp4ijVersion = System.getProperty("xtc.playbook.lsp4ijVersion")
+        val ideFailures = CopyOnWriteArrayList<String>()
+        val cases = CompilerPlaybook(fixtures, lsp4ijVersion)
+        val previousDi = di
+        di =
+            DI {
+                extend(previousDi)
+                bindSingleton<GlobalPaths>(overrides = true) { object : GlobalPaths(reports) {} }
+                bindSingleton<CIServer>(overrides = true) {
+                    object : CIServer by NoCIServer {
+                        override fun reportTestFailure(
+                            testName: String,
+                            message: String,
+                            details: String,
+                            linkToLogs: String?,
+                            kind: SyntheticTestKind,
+                            generifyTestName: Boolean,
+                        ) {
+                            ideFailures += "$testName: $message\n$details\n$linkToLogs"
+                        }
+                    }
+                }
+            }
+        try {
+            val context =
+                Starter.newContext(
+                    "XtcCompilerPlaybook-${run.fileName}",
+                    TestCase(IdeInfo.IdeaUltimate, LocalProjectInfo(workspace)).withVersion(ideVersion),
+                )
+            Files.writeString(run.resolve("ide-paths.txt"), context.paths.toString())
+            PluginConfigurator(context).apply {
+                installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion)
+                installPluginFromPath(Path.of(System.getProperty("path.to.build.plugin")))
+                disablePlugins("com.intellij.kubernetes", "com.intellij.clouds.kubernetes")
+            }
+            context
+                .disableUltimateModule()
+                .applyVMOptionsPatch {
+                    // Prevent trial/license startup from dynamically re-enabling the paid module.
+                    addSystemProperty("request.trial", false)
+                    addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
+                    addSystemProperty("xtc.lsp.semanticTokens", true)
+                    addSystemProperty("idea.auto.reload.plugins", false)
+                }.runIdeWithDriver()
+                .useDriverAndCloseIde {
+                    cases.run(this)
+                }
+            check(ideFailures.isEmpty()) { ideFailures.joinToString("\n\n") }
+        } finally {
+            val report =
+                mapOf(
+                    "ideVersion" to ideVersion,
+                    "lsp4ijVersion" to lsp4ijVersion,
+                    "adapter" to "compiler",
+                    "cases" to cases.results,
+                    "ideFailures" to ideFailures.toList(),
+                )
+            Files.writeString(run.resolve("results.json"), GsonBuilder().setPrettyPrinting().create().toJson(report) + "\n")
+            println("IntelliJ compiler playbook report: ${run.resolve("results.json")}")
+            di = previousDi
+        }
+    }
+}

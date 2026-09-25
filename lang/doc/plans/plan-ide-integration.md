@@ -107,7 +107,7 @@ The adapters provide different capabilities: tree-sitter maintains error-toleran
 the compiler supplies validated semantic facts. A combined adapter has not been implemented.
 
 **Note:** TreeSitterAdapter requires Java 25+ (FFM API). The IntelliJ plugin runs the LSP server
-out-of-process for classloader and crash isolation (IntelliJ 2026.1 runs on JBR 25).
+out-of-process for classloader and crash isolation (IntelliJ 2026.2 runs on JBR 25).
 
 #### Adapter capability matrix
 
@@ -187,7 +187,8 @@ invalidate affected consumers, including transitive imports, cancel pending work
 diagnostics at current document versions. Unrelated successful sessions survive. Binary-only
 artifacts have no invented source targets. Editor launch supplies bundled XDK modules and explicit source modules from
 `xtcCompiler` initialization options or `xtc.compiler` settings. VS Code exposes the live workspace
-setting `xtc.compiler.sourceModules`; IntelliJ has no dedicated graph settings UI yet. `replaceCompilerSourceModules(...)` now
+setting `xtc.compiler.sourceModules`; IntelliJ uses LSP4IJ's existing server Configuration JSON
+with nested `xtc.compiler.sourceModules`. Those settings are IDE-wide; a dedicated project graph UI remains separate. `replaceCompilerSourceModules(...)` now
 provides automatic source dependency builds for explicit roots/edges, including unsaved overlays,
 100 ms edit debouncing, transitive invalidation and per-document diagnostic versions. Failed
 dependencies block consumers without reusing old artifacts; corrections restore them automatically.
@@ -321,7 +322,9 @@ An IntelliJ IDEA plugin providing XTC support:
 - Out-of-process architecture provides classloader and crash isolation
 
 **Build Configuration:**
-- Downloads IntelliJ Community 2026.1 by default (cached by Gradle)
+- Targets IntelliJ IDEA 2026.2.3 (minimum build 262), using its free Community feature set
+- Uses LSP4IJ 0.21.0; no Ultimate subscription is required
+- Opt-in Starter/Driver compiler playbook runs with Ultimate features explicitly disabled
 - Use `-PintellijLocalPath=/path` to use a local IntelliJ installation instead
 - Plugin bytecode target is Java 25
 - Searchable-options indexing is disabled by default for ordinary builds
