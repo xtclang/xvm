@@ -12,7 +12,7 @@ the two Markdown files above.
 
 ## Native IntelliJ signature help
 
-Implemented on `lagergren/errs` after `4dfbeff2e`; currently uncommitted. This is the first item
+Implemented on `lagergren/errs` in `ec85fcb98`, after `4dfbeff2e`. This is the first item
 in the agreed order, before array-dimension cursors and unfinished declaration headers.
 
 - [x] Drive X15–X20 using the shared overload, named-argument, generic, rejection and receiver inputs.
@@ -44,7 +44,7 @@ plugin hook is added, and no dependency or Gradle change is required.
 | L33 | Native Parameter Info action, response/popup checks, shared coverage updates and documentation | L32 and its prerequisite stack |
 
 The extraction map now has **65** groups. Keep this change as an additive follow-up to L32;
-record its commit here after committing it. `019d3f811` remains the shared-catalog implementation
+`ec85fcb98` contains the implementation. `019d3f811` remains the shared-catalog implementation
 and `4dfbeff2e` its commit-map checkpoint.
 
 Validation on 2026-09-25:

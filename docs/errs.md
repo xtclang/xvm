@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Native IntelliJ signature help (2026-09-25, working tree).**
+**Native IntelliJ signature help (2026-09-25, `ec85fcb98`).**
 The driver now covers X15–X20 and constructor variants X74, X83–X85 and X88–X89. It invokes
 Parameter Info, reads that action's completed result, and checks the actual popup's parameter
 text and bold argument. Invalid calls must clear an earlier hint. This brings coverage to
