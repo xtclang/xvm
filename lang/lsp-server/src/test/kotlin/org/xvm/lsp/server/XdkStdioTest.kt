@@ -512,6 +512,38 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "new Box<String>(\"x\", te|) { String read() = text; }",
+            "new Reader(\"x\", te|) { construct(String first, String second) {} @Override String read() = text; }",
+        ],
+    )
+    fun `anonymous constructor edits and signatures round trip through the packaged server`(expression: String) {
+        val prefix =
+            "module Stdio { class Box<T> { construct(T first, T second) {} } interface Reader { String read(); } " +
+                "void run(String text, Int textNumber) { /* 😀 */ " + expression.substringBefore('|')
+        val suffix = expression.substringAfter('|') + "; } }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(prefix + suffix)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(0, prefix.length)
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+            assertThat(help.signatures.single().label).contains("String first, String second").doesNotContain(":1")
+            assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).containsExactly("text")
+            val edit = items.single().textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+            session.change(prefix.dropLast(2) + edit.newText + suffix, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["", "static "])
     fun `property and constant argument edits preserve receiver rules over stdio`(modifier: String) {
         val prefix =
