@@ -489,8 +489,10 @@ class XdkStdioTest {
             val document = TextDocumentIdentifier(URI)
             val cursor = Position(0, prefix.length)
             val items = session.await(service.completion(CompletionParams(document, cursor))).left
-            assertThat(items.map { it.label }).containsExactly("text")
-            val edit = items.single().textEdit.left
+            assertThat(items.map { it.label }).containsExactlyInAnyOrderElementsOf(
+                if (typed == 0) listOf("text", "qualifiedName", "simpleName") else listOf("text"),
+            )
+            val edit = items.single { it.label == "text" }.textEdit.left
             assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - typed), cursor))
             assertThat(edit.newText).isEqualTo("text")
             val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
@@ -500,6 +502,35 @@ class XdkStdioTest {
                     .documentation.left,
             ).contains(if (call.startsWith("fn(")) "runtime target unknown" else "overload not selected")
             session.change("${prefix.dropLast(typed)}${edit.newText}); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["", "static "])
+    fun `property and constant argument edits preserve receiver rules over stdio`(modifier: String) {
+        val prefix =
+            "module Stdio { class Values { String textProperty=\"x\"; static String textConstant=\"c\"; " +
+                "Int textNumber=1; static void take(String value) {} ${modifier}void run() { take(value=te"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open("$prefix); } } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val cursor = Position(0, prefix.length)
+            val items =
+                session
+                    .await(
+                        session.server.textDocumentService.completion(CompletionParams(TextDocumentIdentifier(URI), cursor)),
+                    ).left
+            assertThat(items.map { it.label }).containsExactlyInAnyOrderElementsOf(
+                if (modifier.isEmpty()) listOf("textProperty", "textConstant") else listOf("textConstant"),
+            )
+            val selected = items.single { it.label == if (modifier.isEmpty()) "textProperty" else "textConstant" }
+            assertThat(selected.detail).contains("String")
+            val edit = selected.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+            session.change("${prefix.dropLast(2)}${edit.newText}); } } }", 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             session.shutdownAndExit()
         }

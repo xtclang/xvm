@@ -10,6 +10,7 @@ import java.util.stream.StreamSupport;
 import org.xvm.asm.Register;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -19,16 +20,25 @@ import org.xvm.compiler.ast.IncompleteStatement;
 /** Facts captured at an explicit cursor while its real validation context is alive. */
 public record CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
-                            List<FunctionCandidate> functions, List<Variable> argumentValues) {
+                            List<FunctionCandidate> functions, List<Variable> argumentValues,
+                            List<Property> argumentProperties) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
         candidates = List.copyOf(candidates);
         functions = List.copyOf(functions);
         argumentValues = List.copyOf(argumentValues);
+        argumentProperties = List.copyOf(argumentProperties);
     }
 
-    /** Retain signature-only callers. Record patterns must also include argument values. */
+    /** Retain variable-completion callers. Record patterns must also include argument properties. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues) {
+        this(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues, List.of());
+    }
+
+    /** Retain signature-only callers. */
     public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                          List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
                          List<FunctionCandidate> functions) {
@@ -46,20 +56,25 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     public CursorBinding withCandidates(List<Candidate> candidates) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues);
+        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues, argumentProperties);
     }
 
     public CursorBinding withFunctions(List<FunctionCandidate> functions) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues);
+        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues, argumentProperties);
     }
 
     public CursorBinding withTypes(List<NamedType> types) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues);
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues, argumentProperties);
     }
 
     /** Readable source variables whose proposed insertion fits at least one incomplete-call candidate. */
     public CursorBinding withArgumentValues(List<Variable> values) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, values);
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, values, argumentProperties);
+    }
+
+    /** Implicit property/constant reads whose insertion fits at least one incomplete-call candidate. */
+    public CursorBinding withArgumentProperties(List<Property> properties) {
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues, properties);
     }
 
     public record NamedType(String name, IdentityConstant identity) {}
@@ -81,6 +96,9 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     /** A visible variable and its narrowed type; unreadable variables still shadow outer names. */
     public record Variable(String name, Register register, TypeConstant type, boolean readable) {}
+
+    /** A property read, resolved in the cursor's context, and its validated value type. */
+    public record Property(String name, PropertyConstant identity, TypeConstant type) {}
 
     /** Attempt-owned scratch space; no context or collector is stored on a syntax node. */
     public static final class Collector {

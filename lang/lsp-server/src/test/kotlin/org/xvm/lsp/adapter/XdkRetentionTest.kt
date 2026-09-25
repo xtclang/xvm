@@ -76,6 +76,13 @@ class XdkRetentionTest {
                     XdkSourceModule("Consumer", uri, setOf("Library")),
                 ),
             )
+            val cursorCases =
+                listOf(
+                    "box." to "number",
+                    "take(" to "box",
+                    "take(bo" to "box",
+                    "textTake(te" to "textValue",
+                )
             repeat(CYCLES) { cycle ->
                 adapter.replaceDependencies(listOf(artifacts[cycle % artifacts.size]))
                 val started = System.nanoTime()
@@ -85,8 +92,7 @@ class XdkRetentionTest {
                 timings += System.nanoTime() - started
                 val renamed = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed").get(30, SECONDS)
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
-                val prefix = listOf("box.", "take(", "take(bo")[cycle % 3]
-                val expected = if (cycle % 3 == 0) "number" else "box"
+                val (prefix, expected) = cursorCases[cycle % cursorCases.size]
                 val incomplete = CONSUMER.replace("box) {}", "box) { $prefix }")
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
                 val column = incomplete.lastIndexOf(prefix) + prefix.length
@@ -124,6 +130,7 @@ class XdkRetentionTest {
         const val CYCLES = 120
         const val CONSUMER =
             "module Consumer { package lib import Library; " +
+                "String textValue=\"x\"; void textTake(String value) {} " +
                 "Int run() { Int local=lib.value(); return local; } void take(lib.Box value) {} void probe(lib.Box box) {} }"
     }
 }

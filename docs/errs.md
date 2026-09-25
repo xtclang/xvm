@@ -8,6 +8,17 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Property/constant argument completion (2026-09-25, uncommitted).**
+Implicit properties and constants now join locals in compiler-fitted argument suggestions. Normal
+name validation supplies their identities and receiver-substituted types; access, static context,
+shadowing and conversions remain compiler decisions. Bundled module properties participate too.
+`CursorBinding.argumentProperties` is an immutable additive fact; prior constructors remain,
+while record patterns grow to nine components. There are no AST changes or clone obligations.
+Ordinary property reads do not acquire local-variable flow narrowing. See
+[C15/L28, limits and verification](errs-integration-plan.md#property-and-constant-argument-completion).
+All 19 new property regressions and 87 editor playbook cases pass, alongside the full backend
+checks. The playbook now includes property/constant argument acceptance and static-context controls.
+
 **IntelliJ client/playbook hardening (2026-09-25, `4e46becb6`).**
 The client now delegates compiler configuration to LSP4IJ while retaining Ecstasy formatting
 settings. The IntelliJ target is 2026.2.3 (build 262+) with LSP4IJ 0.21.0; the free Community
@@ -87,7 +98,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X80 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X82 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
