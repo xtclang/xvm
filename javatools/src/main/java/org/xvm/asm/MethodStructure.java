@@ -2194,48 +2194,25 @@ public class MethodStructure
 
     @Override
     public String getDescription() {
-        MethodConstant id = getIdentityConstant();
-        StringBuilder  sb = new StringBuilder();
-        sb.append("host=\"")
-          .append(id.getNamespace().getName())
-          .append("\", id=\"")
-          .append(id.getValueString());
+        MethodConstant id   = getIdentityConstant();
+        boolean        fSrc = m_source != null && m_source.isPresent();
 
-        if (id.isLambda()) {
-            sb.append("\", lambda=")
-              .append(id.getLambdaIndex());
-        }
-
-        sb.append("\", sig=")
-          .append(id.isNascent() ? "n/a" : id.getSignature());
-
-        if (isNative()) {
-            sb.append(", native");
-        }
-        if (hasCode()) {
-            sb.append(", hasCode");
-        }
-        if (isConditionalReturn()) {
-            sb.append(", conditional");
-        }
-
-        sb.append(", type-param-count=")
-          .append(m_cTypeParams)
-          .append(", ")
-          .append(super.getDescription());
-
-        boolean fSrc = m_source != null && m_source.isPresent();
-        sb.append(", hasSource=")
-          .append(fSrc);
-
-        if (fSrc) {
-            sb.append(", line-number=")
-              .append(m_source.getLineNumber())
-              .append(", line-count=")
-              .append(m_source.getLineCount());
-        }
-
-        return sb.toString();
+        return new StringBuilder()
+                .append("host=\"").append(id.getNamespace().getName())
+                .append("\", id=\"").append(id.getValueString())
+                .append(id.isLambda() ? "\", lambda=" + id.getLambdaIndex() : "")
+                .append("\", sig=").append(id.isNascent() ? "n/a" : id.getSignature())
+                .append(isNative()            ? ", native"      : "")
+                .append(hasCode()             ? ", hasCode"     : "")
+                .append(isConditionalReturn() ? ", conditional" : "")
+                .append(", type-param-count=").append(m_cTypeParams)
+                .append(", ").append(super.getDescription())
+                .append(", hasSource=").append(fSrc)
+                // guarded by fSrc: m_source may be null, and peekLineCount() is the display-safe
+                // counterpart of getLineCount(), which would intern the source to count it
+                .append(fSrc ? ", line-number=" + m_source.getLineNumber()
+                             + ", line-count=" + m_source.peekLineCount() : "")
+                .toString();
     }
 
     @Override
@@ -2933,6 +2910,24 @@ public class MethodStructure
         public int getLineCount() {
             normalize();
             return m_aconstSrc == null ? 0 : m_aconstSrc.length;
+        }
+
+        /**
+         * The display-safe counterpart of {@link #getLineCount()}. That one calls
+         * {@link #normalize()}, which interns one {@link StringConstant} per source line into the
+         * ConstantPool and publishes {@code m_aconstSrc}/{@code m_anIndents} unsynchronized - so
+         * asking a method how long it is, in order to describe it, grows the pool by the size of
+         * its own source.
+         *
+         * <p>The answer is the same either way: {@code normalize()} sizes its array from exactly
+         * this split, so counting the lines needs none of the interning that recording them does.
+         *
+         * @return the number of lines of source
+         */
+        public int peekLineCount() {
+            return m_aconstSrc != null ? m_aconstSrc.length
+                 : m_sSrc      != null ? parseDelimitedString(m_sSrc, '\n').length
+                 :                       0;
         }
 
         /**
