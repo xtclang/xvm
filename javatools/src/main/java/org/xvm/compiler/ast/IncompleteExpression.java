@@ -20,6 +20,11 @@ public final class IncompleteExpression extends Expression {
         this.site = site;
     }
 
+    /** The retained source operation; exposes syntax ownership without a validation result. */
+    public IncompleteStatement getSite() {
+        return site;
+    }
+
     @Override
     public long getStartPosition() {
         return site.getStartPosition();

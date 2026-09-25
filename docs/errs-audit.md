@@ -542,3 +542,19 @@ listeners. Tests compare proposals against compiling the corresponding real expr
 that source text, argument lists, diagnostics and selected-call facts are unchanged by the query.
 The [C13/L25 record](errs-integration-plan.md#argument-value-completion) describes API migration,
 supported slots, negative controls and protocol/editor evidence.
+
+### Typed argument-prefix completion, 2026-09-25
+
+A final bare argument name previously became a scope-completion site and lost the enclosing call's
+fitting context. The parser now retains that name's original token on the CALL site, including a
+separate pending named label where present. Complete earlier arguments remain source children;
+the selected prefix is syntax to replace, not a value to validate. Compiler fitting uses the same
+immutable accepted-value list as empty slots, with no new semantic node state or record components.
+
+The explicit probe still reports `PARSER-30` once and cannot emit the incomplete method. Rejected
+proposals use the existing cancellable private PROBE listener; ordinary diagnostics remain cached
+until an actual source edit. Same-prefix incompatible variables, overload alternatives, inference,
+conversions, narrowing, unsaved signatures and cancellation have regression coverage. Exact token
+edits include escaped identifiers, UTF-16 and CRLF. The
+[C14/L26 record](errs-integration-plan.md#typed-argument-prefix-completion) documents syntax ownership,
+unsupported contexts and host/editor verification.

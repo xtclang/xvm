@@ -69,6 +69,23 @@ class XdkDelimiterRecoveryTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["(pair(1, va", "use((pair(1, va", "values[pair(1, va", "use(fn(va", "use(new Box(va"])
+    fun `typed argument prefixes still fit inside missing enclosing delimiters`(expression: String) {
+        val prefix = "$HEADER Int valueNumber=1; return $expression"
+        XdkAdapter().use { adapter ->
+            val cached = adapter.compile(URI, "$prefix; } Int later() = 42; }")
+            assertThat(cached.diagnostics).isNotEmpty()
+            val item = adapter.getCompletions(URI, 0, prefix.length).single()
+            assertThat(item.label).isEqualTo("valueNumber")
+            assertThat(item.textEdit).isEqualTo(
+                TextEdit(Range(Position(0, prefix.length - 2), Position(0, prefix.length)), "valueNumber"),
+            )
+            assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(1)
+            assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
+        }
+    }
+
     @Test
     fun `cursor statements can end at the enclosing brace without a semicolon`() {
         for (statement in listOf("(value.", "1 + value.", "return (value.", "Int result = (value.")) {
