@@ -12,8 +12,8 @@ the two Markdown files above.
 
 ## Anonymous constructor cursor support
 
-Implemented on `lagergren/errs` after `185ff84b1`; these are working changes until the next
-requested commit. This completes the next constructor API investigation before array-dimension
+Implemented on `lagergren/errs` in `cd1732d42`, after `185ff84b1`.
+This completes the next constructor API investigation before array-dimension
 cursors and unfinished declaration headers.
 
 - [x] Prepare the anonymous declaration's existing source-owned class shell for cursor lookup.
@@ -2219,8 +2219,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L29 | Specialized-constructor copying and editor consumers | `46d6c1442` (constructor consumers); X83–X85 | C16, L23/L25/L26/L28, L16 |
 | C17 | Declaration/tuple/literal recovery and source-owned initializers | `46d6c1442` (compiler recovery hunks); recovery section above | C12 and cursor collectors |
 | L30 | Declaration/literal recovery consumers and editor controls | `46d6c1442` (recovery consumers); X86–X87 | C17, L24, L16 |
-| C18 | Anonymous construction ownership and constructor fitting | Working changes after `185ff84b1`; anonymous-constructor section above | C16 and cursor/listener foundations |
-| L31 | Anonymous-constructor labels, consumers and ownership controls | Same working changes; X88–X89 | C18, L29/L30, L16 |
+| C18 | Anonymous construction ownership and constructor fitting | `cd1732d42` compiler portion; anonymous-constructor section above | C16 and cursor/listener foundations |
+| L31 | Anonymous-constructor labels, consumers and ownership controls | `cd1732d42` host portion; X88–X89 | C18, L29/L30, L16 |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
