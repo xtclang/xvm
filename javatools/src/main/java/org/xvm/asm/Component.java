@@ -3075,7 +3075,7 @@ public abstract class Component
                     }
 
                     if (fSynthetic) {
-                        TypeConstant typeContribNew = clz.getFormalType().resolveGenerics(pool, resolver);
+                        TypeConstant typeContribNew = clz.getFormalType(pool).resolveGenerics(pool, resolver);
 
                         if (typeContrib.isAccessSpecified()) {
                             typeContribNew = pool.ensureAccessTypeConstant(typeContribNew,

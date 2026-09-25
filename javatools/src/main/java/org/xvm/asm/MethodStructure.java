@@ -1451,14 +1451,26 @@ public class MethodStructure
      * </ol>
      */
     public boolean producesFormalType(String sTypeName) {
+        return producesFormalType(getConstantPool(), sTypeName);
+    }
+
+    /**
+     * Check whether this method produces a formal type in the specified query owner. Import
+     * signature types before analysis so normalization and recursive queries use that owner.
+     *
+     * @param pool       the destination for derived types and variance results
+     * @param sTypeName  the formal type name
+     * @return true iff the method produces the formal type
+     */
+    public boolean producesFormalType(ConstantPool pool, String sTypeName) {
         for (Parameter param : getParams()) {
-            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC)) {
+            if (queryType(pool, param).consumesFormalType(sTypeName, Access.PUBLIC)) {
                 return true;
             }
         }
 
         for (Parameter param : getReturns()) {
-            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC)) {
+            if (queryType(pool, param).producesFormalType(sTypeName, Access.PUBLIC)) {
                 return true;
             }
         }
@@ -1477,19 +1489,36 @@ public class MethodStructure
      * </ol>
      */
     public boolean consumesFormalType(String sTypeName) {
+        return consumesFormalType(getConstantPool(), sTypeName);
+    }
+
+    /**
+     * Check whether this method consumes a formal type in the specified query owner. Import
+     * signature types before analysis so normalization and recursive queries use that owner.
+     *
+     * @param pool       the destination for derived types and variance results
+     * @param sTypeName  the formal type name
+     * @return true iff the method consumes the formal type
+     */
+    public boolean consumesFormalType(ConstantPool pool, String sTypeName) {
         for (Parameter param : getParams()) {
-            if (param.getType().producesFormalType(sTypeName, Access.PUBLIC)) {
+            if (queryType(pool, param).producesFormalType(sTypeName, Access.PUBLIC)) {
                 return true;
             }
         }
 
         for (Parameter param : getReturns()) {
-            if (param.getType().consumesFormalType(sTypeName, Access.PUBLIC)) {
+            if (queryType(pool, param).consumesFormalType(sTypeName, Access.PUBLIC)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private TypeConstant queryType(ConstantPool pool, Parameter parameter) {
+        TypeConstant type = parameter.getType();
+        return type.getConstantPool() == pool ? type : pool.register(type);
     }
 
     /**

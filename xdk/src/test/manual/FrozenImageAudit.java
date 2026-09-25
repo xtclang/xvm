@@ -64,6 +64,9 @@ class FrozenImageAudit {
             }
             var application = new MainContainer(runtime, root, file.getModuleId());
             application.getTypeContext().freezeDefinitions();
+            // Exercise cold descriptor metadata before the legacy invocation path. This must
+            // succeed without warming queries in the source image to conceal forbidden writes.
+            application.getTypeContext().typeOf(file.getModuleId()).ensureTypeInfo();
             application.start(Map.of());
             application.invokeAsync("run").join();
         } finally {

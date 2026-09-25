@@ -867,3 +867,22 @@ pass.
 Validation for this preparation commit: 494 Java tests (454 passed, 40 existing skips),
 11 XDK ownership tests passed without skips, and the full library compilation passed.
 The read-only formatting gate and whitespace check passed. Frozen execution remains an open gate.
+
+### Class normalization and member variance destinations
+
+Class formal types, canonical types and native rebase types now have explicit destination
+queries. Their legacy no-argument APIs remain declaration-owned compiler conveniences. Queries
+in another owner construct all parent/formal/default types there and do not fill the declaration's
+compiler cache. Class normalization, contribution resolution, member variance and native rebase
+relation analysis carry that owner through their nested calls. Signature types are imported
+before variance analysis, including the unchanged-operand case.
+
+The new cold generic-class regression freezes before requesting its formal type or canonical
+defaults, checks the destination of the formal parameter and resolved default, and compares the
+image constants afterwards. The manual audit explicitly queries descriptor metadata before
+legacy invocation so the next forbidden write is visible without enabling unfinished activation.
+It now passes the previously failing variance and native-rebase normalization paths and stops at
+the independent NakedRef bootstrap binding. This does not complete cold metadata or cache semantics.
+
+Validation: 495 Java tests (455 passed, 40 existing skips), 11 XDK ownership tests passed without
+skips, full library rebuild, read-only formatting check and whitespace check passed.

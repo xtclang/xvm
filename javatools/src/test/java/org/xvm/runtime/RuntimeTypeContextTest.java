@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 import java.util.Arrays;
+import java.util.List;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -42,6 +43,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeTypeContextTest {
+    @Test
+    void coldClassFormalsAndDefaultsUseTheQueryOwner() {
+        var file = new Image();
+        var value = file.type("Value");
+        var box = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Box", null);
+        box.addTypeParam("Element", value);
+        var context = new RuntimeTypeContext(file.getConstantPool());
+        var constants = file.getConstantPool().getConstants();
+        context.freezeDefinitions();
+
+        var pool = context.getDescriptorPool();
+        var formal = box.getFormalType(pool);
+        assertSame(pool, formal.getParamType(0).getConstantPool());
+        assertTrue(formal.getParamType(0).isFormalType());
+        assertSame(context.intern(value), box.getCanonicalType(pool).getParamType(0));
+        assertSame(box.getCanonicalType(pool), box.resolveType(pool, List.of()));
+        assertArrayEquals(constants, file.getConstantPool().getConstants());
+    }
+
     @Test
     void coldDeclarationTypeIsCreatedInTheContextAfterFreezing() {
         var file = new Image();

@@ -2862,7 +2862,7 @@ public abstract class TypeConstant
             // to insert a layer of code between this class and the class being extended, such
             // as when a service (which is a Service format) extends Object (which is a Class
             // format)
-            typeRebase = pool.register(struct.getRebaseType());
+            typeRebase = struct.getRebaseType(pool);
 
             // next up, for any class type, there may be an "extends" contribution that
             // specifies a "super" class
