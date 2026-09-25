@@ -116,6 +116,7 @@ val npmCompile = tasks.register<NpmTask>("npmCompile") {
     inputs.dir(layout.projectDirectory.dir("src"))
     inputs.file(layout.projectDirectory.file("tsconfig.json"))
     inputs.files(layout.projectDirectory.file("package.json"), layout.projectDirectory.file("package-lock.json"))
+    inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
     outputs.dir(layout.projectDirectory.dir("out"))
 }
 
@@ -218,6 +219,7 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
     args.set(listOf("run", "test:playbook"))
     inputs.dir(layout.projectDirectory.dir("src/test"))
     inputs.file(layout.projectDirectory.file("../doc/manual-test-plan.md"))
+    inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
     // Test execution is intentional on every invocation; reports are retained per run.
 }
 
