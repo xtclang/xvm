@@ -68,11 +68,12 @@ class PartialSemanticModel internal constructor(
         val pendingArgumentName: String? = null,
         val functions: List<FunctionCandidate> = emptyList(),
         val argumentValues: List<Member> = emptyList(),
+        val argumentOffset: Int = 0,
     ) {
         /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
         fun argumentIndexAt(position: Position): Int? =
             if (kind == Kind.CALL && position >= operator.end && position <= range.end) {
-                separators.count { it < position }
+                argumentOffset + separators.count { it < position }
             } else {
                 null
             }

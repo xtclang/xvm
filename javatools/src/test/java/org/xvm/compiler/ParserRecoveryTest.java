@@ -179,7 +179,8 @@ public class ParserRecoveryTest {
 
     @Test
     public void missingCursorDelimitersRetainOriginalRangesAndFollowingDeclarations() {
-        for (String expression : List.of("((value.si", "work((value.si", "values[value.si")) {
+        for (String expression : List.of("((value.si", "work((value.si", "values[value.si", "(1, value.si",
+                "Tuple<Int,Int>:(1, value.si", "[value.si", "[1=value.si", "Map<Int,Int>:[1=value.si")) {
             String prefix = "module Recovery { Int run(String value) { return " + expression;
             String text   = prefix + "; } Int later = 42; }";
             Source source = new Source(text);
@@ -208,7 +209,8 @@ public class ParserRecoveryTest {
     @Test
     public void argumentPrefixesRetainCallSyntaxAndCloneOwnership() {
         for (String call : List.of("work(1, te", "work(first=1, second=te",
-                "new Box<String>(1, te", "new Box<String>(first=1, second=te")) {
+                "new Box<String>(1, te", "new Box<String>(first=1, second=te",
+                "outer.new Child(1, te", "box.new(1, te", "new @Tagged Box(1, te")) {
             String prefix = "module Recovery { void run() { " + call;
             String text = prefix + "); } Int later = 42; }";
             Source source = new Source(text);
@@ -241,6 +243,24 @@ public class ParserRecoveryTest {
             assertTrue(nodes(parse(text, ordinary)).stream().noneMatch(IncompleteStatement.class::isInstance));
             assertFalse(ordinary.hasSeriousErrors());
         }
+    }
+
+    @Test
+    public void arrayDimensionsRemainOwnedSyntaxBeforeTrailingArguments() {
+        String prefix = "module Recovery { void run() { new String[2](te";
+        Source source = new Source(prefix + "); } }");
+        prefix.chars().forEach(_ -> source.next());
+        long cursor = source.getPosition();
+        source.reset();
+        var tree = Parser.forPartialAnalysis(source, cursor, new ErrorList()).parseSource();
+        var site = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+        assertEquals(1, site.getLeadingArguments().size());
+        assertTrue(site.getArguments().isEmpty());
+        assertTrue(site.getSeparators().isEmpty());
+        var clone = (IncompleteStatement) site.clone();
+        assertNotSame(site.getLeadingArguments().getFirst(), clone.getLeadingArguments().getFirst());
+        assertEquals("2", site.getLeadingArguments().getFirst().toString());
     }
 
     @Test

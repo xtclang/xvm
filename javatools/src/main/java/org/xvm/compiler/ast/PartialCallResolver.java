@@ -30,7 +30,10 @@ import static org.xvm.asm.ErrorListener.silent;
 
 /** Explicit incomplete-call inspection on the compiler worker, while the lexical context exists. */
 final class PartialCallResolver {
-    static CursorBinding inspect(IncompleteStatement site, Context ctx, ErrorListener errs) {
+    static CursorBinding inspect(IncompleteStatement site, Context ctx, TypeConstant required, ErrorListener errs) {
+        if (site.getTarget() instanceof NewExpression creation) {
+            return PartialConstructionResolver.inspect(site, creation, ctx, required, errs);
+        }
         var scope = ctx.cursorBinding().withCandidates(List.of());
         if (errs.isAbortDesired()) {
             return scope;
@@ -38,29 +41,23 @@ final class PartialCallResolver {
         var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
         Target target = switch (site.getTarget()) {
             case NameExpression callee -> target(callee, ctx, probe);
-            case NewExpression creation -> constructor(creation, ctx, probe);
             default -> null;
         };
         if (target == null || errs.isAbortDesired()) {
-            return site.getTarget() instanceof NewExpression
-                    ? scope : functionScope(site, ctx, scope, errs);
+            return functionScope(site, ctx, scope, errs);
         }
-        String methodName = site.getTarget() instanceof NameExpression callee ? callee.getName() : "construct";
+        String methodName = ((NameExpression) site.getTarget()).getName();
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(errs::log), errs::isAbortDesired);
         var info = target.type().ensureTypeInfo(ctx.getThisClassId(), lookup);
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired()) {
             return scope;
         }
-        if (target.kind() == MethodKind.Constructor && !info.isNewable(false, probe)) {
-            return scope;
-        }
         // InvocationExpression gives a property precedence over methods of the same name.
-        if (target.kind() != MethodKind.Constructor && info.findProperty(methodName) != null) {
+        if (info.findProperty(methodName) != null) {
             return functionScope(site, ctx, scope, errs);
         }
         var methods = info.findMethods(methodName, -1, target.kind()).stream()
-                .filter(method -> method.isTopLevel() && (target.kind() == MethodKind.Constructor
-                        || !info.getMethodById(method).isCtorOrValidator()))
+                .filter(method -> method.isTopLevel() && !info.getMethodById(method).isCtorOrValidator())
                 .filter(method -> info.getType().getAccess() == Access.PRIVATE
                         || info.getMethodById(method).isVisible(ctx.getThisClassId()))
                 .toList();
@@ -68,15 +65,7 @@ final class PartialCallResolver {
                 .takeWhile(method -> !errs.isAbortDesired())
                 .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
                         site.getArguments(), probe).stream())
-                .filter(candidate -> site.getPendingArgumentName().map(name -> {
-                    var method = (MethodStructure) candidate.method().getComponent();
-                    var parameter = method.getParam(name.getValueText());
-                    if (parameter == null || parameter.isTypeParameter()) {
-                        return false;
-                    }
-                    int index = parameter.getIndex() - method.getTypeParamCount();
-                    return candidate.arguments().stream().noneMatch(argument -> argument.parameterIndex() == index);
-                }).orElse(true))
+                .filter(candidate -> acceptsLabel(site, candidate))
                 .toList();
         var result = scope.withCandidates(candidates);
         return candidates.isEmpty() ? result : argumentValues(site, ctx, result, errs,
@@ -98,7 +87,7 @@ final class PartialCallResolver {
      * for resolution, but are never installed in the source tree or selected as complete calls.
      * This preserves generic inference and conversions without copying type rules into the host.
      */
-    private static CursorBinding argumentValues(IncompleteStatement site, Context ctx,
+    static CursorBinding argumentValues(IncompleteStatement site, Context ctx,
             CursorBinding scope, ErrorListener errs, Predicate<List<Expression>> fits) {
         var written = site.getArguments();
         if (site.getPendingArgumentName().isEmpty()
@@ -163,22 +152,16 @@ final class PartialCallResolver {
         return expression;
     }
 
-    /** Ordinary named construction only; virtual/inner/annotated construction needs its own proof. */
-    private static Target constructor(NewExpression creation, Context ctx, ErrorListener errs) {
-        if (creation.left != null || creation.type == null || creation.hasSquareBrackets()) {
-            return null;
-        }
-        var validation = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
-        var trial = ctx.enter();
-        var expression = (TypeExpression) creation.type.clone();
-        if (expression.validate(trial, creation.pool().typeType(), validation) == null
-                || validation.hasSeriousErrors() || validation.isAbortDesired()) {
-            return null;
-        }
-        var type = expression.ensureTypeConstant(trial, validation);
-        return type.containsUnresolved() || type.isFormalType() || type.isAnnotated()
-                || type.isVirtualChild() || type.isInnerChildClass()
-                ? null : new Target(type, MethodKind.Constructor);
+    static boolean acceptsLabel(IncompleteStatement site, CursorBinding.Candidate candidate) {
+        return site.getPendingArgumentName().map(name -> {
+            var method = (MethodStructure) candidate.method().getComponent();
+            var parameter = method.getParam(name.getValueText());
+            if (parameter == null || parameter.isTypeParameter()) {
+                return false;
+            }
+            int index = parameter.getIndex() - method.getTypeParamCount();
+            return candidate.arguments().stream().noneMatch(argument -> argument.parameterIndex() == index);
+        }).orElse(true);
     }
 
     /** Validate trial copies of the callee and arguments without fabricating a complete call. */
