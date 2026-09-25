@@ -8,6 +8,15 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Typed argument-prefix completion (2026-09-25, working tree after `70a26b1d9`).**
+Direct final argument prefixes, including named values, now use the compiler's argument fitter.
+The editor replaces the exact original token, preserving labels and delimiters. Overload alternatives,
+inference, conversions and narrowing remain compiler decisions. The AST adds only a final syntax
+token on `IncompleteStatement`, with a factory/getter and a syntax accessor on `IncompleteExpression`;
+semantic facts still use the existing immutable `CursorBinding.argumentValues`. There are no new
+record components, mutable semantic caches or clone-reset rules. See
+[C14/L26, AST placement, limits and verification](errs-integration-plan.md#typed-argument-prefix-completion).
+
 **Argument-value completion (2026-09-24, `f2896916b`).**
 Empty final positional slots and pending named values now offer compatible readable locals and
 parameters. Compiler trial fitting preserves conversions, inference, narrowing and overload
@@ -70,7 +79,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X78 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X80 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1531,6 +1540,7 @@ their meaning to normal contextual lookup, preserving imports, shadowing and acc
 | `AstNode` argument-fit helper | Expose tentative matching signatures/mappings to `PartialCallResolver`; existing full-call selection keeps its behavior. | Argument fitting already lives here. The helper reuses its named ordering, conversions and inference, with trial argument clones and a child context. No new clone/reset rule. |
 | `PartialCallResolver` | Inspect accessible method/ordinary-constructor candidates and function-valued callees; retain written parameter mappings and fit proposed readable argument variables. | Compiler-side query while Context exists; orchestration is outside AST nodes. Proposed syntax is never installed as source children; trial clones use child contexts and locally collecting speculative listeners. Candidates never masquerade as successful invocations. |
 | `Parser` / `IncompleteStatement` constructor syntax | Reuse the call-argument cursor parser and retain an existing `NewExpression` prefix as the target child. | This is source syntax: the type belongs on the existing constructor node, and arguments on the existing incomplete site. No new AST field, semantic cache or clone/reset rule. |
+| `Parser` / `IncompleteStatement` argument-prefix syntax; `IncompleteExpression.getSite()` | Associate a direct final bare-name prefix with its owning call. Retain its original final `Token` separately from the pending named label and complete argument children. The wrapper accessor exposes its existing syntax child. | Call ownership and the replacement span are parser facts. The token uses existing token-sharing on clone; receiver/complete arguments retain normal child cloning. No semantic cache, phase-assigned field, extra Context retention or clone-reset hook is added. Qualified/compound/grouped expressions and earlier argument slots retain their existing syntax sites. |
 | `InvocationExpression.testFunction` | Preserve argument validity when checking return fit (`fValid &= fit.isFit()`). | The existing full-call validator owns the correctness decision. Successful return fitting must not publish a failed call as validated; no new state or listener suppression. |
 | `NameExpression`, `SequentialAssignExpression`, `AssignmentStatement` atomic emission | Reuse a computed property-owner Ref/Var type for lookup and binary ASTs; preserve sequential result types and the outer register's owner type. | These correct existing emission logic. The protected helper reads the established access plan and retains no Context or new state; there are no clone/reset changes or new embedding hooks. |
 | `CursorBinding` / embedding `PartialAnalysis` | Immutable scope/candidate records and a collector keyed by site identity; publication filters surviving syntax and clears scratch entries. | Attempt ownership avoids phase-assigned node fields and leaking validation contexts. Previous three-/six-/seven-argument constructors remain; `CursorBinding` has eight record components, including function candidates and compatible argument values. Record patterns must migrate. |

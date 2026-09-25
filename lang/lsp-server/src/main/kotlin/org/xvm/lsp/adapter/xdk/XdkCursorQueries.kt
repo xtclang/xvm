@@ -16,10 +16,19 @@ internal object XdkCursorQueries {
     fun completions(model: PartialSemanticModel): List<CompletionItem> {
         val site = model.sites.singleOrNull() ?: return emptyList()
         val prefix =
-            when (site.kind) {
-                PartialSemanticModel.Kind.CALL -> PartialSemanticModel.MemberPrefix("", SemanticModel.Range(site.range.end, site.range.end))
-                else -> site.memberPrefix ?: return emptyList()
-            }
+            site.memberPrefix
+                ?: when (site.kind) {
+                    PartialSemanticModel.Kind.CALL -> {
+                        PartialSemanticModel.MemberPrefix(
+                            "",
+                            SemanticModel.Range(site.range.end, site.range.end),
+                        )
+                    }
+
+                    else -> {
+                        return emptyList()
+                    }
+                }
         val range =
             Range(
                 AdapterPosition(prefix.range.start.line, prefix.range.start.column),

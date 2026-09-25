@@ -104,7 +104,9 @@ final class PartialCallResolver {
                     || written.stream().anyMatch(LabeledExpression.class::isInstance))) {
             return List.of();
         }
+        String prefix = site.getArgumentPrefix().map(Token::getValueText).orElse("");
         return scope.variables().stream().filter(CursorBinding.Variable::readable)
+                .filter(variable -> variable.name().startsWith(prefix))
                 .takeWhile(variable -> !errs.isAbortDesired())
                 .filter(variable -> {
                     long cursor = site.getEndPosition();
