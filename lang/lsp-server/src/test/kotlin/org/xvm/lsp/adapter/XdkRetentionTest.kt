@@ -84,6 +84,7 @@ class XdkRetentionTest {
                     "textTake(te" to "textValue",
                     "new String[2](te" to "textValue",
                     "Object parts = [textValue.si" to "size",
+                    "new Object(te|) { construct(String value) {} Int read() = box.number; };" to "textValue",
                 )
             repeat(CYCLES) { cycle ->
                 adapter.replaceDependencies(listOf(artifacts[cycle % artifacts.size]))
@@ -94,8 +95,9 @@ class XdkRetentionTest {
                 timings += System.nanoTime() - started
                 val renamed = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed").get(30, SECONDS)
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
-                val (prefix, expected) = cursorCases[cycle % cursorCases.size]
-                val incomplete = CONSUMER.replace("box) {}", "box) { $prefix }")
+                val (marked, expected) = cursorCases[cycle % cursorCases.size]
+                val prefix = marked.substringBefore('|')
+                val incomplete = CONSUMER.replace("box) {}", "box) { ${marked.replace("|", "")} }")
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
                 val column = incomplete.lastIndexOf(prefix) + prefix.length
                 assertThat(adapter.getCompletionsAsync(uri, 0, column).get(30, SECONDS).map { it.label }).contains(expected)

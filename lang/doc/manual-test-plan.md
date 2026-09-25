@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X87 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X89 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1688,6 +1688,14 @@ module Advanced {
         new String[2](text);
     }
     Object literal(String word) = [word.size];
+    interface CursorReader { String read(); }
+    void anonymousConstructions(String text, Int textNumber) {
+        new Packet<String>("anonymous", text) { String read() = text; };
+        new CursorReader("a", text) {
+            construct(String first, String second) {}
+            @Override String read() = text;
+        };
+    }
     void take(Int first, String second) {}
     void values(Int number, String text, Boolean flag, function Int(Int, String) fn) {
         Int textNumber = 1;
@@ -1732,6 +1740,9 @@ module Advanced {
 | X85 | Replace `new String[2](text)` with `new String[2](te)`, then `new String[2](supply=te)`. Request help and accept `text`. | Parameter `supply` is active (index 1), since `[2]` supplies `size`. Only the compatible String value is offered. Acceptance clears Problems. |
 | X86 | In `literal`, replace `[word.size]` with `(1, word.si`, `Tuple<Int, Int>:(1, word.si`, `[word.si`, and `["key"=word.si` in turn, leaving the semicolon. Complete `size`, then restore. | Member completion survives missing tuple/list/map closers and replaces only `si`. Accepting the member alone leaves delimiter diagnostics; restoring the complete expression clears Problems. |
 | X87 | Before the module's final brace, add `Int declaredSize(String word) = word.si`, `Int declaredSize = "x".si`, or `void defaults(Int size = Int64.Ma {}` in turn. Complete at the prefix, then repair the missing `;` or `)`, and remove the added declaration. | `size`/`MaxValue` is offered in the declaration's real compiler context. The missing terminator remains a normal diagnostic until repaired. Method defaults must still be constants. Shorthand constructor defaults have backend coverage. |
+| X88 | In `anonymousConstructions`, shorten `text` to `te` in `new Packet<String>("anonymous", text)`. Request signature help and completion, then accept `text`. | The inherited constructor has String parameters and active parameter `second`. Only `text` fits; acceptance clears Problems. The anonymous method still captures its enclosing `text`. |
+| X89 | Shorten `text` in `new CursorReader("a", text)` to `te`. Request help/completion, accept `text`, then repeat after deleting the constructor call's `)` before `{`. Restore the fixture. | The constructor declared inside the anonymous body supplies `new CursorReader(String first, String second)`, without a generated class suffix. Completion replaces only `te`. Missing-`)` diagnostics remain until the delimiter is restored. |
+
 
 
 Argument-value suggestions cover visible readable locals/parameters and implicit properties/constants
@@ -1742,8 +1753,11 @@ instances or imported constants remain unsupported.
 Qualified/grouped/compound expressions and prefixes before later written arguments retain ordinary
 scope/member completion without argument-type filtering. Empty slots before later written arguments
 remain outside this proof. X83–X87 add specialized constructors and bounded declaration/literal recovery.
-Anonymous construction, cursors in array dimensions, multidimensional construction, unfinished declaration
-names/types and missing operands remain unsupported; no literal value or declaration token is invented.
+X88–X89 add anonymous superclass forwarding and constructors declared inside retained bodies, including
+interface implementations and captured locals. Cursor analysis prepares declaration signatures but does
+not validate capture behavior or emit unfinished bodies. Cursors in array dimensions, multidimensional
+construction, unfinished declaration names/types and missing operands remain unsupported; no literal
+value or declaration token is invented.
 
 ## VS Code Extension Playbook
 
