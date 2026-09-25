@@ -562,16 +562,12 @@ private class SemanticModelBuilder(
                         site.separators.map { Position(Source.calculateLine(it.startPosition), Source.calculateOffset(it.startPosition)) },
                     ),
                     immutableList(members),
-                    if (site.isCall) {
-                        null
-                    } else {
-                        site.memberName.orElse(null)?.let { name ->
-                            PartialSemanticModel.MemberPrefix(
-                                name.valueText,
-                                location(site.source, name.startPosition, name.endPosition).range,
-                            )
-                        } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range)
-                    },
+                    (site.argumentPrefix.orElse(null) ?: site.memberName.orElse(null))?.let { name ->
+                        PartialSemanticModel.MemberPrefix(
+                            name.valueText,
+                            location(site.source, name.startPosition, name.endPosition).range,
+                        )
+                    } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range),
                     cursor?.takeIf { it.callsInspected() }?.candidates()?.let { candidates ->
                         immutableList(
                             candidates.mapNotNull { candidate ->
