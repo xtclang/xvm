@@ -8,6 +8,18 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Unfinished declaration headers (2026-09-25, working tree after `b17a9adec`).**
+Malformed method parameter headers now retain a written outline name and source extent. Explicit
+cursor queries complete simple unqualified member/return and parameter types through the actual
+enclosing compiler scope, including imports, aliases and shadowing. The syntax node registers no
+component, parameters or method context. Metadata is final; its cursor child uses ordinary AST
+ownership and cloning. Diagnostics remain until the source is repaired. Shared X91–X92 cover type
+edits, incomplete outlines/folds and repair; IntelliJ labels its missing outline/fold checks partial.
+See [C20/L35](errs-integration-plan.md#unfinished-declaration-headers) for boundaries and verification.
+Validation passes 477 executed compiler tests, 1,019 executed LSP tests, 43 stdio cases and all
+97 VS Code cases. IntelliJ passes startup plus 18 full and 15 partial scenarios, with no IDE
+failures. The 120-cycle retention workload releases all 2,441 observed compiler objects.
+
 **Array dimension cursors (2026-09-25, `0b800c392`).**
 Single-dimensional size slots now retain empty/prefix cursors and missing brackets. The compiler
 fits proposed names against the real fixed-size Array constructor, including narrowing and read
@@ -151,7 +163,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X90 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X92 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1419,6 +1431,9 @@ persistent workspace index remain separate from the host contract.
 |---|---|---|
 | `IncompleteStatement.isCall()` and delimiter display (C19) | Bracket sizes are arguments of array construction; the retained opening token distinguishes them from ordinary index expressions. | Existing target/argument children and final token only. No new field, public signature or clone/reset rule. `getLeadingArguments()` stays empty for size slots; initializer-parenthesis slots still include their preceding dimensions. |
 | `Parser` dimension lookahead (C19) | Type parsing must count dimensions before `NewExpression` owns their expressions. A cursor must survive that ambiguity and report once. | Existing listener branch is discarded on token restore and merged when consumed/failed. The owning parse retains original cursor tokens. A following supplier is consumed for recovery but is outside the retained prefix proof. |
+| `IncompleteDeclarationStatement` (C20) | Preserve written declaration kind/name/range when no valid method or property component can be registered; own the selected type cursor. | Final metadata and ordinary AST child list adoption/cloning. The skipped body contributes only its original range. No component, parameter register, retained Context or lazy cache. AST placement is required for source ownership, structural features and stage traversal. |
+| `IncompleteStatement.isTypeCompletion()` and `CursorScope.declarationTypes` (C20) | Distinguish a type-only header query and resolve enclosing type candidates without inventing a method scope. | Kind is derived from the real parent; existing NameResolver performs lookup. Existing CursorBinding.NamedType carries copied identities. No new cursor field or host-side type resolver. |
+| `Parser` header recovery (C20) | Parser owns missing-header boundaries and distinguishes unqualified type prefixes from values. | Retains an actual name only when written; stops at body/semicolon/enclosing brace/EOF and checks cancellation while skipping the body. Generic/qualified/type-composition headers remain bounded follow-ups. |
 | `PartialConstructionResolver` array filter (C19) | Select the fixed-size constructor by its compiler declaration identity, then reuse normal argument fitting. Specialized TypeInfo method IDs alone do not equal the declaration ID. | Stack-local lookup through existing `ArrayTypeExpression.getSupplyConstructor()` and MethodInfo. No ArrayTypeExpression/NewExpression change or host-side type-rule copy. |
 | `NewExpression.prepareConstruction` and its nested `Construction` record | Share normal receiver/type preparation, annotation checks, inner/formal rules and array setup with explicit cursor probes; avoid duplicating language rules in Kotlin. | Package-local helper and stack-owned record. Normal validation uses the same prefix. Ordinary probes mutate trial syntax; anonymous probes prepare the retained source-owned declaration in the partial-analysis attempt. No new AST field. |
 | `PartialConstructionResolver` | Constructor fitting and class inference need the live compiler Context and existing argument fitter. | Separate compiler helper, discarded child contexts and cloned arguments. Anonymous class components stay under their source-owned `anon` child; superclass candidates need no generated forwarding constructor. Immutable existing `CursorBinding.Candidate` results; no node caches or callbacks retained. |

@@ -13,6 +13,7 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.IncompleteDeclarationStatement;
 import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.NewExpression;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -320,6 +322,77 @@ public class ParserRecoveryTest {
         });
         assertFalse(errs.hasSeriousErrors());
         assertEquals(1, nodes(parser.parseSource()).stream().filter(IncompleteStatement.class::isInstance).count());
+    }
+
+    @Test
+    public void malformedHeadersRetainWrittenNamesButDoNotExposeTheirBodiesAsMembers() {
+        for (String header : List.of("void damaged(Int)", "void damaged(Int value", "void damaged(")) {
+            var errs = new ErrorList();
+            var tree = parse("module Recovery { " + header + " { Int hidden=1; } Int later=2; }", errs);
+            assertTrue(errs.hasSeriousErrors());
+            var declaration = nodes(tree).stream().filter(IncompleteDeclarationStatement.class::isInstance)
+                    .map(IncompleteDeclarationStatement.class::cast).findFirst().orElseThrow();
+            assertEquals("damaged", declaration.getNameToken().orElseThrow().getValueText());
+            assertEquals(IncompleteDeclarationStatement.Kind.METHOD, declaration.getKind());
+            assertEquals(List.of("Recovery", "later"), names(tree));
+            assertFalse(declaration.children().hasNext());
+        }
+    }
+
+    @Test
+    public void declarationTypeCursorIsOwnedSyntaxWithOneDiagnosticAndIndependentClones() {
+        for (String header : List.of("void damaged(Str| value) {}", "void damaged(|) {}",
+                "void damaged(Int first, |) {}", "Str| property;", "Str| damaged() {}", "Str|;")) {
+            String prefix = "module Recovery { " + header.substring(0, header.indexOf('|'));
+            String text = prefix + header.substring(header.indexOf('|') + 1) + " Int later=1; }";
+            Source source = new Source(text);
+            prefix.chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            var reports = new ArrayList<String>();
+            var tree = Parser.forPartialAnalysis(source, cursor,
+                    ErrorListener.collecting(error -> reports.add(error.getCode()))).parseSource();
+            assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, header);
+            var declaration = nodes(tree).stream().filter(IncompleteDeclarationStatement.class::isInstance)
+                    .map(IncompleteDeclarationStatement.class::cast).findFirst().orElseThrow();
+            var site = (IncompleteStatement) declaration.children().next();
+            assertEquals(cursor, site.getEndPosition());
+            var clone = (IncompleteDeclarationStatement) declaration.clone();
+            var clonedSite = (IncompleteStatement) clone.children().next();
+            assertNotSame(site, clonedSite);
+            assertSame(clone, clonedSite.getParent());
+            assertTrue(clonedSite.isTypeCompletion());
+            assertEquals(declaration.getNameToken(), clone.getNameToken());
+            assertEquals(header.equals("Str|;"), declaration.getNameToken().isEmpty());
+            assertTrue(names(tree).contains("later"));
+            assertEquals(text, source.toRawString());
+        }
+    }
+
+    @Test
+    public void declarationRecoveryHonorsBudgetsCancellationAndSpeculation() {
+        String text = "module Recovery { void damaged(Int) {} Int later=1; }";
+        var budget = new ErrorList(ErrorList.FIRST_ERROR);
+        assertThrows(CompilerException.class, () -> parse(text, budget));
+        assertEquals(1, budget.getSeriousErrorCount());
+        assertThrows(CompilerException.class, () -> new Parser(new Source(text),
+                ErrorListener.cancellable(new ErrorList(), () -> true)).parseSource());
+        var errs = new ErrorList();
+        var parser = new Parser(new Source(text), errs);
+        assertThrows(CompilerException.class, () -> {
+            try (Parser.Attempt ignored = parser.attempt()) {
+                parser.parseTypeCompositionStatement();
+            }
+        });
+        assertFalse(errs.hasSeriousErrors());
+        assertEquals(1, nodes(parser.parseSource()).stream()
+                .filter(IncompleteDeclarationStatement.class::isInstance).count());
+
+        String largeBody = "module Recovery { void damaged(Int) { " + "Int hidden=1; ".repeat(1000) + "} }";
+        Source source = new Source(largeBody);
+        assertThrows(CompilerException.class, () -> new Parser(source, ErrorListener.cancellable(
+                new ErrorList(), () -> Source.calculateOffset(source.getPosition()) > 200)).parseSource());
+        assertTrue(Source.calculateOffset(source.getPosition()) < 300, "Cancellation must stop inside the skipped body");
     }
 
     private List<AstNode> nodes(AstNode root) {

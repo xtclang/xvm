@@ -10,6 +10,87 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Unfinished declaration headers
+
+Implemented in the working tree on `lagergren/errs`, after pushed checkpoint `b17a9adec`.
+The implementation commit will be recorded when this slice is committed.
+
+- [x] Preserve a written method name and source extent when its parameter header is malformed.
+- [x] Retain simple unqualified property/return and method-parameter type prefixes, including
+  empty parameter type slots, without fabricating names or signatures.
+- [x] Resolve type candidates through the real enclosing compiler scope: implicit imports,
+  explicit/wildcard imports, aliases, nested types, typedefs and shadowing.
+- [x] Preserve following declarations and folds; discard body declarations and stale semantics.
+- [x] Add parser diagnostic/budget/cancellation/clone controls, embedding ownership checks,
+  adapter overlay invalidation, UTF-16/CRLF stdio and retention coverage.
+- [x] Add shared X91–X92, both editor consumers and manual steps. IntelliJ X92 explicitly lacks
+  native outline/folding assertions; it checks diagnostics, Problems rows and repair.
+- [x] Record final Java/LSP/stdio/editor verification.
+
+**API/AST placement:** `IncompleteDeclarationStatement` is syntax, not a compiler component.
+It owns the written name (if present), declaration kind, original source range and selected cursor
+child. Metadata is final. The child list uses the existing AST adoption/clone mechanism so each
+attempt/clone owns its children; there is no new cache or compiler `Context` field.
+`IncompleteStatement.isTypeCompletion()` derives its answer from parentage. The enclosing real
+class supplies name resolution through `CursorScope`/`NameResolver`; no partial method/property,
+parameter register, synthetic declaration name or method context is registered. Existing
+`CursorBinding.NamedType` facts suffice. Kotlin copies those facts and retains outline/fold ranges.
+The [AST inventory](errs.md#ast-changes-for-embedding-and-lsp-ownership-and-placement) records all hooks.
+
+**Bounds:** this first header slice does not complete qualified/compound types, method type
+parameters, generic-method headers, type-composition/extends headers or parameter/declaration
+names. Return types in multi-return lists are outside this path. A malformed method body is
+skipped as source extent, not exposed as valid members. Recovery stops at a body, semicolon,
+enclosing brace or EOF; headers with no separating boundary can still consume following syntax.
+Nested/default header expressions containing their own braces are not a recovery guarantee.
+Normal compilation still reports the malformed header; cursor probes leave published diagnostics
+unchanged, and neither path emits the incomplete declaration.
+
+| Future PR | Contents | Prerequisites |
+|---|---|---|
+| C20 | Parser header boundaries, IncompleteDeclarationStatement, derived cursor kind, CursorScope name resolution, parser tests and embedding contract documentation | Existing C12/C14 cursor/listener foundations and C17 declaration recovery |
+| L35 | Copied type-only completion, outline/folding, adapter/embedding/stdio/retention tests, shared X91–X92, both editor consumers and docs | C20, L32; native empty-signature assertions use L33 |
+
+These add two groups to the extraction map, bringing it to **69**. Keep compiler and host changes
+separate by the responsibilities above; each extracted PR must pass on its own prerequisites.
+C19/L34 remain the preceding independent array-dimension slice in `0b800c392`.
+
+Validation on 2026-09-25:
+
+- Java: **477 executed, 40 existing skips**, zero failures/errors; all 18 parser recovery cases execute.
+- LSP: **1,019 executed, three existing skips**, zero failures/errors; all 19 header adapter/API cases execute.
+- Packaged stdio: **43 passed, zero skips**, including header edits after an emoji with CRLF line endings.
+- Retention: **120 cycles, 960 edit requests, 2,441 weak references, zero retained**;
+  rebuild p50/p95 **213/223 ms**, including debounce. This bounded workload is not an SLA.
+- XDK distribution preparation and root `spotlessCheck` pass. No Gradle files changed;
+  the corrected combined validation run reuses its configuration cache.
+- VS Code: **97 passed**, including X91–X92. Report:
+  `lang/vscode-extension/build/reports/compiler-playbook/run-mLsWNJ/results.json`.
+- IntelliJ: **19 passed including START, 15 partial, 64 not implemented**, zero failures,
+  not-run cases or IDE failures. X91 checks native candidates, absent parameter hints and exact
+  acceptance; X92 checks diagnostics, Problems rows and clearing. Report:
+  `lang/intellij-plugin/build/reports/compiler-playbook/run-17455356535475190797/results.json`.
+  Native JUnit: one executed test, zero failures/errors/skips; Ultimate remains disabled.
+- Both reports contain identical scenario IDs and SHA-256:
+  `6f4b5b9939beb173f00cbeada93ae0e2aabf53e2e44a1efd7820928a6e84102c`.
+- Kotlin/TypeScript checks pass. Added local Markdown links resolve and `git diff --check` passes.
+
+```bash
+./gradlew :xdk:installDist spotlessCheck --console=plain
+./gradlew :javatools:test :lang:vscode-extension:testCompilerPlaybook :lang:intellij-plugin:testCompilerPlaybook spotlessCheck --max-workers=1 -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
+```
+
+The successful combined run took 10m56s and reused its configuration cache. Java tests executed
+successfully in the preceding run and were up to date on the final run; LSP, stdio and both editor
+tasks executed. The first stdio run found a test assertion dereferencing the valid null result
+for a header's signature help; that assertion was corrected before the successful run.
+Only documentation and constructor continuation whitespace were finalized afterward. No CI run
+was consulted and no Gradle configuration changed.
+
+Next after this bounded slice: qualified/compound and type-composition header recovery, with
+compiler access/type-formal resolution controls before expanding completion. Native IntelliJ
+outline/folding and other declared parity gaps remain separate host-driver work.
+
 ## Array dimension cursors
 
 Implemented on `lagergren/errs` in `0b800c392`, after checkpoint `3f46568af`.
@@ -35,7 +116,7 @@ after a written `]` is parsed to preserve the cursor but is outside its prefix p
 Normal compilation still validates that supplier and rejects omitted defaults (including String).
 Multidimensional construction stays unsupported. Prefixes before later dimensions and compound/member
 expressions keep ordinary scope/member completion, without size filtering. No literal values,
-operands or declaration names are invented. Unfinished declaration headers are next, one step at a time.
+operands or declaration names are invented. The following header slice is recorded above.
 
 | Future PR | Contents | Prerequisites |
 |---|---|---|

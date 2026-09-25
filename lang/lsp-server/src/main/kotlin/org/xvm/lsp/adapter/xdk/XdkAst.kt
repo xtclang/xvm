@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.asm.XvmStructure
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.IncompleteDeclarationStatement
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
@@ -94,7 +95,7 @@ internal object XdkAst {
 
         fun walk(node: AstNode) {
             if (root != null && !node.belongsTo(root)) return
-            if (node is StatementBlock || node is TypeCompositionStatement) {
+            if (node is StatementBlock || node is TypeCompositionStatement || node is IncompleteDeclarationStatement) {
                 val start = lineOf(node.startPosition)
                 val end = lineOf(node.endPosition)
                 if (end > start) {

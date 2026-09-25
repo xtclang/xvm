@@ -198,17 +198,27 @@ still checks the body and its captures. Single-dimensional array brackets suppor
 size completion and signature help, including a missing closing bracket. Proposals fit the real
 fixed-size Array constructor's Int parameter. A following supplier is parsed for recovery but is
 outside that prefix proof; normal compilation still validates suppliers and element defaults.
-Multidimensional construction
-remain unsupported. Candidates never claim final overload selection. Requests propagate cancellation
+Multidimensional construction remains unsupported. Candidates never claim final overload selection. Requests propagate cancellation
 and reject stale document/module results. Missing call/group parentheses and index
 brackets around the cursor retain completion and signature help at statement/outer-delimiter
 boundaries; a cursor at EOF also tolerates missing block braces. Normal compiler diagnostics remain
 visible until the text is repaired. Tuple, typed-tuple, list/set/collection and map closers also
 recover around a cursor hole. Expression-bodied declarations/property initializers can lack their
 terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
-their real source-owned compiler context. Missing operands, unfinished declaration names/types,
-missing map entries and unterminated literal contents remain outside this recovery. The
+their real source-owned compiler context. Simple unqualified member/return and parameter type
+prefixes now use the enclosing compiler scope, without registering incomplete declarations.
+Missing operands, declaration/parameter names, qualified/compound/generic headers, missing map
+entries and unterminated literal contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
+
+Declaration-header recovery retains malformed method names and source extents for outline and
+folding. Explicit cursor queries complete simple unqualified member/return and parameter type
+prefixes through the enclosing compiler scope, including empty parameter slots. They do not
+register partial signatures or invent parameter names. Generic-method, multi-return,
+qualified/compound and type-composition headers remain follow-ups; see
+[shared X91–X92](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+[C20/L35 extraction plan](../../docs/errs-integration-plan.md#unfinished-declaration-headers).
+
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module
 members. It does not expand virtual dispatch, function values, constructors or dependency sources.
