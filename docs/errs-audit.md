@@ -612,13 +612,42 @@ evaluation is unchanged. Method and shorthand-constructor defaults, property val
 bodies have regressions. Tuple/list/set/map recovery retains source ranges and later declarations;
 missing values and unrelated syntax damage remain rejected. No new mutable AST fields were needed.
 
-Anonymous construction, array-dimension cursors, multidimensional construction and unfinished
-declaration names/types remain explicit gaps. The qualified-type fallback's existing `ctx.exit()`
-call was observed during preparation review but was not changed: the complete/partial qualified-inner
-regressions pass, and this pass did not establish an independent defect there. See the
+Anonymous construction was deferred here and is handled by the follow-up below. Array-dimension
+cursors, multidimensional construction and unfinished declaration names/types remain explicit gaps.
+The qualified-type fallback's existing `ctx.exit()` call was observed during preparation review but
+was not changed: the complete/partial qualified-inner regressions pass, and this pass did not
+establish an independent defect there. See the
 [C16/L29/C17/L30 validation and extraction record](errs-integration-plan.md#specialized-constructors-and-declarationliteral-cursor-recovery).
 
 Validation: 473 executed Java tests, 964 executed LSP tests, 36 packaged-stdio tests and all 92
 editor cases passed. The existing 40 Java/three LSP skips are unchanged. The additional focused
 18-case recovery run verifies exact boundary diagnostics and non-emission. The retention workload
 retained zero of 2,402 observed objects. The integration record links the full XML and editor report.
+
+
+## Anonymous constructor ownership audit (2026-09-25)
+
+Working changes after `185ff84b1` resolve the anonymous constructor cursor boundary. Calling normal
+preparation on a detached clone would still register class components under the source method.
+Instead, the partial-analysis attempt prepares its retained anonymous declaration and existing
+`anon` child. Constructor signature lookup requires that class shape but does not require capture
+analysis, synthetic forwarding code or emitted method bodies. Existing Candidate facts suffice;
+no new mutable AST field, clone reset, detached metadata API or public record component was needed.
+
+Own constructor declarations and superclass signatures are fitted with compiler rules. The
+provisional synthetic class default is excluded from suggestions in favor of real superclass
+constructors; interface implementations retain their valid no-argument default. Source-derived
+labels avoid exposing generated `:1` names. Access tests compare public/protected/private dependency
+constructors with normal compilation. Repaired programs exercise read-only and mutable captures;
+cursor attempts must have one owned class shell, no capture bindings, no method AST or operations,
+original source text and exactly the cursor boundary diagnostic.
+
+The probe does not validate the entire anonymous body or claim a selected overload. Cursors in
+array dimensions and unfinished declaration headers remain next. See
+[C18/L31](errs-integration-plan.md#anonymous-constructor-cursor-support) for verification and extraction.
+
+Validation: 473 executed Java tests, 986 executed LSP tests, 38 packaged-stdio tests and all 94
+VS Code editor cases pass. Existing skips remain 40 Java/three LSP; no editor or stdio cases skip.
+The retention workload releases all 2,421 observed objects. The integration record preserves the
+initial startup timeout, the corrected fixture-anchor collision and final report paths. It also
+tracks the observed X76 semantic-token overlap warning as a separate L12 follow-up.

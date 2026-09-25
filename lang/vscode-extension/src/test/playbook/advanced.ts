@@ -344,4 +344,43 @@ export function advancedCases(): void {
         await noErrors(document.uri);
     });
 
+    playbook('X88', 'anonymous construction uses inherited signatures and preserves captured locals', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        const original = 'new Packet<String>("anonymous", text) {';
+        const prefix = 'new Packet<String>("anonymous", te';
+        await workspace.replace(document, fixture('Advanced.x').replace(original, `${prefix}) {`));
+        await diagnostics(document.uri, values => values.length > 0, 'Unresolved anonymous constructor argument');
+        const at = position(document, prefix, prefix.length);
+        const help = await workspace.signature(document, at);
+        assert.strictEqual(help?.signatures[0].label, 'new Packet(String first, String second)');
+        assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, 1);
+        const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+        assert.deepStrictEqual(items.map(label), ['text']);
+        await workspace.accept(document, items[0]);
+        assert.strictEqual(document.getText(), fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
+    playbook('X89', 'anonymous interface constructors survive missing call closers', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        const original = 'new CursorReader("a", text)';
+        const prefix = 'new CursorReader("a", te';
+        for (const closer of [')', '']) {
+            await workspace.replace(document, fixture('Advanced.x').replace(original, prefix + closer));
+            await diagnostics(document.uri, values => values.length > 0, 'Incomplete anonymous interface construction');
+            const at = position(document, prefix, prefix.length);
+            const help = await workspace.signature(document, at);
+            assert.strictEqual(help?.signatures[0].label, 'new CursorReader(String first, String second)');
+            assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, 1);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(label), ['text']);
+            assert.ok(items[0].range instanceof vscode.Range && items[0].range.isEqual(new vscode.Range(at.translate(0, -2), at)));
+            await workspace.accept(document, items[0]);
+            if (closer) await noErrors(document.uri);
+            else await diagnostics(document.uri, values => values.length > 0, 'Missing constructor closer remains a diagnostic');
+            await workspace.replace(document, fixture('Advanced.x'));
+            await noErrors(document.uri);
+        }
+    });
+
 }

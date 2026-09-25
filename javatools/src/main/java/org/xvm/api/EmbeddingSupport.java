@@ -566,8 +566,9 @@ public class EmbeddingSupport {
      * outer-delimiter boundaries. Declaration values retain missing terminators; parameter defaults
      * may retain a missing closing parenthesis before a body. An explicit cursor at EOF can also
      * retain missing block braces. This does not invent operands, declaration names/types or literal
-     * contents, or repair unrelated errors. Anonymous construction and array-dimension slots are
-     * outside the supported constructor cursor forms.
+     * contents, or repair unrelated errors. Anonymous construction prepares the retained declaration
+     * and fits its own or superclass constructors; it does not emit forwarding constructors or run
+     * capture analysis. Array-dimension slots remain outside the supported constructor cursor forms.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,

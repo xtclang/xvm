@@ -107,14 +107,14 @@ class XdkSpecializedConstructorTest {
     }
 
     @Test
-    fun `anonymous construction does not masquerade as an ordinary constructor`() {
+    fun `anonymous construction exposes its inherited constructor`() {
         val prefix = HEADER + "new Box<String>(\"x\", te"
         val suffix = ") { String extra = \"value\"; }; } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, prefix.dropLast(2) + "text" + suffix).diagnostics).isEmpty()
             adapter.compile(URI, prefix + suffix)
-            assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
-            assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()
+            assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNotNull()
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).containsExactly("text")
         }
     }
 

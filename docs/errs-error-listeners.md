@@ -570,3 +570,17 @@ existing synthetic initializer method and failure gate, so no incomplete initial
 Normal compilation, normal constant probes and their listener policy are unchanged. Tests assert
 one boundary diagnostic, original source, no emitted method AST, cancellation/budget handling and
 preserved cached diagnostics. See [the implementation record](errs-integration-plan.md#specialized-constructors-and-declarationliteral-cursor-recovery).
+
+
+## Anonymous constructor cursors (2026-09-25)
+
+Anonymous cursor preparation uses the existing attempt-owned declaration and the same cancellable
+probe listener as specialized constructor preparation. Final own/superclass TypeInfo lookups use
+an explicit collecting forwarder to the host. Arguments are fitted speculatively; failures neither
+select a constructor nor replace the normal document's diagnostics. No forwarding-constructor
+creation, capture analysis, bytecode emission or new listener API is required for these signatures.
+
+The `PARSER-30` boundary still prevents emission of the incomplete method. Tests check that the
+retained class and enclosing method have no emitted operations/AST, the source is unchanged, and
+cancellation/first-error budgets stop analysis. Normal repaired compilation performs captures and
+reports real body errors. See [C18/L31](errs-integration-plan.md#anonymous-constructor-cursor-support).
