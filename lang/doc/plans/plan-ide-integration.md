@@ -275,9 +275,10 @@ qualified/implicit inner, virtual, annotated and formal types, required-type/pro
 inference and parenthesized array suppliers. Dimensions remain written arguments before the active
 supplier slot. X86–X87 retain tuple/typed-tuple/list/set/map closers, declaration value terminators
 and parameter-default closers before a body. Property initializers containing a cursor hole use their
-source-owned validation context. No AST fields or clone-remapping rules are added. Anonymous
-construction, array-dimension cursors, multidimensional construction, unfinished declaration names/types,
-missing operands/map entries and unterminated literal contents remain unsupported.
+source-owned validation context. No AST fields or clone-remapping rules are added. X88–X89 prepare
+source-owned anonymous declarations, fit own/superclass constructors and preserve captured-local
+syntax without capture analysis or emission. Array-dimension cursors, multidimensional construction, unfinished declaration
+names/types, missing operands/map entries and unterminated literal contents remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
 enclosing-instance member enumeration, arbitrary type-valued receiver
 fallbacks and receiver-to-argument rewrites. Qualified/grouped/compound expressions and prefixes before later

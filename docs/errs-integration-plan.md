@@ -10,6 +10,80 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Anonymous constructor cursor support
+
+Implemented on `lagergren/errs` after `185ff84b1`; these are working changes until the next
+requested commit. This completes the next constructor API investigation before array-dimension
+cursors and unfinished declaration headers.
+
+- [x] Prepare the anonymous declaration's existing source-owned class shell for cursor lookup.
+- [x] Fit constructors declared in the body and accessible superclass constructors, including
+  generic, annotated and abstract bases and interface implementations.
+- [x] Preserve required-type inference, named arguments, original edits and body capture syntax.
+- [x] Exclude the class shell's provisional default from superclass signature suggestions; retain
+  the real zero-argument default for interface implementations.
+- [x] Display the written construction type for anonymous constructor signatures.
+- [x] Add source ownership, non-emission, access, invalidation, cancellation and recovery controls;
+  extend retention, packaged-stdio and manual/automated cases X88–X89.
+- [x] Complete backend/editor verification and record the results below.
+
+`PartialConstructionResolver` uses `NewExpression.prepareConstruction` on the actual anonymous
+syntax of the **partial-analysis attempt**. That is necessary because class preparation attaches
+components to the enclosing method: a detached expression clone would leave a component without
+source ownership. The existing `anon` child owns the prepared declaration. Normal constructor
+probes still use clones, and argument fits still use cloned arguments and discarded child contexts.
+No AST field, cloning rule, collector component or public API signature changes are needed.
+
+Preparation resolves class shape and constructor signatures. It stops before forwarding-constructor
+creation, capture analysis and bytecode emission. The source method remains incomplete, so the
+normal emission gate rejects it. Candidate identities refer either to the retained source-owned
+class or its superclass; Kotlin copies them during the worker-owned attempt as before. The host
+gets no compiler context or generated capture parameters. Written anonymous methods can still
+capture locals when the repaired document goes through normal compilation.
+
+Private/protected access comes from the compiler's prepared target TypeInfo. A base may be abstract
+or an interface if the retained anonymous body supplies its required members. An unimplemented
+abstract body, unavailable type, incompatible written argument or invalid argument label yields no
+constructor suggestions. Both own and superclass possibilities remain provisional while arguments
+are missing; normal validation chooses the constructor later. Signature fitting does not claim
+that every expression in the retained body is valid or that capture analysis has completed.
+
+| Group | Files / responsibility | Prerequisites |
+|---|---|---|
+| C18 | `PartialConstructionResolver` anonymous ownership and constructor targets; embedding contract documentation | C16 and existing cursor/listener foundations |
+| L31 | Written constructor labels; anonymous/specialized adapter controls, retention, stdio and X88–X89 | C18, L29/L30 and L16 |
+
+These bring the extraction map to **63** groups. Keep both on the integrated errs branch; each
+future extraction must pass with its listed prerequisites. No extracted-PR validation is claimed.
+
+**Remaining constructor limits:** array-dimension cursor slots and multidimensional construction.
+The latter is not implemented by the ordinary compiler either. Anonymous bodies must be retained
+by the parser; this does not repair arbitrary body errors or infer missing declaration names/types.
+Next: single-dimensional bracket argument fitting, then bounded declaration-header recovery.
+
+**Validation:** the 22 new anonymous and 18 specialized constructor tests pass with
+no skips. All 473 executed Java tests pass (40 existing skips), as do Kotlin/TypeScript checks and
+root `spotlessCheck`. The full LSP suite passes all 986 executed tests (three existing skips).
+The retention workload covers 120 cycles/960 edit requests and releases all 2,421 observed objects;
+rebuild p50/p95 was 219/280 ms, including debounce, on this contended machine.
+
+All 38 packaged-stdio tests pass on a sequential retry. The initial run had one initialization
+timeout in an existing array-supplier case, before opening a document, under heavy machine load;
+that failure is preserved under
+`lang/lsp-server/build/reports/anonymous-constructor-first-stdio-xml/`. The first editor run
+(`run-VALAMC`) passed X88/X89 but exposed an edit-anchor collision with X77/X79. The anonymous
+fixture now uses a distinct first argument. All **94 editor cases** pass without skips in
+`lang/vscode-extension/build/reports/compiler-playbook/run-jkg2Y4/results.json` (VS Code 1.139.1).
+The final invocation reused the successful backend checks and Gradle configuration cache; it
+recompiled TypeScript and reran every editor case. XML evidence is under
+`javatools/build/test-results/test/` and `lang/lsp-server/build/test-results/{test,compilerStdioTest}/`.
+These are extension-host/provider assertions; visual appearance and physical interaction remain
+the manual portion of the playbook. IntelliJ's separate eight-case suite was not rerun for this slice.
+
+Separate presentation follow-up under L12: the successful editor run logged an overlapping
+semantic-token warning at line 43, column 13 during X76. Reproduce the token ranges for that
+incomplete-call edit and add a non-overlap assertion; the existing editor assertions do not check it.
+
 ## Specialized constructors and declaration/literal cursor recovery
 
 Implemented on `lagergren/errs` in `46d6c1442`, after the pushed property checkpoint `ace732d5c`
@@ -53,8 +127,8 @@ source-owned initializer path directly, with the attempt's collectors. Its faile
 emission. The normal constant-evaluation clone path is unchanged. This also reaches shorthand
 constructor defaults that pass through generated property initialization.
 
-**Remaining limits:** anonymous-class construction fails closed (its written body is retained so it
-cannot be mistaken for ordinary construction). Constructor cursors inside array dimensions,
+**Remaining limits at this checkpoint:** anonymous-class construction was deferred and is now
+implemented by C18/L31 above. Constructor cursors inside array dimensions,
 multidimensional construction, unfinished declaration names/types, missing operands/map entries,
 unterminated literal contents and arbitrary delimiter repair remain unsupported. No literal value
 is synthesized. Existing final-slot argument-completion restrictions, enclosing-instance enumeration,
@@ -1295,7 +1369,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. I4 fixes bound-generic typing/binary-AST failures. I7 fixes reproduced atomic AST result/owner errors; bounded ToIntExpression metadata probes pass without a reporting change. Historical capture counts are not an exhaustive audit. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback; `CompilerBoundaryRequirementsTest` checks bound-generic artifact serialization; `CompilerEmissionAuditTest` checks atomic/switch output and diagnostic controls. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; binary/conditional prefixes and arguments following an incomplete member expression are now covered by C10. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. Literal synthesis and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. Missing operands, unfinished declaration names/types, anonymous construction, array-dimension cursors, enclosing-instance member completion, type-valued receiver fallbacks and receiver-rewritten calls remain outside the proven scope. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. Literal synthesis and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. Missing operands, unfinished declaration names/types, array-dimension cursors, enclosing-instance member completion, type-valued receiver fallbacks and receiver-rewritten calls remain outside the proven scope. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation, E5/L20 adds super-call facts, and L22 adds written Ref/Var annotation accessor targets. Native annotation storage and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
@@ -2145,6 +2219,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L29 | Specialized-constructor copying and editor consumers | `46d6c1442` (constructor consumers); X83–X85 | C16, L23/L25/L26/L28, L16 |
 | C17 | Declaration/tuple/literal recovery and source-owned initializers | `46d6c1442` (compiler recovery hunks); recovery section above | C12 and cursor collectors |
 | L30 | Declaration/literal recovery consumers and editor controls | `46d6c1442` (recovery consumers); X86–X87 | C17, L24, L16 |
+| C18 | Anonymous construction ownership and constructor fitting | Working changes after `185ff84b1`; anonymous-constructor section above | C16 and cursor/listener foundations |
+| L31 | Anonymous-constructor labels, consumers and ownership controls | Same working changes; X88–X89 | C18, L29/L30, L16 |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
@@ -2160,7 +2236,7 @@ modules; L16 exposes those roots/edges through editor configuration. Automatic p
 discovery stays separate. L17 adds configured-graph references and method rename. These are
 thirty-five checkpoint PR groups; the seven post-L18 units, L22 and C11/L23/I6 bring the working
 plan to 46; I7 brings it to 47, C12/L24 to 49, C13/L25 to 51, C14/L26 to 53, I8/L27 to 55,
-C15/L28 to **57**, and C16/L29/C17/L30 to **61**. L18 extends property lookup after L10/L13. During current development,
+C15/L28 to **57**, C16/L29/C17/L30 to **61**, and C18/L31 to **63**. L18 extends property lookup after L10/L13. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
 
@@ -2174,6 +2250,7 @@ prerequisites above; these are not batches to open simultaneously.
 | Incomplete editing | C5, C6, E4, L7, C7, L8, C8, C9, L9 | Recovery, partial compiler facts, bounded completion and signature help. |
 | Other semantic consumers | L10, L11, L12, L18 | Type/implementation lookup, property/accessor targets, call hierarchy and semantic presentation; these can land once their listed prerequisites are ready. |
 | Constructor and declaration cursor extensions | C16, L29, C17, L30 | Specialized constructor fitting and bounded declaration/tuple/literal recovery, after the listed completion/recovery prerequisites. |
+| Anonymous construction | C18, L31 | Source-owned class preparation, own/super constructor candidates and editor consumers, after the specialized-constructor foundations. |
 | Source projects and editing | L13, L14, L15, L16, L17 | Versioned dependencies, automatic recompilation, bounded rename, editor configuration and configured-graph reference/method-rename proof. |
 
 When preparing each PR, record its actual base, new branch/commit hashes and validation alongside
