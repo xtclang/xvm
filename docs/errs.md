@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Specialized constructors and declaration/literal recovery (2026-09-25, working changes after `cd4ad0d64`).**
+**Specialized constructors and declaration/literal recovery (2026-09-25, `46d6c1442`).**
 Qualified/implicit inner, virtual, annotated and formal constructor calls reuse normal compiler
 preparation. Required types constrain omitted generics; written arguments provide provisional
 class inference. Array initializer slots include dimensions in their parameter mapping. Cursor
