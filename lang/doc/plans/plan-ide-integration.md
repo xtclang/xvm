@@ -134,7 +134,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/ordinary-constructor calls, including existing or missing enclosing call/group/index closers. Methods/constructors retain named mappings; function types have unnamed parameters. Explicit constructor class type arguments are substituted |
+| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets |
 | Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; ordinary instance methods additionally require an explicit source graph; client versioned-edit support required |
 | Rename (cross-file) | - | - | **Partial** - ordinary instance-method override families across the configured graph; full recompilation plus binding/call/dispatch checks; no discovery of outside consumers |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -270,12 +270,17 @@ offer compatible readable locals/parameters and implicit properties/constants, i
 generic inference, substitutions and conversions. Property reads retain compiler access and
 static-context checks, and shadowing locals take precedence even when unreadable. Ordinary
 properties do not acquire local-variable flow narrowing. The compiler probes proposed names in trial
-contexts; Kotlin consumes immutable accepted-value facts. Missing operands, declaration headers
-and tuple/literal delimiters remain unsupported.
+contexts; Kotlin consumes immutable accepted-value facts. X83–X85 extend constructor support to
+qualified/implicit inner, virtual, annotated and formal types, required-type/provisional argument
+inference and parenthesized array suppliers. Dimensions remain written arguments before the active
+supplier slot. X86–X87 retain tuple/typed-tuple/list/set/map closers, declaration value terminators
+and parameter-default closers before a body. Property initializers containing a cursor hole use their
+source-owned validation context. No AST fields or clone-remapping rules are added. Anonymous
+construction, array-dimension cursors, multidimensional construction, unfinished declaration names/types,
+missing operands/map entries and unterminated literal contents remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
 enclosing-instance member enumeration, arbitrary type-valued receiver
-fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and
-receiver-to-argument rewrites. Qualified/grouped/compound expressions and prefixes before later
+fallbacks and receiver-to-argument rewrites. Qualified/grouped/compound expressions and prefixes before later
 written arguments retain ordinary scope/member completion without argument-type filtering.
 Argument completion does not synthesize literals, enumerate arbitrary enclosing-instance members
 or imported constants, or fill empty slots before later written arguments.

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -126,6 +127,11 @@ public abstract class Statement
      * @return the resulting statement (typically this) or null if the compilation cannot proceed
      */
     protected final Statement validate(Context ctx, ErrorListener errs) {
+        return validate(ctx, errs, () -> validateImpl(ctx, errs));
+    }
+
+    /** Preserve the statement validation scope while supplying an explicit value-context hint. */
+    protected final Statement validate(Context ctx, ErrorListener errs, Supplier<Statement> validation) {
         if (errs.isAbortDesired()) {
             return null;
         }
@@ -136,7 +142,7 @@ public abstract class Statement
         Statement stmt;
         m_ctx = ctx;
         try {
-            stmt = validateImpl(ctx, errs);
+            stmt = validation.get();
         } finally {
             m_ctx = ctxPrevious;
         }

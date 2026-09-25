@@ -283,8 +283,9 @@ public class NewExpression
         return super.calcFit(ctx, typeIn, typeOut);
     }
 
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+    /** Resolve the written construction type using the same rules for validation and cursor probes. */
+    Construction prepareConstruction(Context ctx, TypeConstant typeRequired, ErrorListener errs,
+                                     boolean incomplete) {
         ConstantPool pool       = pool();
         TypeConstant typeSuper  = null;   // the super class type of the anon inner class
         TypeConstant typeTarget = null;   // the type to look for a constructor at (could be private)
@@ -558,7 +559,7 @@ public class NewExpression
                         // we will emit the second constructor in leu of the first one
                         // using the default value for the element type as the second argument
                         int cArgs = args.size();
-                        if (cArgs == 1) {
+                        if (cArgs == 1 && !incomplete) {
                             // array[capacity] is a fixed size array and is allowed only for
                             // types with default values
                             TypeConstant typeElement = typeTarget.getParamType(0);
@@ -599,6 +600,29 @@ public class NewExpression
             }
         }
 
+        return new Construction(typeResult, typeTarget, typeSuper, plan);
+    }
+
+    /** Stack-owned preparation result; no new state is retained on a syntax node. */
+    record Construction(TypeConstant result, TypeConstant target, TypeConstant superType, Plan plan) {
+        boolean requiresNewable() {
+            return plan == Plan.Regular || plan == Plan.Child;
+        }
+    }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        var construction = prepareConstruction(ctx, typeRequired, errs, false);
+        if (construction == null) {
+            return null;
+        }
+        ConstantPool pool       = pool();
+        TypeConstant typeResult = construction.result();
+        TypeConstant typeTarget = construction.target();
+        TypeConstant typeSuper  = construction.superType();
+        Plan         plan       = construction.plan();
+        boolean      fAnonymous = body != null;
+
         ErrorListener errsTemp = errs.branch(this);
         TypeInfo infoTarget = fAnonymous
                 ? typeTarget.ensureTypeInfo(errsTemp)
@@ -611,8 +635,7 @@ public class NewExpression
         }
 
         // for a regular or virtual child construction, the target type must be new-able
-        if ((plan == Plan.Regular || plan == Plan.Child) &&
-                !infoTarget.isNewable(false, errsTemp)) {
+        if (construction.requiresNewable() && !infoTarget.isNewable(false, errsTemp)) {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             infoTarget.reportNotNewable(sTarget, null, false, errsTemp);
             errsTemp.merge();

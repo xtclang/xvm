@@ -555,7 +555,7 @@ private class SemanticModelBuilder(
                     callee,
                     scope,
                     immutableList(
-                        site.arguments.map {
+                        (site.leadingArguments + site.arguments).map {
                             PartialSemanticModel.Argument(
                                 location(site.source, it.startPosition, it.endPosition).range,
                                 (it as? LabeledExpression)?.name,
@@ -622,6 +622,7 @@ private class SemanticModelBuilder(
                         cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
                             cursor?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
                     ),
+                    site.leadingArguments.size,
                 )
             }
         return if (errors.isAbortDesired) {
