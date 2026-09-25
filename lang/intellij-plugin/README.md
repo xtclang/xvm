@@ -128,12 +128,16 @@ See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help
 
 The suite reads all 94 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It runs startup and eighteen scenarios: twelve fully and six partially. This includes diagnostics,
+It runs startup and thirty scenarios: seventeen fully and thirteen partially. This includes diagnostics,
 definition navigation, dependencies/configuration, completion/scope/imports, and delimiter/declaration
-recovery. The error/warning cases open **Problems → Current File**, verify row locations/counts,
+recovery, plus method and constructor signature help. Parameter Info checks inspect the native
+request result, visible parameter text and bold argument; invalid calls must clear an earlier hint.
+LSP4IJ 0.21.0 displays `<no parameters>` for ambiguous named slots that deliberately suppress
+parameter metadata (X20); this remains a documented display limitation.
+The error/warning cases open **Problems → Current File**, verify row locations/counts,
 and verify clearing after corrections. Layout and clicking a Problems row remain manual.
 
-Every report lists all 94 scenario IDs, including the 76 unimplemented entries with concrete
+Every report lists all 94 scenario IDs, including the 64 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
