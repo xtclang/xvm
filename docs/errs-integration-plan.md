@@ -12,7 +12,7 @@ the two Markdown files above.
 
 ## Property and constant argument completion
 
-Implemented on `lagergren/errs` after `e1b9eed49`; currently uncommitted. This resumes the
+Implemented on `lagergren/errs` in `ace732d5c`, following `e1b9eed49`. This resumes the
 compiler/LSP completeness work after the IntelliJ checkpoint.
 
 - [x] Fit implicit property/constant reads in the existing empty and typed argument slots.
@@ -59,7 +59,7 @@ construction remain follow-ups. Tree-sitter remains the shipped default; compile
 | L28 | Kotlin fact copying, adapter/protocol/lifecycle controls, X81–X82 and capability/ownership docs | C15, L25/L26; editor runner L16 |
 
 These add two groups to the prior 55, bringing the working plan to **57**. Keep the compiler and
-host hunks separate during extraction; record the source commit when this checkpoint is committed.
+host hunks from `ace732d5c` separate during extraction.
 Each extracted PR still needs independent validation against its own prerequisites.
 
 **Backend verification (2026-09-25):** JUnit XML reports 512 Java tests (472 executed, 40 existing
@@ -2047,8 +2047,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L25 | Complete compatible locals/parameters at missing argument slots | `f2896916b` host portion; argument-value completion above | C13, L8/L9/L23; editor runner L16; X25 synchronization in the same commit belongs to L16 |
 | C14 | Retain typed argument prefixes in their call fitting context | `dc3218d81` compiler portion; typed argument-prefix completion above | C13, C12; additive syntax token/factory/accessors and compiler prefix filter |
 | L26 | Replace typed argument prefixes with compiler-fitted values | `dc3218d81` host portion; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
-| C15 | Fit implicit property/constant reads as argument values | Uncommitted after `e1b9eed49`; property argument completion above | C13/C14; additive immutable facts, preserved constructors and compiler probes |
-| L28 | Copy property argument facts and verify editor acceptance | Uncommitted after `e1b9eed49`; property argument completion above | C15, L25/L26; L16 runner; X81–X82, protocol and lifecycle controls |
+| C15 | Fit implicit property/constant reads as argument values | `ace732d5c`; property argument completion above | C13/C14; additive immutable facts, preserved constructors and compiler probes |
+| L28 | Copy property argument facts and verify editor acceptance | `ace732d5c`; property argument completion above | C15, L25/L26; L16 runner; X81–X82, protocol and lifecycle controls |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
