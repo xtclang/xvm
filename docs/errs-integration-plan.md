@@ -10,6 +10,76 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Native IntelliJ signature help
+
+Implemented on `lagergren/errs` after `4dfbeff2e`; currently uncommitted. This is the first item
+in the agreed order, before array-dimension cursors and unfinished declaration headers.
+
+- [x] Drive X15–X20 using the shared overload, named-argument, generic, rejection and receiver inputs.
+- [x] Check constructor signatures for X74, X83–X85 and X88–X89, including specialized,
+  omitted-type, array-initializer and anonymous construction with missing closers.
+- [x] Read the future created by the native Parameter Info action, then assert the visible
+  parameter text and bold argument. Empty results require a new completed native request.
+- [x] Leave a valid popup open before each rejected call and check that the stale hint disappears.
+- [x] Use IntelliJ read actions for PSI inspection and scroll the caret into view before opening hints.
+- [x] Complete final native/VS Code validation and record the reports below.
+
+Coverage becomes **30** feature scenarios plus startup: **17** full, **13** partial, and **64**
+not implemented. X16/X20 declaration navigation and X83–X85/X88–X89 completion acceptance remain
+explicitly partial. The catalog records exact missing checks, without claiming unsupported IDE
+features. Tests still require Ultimate to remain unloaded throughout.
+
+**Observed client limitation:** in X20 the compiler retains the full signature label and sends
+an empty parameter list to avoid the protocol's default-to-zero highlight. LSP4IJ 0.21.0 renders
+this as `<no parameters>`. Its pinned `LSPParameterInfoHandler.updateUI` uses only parameter
+metadata, not the signature label. The driver checks the response and absence of a bold argument;
+it does not call this correct label presentation. A future client/upstream fix must preserve the
+signature label without inventing a parameter. Normal named-argument highlighting works.
+
+All changes are test infrastructure and documentation; no compiler, embedding, AST or production
+plugin hook is added, and no dependency or Gradle change is required.
+
+| Group | Scope | Prerequisites |
+|---|---|---|
+| L33 | Native Parameter Info action, response/popup checks, shared coverage updates and documentation | L32 and its prerequisite stack |
+
+The extraction map now has **65** groups. Keep this change as an additive follow-up to L32;
+record its commit here after committing it. `019d3f811` remains the shared-catalog implementation
+and `4dfbeff2e` its commit-map checkpoint.
+
+Validation on 2026-09-25:
+
+- VS Code: **94 passed**, `lang/vscode-extension/build/reports/compiler-playbook/run-ZCoHww/results.json`.
+- IntelliJ: **18 passed including START, 13 partial, 64 not implemented**, zero failed/not-run
+  entries and zero IDE failures. Report:
+  `lang/intellij-plugin/build/reports/compiler-playbook/run-6920611126834570657/results.json`.
+- Both reports have identical IDs and catalog SHA-256:
+  `a14a909fad947d1d96828e0c95dbd76e9bd661c642703f0e67b6f3ee6ee3e40d`.
+- The VS Code task's prerequisites reran: **986 LSP tests executed, three existing skips**, and
+  **38 packaged compiler stdio tests**, zero failures/errors. IntelliJ JUnit XML reports one
+  executed suite, zero failures/errors/skips. Kotlin checks and root `spotlessCheck` passed.
+- The native task reused its configuration cache on the preceding successful run; the final
+  combined command stored its new task graph. No Gradle files changed. Shared source inputs,
+  expected results and manual notes are identical to L32; only IntelliJ coverage metadata changed.
+- The existing VS Code semantic-token overlap warning at Advanced.x line 43, column 13 remains
+  recorded under L12; it is separate from signature help. Markdown file links and `git diff --check`
+  pass. Test-only PSI access and off-screen-caret failures found while building the driver were
+  corrected before these successful runs.
+
+```bash
+./gradlew :lang:vscode-extension:testCompilerPlaybook :lang:intellij-plugin:testCompilerPlaybook spotlessCheck --max-workers=1 -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
+```
+
+Next, one at a time:
+
+1. Completion/signature fitting inside single-dimensional array brackets; add compiler/API,
+   adapter and editor controls. Multidimensional construction remains outside the proven compiler scope.
+2. Bounded recovery of unfinished declaration headers, with source ownership and diagnostic controls.
+
+Native parity follow-ups remain: X20 label presentation; completion acceptance for the constructor
+cases; function-value/nested-call parameter hints; type/implementation lookup, references/rename,
+hierarchies, tokens/inlay hints, and lifecycle cases. These are separate from new compiler API work.
+
 ## Shared editor scenario data
 
 Implemented on `lagergren/errs` in `019d3f811` (L32). The preceding C18/L31 checkpoint was
@@ -37,7 +107,7 @@ there is no shared executable scripting language. Editor actions and protocol ha
 TypeScript/Kotlin. The original seven common edit/anchor checks reject missing or ambiguous
 matches; both drivers also reject catalog/manual ID drift and missing native registrations.
 
-IntelliJ covers X7–X13, X71, X75, X86–X87 and CFG1 fully at the scenario assertion level (**12**),
+At the L32 checkpoint, IntelliJ covered X7–X13, X71, X75, X86–X87 and CFG1 fully at the scenario assertion level (**12**),
 and X2, X4, X6, X45–X46 and 7a.8 partially (**6**), plus START. The remaining **76** entries are
 explicitly unimplemented. Next native work is signature/active-parameter inspection, type and
 implementation choosers, references/rename, hierarchy, semantic tokens/inlay hints, and lifecycle
@@ -52,7 +122,7 @@ is added. The JSON is not bundled into the production extension.
 |---|---|---|
 | L32 | Complete shared catalog, native consumers, explicit coverage reports, Problems checks, task inputs and playbook docs | L16, L27 and L31 with their prerequisite stacks |
 
-This brings the extraction map to **64** groups. Shared data is complete; native IntelliJ parity
+L32 brought the extraction map to **64** groups. Shared data is complete; native IntelliJ parity
 is explicitly incomplete. Keep L32 together when extracting this test-infrastructure PR. Its full
 catalog reaches X89, so extraction follows L31 and its prerequisite compiler/adapter stack;
 sharing data adds no new production API requirement.
