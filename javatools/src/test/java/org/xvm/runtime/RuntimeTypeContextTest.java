@@ -286,8 +286,10 @@ class RuntimeTypeContextTest {
         var second = new RuntimeTypeContext(file.getConstantPool());
         assertNotSame(first.intern(type), second.intern(type));
         assertThrows(IllegalArgumentException.class, () -> second.intern(first.intern(type)));
-        var captured = new HandleConstant(file.getConstantPool(), new ObjectHandle(null) {});
-        assertThrows(IllegalArgumentException.class, () -> first.getDescriptorPool().register(captured));
+        assertThrows(IllegalArgumentException.class, () -> new HandleConstant(file.getConstantPool()));
+        var captured = new HandleConstant(first.getDescriptorPool());
+        assertSame(captured, first.getDescriptorPool().register(captured));
+        assertThrows(IncompatibleTypeOwnerException.class, () -> second.getDescriptorPool().register(captured));
     }
 
     @Test

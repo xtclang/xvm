@@ -1,6 +1,7 @@
 package org.xvm.runtime;
 
 import java.util.Map;
+import java.util.Objects;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -9,6 +10,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.FrameDependentConstant;
+import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 
@@ -235,7 +237,42 @@ public class ConstHeap {
         });
     }
 
+    /**
+     * Capture an annotation argument for this container's execution lifetime. Clearing semantic
+     * metadata does not discard values. The descriptor token never contains the handle itself.
+     *
+     * @param value  the captured argument
+     * @return a fresh token owned by this container
+     */
+    public HandleConstant capture(ObjectHandle value) {
+        Objects.requireNonNull(value, "value");
+        var token = new HandleConstant(f_container.getTypeContext().getDescriptorPool());
+        captures.put(token, value);
+        return token;
+    }
+
+    /**
+     * Resolve a token only in its exact capturing execution. Equal images and module-sharing
+     * ancestry do not authorize captured-value transport.
+     *
+     * @param token  a token created by this heap
+     * @return its captured value
+     * @throws IllegalArgumentException if the token belongs elsewhere or was never published here
+     */
+    public ObjectHandle resolveCapture(HandleConstant token) {
+        if (!token.isShared(f_container.getTypeContext().getDescriptorPool())) {
+            throw new IllegalArgumentException("Capture belongs to another execution");
+        }
+        ObjectHandle value = captures.get(token);
+        if (value == null) {
+            throw new IllegalArgumentException("Unknown capture token");
+        }
+        return value;
+    }
+
     // ----- data fields ---------------------------------------------------------------------------
+
+    private final Map<HandleConstant, ObjectHandle> captures = new ConcurrentHashMap<>();
 
     /**
      * The container this heap belongs to.

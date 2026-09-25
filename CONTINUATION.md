@@ -11,8 +11,10 @@ Continue work on `xtclang/xvm`, branch **`lagergren/constant-pool-state-separati
 The user wants a complete, enforced separation of definition images, runtime descriptors, semantic
 metadata, and execution state, implemented in reviewable stages and separate commits.
 
-**Scopes 1–4 are implemented within their documented boundaries. The next task is scope 5:
-complete reflection and native-value ownership.** Reproduce the remaining foreign, constructor,
+**Scopes 1–4 are implemented within their documented boundaries. Scope 5 is in progress:
+complete reflection and native-value ownership.** Captured annotation values now live in their
+container's constant heap, behind non-transferable descriptor tokens; see the scope-5 record.
+Continue the remaining foreign, constructor,
 property and function reflection issues, captured annotation ownership, file-store/file-node
 handles and classloader-wide native caches before implementing bounded fixes. Preserve the
 service-owned method execution boundary and same-image regressions established in scope 4.
@@ -44,7 +46,8 @@ The original handoff commit was **`f63473dfd`**. Scope 3 is **`b7c6f5378`** (sta
 preparation) and **`2087e376a`** (delegation/accessor ownership). Scope 4 starts with
 **`703ed5f40`** (service-owned initialization); the following decoded-code/layout commit updates
 this prompt. Check the actual local and remote tips when resuming; this file cannot contain its
-own commit hash. These commits are local: do not push or open a PR without an explicit new request.
+own commit hash. The user requested a push on 2026-09-25; scopes 3 and 4 are now published through
+`8d857af9e`. Subsequent scope-5 work is local. Do not push it or open a PR without a new request.
 
 ## Essential references and branch boundaries
 
@@ -85,8 +88,8 @@ larger branch at `plugin/doc/plans/embedded-runtime-pr-plan.md`; it is not this 
 - Keep distinct architectural changes in separate commits. Update the existing architecture and
   ownership documents as stages complete, explaining ownership, why each change is needed, tests,
   and remaining limits. This root handoff file was explicitly requested.
-- Follow `AGENTS.md` for remote operations. The original handoff push was authorized; the scope-3/4
-  work is explicitly local. Do not push or open a PR without a new user request.
+- Follow `AGENTS.md` for remote operations. The requested scope-3/4 push is complete through
+  `8d857af9e`. Do not push subsequent work or open a PR without a new user request.
 - Use modern Java 25 where it improves touched code: records, generics, immutable collections,
   obvious `var` assignments, and suitable `Lazy` / `Lazy.Bound` holders. No new Hungarian field
   names, unnecessary fully qualified names, or arrays where a collection is the better API.

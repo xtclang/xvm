@@ -1401,3 +1401,30 @@ Final verification on 2026-09-25:
 
 Scope 4 is complete within this interpreter-method boundary. Scope 5 covers remaining reflection
 and native state; scope 6 remains the gate for enabling frozen activation by default.
+
+## Scope 5: reflection and native-value ownership
+
+### Captured annotation arguments
+
+The frozen `TypeTemplate.annotate` reproduction reached `RuntimeTypeContext` validation with a
+`HandleConstant` containing a live argument and failed with "Runtime descriptor requires a
+resolved definition". Admitting that object unchanged would retain an execution handle in the
+descriptor interner and its semantic keys.
+
+`HandleConstant` now contains only a unique runtime token. `ConstHeap.capture` retains the value
+in the capturing container's execution heap; `resolveCapture` and frame-based resolution require
+that exact owner. The token uses no serialized indices and cannot be allocated in a definition
+pool. Its classloader-wide sequence allocates identities only and retains no containers or values.
+The container retains captures for its execution lifetime, independently of semantic clears.
+
+The descriptor context admits its own tokens, continues rejecting other frame-dependent operands,
+and rejects foreign captures even through an otherwise approved shared-module import. Tuple and
+annotation wrappers cannot conceal a foreign token. Repeating a capture creates a distinct token;
+structural equality of images or the captured value does not merge execution ownership.
+
+Focused verification: **24 Java cases passed, zero skips/failures/errors**, including three
+self-contained `CapturedValuesTest` cases, sixteen descriptor-context cases and five constant
+ownership cases. Tests cover retained values and descriptor identity after metadata clears,
+distinct captures of the same value, same-image rejection, nested shared-import rejection, and
+unknown tokens. The interpreter reflection migration is still in progress at this checkpoint;
+these unit results do not complete scope 5 or enable frozen activation.

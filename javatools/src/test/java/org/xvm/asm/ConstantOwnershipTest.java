@@ -9,7 +9,6 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
-import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -23,29 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class ConstantOwnershipTest {
-    @Test
-    void runtimeAnnotationValuesCannotBePromotedIntoAnotherPoolsTypeCache() {
-        var source = new FileStructure(Constants.ECSTASY_MODULE);
-        var pool = source.getConstantPool();
-        var destination = new FileStructure(source).getConstantPool();
-        var annotation = pool.ensureClassConstant(source.getModuleId(), "Marker");
-        var handle = new ObjectHandle(null) {
-            @Override
-            public int hashCode() {
-                return System.identityHashCode(this);
-            }
-        };
-        var type = pool.ensureAnnotatedTypeConstant(annotation,
-                new Constant[] {new HandleConstant(pool, handle)}, pool.typeString());
-
-        assertFalse(type.isShared(destination));
-        assertSame(type, destination.register(type));
-        assertSame(pool, type.getConstantPool());
-        assertSame(type, pool.register(type));
-        assertSame(handle, ((HandleConstant) type.getAnnotationParams()[0]).getHandle(null));
-        assertFalse(pool.ensureTupleType(type).isShared(destination));
-    }
-
     @Test
     void adoptingDefinitionsDoesNotCopyExecutionHandles() {
         var source = new FileStructure("Source");

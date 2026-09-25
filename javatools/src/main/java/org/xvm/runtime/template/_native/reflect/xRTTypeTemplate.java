@@ -12,7 +12,6 @@ import org.xvm.asm.Parameter;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
-import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
@@ -541,7 +540,7 @@ public class xRTTypeTemplate
                         GenericHandle hArg   = (GenericHandle) haDelegate.get(i);
                         ObjectHandle  hValue = hArg.getField(frame, "value");
 
-                        aconst[i] = new HandleConstant(pool, hValue);
+                        aconst[i] = frame.f_context.f_container.f_heap.capture(hValue);
                     }
                 } else {
                     aconst = Constant.NO_CONSTS;

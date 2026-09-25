@@ -13,6 +13,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.RuntimeMethods;
 
 import org.xvm.asm.constants.FrameDependentConstant;
+import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -23,7 +24,8 @@ import org.xvm.asm.constants.TypeConstant;
  * <p>Create the context after linking and native preparation, then retain it with its container.
  * Its dependency graph is captured by object identity: recompiling a module with the same name
  * does not make its descriptors interchangeable. Import an image type with {@link #intern} before
- * deriving another type from it. Do not use this context for foreign types or captured values.
+ * deriving another type from it. Foreign types require explicit transport. Captured annotation
+ * values remain in the container's execution heap; only its opaque tokens may enter descriptors.
  *
  * <p>The descriptor pool is a transitional adapter to existing constant factories. It has no XTC
  * indices and is not attached as a child of the image. Derived descriptors can grow without
@@ -235,6 +237,9 @@ public final class RuntimeTypeContext {
         private synchronized <T extends Constant> T importShared(T constant, Set<Constant> operands,
                                                                 Predicate<ModuleConstant> shared) {
             for (Constant operand : operands) {
+                if (operand instanceof HandleConstant capture && !capture.isShared(this)) {
+                    throw new IncompatibleTypeOwnerException("Captured values cannot cross descriptor contexts");
+                }
                 if (operand instanceof ModuleConstant module
                         && (!shared.test(module) || getFileStructure().getModule(module) == null)) {
                     throw new IncompatibleTypeOwnerException("Module is not shared between containers: " + module);
@@ -302,10 +307,14 @@ public final class RuntimeTypeContext {
             if (registered.contains(constant) || sharedOperands.contains(constant) || !visited.add(constant)) {
                 return;
             }
-            if (constant instanceof FrameDependentConstant || constant.containsUnresolved()) {
+            if (constant instanceof FrameDependentConstant && !(constant instanceof HandleConstant)
+                    || constant.containsUnresolved()) {
                 throw new IllegalArgumentException("Runtime descriptor requires a resolved definition");
             }
             ConstantPool owner = constant.getConstantPool();
+            if (constant instanceof HandleConstant && owner != this) {
+                throw new IncompatibleTypeOwnerException("Capture belongs to another descriptor context");
+            }
             if (owner != this && !definitions.contains(owner)) {
                 throw new IncompatibleTypeOwnerException("Constant belongs to another image or context: "
                         + constant);

@@ -801,3 +801,10 @@ prepared image, checking unchanged compiler-Code identities, declaration trees a
 membership/positions. The [scope-4 record](constant-pool-architecture-plan.md#scope-4-compiled-method-execution-ownership)
 records the initial failures, implementation, verification and retention costs. Broader reflection,
 native static cache ownership and default frozen activation remain scopes 5 and 6.
+
+Scope 5 now gives captured annotation arguments an execution owner. `HandleConstant` is an
+opaque token; the captured handle lives in `ConstHeap`, survives semantic clears, and can be
+resolved only by its capturing container. Same-image sibling contexts and explicit shared-module
+imports cannot acquire the token's value. The [scope-5 record](constant-pool-architecture-plan.md#scope-5-reflection-and-native-value-ownership)
+records the reproduced guard failure and the 24 passing focused Java cases. Broader reflection
+and the native-state audit remain in progress.
