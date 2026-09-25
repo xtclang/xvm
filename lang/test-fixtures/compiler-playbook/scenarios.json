@@ -1,0 +1,2370 @@
+{
+  "schemaVersion": 2,
+  "common": {
+    "sourceModules": [
+      {
+        "name": "Library",
+        "uri": "Library.x",
+        "dependencies": []
+      },
+      {
+        "name": "Consumer",
+        "uri": "Consumer.x",
+        "dependencies": [
+          "Library"
+        ]
+      }
+    ],
+    "fixtures": [
+      {
+        "file": "Navigation.x",
+        "pattern": "^module Navigation\\s*\\{"
+      },
+      {
+        "file": "Editing.x",
+        "pattern": "^module Editing\\s*\\{"
+      },
+      {
+        "file": "Project.x",
+        "pattern": "^module Project\\s*\\{"
+      },
+      {
+        "file": "Lookups.x",
+        "pattern": "^module Lookups\\s*\\{"
+      },
+      {
+        "file": "Consumers.x",
+        "pattern": "^module Consumers\\s*\\{"
+      },
+      {
+        "file": "Library.x",
+        "pattern": "^module Library\\s*\\{"
+      },
+      {
+        "file": "Consumer.x",
+        "pattern": "^module Consumer\\s*\\{"
+      },
+      {
+        "file": "Rename.x",
+        "pattern": "^module Rename\\s*\\{"
+      },
+      {
+        "file": "Contracts.x",
+        "pattern": "^module Contracts\\s*\\{"
+      },
+      {
+        "file": "Uses.x",
+        "pattern": "^module Uses\\s*\\{"
+      },
+      {
+        "file": "Dormant.x",
+        "pattern": "^module Dormant\\s*\\{"
+      },
+      {
+        "file": "Properties.x",
+        "pattern": "^module Properties\\s*\\{"
+      },
+      {
+        "file": "Advanced.x",
+        "pattern": "^module Advanced\\s*\\{"
+      },
+      {
+        "file": "DupAnno.x",
+        "pattern": "^module DupAnno\\s*\\{"
+      },
+      {
+        "file": "Project/Child.x",
+        "pattern": "^class Child extends Base<String> \\{"
+      }
+    ],
+    "editing": {
+      "file": "Editing.x",
+      "run": "void run(Box<String> box, String itemParameter, Object value) {}",
+      "inspect": "void inspect(T itemLocal) {}"
+    },
+    "project": {
+      "root": "Project.x",
+      "member": "Project/Child.x"
+    },
+    "dependency": {
+      "consumer": "Consumer.x",
+      "stringLibrary": "module Library { static String value()=\"text\"; }",
+      "brokenLibrary": "module Library { MissingType broken; }",
+      "blockedCode": "DEPENDENCY-FAILED"
+    },
+    "graph": {
+      "sourceModules": [
+        {
+          "name": "Contracts",
+          "uri": "Contracts.x",
+          "dependencies": []
+        },
+        {
+          "name": "Uses",
+          "uri": "Uses.x",
+          "dependencies": [
+            "Contracts"
+          ]
+        },
+        {
+          "name": "Dormant",
+          "uri": "Dormant.x",
+          "dependencies": [
+            "Contracts"
+          ]
+        }
+      ],
+      "root": "Contracts.x",
+      "referenceAnchor": "map("
+    }
+  },
+  "cases": {
+    "X1": {
+      "title": "diagnostics, outline, folding and selection",
+      "manual": [
+        "Outline/folding rendering and Expand Selection keyboard behavior"
+      ],
+      "values": {
+        "file": "Navigation.x",
+        "symbolNames": [
+          "Navigation",
+          "Holder",
+          "value",
+          "read",
+          "text"
+        ],
+        "minimumFolds": 3,
+        "anchor": "return value;",
+        "offset": 7
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native outline, folding and selection-range assertions are not implemented."
+        ]
+      }
+    },
+    "X2": {
+      "title": "source errors clear after unsaved corrections",
+      "manual": [
+        "Problems rows/icons/filter/count rendering and clicking a row; automated next-problem navigation is checked"
+      ],
+      "values": {
+        "file": "Navigation.x",
+        "errors": [
+          {
+            "edit": {
+              "from": "Int value = 2;",
+              "to": "String value = 2;"
+            },
+            "severity": "ERROR",
+            "codePrefix": "COMPILER-",
+            "messageContains": "",
+            "rangeStart": "\u00a7String value = 2;",
+            "rangeEnd": "return \u00a7value + this.value;"
+          },
+          {
+            "edit": {
+              "from": "Object value = input;",
+              "to": "Object value = missing;"
+            },
+            "severity": "ERROR",
+            "codePrefix": "COMPILER-",
+            "messageContains": "missing",
+            "rangeStart": "Object value = \u00a7missing;",
+            "rangeEnd": "Object value = missing\u00a7;"
+          }
+        ],
+        "cleanAppend": "// ERROR: test\n"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Editor severity, source spans, clearing, and Problems Current File row locations/counts are checked; diagnostic code/source and navigation by clicking a Problems row are not inspected."
+        ]
+      }
+    },
+    "X3": {
+      "title": "narrowed hover preserves declaration identity",
+      "manual": [
+        "Hover popup presentation"
+      ],
+      "values": {
+        "file": "Navigation.x",
+        "narrowUse": "return value;",
+        "offset": 7,
+        "wideUse": "return value.toString()",
+        "narrowedType": {
+          "source": "String",
+          "flags": ""
+        },
+        "declaredType": {
+          "source": "Object",
+          "flags": ""
+        },
+        "targetCount": 1,
+        "declaration": "Object value = input"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native hover contents and declaration-identity assertions are not implemented."
+        ]
+      }
+    },
+    "X4": {
+      "title": "local and property references remain separate",
+      "manual": [],
+      "values": {
+        "targetCount": 1,
+        "file": "Navigation.x",
+        "locations": [
+          {
+            "cursor": "return \u00a7value + this.value;",
+            "targetFile": "Navigation.x",
+            "target": "Int \u00a7value = 2;"
+          },
+          {
+            "cursor": "this.\u00a7value",
+            "targetFile": "Navigation.x",
+            "target": "Int \u00a7value = 1;"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Both definition targets are checked; references and document highlights are not implemented."
+        ]
+      }
+    },
+    "X5": {
+      "title": "library target absence and parser recovery",
+      "manual": [],
+      "values": {
+        "file": "Navigation.x",
+        "libraryType": "String text",
+        "missingCloser": "}",
+        "parserCodePrefix": "PARSER-",
+        "retainedSymbol": "Holder",
+        "anchor": "return value;",
+        "offset": 7
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Parser-recovery outline and absent library-target assertions are not implemented."
+        ]
+      }
+    },
+    "X6": {
+      "title": "receiver members and exact prefix replacement",
+      "manual": [
+        "Completion popup appearance and keyboard acceptance"
+      ],
+      "values": {
+        "bodies": [
+          "box.\u00a7;",
+          "box.it\u00a7;"
+        ],
+        "label": "item",
+        "type": {
+          "source": "String",
+          "flags": ""
+        },
+        "excludedLabel": "itemMethod",
+        "acceptedExpression": "box.item;",
+        "validStatement": "String selected = box.item;"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Both receiver forms, exact insertion and corrected-source diagnostics are checked; compiler type detail and excluded method labels are not inspected when IntelliJ auto-inserts the sole candidate."
+        ]
+      }
+    },
+    "X7": {
+      "title": "expression receiver completion",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "edit": {
+          "from": "void run(Box<String> box, String itemParameter, Object value) {}",
+          "to": "void run(Box<String> box, String itemParameter, Object value) { Int size = getValue().si; }"
+        },
+        "cursor": "getValue().si\u00a7;",
+        "label": "size",
+        "accepted": {
+          "from": "getValue().si;",
+          "to": "getValue().size;"
+        }
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X8": {
+      "title": "flow-narrowed receiver completion",
+      "manual": [],
+      "values": {
+        "body": "if (value.is(String)) { Int size = value.si\u00a7; }",
+        "label": "size",
+        "acceptedSuffix": ".size;"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X9": {
+      "title": "scope excludes unreadable and later locals",
+      "manual": [],
+      "values": {
+        "body": "Int itemLocal = 1; Int itemUnassigned; item\u00a7; Int itemLater = 2;",
+        "include": [
+          "itemLocal",
+          "itemParameter"
+        ],
+        "exclude": [
+          "itemUnassigned",
+          "itemLater"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X10": {
+      "title": "empty statement scope inserts without deleting syntax",
+      "manual": [],
+      "values": {
+        "body": "\u00a7",
+        "label": "itemParameter"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X11": {
+      "title": "implicit members respect shadowing and closed scopes",
+      "manual": [],
+      "values": {
+        "body": "ite\u00a7;",
+        "include": [
+          "item",
+          "itemMethod",
+          "itemLocal"
+        ],
+        "label": "item",
+        "genericType": {
+          "source": "\\bT\\b",
+          "flags": ""
+        },
+        "shadowedBody": "{ Int itemClosed = 1; } Int item = 2; ite\u00a7;",
+        "shadowedType": {
+          "source": "Int",
+          "flags": ""
+        },
+        "excludedLabel": "itemClosed"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X12": {
+      "title": "static completion enforces access and receiver kind",
+      "manual": [],
+      "values": {
+        "body": "Tools.item\u00a7;",
+        "include": [
+          "itemFunction",
+          "itemConstant",
+          "itemType"
+        ],
+        "exclude": [
+          "itemProperty",
+          "itemMethod",
+          "itemHidden",
+          "itemPrivate"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X13": {
+      "title": "implicit, aliased and wildcard imported names",
+      "manual": [],
+      "values": {
+        "variants": [
+          {
+            "prefix": "Strin",
+            "name": "String",
+            "addition": ""
+          },
+          {
+            "prefix": "Buffe",
+            "name": "Buffer",
+            "addition": "import ecstasy.text.StringBuffer as Buffer;"
+          },
+          {
+            "prefix": "StringBuffe",
+            "name": "StringBuffer",
+            "addition": "import ecstasy.text.*;"
+          }
+        ],
+        "body": "${0}\u00a7;",
+        "moduleStart": "module Editing {",
+        "moduleWithImport": "module Editing { ${0}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X14": {
+      "title": "completion edits preserve emoji and CRLF positions",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "method": "void run(Box<String> box, String itemParameter, Object value) {}",
+        "incompleteMethod": "void run(Box<String> box, String itemParameter, Object value) { /* \ud83d\ude00 */ Int size = getValue().si\u00a7; }",
+        "lineBreak": {
+          "source": "\\n",
+          "flags": "g"
+        },
+        "label": "size",
+        "prefix": "getValue().si;",
+        "accepted": "getValue().size;"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "The native driver does not yet verify CRLF file bytes alongside UTF-16 completion edits; IntelliJ normalizes document line separators."
+        ]
+      }
+    },
+    "X15": {
+      "title": "written arguments filter incomplete overloads",
+      "manual": [
+        "Parameter hint popup switches without retaining the previous overload"
+      ],
+      "values": {
+        "variants": [
+          {
+            "argument": "\"x\"",
+            "type": "String"
+          },
+          {
+            "argument": "1",
+            "type": "Int"
+          }
+        ],
+        "body": "box.choose(${0}, \u00a7);",
+        "expected": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X16": {
+      "title": "named arguments map to the declared parameter",
+      "manual": [],
+      "values": {
+        "body": "box.pair(second=\"x\", first=\u00a7);",
+        "expected": 1,
+        "type": {
+          "source": "String",
+          "flags": ""
+        },
+        "activeParameter": 0,
+        "replaceFrom": "first=)",
+        "replaceWith": "first=\"y\")",
+        "call": "box.pair",
+        "callOffset": 4,
+        "completedArgument": "first=\"y\"",
+        "argumentOffset": 7
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X17": {
+      "title": "generic inference retains unbound formals",
+      "manual": [],
+      "values": {
+        "variants": [
+          {
+            "body": "box.generic(\"x\", \u00a7);",
+            "type": "String"
+          },
+          {
+            "body": "box.generic(\u00a7);",
+            "type": "U"
+          }
+        ],
+        "typePattern": "\\b${0}\\b"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X18": {
+      "title": "incompatible and invalid named arguments have no candidate",
+      "manual": [],
+      "values": {
+        "bodies": [
+          "box.choose(True, \u00a7);",
+          "box.pair(unknown=\u00a7);",
+          "box.pair(first=\"x\", first=\u00a7);"
+        ],
+        "signatureCount": 0
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X19": {
+      "title": "implicit instance and static signatures",
+      "manual": [],
+      "values": {
+        "receivers": [
+          true,
+          false
+        ],
+        "instanceBody": "pair(itemLocal, \u00a7);",
+        "staticBody": "Tools.join(\"x\", \u00a7);",
+        "replaceFrom": "class Tools {",
+        "replaceWith": "class Tools { static String join(String first, String second) = first;",
+        "activeParameter": 1,
+        "instanceArgument": "itemLocal",
+        "staticArgument": "\"y\""
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X20": {
+      "title": "named-slot ambiguity and selected overload navigation",
+      "manual": [],
+      "values": {
+        "body": "box.pair(second=\"x\", \u00a7);",
+        "bodies": [
+          "box.choose(\"x\", \"y\"); \u00a7",
+          "box.choose(1, 2); \u00a7"
+        ],
+        "anchor": "box.choose",
+        "offset": 4,
+        "targetCount": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X21": {
+      "title": "closed module members participate in navigation",
+      "manual": [],
+      "values": {
+        "anchor": "Base<Element>",
+        "file": "Project/Child.x",
+        "symbolName": "Child",
+        "uses": [
+          "Base<String>",
+          "echo(\"member\")"
+        ],
+        "targetCount": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Closed-member references and workspace-symbol assertions are not implemented."
+        ]
+      }
+    },
+    "X22": {
+      "title": "direct generic type hierarchy spans files",
+      "manual": [
+        "Type-hierarchy tree rendering and editor action availability"
+      ],
+      "values": {
+        "baseDeclaration": "Base<Element>",
+        "childCount": 1,
+        "childName": "Child",
+        "file": "Project/Child.x",
+        "display": "${0} ${1}",
+        "typeArgument": "String",
+        "interfaceName": "Named",
+        "interfaceDeclaration": "interface Named",
+        "offset": 10,
+        "baseName": "Base"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native type-hierarchy view and generic edge assertions are not implemented."
+        ]
+      }
+    },
+    "X23": {
+      "title": "unsaved root edits invalidate sibling diagnostics",
+      "manual": [],
+      "values": {
+        "memberFile": "Project/Child.x",
+        "rootFile": "Project.x",
+        "replaceFrom": "class Base",
+        "replaceWith": "class Renamed",
+        "diagnosticCode": "EMB-5"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Sibling document version and unsaved root diagnostic assertions are not implemented."
+        ]
+      }
+    },
+    "X24": {
+      "title": "member completion sees the unsaved root type",
+      "manual": [],
+      "values": {
+        "memberFile": "Project/Child.x",
+        "method": "String answer()",
+        "incompleteMethod": "void inspect() { ite\u00a7; }\n    String answer()",
+        "types": [
+          "Int",
+          "String",
+          "Int"
+        ],
+        "rootFile": "Project.x",
+        "replaceFrom": "Int item = 1;",
+        "replaceWith": "${0} item = ${1};",
+        "integerType": "Int",
+        "integerValue": "1",
+        "stringValue": "\"overlay\"",
+        "label": "item"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Completion presentation across repeated root overlays and unchanged disk bytes are not implemented."
+        ]
+      }
+    },
+    "X25": {
+      "title": "named unsaved virtual member joins the module",
+      "manual": [
+        "Named nonexistent file is supplied through the LSP client; an ordinary Untitled editor is not equivalent"
+      ],
+      "values": {
+        "file": "Project/pkg/Added.x",
+        "version": 1,
+        "text": "class Added extends Base<String> {}",
+        "anchor": "Base<Element>",
+        "name": "Added"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Synthetic didOpen/didClose for a named nonexistent member is not exposed by the native driver."
+        ]
+      }
+    },
+    "X26": {
+      "title": "discarded member overlay restores disk semantics",
+      "manual": [],
+      "values": {
+        "file": "Project/Child.x",
+        "anchor": "Base<String>",
+        "replaceWith": "Missing",
+        "expected": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Discard/reopen actions and restored member semantics are not implemented."
+        ]
+      }
+    },
+    "X27": {
+      "title": "real file-watcher creation and deletion refresh the module",
+      "manual": [],
+      "values": {
+        "file": "Project/Bad.x",
+        "text": "class Bad extends Missing {}"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Filesystem watcher creation/deletion and closed-file diagnostic assertions are not implemented."
+        ]
+      }
+    },
+    "X28": {
+      "title": "obsolete type hierarchy items cannot resolve",
+      "manual": [],
+      "values": {
+        "file": "Project/Child.x",
+        "anchor": "Child",
+        "replaceWith": "class Child {}",
+        "contains": "Base"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "The native driver does not retain raw hierarchy items to request obsolete snapshots."
+        ]
+      }
+    },
+    "X29": {
+      "title": "rapid edits and cursor requests converge on current text",
+      "manual": [],
+      "values": {
+        "incompleteBody": "box.choose(1, \u00a7);",
+        "integerCall": "choose(1,",
+        "stringCall": "choose(\"x\",",
+        "completedBody": "box.choose(1, 2); \u00a7",
+        "completedCall": "choose(1, 2)",
+        "offset": 10,
+        "pattern": {
+          "source": "Int",
+          "flags": ""
+        },
+        "memberFile": "Project/Child.x",
+        "rootFile": "Project.x",
+        "replaceFrom": "Int item = 1;",
+        "replaceWith": "Int item = ${0};",
+        "anchor": "echo(\"member\")",
+        "expected": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Concurrent signature requests and rapid unsaved root edits are not implemented."
+        ]
+      }
+    },
+    "X30": {
+      "title": "cancellation, close, reopen and server restart recover",
+      "manual": [
+        "Dismissing the actual popup and keyboard responsiveness"
+      ],
+      "values": {
+        "body": "box.it\u00a7;",
+        "cancellationCodes": [
+          -32800,
+          -32801
+        ],
+        "file": "Editing.x",
+        "label": "item"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Explicit LSP cancellation, discard/reopen and server restart assertions are not implemented."
+        ]
+      }
+    },
+    "X31": {
+      "title": "unsupported compiler capabilities are not advertised",
+      "manual": [
+        "Editor-native formatting/snippets are outside compiler capability assertions"
+      ],
+      "values": {
+        "file": "Navigation.x",
+        "unsupportedCapabilities": [
+          "documentFormattingProvider",
+          "documentRangeFormattingProvider",
+          "codeActionProvider",
+          "codeLensProvider"
+        ],
+        "tabSize": 4,
+        "editCount": 0
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Initialize-result capability inspection and formatting provider assertions are not implemented."
+        ]
+      }
+    },
+    "X32": {
+      "title": "unsupported cursor contexts do not invent completions",
+      "manual": [],
+      "values": {
+        "bodies": [
+          "box.pa\u00a7ir(\"x\", \"y\");",
+          "new Box<String>(\u00a7);",
+          "function String() fn = () -> \"x\"; fn(\u00a7);",
+          "box.pair(\u00a7, \"x\");"
+        ],
+        "completionCount": 0
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Empty compiler completions must be distinguished from IntelliJ native suggestions; that assertion is not implemented."
+        ]
+      }
+    },
+    "X33": {
+      "title": "type definitions follow variable and return types",
+      "manual": [],
+      "values": {
+        "file": "Lookups.x",
+        "variants": [
+          {
+            "anchor": "mapper.map",
+            "expected": "Mapper"
+          },
+          {
+            "anchor": "make();",
+            "expected": "TextMapper"
+          },
+          {
+            "anchor": "make() =",
+            "expected": "TextMapper"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X34": {
+      "title": "union and narrowed types have distinct source targets",
+      "manual": [
+        "Multiple-target chooser and peek rendering"
+      ],
+      "values": {
+        "file": "Lookups.x",
+        "narrowedUse": "value.toString();",
+        "narrowedOffset": 0,
+        "narrowedTargets": [
+          "TextMapper"
+        ],
+        "unionUse": "        value.toString();",
+        "unionOffset": 8,
+        "unionTargets": [
+          "TextMapper",
+          "Unrelated"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X35": {
+      "title": "formal types resolve without invented library locations",
+      "manual": [],
+      "values": {
+        "file": "Lookups.x",
+        "formalUse": "T value",
+        "offset": 2,
+        "formalTargets": [
+          "T"
+        ],
+        "binaryUse": "String map"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X36": {
+      "title": "nominal implementation lookup excludes structural lookalikes",
+      "manual": [],
+      "values": {
+        "file": "Lookups.x",
+        "anchor": "Mapper<T>",
+        "implementations": [
+          "Child",
+          "Inherited",
+          "TextMapper"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X37": {
+      "title": "method implementation lookup preserves overload identity",
+      "manual": [],
+      "values": {
+        "file": "Lookups.x",
+        "overrides": {
+          "source": "@Override String map",
+          "flags": "g"
+        },
+        "declarationPrefix": "@Override String ",
+        "declarationOffset": 2,
+        "declaration": "T map",
+        "use": "mapper.map",
+        "useOffset": 7,
+        "methodName": "map(",
+        "targetCount": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native implementation chooser target ranges and overload identity are not implemented."
+        ]
+      }
+    },
+    "X38": {
+      "title": "cross-file semantic lookups track current member positions",
+      "manual": [],
+      "values": {
+        "rootFile": "Project.x",
+        "replaceFrom": "module Project {",
+        "rootWithFactory": "module Project {\n    Child make() = new Child();",
+        "factory": "Child make",
+        "targetCount": 1,
+        "memberFile": "Project/Child.x",
+        "method": "echo(",
+        "lineShift": 2,
+        "replaceWith": "class Child extends"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Cross-file type/implementation navigation with moving and broken overlays is not implemented."
+        ]
+      }
+    },
+    "X39": {
+      "title": "call hierarchy groups sites by caller and overload",
+      "manual": [
+        "Call hierarchy view rendering and click navigation"
+      ],
+      "values": {
+        "file": "Consumers.x",
+        "callee": "Int leaf",
+        "offset": 4,
+        "edgeCount": 2,
+        "callerName": "run",
+        "lambdaName": "lambda",
+        "lambdaSites": 1,
+        "caller": "Int run",
+        "sitesPerCallee": [
+          1,
+          2
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native incoming/outgoing call hierarchy and source-site assertions are not implemented."
+        ]
+      }
+    },
+    "X40": {
+      "title": "lambda calls retain their owner and dynamic calls have no static edge",
+      "manual": [],
+      "values": {
+        "file": "Consumers.x",
+        "callee": "Int leaf",
+        "offset": 4,
+        "lambdaName": "lambda",
+        "edgeCount": 1,
+        "lambdaCall": "leaf(seed)",
+        "dynamicCall": "fn();"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native incoming/outgoing call hierarchy and source-site assertions are not implemented."
+        ]
+      }
+    },
+    "X41": {
+      "title": "semantic tokens and highlights distinguish identity and access",
+      "manual": [
+        "Theme colors and the token inspector UI"
+      ],
+      "values": {
+        "file": "Consumers.x",
+        "tokenKinds": [
+          {
+            "name": "leaf",
+            "type": "method"
+          },
+          {
+            "name": "seed",
+            "type": "parameter"
+          },
+          {
+            "name": "number",
+            "type": "variable"
+          }
+        ],
+        "methodName": "leaf",
+        "staticModifier": "static",
+        "declarationModifier": "declaration",
+        "anchor2": "number +=",
+        "variableName": "number",
+        "writeModifier": "modification",
+        "anchor": "return number",
+        "offset": 7
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Semantic token kinds/modifiers and read/write highlight inspection are not implemented."
+        ]
+      }
+    },
+    "X42": {
+      "title": "inlay hints show inferred types and positional argument names",
+      "manual": [
+        "Inline hint layout and visual distinction from source text"
+      ],
+      "values": {
+        "file": "Consumers.x",
+        "hints": [
+          "Int",
+          "String",
+          "input:",
+          "text:"
+        ],
+        "anchor": "number +=",
+        "typeHintCount": 2,
+        "excludedHint": "extra:"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native inlay hint label, kind and source-position assertions are not implemented."
+        ]
+      }
+    },
+    "X43": {
+      "title": "call hierarchy rejects old snapshots and recovers after parse failure",
+      "manual": [],
+      "values": {
+        "file": "Consumers.x",
+        "anchor": "Int run",
+        "offset": 4,
+        "replaceFrom": "    Int run",
+        "shiftedDeclaration": "\n    Int run",
+        "lineShift": 1,
+        "edgeCount": 2,
+        "replaceWith": "Int broken(\n Int run"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Raw call-hierarchy snapshot expiry and parse-failure recovery are not implemented."
+        ]
+      }
+    },
+    "X44": {
+      "title": "incoming calls include closed members and current overlays",
+      "manual": [],
+      "values": {
+        "memberFile": "Project/Child.x",
+        "memberDeclaration": "class Child extends Base<String> {",
+        "memberWithCall": "class Child extends Base<String> {\n    Int callTarget()=target(1);",
+        "rootFile": "Project.x",
+        "replaceFrom": "module Project {",
+        "replaceWith": "module Project {\n    static Int target(Int n)=n;",
+        "anchor": "Int target",
+        "offset": 4,
+        "lineShift": 2
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Incoming call sites from closed members and current overlays are not implemented."
+        ]
+      }
+    },
+    "X45": {
+      "title": "source dependencies compile and navigate without opening the library",
+      "manual": [],
+      "values": {
+        "file": "Consumer.x",
+        "location": {
+          "cursor": "lib.\u00a7value",
+          "targetFile": "Library.x",
+          "target": "Int \u00a7value()=1;"
+        }
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Cross-module target and clean diagnostics are checked; unopened-library state is not explicitly inspected."
+        ]
+      }
+    },
+    "X46": {
+      "title": "unsaved library type changes recompile unchanged consumers",
+      "manual": [],
+      "values": {
+        "diagnosticCode": "DEPENDENCY-FAILED",
+        "file": "Library.x",
+        "consumer": "Consumer.x",
+        "edit": {
+          "from": "Int value()=1",
+          "to": "String value()=\"text\""
+        }
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Consumer errors and recovery are checked; unchanged consumer version, diagnostic code and unchanged library disk bytes are not inspected."
+        ]
+      }
+    },
+    "X47": {
+      "title": "dependency failure owns diagnostics and removes stale navigation",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "compilerCodePrefix": "COMPILER-",
+        "anchor": "lib.value",
+        "offset": 4
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Dependency-owned diagnostic codes and absent stale navigation are not implemented."
+        ]
+      }
+    },
+    "X48": {
+      "title": "discarding a dependency overlay restores the disk artifact",
+      "manual": [],
+      "values": {
+        "file": "Library.x"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Discarding an unsaved library and verifying its restored artifact is not implemented."
+        ]
+      }
+    },
+    "X49": {
+      "title": "watched dependency deletion and restoration propagate",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "diagnosticCode": "SOURCE-UNAVAILABLE"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Watched library deletion/restoration and diagnostic ownership are not implemented."
+        ]
+      }
+    },
+    "X50": {
+      "title": "unsaved and saved dependency members invalidate and recover consumers",
+      "manual": [
+        "Named unsaved member uses LSP didOpen/didClose; filesystem half uses the real VS Code watcher"
+      ],
+      "values": {
+        "file": "Library/Extra.x",
+        "text": "class Extra { MissingType broken; }",
+        "version": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Synthetic unsaved member notifications and the filesystem watcher equivalent are not implemented."
+        ]
+      }
+    },
+    "X51": {
+      "title": "rapid dependency changes converge without damaging unrelated sessions",
+      "manual": [],
+      "values": {
+        "unrelatedFile": "Navigation.x",
+        "libraryFile": "Library.x",
+        "anchor": "lib.value",
+        "offset": 4
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Concurrent dependency navigation during rapid edits and unrelated-session checks are not implemented."
+        ]
+      }
+    },
+    "X52": {
+      "title": "transitive source changes propagate through the dependency graph",
+      "manual": [],
+      "values": {
+        "bridgeText": "module Bridge { package lib import Library; static Int value()=lib.value(); }",
+        "libraryFile": "Library.x",
+        "bridgeFile": "Bridge.x",
+        "consumerFile": "Consumer.x",
+        "replaceFrom": "import Library",
+        "bridgeImport": "import Bridge",
+        "sourceModules": [
+          {
+            "name": "Library",
+            "uri": "Library.x",
+            "dependencies": []
+          },
+          {
+            "name": "Bridge",
+            "uri": "Bridge.x",
+            "dependencies": [
+              "Library"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "Bridge"
+            ]
+          }
+        ],
+        "brokenBridge": "module Bridge { MissingType broken; }",
+        "anchor": "lib.value",
+        "offset": 4
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Transitive graph configuration and dependency-failure ownership are not implemented."
+        ]
+      }
+    },
+    "X53": {
+      "title": "local rename updates declarations and captured uses",
+      "manual": [
+        "F2 input widget, preview and undo interaction"
+      ],
+      "values": {
+        "file": "Rename.x",
+        "anchor": "local",
+        "replaceWith": "renamed",
+        "replaceFrom": {
+          "source": "\\blocal\\b",
+          "flags": "g"
+        }
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
+        ]
+      }
+    },
+    "X54": {
+      "title": "private parameter rename includes named argument labels",
+      "manual": [],
+      "values": {
+        "file": "Rename.x",
+        "anchors": [
+          "Int input",
+          "input=1"
+        ],
+        "declaration": "Int input",
+        "callOffset": 4,
+        "declarationOffset": 0,
+        "replaceWith": "number",
+        "replaceFrom": {
+          "source": "\\binput\\b",
+          "flags": "g"
+        },
+        "namedArgument": "number=1"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
+        ]
+      }
+    },
+    "X55": {
+      "title": "rename rejects silent capture of an untouched property use",
+      "manual": [],
+      "values": {
+        "file": "Rename.x",
+        "anchor": "local",
+        "newName": "value"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
+        ]
+      }
+    },
+    "X56": {
+      "title": "unsupported member and public parameter renames produce no edits",
+      "manual": [],
+      "values": {
+        "file": "Rename.x",
+        "variants": [
+          "pick(",
+          "Rename",
+          "value ="
+        ],
+        "newName": "replacement",
+        "replaceFrom": "private Int pick",
+        "replaceWith": "Int pick",
+        "anchor": "Int input",
+        "offset": 4
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
+        ]
+      }
+    },
+    "X57": {
+      "title": "rename carries the buffer version and obsolete requests cannot mutate text",
+      "manual": [
+        "Deterministic in-flight edit/close/sibling races run in XdkCursorServerTest; this editor race may complete before closing"
+      ],
+      "values": {
+        "file": "Rename.x",
+        "anchor": "local",
+        "newName": "renamed",
+        "cancellationCodes": [
+          -32800,
+          -32801
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
+        ]
+      }
+    },
+    "X58": {
+      "title": "rename recovers after syntax errors and rejects invalid or conflicting names",
+      "manual": [],
+      "values": {
+        "file": "Rename.x",
+        "replaceFrom": "Int run()",
+        "replaceWith": "Int broken(\n Int run()",
+        "anchor": "local",
+        "newName": "renamed",
+        "invalidNames": [
+          "not-a-name",
+          "captured"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
+        ]
+      }
+    },
+    "X59": {
+      "title": "exact references include unopened configured consumers",
+      "manual": [
+        "References panel presentation"
+      ],
+      "values": {
+        "referenceCount": 3,
+        "modules": [
+          "Contracts",
+          "Uses",
+          "Dormant"
+        ],
+        "moduleFile": "${0}.x",
+        "closedConsumer": "Dormant.x"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Exact references across unopened configured consumers are not implemented."
+        ]
+      }
+    },
+    "X60": {
+      "title": "generic override rename edits every configured declaration and call",
+      "manual": [
+        "F2 preview, confirmation and undo across files"
+      ],
+      "values": {
+        "anchor": "map(",
+        "replaceWith": "convert",
+        "moduleCount": 3,
+        "modules": [
+          "Contracts",
+          "Uses",
+          "Dormant"
+        ],
+        "file": "${0}.x",
+        "replaceFrom": {
+          "source": "\\bmap\\b",
+          "flags": "g"
+        }
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Graph rename preview, document versions and unsaved multi-file workspace edits are not implemented."
+        ]
+      }
+    },
+    "X61": {
+      "title": "graph rename rejects silent capture of an untouched overload call",
+      "manual": [
+        "A separate compiler regression verifies the rejected source still compiles and would change overload selection"
+      ],
+      "values": {
+        "anchor": "pick(",
+        "newName": "choose",
+        "file": "Contracts.x"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Rejected graph rename with unchanged overload resolution is not implemented."
+        ]
+      }
+    },
+    "X62": {
+      "title": "bundled XDK members resolve but their binary contracts cannot be renamed",
+      "manual": [],
+      "values": {
+        "file": "Uses.x",
+        "searchCall": "indexOf(",
+        "searchName": {
+          "source": "indexOf",
+          "flags": ""
+        },
+        "searchArgumentType": {
+          "source": "Char",
+          "flags": ""
+        },
+        "searchRename": "locate",
+        "descriptionCall": "toString(",
+        "descriptionType": {
+          "source": "String",
+          "flags": ""
+        },
+        "descriptionRename": "describe"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Binary signature/hover checks and rejected binary rename are not implemented."
+        ]
+      }
+    },
+    "X63": {
+      "title": "graph queries use unsaved consumer text and fail closed on an incomplete graph",
+      "manual": [
+        "Controlled edit/close/configuration/dependency/cancellation races run in XdkProjectQueryLifecycleTest and XdkCursorServerTest"
+      ],
+      "values": {
+        "file": "Dormant.x",
+        "replaceFrom": "mapper.map(\"c\")",
+        "addedReference": "mapper.map(\"c\")+mapper.map(\"d\")",
+        "consumerReferenceCount": 2,
+        "anchor": "map(",
+        "newName": "convert",
+        "replaceWith": "module Dormant { MissingType broken; }",
+        "referenceCount": 3
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Graph references and versioned rename after unsaved or broken consumer edits are not implemented."
+        ]
+      }
+    },
+    "X64": {
+      "title": "property implementations preserve generic identity and written accessor targets",
+      "manual": [
+        "Implementation chooser/peek rendering and clicking the selected getter"
+      ],
+      "values": {
+        "file": "Properties.x",
+        "locations": [
+          {
+            "anchor": "String name = \"stored\"",
+            "offset": 7,
+            "length": 4
+          },
+          {
+            "anchor": "String name.get()",
+            "offset": 12,
+            "length": 3
+          }
+        ],
+        "anchor2": "T name",
+        "offset2": 2,
+        "anchor": "value.name",
+        "offset": 6
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X65": {
+      "title": "property getters setters and default field overrides have distinct implementation sets",
+      "manual": [],
+      "values": {
+        "file": "Properties.x",
+        "variants": [
+          {
+            "anchor": "Int value {",
+            "offset": 4,
+            "expected": [
+              {
+                "anchor": "Int get()",
+                "offset": 4,
+                "length": 3
+              },
+              {
+                "anchor": "void set(",
+                "offset": 5,
+                "length": 3
+              },
+              {
+                "anchor": "Int value.get()",
+                "offset": 10,
+                "length": 3
+              }
+            ]
+          },
+          {
+            "anchor": "Int get()",
+            "offset": 4,
+            "expected": [
+              {
+                "anchor": "Int get()",
+                "offset": 4,
+                "length": 3
+              },
+              {
+                "anchor": "Int value.get()",
+                "offset": 10,
+                "length": 3
+              }
+            ]
+          },
+          {
+            "anchor": "void set(",
+            "offset": 5,
+            "expected": [
+              {
+                "anchor": "void set(",
+                "offset": 5,
+                "length": 3
+              }
+            ]
+          },
+          {
+            "anchor": "String label {",
+            "offset": 7,
+            "expected": [
+              {
+                "anchor": "String get()",
+                "offset": 7,
+                "length": 3
+              },
+              {
+                "anchor": "String label =",
+                "offset": 7,
+                "length": 5
+              }
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X66": {
+      "title": "abstract delegated annotated and binary properties have no invented source targets",
+      "manual": [],
+      "values": {
+        "file": "Properties.x",
+        "variants": [
+          {
+            "anchor": "String absent",
+            "offset": 7
+          },
+          {
+            "anchor": "Int later",
+            "offset": 4
+          },
+          {
+            "anchor": "text.size",
+            "offset": 5
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X67": {
+      "title": "closed property accessors track unsaved positions and recover after parse failure",
+      "manual": [],
+      "values": {
+        "original": "class Member implements Named<String> { @Override String name.get() = \"member\"; }",
+        "memberFile": "Properties/Member.x",
+        "rootFile": "Properties.x",
+        "anchor": "T name",
+        "lineShift": 2,
+        "targetCount": 3,
+        "declarationLine": 0,
+        "getter": "get",
+        "replaceWith": "class Member {"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Closed property accessor positions and parse-recovery navigation are not implemented."
+        ]
+      }
+    },
+    "X68": {
+      "title": "concrete chained delegation reaches written method and getter bodies",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "use": "forward.map",
+            "offset": 8,
+            "declaration": "String map(String value) = value",
+            "declarationOffset": 7,
+            "length": 3
+          },
+          {
+            "use": "forward.name",
+            "offset": 8,
+            "declaration": "String name.get()",
+            "declarationOffset": 12,
+            "length": 3
+          }
+        ],
+        "targetCount": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X69": {
+      "title": "super navigation reaches its inherited body",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "anchor": "super(value)",
+        "inheritedDeclaration": "T pick(T value)",
+        "inheritedOffset": 2,
+        "targetCount": 1,
+        "targetLength": 4,
+        "override": "String pick(String value)",
+        "overrideOffset": 7,
+        "renameRejection": "Rename not allowed at this position"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Super definition, outgoing calls and prepareRename rejection are not implemented."
+        ]
+      }
+    },
+    "X70": {
+      "title": "function calls show signature types without guessed parameter names",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "anchor": "fn(42)",
+        "offset": 4,
+        "signature": "Int fn(Int)",
+        "targetCount": 1,
+        "targetName": "fn"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native function signature labels and definition navigation are not implemented."
+        ]
+      }
+    },
+    "X71": {
+      "title": "compound conditional and trailing argument edits preserve completion scope",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          "1 + word.",
+          "flag ? word. : 0",
+          "flag ? 0 : word.",
+          "pair(word., 2)"
+        ],
+        "replaceFrom": "return 1 + word.size;",
+        "replaceWith": "return ${0};",
+        "anchor": "word.",
+        "offset": 5,
+        "label": "size"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X72": {
+      "title": "annotation accessors follow compiler composition and explicit overrides",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "use": "meter.count",
+            "getter": "Referent get() = super()",
+            "getterOffset": 9,
+            "setter": "void set(Referent value)",
+            "setterOffset": 5
+          },
+          {
+            "use": "meter.computed",
+            "getter": "Int get() = 3",
+            "getterOffset": 4,
+            "setter": "void set(Int value)",
+            "setterOffset": 5
+          }
+        ],
+        "offset": 6,
+        "targetCount": 2,
+        "targetLength": 3
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
+        ]
+      }
+    },
+    "X73": {
+      "title": "incomplete function values retain signatures and reject incompatible arguments",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "call": "fn(",
+            "active": 0
+          },
+          {
+            "call": "fn(1, ",
+            "active": 1
+          }
+        ],
+        "replaceFrom": "fn(1, \"x\")",
+        "incompleteExpression": "${0})",
+        "callAnchor": "Int applyPair(function Int(Int, String) fn) = ${0}",
+        "signature": "Int fn(Int, String)",
+        "invalidExpression": "fn(True, )",
+        "invalidCall": "fn(True, ",
+        "offset": 9,
+        "rejectedSignatureCount": 0
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X74": {
+      "title": "incomplete generic constructors map positional and named arguments",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "call": "new Packet<String>(",
+            "active": 0
+          },
+          {
+            "call": "new Packet<String>(\"a\", ",
+            "active": 1
+          },
+          {
+            "call": "new Packet<String>(second=\"b\", first=",
+            "active": 0
+          }
+        ],
+        "replaceFrom": "new Packet<String>(\"a\", \"b\")",
+        "replaceWith": "${0})",
+        "signature": "new Packet(String first, String second)"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X75": {
+      "title": "missing grouping and index delimiters retain member completion",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          "(word.si",
+          "pair((word.si",
+          "word[word.si"
+        ],
+        "replaceFrom": "return 1 + word.size;",
+        "replaceWith": "return ${0};",
+        "anchor": "word.si",
+        "offset": 7,
+        "label": "size"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X76": {
+      "title": "missing nested call delimiters retain the innermost signature",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "expression": "pair((pair(1, ",
+        "replaceFrom": "return 1 + word.size;",
+        "replaceWith": "return ${0};",
+        "signature": "Int pair(Int first, Int second)",
+        "activeParameter": 1
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X77": {
+      "title": "argument value completions fit methods functions and generic constructors",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "original": "take(1, text)",
+            "prefix": "take(1, "
+          },
+          {
+            "original": "take(1, text)",
+            "prefix": "take(first=1, second="
+          },
+          {
+            "original": "fn(1, text)",
+            "prefix": "fn(1, "
+          },
+          {
+            "original": "new Packet<String>(\"a\", text)",
+            "prefix": "new Packet<String>(\"a\", "
+          },
+          {
+            "original": "new Packet<String>(\"a\", text)",
+            "prefix": "new Packet<String>(second=\"b\", first="
+          }
+        ],
+        "replaceWith": "${0})",
+        "labels": [
+          "qualifiedName",
+          "simpleName",
+          "text"
+        ],
+        "label": "text"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native completion selection, source-edit and scope assertions are not implemented."
+        ]
+      }
+    },
+    "X78": {
+      "title": "argument completion preserves overload alternatives until insertion",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "selections": [
+          "number",
+          "text"
+        ],
+        "replaceFrom": "choose(text);",
+        "anchor": "choose();",
+        "offset": 7,
+        "labels": [
+          "number",
+          "qualifiedName",
+          "simpleName",
+          "text"
+        ],
+        "signatureCount": 2
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X79": {
+      "title": "typed argument prefixes fit values and replace exactly the identifier",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "original": "take(1, text)",
+            "prefix": "take(1, te"
+          },
+          {
+            "original": "take(1, text)",
+            "prefix": "take(first=1, second=te"
+          },
+          {
+            "original": "fn(1, text)",
+            "prefix": "fn(1, te"
+          },
+          {
+            "original": "new Packet<String>(\"a\", text)",
+            "prefix": "new Packet<String>(\"a\", te"
+          },
+          {
+            "original": "new Packet<String>(\"a\", text)",
+            "prefix": "new Packet<String>(second=\"b\", first=te"
+          }
+        ],
+        "replaceFrom": "${0})",
+        "labels": [
+          "text"
+        ],
+        "replacementStartDelta": -2,
+        "replaceWith": "${0}text)",
+        "prefixLength": 2
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native completion selection, source-edit and scope assertions are not implemented."
+        ]
+      }
+    },
+    "X80": {
+      "title": "typed argument prefixes preserve compatible overload alternatives",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "labels": [
+          "valueNumber",
+          "valueText"
+        ],
+        "replaceFrom": "choose(valueText);",
+        "anchor": "choose(va);",
+        "offset": 9,
+        "signatureCount": 2,
+        "replacementStartDelta": -2,
+        "acceptedCall": "choose(${0});"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X81": {
+      "title": "implicit property and constant values fit positional and named arguments",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          "takeValue(va",
+          "takeValue(value=va"
+        ],
+        "replaceFrom": "takeValue(valueText)",
+        "replaceWith": "${0})",
+        "labels": [
+          "valueConstant",
+          "valueText"
+        ],
+        "label": "valueText",
+        "type": {
+          "source": "String",
+          "flags": ""
+        },
+        "replacementStartDelta": -2
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native completion selection, source-edit and scope assertions are not implemented."
+        ]
+      }
+    },
+    "X82": {
+      "title": "static argument completion offers compatible constants without an instance receiver",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "replaceFrom": "takeValue(valueConstant)",
+        "anchor": "takeValue(va)",
+        "offset": 12,
+        "labels": [
+          "valueConstant"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native completion selection, source-edit and scope assertions are not implemented."
+        ]
+      }
+    },
+    "X83": {
+      "title": "specialized constructors preserve receiver type and exact argument edits",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          "outer.new Part(\"a\", text)",
+          "packet.new(\"a\", text)",
+          "new @Marked Packet<String>(\"a\", text)"
+        ],
+        "replaceFrom": "text)",
+        "prefix": "te",
+        "replaceWith": "${0})",
+        "signature": {
+          "source": "String first, String second",
+          "flags": ""
+        },
+        "activeParameter": 1,
+        "labels": [
+          "text"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X84": {
+      "title": "omitted constructor types distinguish required from provisional inference",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "constructors": [
+          "Packet<String> inferred = new Packet(\"a\", text)",
+          "        new Packet(\"a\", text)"
+        ],
+        "replaceFrom": "text)",
+        "prefix": "te",
+        "replaceWith": "${0})",
+        "signature": {
+          "source": "String first, String second",
+          "flags": ""
+        },
+        "requiredContext": "inferred",
+        "requiredLabels": [
+          "text"
+        ],
+        "provisionalLabels": [
+          "text",
+          "textNumber"
+        ],
+        "label": "text"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X85": {
+      "title": "array dimensions precede the active initializer argument",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          "new String[2](te",
+          "new String[2](supply=te"
+        ],
+        "replaceFrom": "new String[2](text)",
+        "replaceWith": "${0})",
+        "activeParameter": 1,
+        "parameter": {
+          "source": "supply",
+          "flags": ""
+        },
+        "labels": [
+          "text"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X86": {
+      "title": "tuple and collection literals retain cursor completion with missing closers",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          "(1, word.si",
+          "Tuple<Int, Int>:(1, word.si",
+          "[word.si",
+          "[\"key\"=word.si"
+        ],
+        "replaceFrom": "[word.size]",
+        "label": "size",
+        "replacementStartDelta": -2
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X87": {
+      "title": "declaration recovery preserves initializer and default-value contexts",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "variants": [
+          {
+            "prefix": "Int declaredSize(String word) = word.si",
+            "suffix": "",
+            "selected": "size",
+            "terminator": ";"
+          },
+          {
+            "prefix": "Int declaredSize = \"x\".si",
+            "suffix": "",
+            "selected": "size",
+            "terminator": ";"
+          },
+          {
+            "prefix": "void defaults(Int size = Int64.Ma",
+            "suffix": " {}",
+            "selected": "MaxValue",
+            "terminator": ")"
+          }
+        ],
+        "replaceFrom": {
+          "source": "}\\s*$",
+          "flags": ""
+        },
+        "replaceWith": "${0}${1}\n}\n",
+        "prefixLength": 2
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X88": {
+      "title": "anonymous construction uses inherited signatures and preserves captured locals",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "original": "new Packet<String>(\"anonymous\", text) {",
+        "prefix": "new Packet<String>(\"anonymous\", te",
+        "replaceWith": "${0}) {",
+        "signature": "new Packet(String first, String second)",
+        "activeParameter": 1,
+        "labels": [
+          "text"
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "X89": {
+      "title": "anonymous interface constructors survive missing call closers",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "original": "new CursorReader(\"a\", text)",
+        "prefix": "new CursorReader(\"a\", te",
+        "closers": [
+          ")",
+          ""
+        ],
+        "signature": "new CursorReader(String first, String second)",
+        "activeParameter": 1,
+        "labels": [
+          "text"
+        ],
+        "replacementStartDelta": -2
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+        ]
+      }
+    },
+    "CFG1": {
+      "title": "removing and restoring source settings replaces the graph",
+      "manual": [],
+      "values": {
+        "consumer": "Consumer.x"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "CFG2": {
+      "title": "invalid cyclic settings preserve the last valid graph",
+      "manual": [],
+      "values": {
+        "pattern": {
+          "source": "cycl|invalid|reject",
+          "flags": "i"
+        },
+        "sourceModules": [
+          {
+            "name": "Library",
+            "uri": "Library.x",
+            "dependencies": [
+              "Consumer"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "Library"
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Observation of rejected configuration notifications with last-valid-graph semantics is not implemented."
+        ]
+      }
+    },
+    "CFG3": {
+      "title": "unchanged source settings preserve current semantics",
+      "manual": [],
+      "values": {},
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Unchanged configuration notification and consumer document-version assertions are not implemented."
+        ]
+      }
+    },
+    "7a.8": {
+      "title": "compiler-only duplicate annotation warning is delivered exactly once",
+      "manual": [
+        "Problems warning icon/code/count rendering and clicking a row"
+      ],
+      "values": {
+        "warningCount": 1,
+        "errorFile": "Navigation.x",
+        "replaceFrom": "Int value = 2;",
+        "replaceWith": "String value = 2;",
+        "file": "DupAnno.x",
+        "severity": "WARNING",
+        "code": "VERIFY-75",
+        "messageContains": "annotation",
+        "count": 1,
+        "declaration": "@Atomic @Override Int \u00a7x",
+        "edit": {
+          "from": "@Atomic @Override",
+          "to": "@Override"
+        }
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Warning count, severity, location, message, clearing, and Problems Current File rows are checked; code/source, navigation by clicking a row and coexistence with errors in another file are not inspected."
+        ]
+      }
+    },
+    "7a.9": {
+      "title": "bad source has a bounded diagnostic result",
+      "manual": [],
+      "values": {
+        "file": "Broken.x",
+        "moduleStart": "module Broken {\n",
+        "declarationCount": 150,
+        "declaration": "Missing${0} value${1};",
+        "moduleEnd": "\n}",
+        "maximumErrors": 100,
+        "diagnosticCode": "EMB-5"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Bounded diagnostic-count and internal-error code assertions are not implemented."
+        ]
+      }
+    }
+  }
+}

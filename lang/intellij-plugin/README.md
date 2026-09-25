@@ -126,11 +126,18 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The initial suite has eight cases and covers startup, X2 compiler errors and clearing, the definition portion of X4,
-X7 completion acceptance, X45–X46 source-module navigation/recompilation, the CFG1 graph
-clear/restore transition and the 7a.8 duplicate-annotation warning. It reads fixtures from the
-[manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook). Remaining rows, the Problems
-tool-window layout, popup appearance and prolonged editing remain to be ported or checked manually.
+The suite reads all 94 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
+It runs startup and eighteen scenarios: twelve fully and six partially. This includes diagnostics,
+definition navigation, dependencies/configuration, completion/scope/imports, and delimiter/declaration
+recovery. The error/warning cases open **Problems → Current File**, verify row locations/counts,
+and verify clearing after corrections. Layout and clicking a Problems row remain manual.
+
+Every report lists all 94 scenario IDs, including the 76 unimplemented entries with concrete
+missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
+missing from this driver is not labeled an unsupported IntelliJ feature. See
+[shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
+The catalog is a declared Gradle task input and its SHA-256 identifies the data used by each run.
 
 Reports are under `build/reports/compiler-playbook/run-*/results.json`; `ide-paths.txt` points to
 the isolated IDE's profile/log directory. Starter caches its IDE download below the same report
