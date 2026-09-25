@@ -15,6 +15,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
+import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -261,6 +262,37 @@ public class ParserRecoveryTest {
         var clone = (IncompleteStatement) site.clone();
         assertNotSame(site.getLeadingArguments().getFirst(), clone.getLeadingArguments().getFirst());
         assertEquals("2", site.getLeadingArguments().getFirst().toString());
+    }
+
+    @Test
+    public void dimensionCursorRetainsItsOwnerWithoutDuplicatingLookaheadDiagnostics() {
+        for (String suffix : List.of("]", "", "](\"x\")")) {
+            String prefix = "module Recovery { void run(Int number) { new String[nu";
+            String text = prefix + suffix + "; } Int later = 1; }";
+            Source source = new Source(text);
+            prefix.chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            var reported = new ArrayList<String>();
+            var errs = ErrorListener.collecting(error -> reported.add(error.getCode()));
+            var tree = Parser.forPartialAnalysis(source, cursor, errs).parseSource();
+            var sites = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).toList();
+            assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reported);
+            assertEquals(1, sites.size());
+            var site = sites.getFirst();
+            assertTrue(site.isCall());
+            assertEquals(Token.Id.L_SQUARE, site.getOperator().getId());
+            assertTrue(site.getTarget() instanceof NewExpression);
+            assertTrue(site.getLeadingArguments().isEmpty());
+            assertEquals("nu", site.getArgumentPrefix().orElseThrow().getValueText());
+            assertEquals(cursor, site.getEndPosition());
+            var clone = (IncompleteStatement) site.clone();
+            assertNotSame(site.getTarget(), clone.getTarget());
+            assertEquals(site.getArgumentPrefix(), clone.getArgumentPrefix());
+            assertTrue(names(tree).contains("later"));
+            assertEquals(text, source.toRawString());
+        }
     }
 
     @Test

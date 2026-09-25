@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X89 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X90 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1086,13 +1086,13 @@ required. See the [IntelliJ test and configuration instructions](../intellij-plu
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 94 scenarios: X1–X89, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 95 scenarios: X1–X90, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Source programs remain the canonical fixtures below. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 94 cases. IntelliJ executes seventeen fully and thirteen partially, plus a separate startup check;
+all 95 cases. IntelliJ executes seventeen fully and fourteen partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1770,6 +1770,7 @@ module Advanced {
 | X87 | Before the module's final brace, add `Int declaredSize(String word) = word.si`, `Int declaredSize = "x".si`, or `void defaults(Int size = Int64.Ma {}` in turn. Complete at the prefix, then repair the missing `;` or `)`, and remove the added declaration. | `size`/`MaxValue` is offered in the declaration's real compiler context. The missing terminator remains a normal diagnostic until repaired. Method defaults must still be constants. Shorthand constructor defaults have backend coverage. |
 | X88 | In `anonymousConstructions`, shorten `text` to `te` in `new Packet<String>("anonymous", text)`. Request signature help and completion, then accept `text`. | The inherited constructor has String parameters and active parameter `second`. Only `text` fits; acceptance clears Problems. The anonymous method still captures its enclosing `text`. |
 | X89 | Shorten `text` in `new CursorReader("a", text)` to `te`. Request help/completion, accept `text`, then repeat after deleting the constructor call's `)` before `{`. Restore the fixture. | The constructor declared inside the anonymous body supplies `new CursorReader(String first, String second)`, without a generated class suffix. Completion replaces only `te`. Missing-`)` diagnostics remain until the delimiter is restored. |
+| X90 | In `constructions`, replace `new String[2](text)` with `new String[te](text)`. Request completion and signature help inside the brackets, then accept `textNumber`. Repeat with `new String[te` before the semicolon, then restore `](text)` and the fixture. | Only the Int value `textNumber` fits the size prefix; the String value `text` is excluded. Help shows the fixed-size Array constructor with `Int size` active at index 0. Acceptance replaces only `te`. A missing bracket remains a diagnostic until repaired. The native IntelliJ run checks the visible size highlight and exact accepted edit; its sole-candidate auto-insertion can prevent inspecting the entire candidate list. |
 
 
 
@@ -1783,8 +1784,11 @@ scope/member completion without argument-type filtering. Empty slots before late
 remain outside this proof. X83–X87 add specialized constructors and bounded declaration/literal recovery.
 X88–X89 add anonymous superclass forwarding and constructors declared inside retained bodies, including
 interface implementations and captured locals. Cursor analysis prepares declaration signatures but does
-not validate capture behavior or emit unfinished bodies. Cursors in array dimensions, multidimensional
-construction, unfinished declaration names/types and missing operands remain unsupported; no literal
+not validate capture behavior or emit unfinished bodies. X90 adds empty/final-prefix single-dimensional
+size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
+prefix query does not validate a following supplier. Types without an element default still require
+a supplier when compiled normally. Multidimensional construction, unfinished declaration names/types
+and missing operands remain unsupported; no literal
 value or declaration token is invented.
 
 ## VS Code Extension Playbook
