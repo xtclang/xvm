@@ -4,13 +4,12 @@ import com.intellij.application.options.CodeStyle
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
-import org.eclipse.lsp4j.ConfigurationItem
-import org.eclipse.lsp4j.ConfigurationParams
 import org.xtclang.idea.XtcIntelliJLanguage
-import java.util.concurrent.CompletableFuture
 
 /**
- * Custom LSP language client that bridges IntelliJ Code Style settings to the XTC LSP server.
+ * Bridges Ecstasy Code Style settings while preserving LSP4IJ's server configuration support.
+ * Compiler source modules use LSP4IJ's server Configuration settings under `xtc.compiler`;
+ * the base client owns section lookup, change notifications and listener disposal.
  *
  * When the LSP server sends a `workspace/configuration` request for section `"xtc.formatting"`,
  * this client reads the current IntelliJ Code Style settings for the Ecstasy language and
@@ -28,28 +27,13 @@ class XtcLanguageClient(
     project: Project,
 ) : LanguageClientImpl(project) {
     /**
-     * Handle `workspace/configuration` requests from the LSP server.
-     *
-     * The server requests configuration sections after initialization. For each
-     * [ConfigurationItem] with section `"xtc.formatting"`, we return the IntelliJ
-     * Code Style settings for XTC. Unknown sections get `null`.
+     * Specialize only formatting. Delegating other sections preserves configured compiler graphs,
+     * null entries for unknown sections and the base client's asynchronous response ordering.
      */
-    override fun configuration(params: ConfigurationParams): CompletableFuture<List<Any?>> {
-        logger.info("workspace/configuration: ${params.items.map { it.section }}")
-        val results = params.items.map { item -> resolveConfigSection(item) }
-        return CompletableFuture.completedFuture(results)
-    }
-
-    private fun resolveConfigSection(item: ConfigurationItem): Any? =
-        when (item.section) {
-            FORMATTING_SECTION -> {
-                readFormattingSettings()
-            }
-
-            else -> {
-                logger.info("workspace/configuration: unknown section '${item.section}', returning null")
-                null
-            }
+    override fun findSettings(section: String?): Any? =
+        when (section) {
+            FORMATTING_SECTION -> readFormattingSettings()
+            else -> super.findSettings(section)
         }
 
     private fun readFormattingSettings(): Map<String, Any> {
