@@ -40,6 +40,7 @@ import org.xvm.compiler.ast.NewExpression
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.compiler.ast.TypeExpression
 import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.compiler.ast.VariableTypeExpression
@@ -579,10 +580,24 @@ private class SemanticModelBuilder(
                                 val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
                                 val signature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
                                 val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
+                                val name =
+                                    when {
+                                        !method.isConstructor -> {
+                                            method.name
+                                        }
+
+                                        method.containingClass.isAnonInnerClass -> {
+                                            "new ${site.target.children().filterIsInstance<TypeExpression>().single()}"
+                                        }
+
+                                        else -> {
+                                            "new ${method.containingClass.name}"
+                                        }
+                                    }
                                 PartialSemanticModel.CallCandidate(
                                     PartialSemanticModel.Member(
                                         id,
-                                        if (method.isConstructor) "new ${method.containingClass.name}" else method.name,
+                                        name,
                                         SymbolKind.METHOD,
                                         null,
                                         signature,
