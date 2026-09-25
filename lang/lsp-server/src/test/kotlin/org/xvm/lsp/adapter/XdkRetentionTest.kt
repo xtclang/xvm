@@ -96,9 +96,15 @@ class XdkRetentionTest {
                 timings += System.nanoTime() - started
                 val renamed = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed").get(30, SECONDS)
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
-                val (marked, expected) = cursorCases[cycle % cursorCases.size]
+                val headerQuery = cycle % (cursorCases.size + 1) == cursorCases.size
+                val (marked, expected) = if (headerQuery) "void probe(Str| value) {}" to "String" else cursorCases[cycle % cursorCases.size]
                 val prefix = marked.substringBefore('|')
-                val incomplete = CONSUMER.replace("box) {}", "box) { ${marked.replace("|", "")} }")
+                val incomplete =
+                    if (headerQuery) {
+                        CONSUMER.replace("void probe(lib.Box box) {}", marked.replace("|", ""))
+                    } else {
+                        CONSUMER.replace("box) {}", "box) { ${marked.replace("|", "")} }")
+                    }
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
                 val column = incomplete.lastIndexOf(prefix) + prefix.length
                 assertThat(adapter.getCompletionsAsync(uri, 0, column).get(30, SECONDS).map { it.label }).contains(expected)

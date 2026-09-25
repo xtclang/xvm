@@ -585,3 +585,20 @@ The `PARSER-30` boundary still prevents emission of the incomplete method. Tests
 retained class and enclosing method have no emitted operations/AST, the source is unchanged, and
 cancellation/first-error budgets stop analysis. Normal repaired compilation performs captures and
 reports real body errors. See [C18/L31](errs-integration-plan.md#anonymous-constructor-cursor-support).
+
+## Declaration-header recovery and listeners
+
+The C20/L35 follow-up retains written header syntax without registering a partial compiler
+component. Normal parsing still reports the original header error. An explicit type-prefix query
+reports `INCOMPLETE_EXPRESSION`; its later validation guard prevents emission, and the existing
+embedding deduplication keeps the same source/code report from being published twice. Parser
+regressions use a collecting listener without deduplication to verify that parsing itself reports
+the selected hole only once. First-error budgets and cancellation stop recovery, including while
+skipping a large body; speculative attempts publish no diagnostics or retained header nodes.
+
+Type candidate lookup uses an explicitly silent `PROBE` listener whose cancellation follows the
+host. Failed name candidates are not additional source errors. Normal diagnostics stay separate
+from cursor results, so accepting a type does not hide a still-missing parameter name or delimiter.
+No new listener field, ambient state or compiler Context is stored on the new syntax node. See the
+[header audit](errs-audit.md#unfinished-declaration-header-audit-2026-09-25) and
+[verification/extraction map](errs-integration-plan.md#unfinished-declaration-headers).
