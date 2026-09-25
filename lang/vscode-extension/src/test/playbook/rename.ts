@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { scenarioRegex } from './shared';
 import { client, diagnostics, fixture, noErrors, playbook, position, symbols } from './support';
 
 async function rename(document: vscode.TextDocument, at: vscode.Position, newName: string): Promise<WorkspaceEdit | null> {
@@ -18,75 +19,75 @@ async function applyRename(document: vscode.TextDocument, at: vscode.Position, n
 }
 
 export function renameCases(): void {
-    playbook('X53', 'local rename updates declarations and captured uses', async workspace => {
-        const document = await workspace.open('Rename.x');
+    playbook('X53', async (workspace, data) => {
+        const document = await workspace.open(data.file);
         await noErrors(document.uri);
-        await applyRename(document, position(document, 'local'), 'renamed');
-        assert.strictEqual(document.getText(), fixture('Rename.x').replace(/\blocal\b/g, 'renamed'));
-    }, ['F2 input widget, preview and undo interaction']);
+        await applyRename(document, position(document, data.anchor), data.replaceWith);
+        assert.strictEqual(document.getText(), fixture(data.file).replace(scenarioRegex(data.replaceFrom), data.replaceWith));
+    });
 
-    playbook('X54', 'private parameter rename includes named argument labels', async workspace => {
-        const document = await workspace.open('Rename.x');
-        for (const anchor of ['Int input', 'input=1']) {
-            await workspace.replace(document, fixture('Rename.x'));
-            await applyRename(document, position(document, anchor, anchor === 'Int input' ? 4 : 0), 'number');
-            assert.strictEqual(document.getText(), fixture('Rename.x').replace(/\binput\b/g, 'number'));
-            assert.ok(document.getText().includes('number=1'));
+    playbook('X54', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        for (const anchor of data.anchors) {
+            await workspace.replace(document, fixture(data.file));
+            await applyRename(document, position(document, anchor, anchor === data.declaration ? data.callOffset : data.declarationOffset), data.replaceWith);
+            assert.strictEqual(document.getText(), fixture(data.file).replace(scenarioRegex(data.replaceFrom), data.replaceWith));
+            assert.ok(document.getText().includes(data.namedArgument));
         }
     });
 
-    playbook('X55', 'rename rejects silent capture of an untouched property use', async workspace => {
-        const document = await workspace.open('Rename.x');
-        assert.strictEqual(await rename(document, position(document, 'local'), 'value'), null);
-        assert.strictEqual(document.getText(), fixture('Rename.x'));
+    playbook('X55', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        assert.strictEqual(await rename(document, position(document, data.anchor), data.newName), null);
+        assert.strictEqual(document.getText(), fixture(data.file));
         await noErrors(document.uri);
     });
 
-    playbook('X56', 'unsupported member and public parameter renames produce no edits', async workspace => {
-        const document = await workspace.open('Rename.x');
-        for (const anchor of ['pick(', 'Rename', 'value =']) {
-            assert.strictEqual(await rename(document, position(document, anchor), 'replacement'), null, anchor);
+    playbook('X56', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        for (const anchor of data.variants) {
+            assert.strictEqual(await rename(document, position(document, anchor), data.newName), null, anchor);
         }
-        await workspace.replace(document, fixture('Rename.x').replace('private Int pick', 'Int pick'));
-        assert.strictEqual(await rename(document, position(document, 'Int input', 4), 'replacement'), null);
+        await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.replaceWith));
+        assert.strictEqual(await rename(document, position(document, data.anchor, data.offset), data.newName), null);
     });
 
-    playbook('X57', 'rename carries the buffer version and obsolete requests cannot mutate text', async workspace => {
-        const document = await workspace.open('Rename.x');
-        const edit = await rename(document, position(document, 'local'), 'renamed');
+    playbook('X57', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        const edit = await rename(document, position(document, data.anchor), data.newName);
         assert.ok(edit?.documentChanges?.length);
         assert.ok(!edit.changes, 'Only versioned documentChanges are supported');
         const change = edit.documentChanges[0];
         assert.ok(TextDocumentEdit.is(change));
         assert.strictEqual(change.textDocument.version, document.version);
-        await workspace.replace(document, '\n' + fixture('Rename.x'));
+        await workspace.replace(document, '\n' + fixture(data.file));
         assert.notStrictEqual(change.textDocument.version, document.version);
         // The language client's rename provider checks this before returning an edit.
         // Converting directly to vscode.WorkspaceEdit would discard the protocol version.
         assert.strictEqual(client().validateWorkspaceEdit(edit), false, 'Client must reject an edit for the old document version');
-        assert.strictEqual(document.getText(), '\n' + fixture('Rename.x'));
+        assert.strictEqual(document.getText(), '\n' + fixture(data.file));
 
-        const pending = rename(document, position(document, 'local'), 'renamed').catch(error => {
-            assert.ok([-32800, -32801].includes(error.code), String(error));
+        const pending = rename(document, position(document, data.anchor), data.newName).catch(error => {
+            assert.ok((data.cancellationCodes as (number)[]).includes(error.code), String(error));
             return null;
         });
         await workspace.discard(document);
         await pending;
-        const reopened = await workspace.open('Rename.x');
-        assert.strictEqual(reopened.getText(), fixture('Rename.x'));
-        await applyRename(reopened, position(reopened, 'local'), 'renamed');
-    }, ['Deterministic in-flight edit/close/sibling races run in XdkCursorServerTest; this editor race may complete before closing']);
+        const reopened = await workspace.open(data.file);
+        assert.strictEqual(reopened.getText(), fixture(data.file));
+        await applyRename(reopened, position(reopened, data.anchor), data.newName);
+    });
 
-    playbook('X58', 'rename recovers after syntax errors and rejects invalid or conflicting names', async workspace => {
-        const document = await workspace.open('Rename.x');
-        await workspace.replace(document, fixture('Rename.x').replace('Int run()', 'Int broken(\n Int run()'));
+    playbook('X58', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, data.replaceWith));
         await diagnostics(document.uri, values => values.length > 0, 'Broken rename source');
-        assert.strictEqual(await rename(document, position(document, 'local'), 'renamed'), null);
-        await workspace.replace(document, fixture('Rename.x'));
+        assert.strictEqual(await rename(document, position(document, data.anchor), data.newName), null);
+        await workspace.replace(document, fixture(data.file));
         await noErrors(document.uri);
-        for (const name of ['not-a-name', 'captured']) {
-            assert.strictEqual(await rename(document, position(document, 'local'), name), null, name);
+        for (const name of data.invalidNames) {
+            assert.strictEqual(await rename(document, position(document, data.anchor), name), null, name);
         }
-        await applyRename(document, position(document, 'local'), 'renamed');
+        await applyRename(document, position(document, data.anchor), data.newName);
     });
 }
