@@ -1065,16 +1065,39 @@ are compiler-output checks that the editor UI cannot establish. To run them with
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
-The initial Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate
-features disabled. It reads the fixtures below and exercises startup, X2, X4's definition
-portion, X7, X45–X46, CFG1's clear/restore transition and 7a.8. It drives editor actions and
-checks the diagnostics and completion items delivered to IntelliJ. Remaining rows and the
-Problems tool-window layout are not yet automated in IntelliJ; VS Code's complete case list
-must not be interpreted as IntelliJ coverage.
+The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
+disabled. It runs startup and eighteen shared scenarios: X2, X4, X6–X13, X45–X46, X71, X75,
+X86–X87, CFG1 and 7a.8. Twelve have full scenario assertions and six have explicitly partial
+coverage. X2 and 7a.8 open **Problems → Current File**, check its diagnostic row locations/counts,
+and check that corrections clear the rows. Editor severity and source-span checks remain in place.
+The report also lists all 76 unimplemented scenarios and their specific missing native checks.
+Problems-row clicking and visual layout remain manual; VS Code's complete case list does not
+establish IntelliJ parity.
 
 Results are under `lang/intellij-plugin/build/reports/compiler-playbook/run-*/results.json`.
 `ide-paths.txt` identifies the separate IDE profile/log directory. A graphical desktop is
 required. See the [IntelliJ test and configuration instructions](../intellij-plugin/README.md#compiler-playbook-in-intellij).
+
+### Shared editor scenarios
+
+Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
+for all 94 scenarios: X1–X89, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
+manual-check notes. Source programs remain the canonical fixtures below. A `§` marks an offset;
+`${0}` templates substitute literal values without evaluating code.
+
+Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
+all 94 cases. IntelliJ executes twelve fully and six partially, plus a separate startup check;
+its catalog entries explain every partial or unimplemented case. A missing driver implementation
+must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
+case was prevented from running, such as after an earlier failure. Partial coverage never appears
+as a full pass. A failed implemented check fails the Gradle task.
+
+Both reports include the shared file, SHA-256 and complete ID list. Both drivers compare catalog
+IDs with the manual table; VS Code also checks exact registration order, and IntelliJ checks that
+every case declared full/partial executes. To add a scenario, add its data and VS Code consumer,
+then implement its native IntelliJ actions or record the exact missing assertions in its coverage
+entry. Keep client-specific protocol and UI mechanics in the drivers.
 
 ### Launch and confirm the backend
 

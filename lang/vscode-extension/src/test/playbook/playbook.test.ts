@@ -9,8 +9,9 @@ import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { propertyCases } from './properties';
 import { renameCases } from './rename';
+import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases } from './semantics';
-import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook, position } from './support';
+import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
 
 suite('XdkAdapter playbook', function () {
     suiteSetup(async function () {
@@ -36,32 +37,34 @@ suite('XdkAdapter playbook', function () {
     advancedCases();
     configurationCases();
 
-    playbook('7a.8', 'compiler-only duplicate annotation warning is delivered exactly once', async workspace => {
-        const document = await workspace.open('DupAnno.x');
-        const result = await diagnostics(document.uri, values => values.some(item => diagnosticCode(item) === 'VERIFY-75'), 'Duplicate annotation warning');
-        assert.strictEqual(result.length, 1);
-        assert.strictEqual(result[0].severity, vscode.DiagnosticSeverity.Warning);
+    playbook('7a.8', async (workspace, data) => {
+        const scenario = shared.warning;
+        const document = await workspace.open(scenario.file);
+        const result = await diagnostics(document.uri, values => values.some(item => diagnosticCode(item) === scenario.code), 'Duplicate annotation warning');
+        assert.strictEqual(result.length, scenario.count);
+        assert.strictEqual(vscode.DiagnosticSeverity[result[0].severity].toUpperCase(), scenario.severity);
+        assert.ok(result[0].message.toLowerCase().includes(scenario.messageContains.toLowerCase()));
         assert.strictEqual(result[0].source, 'xtc');
-        const declaration = position(document, '@Atomic @Override Int x', '@Atomic @Override Int '.length);
-        assert.ok(result[0].range.isEqual(new vscode.Range(declaration, declaration.translate(0, 1))));
+        const declaration = document.positionAt(scenarioOffset(document.getText(), scenario.declaration));
+        assert.ok(result[0].range.isEqual(new vscode.Range(declaration, declaration.translate(0, data.warningCount))));
         await nextProblem(document, result);
-        const errorDocument = await workspace.open('Navigation.x');
-        await workspace.replace(errorDocument, fixture('Navigation.x').replace('Int value = 2;', 'String value = 2;'));
+        const errorDocument = await workspace.open(data.errorFile);
+        await workspace.replace(errorDocument, fixture(data.errorFile).replace(data.replaceFrom, data.replaceWith));
         await diagnostics(errorDocument.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Error alongside warning');
-        await diagnostics(document.uri, values => values.length === 1 && values[0].severity === vscode.DiagnosticSeverity.Warning, 'Warning remains in other file');
-        await workspace.replace(document, fixture('DupAnno.x').replace('@Atomic @Override', '@Override'));
+        await diagnostics(document.uri, values => values.length === data.warningCount && values[0].severity === vscode.DiagnosticSeverity.Warning, 'Warning remains in other file');
+        await workspace.replace(document, editScenario(fixture(scenario.file), scenario.edit));
         await noErrors(document.uri);
         await diagnostics(errorDocument.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Clearing warning preserves error');
-        await workspace.replace(errorDocument, fixture('Navigation.x'));
+        await workspace.replace(errorDocument, fixture(data.errorFile));
         await noErrors(errorDocument.uri);
-        await workspace.replace(document, fixture('DupAnno.x'));
-        await diagnostics(document.uri, values => values.length === 1 && diagnosticCode(values[0]) === 'VERIFY-75', 'Warning restored');
-    }, ['Problems warning icon/code/count rendering and clicking a row']);
+        await workspace.replace(document, fixture(scenario.file));
+        await diagnostics(document.uri, values => values.length === scenario.count && diagnosticCode(values[0]) === scenario.code, 'Warning restored');
+    });
 
-    playbook('7a.9', 'bad source has a bounded diagnostic result', async workspace => {
-        const document = await workspace.open('Broken.x', 'module Broken {\n' + Array.from({ length: 150 }, (_, index) => `Missing${index} value${index};`).join('\n') + '\n}');
+    playbook('7a.9', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.moduleStart + Array.from({ length: data.declarationCount }, (_, index) => scenarioText(data.declaration, index, index)).join('\n') + data.moduleEnd);
         const result = await diagnostics(document.uri, values => values.length > 0, 'Invalid source diagnostics');
-        assert.ok(result.filter(item => item.severity === vscode.DiagnosticSeverity.Error).length <= 100, `${result.length} diagnostics`);
-        assert.ok(result.every(item => diagnosticCode(item) !== 'EMB-5'));
+        assert.ok(result.filter(item => item.severity === vscode.DiagnosticSeverity.Error).length <= data.maximumErrors, `${result.length} diagnostics`);
+        assert.ok(result.every(item => diagnosticCode(item) !== data.diagnosticCode));
     });
 });

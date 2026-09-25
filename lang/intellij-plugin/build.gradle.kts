@@ -885,6 +885,9 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
                 .get(),
         )
         systemProperty("xtc.playbook.adapter", providers.gradleProperty("lsp.adapter").getOrElse("treesitter"))
+        val scenarios = rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
+        inputs.file(scenarios)
+        systemProperty("xtc.playbook.scenarios", scenarios.asFile.absolutePath)
         inputs.file(rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"))
         systemProperty(
             "xtc.playbook.manual",

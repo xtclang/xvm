@@ -314,7 +314,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X82, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X89, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -335,6 +335,12 @@ missing, and records remaining visual/manual checks explicitly. `latest-run.txt`
 latest `results.txt`/`results.json` and retained scratch workspace. After assembling the compiler
 extension, `npm run test:playbook` runs only its editor checks; the Gradle command also supplies
 host/protocol regression evidence. The existing default-backend smoke suite remains separate.
+All 94 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+[shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
+A type-only JSON import checks those values during compilation; the data is not bundled into the
+production extension. The catalog is a declared compilation/test input. Reports include its
+SHA-256 and complete ID list. The [shared scenario notes](../doc/manual-test-plan.md#shared-editor-scenarios)
+explain native assertions and remaining IntelliJ coverage gaps.
 
 **Tests are not auto-attached to `:check`.** The test downloads ~210 MB on first run and requires either a display or `xvfb`; both make it a poor fit for unconditional CI runs. Wire it into your CI pipeline explicitly when you want it.
 

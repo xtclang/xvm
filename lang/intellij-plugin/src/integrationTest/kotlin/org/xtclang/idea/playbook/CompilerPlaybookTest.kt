@@ -29,20 +29,26 @@ class CompilerPlaybookTest {
         val run = Files.createTempDirectory(reports, "run-")
         val workspace = Files.createDirectory(run.resolve("workspace"))
         val manual = Files.readString(Path.of(System.getProperty("xtc.playbook.manual")))
+        val blocks = Regex("```xtc\\n([\\s\\S]*?)\\n```").findAll(manual).map { it.groupValues[1] }.toList()
+        val scenarioPath = Path.of(System.getProperty("xtc.playbook.scenarios"))
+        val shared = SharedScenarios.read(scenarioPath)
         val fixtures =
-            listOf("Navigation", "Editing", "DupAnno", "Library", "Consumer").associateWith { name ->
-                val source =
-                    Regex("```xtc\\n(?:[^`]*?\\n)?(module $name \\{[\\s\\S]*?)\\n```")
-                        .find(manual)
-                        ?.groupValues
-                        ?.get(1)
-                requireNotNull(source) { "Missing $name fixture in manual-test-plan.md" }
-                "$source\n".also { Files.writeString(workspace.resolve("$name.x"), it) }
+            shared.common.fixtures.associate { fixture ->
+                val matches = blocks.filter { Regex(fixture.pattern, RegexOption.MULTILINE).containsMatchIn(it) }
+                require(matches.size == 1) { "Expected one ${fixture.file} fixture in manual-test-plan.md" }
+                val text = "${matches.single()}\n"
+                val file = workspace.resolve(fixture.file)
+                Files.createDirectories(file.parent)
+                Files.writeString(file, text)
+                fixture.file to text
             }
+        val manualIds = Regex("^\\| (X\\d+) \\|", RegexOption.MULTILINE).findAll(manual).map { it.groupValues[1] }.toList()
+        require(shared.ids.filter { it.startsWith("X") } == manualIds) { "Shared catalog and manual playbook rows differ" }
+        shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
         val lsp4ijVersion = System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
-        val cases = CompilerPlaybook(fixtures, lsp4ijVersion)
+        val cases = CompilerPlaybook(fixtures, shared, lsp4ijVersion)
         val previousDi = di
         di =
             DI {
@@ -94,7 +100,11 @@ class CompilerPlaybookTest {
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
                     "adapter" to "compiler",
+                    "sharedScenarios" to mapOf("file" to scenarioPath.toString(), "sha256" to shared.sourceHash, "ids" to shared.ids),
                     "cases" to cases.results,
+                    "counts" to cases.results.groupingBy { it.status }.eachCount(),
+                    "scope" to
+                        "Native IntelliJ actions with Ultimate disabled. Partial and unimplemented cases are explicit; manual visual checks remain separate.",
                     "ideFailures" to ideFailures.toList(),
                 )
             Files.writeString(run.resolve("results.json"), GsonBuilder().setPrettyPrinting().create().toJson(report) + "\n")
