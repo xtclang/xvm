@@ -512,6 +512,30 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["void damaged(Str| value) {}", "Str| property;"])
+    fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
+        val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('|')
+        val suffix = declaration.substringAfter('|') + "\r\n Int later=1; }"
+        val column = prefix.substringAfterLast('\n').length
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(prefix + suffix)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(1, column)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            val edit = items.single { it.label == "String" }.textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(1, column - 3), cursor))
+            assertThat(edit.newText).isEqualTo("String")
+            assertThat(session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))?.signatures.orEmpty()).isEmpty()
+            session.change(prefix.dropLast(3) + edit.newText + suffix, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["new Int[nu|]", "new Int[nu|", "new String[nu|](\"x\")"])
     fun `array size edits and signature fitting round trip over stdio`(expression: String) {
         val prefix = "module Stdio { void run(Int number, String numberText) { /* 😀 */ " + expression.substringBefore('|')

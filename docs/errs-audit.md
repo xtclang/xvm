@@ -673,3 +673,33 @@ the compiler-established source parentage; the parser-only test checks independe
 because parentage is introduced later in the pipeline. Shared X90 and packaged stdio exercise the
 original UTF-16 edit range and diagnostic repair. Final validation is recorded under
 [C19/L34](errs-integration-plan.md#array-dimension-cursors).
+
+## Unfinished declaration-header audit (2026-09-25)
+
+C20/L35 retains incomplete method headers structurally and completes simple member/parameter type
+prefixes. A syntax-only `IncompleteDeclarationStatement` is preferable to a partial
+`MethodDeclarationStatement`: registration of a fabricated signature could leak parameters,
+methods and invalid type identities into normal compiler stages. The new node owns only original
+source metadata and selected cursor syntax; its child list follows ordinary AST cloning, while
+metadata stays final. The discarded body cannot leak its local declarations into the owner.
+
+Header name queries use `NameResolver` in the real enclosing class, and reuse the existing
+`CursorBinding.NamedType` output. They do not create a method Context or enumerate value members.
+Regression controls cover imported aliases, wildcard imports, typedefs, nested owners, shadowing,
+unsaved member/root overlays, current-version invalidation, exact edits and source ownership.
+Missing names remain absent; generic-method, qualified/compound and type-composition headers are
+not inferred. Missing `)` or a parameter name still produces normal diagnostics after accepting a
+type completion. Skipping a body uses brace depth and checks cancellation for each token; it keeps
+the actual closing-token range for folds. Parser tests check a collector without deduplication,
+first-error abort, speculative isolation, mid-body cancellation and independent cloned children.
+
+The first prototype used the generic delimiter-skip helper; review found that helper does not
+advance `prev()` for every skipped token. The header scanner now consumes actual tokens so the
+retained range reaches the body end. A generic-method negative fixture was corrected from a
+redundant-return-list spelling to `<T> void damaged(...)`; this was a test-input issue.
+
+Remaining bounds: multi-return/generic/type-composition headers, qualified/compound type names,
+method-formal candidates and name completion. No separator before a later declaration, or complex
+default/header syntax with its own braces, can still limit retention. X91–X92 keep shared editor
+inputs; native X92 checks diagnostics/Problems/repair but explicitly lacks outline and fold checks.
+Final evidence and extraction boundaries are in the [integration plan](errs-integration-plan.md#unfinished-declaration-headers).
