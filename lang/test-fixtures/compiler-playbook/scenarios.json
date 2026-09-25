@@ -469,10 +469,8 @@
         "expected": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X16": {
@@ -494,9 +492,9 @@
         "argumentOffset": 7
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native signature popup, active argument and completed-call diagnostics are checked; selected-call declaration navigation is not yet driven."
         ]
       }
     },
@@ -517,10 +515,8 @@
         "typePattern": "\\b${0}\\b"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X18": {
@@ -535,10 +531,8 @@
         "signatureCount": 0
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X19": {
@@ -558,10 +552,8 @@
         "staticArgument": "\"y\""
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X20": {
@@ -578,9 +570,9 @@
         "targetCount": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native request confirms suppressed parameter metadata and no bold argument. LSP4IJ 0.21.0 displays \"no parameters\" instead of retaining the signature label; selected-overload navigation is not yet driven."
         ]
       }
     },
@@ -1846,10 +1838,8 @@
         "signature": "new Packet(String first, String second)"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X75": {
@@ -2096,9 +2086,9 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
         ]
       }
     },
@@ -2129,9 +2119,9 @@
         "label": "text"
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
         ]
       }
     },
@@ -2156,9 +2146,9 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
         ]
       }
     },
@@ -2234,9 +2224,9 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
         ]
       }
     },
@@ -2259,9 +2249,9 @@
         "replacementStartDelta": -2
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
+          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
         ]
       }
     },
