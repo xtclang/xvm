@@ -524,7 +524,9 @@ ordinary compilation still reports its usual errors; a cursor request never repl
 
 This adds no error-listener interface, AST field or semantic collector. Speculation, cancellation
 and error budgets still stop recovery; unrelated malformed statements prevent semantic analysis.
-Missing operands, declaration headers and tuple/literal delimiters are not repaired. See the
+This checkpoint did not repair missing operands, declaration headers or tuple/literal delimiters.
+C17/L30 now extends the latter two around supported cursor holes; unfinished declaration names/types
+and missing operands remain unsupported. See the
 [C12/L24 record](errs-integration-plan.md#missing-delimiter-cursor-recovery) for regressions,
 editor coverage, ownership and future extraction boundaries.
 
@@ -593,3 +595,30 @@ Verification: 19 property regressions pass; the complete run reports 472 execute
 928 executed LSP tests, 29 packaged-stdio tests and 87 editor cases, all with zero failures/errors.
 The prior 40 Java and three LSP skips remain. The retention workload includes property proposals
 and releases all 2,402 observed references; no AST ownership changes were needed.
+
+
+## Specialized constructor and declaration recovery audit (2026-09-25)
+
+The working changes after `cd4ad0d64` close the next cursor API gaps. Constructor probes reuse
+normal preparation for inner/virtual/annotated/formal types and required-type inference; array
+sizes remain written arguments before a parenthesized supplier. Provisional class inference does
+not constrain later arguments more than normal compilation does. Accepted completions are checked
+against complete compiler inputs, including a supplier for an element without a default value.
+
+Declaration recovery exposed a lost-facts path: property constant evaluation validated a disposable
+clone and never reached the source-owned cursor. Explicit cursor analysis now uses the existing
+real initializer path for values containing a hole. No clone facts are promoted and normal constant
+evaluation is unchanged. Method and shorthand-constructor defaults, property values and expression
+bodies have regressions. Tuple/list/set/map recovery retains source ranges and later declarations;
+missing values and unrelated syntax damage remain rejected. No new mutable AST fields were needed.
+
+Anonymous construction, array-dimension cursors, multidimensional construction and unfinished
+declaration names/types remain explicit gaps. The qualified-type fallback's existing `ctx.exit()`
+call was observed during preparation review but was not changed: the complete/partial qualified-inner
+regressions pass, and this pass did not establish an independent defect there. See the
+[C16/L29/C17/L30 validation and extraction record](errs-integration-plan.md#specialized-constructors-and-declarationliteral-cursor-recovery).
+
+Validation: 473 executed Java tests, 964 executed LSP tests, 36 packaged-stdio tests and all 92
+editor cases passed. The existing 40 Java/three LSP skips are unchanged. The additional focused
+18-case recovery run verifies exact boundary diagnostics and non-emission. The retention workload
+retained zero of 2,402 observed objects. The integration record links the full XML and editor report.
