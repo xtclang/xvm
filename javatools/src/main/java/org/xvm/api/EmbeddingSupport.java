@@ -560,9 +560,14 @@ public class EmbeddingSupport {
      * Bare-name prefixes and empty statement boundaries expose visible scope; a final named argument
      * awaiting its value retains its label. Candidate signatures can infer types from written arguments.
      * Compound/conditional values and arguments following the cursor retain their real contexts.
-     * Missing enclosing call/group parentheses and index brackets are retained at statement or outer
-     * delimiter boundaries. An explicit cursor at EOF can also retain missing block braces. This
-     * does not repair missing operands, declaration headers, tuple/literal delimiters or unrelated errors.
+     * Constructors reuse normal receiver/type preparation, including virtual/inner/annotated types,
+     * required-type and argument-derived class inference, and parenthesized array initializers.
+     * Missing call/group/tuple parentheses and index/list/map brackets are retained at statement or
+     * outer-delimiter boundaries. Declaration values retain missing terminators; parameter defaults
+     * may retain a missing closing parenthesis before a body. An explicit cursor at EOF can also
+     * retain missing block braces. This does not invent operands, declaration names/types or literal
+     * contents, or repair unrelated errors. Anonymous construction and array-dimension slots are
+     * outside the supported constructor cursor forms.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,

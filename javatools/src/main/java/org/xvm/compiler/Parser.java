@@ -1158,10 +1158,10 @@ public class Parser {
         case ASN:
             Token eq = expect(Id.ASN);
             Expression expr = parseExpression();
-            Token semi = expect(Id.SEMICOLON);
+            finishValueStatement(expr);
             ReturnStatement stmt = new ReturnStatement(eq, expr);
             body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
-                                                           semi.getEndPosition());
+                                                           prev().getEndPosition());
             break;
         default:
             body = parseStatementBlock();
@@ -1238,7 +1238,7 @@ public class Parser {
             // "=" Expression ";"
             value   = parseExpression();
             lEndPos = value.getEndPosition();
-            expect(Id.SEMICOLON);
+            finishValueStatement(value);
         } else if (body == null || fNeedsSemi) {
             expect(Id.SEMICOLON);
         }
@@ -3288,7 +3288,10 @@ public class Parser {
             // argument list for a "virtual new"; assume it's a virtual new, and we'll back
             // up if we were wrong
             Mark mark = mark();
-            args    = parseArgumentList(true, false, false);
+            args    = f_partialAnalysis
+                    ? parsePartialArguments(new NewExpression(left, keyword, null, List.of(),
+                            -1, null, keyword.getEndPosition()), false)
+                    : parseArgumentList(true, false, false);
             lEndPos = prev().getEndPosition();
 
             Token.Id idNext = peek().getId();
@@ -3317,7 +3320,10 @@ public class Parser {
                 }
 
                 // parenthesized arguments after the dims
-                List<Expression> argsTrailing = parseArgumentList(false, false, false);
+                List<Expression> argsTrailing = f_partialAnalysis && peek(Id.L_PAREN)
+                        ? parsePartialArguments(new NewExpression(left, keyword, type, args,
+                                dims, null, lEndPos), false)
+                        : parseArgumentList(false, false, false);
                 if (argsTrailing != null) {
                     if (!argsTrailing.isEmpty()) {
                         if (args.isEmpty()) {
@@ -3329,10 +3335,22 @@ public class Parser {
                     lEndPos = prev().getEndPosition();
                 }
             } else {
-                args    = f_partialAnalysis && left == null
-                        ? parsePartialArguments(new NewExpression(null, keyword, type, List.of(),
-                                -1, null, type.getEndPosition()), false)
-                        : parseArgumentList(true, false, false);
+                try {
+                    args = f_partialAnalysis
+                            ? parsePartialArguments(new NewExpression(left, keyword, type, List.of(),
+                                    -1, null, type.getEndPosition()), false)
+                            : parseArgumentList(true, false, false);
+                } catch (IncompleteSyntax failure) {
+                    if (left == null && peek(Id.L_CURLY)) {
+                        // Preserve the anonymous body as construction syntax. A cursor probe
+                        // must not mistake it for ordinary construction followed by a block.
+                        body = parseTypeCompositionBody(keyword);
+                        var site = failure.statement;
+                        site.replaceChild(site.getTarget(), new NewExpression(left, keyword, type,
+                                List.of(), -1, body, prev().getEndPosition()));
+                    }
+                    throw failure;
+                }
                 lEndPos = prev().getEndPosition();
             }
 
@@ -3637,7 +3655,10 @@ public class Parser {
                 // parsed to see if it's followed by a lambda operator
                 List<Expression> exprs = new ArrayList<>();
                 exprs.add(expr);
-                while (match(Id.R_PAREN, match(Id.COMMA) == null) == null) {
+                Token tupleClose;
+                while ((tupleClose = match(Id.COMMA) == null
+                        ? expectPartialClose(Id.R_PAREN, exprs)
+                        : matchPartialClose(Id.R_PAREN, exprs)) == null) {
                     exprs.add(parseExpression());
                 }
 
@@ -3647,7 +3668,7 @@ public class Parser {
                 }
 
                 // it's a Tuple literal
-                return new TupleExpression(null, exprs, tokLParen.getStartPosition(), prev().getEndPosition());
+                return new TupleExpression(null, exprs, tokLParen.getStartPosition(), tupleClose.getEndPosition());
 
             case R_PAREN:
                 // this is either a parenthesized expression or a single parameter for a
@@ -4164,12 +4185,13 @@ public class Parser {
                         if (peek().getId() == Id.ASN) {
                             List<Expression> keys   = new ArrayList<>();
                             List<Expression> values = new ArrayList<>();
-                            while (match(Id.R_SQUARE) == null) {
+                            Token close;
+                            while ((close = match(Id.R_SQUARE)) == null) {
                                 keys.add(keys.isEmpty() ? expr : parseExpression());
                                 expect(Id.ASN);
                                 values.add(parseExpression());
                                 if (match(Id.COMMA) == null) {
-                                    expect(Id.R_SQUARE);
+                                    close = expectPartialClose(Id.R_SQUARE, values);
                                     break;
                                 }
                             }
@@ -4178,12 +4200,12 @@ public class Parser {
                             Token          tokName  = new Token(ofMap, ofMap, Id.IDENTIFIER, "Map");
                             TypeExpression exprType = new NamedTypeExpression(null,
                                     Collections.singletonList(tokName), null, null, null, ofMap);
-                            return new MapExpression(exprType, keys, values, prev().getEndPosition());
+                            return new MapExpression(exprType, keys, values, close.getEndPosition());
                         }
                     }
 
-                    expect(Id.R_SQUARE);
-                    break;
+                    return new ListExpression(type, exprs, lStartPos,
+                            expectPartialClose(Id.R_SQUARE, exprs).getEndPosition());
                 }
             }
             return new ListExpression(type, exprs, lStartPos, prev().getEndPosition());
@@ -4212,8 +4234,8 @@ public class Parser {
                 expect(Id.ASN);
                 values.add(parseExpression());
                 if (match(Id.COMMA) == null) {
-                    expect(Id.R_SQUARE);
-                    break;
+                    return new MapExpression(type, keys, values,
+                            expectPartialClose(Id.R_SQUARE, values).getEndPosition());
                 }
             }
             return new MapExpression(type, keys, values, prev().getEndPosition());
@@ -4221,17 +4243,16 @@ public class Parser {
 
         case "Tuple": {
             expect(Id.L_PAREN);
-            List<Expression> exprs = null;
-            while (match(Id.R_PAREN) == null) {
-                if (exprs == null) {
-                    exprs = new ArrayList<>();
-                } else {
+            List<Expression> exprs = new ArrayList<>();
+            Token close;
+            while ((close = matchPartialClose(Id.R_PAREN, exprs)) == null) {
+                if (!exprs.isEmpty()) {
                     expect(Id.COMMA);
                 }
                 exprs.add(parseExpression());
             }
             return new TupleExpression(type, exprs, type.getStartPosition(),
-                    prev().getEndPosition());
+                    close.getEndPosition());
         }
 
         case "Path":
@@ -5021,7 +5042,9 @@ public class Parser {
                         value = parseExpression();
                     }
                     params.add(new Parameter(type, name, value));
-                } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
+                } while ((match(Id.COMMA) == null
+                        ? expectPartialClose(Id.R_PAREN, params)
+                        : match(Id.R_PAREN)) == null);
             }
         }
         return params;
@@ -5195,7 +5218,7 @@ public class Parser {
         return new InvocationExpression(callee, async, args, prev().getEndPosition());
     }
 
-    /** Shared cursor syntax for ordinary calls and explicit, non-array construction. */
+    /** Shared cursor syntax for ordinary calls and constructor arguments. */
     private List<Expression> parsePartialArguments(Expression callee, boolean allowBindings) {
         Token            open       = allowBindings && peek(Id.ASYNC_PAREN) ? current() : expect(Id.L_PAREN);
         List<Expression> args       = new ArrayList<>();
@@ -5265,7 +5288,7 @@ public class Parser {
         return prev().getEndPosition() <= f_cursor
                 && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
                 && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
-                        || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON));
+                        || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON) || peek(Id.L_CURLY));
     }
 
     /**
@@ -5274,7 +5297,12 @@ public class Parser {
      * this zero-width end marker neither edits the source nor consumes an enclosing delimiter.
      * Without that hole, ordinary parsing (including speculation and error budgets) still fails.
      */
-    private Token expectPartialClose(Id close, List<Expression> expressions) {
+    private Token expectPartialClose(Id close, List<? extends AstNode> expressions) {
+        Token token = matchPartialClose(close, expressions);
+        return token == null ? expect(close) : token;
+    }
+
+    private Token matchPartialClose(Id close, List<? extends AstNode> expressions) {
         Token token = match(close);
         if (token != null) {
             return token;
@@ -5283,14 +5311,14 @@ public class Parser {
             long end = Math.max(f_cursor, prev().getEndPosition());
             return new Token(end, end, close);
         }
-        return expect(close);
+        return null;
     }
 
     private boolean atMissingClose() {
         return f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
                 && !f_errs.get().isAbortDesired()
                 && (eof() || peek(Id.SEMICOLON) || peek(Id.R_CURLY)
-                        || peek(Id.R_PAREN) || peek(Id.R_SQUARE));
+                        || peek(Id.R_PAREN) || peek(Id.R_SQUARE) || peek(Id.L_CURLY));
     }
 
     /** Query syntax ownership rather than caching cursor state on ordinary AST nodes. */

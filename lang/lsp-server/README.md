@@ -185,15 +185,21 @@ Signature help uses exact selected signatures
 for completed calls. Incomplete qualified/implicit/static calls expose compiler-fitted candidates,
 generic expected types and named parameter mappings, including a pending `name=|` and an existing
 closing parenthesis. Function-valued calls also show their full function type while arguments are
-missing, with active positional slots and no guessed parameter names or runtime targets. Ordinary
-`new Type(...)` candidates include overload filtering, explicit class type arguments, named slots
-and defaults. Virtual/inner/array/annotated construction and omitted class-type inference remain
-outside the proven scope. Candidates never claim final overload selection. Requests propagate
-cancellation and reject stale document/module results. Missing call/group parentheses and index
+missing, with active positional slots and no guessed parameter names or runtime targets. Constructor
+candidates include overload filtering, named slots and defaults. Qualified/implicit inner,
+virtual, annotated and formal construction reuse compiler preparation. Expected assignment/return
+types constrain omitted class parameters; written arguments provide provisional class inference
+that can change as more arguments are supplied. Parenthesized array initializers retain their
+written dimension arguments and highlight the supplier parameter correctly. Anonymous construction,
+array-dimension cursors and multidimensional construction remain unsupported. Candidates never
+claim final overload selection. Requests propagate cancellation and reject stale document/module results. Missing call/group parentheses and index
 brackets around the cursor retain completion and signature help at statement/outer-delimiter
 boundaries; a cursor at EOF also tolerates missing block braces. Normal compiler diagnostics remain
-visible until the text is repaired. Missing operands, declaration headers and tuple/literal
-delimiters remain outside this recovery. The
+visible until the text is repaired. Tuple, typed-tuple, list/set/collection and map closers also
+recover around a cursor hole. Expression-bodied declarations/property initializers can lack their
+terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
+their real source-owned compiler context. Missing operands, unfinished declaration names/types,
+missing map entries and unterminated literal contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module

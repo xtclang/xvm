@@ -255,4 +255,93 @@ export function advancedCases(): void {
         await noErrors(document.uri);
         assert.strictEqual(document.getText(), fixture('Advanced.x'));
     });
+
+    playbook('X83', 'specialized constructors preserve receiver type and exact argument edits', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        for (const original of ['outer.new Part("a", text)', 'packet.new("a", text)', 'new @Marked Packet<String>("a", text)']) {
+            const prefix = original.replace('text)', 'te');
+            await workspace.replace(document, fixture('Advanced.x').replace(original, `${prefix})`));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved constructor prefix');
+            const at = position(document, prefix, prefix.length);
+            const help = await workspace.signature(document, at);
+            assert.match(help?.signatures[0].label ?? '', /String first, String second/);
+            assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, 1);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(label), ['text']);
+            await workspace.accept(document, items[0]);
+            assert.strictEqual(document.getText(), fixture('Advanced.x'));
+            await noErrors(document.uri);
+        }
+    });
+
+    playbook('X84', 'omitted constructor types distinguish required from provisional inference', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        for (const original of ['Packet<String> inferred = new Packet("a", text)', '        new Packet("a", text)']) {
+            const prefix = original.replace('text)', 'te');
+            await workspace.replace(document, fixture('Advanced.x').replace(original, `${prefix})`));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved inferred constructor prefix');
+            const at = position(document, prefix, prefix.length);
+            assert.match((await workspace.signature(document, at))?.signatures[0].label ?? '', /String first, String second/);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(label).sort(), original.includes('inferred') ? ['text'] : ['text', 'textNumber']);
+            await workspace.accept(document, items.find(item => label(item) === 'text')!);
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+    });
+
+    playbook('X85', 'array dimensions precede the active initializer argument', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        for (const prefix of ['new String[2](te', 'new String[2](supply=te']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('new String[2](text)', `${prefix})`));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved array initializer');
+            const at = position(document, prefix, prefix.length);
+            const help = await workspace.signature(document, at);
+            assert.strictEqual(help?.signatures[0].activeParameter ?? help?.activeParameter, 1);
+            assert.match(help?.signatures[0].label ?? '', /supply/);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.deepStrictEqual(items.map(label), ['text']);
+            await workspace.accept(document, items[0]);
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+    });
+
+    playbook('X86', 'tuple and collection literals retain cursor completion with missing closers', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        for (const expression of ['(1, word.si', 'Tuple<Int, Int>:(1, word.si', '[word.si', '["key"=word.si']) {
+            await workspace.replace(document, fixture('Advanced.x').replace('[word.size]', expression));
+            await diagnostics(document.uri, values => values.length > 0, 'Missing literal delimiter');
+            const at = position(document, expression, expression.length);
+            const item = (await workspace.completion(document, at)).find(item => label(item) === 'size');
+            assert.ok(item);
+            assert.ok(item.range instanceof vscode.Range && item.range.isEqual(new vscode.Range(at.translate(0, -2), at)));
+            await workspace.accept(document, item);
+            await diagnostics(document.uri, values => values.length > 0, 'Accepting a member must not repair delimiters');
+            await workspace.replace(document, fixture('Advanced.x'));
+            await noErrors(document.uri);
+        }
+    });
+
+    playbook('X87', 'declaration recovery preserves initializer and default-value contexts', async workspace => {
+        const document = await workspace.open('Advanced.x');
+        for (const [prefix, suffix, selected, terminator] of [
+            ['Int declaredSize(String word) = word.si', '', 'size', ';'],
+            ['Int declaredSize = "x".si', '', 'size', ';'],
+            ['void defaults(Int size = Int64.Ma', ' {}', 'MaxValue', ')']
+        ]) {
+            const text = fixture('Advanced.x').replace(/}\s*$/, `${prefix}${suffix}\n}\n`);
+            await workspace.replace(document, text);
+            await diagnostics(document.uri, values => values.length > 0, 'Incomplete declaration');
+            const at = position(document, prefix, prefix.length);
+            const item = (await workspace.completion(document, at)).find(item => label(item) === selected);
+            assert.ok(item, prefix);
+            await workspace.accept(document, item);
+            await workspace.replace(document, text.replace(prefix, prefix.slice(0, -2) + selected + terminator));
+            await noErrors(document.uri);
+        }
+        await workspace.replace(document, fixture('Advanced.x'));
+        await noErrors(document.uri);
+    });
+
 }
