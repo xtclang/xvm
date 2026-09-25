@@ -12,7 +12,7 @@ the two Markdown files above.
 
 ## Shared editor scenario data
 
-Status: implemented as working changes after `c7976f970`. The preceding C18/L31 checkpoint was
+Implemented on `lagergren/errs` in `019d3f811` (L32). The preceding C18/L31 checkpoint was
 committed and pushed first: `cd1732d42` implements anonymous constructors; `c7976f970` maps them.
 
 - [x] Move all 94 scenario definitions into `lang/test-fixtures/compiler-playbook/scenarios.json`:
@@ -72,7 +72,8 @@ failed/not-run entries and zero IDE failures. Both reports identify the same cat
 `8098316aadfbde0ade8bdf32cc35fdf1b4d6eb2cc3c2cf4dfa8f49868a98ef72`. Gradle reported
 `Configuration cache entry reused`. TypeScript compilation and Kotlin checks passed; review
 confirmed that all 94 VS Code bodies retain their pre-migration assertion calls. Markdown file
-links and `git diff --check` passed. Host/compiler tests were up-to-date in this final replay;
+links, `git diff --check` and the pre-push root `spotlessCheck` passed. Host/compiler tests were
+up-to-date in this final replay;
 this test-infrastructure change does not claim another fresh host-test run.
 
 Command (repeat with `--info` for configuration-cache evidence):
@@ -2292,7 +2293,7 @@ above identify old candidate patches, not additional changes to merge into the i
 | L30 | Declaration/literal recovery consumers and editor controls | `46d6c1442` (recovery consumers); X86–X87 | C17, L24, L16 |
 | C18 | Anonymous construction ownership and constructor fitting | `cd1732d42` compiler portion; anonymous-constructor section above | C16 and cursor/listener foundations |
 | L31 | Anonymous-constructor labels, consumers and ownership controls | `cd1732d42` host portion; X88–X89 | C18, L29/L30, L16 |
-| L32 | Complete shared editor catalog and native consumers | Working changes after `c7976f970`; shared-scenario section above | L16, L27, L31 |
+| L32 | Complete shared editor catalog and native consumers | `019d3f811`; shared-scenario section above | L16, L27, L31 |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
