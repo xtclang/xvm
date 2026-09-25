@@ -8,6 +8,15 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Shared editor scenarios (2026-09-25, working changes after `c7976f970`).**
+All 94 scenarios now get their inputs, expectations and manual-check notes from one shared JSON
+catalog. VS Code retains the full assertion set. IntelliJ implements twelve scenarios fully and
+six partially, plus startup; its report names the missing assertions for all remaining 76 cases.
+Its error/warning cases also open Problems → Current File and check row locations/counts and
+clearing. Both reports include catalog IDs and SHA-256. Shared data does not imply editor parity.
+No compiler, embedding API or AST change is involved. See
+[L32](errs-integration-plan.md#shared-editor-scenario-data) for scope, remaining work and validation.
+
 **Anonymous constructors (2026-09-25, `cd1732d42`).**
 Cursor queries now prepare the source-owned anonymous declaration and fit its own or superclass
 constructors. Interface/abstract implementations, generic and annotated bases, named slots and
