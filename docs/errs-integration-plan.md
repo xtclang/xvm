@@ -841,7 +841,7 @@ discovery and persistent indexing remain separate work.
 
 #### Typed argument-prefix completion
 
-**Implementation (2026-09-25, working tree after `70a26b1d9`).** A direct final argument prefix
+**Implementation (2026-09-25, `dc3218d81`).** A direct final argument prefix
 such as `take(te|)` or `take(value=te|)` now retains its call's fitting context. Previously it became
 an ordinary NAME site and offered every matching visible name, even incompatible values. The
 parser retains the original prefix token separately from complete earlier arguments and the
@@ -888,8 +888,8 @@ Java analysis exclusively.
 | C14 | Parser promotion; `IncompleteStatement` token/factory/getter; `IncompleteExpression` syntax accessor; `PartialCallResolver` prefix filter; parser clone/source regressions | C13, C12 for missing-delimiter composition; additive API only |
 | L26 | Copied prefix/range and replacement edits; adapter, cancellation/retention and stdio tests; X79–X80; capability and ownership docs | C14, L25, L24; editor runner L16 |
 
-These add two groups, bringing the working plan to **53**. Both are currently uncommitted after
-`70a26b1d9`; record the source commit here and in the extraction table at the next checkpoint.
+These add two groups, bringing the working plan to **53**. Source commit `dc3218d81` contains
+the C14 compiler portion and L26 host/tests/documentation portion described above.
 The integrated branch remains `lagergren/errs`; each future PR still needs its own prerequisites
 and independently passing checks.
 
@@ -1929,8 +1929,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L24 | Prove delimiter recovery through the adapter, protocol and editor | `aa65860d0` host portion; delimiter recovery above | C12, L8/L9, C11/L23; editor runner L16 |
 | C13 | Fit proposed visible argument values in the compiler | `f2896916b` compiler portion; argument-value completion above | C8/C9/C11; constructor and eight-component record-pattern migration proof |
 | L25 | Complete compatible locals/parameters at missing argument slots | `f2896916b` host portion; argument-value completion above | C13, L8/L9/L23; editor runner L16; X25 synchronization in the same commit belongs to L16 |
-| C14 | Retain typed argument prefixes in their call fitting context | Working tree after `70a26b1d9`; typed argument-prefix completion above | C13, C12; additive syntax token/factory/accessors and compiler prefix filter |
-| L26 | Replace typed argument prefixes with compiler-fitted values | Working tree after `70a26b1d9`; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
+| C14 | Retain typed argument prefixes in their call fitting context | `dc3218d81` compiler portion; typed argument-prefix completion above | C13, C12; additive syntax token/factory/accessors and compiler prefix filter |
+| L26 | Replace typed argument prefixes with compiler-fitted values | `dc3218d81` host portion; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
