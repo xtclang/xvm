@@ -85,6 +85,11 @@ public class ServiceContext {
         return f_container;
     }
 
+    /** @return the container that owns this service's execution and runtime descriptors */
+    public Container getContainer() {
+        return f_container;
+    }
+
     /**
      * Obtain this service's destination for runtime type and value descriptors. It belongs to
      * the container's prepared definition context and has no serialized constant indices.

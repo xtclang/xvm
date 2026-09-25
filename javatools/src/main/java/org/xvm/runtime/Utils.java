@@ -868,7 +868,8 @@ public abstract class Utils {
             // No parameters does not imply no locals; construct() takes the complete frame slots.
             ObjectHandle[] variables = ensureSize(OBJECTS_NONE, constructor.getMaxVars());
             return template.construct(frame, constructor,
-                    template.getCanonicalClass(container), null, variables, Op.A_STACK);
+                    template.ensureClass(container, clz.getCanonicalType(frame.poolContext())),
+                    null, variables, Op.A_STACK);
         }
 
         default:

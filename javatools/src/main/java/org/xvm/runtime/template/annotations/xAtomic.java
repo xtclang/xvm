@@ -70,7 +70,7 @@ public class xAtomic
     }
 
     @Override
-    public ClassTemplate getTemplate(TypeConstant type) {
+    public ClassTemplate getTemplate(Container container, TypeConstant type) {
         ClassTemplate templateAtomicInt = NUMBER_TEMPLATES.get(type.getParamType(0));
         return templateAtomicInt == null ? this : templateAtomicInt;
     }

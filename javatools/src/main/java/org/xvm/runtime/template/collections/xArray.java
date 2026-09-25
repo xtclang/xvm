@@ -178,7 +178,7 @@ public class xArray
     }
 
     @Override
-    public ClassTemplate getTemplate(TypeConstant type) {
+    public ClassTemplate getTemplate(Container container, TypeConstant type) {
         xArray template = ARRAY_TEMPLATES.get(type.getParamType(0));
 
         return template == null ? this : template;

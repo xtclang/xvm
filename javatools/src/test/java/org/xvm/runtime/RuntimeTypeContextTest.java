@@ -44,6 +44,56 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeTypeContextTest {
     @Test
+    void explicitSharedImportRebindsWithoutOpeningOrdinaryInterning() {
+        var first = new Image();
+        var sourceType = first.type("Value");
+        var second = new Image();
+        var targetType = second.type("Value");
+        var source = new RuntimeTypeContext(first.getConstantPool());
+        var target = new RuntimeTypeContext(second.getConstantPool());
+        var firstConstants = first.getConstantPool().getConstants();
+        var secondConstants = second.getConstantPool().getConstants();
+        source.freezeDefinitions();
+        target.freezeDefinitions();
+
+        assertThrows(IncompatibleTypeOwnerException.class,
+                () -> target.importShared(sourceType, source, _ -> false));
+        var result = target.importShared(sourceType, source, _ -> true);
+        assertSame(target.intern(targetType), result);
+        assertSame(targetType.getSingleUnderlyingClass(true).getComponent(),
+                result.getSingleUnderlyingClass(true).getComponent());
+        assertThrows(IncompatibleTypeOwnerException.class, () -> target.intern(source.intern(sourceType)));
+        assertThrows(IncompatibleTypeOwnerException.class, () -> target.intern(sourceType));
+        assertThrows(IncompatibleTypeOwnerException.class,
+                () -> target.importShared(targetType, source, _ -> true));
+        assertArrayEquals(firstConstants, first.getConstantPool().getConstants());
+        assertArrayEquals(secondConstants, second.getConstantPool().getConstants());
+    }
+
+    @Test
+    void failedSharedAdoptionRestoresStrictOwnershipChecks() {
+        var first = new Image();
+        var identity = first.type("Value").getSingleUnderlyingClass(true);
+        var second = new Image();
+        second.type("Value");
+        var source = new RuntimeTypeContext(first.getConstantPool());
+        var target = new RuntimeTypeContext(second.getConstantPool());
+        var pool = source.getDescriptorPool();
+        var failure = new IllegalStateException("injected adoption failure");
+        var broken = pool.register(new TerminalTypeConstant(pool, pool.register(identity)) {
+            @Override
+            protected Constant adoptedBy(ConstantPool destination) {
+                throw failure;
+            }
+        });
+        assertSame(failure, assertThrows(IllegalStateException.class,
+                () -> target.importShared(broken, source, _ -> true)));
+        assertThrows(IncompatibleTypeOwnerException.class, () -> target.intern(broken));
+        assertThrows(IncompatibleTypeOwnerException.class,
+                () -> target.getDescriptorPool().register(pool.register(identity)));
+    }
+
+    @Test
     void coldClassFormalsAndDefaultsUseTheQueryOwner() {
         var file = new Image();
         var value = file.type("Value");

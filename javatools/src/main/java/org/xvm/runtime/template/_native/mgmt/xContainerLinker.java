@@ -278,7 +278,10 @@ public class xContainerLinker
         public int doNext(Frame frameCaller) {
             while (++index < aKeys.length) {
                 InjectionKey key   = aKeys[index];
-                TypeHandle   hType = key.f_type.ensureTypeHandle(container);
+                // The provider binds a supplier in its own execution context. Shared injection
+                // types must be represented there; unshared types retain their foreign identity.
+                TypeHandle   hType = hProvider.getComposition().getContainer()
+                        .ensureTypeHandle(key.f_type, container);
                 StringHandle hName = xString.makeHandle(key.f_sName);
                 CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
 

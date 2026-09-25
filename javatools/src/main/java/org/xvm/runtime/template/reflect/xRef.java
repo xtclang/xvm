@@ -110,11 +110,11 @@ public class xRef
     }
 
     @Override
-    public ClassTemplate getTemplate(TypeConstant type) {
+    public ClassTemplate getTemplate(Container container, TypeConstant type) {
         // if the type is an annotated Ref and the annotation itself has a native template
         // (e.g. @Future Var<Int>) then keep it; however in a case of not a native annotation
         // (e.g. @Lazy Var<Int>) use this template instead
-        ClassTemplate template = super.getTemplate(type);
+        ClassTemplate template = super.getTemplate(container, type);
         return template instanceof xRef
                 ? template
                 : this;

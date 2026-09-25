@@ -143,7 +143,7 @@ public class xRTDelegate
     }
 
     @Override
-    public ClassTemplate getTemplate(TypeConstant type) {
+    public ClassTemplate getTemplate(Container container, TypeConstant type) {
         return getArrayTemplate(type.getParamType(0));
     }
 

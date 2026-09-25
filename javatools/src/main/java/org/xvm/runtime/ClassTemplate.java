@@ -142,6 +142,20 @@ public abstract class ClassTemplate
     }
 
     /**
+     * Select this template's shared method in the receiving container's prepared image before
+     * executing it. A native template belongs to the root; its cached method must not supply
+     * root-owned local operands to a composition built from an application's copied definitions.
+     *
+     * @param container  the execution destination
+     * @param method     the template-owned shared method
+     * @return the receiving image's method declaration
+     */
+    protected MethodStructure resolveMethod(Container container, MethodStructure method) {
+        return (MethodStructure) container.importSharedConstant(method.getIdentityConstant(), f_container)
+                .getComponent();
+    }
+
+    /**
      * Obtain the canonical type that is represented by this {@link ClassTemplate}
      */
     public TypeConstant getCanonicalType() {
@@ -218,11 +232,17 @@ public abstract class ClassTemplate
      * @param atypeParams  the type parameters
      */
     public TypeComposition ensureParameterizedClass(Container container, TypeConstant... atypeParams) {
-        ConstantPool pool          = container.getConstantPool();
+        ConstantPool pool          = container.getTypeContext().getDescriptorPool();
+        // Native templates are selected explicitly from the runtime root. Bind their declaration
+        // to the prepared application before deriving parameterizations; never import a native
+        // root's canonical defaults into another descriptor context by structural equality.
+        IdentityConstant inception = pool.register(container.getConstantPool().register(getInceptionClassConstant()));
+        IdentityConstant declaration = pool.register(container.getConstantPool().register(getClassConstant()));
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
-            getInceptionClassConstant().getType(), atypeParams).normalizeParameters();
+            inception.getType(), atypeParams).normalizeParameters();
 
-        TypeConstant typeMask = getCanonicalType().adoptParameters(pool, atypeParams);
+        TypeConstant typeMask = ((ClassStructure) declaration.getComponent()).getCanonicalType(pool)
+                .adoptParameters(pool, atypeParams);
 
         return ensureClass(container, typeInception, typeMask);
     }
@@ -1053,10 +1073,14 @@ public abstract class ClassTemplate
                 xException.immutableObjectProperty(frame, idProp.getName(), hThis.getType()));
         }
 
-        if (!(hValue instanceof InitializingHandle)
-                && !hValue.getUnsafeType().isA(field.getType())) {
-            return frame.raiseException(
-                xException.typeMismatch(frame, hValue.getUnsafeType(), field.getType()));
+        if (!(hValue instanceof InitializingHandle)) {
+            TypeConstant typeValue = hValue.getUnsafeType();
+            if (typeValue == hValue.getType()) {
+                typeValue = frame.runtimeTypeOf(hValue);
+            }
+            if (!typeValue.isA(field.getType())) {
+                return frame.raiseException(xException.typeMismatch(frame, typeValue, field.getType()));
+            }
         }
 
         if (field.isInflated()) {
@@ -1618,13 +1642,26 @@ public abstract class ClassTemplate
 
     @Override
     public ClassTemplate getTemplate(TypeConstant type) {
+        return getTemplate(f_container, type);
+    }
+
+    /**
+     * Select a native specialization while retaining the requesting container's descriptor owner.
+     * A root-owned template may serve many containers; peeling an annotation must resolve its
+     * underlying type in the requester's context, not in the template's root container.
+     *
+     * @param container  the container that owns the requested type's runtime representation
+     * @param type       the requested type
+     * @return the selected template
+     */
+    public ClassTemplate getTemplate(Container container, TypeConstant type) {
         if (type instanceof AnnotatedTypeConstant typeAnno) {
             while (true) {
                 TypeConstant typeBase = typeAnno.getUnderlyingType();
                 if (typeBase instanceof AnnotatedTypeConstant typeAnnoBase) {
                     typeAnno = typeAnnoBase;
                 } else {
-                    return f_container.getTemplate(typeBase);
+                    return container.getTemplate(typeBase);
                 }
             }
         }

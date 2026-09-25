@@ -35,7 +35,7 @@ public class xRTSlicingDelegate
     }
 
     @Override
-    public ClassTemplate getTemplate(TypeConstant type) {
+    public ClassTemplate getTemplate(Container container, TypeConstant type) {
         return this;
     }
 

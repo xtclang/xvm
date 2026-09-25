@@ -292,6 +292,43 @@ class ConstantPoolOwnershipTest {
     }
 
     @Test
+    void sharedTypeTransportUsesAncestryAndLeavesFrozenImagesUnchanged() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("Transport").getModule());
+            var parent = new MainContainer(runtime, root, file.getModuleId());
+            var child = new NestedContainer(parent, new FileStructure(file).getModuleId(), null, List.of());
+            var sibling = new NestedContainer(parent, new FileStructure(file).getModuleId(), null, List.of());
+            var parentImage = parent.getConstantPool();
+            var childImage = child.getConstantPool();
+            var parentConstants = parentImage.getConstants();
+            var childConstants = childImage.getConstants();
+            parent.getTypeContext().freezeDefinitions();
+            child.getTypeContext().freezeDefinitions();
+            sibling.getTypeContext().freezeDefinitions();
+
+            var source = child.getTypeContext().getDescriptorPool();
+            var shared = source.ensureArrayType(source.typeString());
+            var translated = parent.importSharedType(shared, child);
+            var target = parent.getTypeContext().getDescriptorPool();
+            assertSame(target.ensureArrayType(target.typeString()), translated);
+            assertNotSame(shared, translated);
+            assertThrows(IncompatibleTypeOwnerException.class, () -> parent.getTypeContext().intern(shared));
+
+            // Copies with the same module name do not share their application declarations.
+            var ownType = child.getTypeContext().typeOf(child.getModule());
+            assertThrows(IncompatibleTypeOwnerException.class, () -> parent.importSharedType(ownType, child));
+            assertThrows(IncompatibleTypeOwnerException.class, () -> sibling.importSharedType(ownType, child));
+            assertThrows(IncompatibleTypeOwnerException.class, () -> parent.importSharedType(shared, sibling));
+            assertArrayEquals(parentConstants, parentImage.getConstants());
+            assertArrayEquals(childConstants, childImage.getConstants());
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
     void explicitlySharedNestedModulesUseTheHighestOwningAncestor() {
         var runtime = new Runtime();
         try {

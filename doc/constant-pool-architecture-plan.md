@@ -6,8 +6,9 @@ the first descriptor/index boundary, including late-generated field initializers
 parameterization, a separate type-relation table and an explicit definition-freeze boundary.
 Broader reflection migration, the remaining metadata caches, other generated methods and
 activation with frozen images remain unfinished. The frozen-execution audit currently fails.
-The latest entry/frame migration checkpoint also has two ordinary ownership integration failures;
-it is a development checkpoint, not a merge-ready activation change. See the checkpoint below.
+Entry/frame construction and explicit shared-reference transport now pass ordinary ownership
+integration tests. Frozen execution still stops in property-annotation metadata; this is not yet
+a merge-ready activation change. See the staged validation and remaining boundaries below.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -25,7 +26,8 @@ Do not combine the full architecture migration with this extraction.
 The full split is substantial: factories, reflection, method execution, native bootstrap and
 metadata queries currently use the same object graph. Moving a few cache fields does not freeze
 that graph, and freezing it immediately would break legitimate runtime type construction.
-The stages below are independently reviewable hypotheses, not a commitment to implement them.
+The stages below are being implemented as independently reviewable commits; each stage retains
+its own validation gate before the full frozen-runtime model can be enabled.
 The general error-listener architecture is a separate deferred project, preserved at
 `archive/constant-pool-with-listener-migration` (`e90e5f8f8`) and on the original combined/errs
 branches. It is not a prerequisite for these stages; this branch retains only the definition/cache
@@ -931,15 +933,66 @@ still uses the method's local constant table. Singleton lookup selects its value
 reuses an existing image constant if present, and otherwise creates the value reference outside
 the image. Module/package handle construction and singleton initialization use those paths.
 
-This checkpoint is intentionally incomplete. The latest ordinary ownership test run reports
+This checkpoint (`38f021839`) was intentionally incomplete. Its ordinary ownership test run reported
 13 tests, two failures and no skips. Function binding in `xRTFunction.FunctionHandle.bind` carries
 a `ModuleRepository` type from another owner into the current descriptor pool; native
 `xListMap.constructMap` similarly supplies the native root's ListMap type. These require explicit
-binding at the runtime boundary, not weaker descriptor generation checks. The last package
-singleton routing change compiles but has not yet had a full integration rerun.
+binding at the runtime boundary, not weaker descriptor generation checks. The package singleton
+routing change had compiled but had not yet had a full integration rerun.
 
 The frozen `Singletons.x` audit now reaches singleton class construction, where
 `ClassTemplate.getCanonicalClass` creates image-owned access-qualified types in `ClassComposition`.
 It still fails with `ConstantPool is read-only`. Completing these construction and cross-owner
 boundaries is scope 1. The other five scopes above remain open; no freeze-by-default switch,
 image-copy removal, new CI dependency or JIT work is included in this checkpoint.
+
+### Construction and explicit shared-reference transport
+
+Ordinary interpreter execution now uses descriptor destinations for singleton compositions,
+native parameterized compositions and function binding. Native template specialization retains
+the requesting container when peeling annotations. A root-owned template no longer redirects
+an application's descriptor back into the root's context. Shared runtime values, including core
+Object/Null values, have their exposed types translated before local generic resolution and
+field compatibility checks. Injection providers receive a type represented in their own context;
+an unshared injection type retains its foreign representation.
+
+`Container.importSharedType` and `importSharedConstant` require a known source container and the
+same module-sharing ancestor on both sides. The source context validates the exact definition
+generation first. The destination permits only those exact validated operand objects while
+adopting the reference; ordinary interning still rejects foreign contexts afterwards, including
+after failed adoption. Source validation precedes the destination lock, so reciprocal transports
+do not nest the two descriptor locks. No source cache, captured handle or singleton state is
+transferred. Equal module names in unshared sibling containers do not authorize translation.
+
+ListMap construction selects the prepared method in the receiving image before executing its
+body. Independently, its static constructor cache retained the first runtime's method when a
+later runtime created another template. This bug exists in master: the static field dates to
+2019. Commit `d63215e45` replaces it with a final per-template lazy holder. A deterministic unit
+test builds two independent declaration graphs without an installed XDK; it fails with master's
+actual `xListMap.java` because the second template returns the first constructor, and passes with
+the fix. This proves stale method ownership, not that master throws this branch's new exception.
+
+The singleton unit fixtures now include an empty system-module declaration because creating a
+missing singleton descriptor also describes its name. They still require no compiled XDK.
+New transport regressions cover shared core types, rejected same-name unshared modules, incorrect
+source contexts, exception restoration and unchanged frozen definition tables.
+
+The full XDK suite passes 39 tests without skips. The full Java suite reports 498 tests
+(458 passed, 40 existing skips with integration opt-in unset). With integration opt-in enabled,
+the earlier full run passed 497 tests (461 passed, 36 existing skips), before the additional
+ListMap regression. All newly added regressions run without skips. Formatting and whitespace
+checks pass. Fresh-process execution of
+`Singletons.x`, `SingletonPaths.x` and `RuntimeDescriptors.x` passes as well; the multi-runtime
+suite was necessary to expose the static ListMap cache.
+
+Scope 1 is still incomplete. The manual frozen audit now gets through singleton composition
+selection and stops in `PropertyStructure.buildAnnotationArrays`: its annotation classification
+derives relation metadata in the declaration pool. Cold annotation queries need an explicit
+destination. Native declaration binding also still uses image registration before descriptor
+adoption and must become a lookup of prepared declarations. These are remaining construction
+dependencies, not a reason to weaken freezing or prewarm metadata to hide writes.
+
+The JumpVal adjustment keeps a descriptor-backed handle in its current execution container;
+it does not make a cached Op safe to share across independent executions of the same method.
+Method/Op state remains scope 4. Other classloader-wide native state and foreign/captured-value
+ownership remain scope 5. Full frozen activation and the other stages remain open.

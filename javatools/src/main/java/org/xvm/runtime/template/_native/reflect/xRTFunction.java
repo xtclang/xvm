@@ -493,7 +493,7 @@ public class xRTFunction
                 }
             }
 
-            TypeConstant typeFn = pool.bindFunctionParam(f_type.resolveGenerics(pool, resolver), iArg);
+            TypeConstant typeFn = pool.bindFunctionParam(pool.register(f_type).resolveGenerics(pool, resolver), iArg);
 
             return new SingleBoundHandle(frame.f_context.f_container, typeFn, this, iArg, hArg);
         }

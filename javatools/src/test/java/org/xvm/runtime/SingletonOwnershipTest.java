@@ -13,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.Op;
 
@@ -37,7 +38,7 @@ class SingletonOwnershipTest {
     void identicalDefinitionObjectsDoNotGrantValueSharing(boolean shared) {
         var runtime = new Runtime();
         try {
-            var file = new FileStructure("App");
+            var file = image();
             var parent = new TestContainer(runtime, null, file, false);
             var child = new TestContainer(runtime, parent, file, shared);
             var definition = file.getConstantPool().ensureSingletonConstConstant(file.getModuleId());
@@ -66,7 +67,7 @@ class SingletonOwnershipTest {
     void concurrentLookupPublishesOneEntryWithoutAnAmbientPoolDependency() throws Exception {
         var runtime = new Runtime();
         try (var threads = Executors.newVirtualThreadPerTaskExecutor()) {
-            var owner = new TestContainer(runtime, null, new FileStructure("App"), false);
+            var owner = new TestContainer(runtime, null, image(), false);
             var definition = owner.getConstantPool().ensureSingletonConstConstant(owner.getModule());
             var unrelated = new FileStructure("Unrelated").getConstantPool();
             var ready = new CountDownLatch(2);
@@ -103,7 +104,7 @@ class SingletonOwnershipTest {
     void recursiveHandleAndMultipleWaitersStayWithTheirSelectedOwner() {
         var runtime = new Runtime();
         try {
-            var file = new FileStructure("App");
+            var file = image();
             var owner = new TestContainer(runtime, null, file, false);
             var sibling = new TestContainer(runtime, null, file, false);
             var definition = file.getConstantPool().ensureSingletonConstConstant(file.getModuleId());
@@ -139,7 +140,7 @@ class SingletonOwnershipTest {
     void moduleSharingSelectsTheOwnerEvenForALocalAlias(boolean shared) {
         var runtime = new Runtime();
         try {
-            var file = new FileStructure("App");
+            var file = image();
             var parent = new TestContainer(runtime, null, file, false);
             var child = new TestContainer(runtime, parent, new FileStructure(file), shared);
             var original = parent.getConstantPool().ensureSingletonConstConstant(parent.getModule());
@@ -194,7 +195,7 @@ class SingletonOwnershipTest {
     void unsharedOwnersHaveIndependentInitializationWaiters(boolean copiedDefinition) {
         var runtime = new Runtime();
         try {
-            var file = new FileStructure("App");
+            var file = image();
             var first = new TestContainer(runtime, null, file, false);
             var second = new TestContainer(runtime, first,
                     copiedDefinition ? new FileStructure(file) : file, false);
@@ -228,7 +229,7 @@ class SingletonOwnershipTest {
     void failedInitializationReleasesWaitersAndAllowsAFreshAttempt() {
         var runtime = new Runtime();
         try {
-            var owner = new TestContainer(runtime, null, new FileStructure("App"), false);
+            var owner = new TestContainer(runtime, null, image(), false);
             var singleton = owner.ensureSingletonState(
                     owner.getConstantPool().ensureSingletonConstConstant(owner.getModule()));
             var initializer = fiber(owner.main);
@@ -252,6 +253,14 @@ class SingletonOwnershipTest {
         } finally {
             runtime.shutdownXVM();
         }
+    }
+
+    private static FileStructure image() {
+        var file = new FileStructure("App");
+        // Runtime descriptors for module names require the system-module identity for String.
+        // A bundled stub supplies that graph without compiled XDK artifacts or native bootstrap.
+        file.merge(new FileStructure(Constants.ECSTASY_MODULE).getModule(), false, false);
+        return file;
     }
 
     private static Fiber fiber(ServiceContext context) {

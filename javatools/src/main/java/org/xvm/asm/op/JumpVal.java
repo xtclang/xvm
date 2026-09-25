@@ -292,14 +292,17 @@ public class JumpVal
             assert !hCase.isMutable();
 
             // caching a constant linked to the current pool would "leak" the current container
-            if (hCase.getComposition().getConstantPool() != poolTarget) {
+            // A runtime descriptor has no image indices, but a handle created by this container
+            // already has the same execution lifetime as this method's current op state.
+            if (hCase.getComposition().getContainer() != frame.f_context.getContainer()
+                    && hCase.getComposition().getConstantPool() != poolTarget) {
                 hCase = heap.relocateConst(hCase, frame.getConstant(m_anConstCase[iCase]));
 
                 assert hCase != null;
                 ahCase[iCase] = hCase;
             }
 
-            TypeConstant typeCase = hCase.getType();
+            TypeConstant typeCase = frame.runtimeTypeOf(hCase);
             boolean      fRange   = typeCase.isA(typeRange) && !typeCond.isA(typeRange);
 
             if (algorithm.isNative()) {

@@ -29,6 +29,8 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.VersionConstant;
 
+import org.xvm.runtime.RuntimeTypeContext.IncompatibleTypeOwnerException;
+
 import org.xvm.runtime.template.Child;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xBoolean.BooleanHandle;
@@ -102,6 +104,68 @@ public abstract class Container
      */
     public RuntimeTypeContext getTypeContext() {
         return typeContext.get();
+    }
+
+    /**
+     * Import a type transported from a known container. Each referenced module must have the
+     * same sharing ancestor in both containers; knowing equal module names is insufficient.
+     * The source context checks the operand's exact generation before translation, and this
+     * context supplies the resulting descriptor and its prepared declarations.
+     *
+     * <p>Use this at a container boundary, before deriving a local type from a shared type value.
+     * It does not transfer captured handles, singleton values or initialization state. Ordinary
+     * same-context construction uses {@link RuntimeTypeContext#intern} instead.
+     *
+     * @param type    the transported type
+     * @param source  the container that supplied the type
+     * @return this container's canonical descriptor
+     * @throws IncompatibleTypeOwnerException if any module is not shared
+     */
+    public TypeConstant importSharedType(TypeConstant type, Container source) {
+        return importSharedConstant(type, source);
+    }
+
+    /**
+     * Bind a descriptor or declaration reference from a known sharing container. Native templates
+     * use this to select the prepared method declaration before executing its compiled body, so
+     * its local operands refer to the same image as the receiving composition.
+     *
+     * @param constant  the shared reference; captured runtime handles are not accepted
+     * @param source    the container supplying the reference
+     * @param <T>       the reference's constant type
+     * @return the corresponding reference in this descriptor context
+     */
+    public <T extends Constant> T importSharedConstant(T constant, Container source) {
+        if (source == this) {
+            return getTypeContext().getDescriptorPool().register(constant);
+        }
+        return getTypeContext().importShared(constant, source.getTypeContext(),
+                module -> getModuleOwner(module) == source.getModuleOwner(module));
+    }
+
+    private Container getModuleOwner(ModuleConstant module) {
+        return f_parent != null && isShared(module) ? f_parent.getModuleOwner(module) : this;
+    }
+
+    /**
+     * Represent a type supplied by another container. Shared modules are translated to this
+     * descriptor context; an unshared type keeps its foreign representation and source identity.
+     * Handle construction failures are not ownership rejections and propagate to the caller.
+     *
+     * @param type    the transported type
+     * @param source  its source container
+     * @return a local handle for a shared type, or a foreign type handle
+     */
+    public TypeHandle ensureTypeHandle(TypeConstant type, Container source) {
+        // A mismatched source is a caller error, not a legitimate foreign type representation.
+        TypeConstant canonical = source.getTypeContext().intern(type);
+        TypeConstant local;
+        try {
+            local = importSharedType(canonical, source);
+        } catch (IncompatibleTypeOwnerException e) {
+            return xRTType.makeForeignHandle(canonical);
+        }
+        return ensureTypeHandle(local);
     }
 
     /**
@@ -327,7 +391,7 @@ public abstract class Container
             type = getTypeContext().intern(type);
             ClassTemplate template = getTemplate(type.getSingleUnderlyingClass(true));
             return type.isShared(template.f_container.getConstantPool())
-                    ? template.getTemplate(type)
+                    ? template.getTemplate(this, type)
                     : template;
         }
         if (f_parent != null && type.isShared(f_parent.getConstantPool())) {
@@ -346,7 +410,7 @@ public abstract class Container
                 // native templates for parameterized classes may "promote" themselves based on the
                 // parameter type, but we can only do it within the same container
                 if (type.isShared(template.f_container.getConstantPool())) {
-                    template = template.getTemplate(type);
+                    template = template.getTemplate(this, type);
                 }
                 f_mapTemplatesByType.put(type, template);
             } else {
@@ -518,17 +582,18 @@ public abstract class Container
     }
 
     /**
-     * Resolve a singleton definition to the canonical definition in its value owner's pool.
+     * Resolve a singleton definition to the canonical reference in its value owner's context.
      *
      * <p>Use this when collecting definitions for deferred lookup or initialization. State access
      * uses {@link #ensureSingletonState} directly. Module sharing selects the owner, even if
-     * the input already belongs to this container's pool. Registration preserves an existing
-     * canonical definition. Live values belong to {@link #ensureSingletonState}, not the constant;
+     * the input already belongs to this container's pool. An existing image constant is reused;
+     * otherwise the reference is created in the owner's descriptor store without extending the
+     * image table. Live values belong to {@link #ensureSingletonState}, not the constant;
      * sharing a definition object does not share its state. The ambient pool does not participate.
      *
      * @param constant  the singleton definition
      *
-     * @return the canonical constant in its owning container's pool
+     * @return the canonical image constant or descriptor in the owning container's context
      */
     public SingletonConstant ensureSingletonConstant(SingletonConstant constant) {
         Container owner = getOriginContainer(constant);

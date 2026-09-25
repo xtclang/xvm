@@ -1326,8 +1326,10 @@ public class Frame
     }
 
     /**
-     * @return the ConstantPool to be used to create new constants that may be required by the
-     *         run-time execution
+     * Obtain the container's descriptor destination for new runtime constants. Descriptors have
+     * no serialized indices; compiled operands must still be read from {@link #localConstants()}.
+     *
+     * @return this execution's growable runtime descriptor pool
      */
     public ConstantPool poolContext() {
         return f_context.getRuntimePool();
@@ -1926,7 +1928,21 @@ public class Frame
     public GenericTypeResolver getGenericsResolver(boolean fDynamic) {
         return fDynamic || f_hThis == null || f_function.getTypeParamCount() != 0
                 ? this
-                : f_hThis.getType();
+                : runtimeTypeOf(f_hThis);
+    }
+
+    /**
+     * Describe a runtime value in this frame's construction context. Core/pass-through values
+     * can carry a composition from a sharing ancestor; translate through that explicit value
+     * owner before generic resolution combines their types with local descriptors.
+     *
+     * @param value  the value whose exposed type is needed
+     * @return the exposed type in this frame's descriptor context
+     */
+    public TypeConstant runtimeTypeOf(ObjectHandle value) {
+        TypeConstant type = value.getType();
+        return type.getConstantPool() == poolContext() ? type
+                : f_context.getContainer().importSharedType(type, value.getComposition().getContainer());
     }
 
     @Override
@@ -1953,7 +1969,7 @@ public class Frame
             }
             return f_hThis == null
                 ? null
-                : f_hThis.getType().resolveGenericType(sFormalName);
+                : runtimeTypeOf(f_hThis).resolveGenericType(sFormalName);
         }
 
         case TypeParameter: {
@@ -1979,7 +1995,7 @@ public class Frame
             MethodConstant        idMethod     = constDynamic.getMethod();
             do {
                 if (idMethod.equals(frame.f_function.getIdentityConstant())) {
-                    TypeConstant typeTarget = frame.f_ahVar[constDynamic.getRegisterIndex()].getType();
+                    TypeConstant typeTarget = runtimeTypeOf(frame.f_ahVar[constDynamic.getRegisterIndex()]);
                     return typeTarget.isShared(frame.poolContext())
                             ? constDynamic.getFormalConstant().resolve(typeTarget)
                             : poolContext().typeObject();
@@ -1999,7 +2015,7 @@ public class Frame
             throw new IllegalStateException();
         }
 
-        TypeConstant typeType = frame.f_ahVar[nRegister].getType();
+        TypeConstant typeType = runtimeTypeOf(frame.f_ahVar[nRegister]);
 
         // type parameter's type must be of Type<DataType, OuterType>
         assert typeType.isTypeOfType() && typeType.getParamsCount() >= 1;

@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
 
+import java.util.function.Predicate;
+
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -68,6 +70,39 @@ public final class RuntimeTypeContext {
      */
     public TypeConstant intern(TypeConstant type) {
         return descriptors.register(type);
+    }
+
+    /**
+     * Translate a descriptor or declaration reference across an established sharing boundary. The source
+     * context validates the complete graph first; every referenced module must then be approved
+     * by the caller's sharing policy. Equal module names alone never authorize this operation.
+     * The result refers to this context's prepared declarations and carries no source caches.
+     *
+     * <p>This package-private boundary is used by Container when transporting shared references.
+     * Ordinary interning continues to reject other contexts, including the source after this
+     * operation returns. No image table is modified.
+     *
+     * @param constant  the descriptor or declaration reference being transported
+     * @param source    its known source container's context
+     * @param shared    the container policy approving each referenced module
+     * @param <T>       the constant type
+     *
+     * @return this context's canonical descriptor
+     */
+    <T extends Constant> T importShared(T constant, RuntimeTypeContext source,
+                                      Predicate<ModuleConstant> shared) {
+        T canonical = source.descriptors.register(constant);
+        // Validate and collect before taking the destination lock: reciprocal transports must
+        // not acquire two descriptor-store locks in opposite order.
+        Set<Constant> operands = Collections.newSetFromMap(new IdentityHashMap<>());
+        collectOperands(canonical, operands);
+        return descriptors.importShared(canonical, operands, shared);
+    }
+
+    private static void collectOperands(Constant constant, Set<Constant> operands) {
+        if (operands.add(constant)) {
+            constant.forEachUnderlying(child -> collectOperands(child, operands));
+        }
     }
 
     /**
@@ -168,6 +203,27 @@ public final class RuntimeTypeContext {
             return false;
         }
 
+        private synchronized <T extends Constant> T importShared(T constant, Set<Constant> operands,
+                                                                Predicate<ModuleConstant> shared) {
+            for (Constant operand : operands) {
+                if (operand instanceof ModuleConstant module
+                        && (!shared.test(module) || getFileStructure().getModule(module) == null)) {
+                    throw new IncompatibleTypeOwnerException("Module is not shared between containers: " + module);
+                }
+            }
+
+            // Permit only these exact, prevalidated source objects during recursive adoption.
+            // The monitor excludes ordinary register/getConstant calls until the set is restored;
+            // no ambient pool or thread-local import permission is introduced.
+            Set<Constant> previous = sharedOperands;
+            sharedOperands = operands;
+            try {
+                return register(constant);
+            } finally {
+                sharedOperands = previous;
+            }
+        }
+
         @Override
         protected TypeConstant getNakedRefMetadataType() {
             // The configured bootstrap prototype supplies the shape of get(). Its module has
@@ -214,7 +270,7 @@ public final class RuntimeTypeContext {
          * generations, so visiting one must never suppress the ownership check on the other.
          */
         private void validate(Constant constant, Set<Constant> visited) {
-            if (registered.contains(constant) || !visited.add(constant)) {
+            if (registered.contains(constant) || sharedOperands.contains(constant) || !visited.add(constant)) {
                 return;
             }
             if (constant instanceof FrameDependentConstant || constant.containsUnresolved()) {
@@ -259,6 +315,10 @@ public final class RuntimeTypeContext {
         // Only this exact adopted object has completed validation; an equal foreign object has not.
         private final Set<Constant> registered =
                 Collections.newSetFromMap(new IdentityHashMap<>());
+
+        // Guarded by this pool's monitor. Non-empty only during an explicit shared-reference import;
+        // identity membership prevents equal but unapproved foreign operands from being admitted.
+        private Set<Constant> sharedOperands = Set.of();
     }
 
     private final DescriptorPool descriptors;

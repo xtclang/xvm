@@ -102,7 +102,7 @@ public class xListMap
         TypeComposition clzKeyArray = typeKeyArray.ensureClass(frame);
         TypeComposition clzValArray = typeValArray.ensureClass(frame);
         TypeComposition clzMap      = ensureClass(frame.f_context.f_container,
-            pool.ensureParameterizedTypeConstant(getClassConstant().getType(), typeKey, typeVal));
+            pool.ensureParameterizedTypeConstant(pool.typeListMap(), typeKey, typeVal));
 
         ObjectHandle haKeys = fDeferredKey
                 ? new DeferredArrayHandle(clzKeyArray, ahKey)
@@ -111,7 +111,7 @@ public class xListMap
                 ? new DeferredArrayHandle(clzValArray, ahVal)
                 : xArray.createImmutableArray(clzValArray, ahVal);
 
-        MethodStructure constructor = ensureConstructor();
+        MethodStructure constructor = resolveMethod(frame.f_context.getContainer(), ensureConstructor());
         ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
