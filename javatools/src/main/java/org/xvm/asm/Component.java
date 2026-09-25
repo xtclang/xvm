@@ -3051,7 +3051,12 @@ public abstract class Component
          *         does not apply for the resulting type
          */
         public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
+            // Normalize in the query's destination, not the declaration's pool. Even a
+            // contribution with no substitutions may need new access or parameterized types.
             TypeConstant typeContrib = getTypeConstant();
+            if (typeContrib.getConstantPool() != pool) {
+                typeContrib = pool.register(typeContrib);
+            }
             boolean      fNormalize  = true;
 
             if (typeContrib.isExplicitClassIdentity(true) && !typeContrib.isParamsSpecified()) {
@@ -3107,6 +3112,9 @@ public abstract class Component
         protected TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
                                            List<TypeConstant> listActual) {
             TypeConstant typeContrib = getTypeConstant();
+            if (typeContrib.getConstantPool() != pool) {
+                typeContrib = pool.register(typeContrib);
+            }
 
             assert typeContrib.isSingleDefiningConstant();
 
@@ -3137,6 +3145,9 @@ public abstract class Component
         protected TypeConstant resolveType(ConstantPool pool, ClassStructure clzParent,
                                            TypeConstant typeActual) {
             TypeConstant typeContrib = getTypeConstant();
+            if (typeContrib.getConstantPool() != pool) {
+                typeContrib = pool.register(typeContrib);
+            }
 
             assert typeContrib.isSingleDefiningConstant();
 

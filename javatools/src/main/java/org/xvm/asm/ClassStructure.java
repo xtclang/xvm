@@ -879,7 +879,10 @@ public class ClassStructure
      * @return true iff this class is a Tuple or a Tuple mixin
      */
     public boolean isTuple() {
-        if (getIdentityConstant().equals(getConstantPool().clzTuple())) {
+        // This is a declaration predicate, not a request to intern the Tuple identity in
+        // this image. It must also work on a frozen image that never referenced Tuple.
+        if (getIdentityConstant() instanceof ClassConstant identity
+                && "Tuple".equals(identity.getImplicitImportName())) {
             return true;
         }
 

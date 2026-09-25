@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Composition;
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
@@ -41,6 +42,40 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeTypeContextTest {
+    @Test
+    void coldDeclarationTypeIsCreatedInTheContextAfterFreezing() {
+        var file = new Image();
+        var identity = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Cold", null)
+                .getIdentityConstant();
+        var context = new RuntimeTypeContext(file.getConstantPool());
+        var constants = file.getConstantPool().getConstants();
+        context.freezeDefinitions();
+
+        assertThrows(IllegalStateException.class, identity::getType);
+        var descriptor = context.typeOf(identity);
+        assertSame(context.getDescriptorPool(), descriptor.getConstantPool());
+        assertSame(identity.getComponent(), descriptor.getSingleUnderlyingClass(true).getComponent());
+        assertSame(descriptor, context.typeOf(identity));
+        assertArrayEquals(constants, file.getConstantPool().getConstants());
+    }
+
+    @Test
+    void unchangedContributionIsAdoptedBeforeMetadataAddsAccess() {
+        var file = new Image();
+        var declaration = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Child", null);
+        var base = file.type("Base");
+        var contribution = declaration.addContribution(Composition.Extends, base);
+        var context = new RuntimeTypeContext(file.getConstantPool());
+        var child = context.typeOf(declaration.getIdentityConstant());
+        var constants = file.getConstantPool().getConstants();
+        context.freezeDefinitions();
+
+        var resolved = contribution.resolveGenerics(context.getDescriptorPool(), child);
+        assertSame(context.intern(base), resolved);
+        assertSame(context.getDescriptorPool(), resolved.ensureAccess(Access.PROTECTED).getConstantPool());
+        assertArrayEquals(constants, file.getConstantPool().getConstants());
+    }
+
     @Test
     void derivedDescriptorsLeaveAFrozenImageAndItsIndicesUnchanged() {
         var file = new Image();

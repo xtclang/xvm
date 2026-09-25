@@ -9,6 +9,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.FrameDependentConstant;
+import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -66,6 +67,18 @@ public final class RuntimeTypeContext {
      */
     public TypeConstant intern(TypeConstant type) {
         return descriptors.register(type);
+    }
+
+    /**
+     * Describe a declaration in this context. Import its identity before requesting its type:
+     * {@link IdentityConstant#getType()} can create a terminal type even for an existing
+     * declaration, and must not do so in the definition image after publication.
+     *
+     * @param identity  a declaration from this context or its exact definition graph
+     * @return the declaration's type, owned by this descriptor context
+     */
+    public TypeConstant typeOf(IdentityConstant identity) {
+        return intern(descriptors.register(identity).getType());
     }
 
     /**

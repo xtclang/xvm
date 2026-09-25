@@ -836,3 +836,34 @@ Validation for this enforcement commit: the full Java suite reports 492 tests (4
 Counts come from JUnit XML. Formatting and whitespace checks passed. The separate manual frozen
 execution audit exited 1 at the forbidden image write above; that result is an open migration
 failure, not a passing frozen-runtime test.
+
+## Staged completion after the freeze audit
+
+### Entry and contribution destinations
+
+`RuntimeTypeContext.typeOf` imports a declaration identity before asking for its type. A missing terminal module type can therefore be created in the execution's descriptor
+store. Entry lookup remains on its existing path until cold descriptor metadata is complete. Contribution normalization adopts cross-owner
+operands before deriving types; it deliberately leaves same-owner compiler operands untouched.
+Registering those unnecessarily canonicalized an in-progress compiler contribution and caused a
+reproducible `ObjectInputStream.PeekAhead` validation error in the JSON library. The final code
+preserves the compiler's original same-owner operand while adopting definitions for runtime
+queries. `ClassStructure.isTuple` is now a pure declaration predicate: it no longer interns a
+Tuple identity as a side effect.
+
+Two new unit regressions freeze before a cold identity lookup and before resolving a contribution
+whose generic resolution changes nothing. Both assert descriptor ownership and unchanged image
+constants; the second also constructs an access-qualified result after resolution. All eleven
+`RuntimeTypeContextTest` cases pass without skips.
+
+This is the first part of stage 1, not its completion. With entry lookup experimentally switched to the new API, the frozen full-execution audit
+reaches variance analysis of a method signature. Normal execution also exposed that the NakedRef
+bootstrap prototype is outside the descriptor context's captured module graph. The entry switch
+is withheld until those dependencies are handled. That path still invokes `MethodStructure` parameter
+queries in the declaration's pool and fails when normalization needs a new parameterized type.
+Explicit destinations through class formal/canonical types and member variance are the next
+boundary. The remaining stages above stay open until their respective tests and activation gate
+pass.
+
+Validation for this preparation commit: 494 Java tests (454 passed, 40 existing skips),
+11 XDK ownership tests passed without skips, and the full library compilation passed.
+The read-only formatting gate and whitespace check passed. Frozen execution remains an open gate.
