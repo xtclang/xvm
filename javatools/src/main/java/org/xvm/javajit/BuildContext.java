@@ -3187,9 +3187,8 @@ public class BuildContext {
             assert destType != null;
 
             RegisterInfo reg = ensureRegister(regId, destType);
-            if (!isAssigned(reg)) {
-                // the payload is undefined when the condition is False, but its Java slots must
-                // still have verifier-visible values
+            if (typeMatrix.needsInitialization(regId, currOpAddr)) {
+                // the False path still needs initialized slots for the Java verifier
                 Builder.defaultStore(code, reg);
             }
         }

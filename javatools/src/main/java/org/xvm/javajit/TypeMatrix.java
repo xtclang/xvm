@@ -411,6 +411,16 @@ public class TypeMatrix {
     // ----- retrieval phase -----------------------------------------------------------------------
 
     /**
+     * @return true iff the incoming register type is unknown or marked as "unassigned", in which
+     *         case code generation may need to supply a default value to satisfy the verifier
+     */
+    public boolean needsInitialization(int regId, int addr) {
+        OpView       view = views[addr];
+        TypeConstant type = view == null ? null : view.types.get(regId);
+        return type == null || type instanceof UnassignedTypeConstant;
+    }
+
+    /**
      * Augment a property type with any generic type narrowing known at the specified address.
      */
     public TypeConstant augmentPropertyType(TypeConstant type, int addr) {
