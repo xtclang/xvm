@@ -12,8 +12,7 @@ the two Markdown files above.
 
 ## Unfinished declaration headers
 
-Implemented in the working tree on `lagergren/errs`, after pushed checkpoint `b17a9adec`.
-The implementation commit will be recorded when this slice is committed.
+Implemented on `lagergren/errs` in `68a291c0f`, after pushed checkpoint `b17a9adec`.
 
 - [x] Preserve a written method name and source extent when its parameter header is malformed.
 - [x] Retain simple unqualified property/return and method-parameter type prefixes, including
@@ -51,8 +50,9 @@ unchanged, and neither path emits the incomplete declaration.
 | C20 | Parser header boundaries, IncompleteDeclarationStatement, derived cursor kind, CursorScope name resolution, parser tests and embedding contract documentation | Existing C12/C14 cursor/listener foundations and C17 declaration recovery |
 | L35 | Copied type-only completion, outline/folding, adapter/embedding/stdio/retention tests, shared X91–X92, both editor consumers and docs | C20, L32; native empty-signature assertions use L33 |
 
-These add two groups to the extraction map, bringing it to **69**. Keep compiler and host changes
-separate by the responsibilities above; each extracted PR must pass on its own prerequisites.
+These add two groups to the extraction map, bringing it to **69**. Commit `68a291c0f` contains
+both groups; split compiler and host changes by the responsibilities above during extraction.
+Each extracted PR must pass on its own prerequisites.
 C19/L34 remain the preceding independent array-dimension slice in `0b800c392`.
 
 Validation on 2026-09-25:
