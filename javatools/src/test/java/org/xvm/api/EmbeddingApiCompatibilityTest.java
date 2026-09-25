@@ -65,11 +65,14 @@ public class EmbeddingApiCompatibilityTest {
         var original = new CursorBinding(List.of(), type, true);
         var candidates = new CursorBinding(List.of(), type, true, List.of(), List.of(), false);
         var functions = new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of());
+        var values = new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of(), List.of());
         assertEquals(original, candidates);
         assertEquals(original, functions);
+        assertEquals(original, values);
         assertEquals(0, switch (candidates) {
             case CursorBinding(var variables, var thisType, var instance, var types,
-                    var methods, var inspected, var callable, var argumentValues) -> argumentValues.size();
+                    var methods, var inspected, var callable, var argumentValues, var properties) ->
+                    argumentValues.size() + properties.size();
         });
     }
 
