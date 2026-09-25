@@ -21,21 +21,56 @@ import static org.xvm.javajit.JitFlavor.AlwaysNull;
 
 /**
  * A register holding a narrowed value.
- *
- * @param regId       the register id
- * @param slots       the identifiers of the slots that store the value represented by this register
- * @param type        the {@link TypeConstant} of the value this register represents
- * @param flavor      the {@link JitFlavor} of the value this register represents
- * @param cd          the {@link ClassDesc} of the value this register represents; always boxed
- * @param slotCds     the {@link ClassDesc} instances for each slot
- * @param name        the name of the value represented by this register
- * @param scopeDepth  the scope depth this narrowed register was introduced at
- * @param origReg     the original register info
  */
-public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flavor,
-                       ClassDesc cd, ClassDesc[] slotCds, String name, int scopeDepth,
-                       RegisterInfo origReg)
-    implements RegisterInfo {
+public class Narrowed
+        extends AbstractRegisterInfo {
+
+    /**
+     * Create a narrowed view of an existing register.
+     *
+     * @param regId       the register id
+     * @param slots       the identifiers of the slots that store the value represented by this register
+     * @param type        the {@link TypeConstant} of the value this register represents
+     * @param flavor      the {@link JitFlavor} of the value this register represents
+     * @param cd          the {@link ClassDesc} of the value this register represents; always boxed
+     * @param slotCds     the {@link ClassDesc} instances for each slot
+     * @param name        the name of the value represented by this register
+     * @param scopeDepth  the scope depth this narrowed register was introduced at
+     * @param origReg     the original register info
+     */
+    public Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flavor, ClassDesc cd,
+                    ClassDesc[] slotCds, String name, int scopeDepth, RegisterInfo origReg) {
+        super(regId, flavor, type, cd, name);
+
+        this.slots      = slots;
+        this.slotCds    = slotCds;
+        this.scopeDepth = scopeDepth;
+        this.origReg    = origReg;
+    }
+
+    /**
+     * @return the scope depth at which this narrowed register was introduced
+     */
+    public int scopeDepth() {
+        return scopeDepth;
+    }
+
+    /**
+     * @return the register from which this narrowed view was created
+     */
+    public RegisterInfo origReg() {
+        return origReg;
+    }
+
+    @Override
+    public int[] slots() {
+        return slots;
+    }
+
+    @Override
+    public ClassDesc[] slotCds() {
+        return slotCds;
+    }
 
     @Override
     public int slot() {
@@ -105,7 +140,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
         }
 
         if (type.isA(this.type())) {
-            return RegisterInfo.super.store(bctx, code, type);
+            return super.store(bctx, code, type);
         } else {
             assert type.isA(original().type()) || type.isJitAssignableTo(original().type());
             RegisterInfo origReg = bctx.resetRegister(this).store(bctx, code, type);
@@ -116,7 +151,7 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
     /**
      * @return {@code true} if this register shares the same slot as the original register
      */
-    boolean sharesOriginalSlot() {
+    protected boolean sharesOriginalSlot() {
         return Arrays.equals(slots, origReg.slots());
     }
 
@@ -157,10 +192,13 @@ public record Narrowed(int regId, int[] slots, TypeConstant type, JitFlavor flav
 
     @Override
     public String toString() {
-        return "regId=" + regId
-            + ", slots=" + Arrays.toString(slots)
-            + ", flavor=" + flavor
-            + ", type=" + type.getValueString()
+        return super.toString()
+            + ", slots="   + Arrays.toString(slots)
             + ", slotCds=" + Arrays.toString(slotCds);
     }
+
+    private final int[]        slots;
+    private final ClassDesc[]  slotCds;
+    private final int          scopeDepth;
+    private final RegisterInfo origReg;
 }

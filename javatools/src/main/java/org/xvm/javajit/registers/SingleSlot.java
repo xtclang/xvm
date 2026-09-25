@@ -7,32 +7,26 @@ import org.xvm.asm.Op;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.JitFlavor;
-import org.xvm.javajit.RegisterInfo;
 
 /**
  * A register that stores an XVM value in a single Java slot.
- *
- * @param regId   the register id
- * @param slot    the Java slot that stores the underlying value
- * @param flavor  the {@link JitFlavor} of the value this register represents
- * @param type    the {@link TypeConstant} of the value this register represents
- * @param cd      the {@link ClassDesc} of the value this register represents
- * @param name    the name of the value represented by this register
  */
-public record SingleSlot(int regId, int slot, JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                         String name)
-        implements RegisterInfo {
+public class SingleSlot
+        extends AbstractRegisterInfo {
 
     /**
      * The canonical constructor.
+     *
+     * @param regId   the register id
+     * @param slot    the Java slot that stores the underlying value
+     * @param flavor  the {@link JitFlavor} of the value this register represents
+     * @param type    the {@link TypeConstant} of the value this register represents
+     * @param cd      the {@link ClassDesc} of the value this register represents
+     * @param name    the name of the value represented by this register
      */
     public SingleSlot(int regId, int slot, JitFlavor flavor, TypeConstant type, ClassDesc cd, String name) {
-        this.regId  = regId;
-        this.slot   = slot;
-        this.flavor = flavor;
-        this.type   = type.removeAutoNarrowing();
-        this.cd     = cd;
-        this.name   = name;
+        super(regId, flavor, type.removeAutoNarrowing(), cd, name);
+        this.slot = slot;
     }
 
     /**
@@ -43,7 +37,19 @@ public record SingleSlot(int regId, int slot, JitFlavor flavor, TypeConstant typ
     }
 
     @Override
+    public int slot() {
+        return slot;
+    }
+
+    @Override
     public boolean isSingle() {
         return true;
     }
+
+    @Override
+    public String toString() {
+        return super.toString() + ", slot=" + slot;
+    }
+
+    private final int slot;
 }

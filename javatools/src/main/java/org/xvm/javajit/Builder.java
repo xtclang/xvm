@@ -247,8 +247,8 @@ public abstract class Builder {
                         code.ldc(n < 0 ? -1L : 0L);
                     }
                     yield intConstant.getFormat() == Int128
-                            ? new MultiSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
-                            : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
+                            ? new MultiSlot(XvmPrimitive, type, CD_Int128, CDs_LongLong)
+                            : new MultiSlot(XvmPrimitive, type, CD_UInt128, CDs_LongLong);
                 }
                 case IntN, UIntN -> {
                     TypeConstant type  = intConstant.getType();
@@ -274,20 +274,20 @@ public abstract class Builder {
                     TypeConstant type = decConstant.getType();
                     Decimal32    dec  = (Decimal32) decConstant.getValue();
                     code.ldc(dec.toIntBits());
-                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec32, CDs_Int);
+                    yield new MultiSlot(XvmPrimitive, type, CD_Dec32, CDs_Int);
                 }
                 case Dec64 -> {
                     TypeConstant type = decConstant.getType();
                     Decimal64    dec  = (Decimal64) decConstant.getValue();
                     code.ldc(dec.toLongBits());
-                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec64, CDs_Long);
+                    yield new MultiSlot(XvmPrimitive, type, CD_Dec64, CDs_Long);
                 }
                 case Dec128 -> {
                     TypeConstant type = decConstant.getType();
                     Decimal128   dec  = (Decimal128) decConstant.getValue();
                     code.ldc(dec.getLowBits());
                     code.ldc(dec.getHighBits());
-                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec128, CDs_LongLong);
+                    yield new MultiSlot(XvmPrimitive, type, CD_Dec128, CDs_LongLong);
                 }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
@@ -373,7 +373,7 @@ public abstract class Builder {
                     for (int i = 0; i < cds.length; i++) {
                         code.getstatic(jtd.cd, name + i, cds[i]);
                     }
-                    return new MultiSlot(bctx, jtd.flavor, propType, jtd.cd, cds);
+                    return new MultiSlot(jtd.flavor, propType, jtd.cd, cds);
 
                 default:
                     throw new UnsupportedOperationException("Load property singleton " +
@@ -460,8 +460,7 @@ public abstract class Builder {
                 case NullablePrimitive:
                     // load the null flag value from the context to the stack
                     loadFromContext(code, CD_boolean, 0, ctxSlot);
-                    return new ExtendedSlot(bctx, Op.A_STACK, 0, 0, jtd.flavor, type,
-                            jtd.cd, "");
+                    return new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, type, jtd.cd, "");
 
                 case XvmPrimitive:
                 case NullableXvmPrimitive:
@@ -476,7 +475,7 @@ public abstract class Builder {
                         // load the boolean Null flag from the context
                         loadFromContext(code, CD_boolean, slot, ctxSlot);
                     }
-                    return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
+                    return new MultiSlot(jtd.flavor, type, jtd.cd, cds);
                 case Specific, Primitive, Widened:
                     // single property value is on the stack
                     return new SingleSlot(type, jtd.flavor, jtd.cd, "");
@@ -1169,7 +1168,7 @@ public abstract class Builder {
                 store(code, cds[i], slots[i]);
             }
 
-            if (multi.extSlot() != MultiSlot.NO_SLOT) {
+            if (multi.extSlot() != MultiSlot.NO_EXT) {
                 code.iconst_1()
                     .istore(multi.extSlot());
             }

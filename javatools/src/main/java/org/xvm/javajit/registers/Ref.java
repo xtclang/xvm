@@ -23,20 +23,32 @@ import static org.xvm.javajit.Builder.md;
 
 /**
  * A register that holds a Ref to an underlying value.
- *
- * @param bctx            the {@link BuildContext} associated with this register
- * @param regId           the register id
- * @param slot            the Java slot that stores the primitive value
- * @param name            the register name
- * @param isVar           true for a Var; false for a Ref
- * @param referentType    the {@link TypeConstant} for the referent
- * @param referentFlavor  the flavor of the referent type
- * @param scopeDepth      the scope depth this narrowed Ref was introduced at
- * @param origRef         if not null, the original Ref this Ref is narrowing
  */
-public record Ref(BuildContext bctx, int regId, int slot, String name, boolean isVar,
-                  TypeConstant referentType, JitFlavor referentFlavor, int scopeDepth, Ref origRef)
-        implements RegisterInfo {
+public class Ref
+        extends AbstractRegisterInfo {
+
+    /**
+     * @param bctx            the {@link BuildContext} associated with this register
+     * @param regId           the register id
+     * @param slot            the Java slot that stores the primitive value
+     * @param name            the register name
+     * @param isVar           true for a Var; false for a Ref
+     * @param referentType    the {@link TypeConstant} for the referent
+     * @param referentFlavor  the flavor of the referent type
+     * @param scopeDepth      the scope depth this narrowed Ref was introduced at
+     * @param origRef         if not null, the original Ref this Ref is narrowing
+     */
+    public Ref(BuildContext bctx, int regId, int slot, String name, boolean isVar,
+               TypeConstant referentType, JitFlavor referentFlavor, int scopeDepth, Ref origRef) {
+        super(regId, JitFlavor.Ref, referentType, CD_nRef, name);
+
+        this.bctx           = bctx;
+        this.slot           = slot;
+        this.isVar          = isVar;
+        this.referentFlavor = referentFlavor;
+        this.scopeDepth     = scopeDepth;
+        this.origRef        = origRef;
+    }
 
     /**
      * Create an initial Ref.
@@ -44,6 +56,31 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
     public Ref(BuildContext bctx, int regId, int slot, String name, boolean isVar,
                   TypeConstant referentType, JitFlavor referentFlavor) {
         this(bctx, regId, slot, name, isVar, referentType, referentFlavor, 0, null);
+    }
+
+    @Override
+    public int slot() {
+        return slot;
+    }
+
+    public boolean isVar() {
+        return isVar;
+    }
+
+    public TypeConstant referentType() {
+        return type();
+    }
+
+    public JitFlavor referentFlavor() {
+        return referentFlavor;
+    }
+
+    public int scopeDepth() {
+        return scopeDepth;
+    }
+
+    public Ref origRef() {
+        return origRef;
     }
 
     /**
@@ -59,22 +96,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
     public TypeConstant refType() {
         ConstantPool pool = bctx.pool();
         return pool.ensureParameterizedTypeConstant(
-                isVar ? pool.typeVar() : pool.typeRef(), referentType);
-    }
-
-    @Override
-    public TypeConstant type() {
-        return referentType;
-    }
-
-    @Override
-    public JitFlavor flavor() {
-        return JitFlavor.Ref;
-    }
-
-    @Override
-    public ClassDesc cd() {
-        return CD_nRef;
+                isVar ? pool.typeVar() : pool.typeRef(), referentType());
     }
 
     @Override
@@ -84,21 +106,22 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
 
     @Override
     public RegisterInfo load(CodeBuilder code) {
-        ClassDesc referentCd = bctx.builder.ensureClassDesc(referentType);
+        ClassDesc referentCd = bctx.builder.ensureClassDesc(referentType());
         String    refName    = "⅋" + name;
 
-        RegisterInfo.super.load(code);
+        super.load(code);
         bctx.loadCtx(code);
         code.invokevirtual(CD_nRef, "get", md(CD_Object, CD_Ctx));
         code.checkcast(referentCd);
+
         return switch (referentFlavor) {
             case Specific, Widened ->
-                new SingleSlot(referentType, referentFlavor, referentCd, refName);
+                new SingleSlot(referentType(), referentFlavor, referentCd, refName);
 
             case Primitive -> {
-                Builder.unbox(code, referentType);
-                yield new SingleSlot(referentType, referentFlavor,
-                    JitTypeDesc.requireJavaPrimitive(referentType), refName);
+                Builder.unbox(code, referentType());
+                yield new SingleSlot(referentType(), referentFlavor,
+                    JitTypeDesc.requireJavaPrimitive(referentType()), refName);
             }
 
             default -> throw new UnsupportedOperationException("flavor: " + referentFlavor);
@@ -112,7 +135,7 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
             case Specific, Widened -> {}
 
             case Primitive
-                -> Builder.box(code, referentType);
+                -> Builder.box(code, referentType());
 
             default
                 -> throw new UnsupportedOperationException("flavor: " + referentFlavor);
@@ -120,12 +143,12 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
 
         int tempSlot = bctx.storeTempValue(code, bctx.builder.ensureClassDesc(type));
         if (bctx.isAssigned(this)) {
-            RegisterInfo.super.load(code); // nRef
+            super.load(code); // nRef
             bctx.loadCtx(code)
                 .aload(tempSlot)
                 .invokevirtual(CD_nRef, "set", md(CD_void, CD_Ctx, CD_Object));
 
-            if (!type.isA(referentType)) {
+            if (!type.isA(referentType())) {
                 return bctx.narrowRegister(code, origRef, type);
             }
         }
@@ -139,15 +162,17 @@ public record Ref(BuildContext bctx, int regId, int slot, String name, boolean i
 
     @Override
     public String toString() {
-        return "regId="      + regId
-            + ", slot="      + slot
-            + ", flavor="    + flavor()
-            + ", cd="        + cd()
-            + ", name="      + name
-            + ", refFlavor=" + referentFlavor
-            + ", refType="   + referentType.getValueString()
+        return super.toString()
+            + ", slot="       + slot
+            + ", refFlavor="  + referentFlavor
             + ", scopeDepth=" + scopeDepth
-            + (origRef == null ? "" : ", origRefType=" + origRef.referentType.getValueString()
-        );
+            + (origRef == null ? "" : ", origRefType=" + origRef.referentType().getValueString());
     }
+
+    private final BuildContext bctx;
+    private final int          slot;
+    private final boolean      isVar;
+    private final JitFlavor    referentFlavor;
+    private final int          scopeDepth;
+    private final Ref          origRef;
 }

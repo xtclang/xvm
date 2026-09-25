@@ -17,7 +17,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -111,8 +110,9 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.XvmPrimitiveWithDefault;
-
 import static org.xvm.javajit.TypeSystem.HASH;
+
+import static org.xvm.javajit.registers.MultiSlot.NO_EXT;
 
 /**
  * Whatever is necessary for the method bytecode production.
@@ -262,11 +262,6 @@ public class BuildContext {
      * The current op address.
      */
     private int currOpAddr;
-
-    /**
-     * The Map of not-yet-assigned registers.
-     */
-    private final Map<RegisterInfo, Label> unassignedRegisters = new IdentityHashMap<>();
 
     /**
      * The registers whose Java slots require verifier-visible default values because they are not
@@ -843,7 +838,7 @@ public class BuildContext {
                 i++; // we consumed the next param
 
                 registerInfos.put(varIndex,
-                    new ExtendedSlot(this, varIndex, slot, extSlot, NullablePrimitive,
+                    new ExtendedSlot(varIndex, slot, extSlot, NullablePrimitive,
                         paramDesc.type, paramDesc.cd, name));
                 break;
             }
@@ -901,7 +896,7 @@ public class BuildContext {
 
                 int extSlot;
                 if (flavor == XvmPrimitive) {
-                    extSlot = MultiSlot.NO_SLOT;
+                    extSlot = NO_EXT;
                     if (withDefault) {
                         i++; // skip the next param
                     }
@@ -914,7 +909,7 @@ public class BuildContext {
                         ? JitTypeDesc.getNullableXvmPrimitiveClass(paramDesc.type)
                         : JitTypeDesc.getXvmPrimitiveClass(paramDesc.type);
 
-                registerInfos.put(varIndex, new MultiSlot(this, varIndex, slots, extSlot,
+                registerInfos.put(varIndex, new MultiSlot(varIndex, slots, extSlot,
                         flavor, paramDesc.type, cd, cds, name));
                 break;
             }
@@ -1345,7 +1340,7 @@ public class BuildContext {
                                 type, cdActual, name);
 
                     case NullablePrimitive:
-                        return new ExtendedSlot(this, regId,
+                        return new ExtendedSlot(regId,
                                 scope.allocateLocal(regId, cdActual),
                                 scope.allocateLocal(regId, TypeKind.BOOLEAN),
                                 flavor, type, cdActual, name);
@@ -1358,8 +1353,8 @@ public class BuildContext {
                         }
                         int extSlot = flavor == NullableXvmPrimitive
                                 ? scope.allocateLocal(regId, TypeKind.BOOLEAN)
-                                : MultiSlot.NO_SLOT;
-                        return new MultiSlot(this, regId, slots, extSlot,
+                                : NO_EXT;
+                        return new MultiSlot(regId, slots, extSlot,
                                 flavor, type, cdActual, cds, name);
 
                     default:
@@ -1377,7 +1372,7 @@ public class BuildContext {
      * @return true iff this register has been assigned
      */
     public boolean isAssigned(RegisterInfo reg) {
-        return !unassignedRegisters.containsKey(reg.original());
+        return !reg.original().isAssignmentPending();
     }
 
     /**
@@ -1386,12 +1381,7 @@ public class BuildContext {
      * @return true iff this is the first time the register is assigned
      */
     public boolean ensureRegisterScope(CodeBuilder code, RegisterInfo reg) {
-        Label varStart = unassignedRegisters.remove(reg);
-        if (varStart != null) {
-            code.labelBinding(varStart);
-            return true;
-        }
-        return false;
+        return reg.bindStartLabel(code);
     }
 
     /**
@@ -1740,8 +1730,7 @@ public class BuildContext {
                         code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
                     }
 
-                    yield new ExtendedSlot(this, regId, slotPrime, slotExt, NullablePrimitive,
-                        type, jtd.cd, name);
+                    yield new ExtendedSlot(regId, slotPrime, slotExt, NullablePrimitive, type, jtd.cd, name);
                 }
                 case XvmPrimitive -> {
                     ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
@@ -1754,8 +1743,7 @@ public class BuildContext {
                             code.localVariable(slots[i], name + "$" + i, cds[i], varStart, scope.endLabel);
                         }
                     }
-                    yield new MultiSlot(this, regId, slots, XvmPrimitive,
-                            jtd.type, jtd.cd, cds, name);
+                    yield new MultiSlot(regId, slots, NO_EXT, XvmPrimitive, jtd.type, jtd.cd, cds, name);
 
                 }
                 case NullableXvmPrimitive -> {
@@ -1773,8 +1761,7 @@ public class BuildContext {
                     if (debugInfo) {
                         code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
                     }
-                    yield new MultiSlot(this, regId, slots, slotExt, NullableXvmPrimitive,
-                            type, jtd.cd, cds, name);
+                    yield new MultiSlot(regId, slots, slotExt, NullableXvmPrimitive, type, jtd.cd, cds, name);
                 }
 
                 default -> throw new UnsupportedOperationException("Not implemented: " + jtd.flavor);
@@ -1782,7 +1769,7 @@ public class BuildContext {
         }
 
         registerInfos.put(regId, reg);
-        unassignedRegisters.put(reg, varStart);
+        reg.addStartLabel(varStart);
         if (conditionalRegisters.contains(regId)) {
             // ensure a verifier-visible value
             Builder.defaultStore(code, reg);
@@ -2029,7 +2016,7 @@ public class BuildContext {
         Label        label = code.newLabel();
 
         registerInfos.put(regId, ref);
-        unassignedRegisters.put(ref, label);
+        ref.addStartLabel(label);
         return ref;
     }
 
@@ -2984,12 +2971,11 @@ public class BuildContext {
                 new SingleSlot(type, flavor, jtd.cd, "");
 
             case NullablePrimitive ->
-                new ExtendedSlot(this, Op.A_STACK, RegisterInfo.JAVA_STACK,
+                new ExtendedSlot(Op.A_STACK, RegisterInfo.JAVA_STACK,
                     RegisterInfo.JAVA_STACK, flavor, type, jtd.cd, "");
 
             case XvmPrimitive, NullableXvmPrimitive ->
-                new MultiSlot(this, flavor, type, jtd.cd,
-                    JitTypeDesc.getXvmPrimitiveClasses(type));
+                new MultiSlot(flavor, type, jtd.cd, JitTypeDesc.getXvmPrimitiveClasses(type));
 
             default -> throw new UnsupportedOperationException("Not implemented: " + flavor);
         };
@@ -3011,7 +2997,7 @@ public class BuildContext {
             break;
 
         case NullablePrimitive:
-            reg = new ExtendedSlot(this, Op.A_STACK,
+            reg = new ExtendedSlot(Op.A_STACK,
                     scope.allocateJavaSlot(cd), scope.allocateJavaSlot(CD_boolean),
                     flavor, type, cd, "");
             break;
@@ -3024,8 +3010,8 @@ public class BuildContext {
             }
             int extSlot = flavor == NullableXvmPrimitive
                     ? scope.allocateJavaSlot(CD_boolean)
-                    : MultiSlot.NO_SLOT;
-            reg = new MultiSlot(this, Op.A_STACK, slots, extSlot, flavor, type, cd, cds, "");
+                    : NO_EXT;
+            reg = new MultiSlot(Op.A_STACK, slots, extSlot, flavor, type, cd, cds, "");
             break;
 
         default:
@@ -3053,19 +3039,19 @@ public class BuildContext {
                 int extSlot = storeTempValue(code, CD_boolean);
                 ClassDesc cd = reg.cd();
                 int slot     = storeTempValue(code, cd);
-                yield new ExtendedSlot(this, regId, slot, extSlot, flavor, type, cd, name);
+                yield new ExtendedSlot(regId, slot, extSlot, flavor, type, cd, name);
             }
 
             case XvmPrimitive, NullableXvmPrimitive -> {
                 ClassDesc[] cds     = reg.slotCds();
                 int         extSlot = flavor == NullableXvmPrimitive
                                     ? storeTempValue(code, CD_boolean)
-                                    : MultiSlot.NO_SLOT;
+                                    : NO_EXT;
                 int[]       slots   = new int[cds.length];
                 for (int i = cds.length - 1; i >= 0; i--) {
                     slots[i] = storeTempValue(code, cds[i]);
                 }
-                yield new MultiSlot(this, regId, slots, extSlot, flavor, type, reg.cd(), cds, name);
+                yield new MultiSlot(regId, slots, extSlot, flavor, type, reg.cd(), cds, name);
             }
 
             default -> throw new UnsupportedOperationException("Not implemented: " + flavor);
@@ -3513,7 +3499,7 @@ public class BuildContext {
         }
         ClassDesc    cd      = builder.ensureClassDesc(type);
         JitFlavor    flavor  = type.getJitDesc(builder).flavor;
-        RegisterInfo tempReg = new MultiSlot(this, Op.A_STACK, tempSlots, flavor, type, cd, cds, "");
+        RegisterInfo tempReg = new MultiSlot(Op.A_STACK, tempSlots, NO_EXT, flavor, type, cd, cds, "");
         tempRegStack.push(tempReg);
         return tempReg;
     }

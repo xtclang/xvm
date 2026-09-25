@@ -23,62 +23,30 @@ import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 
 /**
  * A register that stores an XVM value in multiple Java slots.
- *
- * @param bctx     the {@link BuildContext} associated with this register
- * @param regId    the register id
- * @param slots    the identifiers of the slots that store the value represented by this register
- * @param extSlot  the identifier of the slot that stores an additional boolean flag
- * @param flavor   the {@link JitFlavor} of the value this register represents
- * @param type     the {@link TypeConstant} of the value this register represents
- * @param cd       the {@link ClassDesc} of the value this register represents
- * @param slotCds  the {@link ClassDesc} instances for each slot
- * @param name     the name of the value represented by this register
  */
-public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
-                        JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                        ClassDesc[] slotCds, String name)
-        implements RegisterInfo {
+public class MultiSlot
+        extends AbstractRegisterInfo {
 
     /**
      * An {@code int} value to indicate that the extSlot is not used.
      */
-    public static final int NO_SLOT = Integer.MIN_VALUE;
+    public static final int NO_EXT = Integer.MIN_VALUE;
 
     /**
      * Create a {@link MultiSlot} representing a value stored on the Java stack.
      *
-     * @param bctx     the {@link BuildContext} associated with this register
      * @param flavor   the {@link JitFlavor} of the value this register represents
      * @param type     the {@link TypeConstant} of the value this register represents
      * @param cd       the {@link ClassDesc} of the value this register represents
      * @param cdSlots  the {@link ClassDesc} instances for each slot
      */
-    public MultiSlot(BuildContext bctx, JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                     ClassDesc[] cdSlots) {
-        this(bctx, Op.A_STACK, null, NO_SLOT, flavor, type, cd, cdSlots, "");
+    public MultiSlot(JitFlavor flavor, TypeConstant type, ClassDesc cd, ClassDesc[] cdSlots) {
+        this(Op.A_STACK, null, NO_EXT, flavor, type, cd, cdSlots, "");
     }
 
     /**
      * Create a {@link MultiSlot} representing a value stored on the Java stack.
      *
-     * @param bctx     the {@link BuildContext} associated with this register
-     * @param regId    the identifier of the register
-     * @param slots    the identifiers of the slots that store the value represented by this register
-     * @param flavor   the {@link JitFlavor} of the value this register represents
-     * @param type     the {@link TypeConstant} of the value this register represents
-     * @param cd       the {@link ClassDesc} of the value this register represents
-     * @param cdSlots  the {@link ClassDesc} instances for each slot
-     * @param name     the name of the value represented by this register
-     */
-    public MultiSlot(BuildContext bctx, int regId, int[] slots, JitFlavor flavor,
-                     TypeConstant type, ClassDesc cd, ClassDesc[] cdSlots, String name) {
-        this(bctx, regId, slots, NO_SLOT, flavor, type, cd, cdSlots, name);
-    }
-
-    /**
-     * Create a {@link MultiSlot} representing a value stored on the Java stack.
-     *
-     * @param bctx     the {@link BuildContext} associated with this register
      * @param regId    the identifier of the register
      * @param slots    the identifiers of the slots that store the value represented by this register
      * @param extSlot  the identifier of the slot that stores an additional boolean flag
@@ -88,19 +56,14 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
      * @param slotCds  the {@link ClassDesc} instances for each slot
      * @param name     the name of the value represented by this register
      */
-    public MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
-                     JitFlavor flavor, TypeConstant type, ClassDesc cd,
-                     ClassDesc[] slotCds, String name) {
+    public MultiSlot(int regId, int[] slots, int extSlot, JitFlavor flavor, TypeConstant type,
+                     ClassDesc cd, ClassDesc[] slotCds, String name) {
+        super(regId, Objects.requireNonNull(flavor), Objects.requireNonNull(type),
+                Objects.requireNonNull(cd), name);
         assert flavor == XvmPrimitive || flavor == NullableXvmPrimitive;
 
-        this.bctx    = bctx;
-        this.regId   = regId;
         this.extSlot = extSlot;
-        this.flavor  = Objects.requireNonNull(flavor);
-        this.type    = Objects.requireNonNull(type);
-        this.cd      = Objects.requireNonNull(cd);
         this.slotCds = Objects.requireNonNull(slotCds);
-        this.name    = name;
 
         if (slots == null) {
             this.slots = new int[slotCds.length];
@@ -109,6 +72,44 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
             assert slots.length == slotCds.length;
             this.slots = slots;
         }
+    }
+
+    /**
+     * @return the number of slots used by this register
+     */
+    public int slotCount() {
+        return slots.length;
+    }
+
+    /**
+     * @return the slot at the specified index
+     */
+    public int slot(int index) {
+        return slots[index];
+    }
+
+    /**
+     * @return the slot for the additional boolean flag, or {@link #NO_EXT} if none
+     */
+    public int extSlot() {
+        return extSlot;
+    }
+
+    /**
+     * @return the class descriptor at the specified index
+     */
+    public ClassDesc cd(int index) {
+        return slotCds[index];
+    }
+
+    @Override
+    public int[] slots() {
+        return slots;
+    }
+
+    @Override
+    public ClassDesc[] slotCds() {
+        return slotCds;
     }
 
     @Override
@@ -121,33 +122,6 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
         return slots[0];
     }
 
-    /**
-     * @return the number of slots used by this register
-     */
-    public int slotCount() {
-        return slots.length;
-    }
-
-    /**
-     * Obtain the slot at the specified index.
-     *
-     * @param index the index of the slot to return
-     * @return the slot at the specified index
-     */
-    public int slot(int index) {
-        return slots[index];
-    }
-
-    /**
-     * Obtain the class descriptor at the specified index.
-     *
-     * @param index the index of the class descriptor to return
-     * @return the class descriptor at the specified index
-     */
-    public ClassDesc cd(int index) {
-        return slotCds[index];
-    }
-
     @Override
     public RegisterInfo load(CodeBuilder code) {
         assert flavor == XvmPrimitive || flavor == NullableXvmPrimitive;
@@ -156,7 +130,7 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
             Builder.load(code, slotCds[i], slots[i]);
         }
 
-        if (extSlot != NO_SLOT) {
+        if (extSlot != NO_EXT) {
             // load the "extension" boolean flag last
             Builder.load(code, CD_boolean, extSlot);
         }
@@ -167,7 +141,7 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
     public RegisterInfo store(BuildContext bctx, CodeBuilder code, TypeConstant type) {
         assert regId() > Op.CONSTANT_OFFSET; // cannot store a property register
 
-        if (extSlot != NO_SLOT) {
+        if (extSlot != NO_EXT) {
             if (type != null && type.isXvmPrimitive()) {
                 // a non-null result has only its primitive components on the stack
                 code.iconst_0();
@@ -192,10 +166,13 @@ public record MultiSlot(BuildContext bctx, int regId, int[] slots, int extSlot,
 
     @Override
     public String toString() {
-        return "regId="    + regId
+        return super.toString()
             + ", slots="   + Arrays.toString(slots)
-            + ", flavor="  + flavor
-            + ", type="    + type.getValueString()
-            + ", slotCds=" + Arrays.toString(slotCds);
+            + ", slotCds=" + Arrays.toString(slotCds)
+            + ", extSlot=" + extSlot;
     }
+
+    private final int[]       slots;
+    private final int         extSlot;
+    private final ClassDesc[] slotCds;
 }

@@ -44,6 +44,8 @@ import static org.xvm.javajit.Builder.CD_Object;
 import static org.xvm.javajit.Builder.MD_xvmVoid;
 import static org.xvm.javajit.Builder.md;
 
+import static org.xvm.javajit.registers.MultiSlot.NO_EXT;
+
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
 
@@ -524,7 +526,7 @@ public abstract class OpIndex
                     Builder.loadFromContext(code, cds[i], i - 1);
                     slots[i] = bctx.storeTempValue(code, cds[i]);
                 }
-                regElement = new MultiSlot(bctx, 0, slots, JitFlavor.XvmPrimitive, typeEl,
+                regElement = new MultiSlot(0, slots, NO_EXT, JitFlavor.XvmPrimitive, typeEl,
                         cd, cds, "");
             } else {
                 int slot = bctx.storeTempValue(code, cdEl);

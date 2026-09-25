@@ -1,6 +1,7 @@
 package org.xvm.javajit;
 
 import java.lang.classfile.CodeBuilder;
+import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 
 import org.xvm.asm.Op;
@@ -60,6 +61,30 @@ public interface RegisterInfo {
      * @return the XTC register name (optional)
      */
     String name();
+
+    /**
+     * @return true iff the first assignment is pending; this reflects code-generation progress,
+     *         not definite assignment on every control-flow path
+     */
+    boolean isAssignmentPending();
+
+    /**
+     * Register the scope-start label to bind when the first store is emitted. There must not
+     * already be a pending label for this register.
+     *
+     * @param label  the scope-start label
+     */
+    void addStartLabel(Label label);
+
+    /**
+     * Bind and clear the pending scope-start label after emitting the first store. This records code
+     * generation progress, not whether the register is assigned on every control-flow path.
+     *
+     * @param code  the code builder
+     *
+     * @return true iff a pending label was bound
+     */
+    boolean bindStartLabel(CodeBuilder code);
 
     /**
      * @return true iff the XTC register is represented by a single Java slot

@@ -458,7 +458,7 @@ public class CommonBuilder
             ClassDesc[]  cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
             code.getstatic(art.CD(), CONST_PROP + index, cd);
             unbox(code, type);
-            return new MultiSlot(bctx, JitFlavor.XvmPrimitive, type, cd, cds);
+            return new MultiSlot(JitFlavor.XvmPrimitive, type, cd, cds);
         }
 
         default:
