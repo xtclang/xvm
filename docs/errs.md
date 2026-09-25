@@ -8,6 +8,16 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Anonymous constructors (2026-09-25, working changes after `185ff84b1`).**
+Cursor queries now prepare the source-owned anonymous declaration and fit its own or superclass
+constructors. Interface/abstract implementations, generic and annotated bases, named slots and
+captured-local syntax have consumers. No new AST member or public embedding signature is needed.
+Preparation stops before forwarding constructors, capture analysis and emission; Kotlin hides
+generated class names in help. See [C18/L31](errs-integration-plan.md#anonymous-constructor-cursor-support)
+for ownership, limits and validation. Manual/automated cases are X88–X89. All 473 executed Java,
+986 executed LSP, 38 packaged-stdio and 94 editor cases pass; existing skips and retry evidence are
+recorded there. The retention workload releases all 2,421 observed compiler objects.
+
 **Specialized constructors and declaration/literal recovery (2026-09-25, `46d6c1442`).**
 Qualified/implicit inner, virtual, annotated and formal constructor calls reuse normal compiler
 preparation. Required types constrain omitted generics; written arguments provide provisional
@@ -109,7 +119,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X87 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X89 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1375,13 +1385,13 @@ persistent workspace index remain separate from the host contract.
 
 | Changed source | Why it belongs here | State / ownership |
 |---|---|---|
-| `NewExpression.prepareConstruction` and its nested `Construction` record | Share normal receiver/type preparation, annotation checks, inner/formal rules and array setup with explicit cursor probes; avoid duplicating language rules in Kotlin. | Package-local helper and stack-owned record. Normal validation uses the same prefix. Only trial syntax is mutated during a probe; no new AST field. |
-| `PartialConstructionResolver` | Constructor fitting and class inference need the live compiler Context and existing argument fitter. | Separate compiler helper, discarded child contexts and cloned arguments. Immutable existing `CursorBinding.Candidate` results; no node caches or callbacks retained. |
+| `NewExpression.prepareConstruction` and its nested `Construction` record | Share normal receiver/type preparation, annotation checks, inner/formal rules and array setup with explicit cursor probes; avoid duplicating language rules in Kotlin. | Package-local helper and stack-owned record. Normal validation uses the same prefix. Ordinary probes mutate trial syntax; anonymous probes prepare the retained source-owned declaration in the partial-analysis attempt. No new AST field. |
+| `PartialConstructionResolver` | Constructor fitting and class inference need the live compiler Context and existing argument fitter. | Separate compiler helper, discarded child contexts and cloned arguments. Anonymous class components stay under their source-owned `anon` child; superclass candidates need no generated forwarding constructor. Immutable existing `CursorBinding.Candidate` results; no node caches or callbacks retained. |
 | `Statement.validate` overload, `IncompleteExpression` and `IncompleteStatement` | Carry an enclosing required type into constructor inspection while preserving Statement's validation/break bookkeeping. | A synchronous Supplier runs inside the existing context scope. Required type stays on the call stack, never in a field. |
 | `IncompleteStatement.getLeadingArguments()` | Array dimensions are real source arguments preceding the initializer's parenthesis. | Read-only view of existing NewExpression argument children; ordinary AST cloning already owns them. Kotlin copies ranges and an integer offset. |
 | `IncompleteStatement.isWithin` | Identify retained cursor syntax before a declaration's disposable constant probe. | Package-local recursive syntax query; no cached flag. |
 | `PropertyDeclarationStatement.validateContent` | A property/default initializer's lexical context and synthetic method are compiler-owned. A cursor hole cannot become a constant; probing a discarded clone loses the source-owned facts. | In explicit cursor analysis only, use the existing real initializer field and collectors directly. Failed validation prevents emission. Normal compilation retains its constant probe. No new field or clone-remapping mechanism. |
-| `Parser` constructor/declaration/tuple/literal paths | The parser owns delimiter ambiguity, original source ranges and recovery boundaries. | Existing Incomplete nodes and zero-width closing markers. Anonymous bodies remain owned syntax so unsupported constructor probes fail closed. No invented operands or declaration names/types. |
+| `Parser` constructor/declaration/tuple/literal paths | The parser owns delimiter ambiguity, original source ranges and recovery boundaries. | Existing Incomplete nodes and zero-width closing markers. Anonymous bodies remain owned syntax so constructor probes resolve the retained declaration instead of treating it as a following block. No invented operands or declaration names/types. |
 
 This is an additive syntax accessor and internal refactoring, with no new Java public record
 components. C16 and C17 have independent semantic responsibilities; shared files must be split by
