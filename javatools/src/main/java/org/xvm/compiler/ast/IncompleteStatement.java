@@ -55,9 +55,22 @@ public final class IncompleteStatement extends Statement {
         return new IncompleteStatement(callee, open, arguments, separators, cursor, Parser.INCOMPLETE_EXPRESSION, name);
     }
 
+    /** A direct argument name prefix; label is null for a positional argument. */
+    public static IncompleteStatement forArgumentPrefix(Expression callee, Token open,
+            List<Expression> arguments, List<Token> separators, long cursor, Token label, Token prefix) {
+        return new IncompleteStatement(callee, open, arguments, separators, cursor,
+                Parser.INCOMPLETE_EXPRESSION, label, prefix);
+    }
+
     private IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
                                 List<Token> separators, long endPosition, String diagnosticCode,
                                 Token cursorName) {
+        this(target, operator, arguments, separators, endPosition, diagnosticCode, cursorName, null);
+    }
+
+    private IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
+                                List<Token> separators, long endPosition, String diagnosticCode,
+                                Token cursorName, Token argumentPrefix) {
         this.target         = target;
         this.operator       = operator;
         this.arguments      = new ArrayList<>(arguments);
@@ -65,6 +78,7 @@ public final class IncompleteStatement extends Statement {
         this.endPosition    = endPosition;
         this.diagnosticCode = diagnosticCode;
         this.cursorName     = cursorName;
+        this.argumentPrefix = argumentPrefix;
     }
 
     /** The written receiver (member access) or callee (call); a call is never overload-resolved. */
@@ -82,12 +96,17 @@ public final class IncompleteStatement extends Statement {
         return isCall() ? Optional.empty() : Optional.ofNullable(cursorName);
     }
 
-    /** The named argument at the cursor, whose value is absent and has no expression/type. */
+    /** The named argument at the cursor, whose value is absent or retained only as a name prefix. */
     public Optional<Token> getPendingArgumentName() {
         return isCall() ? Optional.ofNullable(cursorName) : Optional.empty();
     }
 
-    /** Complete written arguments; excludes the missing argument after a trailing comma. */
+    /** Original token to replace when completing an argument; it is never validated as a value. */
+    public Optional<Token> getArgumentPrefix() {
+        return Optional.ofNullable(argumentPrefix);
+    }
+
+    /** Complete written arguments; excludes the missing value or cursor-selected argument prefix. */
     public List<Expression> getArguments() {
         return List.copyOf(arguments);
     }
@@ -193,6 +212,7 @@ public final class IncompleteStatement extends Statement {
     private final long        endPosition;
     private final String      diagnosticCode;
     private final Token       cursorName;
+    private final Token       argumentPrefix;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteStatement.class, "target", "arguments");
 }

@@ -127,11 +127,15 @@ class XdkCursorRequestTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = [false, true])
-    fun `canceling converted completion results cancels their compiler request`(argumentSlot: Boolean) {
+    @ValueSource(strings = ["member", "empty", "typed"])
+    fun `canceling converted completion results cancels their compiler request`(kind: String) {
         val compiler = PausedCursor()
         val prefix =
-            if (argumentSlot) "module Editing { void take(String value) {} void run(String text) { take(" else prefix("String")
+            when (kind) {
+                "member" -> prefix("String")
+                "empty" -> "module Editing { void take(String value) {} void run(String text) { take("
+                else -> "module Editing { void take(String value) {} void run(String text) { take(te"
+            }
         val source = "$prefix } }"
         compiler.adapter().use { adapter ->
             adapter.compile(URI, source)
@@ -142,7 +146,15 @@ class XdkCursorRequestTest {
                 compiler.release.countDown()
                 adapter.compileAsync("untitled:Barrier.x", text("String")).get(10, SECONDS)
                 assertThat(running.isCancelled).isTrue()
-                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains(if (argumentSlot) "text" else "size")
+                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains(
+                    if (kind ==
+                        "member"
+                    ) {
+                        "size"
+                    } else {
+                        "text"
+                    },
+                )
             } finally {
                 compiler.release.countDown()
             }
