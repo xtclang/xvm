@@ -340,7 +340,7 @@ public abstract class Builder {
                 TypeConstant propType  = singleton.getType();
                 JitTypeDesc  jtd       = propType.getJitDesc(this);
 
-                SingleSlot singleSlot = new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                RegisterInfo singletonReg = new SingleSlot(propType, jtd.flavor, jtd.cd, "");
                 if (isContainerScoped(propInfo)) {
                     assert !jtd.flavor.isOptimized;
 
@@ -351,7 +351,7 @@ public abstract class Builder {
                                 propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
                         .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic);
                     code.checkcast(jtd.cd);
-                    return singleSlot;
+                    return singletonReg;
                 }
 
                 switch (jtd.flavor) {
@@ -360,12 +360,12 @@ public abstract class Builder {
                             propId.ensureJitPropertyName(typeSystem),
                             JitTypeDesc.requirePrimitiveFieldClass(propType));
                     normalizePrimitiveField(code, propType);
-                    return singleSlot;
+                    return singletonReg;
 
                 case Specific, Widened:
                     code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
-                    return singleSlot;
+                    return singletonReg;
 
                 case XvmPrimitive:
                     ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(propType);
@@ -1394,21 +1394,24 @@ public abstract class Builder {
         Label        lblDone      = code.newLabel();
         TypeConstant typeSansNull = type.removeNullable();
         ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
-                                    ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                    : new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeSansNull)};
+                ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
+                : new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeSansNull)};
 
-        loadNull(code.dup())
+        code.dup();
+        loadNull(code)
             .if_acmpne(lblNotNull)
             .pop();
         for (ClassDesc primitiveCd : primitiveCds) {
             defaultLoad(code, primitiveCd);
         }
-        return unbox(code.iconst_1()
-                         .goto_(lblDone)
-                         .labelBinding(lblNotNull)
-                         .checkcast(cd), type)
-                .iconst_0()
-                .labelBinding(lblDone);
+        code.iconst_1()
+            .goto_(lblDone)
+            .labelBinding(lblNotNull)
+            .checkcast(cd);
+        unbox(code, type)
+            .iconst_0()
+            .labelBinding(lblDone);
+        return code;
     }
 
     /**
@@ -1428,15 +1431,17 @@ public abstract class Builder {
         Label        lblNull  = code.newLabel();
         Label        lblDone  = code.newLabel();
 
-        box(code.ifne(lblNull), sansNull)
+        code.ifne(lblNull);
+        box(code, sansNull)
             .goto_(lblDone)
             .labelBinding(lblNull);
-
         ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(sansNull);
         for (int i = cds.length - 1; i >= 0; i--) {
             pop(code, cds[i]);
         }
-        return loadNull(code).labelBinding(lblDone);
+        loadNull(code)
+            .labelBinding(lblDone);
+        return code;
     }
 
     /**

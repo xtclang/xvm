@@ -7764,7 +7764,7 @@ public abstract class TypeConstant
      * @param code  the {@link CodeBuilder} to use to generate byte codes
      */
     private CodeBuilder convertIfUnsignedPrimitive(CodeBuilder code) {
-        // We only need to convert UInt32 and UInt64 because unlike Java, Ecstasy holds other
+        // we only need to convert UInt32 and UInt64 because unlike Java, Ecstasy holds other
         // values such as UInt8 and UInt16 inside an int already in the correct form
         return switch (getSingleUnderlyingClass(true).getName()) {
             case "UInt32" -> code.loadConstant(Integer.MIN_VALUE).iadd();

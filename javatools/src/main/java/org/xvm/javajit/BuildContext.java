@@ -375,27 +375,24 @@ public class BuildContext {
      *     if ($jump2) GOTO Loop.Exit
      *     if ($doReturn) return $r1
      * }</pre>
-     *
-     * @param code  the code builder, used to exchange jumps that have to run a "finally" first
-     * @param ops   the ops of the method being compiled
      */
     public void preprocess(CodeBuilder code, Op[] ops) {
         Scope origScope = scope;
         scope = origScope.startPreprocessing();
 
         // these are only ever touched from inside a GuardAll region, so the op stream guarantees
-        // they are set by the time they are read; initialize them up front anyway, so that is a
+        // they are set by the time they are read; we initialize them up front anyway, so that is a
         // property of the code rather than of the op stream
         Deque<Integer>       guardStack    = new ArrayDeque<>();
         Deque<List<Integer>> jumpAddrStack = new ArrayDeque<>();
         Deque<List<Integer>> jumpDestStack = new ArrayDeque<>();
 
-        int                   guardAddr  = -1;    // the address of the last GuardAll op
-        int                   finAddr    = -1;    // the address of the last FinallyEnd op
+        int                   guardAddr  = -1;                // the address of the last GuardAll op
+        int                   finAddr    = -1;                // the address of the last FinallyEnd op
         List<Integer>         jumpsAddr  = new ArrayList<>(); // the addresses of Jump ops
         List<Integer>         jumpsDest  = new ArrayList<>(); // the addresses of jump destinations
-        Map<Integer, Boolean> refs       = null;  // the ids of registers that need to be boxed as Refs
-        boolean               doReturn   = false; // indicates whether FinallyEnd should generate returns
+        Map<Integer, Boolean> refs       = null;              // the ids of registers that need to be boxed as Refs
+        boolean               doReturn   = false;             // indicates whether FinallyEnd should generate returns
         for (int iPC = 0, opsCount = ops.length; iPC < opsCount; iPC++) {
             Op op = ops[currOpAddr = iPC];
             switch (op) {
@@ -757,10 +754,10 @@ public class BuildContext {
                 type     = thisType;
                 slot     = code.parameterSlot(0);
             } else {
-                param     = methodStruct.getParam(varIndex);
-                name      = param.getName();
-                type      = resolveSpecialized(param.getType());
-                slot      = code.parameterSlot(extraArgs + i); // compensate for implicits
+                param    = methodStruct.getParam(varIndex);
+                name     = param.getName();
+                type     = resolveSpecialized(param.getType());
+                slot     = code.parameterSlot(extraArgs + i); // compensate for implicits
             }
 
             if (debugInfo) {
@@ -770,6 +767,7 @@ public class BuildContext {
 
             JitFlavor flavor      = paramDesc.flavor;
             boolean   withDefault = false;
+
             switch (flavor) {
             case Primitive, Specific, Widened: {
                 TypeConstant regType = flavor == Primitive ? paramDesc.type : type;
@@ -779,7 +777,8 @@ public class BuildContext {
             }
 
             case PrimitiveWithDefault, SpecificWithDefault, WidenedWithDefault: {
-                // a *WithDefault flavor never applies to "thi$", so param is set here
+                // "thi$" can never be of "*WithDefault" flavor so param is set here and other
+                // cases below
                 assert param != null && param.hasDefaultValue();
 
                 Label ifNotDefault = code.newLabel();
@@ -810,7 +809,6 @@ public class BuildContext {
             }
 
             case NullablePrimitiveWithDefault: {
-                // a *WithDefault flavor never applies to "thi$", so param is set here
                 assert param != null && param.hasDefaultValue();
 
                 Label ifNotDefault = code.newLabel();
@@ -851,7 +849,6 @@ public class BuildContext {
             }
 
             case XvmPrimitiveWithDefault, NullableXvmPrimitiveWithDefault: {
-                // a *WithDefault flavor never applies to "thi$", so param is set here
                 assert param != null && param.hasDefaultValue();
 
                 ClassDesc[] cds          = JitTypeDesc.getXvmPrimitiveClasses(paramDesc.type);
@@ -2177,7 +2174,7 @@ public class BuildContext {
                  "Specific->NullableXvmPrimitiveWithDefault": {
                 assert srcReg.type().isOnlyNullable();
                 code.pop(); // throw away Null; load the default primitive values and "true"
-                assert pd.index != -1; // TODO CP -1 == thi$
+                assert pd.index != -1;
                 int[] anIndexes = jmd.getAllOptimizedParamIndexes(pd.index);
                 // the last opt arg will be the boolean flag, fill the others with the default
                 for (int nIndex = 0; nIndex < anIndexes.length - 1; nIndex++) {
@@ -2277,11 +2274,9 @@ public class BuildContext {
             TypeConstant refType = isVar ? pool().ensureVarType(type) : pool().ensureRefType(type);
             return introduceRegister(code, regId, refType, "");
         } else {
-            // note: typeRef() is read outside the assert; it lazily populates a cache, and an
-            // assertion must not be the thing that fills it
-            TypeConstant typeRef = pool().typeRef();
+            TypeConstant refType = pool().typeRef();
             assert reg.flavor() != JitFlavor.Ref;
-            assert reg.type().isA(typeRef) && reg.type().getParamType(0).equals(type);
+            assert reg.type().isA(refType) && reg.type().getParamType(0).equals(type);
             return reg;
         }
     }

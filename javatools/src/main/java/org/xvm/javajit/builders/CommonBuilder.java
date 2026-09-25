@@ -3210,8 +3210,6 @@ public class CommonBuilder
      * @param allowLazy  true if lazy properties should be included
      *
      * @return the const-forming properties, sorted by rank
-     *
-     * @throws UnsupportedOperationException  if one of them has a union type
      */
     private List<PropertyInfo> collectConstFormingProperties(TypeConstant baseType,
                                                              boolean allowLazy) {
@@ -3226,9 +3224,6 @@ public class CommonBuilder
      * @param prop  a property a generated Const method is about to be built over
      *
      * @return the property itself
-     *
-     * @throws UnsupportedOperationException  if its type is one the generated methods cannot
-     *                                        handle yet
      */
     private static PropertyInfo requireSupportedConstType(PropertyInfo prop) {
         TypeConstant propType = prop.getType();

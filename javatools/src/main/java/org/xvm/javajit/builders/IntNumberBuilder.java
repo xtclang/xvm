@@ -738,8 +738,6 @@ public class IntNumberBuilder extends NumberBuilder {
         addPrimitiveReturn(code, jmd);
     }
 
-    private static final ClassDesc CD_BigInteger = ClassDesc.of(BigInteger.class.getName());
-
     /**
      * @return the exception to throw for a multi-slot XVM primitive this builder cannot handle
      */
@@ -753,4 +751,6 @@ public class IntNumberBuilder extends NumberBuilder {
     private UnsupportedOperationException unsupportedNumber() {
         return new UnsupportedOperationException("Unsupported number type: " + thisType);
     }
+
+    private static final ClassDesc CD_BigInteger = ClassDesc.of(BigInteger.class.getName());
 }
