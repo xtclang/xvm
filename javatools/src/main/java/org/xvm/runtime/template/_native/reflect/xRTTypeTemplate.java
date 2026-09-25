@@ -791,7 +791,8 @@ public class xRTTypeTemplate
                     }
                     Parameter param   = constructor.getParam(iArg);
                     int       iResult = Utils.constructArgument(frameCaller,
-                                            param.getType().freeze(), hValue, param.getName());
+                                            frameCaller.runtimeConstant(param.getType()).freeze(),
+                                            hValue, param.getName());
                     if (iResult == Op.R_CALL) {
                         frameCaller.m_frameNext.addContinuation(this);
                     } else {

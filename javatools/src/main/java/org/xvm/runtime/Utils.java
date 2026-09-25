@@ -81,17 +81,6 @@ public abstract class Utils {
     public static void initNative(NativeContainer container) {
         ConstantPool pool = container.getConstantPool();
 
-        ANNOTATION_TEMPLATE           = container.getTemplate("reflect.Annotation");
-        ANNOTATION_TEMPLATE_TEMPLATE  = container.getTemplate("reflect.AnnotationTemplate");
-        ARGUMENT_TEMPLATE             = container.getTemplate("reflect.Argument");
-        RT_PARAMETER_TEMPLATE         = container.getTemplate("_native.reflect.RTParameter");
-        ANNOTATION_CONSTRUCT          = ANNOTATION_TEMPLATE.getStructure().findMethod("construct", 2);
-        ANNOTATION_TEMPLATE_CONSTRUCT = ANNOTATION_TEMPLATE_TEMPLATE.getStructure().findMethod("construct", 2);
-        ARGUMENT_CONSTRUCT            = ARGUMENT_TEMPLATE.getStructure().findMethod("construct", 2);
-        RT_PARAMETER_CONSTRUCT        = RT_PARAMETER_TEMPLATE.getStructure().findMethod("construct", 5);
-        LIST_MAP_CONSTRUCT            = xListMap.INSTANCE.ensureConstructor();
-        ANNOTATION_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Annotation"));
-        ARGUMENT_ARRAY_TYPE           = pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Argument"));
         CONST_HELPER                  = container.getClassStructure("_native.ConstHelper");
         STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
         SIG_FREEZE                    = container.getClassStructure("Freezable").findMethod("freeze", 1).
@@ -250,7 +239,7 @@ public abstract class Utils {
     public static ObjectHandle ensureInitializedEnum(Frame frame, EnumHandle hEnum) {
         if (hEnum.isStruct()) {
             // turn the Enum struct into a "public" value
-            IdentityConstant idValue = (IdentityConstant) hEnum.getType().getDefiningConstant();
+            IdentityConstant idValue = (IdentityConstant) frame.runtimeTypeOf(hEnum).getDefiningConstant();
             return frame.getConstHandle(
                     frame.poolContext().ensureSingletonConstConstant(idValue));
         }
@@ -1517,8 +1506,9 @@ public abstract class Utils {
      * @return a constant Annotation array handle
      */
     public static ArrayHandle makeAnnoArrayHandle(Container container, ObjectHandle[] ahAnno) {
-        return xArray.makeArrayHandle(
-                container.ensureClassComposition(ANNOTATION_ARRAY_TYPE, xArray.INSTANCE),
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        return xArray.makeArrayHandle(container.resolveClass(pool.ensureArrayType(
+                pool.ensureEcstasyTypeConstant("reflect.Annotation"))),
                 ahAnno.length, ahAnno, Mutability.Constant);
     }
 
@@ -1526,8 +1516,9 @@ public abstract class Utils {
      * @return a constant Argument array handle
      */
     public static ArrayHandle makeArgumentArrayHandle(Container container, ObjectHandle[] ahArg) {
-        return xArray.makeArrayHandle(
-                container.ensureClassComposition(ARGUMENT_ARRAY_TYPE, xArray.INSTANCE),
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        return xArray.makeArrayHandle(container.resolveClass(pool.ensureArrayType(
+                pool.ensureEcstasyTypeConstant("reflect.Argument"))),
                 ahArg.length, ahArg, Mutability.Constant);
     }
 
@@ -1541,7 +1532,6 @@ public abstract class Utils {
             this.aParam       = aParam;
             this.ahParam      = ahParam;
             this.continuation = continuation;
-            typeRTParameter   = RT_PARAMETER_TEMPLATE.getClassConstant().getType();
         }
 
         @Override
@@ -1559,17 +1549,16 @@ public abstract class Utils {
         public int doNext(Frame frameCaller) {
             while (++index < aParam.length) {
                 Parameter    param        = aParam[index];
-                TypeConstant type         = param.getType();
+                TypeConstant type         = frameCaller.runtimeConstant(param.getType());
                 String       sName        = param.getName();
                 boolean      fFormal      = param.isTypeParameter();
                 Constant     constDefault = param.getDefaultValue();
 
-                ConstantPool    pool      = frameCaller.poolContext();
-                ClassTemplate   template  = RT_PARAMETER_TEMPLATE;
-                TypeConstant    typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
-                TypeComposition clzParam  = frameCaller.f_context.f_container.ensureClassComposition(typeParam, template);
+                Container container = frameCaller.f_context.f_container;
+                ClassTemplate template = container.getTemplate("_native.reflect.RTParameter");
+                TypeComposition clzParam = template.ensureParameterizedClass(container, type);
 
-                MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
+                MethodStructure construct = template.getStructure().findMethod("construct", 5);
                 ObjectHandle[]   ahArg     = new ObjectHandle[frameCaller.getMaxVars(construct)];
                 ahArg[0] = xInt64.makeHandle(index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
@@ -1596,7 +1585,6 @@ public abstract class Utils {
         private final Parameter[]    aParam;
         private final ObjectHandle[] ahParam;
         private final Frame.Continuation continuation;
-        private final TypeConstant  typeRTParameter;
         private int index = -1;
     }
 
@@ -1613,7 +1601,7 @@ public abstract class Utils {
      */
     public static int constructListMap(Frame frame, TypeComposition clzMap,
                                        ObjectHandle haKeys, ObjectHandle haValues, int iReturn) {
-        MethodStructure constructor = LIST_MAP_CONSTRUCT;
+        MethodStructure constructor = ((xListMap) clzMap.getTemplate()).ensureConstructor();
         ObjectHandle[]  ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = haKeys;
         ahArg[1] = haValues;
@@ -1633,14 +1621,16 @@ public abstract class Utils {
      */
     public static int constructArgument(Frame frame, TypeConstant typeReferent,
                                         ObjectHandle hValue, String sName) {
-        MethodStructure constructor = ARGUMENT_CONSTRUCT;
+        Container container = frame.f_context.f_container;
+        ClassTemplate template = container.getTemplate("reflect.Argument");
+        MethodStructure constructor = template.getStructure().findMethod("construct", 2);
         ObjectHandle[]  ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = hValue;
         ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
 
-        TypeComposition clzArg = ARGUMENT_TEMPLATE.
-                ensureParameterizedClass(frame.f_context.f_container, typeReferent);
-        return ARGUMENT_TEMPLATE.construct(frame, constructor, clzArg, null, ahArg, Op.A_STACK);
+        TypeComposition clzArg = template.ensureParameterizedClass(
+                container, frame.runtimeConstant(typeReferent));
+        return template.construct(frame, constructor, clzArg, null, ahArg, Op.A_STACK);
     }
 
     /**
@@ -1655,14 +1645,15 @@ public abstract class Utils {
      */
     public static int constructAnnotation(Frame frame, ClassHandle hAnno,
                                           ObjectHandle[] ahAnnoArg, int iReturn) {
-        MethodStructure constructor = ANNOTATION_CONSTRUCT;
+        Container container = frame.f_context.f_container;
+        ClassTemplate template = container.getTemplate("reflect.Annotation");
+        MethodStructure constructor = template.getStructure().findMethod("construct", 2);
         ObjectHandle[]  ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = hAnno;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
-        ClassTemplate template = ANNOTATION_TEMPLATE;
         return template.construct(frame, constructor,
-                template.getCanonicalClass(), null, ahArg, iReturn);
+                template.getCanonicalClass(container), null, ahArg, iReturn);
     }
 
     /**
@@ -1677,14 +1668,15 @@ public abstract class Utils {
      */
     public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle hClass,
                                                   ObjectHandle[] ahAnnoArg, int iReturn) {
-        MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
+        Container container = frame.f_context.f_container;
+        ClassTemplate template = container.getTemplate("reflect.AnnotationTemplate");
+        MethodStructure constructor = template.getStructure().findMethod("construct", 2);
         ObjectHandle[]  ahArg = new ObjectHandle[frame.getMaxVars(constructor)];
         ahArg[0] = hClass;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 
-        ClassTemplate template = ANNOTATION_TEMPLATE_TEMPLATE;
         return template.construct(frame, constructor,
-                template.getCanonicalClass(), null, ahArg, iReturn);
+                template.getCanonicalClass(container), null, ahArg, iReturn);
     }
 
     /**
@@ -1752,18 +1744,7 @@ public abstract class Utils {
     public static final Predicate          ANY  = t -> true;
 
     public  static ClassStructure    CONST_HELPER;
-    private static ClassTemplate     ANNOTATION_TEMPLATE;
-    private static ClassTemplate     ANNOTATION_TEMPLATE_TEMPLATE;
-    private static ClassTemplate     ARGUMENT_TEMPLATE;
-    private static ClassTemplate     RT_PARAMETER_TEMPLATE;
-    private static MethodStructure   ANNOTATION_CONSTRUCT;
-    private static MethodStructure   ANNOTATION_TEMPLATE_CONSTRUCT;
-    private static MethodStructure   ARGUMENT_CONSTRUCT;
-    private static MethodStructure   RT_PARAMETER_CONSTRUCT;
-    private static MethodStructure   LIST_MAP_CONSTRUCT;
     private static MethodStructure   STRING_VALUE_OF;
-    private static TypeConstant      ANNOTATION_ARRAY_TYPE;
-    private static TypeConstant      ARGUMENT_ARRAY_TYPE;
     private static SignatureConstant SIG_FREEZE;
     private static SignatureConstant SIG_GET_RESOURCE;
     private static SignatureConstant SIG_INJECT;

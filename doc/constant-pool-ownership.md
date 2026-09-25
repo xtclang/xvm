@@ -808,3 +808,12 @@ resolved only by its capturing container. Same-image sibling contexts and explic
 imports cannot acquire the token's value. The [scope-5 record](constant-pool-architecture-plan.md#scope-5-reflection-and-native-value-ownership)
 records the reproduced guard failure and the 24 passing focused Java cases. Broader reflection
 and the native-state audit remain in progress.
+
+The following reflection migration gives runtime signature/array/map helpers and MethodTemplate
+handles explicit requesting owners. Foreign Type handles retain their exact source execution;
+descriptor lookup cannot confuse two executions of one image. Parameterization and relational
+reflection require a common owner established by module sharing before simplification. Bound
+function introspection waits for annotated-function construction, and captured annotation values
+are exercised through the interpreter. Cold shared-value and union-metadata destinations are
+corrected without weakening the descriptor or image guards. See the scope-5 architecture record
+for the test cases, retention policy and final verification.

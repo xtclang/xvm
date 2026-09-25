@@ -194,7 +194,7 @@ public class xArray
             default    -> throw new IllegalStateException();
         };
 
-        TypeConstant typeArray = constArray.getType();
+        TypeConstant typeArray = frame.runtimeConstant(constArray.getType());
         Constant[]   aconst    = constArray.getValue();
         int          cSize     = aconst.length;
 

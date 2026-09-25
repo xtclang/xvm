@@ -1428,3 +1428,57 @@ ownership cases. Tests cover retained values and descriptor identity after metad
 distinct captures of the same value, same-image rejection, nested shared-import rejection, and
 unknown tokens. The interpreter reflection migration is still in progress at this checkpoint;
 these unit results do not complete scope 5 or enable frozen activation.
+
+### Reflective descriptors, calls and foreign sources
+
+The frozen reproductions exposed first-request reflection array/map types in image pools,
+signature parameter compositions owned by the native root, and annotated function signatures
+constructed before adoption. Reflection helpers now take the requesting container, construct
+types in its descriptor pool, and obtain compositions from its existing composition table.
+Empty Type/Function/Method/Property/Module arrays use descriptor keys in that container's heap.
+Annotation, argument, register, parameter and return construction select their templates through
+the request. MethodTemplate handles likewise have a requesting composition owner.
+
+Constructor enumeration includes generic receivers and virtual-child outer parameters. Annotated
+function construction adopts the signature before deriving its function type; invocation translates
+shared argument and parameter types before checking compatibility. Bound-function introspection
+uses the existing deferred-value assignment protocol, so an annotated original function can finish
+construction before its result is assigned. Reflection results remain execution values, retained
+independently of disposable semantic metadata.
+
+A foreign Type handle now retains its exact source container and has a destination-owned exposed
+composition. Source-side reflection dispatch uses that retained container. Runtime lookup recognizes
+descriptor-pool identity and declines an ambiguous image-pool lookup when two containers execute
+the same image. It never selects the first same-image container as an execution owner. Keeping a
+foreign handle alive intentionally keeps its source execution reachable.
+
+Reflective parameterization and relational operations consider the caller and the known sources.
+A candidate must import every operand through actual module-sharing ancestry before it constructs
+or simplifies the result. A result involving an unshared source module remains foreign in the
+caller. Equal definitions do not permit an operation combining two unshared executions, even when
+the result could otherwise collapse by structural equality. Source-less pure types cannot authorize
+these constructions. Foreign constant and underlying-type arrays use their correct element kind,
+and Type proxies retain data types and source identity without adding another Type wrapper.
+Conditional native proxy calls now dispatch through the source target as well. Zero-argument
+Type.annotate imports the actual source type and annotation class into the caller, rejecting an
+unshared foreign type; previously it could silently annotate that handle's local Object mask.
+
+The interpreter checks exercise the reflection methods directly, including Type.or; a compiler
+type expression is not evidence that the reflective method executed. They cover generic and
+virtual-child constructors, property reads/writes and Ref round trips, method target binding,
+annotated functions, bound argument introspection, foreign member dispatch, source-owned
+parameterization/union results, metadata clears and same-image rejection. Captured annotation
+arguments are also constructed and recovered through TypeTemplate.annotate/annotated.
+
+Additional cold paths were exposed by these programs. Shared enum structs, module/package
+constants, array literals and variable references now translate their operands at their existing
+frame boundary. A method-formal constant visits its name while still omitting the cyclic method
+edge. Union metadata completes its temporary formal/signature cycle before publishing the native
+method descriptor. The descriptor validator continues rejecting unresolved operands; no partial
+signature is admitted and no generated declaration is attached to a frozen image.
+
+At this reflection checkpoint, all five focused XDK reflection/ownership cases pass without
+skips, failures or errors. The three interpreter programs run in two applications over the same
+frozen image; their assertions include the cases above. File-system materialization and final
+scope-5 verification remain in progress. This work does not add previously unimplemented
+reflection operations, freeze the native root, or enable default frozen activation.

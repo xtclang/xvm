@@ -67,15 +67,26 @@ public class Runtime {
     }
 
     /**
-     * @return a container that uses the specified ConstantPool; null if not found
+     * Find the exact descriptor owner for foreign reflection. A definition image identifies an
+     * owner only when one registered container uses it; shared images cannot select execution state.
+     *
+     * @return the descriptor owner or unique image owner; null if absent or ambiguous
      */
     public Container findContainer(ConstantPool pool) {
-        for (Container container : f_containers.keySet()) {
-            if (container.getConstantPool() == pool) {
-                return container;
+        synchronized (f_containers) {
+            Container imageOwner = null;
+            boolean ambiguous = false;
+            for (Container container : f_containers.keySet()) {
+                if (container.ownsDescriptorPool(pool)) {
+                    return container;
+                }
+                if (container.getConstantPool() == pool) {
+                    ambiguous |= imageOwner != null;
+                    imageOwner = container;
+                }
             }
+            return ambiguous ? null : imageOwner;
         }
-        return null;
     }
 
     /**

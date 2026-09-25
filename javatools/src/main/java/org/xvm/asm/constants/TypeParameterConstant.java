@@ -186,7 +186,8 @@ public class TypeParameterConstant
 
     @Override
     public void forEachUnderlying(Consumer<Constant> visitor) {
-        // the method constant is not "a child"; this would cause an infinite loop
+        // The name is an operand even though visiting the method would create a cycle.
+        visitor.accept(getNameConstant());
     }
 
     @Override

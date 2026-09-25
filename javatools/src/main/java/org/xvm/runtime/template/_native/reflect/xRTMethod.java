@@ -338,26 +338,21 @@ public class xRTMethod
     /**
      * @return the ArrayConstant for an empty Array of Method
      */
-    public static ArrayConstant ensureEmptyArrayConstant() {
-        ArrayConstant constant = EMPTY_ARRAY;
-        if (constant == null) {
-            ConstantPool pool = INSTANCE.pool();
-            EMPTY_ARRAY = constant = new ArrayConstant(pool, Constant.Format.Array,
-                                            pool.ensureArrayType(pool.typeMethod()));
-        }
-        return constant;
+    public static ArrayConstant ensureEmptyArrayConstant(Container container) {
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        return pool.ensureArrayConstant(pool.ensureArrayType(pool.typeMethod()), Constant.NO_CONSTS);
     }
 
     /**
      * @return the handle for an empty Array of Method
      */
     public static ObjectHandle ensureEmptyArray(Container container) {
-        ArrayConstant constArray = ensureEmptyArrayConstant();
+        ArrayConstant constArray = ensureEmptyArrayConstant(container);
         ObjectHandle hArray = container.f_heap.getConstHandle(constArray);
         if (hArray == null) {
             TypeComposition clzArray = container.resolveClass(constArray.getType());
             hArray = xArray.createImmutableArray(clzArray, Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(constArray, hArray);
+            hArray = container.f_heap.saveConstHandle(constArray, hArray);
         }
         return hArray;
     }
@@ -374,7 +369,4 @@ public class xRTMethod
         return frame.f_context.f_container.resolveClass(typeMethodArray);
     }
 
-    // ----- data members --------------------------------------------------------------------------
-
-    private static ArrayConstant EMPTY_ARRAY;
 }

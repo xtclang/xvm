@@ -726,11 +726,16 @@ public class UnionTypeConstant
         assert cValues == 1 || cValues == 2;
         TypeConstant           typeCompileType = pool.ensureParameterizedTypeConstant(pool.typeType(), this);
         UnresolvedTypeConstant typeValue       = new UnresolvedTypeConstant(pool, null);
-        SignatureConstant      sigFn           = pool.ensureSignatureConstant(sName,
+        // Complete the circular formal binding before publishing to a runtime descriptor store.
+        // A placeholder may be local construction state, but may never be an interned descriptor.
+        SignatureConstant      sigFn           = new SignatureConstant(pool, sName,
                   cValues == 1 ? typesOf(typeCompileType, typeValue) : typesOf(typeCompileType, typeValue, typeValue),
                   typesOf(typeReturn));
-        MethodConstant         idFn            = pool.ensureMethodConstant(idThis, sigFn);
-        typeValue.resolve(new TypeParameterConstant(pool, idFn, "CompileType", 0).getType());
+        MethodConstant         idFn            = new MethodConstant(pool,
+                pool.ensureMultiMethodConstant(idThis, sName), sigFn, 0);
+        typeValue.resolve(new TerminalTypeConstant(pool, new TypeParameterConstant(pool, idFn, "CompileType", 0)));
+        idFn  = pool.register(idFn);
+        sigFn = idFn.getSignature();
         mapMethods.put(idFn, new MethodInfo(new MethodBody(idFn, sigFn, Implementation.Native), iRank));
         return idFn;
     }

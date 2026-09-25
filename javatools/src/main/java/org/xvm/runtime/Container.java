@@ -108,6 +108,14 @@ public abstract class Container
     }
 
     /**
+     * Test descriptor ownership without initializing an unpublished container's context.
+     */
+    boolean ownsDescriptorPool(ConstantPool pool) {
+        RuntimeTypeContext context = typeContext.orElse(null);
+        return context != null && context.getDescriptorPool() == pool;
+    }
+
+    /**
      * Import a type transported from a known container. Each referenced module must have the
      * same sharing ancestor in both containers; knowing equal module names is insufficient.
      * The source context checks the operand's exact generation before translation, and this
@@ -203,7 +211,7 @@ public abstract class Container
         try {
             local = importSharedType(canonical, source);
         } catch (IncompatibleTypeOwnerException e) {
-            return xRTType.makeForeignHandle(canonical);
+            return xRTType.makeForeignHandle(this, canonical, source);
         }
         return ensureTypeHandle(local);
     }
@@ -220,16 +228,10 @@ public abstract class Container
      * @return a handle owned by this container, or a foreign type handle
      */
     public TypeHandle ensureTypeHandle(TypeConstant type) {
-        ConstantPool pool = getConstantPool();
-        if (!type.getConstantPool().hasSerializedIndices()) {
-            if (type.getConstantPool() != getTypeContext().getDescriptorPool()) {
-                return xRTType.makeForeignHandle(type);
-            }
-            type = getTypeContext().intern(type);
-        } else if (!type.isShared(pool)) {
-            return xRTType.makeForeignHandle(type);
-        } else {
-            type = pool.register(type);
+        try {
+            type = resolveRuntimeConstant(type);
+        } catch (IncompatibleTypeOwnerException e) {
+            return xRTType.makeForeignHandle(this, type);
         }
 
         var key = new TypeKey(type.getConstantPool(), type);
@@ -829,7 +831,7 @@ public abstract class Container
             }
 
             ClassTemplate    templateTS  = getTemplate("reflect.TypeSystem");
-            ClassComposition clzTS       = templateTS.getCanonicalClass();
+            ClassComposition clzTS       = templateTS.getCanonicalClass(this);
             MethodStructure  constructor = templateTS.getStructure().findMethod("construct", 2);
             ObjectHandle[]   ahArg       = new ObjectHandle[frame.getMaxVars(constructor)];
 

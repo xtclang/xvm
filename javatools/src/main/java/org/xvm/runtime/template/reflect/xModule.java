@@ -58,11 +58,6 @@ public class xModule
     @Override
     public void initNative() {
         if (this == INSTANCE) {
-            ConstantPool pool = f_container.getConstantPool();
-
-            MODULE_ARRAY_TYPE  = pool.ensureArrayType(pool.typeModule());
-            EMPTY_MODULE_ARRAY = pool.ensureArrayConstant(MODULE_ARRAY_TYPE, Constant.NO_CONSTS);
-
             VERSION_DEFAULT = new VersionConstant(pool(), new Version("CI"));
 
             // while these properties are naturally implementable, they are accessed
@@ -78,6 +73,7 @@ public class xModule
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof ModuleConstant idModule) {
+            idModule = frame.runtimeConstant(idModule);
             return ensureConstHandle(frame, idModule, idModule.getType());
         }
 
@@ -309,17 +305,21 @@ public class xModule
      * @return the TypeComposition for an Array of Module
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(MODULE_ARRAY_TYPE, xArray.INSTANCE);
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        return container.resolveClass(pool.ensureArrayType(pool.typeModule()));
     }
 
     /**
      * @return the handle for an empty Array of Module
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_MODULE_ARRAY);
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        ArrayConstant empty = pool.ensureArrayConstant(
+                pool.ensureArrayType(pool.typeModule()), Constant.NO_CONSTS);
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(empty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_MODULE_ARRAY, haEmpty);
+            haEmpty = (ArrayHandle) container.f_heap.saveConstHandle(empty, haEmpty);
         }
         return haEmpty;
     }
@@ -340,8 +340,6 @@ public class xModule
 
     // ----- data members --------------------------------------------------------------------------
 
-    private static TypeConstant    MODULE_ARRAY_TYPE;
-    private static ArrayConstant   EMPTY_MODULE_ARRAY;
     private static TypeConstant    LISTMAP_TYPE;
     private static VersionConstant VERSION_DEFAULT;
 }

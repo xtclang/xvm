@@ -67,9 +67,10 @@ public class xPackage
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof PackageConstant idPackage) {
+            idPackage = frame.runtimeConstant(idPackage);
             PackageStructure pkg     = (PackageStructure) idPackage.getComponent();
             TypeConstant     typePkg = pkg.isModuleImport()
-                    ? pkg.getImportedModule().getIdentityConstant().getType()
+                    ? frame.runtimeConstant(pkg.getImportedModule().getIdentityConstant()).getType()
                     : idPackage.getType();
 
             return ensureConstHandle(frame, idPackage, typePkg);

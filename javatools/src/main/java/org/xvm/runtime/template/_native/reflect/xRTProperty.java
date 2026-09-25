@@ -48,12 +48,6 @@ public class xRTProperty
 
     @Override
     public void initNative() {
-        ConstantPool pool = pool();
-
-        EMPTY_PROPERTY_ARRAY = pool.ensureArrayConstant(
-                pool.ensureArrayType(pool.ensureEcstasyTypeConstant("reflect.Property")),
-                Constant.NO_CONSTS);
-
         markNativeProperty("abstract");
         markNativeProperty("annotations");
         markNativeProperty("atomic");
@@ -174,8 +168,10 @@ public class xRTProperty
      * @return the resulting {@link PropertyHandle} or a {@link DeferredCallHandle}
      */
     public static ObjectHandle makeHandle(Frame frame, TypeConstant typeTarget, PropertyInfo infoProp) {
-        Annotation[] aAnno    = infoProp.getPropertyAnnotations();
-        TypeConstant typeProp = infoProp.getIdentity().getValueType(frame.poolContext(), typeTarget);
+        Annotation[] aAnno = infoProp.getPropertyAnnotations();
+        PropertyConstant idProp = frame.runtimeConstant(infoProp.getIdentity());
+        TypeConstant typeProp = idProp.getValueType(frame.poolContext(),
+                typeTarget == null ? null : frame.runtimeConstant(typeTarget));
 
         if (aAnno != null && aAnno.length > 0) {
             typeProp = frame.poolContext().ensureAnnotatedTypeConstant(typeProp, aAnno);
@@ -362,13 +358,13 @@ public class xRTProperty
      * @return the handle for an empty Array of Property
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_PROPERTY_ARRAY);
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        ArrayConstant empty = pool.ensureArrayConstant(
+                pool.ensureArrayType(pool.typeProperty()), Constant.NO_CONSTS);
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(empty);
         if (haEmpty == null) {
-            ConstantPool    pool = container.getConstantPool();
-            TypeComposition clz  = container.resolveClass(pool.ensureArrayType(pool.typeProperty()));
-
-            haEmpty = xArray.createImmutableArray(clz, Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_PROPERTY_ARRAY, haEmpty);
+            haEmpty = xArray.createImmutableArray(container.resolveClass(empty.getType()), Utils.OBJECTS_NONE);
+            haEmpty = (ArrayHandle) container.f_heap.saveConstHandle(empty, haEmpty);
         }
         return haEmpty;
     }
@@ -385,7 +381,4 @@ public class xRTProperty
         return frame.f_context.f_container.resolveClass(typePropertyArray);
     }
 
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static ArrayConstant EMPTY_PROPERTY_ARRAY;
 }

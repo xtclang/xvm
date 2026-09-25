@@ -11,12 +11,13 @@ Continue work on `xtclang/xvm`, branch **`lagergren/constant-pool-state-separati
 The user wants a complete, enforced separation of definition images, runtime descriptors, semantic
 metadata, and execution state, implemented in reviewable stages and separate commits.
 
-**Scopes 1–4 are implemented within their documented boundaries. Scope 5 is in progress:
-complete reflection and native-value ownership.** Captured annotation values now live in their
-container's constant heap, behind non-transferable descriptor tokens; see the scope-5 record.
-Continue the remaining foreign, constructor,
-property and function reflection issues, captured annotation ownership, file-store/file-node
-handles and classloader-wide native caches before implementing bounded fixes. Preserve the
+**Scopes 1–4 are implemented within their documented boundaries. Scope 5 is in progress.**
+Captured annotation values now live in their container's constant heap, behind non-transferable
+descriptor tokens. The reflection migration passes five focused frozen interpreter/ownership
+cases, including generic/child constructors, properties, bound functions, foreign dispatch and
+annotation source rejection. Finish the file-store/file-node materialization audit and final
+verification; the current remaining reproduction reaches frozen metadata while parsing file
+timestamps. See the scope-5 architecture record and current local changes. Preserve the
 service-owned method execution boundary and same-image regressions established in scope 4.
 Continue the existing architecture; do not broaden this into the embedding, Gradle, error-listener
 or JIT projects.

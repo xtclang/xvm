@@ -102,6 +102,17 @@ public class Proxy
     }
 
     @Override
+    public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget,
+                              ObjectHandle[] ahArg, int[] aiReturn) {
+        ProxyHandle hProxy = (ProxyHandle) hTarget;
+        hTarget = hProxy.f_hTarget;
+
+        return frame.f_context == hProxy.f_context
+            ? hTarget.getTemplate().invokeNativeNN(frame, method, hTarget, ahArg, aiReturn)
+            : makeAsyncNativeHandle(hTarget, method).callN(frame, hProxy, ahArg, aiReturn);
+    }
+
+    @Override
     public int invoke1(Frame frame, CallChain chain, ObjectHandle hTarget, ObjectHandle[] ahVar, int iReturn) {
         ProxyHandle hProxy = (ProxyHandle) hTarget;
 
@@ -209,7 +220,7 @@ public class Proxy
      * service boundaries.
      */
     private FunctionHandle makeAsyncNativeHandle(ObjectHandle hTarget, MethodStructure method) {
-        return new AsyncHandle(INSTANCE.f_container, method) {
+        return new AsyncHandle(hTarget.getComposition().getContainer(), method) {
             @Override
             protected ObjectHandle getContextTarget(Frame frame, ObjectHandle hService) {
                 return hTarget;

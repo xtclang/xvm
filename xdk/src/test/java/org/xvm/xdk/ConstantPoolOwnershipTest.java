@@ -58,6 +58,8 @@ import org.xvm.runtime.ServiceContext.CallLaterRequest;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xNullable;
 
+import org.xvm.runtime.template._native.reflect.xRTType;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -96,6 +98,65 @@ class ConstantPoolOwnershipTest {
         runOwnershipProgram(source, true, true);
     }
 
+    @Test
+    @Timeout(90)
+    void scopeFiveReflectionRunsOverTheSameFrozenImage() throws Exception {
+        runOwnershipProgram("RuntimeReflection.x", true, true);
+    }
+
+    @Test
+    @Timeout(90)
+    void scopeFiveCapturedAnnotationsRunOverTheSameFrozenImage() throws Exception {
+        runOwnershipProgram("RuntimeCapturedAnnotations.x", true, true);
+    }
+
+    @Test
+    @Timeout(90)
+    void scopeFiveForeignReflectionUsesTheSourceExecution() throws Exception {
+        runOwnershipProgram("RuntimeForeignReflection.x", true, true);
+    }
+
+    @Test
+    void scopeFiveForeignDispatchFindsTheExactDescriptorOwner() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("ForeignDispatch").getModule());
+            var first = new MainContainer(runtime, root, file.getModuleId());
+            var second = new MainContainer(runtime, root, file.getModuleId());
+            first.getTypeContext().freezeDefinitions();
+            second.getTypeContext().freezeDefinitions();
+            assertSame(first, runtime.findContainer(first.getTypeContext().getDescriptorPool()));
+            assertSame(second, runtime.findContainer(second.getTypeContext().getDescriptorPool()));
+            assertNull(runtime.findContainer(file.getConstantPool()));
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
+    void scopeFiveReflectionHelpersUseTheirFrozenContexts() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("ReflectionHelpers").getModule());
+            var first = new MainContainer(runtime, root, file.getModuleId());
+            var second = new MainContainer(runtime, root, file.getModuleId());
+            var constants = file.getConstantPool().getConstants();
+            first.getTypeContext().freezeDefinitions();
+            second.getTypeContext().freezeDefinitions();
+            for (var container : List.of(first, second)) {
+                var type = xRTType.ensureListMapType(container);
+                assertSame(container.getTypeContext().getDescriptorPool(), type.getConstantPool());
+                assertSame(type, xRTType.ensureListMapType(container));
+                assertSame(container, xRTType.ensureEmptyTypeArray(container).getComposition().getContainer());
+            }
+            assertArrayEquals(constants, file.getConstantPool().getConstants());
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
     private void runOwnershipProgram(String source, boolean freeze) throws Exception {
         runOwnershipProgram(source, freeze, false);
     }
@@ -120,6 +181,7 @@ class ConstantPoolOwnershipTest {
             var runtimeRepository = new LinkedRepository(modules, repository);
             var root = new NativeContainer(runtime, runtimeRepository);
             FileStructure shared = null;
+            MainContainer previous = null;
             for (int i = 0; i < 2; i++) {
                 var file = shared;
                 if (file == null) {
@@ -145,6 +207,25 @@ class ConstantPoolOwnershipTest {
                 }
                 application.start(Map.of());
                 application.invokeAsync("run").join();
+                if (source.equals("RuntimeForeignReflection.x")) {
+                    if (previous != null) {
+                        var box = (ClassStructure) file.getModule().getChild("Box");
+                        var type = previous.getTypeContext().typeOf(box.getIdentityConstant());
+                        var foreign = application.ensureTypeHandle(type, previous);
+                        assertTrue(foreign.isForeign());
+                        assertSame(previous, foreign.getSourceContainer());
+                        assertSame(application, foreign.getComposition().getContainer());
+                        previous.getTypeContext().clearMetadata();
+                        application.getTypeContext().clearMetadata();
+                        assertSame(type, foreign.getUnsafeDataType());
+                        var combined = (xRTType.TypeHandle) application.invokeAsync("combine", foreign).join();
+                        assertTrue(combined.getUnsafeDataType().isRelationalType(),
+                                () -> combined.getUnsafeDataType().getValueString());
+                        assertSame(previous, combined.getSourceContainer());
+                        application.invokeAsync("inspect", foreign).join();
+                    }
+                    previous = application;
+                }
                 if (freeze && source.equals("RuntimeDelegation.x")) {
                     verifyGeneratedDelegation(application);
                 }
@@ -463,7 +544,7 @@ class ConstantPoolOwnershipTest {
             assertSame(secondHandle, type.ensureTypeHandle(second));
             var descriptor = first.getTypeContext().intern(type);
             var descriptorHandle = descriptor.ensureTypeHandle(first);
-            assertNotSame(firstHandle, descriptorHandle);
+            assertSame(firstHandle, descriptorHandle);
             assertSame(descriptor, descriptorHandle.getDataType());
             var foreignHandle = descriptor.ensureTypeHandle(second);
             assertTrue(foreignHandle.isForeign());

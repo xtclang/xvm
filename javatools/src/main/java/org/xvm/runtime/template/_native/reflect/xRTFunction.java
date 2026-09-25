@@ -25,7 +25,6 @@ import org.xvm.runtime.ServiceContext;
 import org.xvm.runtime.TypeComposition;
 import org.xvm.runtime.Utils;
 
-import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xException;
 import org.xvm.runtime.template.xOrdered;
@@ -35,6 +34,7 @@ import org.xvm.runtime.template.xService.ServiceHandle;
 import org.xvm.runtime.template.collections.xArray;
 import org.xvm.runtime.template.collections.xArray.ArrayHandle;
 import org.xvm.runtime.template.collections.xArray.Mutability;
+import org.xvm.runtime.template.collections.xTuple;
 import org.xvm.runtime.template.collections.xTuple.TupleHandle;
 
 import org.xvm.runtime.template._native.reflect.xRTType.TypeHandle;
@@ -56,13 +56,8 @@ public class xRTFunction
 
     @Override
     public void initNative() {
-        ConstantPool pool = f_container.getConstantPool();
-
         TO_ARRAY     = getStructure().findMethod("toArray", 1);
         NATIVE_NO_OP = new NativeFunctionHandle((_, _, _) -> Op.R_NEXT);
-
-        FUNCTION_ARRAY_TYPE  = pool.ensureArrayType(pool.typeFunction());
-        EMPTY_FUNCTION_ARRAY = pool.ensureArrayConstant(FUNCTION_ARRAY_TYPE, Constant.NO_CONSTS);
 
         markNativeMethod("bind", new String[] {"reflect.Type<Object>", "reflect.Parameter", "Object"}, null);
         markNativeMethod("bind", new String[] {"maps.Map<reflect.Parameter, Object>"}, null);
@@ -272,8 +267,9 @@ public class xRTFunction
         }
 
         for (int i = 0; i < cArgs; i++) {
-            TypeConstant typeParam = hFunc.getParamType(i);
-            TypeConstant typeArg   = ahArg[i].getUnsafeType();
+            TypeConstant typeParam = frame.f_context.f_container.importSharedType(
+                    hFunc.getParamType(i), hFunc.getComposition().getContainer());
+            TypeConstant typeArg = frame.runtimeUnsafeTypeOf(ahArg[i]);
             if (!typeArg.isA(typeParam)) {
                 return frame.raiseException(xException.typeMismatch(frame, typeArg, typeParam));
             }
@@ -294,13 +290,14 @@ public class xRTFunction
 
             hFunc.addBoundArguments(ahValue);
 
-            // TODO: what if any of the assigns below return a deferred handle?
-            frame.assignValue(aiReturn[0], xBoolean.TRUE);
-            frame.assignValue(aiReturn[1], xRTMethodTemplate.makeHandle(method));
-            frame.assignValue(aiReturn[2], makeHandle(frame, method));
-
-            Frame.Continuation stepNext = frameCaller ->
-                constructListMap(frameCaller, ahParam, ahValue, aiReturn[3]);
+            Frame.Continuation stepNext = frameCaller -> {
+                ObjectHandle bindings = frameCaller.popResult(
+                        constructListMap(frameCaller, ahParam, ahValue, Op.A_STACK));
+                ObjectHandle[] results = {xBoolean.TRUE,
+                        xRTMethodTemplate.makeHandle(frameCaller.f_context.f_container, method),
+                        makeHandle(frameCaller, method), bindings};
+                return new Utils.AssignValues(aiReturn, results).proceed(frameCaller);
+            };
             return new Utils.CreateParameters(method.getParamArray(), ahParam, stepNext).doNext(frame);
         }
 
@@ -309,11 +306,12 @@ public class xRTFunction
 
     private int constructListMap(Frame frame,
                                  ObjectHandle[] ahParam, ObjectHandle[] ahValue, int iReturn) {
-        ObjectHandle haParams = xArray.createImmutableArray(xRTSignature.ensureParamArray(), ahParam);
+        ObjectHandle haParams = xArray.createImmutableArray(
+                xRTSignature.ensureParamArray(frame.f_context.f_container), ahParam);
         ObjectHandle haValues = xArray.makeObjectArrayHandle(ahValue, Mutability.Constant);
 
         return Utils.constructListMap(frame,
-                frame.f_context.f_container.resolveClass(ensureListMapType()),
+                frame.f_context.f_container.resolveClass(ensureListMapType(frame.f_context.f_container)),
                 haParams, haValues, iReturn);
     }
 
@@ -1289,8 +1287,9 @@ public class xRTFunction
         Annotation[] aAnno = function.getAnnotations();
 
         if (aAnno.length > 0) {
-            TypeConstant type = function.getIdentityConstant().getSignature().asFunctionType();
-            type = container.getConstantPool().ensureAnnotatedTypeConstant(type, aAnno);
+            ConstantPool pool = container.getTypeContext().getDescriptorPool();
+            TypeConstant type = pool.register(function.getIdentityConstant().getSignature()).asFunctionType();
+            type = pool.ensureAnnotatedTypeConstant(type, aAnno);
 
             TypeComposition clzFunction = INSTANCE.ensureClass(container, function);
             FunctionHandle  hStruct     = new FunctionHandle(clzFunction.
@@ -1321,8 +1320,7 @@ public class xRTFunction
         } else {
             Annotation[] aAnno = constructor.getAnnotations();
             if (aAnno.length > 0) {
-                typeConstructor = container.getConstantPool().
-                        ensureAnnotatedTypeConstant(typeConstructor, aAnno);
+                typeConstructor = frame.poolContext().ensureAnnotatedTypeConstant(typeConstructor, aAnno);
 
                 TypeComposition clzConstructor = INSTANCE.ensureClass(container, constructor).
                         ensureAccess(Constants.Access.STRUCT);
@@ -1461,17 +1459,21 @@ public class xRTFunction
      * @return the TypeComposition for an Array of Function
      */
     public static TypeComposition ensureArrayComposition(Container container) {
-        return container.ensureClassComposition(FUNCTION_ARRAY_TYPE, xArray.INSTANCE);
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        return container.resolveClass(pool.ensureArrayType(pool.typeFunction()));
     }
 
     /**
      * @return the handle for an empty Array of Function
      */
     public static ArrayHandle ensureEmptyArray(Container container) {
-        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(EMPTY_FUNCTION_ARRAY);
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        ArrayConstant empty = pool.ensureArrayConstant(
+                pool.ensureArrayType(pool.typeFunction()), Constant.NO_CONSTS);
+        ArrayHandle haEmpty = (ArrayHandle) container.f_heap.getConstHandle(empty);
         if (haEmpty == null) {
             haEmpty = xArray.createImmutableArray(ensureArrayComposition(container), Utils.OBJECTS_NONE);
-            container.f_heap.saveConstHandle(EMPTY_FUNCTION_ARRAY, haEmpty);
+            haEmpty = (ArrayHandle) container.f_heap.saveConstHandle(empty, haEmpty);
         }
         return haEmpty;
     }
@@ -1479,15 +1481,10 @@ public class xRTFunction
     /**
      * @return the TypeConstant for a ListMap<Parameter, Object>
      */
-    public static TypeConstant ensureListMapType() {
-        TypeConstant type = LISTMAP_TYPE;
-        if (type == null) {
-            ConstantPool pool = INSTANCE.pool();
-            LISTMAP_TYPE = type = pool.ensureParameterizedTypeConstant(
-                    pool.ensureEcstasyTypeConstant("maps.ListMap"),
-                    pool.typeParameter(), pool.typeObject());
-        }
-        return type;
+    public static TypeConstant ensureListMapType(Container container) {
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
+        return pool.ensureParameterizedTypeConstant(
+                pool.typeListMap(), pool.typeParameter(), pool.typeObject());
     }
 
     /**
@@ -1513,10 +1510,6 @@ public class xRTFunction
     // ----- constants -----------------------------------------------------------------------------
 
     public static FunctionHandle NATIVE_NO_OP;
-
-    private static TypeConstant  FUNCTION_ARRAY_TYPE;
-    private static ArrayConstant EMPTY_FUNCTION_ARRAY;
-    private static TypeConstant  LISTMAP_TYPE;
 
     /**
      * RTFunction:

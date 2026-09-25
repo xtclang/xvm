@@ -102,6 +102,8 @@ public class MoveVar
                 typeReferent = nFrom == Op.A_STACK
                         ? frame.poolContext().typeObject()
                         : frame.getVarInfo(nFrom).getType();
+            } else {
+                typeReferent = frame.runtimeTypeOf(hReferent);
             }
             TypeComposition clzRef = xVar.INSTANCE.
                     ensureParameterizedClass(frame.f_context.f_container, typeReferent);

@@ -2,7 +2,6 @@ package org.xvm.runtime.template._native.reflect;
 
 import org.xvm.asm.Annotation;
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.Parameter;
@@ -176,16 +175,11 @@ public class xRTMethodTemplate
     /**
      * @return the TypeComposition for an RTMethodTemplate
      */
-    public static TypeComposition ensureMethodTemplateComposition() { // TODO: use the container
-        TypeComposition clz = METHOD_TEMPLATE_COMP;
-        if (clz == null) {
-            ClassTemplate templateRT   = INSTANCE;
-            ConstantPool  pool         = templateRT.pool();
-            TypeConstant  typeTemplate = pool.ensureEcstasyTypeConstant("reflect.MethodTemplate");
-            METHOD_TEMPLATE_COMP = clz = templateRT.ensureClass(templateRT.f_container, typeTemplate);
-            assert clz != null;
-        }
-        return clz;
+    public static TypeComposition ensureMethodTemplateComposition(Container container) {
+        ClassTemplate template = container.getTemplate("_native.reflect.RTMethodTemplate");
+        TypeConstant type = container.getTypeContext().getDescriptorPool()
+                .ensureEcstasyTypeConstant("reflect.MethodTemplate");
+        return template.ensureClass(container, type);
     }
 
     // ----- ObjectHandle support ------------------------------------------------------------------
@@ -197,11 +191,8 @@ public class xRTMethodTemplate
      *
      * @return the newly created handle
      */
-    static ComponentTemplateHandle makeHandle(MethodStructure method) {
-        return new ComponentTemplateHandle(ensureMethodTemplateComposition(), method);
+    static ComponentTemplateHandle makeHandle(Container container, MethodStructure method) {
+        return new ComponentTemplateHandle(ensureMethodTemplateComposition(container), method);
     }
 
-    // ----- constants -----------------------------------------------------------------------------
-
-    private static TypeComposition METHOD_TEMPLATE_COMP;
 }
