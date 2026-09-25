@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Shared editor scenarios (2026-09-25, working changes after `c7976f970`).**
+**Shared editor scenarios (2026-09-25, `019d3f811`).**
 All 94 scenarios now get their inputs, expectations and manual-check notes from one shared JSON
 catalog. VS Code retains the full assertion set. IntelliJ implements twelve scenarios fully and
 six partially, plus startup; its report names the missing assertions for all remaining 76 cases.
