@@ -627,7 +627,7 @@ retained zero of 2,402 observed objects. The integration record links the full X
 
 ## Anonymous constructor ownership audit (2026-09-25)
 
-Working changes after `185ff84b1` resolve the anonymous constructor cursor boundary. Calling normal
+Commit `cd1732d42` resolves the anonymous constructor cursor boundary. Calling normal
 preparation on a detached clone would still register class components under the source method.
 Instead, the partial-analysis attempt prepares its retained anonymous declaration and existing
 `anon` child. Constructor signature lookup requires that class shape but does not require capture

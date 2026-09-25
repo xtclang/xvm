@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Anonymous constructors (2026-09-25, working changes after `185ff84b1`).**
+**Anonymous constructors (2026-09-25, `cd1732d42`).**
 Cursor queries now prepare the source-owned anonymous declaration and fit its own or superclass
 constructors. Interface/abstract implementations, generic and annotated bases, named slots and
 captured-local syntax have consumers. No new AST member or public embedding signature is needed.
