@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { catalog, ScenarioId, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
 export const manualPath = path.resolve(__dirname, '../../../../doc/manual-test-plan.md');
 export const cases = new Map<string, { title: string; manual: string[] }>();
@@ -29,14 +30,13 @@ export async function loadFixtures(): Promise<void> {
     const manual = await fs.readFile(manualPath, 'utf8');
     const blocks = [...manual.matchAll(/```xtc\n([\s\S]*?)\n```/g)].map(match => match[1]);
     fixtures = new Map();
-    for (const name of ['Navigation', 'Editing', 'Project', 'Lookups', 'Consumers', 'Library', 'Consumer', 'Rename', 'Contracts', 'Uses', 'Dormant', 'Properties', 'Advanced', 'DupAnno']) {
-        const matches = blocks.filter(text => new RegExp(`^module ${name}\\s*\\{`, 'm').test(text));
-        assert.strictEqual(matches.length, 1, `One canonical ${name} fixture in playbook`);
-        fixtures.set(`${name}.x`, matches[0] + '\n');
+    for (const { file, pattern } of catalog.common.fixtures) {
+        const matches = blocks.filter(text => new RegExp(pattern, 'm').test(text));
+        assert.strictEqual(matches.length, 1, `One canonical ${file} fixture in playbook`);
+        fixtures.set(file, matches[0] + '\n');
     }
-    const children = blocks.filter(text => text.startsWith('class Child extends Base<String> {'));
-    assert.strictEqual(children.length, 1);
-    fixtures.set('Project/Child.x', children[0] + '\n');
+    validateSharedFixtures(fixture);
+    assert.deepStrictEqual([...cases.keys()], sharedScenarioIds, 'Every shared case must have exactly one VS Code implementation');
     const ids = [...manual.matchAll(/^\| (X\d+) \|/gm)].map(match => match[1]);
     assert.deepStrictEqual([...cases.keys()].filter(id => /^X\d+$/.test(id)), ids,
         'Every XdkAdapter playbook row must have exactly one registered case, in playbook order');
@@ -156,10 +156,10 @@ export class Workspace {
     }
 
     async editing(body: string, inspect = false, transform: (text: string) => string = text => text) {
-        const text = transform(fixture('Editing.x')).replace(inspect ? 'void inspect(T itemLocal) {}'
-            : 'void run(Box<String> box, String itemParameter, Object value) {}',
-        inspect ? `void inspect(T itemLocal) { ${body} }` : `void run(Box<String> box, String itemParameter, Object value) { ${body} }`);
-        return this.marked('Editing.x', text);
+        const setup = catalog.common.editing;
+        const anchor = inspect ? setup.inspect : setup.run;
+        const text = transform(fixture(setup.file)).replace(anchor, anchor.replace('{}', `{ ${body} }`));
+        return this.marked(setup.file, text);
     }
 
     async completion(document: vscode.TextDocument, at: vscode.Position): Promise<vscode.CompletionItem[]> {
@@ -183,8 +183,8 @@ export class Workspace {
     }
 
     async project(): Promise<vscode.TextDocument> {
-        await this.write('Project/Child.x');
-        const document = await this.open('Project.x');
+        await this.write(catalog.common.project.member);
+        const document = await this.open(catalog.common.project.root);
         await noErrors(document.uri);
         return document;
     }
@@ -194,15 +194,15 @@ export class Workspace {
     }
 
     async dependencies(): Promise<vscode.TextDocument> {
-        await this.write('Library.x');
-        await this.write('Consumer.x');
-        await this.configure([
-            { name: 'Library', uri: this.uri('Library.x').toString() },
-            { name: 'Consumer', uri: this.uri('Consumer.x').toString(), dependencies: ['Library'] }
-        ]);
-        const document = await this.open('Consumer.x');
+        for (const module of shared.sourceModules) { await this.write(module.uri); }
+        await this.configureSharedGraph();
+        const document = await this.open(shared.dependencyNavigation.file);
         await noErrors(document.uri);
         return document;
+    }
+
+    async configureSharedGraph(): Promise<void> {
+        await this.configure(shared.sourceModules.map(module => ({ ...module, uri: this.uri(module.uri).toString() })));
     }
 
     async discard(document: vscode.TextDocument): Promise<void> {
@@ -229,7 +229,10 @@ export class Workspace {
     }
 }
 
-export function playbook(id: string, title: string, body: (workspace: Workspace) => Promise<void>, manual: string[] = []): void {
+export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspace, data: ScenarioValues<K>) => Promise<void>): void {
+    const scenario = catalog.cases[id];
+    assert.ok(scenario, `Case ${id} is missing from the shared catalog`);
+    const { title, manual } = scenario;
     assert.ok(!cases.has(id), `Duplicate playbook case ${id}`);
     cases.set(id, { title, manual });
     test(`${id}: ${title}`, async function () {
@@ -237,7 +240,7 @@ export function playbook(id: string, title: string, body: (workspace: Workspace)
         const root = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         assert.ok(root);
         const workspace = new Workspace(path.join(root, id));
-        try { await body(workspace); }
+        try { await body(workspace, scenario.values); }
         catch (error) {
             const report = process.env.XTC_PLAYBOOK_REPORT_DIR;
             if (report) {

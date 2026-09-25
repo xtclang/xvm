@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { TypeHierarchyItem } from 'vscode-languageclient/node';
 import { getClient } from '../../lsp-client';
+import { scenarioRegex, scenarioText } from './shared';
 import { client, diagnostics, diagnosticCode, eventually, fixture, label, noErrors, playbook, position, symbols, targets } from './support';
 
 export async function hierarchy(document: vscode.TextDocument, at: vscode.Position): Promise<TypeHierarchyItem[]> {
@@ -17,177 +18,176 @@ export async function edges(item: TypeHierarchyItem, direction: 'supertypes' | '
 }
 
 export function moduleCases(): void {
-    playbook('X21', 'closed module members participate in navigation', async workspace => {
+    playbook('X21', async (workspace, data) => {
         const root = await workspace.project();
-        const references = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeReferenceProvider', root.uri, position(root, 'Base<Element>'));
-        assert.ok(references?.some(item => item.uri.toString() === workspace.uri('Project/Child.x').toString()));
-        const found = await vscode.commands.executeCommand<vscode.SymbolInformation[]>('vscode.executeWorkspaceSymbolProvider', 'Child');
-        assert.ok(found?.some(item => item.location.uri.toString() === workspace.uri('Project/Child.x').toString()));
-        const child = await workspace.open('Project/Child.x');
-        for (const word of ['Base<String>', 'echo("member")']) {
+        const references = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeReferenceProvider', root.uri, position(root, data.anchor));
+        assert.ok(references?.some(item => item.uri.toString() === workspace.uri(data.file).toString()));
+        const found = await vscode.commands.executeCommand<vscode.SymbolInformation[]>('vscode.executeWorkspaceSymbolProvider', data.symbolName);
+        assert.ok(found?.some(item => item.location.uri.toString() === workspace.uri(data.file).toString()));
+        const child = await workspace.open(data.file);
+        for (const word of data.uses) {
             const definitions = await targets(child, 'Definition', position(child, word));
-            assert.strictEqual(definitions.length, 1);
+            assert.strictEqual(definitions.length, data.targetCount);
             assert.strictEqual(definitions[0].uri.toString(), root.uri.toString());
         }
     });
 
-    playbook('X22', 'direct generic type hierarchy spans files', async workspace => {
+    playbook('X22', async (workspace, data) => {
         const root = await workspace.project();
-        const [base] = await hierarchy(root, position(root, 'Base<Element>'));
+        const [base] = await hierarchy(root, position(root, data.baseDeclaration));
         assert.ok(base);
         const children = await edges(base, 'subtypes');
-        assert.strictEqual(children.length, 1);
-        assert.strictEqual(children[0].name, 'Child');
-        assert.strictEqual(vscode.Uri.parse(children[0].uri).fsPath, workspace.uri('Project/Child.x').fsPath);
+        assert.strictEqual(children.length, data.childCount);
+        assert.strictEqual(children[0].name, data.childName);
+        assert.strictEqual(vscode.Uri.parse(children[0].uri).fsPath, workspace.uri(data.file).fsPath);
         const parents = await edges(children[0], 'supertypes');
-        assert.ok(parents.some(item => `${item.name} ${item.detail}`.includes('String')), JSON.stringify(parents));
-        assert.ok((await edges(base, 'supertypes')).some(item => item.name === 'Named'));
-        const [named] = await hierarchy(root, position(root, 'interface Named', 10));
-        assert.ok((await edges(named, 'subtypes')).some(item => item.name.startsWith('Base')));
-    }, ['Type-hierarchy tree rendering and editor action availability']);
+        assert.ok(parents.some(item => scenarioText(data.display, item.name, item.detail).includes(data.typeArgument)), JSON.stringify(parents));
+        assert.ok((await edges(base, 'supertypes')).some(item => item.name === data.interfaceName));
+        const [named] = await hierarchy(root, position(root, data.interfaceDeclaration, data.offset));
+        assert.ok((await edges(named, 'subtypes')).some(item => item.name.startsWith(data.baseName)));
+    });
 
-    playbook('X23', 'unsaved root edits invalidate sibling diagnostics', async workspace => {
+    playbook('X23', async (workspace, data) => {
         const root = await workspace.project();
-        const child = await workspace.open('Project/Child.x');
+        const child = await workspace.open(data.memberFile);
         const version = child.version;
-        await workspace.replace(root, fixture('Project.x').replace('class Base', 'class Renamed'));
+        await workspace.replace(root, fixture(data.rootFile).replace(data.replaceFrom, data.replaceWith));
         const errors = await diagnostics(child.uri, values => values.length > 0, 'Sibling diagnostic');
-        assert.ok(errors.every(item => diagnosticCode(item) !== 'EMB-5'));
+        assert.ok(errors.every(item => diagnosticCode(item) !== data.diagnosticCode));
         assert.strictEqual(child.version, version);
-        assert.ok(!vscode.languages.getDiagnostics(root.uri).some(item => diagnosticCode(item) === 'EMB-5'));
-        await workspace.replace(root, fixture('Project.x'));
+        assert.ok(!vscode.languages.getDiagnostics(root.uri).some(item => diagnosticCode(item) === data.diagnosticCode));
+        await workspace.replace(root, fixture(data.rootFile));
         await noErrors(child.uri);
     });
 
-    playbook('X24', 'member completion sees the unsaved root type', async workspace => {
+    playbook('X24', async (workspace, data) => {
         const root = await workspace.project();
-        const text = fixture('Project/Child.x').replace('String answer()', 'void inspect() { ite§; }\n    String answer()');
-        const { document, at } = await workspace.marked('Project/Child.x', text);
-        for (const type of ['Int', 'String', 'Int']) {
-            await workspace.replace(root, fixture('Project.x').replace('Int item = 1;', `${type} item = ${type === 'Int' ? '1' : '"overlay"'};`));
-            const item = (await workspace.completion(document, at)).find(value => label(value) === 'item');
+        const text = fixture(data.memberFile).replace(data.method, data.incompleteMethod);
+        const { document, at } = await workspace.marked(data.memberFile, text);
+        for (const type of data.types) {
+            await workspace.replace(root, fixture(data.rootFile).replace(data.replaceFrom, scenarioText(data.replaceWith, type, type === data.integerType ? data.integerValue : data.stringValue)));
+            const item = (await workspace.completion(document, at)).find(value => label(value) === data.label);
             assert.ok(item);
             assert.match(item.detail ?? '', new RegExp(type));
         }
-        assert.strictEqual(await fs.readFile(root.uri.fsPath, 'utf8'), fixture('Project.x'));
+        assert.strictEqual(await fs.readFile(root.uri.fsPath, 'utf8'), fixture(data.rootFile));
     });
 
-    playbook('X25', 'named unsaved virtual member joins the module', async workspace => {
+    playbook('X25', async (workspace, data) => {
         const root = await workspace.project();
-        const uri = workspace.uri('Project/pkg/Added.x');
+        const uri = workspace.uri(data.file);
         try {
             await client().sendNotification('textDocument/didOpen', { textDocument: {
-                uri: uri.toString(), languageId: 'xtc', version: 1, text: 'class Added extends Base<String> {}'
+                uri: uri.toString(), languageId: 'xtc', version: data.version, text: data.text
             } });
             await symbols(root);
             // Fixture filesystem notifications can rebuild the module between these two
             // requests. Reprepare each time: hierarchy items deliberately expire on rebuild.
             await eventually(async () => {
-                const [base] = await hierarchy(root, position(root, 'Base<Element>'));
+                const [base] = await hierarchy(root, position(root, data.anchor));
                 return base ? edges(base, 'subtypes') : [];
-            }, children => children.some(item => item.name === 'Added'), 'Unsaved member in current hierarchy');
+            }, children => children.some(item => item.name === data.name), 'Unsaved member in current hierarchy');
             assert.strictEqual(await fs.stat(uri.fsPath).catch(() => undefined), undefined);
             await noErrors(uri);
         } finally {
             await client().sendNotification('textDocument/didClose', { textDocument: { uri: uri.toString() } });
         }
-    }, ['Named nonexistent file is supplied through the LSP client; an ordinary Untitled editor is not equivalent']);
+    });
 
-    playbook('X26', 'discarded member overlay restores disk semantics', async workspace => {
+    playbook('X26', async (workspace, data) => {
         const root = await workspace.project();
-        const child = await workspace.open('Project/Child.x');
-        await workspace.replace(child, fixture('Project/Child.x').replace('Base<String>', 'Missing'));
+        const child = await workspace.open(data.file);
+        await workspace.replace(child, fixture(data.file).replace(data.anchor, data.replaceWith));
         await diagnostics(child.uri, values => values.length > 0, 'Broken member');
         await workspace.discard(child);
         await symbols(root);
         await noErrors(child.uri);
-        const reopened = await workspace.open('Project/Child.x');
-        assert.strictEqual(reopened.getText(), fixture('Project/Child.x'));
-        assert.strictEqual((await targets(reopened, 'Definition', position(reopened, 'Base<String>'))).length, 1);
+        const reopened = await workspace.open(data.file);
+        assert.strictEqual(reopened.getText(), fixture(data.file));
+        assert.strictEqual((await targets(reopened, 'Definition', position(reopened, data.anchor))).length, data.expected);
     });
 
-    playbook('X27', 'real file-watcher creation and deletion refresh the module', async workspace => {
+    playbook('X27', async (workspace, data) => {
         await workspace.project();
-        await workspace.write('Project/Bad.x', 'class Bad extends Missing {}');
-        const uri = workspace.uri('Project/Bad.x');
+        await workspace.write(data.file, data.text);
+        const uri = workspace.uri(data.file);
         await diagnostics(uri, values => values.length > 0, 'Closed created member diagnostic');
         await fs.unlink(uri.fsPath);
         await noErrors(uri);
     });
 
-    playbook('X28', 'obsolete type hierarchy items cannot resolve', async workspace => {
+    playbook('X28', async (workspace, data) => {
         await workspace.project();
-        const child = await workspace.open('Project/Child.x');
-        const [old] = await hierarchy(child, position(child, 'Child'));
+        const child = await workspace.open(data.file);
+        const [old] = await hierarchy(child, position(child, data.anchor));
         assert.ok(old);
-        await workspace.replace(child, 'class Child {}');
+        await workspace.replace(child, data.replaceWith);
         await noErrors(child.uri);
         assert.deepStrictEqual(await edges(old, 'supertypes'), []);
-        const [fresh] = await hierarchy(child, position(child, 'Child'));
-        assert.ok(!(await edges(fresh, 'supertypes')).some(item => item.name.startsWith('Base')));
-        await workspace.replace(child, fixture('Project/Child.x'));
-        const [restored] = await hierarchy(child, position(child, 'Child'));
-        assert.ok((await edges(restored, 'supertypes')).some(item => item.name.startsWith('Base')));
+        const [fresh] = await hierarchy(child, position(child, data.anchor));
+        assert.ok(!(await edges(fresh, 'supertypes')).some(item => item.name.startsWith(data.contains)));
+        await workspace.replace(child, fixture(data.file));
+        const [restored] = await hierarchy(child, position(child, data.anchor));
+        assert.ok((await edges(restored, 'supertypes')).some(item => item.name.startsWith(data.contains)));
     });
 
-    playbook('X29', 'rapid edits and cursor requests converge on current text', async workspace => {
-        const { document, at } = await workspace.editing('box.choose(1, §);');
+    playbook('X29', async (workspace, data) => {
+        const { document, at } = await workspace.editing(data.incompleteBody);
         const initial = document.getText();
         const pending = [];
         for (let index = 0; index < 10; index++) {
-            await workspace.replace(document, initial.replace('choose(1,', index % 2 ? 'choose(1,' : 'choose("x",'), false);
+            await workspace.replace(document, initial.replace(data.integerCall, index % 2 ? data.integerCall : data.stringCall), false);
             pending.push(workspace.signature(document, at));
         }
         await Promise.all(pending);
-        const final = await workspace.editing('box.choose(1, 2); §');
+        const final = await workspace.editing(data.completedBody);
         await noErrors(final.document.uri);
-        const signature = await workspace.signature(final.document, position(final.document, 'choose(1, 2)', 10));
-        assert.match(signature?.signatures[0]?.label ?? '', /Int/);
+        const signature = await workspace.signature(final.document, position(final.document, data.completedCall, data.offset));
+        assert.match(signature?.signatures[0]?.label ?? '', scenarioRegex(data.pattern));
         const root = await workspace.project();
-        const child = await workspace.open('Project/Child.x');
+        const child = await workspace.open(data.memberFile);
         for (let index = 0; index < 6; index++) {
-            await workspace.replace(root, fixture('Project.x').replace('Int item = 1;', `Int item = ${index};`), false);
+            await workspace.replace(root, fixture(data.rootFile).replace(data.replaceFrom, scenarioText(data.replaceWith, index)), false);
         }
         await symbols(child);
         await noErrors(child.uri);
-        assert.strictEqual((await targets(child, 'Definition', position(child, 'echo("member")'))).length, 1);
+        assert.strictEqual((await targets(child, 'Definition', position(child, data.anchor))).length, data.expected);
     });
 
-    playbook('X30', 'cancellation, close, reopen and server restart recover', async workspace => {
-        const { document, at } = await workspace.editing('box.it§;');
+    playbook('X30', async (workspace, data) => {
+        const { document, at } = await workspace.editing(data.body);
         const token = new vscode.CancellationTokenSource();
         const pending = client().sendRequest('textDocument/completion', { textDocument: { uri: document.uri.toString() }, position: at }, token.token)
-            .then(() => undefined, error => { assert.ok([-32800, -32801].includes(error.code), String(error)); });
+            .then(() => undefined, error => { assert.ok((data.cancellationCodes as (number)[]).includes(error.code), String(error)); });
         token.cancel();
         await pending;
         token.dispose();
         await workspace.discard(document);
-        const reopened = await workspace.open('Editing.x');
+        const reopened = await workspace.open(data.file);
         await noErrors(reopened.uri);
         const previous = getClient();
         await vscode.commands.executeCommand('xtc.restartServer');
         await eventually(async () => getClient(), value => !!value?.initializeResult && value !== previous, 'Restarted language client');
         await symbols(reopened);
         await noErrors(reopened.uri);
-        const current = await workspace.editing('box.it§;');
-        assert.ok((await workspace.completion(current.document, current.at)).some(item => label(item) === 'item'));
-    }, ['Dismissing the actual popup and keyboard responsiveness']);
+        const current = await workspace.editing(data.body);
+        assert.ok((await workspace.completion(current.document, current.at)).some(item => label(item) === data.label));
+    });
 
-    playbook('X31', 'unsupported compiler capabilities are not advertised', async workspace => {
-        const document = await workspace.open('Navigation.x');
+    playbook('X31', async (workspace, data) => {
+        const document = await workspace.open(data.file);
         const capabilities = client().initializeResult!.capabilities;
-        for (const capability of ['documentFormattingProvider', 'documentRangeFormattingProvider', 'codeActionProvider', 'codeLensProvider']) {
+        for (const capability of data.unsupportedCapabilities) {
             assert.ok(!capabilities[capability as keyof typeof capabilities], capability);
         }
         assert.strictEqual((await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri,
-            { tabSize: 4, insertSpaces: true }))?.length ?? 0, 0);
-    }, ['Editor-native formatting/snippets are outside compiler capability assertions']);
+            { tabSize: data.tabSize, insertSpaces: true }))?.length ?? data.editCount, data.editCount);
+    });
 
-    playbook('X32', 'unsupported cursor contexts do not invent completions', async workspace => {
-        for (const body of ['box.pa§ir("x", "y");', 'new Box<String>(§);',
-            'function String() fn = () -> "x"; fn(§);', 'box.pair(§, "x");']) {
+    playbook('X32', async (workspace, data) => {
+        for (const body of data.bodies) {
             const { document, at } = await workspace.editing(body);
-            assert.strictEqual((await workspace.completion(document, at)).length, 0, body);
+            assert.strictEqual((await workspace.completion(document, at)).length, data.completionCount, body);
         }
     });
 }

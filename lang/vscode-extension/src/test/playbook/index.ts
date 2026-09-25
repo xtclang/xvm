@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import Mocha from 'mocha';
 import * as vscode from 'vscode';
+import { sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
 import { cases } from './support';
 
 async function hostResults() {
@@ -38,6 +39,7 @@ export async function run(): Promise<void> {
     const report = {
         commit: process.env.XTC_PLAYBOOK_COMMIT, dirtyPaths: process.env.XTC_PLAYBOOK_DIRTY,
         vscode: vscode.version, finished: new Date().toISOString(), failures,
+        sharedScenarios: { file: sharedScenarioPath, sha256: sharedScenarioHash, ids: sharedScenarioIds },
         cases: [...cases].map(([id, description]) => ({ ...description, id,
             ...(results.find(result => result.id === id) ?? { status: 'not-run' }) })),
         errors: results.filter(result => !cases.has(result.id)),

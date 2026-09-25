@@ -10,6 +10,77 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Shared editor scenario data
+
+Status: implemented as working changes after `c7976f970`. The preceding C18/L31 checkpoint was
+committed and pushed first: `cd1732d42` implements anonymous constructors; `c7976f970` maps them.
+
+- [x] Move all 94 scenario definitions into `lang/test-fixtures/compiler-playbook/scenarios.json`:
+  X1–X89, CFG1–CFG3 and 7a.8–7a.9, including titles, edits, anchors, variants, expected results,
+  fixture selectors, module graphs and remaining manual checks.
+- [x] Make VS Code consume the catalog without removing its existing provider/protocol assertions.
+  A type-only JSON import checks field names and shapes during TypeScript compilation.
+- [x] Extend the native IntelliJ driver from seven feature scenarios to eighteen; keep startup
+  separate. Reuse the same completion/scope/import/recovery inputs and expectations.
+- [x] Report every IntelliJ case: `passed`, `partial`, `not-implemented`, `not-run` or `failed`.
+  Each partial/unimplemented entry names the missing native assertions. A driver gap is not a
+  claim that IntelliJ or LSP4IJ lacks that LSP capability.
+- [x] Open IntelliJ's Problems tool window for X2 and 7a.8, select Current File, verify visibility,
+  compare row locations/counts with the checked editor diagnostics, and verify clearing.
+- [x] Declare the catalog as a Gradle input for TypeScript compilation and both playbook tasks;
+  include its IDs and SHA-256 in both reports so runs against different data are distinguishable.
+- [x] Finish the final editor replay and configuration-cache verification after Problems integration.
+
+Source programs still come from the manual playbook; selectors live in the catalog. A `§` marks a
+cursor offset. Variant rows have named columns, and `${0}` substitutions insert literal text;
+there is no shared executable scripting language. Editor actions and protocol handling stay in
+TypeScript/Kotlin. The original seven common edit/anchor checks reject missing or ambiguous
+matches; both drivers also reject catalog/manual ID drift and missing native registrations.
+
+IntelliJ covers X7–X13, X71, X75, X86–X87 and CFG1 fully at the scenario assertion level (**12**),
+and X2, X4, X6, X45–X46 and 7a.8 partially (**6**), plus START. The remaining **76** entries are
+explicitly unimplemented. Next native work is signature/active-parameter inspection, type and
+implementation choosers, references/rename, hierarchy, semantic tokens/inlay hints, and lifecycle
+or raw-protocol cases. Each exact gap is recorded beside its shared scenario. Visual layout,
+physical key use, Problems-row clicking and long editing sessions remain manual where listed.
+
+No production server, plugin, compiler, embedding API or AST behavior changes. All new Kotlin
+remains in `integrationTest`; the test still asserts that Ultimate stays unloaded. No dependency
+is added. The JSON is not bundled into the production extension.
+
+| Group | Scope | Prerequisites |
+|---|---|---|
+| L32 | Complete shared catalog, native consumers, explicit coverage reports, Problems checks, task inputs and playbook docs | L16, L27 and L31 with their prerequisite stacks |
+
+This brings the extraction map to **64** groups. Shared data is complete; native IntelliJ parity
+is explicitly incomplete. Keep L32 together when extracting this test-infrastructure PR. Its full
+catalog reaches X89, so extraction follows L31 and its prerequisite compiler/adapter stack;
+sharing data adds no new production API requirement.
+
+Initial expanded validation on 2026-09-25: all 94 VS Code cases passed in
+`lang/vscode-extension/build/reports/compiler-playbook/run-DmL7Ao/results.json`. IntelliJ startup
+and all eighteen implemented/partial scenarios passed in
+`lang/intellij-plugin/build/reports/compiler-playbook/run-12241983404891814641/results.json`,
+with Ultimate disabled and no IDE failures.
+
+Final replay, including Problems row checks and the completion-helper cleanup: all 94 VS Code
+cases passed in `lang/vscode-extension/build/reports/compiler-playbook/run-rQuTm3/results.json`.
+IntelliJ startup and all eighteen implemented/partial scenarios passed in
+`lang/intellij-plugin/build/reports/compiler-playbook/run-7796454822837157094/results.json`:
+13 `passed` entries including START, six `partial` entries, 76 `not-implemented` entries, zero
+failed/not-run entries and zero IDE failures. Both reports identify the same catalog SHA-256,
+`8098316aadfbde0ade8bdf32cc35fdf1b4d6eb2cc3c2cf4dfa8f49868a98ef72`. Gradle reported
+`Configuration cache entry reused`. TypeScript compilation and Kotlin checks passed; review
+confirmed that all 94 VS Code bodies retain their pre-migration assertion calls. Markdown file
+links and `git diff --check` passed. Host/compiler tests were up-to-date in this final replay;
+this test-infrastructure change does not claim another fresh host-test run.
+
+Command (repeat with `--info` for configuration-cache evidence):
+
+```bash
+./gradlew :lang:vscode-extension:testCompilerPlaybook :lang:intellij-plugin:testCompilerPlaybook --max-workers=1 -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
+```
+
 ## Anonymous constructor cursor support
 
 Implemented on `lagergren/errs` in `cd1732d42`, after `185ff84b1`.
@@ -2221,6 +2292,7 @@ above identify old candidate patches, not additional changes to merge into the i
 | L30 | Declaration/literal recovery consumers and editor controls | `46d6c1442` (recovery consumers); X86–X87 | C17, L24, L16 |
 | C18 | Anonymous construction ownership and constructor fitting | `cd1732d42` compiler portion; anonymous-constructor section above | C16 and cursor/listener foundations |
 | L31 | Anonymous-constructor labels, consumers and ownership controls | `cd1732d42` host portion; X88–X89 | C18, L29/L30, L16 |
+| L32 | Complete shared editor catalog and native consumers | Working changes after `c7976f970`; shared-scenario section above | L16, L27, L31 |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
@@ -2236,7 +2308,7 @@ modules; L16 exposes those roots/edges through editor configuration. Automatic p
 discovery stays separate. L17 adds configured-graph references and method rename. These are
 thirty-five checkpoint PR groups; the seven post-L18 units, L22 and C11/L23/I6 bring the working
 plan to 46; I7 brings it to 47, C12/L24 to 49, C13/L25 to 51, C14/L26 to 53, I8/L27 to 55,
-C15/L28 to **57**, C16/L29/C17/L30 to **61**, and C18/L31 to **63**. L18 extends property lookup after L10/L13. During current development,
+C15/L28 to **57**, C16/L29/C17/L30 to **61**, C18/L31 to **63**, and L32 to **64**. L18 extends property lookup after L10/L13. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
 

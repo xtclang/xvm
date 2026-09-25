@@ -2,6 +2,7 @@ package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Remote
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
 
 /** Test-only Driver proxies; no automation hooks are added to the shipped plugin. */
 @Remote("com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings", plugin = "com.redhat.devtools.lsp4ij")
@@ -31,10 +32,14 @@ interface EditorLookupManager {
 interface EditorLookup {
     fun getItems(): List<CompletionItem>
 
+    fun isCalculating(): Boolean
+
     fun setCurrentItem(item: CompletionItem)
 }
 
 @Remote("com.intellij.codeInsight.lookup.LookupElement")
 interface CompletionItem {
     fun getLookupString(): String
+
+    fun renderElement(presentation: LookupElementPresentation)
 }
