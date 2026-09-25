@@ -8,9 +8,20 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Native IntelliJ signature help (2026-09-25, working tree).**
+The driver now covers X15–X20 and constructor variants X74, X83–X85 and X88–X89. It invokes
+Parameter Info, reads that action's completed result, and checks the actual popup's parameter
+text and bold argument. Invalid calls must clear an earlier hint. This brings coverage to
+seventeen full and thirteen partial scenarios plus startup, with 64 unimplemented entries.
+X20 exposes an LSP4IJ display limitation: suppressed ambiguous parameter metadata is rendered as
+`<no parameters>` even though the response retains the full signature. Completion acceptance and
+selected-call navigation remain explicit partial checks. No production API or AST changes are
+needed. Validation passes all 94 VS Code cases, IntelliJ startup plus 30 implemented/partial cases,
+986 executed LSP tests and 38 packaged stdio tests. See [L33 and the remaining order](errs-integration-plan.md#native-intellij-signature-help).
+
 **Shared editor scenarios (2026-09-25, `019d3f811`).**
 All 94 scenarios now get their inputs, expectations and manual-check notes from one shared JSON
-catalog. VS Code retains the full assertion set. IntelliJ implements twelve scenarios fully and
+catalog. VS Code retains the full assertion set. At this checkpoint IntelliJ implemented twelve scenarios fully and
 six partially, plus startup; its report names the missing assertions for all remaining 76 cases.
 Its error/warning cases also open Problems → Current File and check row locations/counts and
 clearing. Both reports include catalog IDs and SHA-256. Shared data does not imply editor parity.

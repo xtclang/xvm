@@ -216,6 +216,7 @@ class CompilerPlaybook(
                 }
                 restore(shared.common.editing.file)
             }
+            signatureScenarios()
             for (id in listOf("X71", "X75")) {
                 scenario(id) { data ->
                     val editor = open(data.text("file"))
@@ -267,6 +268,141 @@ class CompilerPlaybook(
                 "Every case declared implemented or partial must execute; unimplemented cases must stay explicit"
             }
         }
+
+    private fun Driver.signatureScenarios() {
+        scenario("X15") { data ->
+            data.rows("variants").forEach { variant ->
+                val (editor, at) = editing(SharedScenarios.text(data.text("body"), variant["argument"].asString))
+                signature(editor, at) { items ->
+                    items.size == data.values["expected"].asInt &&
+                        Regex(variant["type"].asString).containsMatchIn(items.single().label) &&
+                        items.single().activeParameter == data.values["expected"].asInt
+                }
+            }
+            restore(shared.common.editing.file)
+        }
+        scenario("X16") { data ->
+            val (editor, at) = editing(data.text("body"))
+            signature(editor, at) { items ->
+                items.size == data.values["expected"].asInt &&
+                    Regex(data.values["type"].asJsonObject["source"].asString).containsMatchIn(items.single().label) &&
+                    items.single().activeParameter == data.values["activeParameter"].asInt
+            }
+            editor.text = editor.text.replace(data.text("replaceFrom"), data.text("replaceWith"))
+            editor.awaitDiagnostics(emptyList())
+            signature(editor, editor.text.indexOf(data.text("completedArgument")) + data.values["argumentOffset"].asInt) {
+                it.isNotEmpty()
+            }
+            restore(shared.common.editing.file)
+        }
+        scenario("X17") { data ->
+            data.rows("variants").forEach { variant ->
+                val (editor, at) = editing(variant["body"].asString)
+                val type = Regex(SharedScenarios.text(data.text("typePattern"), variant["type"].asString))
+                signature(editor, at) { it.isNotEmpty() && type.containsMatchIn(it.first().label) }
+            }
+            restore(shared.common.editing.file)
+        }
+        scenario("X18") { data ->
+            data.strings("bodies").forEach { body ->
+                val valid = shared.scenarios.getValue("X15")
+                val argument = valid.rows("variants").first()["argument"].asString
+                val (previous, previousAt) = editing(SharedScenarios.text(valid.text("body"), argument))
+                signature(previous, previousAt, keepOpen = true) { it.isNotEmpty() }
+                val (editor, at) = editing(body)
+                signature(editor, at) { it.size == data.values["signatureCount"].asInt }
+            }
+            restore(shared.common.editing.file)
+        }
+        scenario("X19") { data ->
+            data.values["receivers"].asJsonArray.forEach { receiver ->
+                val instance = receiver.asBoolean
+                val (editor, at) =
+                    editing(data.text(if (instance) "instanceBody" else "staticBody"), inspect = instance) {
+                        it.replace(data.text("replaceFrom"), data.text("replaceWith"))
+                    }
+                signature(editor, at) { it.isNotEmpty() && it.first().activeParameter == data.values["activeParameter"].asInt }
+                editor.text = editor.text.replaceRange(at, at, data.text(if (instance) "instanceArgument" else "staticArgument"))
+                editor.awaitDiagnostics(emptyList())
+            }
+            restore(shared.common.editing.file)
+        }
+        scenario("X20") { data ->
+            val (editor, at) = editing(data.text("body"))
+            signature(editor, at) { it.isNotEmpty() && it.first().parameters.isEmpty() }
+            restore(shared.common.editing.file)
+        }
+        scenario("X74") { data ->
+            val editor = open(data.text("file"))
+            data.rows("variants").forEach { variant ->
+                val call = variant["call"].asString
+                editor.text =
+                    fixtures.getValue(data.text("file")).replace(
+                        data.text("replaceFrom"),
+                        SharedScenarios.text(data.text("replaceWith"), call),
+                    )
+                signature(editor, editor.text.indexOf(call) + call.length) {
+                    it.isNotEmpty() && it.first().label == data.text("signature") &&
+                        it.first().activeParameter == variant["active"].asInt
+                }
+            }
+            restore(data.text("file"))
+        }
+        for (id in listOf("X83", "X84")) {
+            scenario(id) { data ->
+                val editor = open(data.text("file"))
+                data.strings(if (id == "X84") "constructors" else "variants").forEach { original ->
+                    val prefix = original.replace(data.text("replaceFrom"), data.text("prefix"))
+                    editor.text =
+                        fixtures.getValue(data.text("file")).replace(
+                            original,
+                            SharedScenarios.text(data.text("replaceWith"), prefix),
+                        )
+                    signature(editor, editor.text.indexOf(prefix) + prefix.length) {
+                        it.isNotEmpty() &&
+                            Regex(data.values["signature"].asJsonObject["source"].asString).containsMatchIn(it.first().label) &&
+                            (id != "X83" || it.first().activeParameter == data.values["activeParameter"].asInt)
+                    }
+                }
+                restore(data.text("file"))
+            }
+        }
+        scenario("X85") { data ->
+            val editor = open(data.text("file"))
+            data.strings("variants").forEach { prefix ->
+                editor.text =
+                    fixtures.getValue(data.text("file")).replace(
+                        data.text("replaceFrom"),
+                        SharedScenarios.text(data.text("replaceWith"), prefix),
+                    )
+                signature(editor, editor.text.indexOf(prefix) + prefix.length) {
+                    it.isNotEmpty() && it.first().activeParameter == data.values["activeParameter"].asInt &&
+                        Regex(data.values["parameter"].asJsonObject["source"].asString).containsMatchIn(it.first().label)
+                }
+            }
+            restore(data.text("file"))
+        }
+        for (id in listOf("X88", "X89")) {
+            scenario(id) { data ->
+                val editor = open(data.text("file"))
+                val prefix = data.text("prefix")
+                val replacements =
+                    if (id == "X89") {
+                        data.strings("closers").map { prefix + it }
+                    } else {
+                        listOf(SharedScenarios.text(data.text("replaceWith"), prefix))
+                    }
+                replacements.forEach { replacement ->
+                    editor.text = fixtures.getValue(data.text("file")).replace(data.text("original"), replacement)
+                    signature(editor, editor.text.indexOf(prefix) + prefix.length) {
+                        it.isNotEmpty() && it.first().label == data.text("signature") &&
+                            it.first().activeParameter == data.values["activeParameter"].asInt
+                    }
+                }
+                restore(data.text("file"))
+            }
+        }
+    }
 
     private fun Driver.problems(editor: JEditorUiComponent) {
         val text = editor.text

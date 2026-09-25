@@ -1066,11 +1066,16 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It runs startup and eighteen shared scenarios: X2, X4, X6–X13, X45–X46, X71, X75,
-X86–X87, CFG1 and 7a.8. Twelve have full scenario assertions and six have explicitly partial
-coverage. X2 and 7a.8 open **Problems → Current File**, check its diagnostic row locations/counts,
-and check that corrections clear the rows. Editor severity and source-span checks remain in place.
-The report also lists all 76 unimplemented scenarios and their specific missing native checks.
+disabled. It runs startup and thirty shared scenarios: X2, X4, X6–X13, X15–X20, X45–X46,
+X71, X74–X75, X83–X89, CFG1 and 7a.8. Seventeen have full scenario assertions and thirteen
+have explicitly partial coverage. Parameter Info checks inspect the actual native request,
+rendered parameters and bold argument for method and constructor variants. Invalid calls must
+clear an earlier valid hint. Constructor completion acceptance and X16/X20 declaration navigation
+remain partial. In X20, LSP4IJ 0.21.0 displays `<no parameters>` when the compiler deliberately
+suppresses ambiguous parameter metadata; the signature label is still present in the response.
+X2 and 7a.8 open **Problems → Current File**, check its diagnostic row locations/counts, and check
+that corrections clear the rows. Editor severity and source-span checks remain in place.
+The report lists all 64 unimplemented scenarios and their specific missing native checks.
 Problems-row clicking and visual layout remain manual; VS Code's complete case list does not
 establish IntelliJ parity.
 
@@ -1087,7 +1092,7 @@ manual-check notes. Source programs remain the canonical fixtures below. A `§` 
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 94 cases. IntelliJ executes twelve fully and six partially, plus a separate startup check;
+all 94 cases. IntelliJ executes seventeen fully and thirteen partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
