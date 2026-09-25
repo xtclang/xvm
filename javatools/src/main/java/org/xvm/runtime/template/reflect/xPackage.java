@@ -203,7 +203,7 @@ public class xPackage
      */
     protected int ensureConstHandle(Frame frame, IdentityConstant idPkg, TypeConstant typePkg) {
         Container         container = frame.f_context.f_container;
-        SingletonConstant constPkg  = container.getConstantPool().ensureSingletonConstConstant(idPkg);
+        SingletonConstant constPkg  = frame.poolContext().ensureSingletonConstConstant(idPkg);
 
         var state = container.ensureSingletonState(constPkg);
         ObjectHandle hPkg = state.getHandle();

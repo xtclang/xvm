@@ -270,7 +270,7 @@ public abstract class Container
      * @return the method constant or null if not found
      */
     public MethodConstant findModuleMethod(String sMethod, ObjectHandle[] ahArg) {
-        TypeInfo infoModule = getModule().getType().ensureTypeInfo();
+        TypeInfo infoModule = getTypeContext().typeOf(getModule()).ensureTypeInfo();
 
         TypeConstant[] atypeArg;
         if (ahArg.length == 0) {
@@ -531,7 +531,24 @@ public abstract class Container
      * @return the canonical constant in its owning container's pool
      */
     public SingletonConstant ensureSingletonConstant(SingletonConstant constant) {
-        return getOriginContainer(constant).getConstantPool().register(constant);
+        Container owner = getOriginContainer(constant);
+        ConstantPool image = owner.getConstantPool();
+        SingletonConstant existing = (SingletonConstant) image.getConstant(constant);
+        if (existing != null) {
+            return existing;
+        }
+
+        // Sharing selected the value owner explicitly. Bind to its existing declaration, then
+        // create the value reference in its descriptor store; the image need not have used that
+        // singleton as a literal and must not gain a new indexed constant during execution.
+        var identity = (IdentityConstant) image.getConstant(constant.getClassConstant());
+        if (identity == null) {
+            throw new IllegalArgumentException("Missing singleton declaration in its owner: " + constant);
+        }
+        var pool = owner.getTypeContext().getDescriptorPool();
+        return constant.getFormat() == Constant.Format.SingletonService
+                ? pool.register(new SingletonConstant(pool, constant.getFormat(), pool.register(identity)))
+                : pool.ensureSingletonConstConstant(pool.register(identity));
     }
 
     /**
@@ -549,7 +566,7 @@ public abstract class Container
      */
     public SingletonState ensureSingletonState(SingletonConstant constant) {
         Container owner = getOriginContainer(constant);
-        return owner.f_heap.ensureSingletonState(owner.getConstantPool().register(constant));
+        return owner.f_heap.ensureSingletonState(ensureSingletonConstant(constant));
     }
 
     /**

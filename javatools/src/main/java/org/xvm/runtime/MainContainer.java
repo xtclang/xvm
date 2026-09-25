@@ -197,7 +197,7 @@ public class MainContainer
                 return;
             }
 
-            TypeConstant      typeModule = f_idModule.getType();
+            TypeConstant      typeModule = getTypeContext().typeOf(f_idModule);
             TypeComposition   clzModule  = resolveClass(typeModule);
             SignatureConstant sigMethod  = idMethod.getSignature();
             CallChain         chain      = clzModule.getMethodCallChain(sigMethod);
@@ -255,7 +255,7 @@ public class MainContainer
                         "Missing: " + sMethodName + " method for " + f_idModule.getValueString());
             }
 
-            TypeConstant      typeModule = f_idModule.getType();
+            TypeConstant      typeModule = getTypeContext().typeOf(f_idModule);
             TypeComposition   clzModule  = resolveClass(typeModule);
             SignatureConstant sigMethod  = idMethod.getSignature();
             CallChain         chain      = clzModule.getMethodCallChain(sigMethod);

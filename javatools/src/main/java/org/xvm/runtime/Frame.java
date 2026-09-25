@@ -1330,7 +1330,7 @@ public class Frame
      *         run-time execution
      */
     public ConstantPool poolContext() {
-        return f_context.f_pool;
+        return f_context.getRuntimePool();
     }
 
     /**

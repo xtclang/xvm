@@ -1,12 +1,13 @@
 # Separating definitions, type metadata and execution state
 
-Status: staged proposal and architectural prototypes, 2026-09-24. The experimental branch
+Status: staged implementation in progress, 2026-09-25. The experimental branch
 `lagergren/constant-pool-state-separation` implements the singleton execution-state boundary and
 the first descriptor/index boundary, including late-generated field initializers, local reflective
 parameterization, a separate type-relation table and an explicit definition-freeze boundary.
 Broader reflection migration, the remaining metadata caches, other generated methods and
-activation with frozen images remain unfinished. The frozen-execution audit currently fails;
-the passing normal suite is not proof of full runtime immutability.
+activation with frozen images remain unfinished. The frozen-execution audit currently fails.
+The latest entry/frame migration checkpoint also has two ordinary ownership integration failures;
+it is a development checkpoint, not a merge-ready activation change. See the checkpoint below.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -921,3 +922,24 @@ objects are independent, while all definition constants and their indices remain
 The full XDK suite passes 38 tests with no skips; the libraries rebuild and formatting checks pass.
 The manual audit now completes its cold descriptor-metadata query and fails later in the legacy
 image-owned invocation lookup. Runtime entry/frame migration and the other stages remain open.
+
+### Entry/frame migration checkpoint (incomplete)
+
+Entry lookup and module compositions now start in the descriptor context. `Frame.poolContext()`
+delegates to `ServiceContext.getRuntimePool()` for runtime construction; compiled operand lookup
+still uses the method's local constant table. Singleton lookup selects its value owner first,
+reuses an existing image constant if present, and otherwise creates the value reference outside
+the image. Module/package handle construction and singleton initialization use those paths.
+
+This checkpoint is intentionally incomplete. The latest ordinary ownership test run reports
+13 tests, two failures and no skips. Function binding in `xRTFunction.FunctionHandle.bind` carries
+a `ModuleRepository` type from another owner into the current descriptor pool; native
+`xListMap.constructMap` similarly supplies the native root's ListMap type. These require explicit
+binding at the runtime boundary, not weaker descriptor generation checks. The last package
+singleton routing change compiles but has not yet had a full integration rerun.
+
+The frozen `Singletons.x` audit now reaches singleton class construction, where
+`ClassTemplate.getCanonicalClass` creates image-owned access-qualified types in `ClassComposition`.
+It still fails with `ConstantPool is read-only`. Completing these construction and cross-owner
+boundaries is scope 1. The other five scopes above remain open; no freeze-by-default switch,
+image-copy removal, new CI dependency or JIT work is included in this checkpoint.

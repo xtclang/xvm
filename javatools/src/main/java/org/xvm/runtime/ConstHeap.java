@@ -164,7 +164,8 @@ public class ConstHeap {
      * @return this heap's unique state entry
      */
     SingletonState ensureSingletonState(SingletonConstant definition) {
-        assert definition.getConstantPool() == f_container.getConstantPool();
+        assert definition.getConstantPool() == f_container.getConstantPool()
+                || definition.getConstantPool() == f_container.getTypeContext().getDescriptorPool();
         return singletonStates.computeIfAbsent(definition, SingletonState::new);
     }
 
@@ -185,7 +186,7 @@ public class ConstHeap {
             hValue = hConst;
         }
         ConstantPool pool = f_container.getConstantPool();
-        if (constValue.getConstantPool() != pool) {
+        if (constValue.getConstantPool() != pool && constValue.getConstantPool().hasSerializedIndices()) {
             constValue = pool.register(constValue);
         }
         ObjectHandle hValue0 = f_mapConstants.putIfAbsent(constValue, hValue);

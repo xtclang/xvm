@@ -85,6 +85,17 @@ public class ServiceContext {
         return f_container;
     }
 
+    /**
+     * Obtain this service's destination for runtime type and value descriptors. It belongs to
+     * the container's prepared definition context and has no serialized constant indices.
+     * Compiled operands are resolved through their method's local constant table instead.
+     *
+     * @return the container-owned, growable runtime descriptor pool
+     */
+    public ConstantPool getRuntimePool() {
+        return f_container.getTypeContext().getDescriptorPool();
+    }
+
     public ServiceContext getMainContext() {
         return f_container.getServiceContext();
     }

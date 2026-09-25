@@ -751,7 +751,7 @@ public abstract class Utils {
                                     Frame.Continuation continuation) {
         for (SingletonConstant definition : listSingletons) {
             Container owner = frame.f_context.f_container.getOriginContainer(definition);
-            SingletonState state = owner.f_heap.ensureSingletonState(owner.getConstantPool().register(definition));
+            SingletonState state = owner.ensureSingletonState(definition);
             SingletonConstant constSingleton = state.getDefinition();
             ObjectHandle hValue = state.getHandle();
             if (hValue != null && !(hValue instanceof InitializingHandle)) {
