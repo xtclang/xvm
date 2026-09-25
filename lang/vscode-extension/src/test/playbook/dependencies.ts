@@ -1,79 +1,88 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
+import { catalog, editScenario, scenarioOffset, scenarioRegex, shared } from './shared';
 import { client, diagnosticCode, diagnostics, eventually, fixture, noErrors, playbook, position, symbols, targets, Workspace } from './support';
 
-const stringLibrary = 'module Library { static String value()="text"; }';
-const brokenLibrary = 'module Library { MissingType broken; }';
+const { stringLibrary, brokenLibrary } = catalog.common.dependency;
 
 async function blocked(workspace: Workspace): Promise<void> {
-    await diagnostics(workspace.uri('Consumer.x'), values => values.some(item => diagnosticCode(item) === 'DEPENDENCY-FAILED'), 'Blocked consumer');
+    await diagnostics(workspace.uri(catalog.common.dependency.consumer), values => values.some(item => diagnosticCode(item) === catalog.common.dependency.blockedCode), 'Blocked consumer');
 }
 
 async function linked(document: vscode.TextDocument, workspace: Workspace): Promise<void> {
     await symbols(document);
     await noErrors(document.uri);
-    const result = await targets(document, 'Definition', position(document, 'lib.value', 4));
+    const location = shared.dependencyNavigation.location;
+    const result = await targets(document, 'Definition', document.positionAt(scenarioOffset(document.getText(), location.cursor)));
     assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].uri.toString(), workspace.uri('Library.x').toString());
+    assert.strictEqual(result[0].uri.toString(), workspace.uri(location.targetFile).toString());
 }
 
 export function dependencyCases(): void {
-    playbook('X45', 'source dependencies compile and navigate without opening the library', async workspace => {
+    playbook('X45', async (workspace, data) => {
         const consumer = await workspace.dependencies();
-        assert.ok(!vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === workspace.uri('Library.x').toString()));
+        const location = shared.dependencyNavigation.location;
+        assert.ok(!vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === workspace.uri(location.targetFile).toString()));
         await linked(consumer, workspace);
+        const result = await targets(consumer, 'Definition', consumer.positionAt(scenarioOffset(consumer.getText(), location.cursor)));
+        const target = await vscode.workspace.openTextDocument(result[0].uri);
+        assert.strictEqual(target.offsetAt(result[0].range.start), scenarioOffset(target.getText(), location.target));
     });
 
-    playbook('X46', 'unsaved library type changes recompile unchanged consumers', async workspace => {
+    playbook('X46', async (workspace, data) => {
+        const scenario = shared.dependencyEdit;
         const consumer = await workspace.dependencies();
+        assert.strictEqual(consumer.uri.toString(), workspace.uri(scenario.consumer).toString());
         const version = consumer.version;
-        const library = await workspace.open('Library.x');
-        await workspace.replace(library, stringLibrary);
+        const library = await workspace.open(scenario.file);
+        await workspace.replace(library, editScenario(fixture(scenario.file), scenario.edit));
         const result = await diagnostics(consumer.uri, values => values.length > 0, 'Consumer type mismatch');
-        assert.ok(result.every(item => diagnosticCode(item) !== 'DEPENDENCY-FAILED'));
+        assert.ok(result.every(item => diagnosticCode(item) !== data.diagnosticCode));
         assert.strictEqual(consumer.version, version);
-        assert.strictEqual(await fs.readFile(library.uri.fsPath, 'utf8'), fixture('Library.x'));
+        assert.strictEqual(await fs.readFile(library.uri.fsPath, 'utf8'), fixture(scenario.file));
+        await workspace.replace(library, fixture(scenario.file));
+        await noErrors(consumer.uri);
     });
 
-    playbook('X47', 'dependency failure owns diagnostics and removes stale navigation', async workspace => {
+    playbook('X47', async (workspace, data) => {
         const consumer = await workspace.dependencies();
-        const library = await workspace.open('Library.x');
+        const library = await workspace.open(data.file);
         await workspace.replace(library, brokenLibrary);
-        await diagnostics(library.uri, values => values.some(item => diagnosticCode(item).startsWith('COMPILER-')), 'Library compiler diagnostic');
+        await diagnostics(library.uri, values => values.some(item => diagnosticCode(item).startsWith(data.compilerCodePrefix)), 'Library compiler diagnostic');
         await blocked(workspace);
-        assert.deepStrictEqual(await targets(consumer, 'Definition', position(consumer, 'lib.value', 4)), []);
-        await workspace.replace(library, fixture('Library.x'));
+        assert.deepStrictEqual(await targets(consumer, 'Definition', position(consumer, data.anchor, data.offset)), []);
+        await workspace.replace(library, fixture(data.file));
         await noErrors(library.uri);
         await linked(consumer, workspace);
     });
 
-    playbook('X48', 'discarding a dependency overlay restores the disk artifact', async workspace => {
+    playbook('X48', async (workspace, data) => {
         const consumer = await workspace.dependencies();
-        const library = await workspace.open('Library.x');
+        const library = await workspace.open(data.file);
         await workspace.replace(library, stringLibrary);
         await diagnostics(consumer.uri, values => values.length > 0, 'Consumer type mismatch');
         await workspace.discard(library);
         await linked(consumer, workspace);
-        assert.strictEqual((await workspace.open('Library.x')).getText(), fixture('Library.x'));
+        assert.strictEqual((await workspace.open(data.file)).getText(), fixture(data.file));
     });
 
-    playbook('X49', 'watched dependency deletion and restoration propagate', async workspace => {
+    playbook('X49', async (workspace, data) => {
         const consumer = await workspace.dependencies();
-        await fs.unlink(workspace.uri('Library.x').fsPath);
-        await diagnostics(workspace.uri('Library.x'), values => values.some(item => diagnosticCode(item) === 'SOURCE-UNAVAILABLE'), 'Missing dependency source');
+        await fs.unlink(workspace.uri(data.file).fsPath);
+        await diagnostics(workspace.uri(data.file), values => values.some(item => diagnosticCode(item) === data.diagnosticCode), 'Missing dependency source');
         await blocked(workspace);
-        await workspace.write('Library.x');
+        await workspace.write(data.file);
         await linked(consumer, workspace);
-        await noErrors(workspace.uri('Library.x'));
+        await noErrors(workspace.uri(data.file));
     });
 
-    playbook('X50', 'unsaved and saved dependency members invalidate and recover consumers', async workspace => {
+    playbook('X50', async (workspace, data) => {
         const consumer = await workspace.dependencies();
-        const uri = workspace.uri('Library/Extra.x');
-        const text = 'class Extra { MissingType broken; }';
+        const uri = workspace.uri(data.file);
+        const text = data.text;
         try {
-            await client().sendNotification('textDocument/didOpen', { textDocument: { uri: uri.toString(), languageId: 'xtc', version: 1, text } });
+            await client().sendNotification('textDocument/didOpen', { textDocument: { uri: uri.toString(), languageId: 'xtc', version: data.version, text } });
             await diagnostics(uri, values => values.length > 0, 'Virtual member diagnostic');
             await blocked(workspace);
         } finally {
@@ -81,22 +90,22 @@ export function dependencyCases(): void {
         }
         await linked(consumer, workspace);
         await noErrors(uri);
-        await workspace.write('Library/Extra.x', text);
+        await workspace.write(data.file, text);
         await diagnostics(uri, values => values.length > 0, 'Saved member diagnostic');
         await blocked(workspace);
         await fs.unlink(uri.fsPath);
         await linked(consumer, workspace);
         await noErrors(uri);
-    }, ['Named unsaved member uses LSP didOpen/didClose; filesystem half uses the real VS Code watcher']);
+    });
 
-    playbook('X51', 'rapid dependency changes converge without damaging unrelated sessions', async workspace => {
+    playbook('X51', async (workspace, data) => {
         const consumer = await workspace.dependencies();
-        const unrelated = await workspace.open('Navigation.x');
-        const library = await workspace.open('Library.x');
+        const unrelated = await workspace.open(data.unrelatedFile);
+        const library = await workspace.open(data.libraryFile);
         const queries = [];
         for (let index = 0; index < 10; index++) {
-            await workspace.replace(library, index % 2 ? fixture('Library.x') : brokenLibrary, false);
-            queries.push(targets(consumer, 'Definition', position(consumer, 'lib.value', 4)));
+            await workspace.replace(library, index % 2 ? fixture(data.libraryFile) : brokenLibrary, false);
+            queries.push(targets(consumer, 'Definition', position(consumer, data.anchor, data.offset)));
         }
         await Promise.all(queries);
         await linked(consumer, workspace);
@@ -104,66 +113,57 @@ export function dependencyCases(): void {
         assert.ok((await symbols(unrelated)).length);
     });
 
-    playbook('X52', 'transitive source changes propagate through the dependency graph', async workspace => {
-        const bridgeText = 'module Bridge { package lib import Library; static Int value()=lib.value(); }';
-        await workspace.write('Library.x');
-        await workspace.write('Bridge.x', bridgeText);
-        await workspace.write('Consumer.x', fixture('Consumer.x').replace('import Library', 'import Bridge'));
-        await workspace.configure([
-            { name: 'Library', uri: workspace.uri('Library.x').toString() },
-            { name: 'Bridge', uri: workspace.uri('Bridge.x').toString(), dependencies: ['Library'] },
-            { name: 'Consumer', uri: workspace.uri('Consumer.x').toString(), dependencies: ['Bridge'] }
-        ]);
-        const consumer = await workspace.open('Consumer.x');
+    playbook('X52', async (workspace, data) => {
+        const bridgeText = data.bridgeText;
+        await workspace.write(data.libraryFile);
+        await workspace.write(data.bridgeFile, bridgeText);
+        await workspace.write(data.consumerFile, fixture(data.consumerFile).replace(data.replaceFrom, data.bridgeImport));
+        await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
+        const consumer = await workspace.open(data.consumerFile);
         await noErrors(consumer.uri);
-        const library = await workspace.open('Library.x');
+        const library = await workspace.open(data.libraryFile);
         await workspace.replace(library, stringLibrary);
-        await diagnostics(workspace.uri('Bridge.x'), values => values.length > 0, 'Transitive type mismatch');
+        await diagnostics(workspace.uri(data.bridgeFile), values => values.length > 0, 'Transitive type mismatch');
         await blocked(workspace);
         await workspace.replace(library, brokenLibrary);
         await blocked(workspace);
-        await workspace.replace(library, fixture('Library.x'));
+        await workspace.replace(library, fixture(data.libraryFile));
         await noErrors(consumer.uri);
-        const bridge = await workspace.open('Bridge.x');
-        await workspace.replace(bridge, 'module Bridge { MissingType broken; }');
+        const bridge = await workspace.open(data.bridgeFile);
+        await workspace.replace(bridge, data.brokenBridge);
         await blocked(workspace);
         await workspace.replace(bridge, bridgeText);
         await noErrors(consumer.uri);
-        assert.strictEqual((await targets(consumer, 'Definition', position(consumer, 'lib.value', 4)))[0].uri.toString(), bridge.uri.toString());
+        assert.strictEqual((await targets(consumer, 'Definition', position(consumer, data.anchor, data.offset)))[0].uri.toString(), bridge.uri.toString());
     });
 }
 
 export function configurationCases(): void {
-    playbook('CFG1', 'removing and restoring source settings replaces the graph', async workspace => {
+    playbook('CFG1', async (workspace, data) => {
         const consumer = await workspace.dependencies();
+        assert.strictEqual(consumer.uri.toString(), workspace.uri(shared.configuration.consumer).toString());
         await workspace.configure([]);
         await diagnostics(consumer.uri, values => values.length > 0, 'Removed dependency graph');
-        await workspace.configure([
-            { name: 'Library', uri: workspace.uri('Library.x').toString() },
-            { name: 'Consumer', uri: workspace.uri('Consumer.x').toString(), dependencies: ['Library'] }
-        ]);
+        await workspace.configureSharedGraph();
         await linked(consumer, workspace);
     });
 
-    playbook('CFG2', 'invalid cyclic settings preserve the last valid graph', async workspace => {
+    playbook('CFG2', async (workspace, data) => {
         const consumer = await workspace.dependencies();
         // Observe the error notification as well as unchanged navigation: otherwise a query
         // could race ahead of processing the rejected configuration.
         let rejected = false;
         const registration = client().onNotification('window/showMessage', (message: { message: string }) => {
-            if (/cycl|invalid|reject/i.test(message.message)) { rejected = true; }
+            if (scenarioRegex(data.pattern).test(message.message)) { rejected = true; }
         });
         try {
-            await workspace.configure([
-                { name: 'Library', uri: workspace.uri('Library.x').toString(), dependencies: ['Consumer'] },
-                { name: 'Consumer', uri: workspace.uri('Consumer.x').toString(), dependencies: ['Library'] }
-            ]);
+            await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
             await eventually(async () => rejected, Boolean, 'Invalid configuration rejected');
             await linked(consumer, workspace);
         } finally { registration.dispose(); }
     });
 
-    playbook('CFG3', 'unchanged source settings preserve current semantics', async workspace => {
+    playbook('CFG3', async (workspace, data) => {
         const consumer = await workspace.dependencies();
         const version = consumer.version;
         await client().sendNotification('workspace/didChangeConfiguration', { settings: null });
