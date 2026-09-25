@@ -1987,7 +1987,8 @@ public class TerminalTypeConstant
 
     @Override
     public String getValueString() {
-        return ensureResolvedConstant().getValueString();
+        // not ensureResolvedConstant(): that stores the resolution back into m_constId
+        return m_constId.resolve().getValueString();
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
