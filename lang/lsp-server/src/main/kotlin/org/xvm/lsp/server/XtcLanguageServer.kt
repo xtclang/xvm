@@ -582,7 +582,7 @@ class XtcLanguageServer(
             // See TreeSitterAdapter.getDocumentLinks for the matcher.
             documentLinkProvider = DocumentLinkOptions()
 
-            signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
+            signatureHelpProvider = SignatureHelpOptions(if (adapter is XdkAdapter) listOf("(", ",", "[") else listOf("(", ","))
 
             // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if needed.
             if (semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities) {

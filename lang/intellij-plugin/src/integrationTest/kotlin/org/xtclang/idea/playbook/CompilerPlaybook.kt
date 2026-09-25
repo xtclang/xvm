@@ -402,6 +402,30 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
+        scenario("X90") { data ->
+            val editor = open(data.text("file"))
+            val prefix = data.text("prefix")
+            val selected = data.strings("labels").single()
+            data.rows("variants").forEach { variant ->
+                editor.text = fixtures.getValue(data.text("file")).replace(data.text("original"), prefix + variant["suffix"].asString)
+                val at = editor.text.indexOf(prefix) + prefix.length
+                signature(editor, at) {
+                    it.size == 1 && it.single().label == data.text("signature") &&
+                        it.single().activeParameter == data.values["activeParameter"].asInt
+                }
+                accept(editor, at, selected)
+                if (variant["validAfterAcceptance"].asBoolean) {
+                    editor.awaitDiagnostics(emptyList())
+                } else {
+                    waitFor("missing array bracket remains a diagnostic", 30.seconds) { editor.diagnostics().isNotEmpty() }
+                }
+                val accepted = prefix.dropLast(-data.values["replacementStartDelta"].asInt) + selected
+                editor.text =
+                    fixtures.getValue(data.text("file")).replace(data.text("original"), accepted + variant["repairedSuffix"].asString)
+                editor.awaitDiagnostics(emptyList())
+                restore(data.text("file"))
+            }
+        }
     }
 
     private fun Driver.problems(editor: JEditorUiComponent) {

@@ -3312,7 +3312,19 @@ public class Parser {
             boolean fArray = type instanceof ArrayTypeExpression;
             if (fArray) {
                 if (peek(Id.L_SQUARE)) {
-                    args    = parseArgumentList(true, false, true);
+                    try {
+                        args = f_partialAnalysis
+                                ? parsePartialArguments(new NewExpression(left, keyword, type, List.of(),
+                                        ((ArrayTypeExpression) type).getDimensions(), null, lEndPos), false)
+                                : parseArgumentList(true, false, true);
+                    } catch (IncompleteSyntax failure) {
+                        // Finish the construction's suffix so a written supplier does not hide
+                        // the dimension cursor. This prefix query does not validate the supplier.
+                        if (prev().getId() == Id.R_SQUARE) {
+                            parseArgumentList(false, false, false);
+                        }
+                        throw failure;
+                    }
                     dims    = args.size();
                     lEndPos = prev().getEndPosition();
                 } else {
@@ -4497,48 +4509,61 @@ public class Parser {
 
         while (true) {
             switch (peek().getId()) {
-            case L_SQUARE:
-                // this could be either:
-                //  -> NonBiTypeExpression ArrayDims
-                //  -> NonBiTypeExpression ArrayIndexes
-                // in the case of the ArrayIndexes, we do NOT consume that portion of the
-                // expression; we use it to give us a dimension count, as if it were ArrayDims
+            case L_SQUARE: {
+                // Sizes belong to the surrounding construction, not to its type. Look ahead
+                // with a branch so a cursor hole is reported only when the sizes are reparsed
+                // with their owning NewExpression. No diagnostic escapes a discarded lookahead.
                 Mark mark = mark();
-
-                expect(Id.L_SQUARE);
-                int cDims    = 0;
-                int cIndexes = 0;
-                while (match(Id.R_SQUARE) == null) {
-                    if (cDims + cIndexes > 0) {
-                        expect(Id.COMMA);
-                    }
-
-                    Token dim = peek(); // just for error reporting
-                    if (match(Id.COND) == null) {
-                        parseExpression();
-                        if (cIndexes == 0 && cDims > 0) {
-                            // just log the first one that deviates
-                            log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                var branch = f_errs.get().branch(null);
+                try (var ignored = reportingTo(branch)) {
+                    expect(Id.L_SQUARE);
+                    int cDims    = 0;
+                    int cIndexes = 0;
+                    while (true) {
+                        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+                            int dimensions = cDims + cIndexes + 1 + (peek(Id.COMMA) ? 1 : 0);
+                            restore(mark);
+                            return new ArrayTypeExpression(type, dimensions, f_cursor);
                         }
-                        ++cIndexes;
-                    } else { // we ate the "?"
-                        if (cDims == 0 && cIndexes > 0) {
-                            // just log the first one that deviates
-                            log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                        if (match(Id.R_SQUARE) != null) {
+                            break;
                         }
-                        ++cDims;
-                    }
-                }
-                long lEndPos = prev().getEndPosition();
-                type = new ArrayTypeExpression(type, cDims + cIndexes, lEndPos);
+                        if (cDims + cIndexes > 0) {
+                            expect(Id.COMMA);
+                        }
 
-                // if there were only indexes, then we need to leave them in place because the
-                // type expression does not consume them
-                if (cDims == 0 && cIndexes > 0) {
-                    restore(mark);
-                    return type;
+                        Token dim = peek();
+                        if (match(Id.COND) == null) {
+                            Expression index = f_partialAnalysis ? parsePartialValue() : parseExpression();
+                            ++cIndexes;
+                            if (f_cursor != NO_CURSOR && (containsCursorHole(index) || canRetainIncomplete())) {
+                                int dimensions = cDims + cIndexes + (peek(Id.COMMA) ? 1 : 0);
+                                long end = Math.max(f_cursor, prev().getEndPosition());
+                                restore(mark);
+                                return new ArrayTypeExpression(type, dimensions, end);
+                            }
+                            if (cIndexes == 1 && cDims > 0) {
+                                log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                            }
+                        } else {
+                            if (cDims == 0 && cIndexes > 0) {
+                                log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                            }
+                            ++cDims;
+                        }
+                    }
+                    type = new ArrayTypeExpression(type, cDims + cIndexes, prev().getEndPosition());
+                    if (cDims == 0 && cIndexes > 0) {
+                        restore(mark);
+                        return type;
+                    }
+                } catch (CompilerException error) {
+                    branch.merge();
+                    throw error;
                 }
+                branch.merge();
                 break;
+            }
 
             case COND:
                 if (!peek().hasLeadingWhitespace()) {
@@ -5220,21 +5245,23 @@ public class Parser {
 
     /** Shared cursor syntax for ordinary calls and constructor arguments. */
     private List<Expression> parsePartialArguments(Expression callee, boolean allowBindings) {
-        Token            open       = allowBindings && peek(Id.ASYNC_PAREN) ? current() : expect(Id.L_PAREN);
+        boolean          array      = callee instanceof NewExpression && peek(Id.L_SQUARE);
+        Id               close      = array ? Id.R_SQUARE : Id.R_PAREN;
+        Token            open       = array || allowBindings && peek(Id.ASYNC_PAREN) ? current() : expect(Id.L_PAREN);
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
         boolean          incomplete = false;
         if (canRetainIncomplete()) {
-            match(Id.R_PAREN);
+            match(close);
             throw incomplete(callee, open, args, separators);
         }
-        if (match(Id.R_PAREN) == null) {
+        if (match(close) == null) {
             while (true) {
                 Expression argument;
                 try {
-                    argument = parseArgument(allowBindings, false, f_cursor != NO_CURSOR);
+                    argument = parseArgument(allowBindings, array, f_cursor != NO_CURSOR);
                 } catch (IncompleteArgument e) {
-                    match(Id.R_PAREN);
+                    match(close);
                     log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
                     throw new IncompleteSyntax(IncompleteStatement.forNamedArgument(
                             callee, open, args, separators, f_cursor, e.name));
@@ -5246,7 +5273,7 @@ public class Parser {
                 // Compound/member expressions and slots before later arguments keep their sites.
                 if (value instanceof IncompleteExpression partial && partial.getSite().isNameCompletion()
                         && canRetainIncomplete() && !peek(Id.COMMA)) {
-                    match(Id.R_PAREN);
+                    match(close);
                     throw new IncompleteSyntax(IncompleteStatement.forArgumentPrefix(callee, open,
                             args, separators, f_cursor,
                             argument instanceof LabeledExpression labeled ? labeled.getNameToken() : null,
@@ -5261,13 +5288,13 @@ public class Parser {
                     separators.add(comma);
                 }
                 if (canRetainIncomplete()) {
-                    match(Id.R_PAREN);
+                    match(close);
                     throw incomplete(callee, open, args, separators);
                 }
-                if (comma == null && incomplete && !peek(Id.R_PAREN) && atMissingClose()) {
+                if (comma == null && incomplete && !peek(close) && atMissingClose()) {
                     break;
                 }
-                if (match(Id.R_PAREN, comma == null) != null) {
+                if (match(close, comma == null) != null) {
                     break;
                 }
             }

@@ -512,6 +512,39 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["new Int[nu|]", "new Int[nu|", "new String[nu|](\"x\")"])
+    fun `array size edits and signature fitting round trip over stdio`(expression: String) {
+        val prefix = "module Stdio { void run(Int number, String numberText) { /* 😀 */ " + expression.substringBefore('|')
+        val suffix = expression.substringAfter('|') + "; } }"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(prefix + suffix)
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val cursor = Position(0, prefix.length)
+            val items = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(items.map { it.label }).containsExactly("number")
+            val edit = items.single().textEdit.left
+            assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
+            assertThat(edit.newText).isEqualTo("number")
+            val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+            assertThat(
+                help.signatures
+                    .single()
+                    .parameters
+                    .first()
+                    .label.left,
+            ).isEqualTo("Int size")
+            assertThat(help.signatures.single().activeParameter).isZero()
+            val completedSuffix = if (']' in suffix) suffix else "]$suffix"
+            session.change(prefix.dropLast(2) + edit.newText + completedSuffix, 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(
         strings = [
             "new Box<String>(\"x\", te|) { String read() = text; }",
@@ -831,6 +864,7 @@ class XdkStdioTest {
                 assertThat(initialized.capabilities.renameProvider).isNull()
             }
             assertThat(initialized.capabilities.signatureHelpProvider).isNotNull()
+            assertThat(initialized.capabilities.signatureHelpProvider.triggerCharacters).contains("[")
             server.initialized(InitializedParams())
         }
 

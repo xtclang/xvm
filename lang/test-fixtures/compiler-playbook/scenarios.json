@@ -2255,6 +2255,29 @@
         ]
       }
     },
+    "X90": {
+      "title": "array dimension completion fits size and survives a missing bracket",
+      "manual": [],
+      "values": {
+        "file": "Advanced.x",
+        "original": "new String[2](text)",
+        "prefix": "new String[te",
+        "variants": [
+          { "suffix": "](text)", "repairedSuffix": "](text)", "validAfterAcceptance": true },
+          { "suffix": "", "repairedSuffix": "](text)", "validAfterAcceptance": false }
+        ],
+        "signature": "new Array(Int size, String | function String(Int) supply)",
+        "activeParameter": 0,
+        "labels": ["textNumber"],
+        "replacementStartDelta": -2
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "Native signature, bold size parameter, exact accepted edit, diagnostic persistence and repair are checked; IntelliJ may auto-insert the sole completion before its full candidate list can be inspected."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

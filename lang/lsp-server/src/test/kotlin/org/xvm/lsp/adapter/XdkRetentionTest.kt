@@ -83,6 +83,7 @@ class XdkRetentionTest {
                     "take(bo" to "box",
                     "textTake(te" to "textValue",
                     "new String[2](te" to "textValue",
+                    "new Int[si|];" to "sizeValue",
                     "Object parts = [textValue.si" to "size",
                     "new Object(te|) { construct(String value) {} Int read() = box.number; };" to "textValue",
                 )
@@ -134,7 +135,7 @@ class XdkRetentionTest {
         const val CYCLES = 120
         const val CONSUMER =
             "module Consumer { package lib import Library; " +
-                "String textValue=\"x\"; void textTake(String value) {} " +
+                "String textValue=\"x\"; Int sizeValue=2; void textTake(String value) {} " +
                 "Int run() { Int local=lib.value(); return local; } void take(lib.Box value) {} void probe(lib.Box box) {} }"
     }
 }

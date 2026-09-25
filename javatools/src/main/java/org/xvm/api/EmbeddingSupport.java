@@ -568,7 +568,10 @@ public class EmbeddingSupport {
      * retain missing block braces. This does not invent operands, declaration names/types or literal
      * contents, or repair unrelated errors. Anonymous construction prepares the retained declaration
      * and fits its own or superclass constructors; it does not emit forwarding constructors or run
-     * capture analysis. Array-dimension slots remain outside the supported constructor cursor forms.
+     * capture analysis. Single-dimensional array brackets fit the size parameter of the fixed-size
+     * constructor, including an empty/final-name slot and a missing closing bracket. A following
+     * supplier is parsed for recovery but is outside this prefix proof. Multidimensional
+     * construction remains unsupported.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,
