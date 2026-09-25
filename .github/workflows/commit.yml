@@ -826,6 +826,22 @@ jobs:
                   if-no-files-found: error
                   retention-days: 10
 
+            # The render-equivalence gate compares the rendered text of the constant pool between
+            # two builds, which is only possible if the evidence outlives the runner. The digest
+            # answers "did it change"; the sorted dump is what attributes a change to a specific
+            # constant instead of to an opaque hash. Retained longer than the other artifacts
+            # because the whole point is comparing against older code.
+            - name: Upload render-equivalence digest
+              if: always() && matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: render-equivalence-${{ github.sha }}
+                  path: |
+                      xdk/build/render-digest.txt
+                      xdk/build/render-dump.txt
+                  if-no-files-found: warn
+                  retention-days: 90
+
             - name: Collect CI diagnostics
               if: failure() && matrix.os == 'ubuntu-latest'
               shell: bash
