@@ -10,6 +10,79 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Property and constant argument completion
+
+Implemented on `lagergren/errs` after `e1b9eed49`; currently uncommitted. This resumes the
+compiler/LSP completeness work after the IntelliJ checkpoint.
+
+- [x] Fit implicit property/constant reads in the existing empty and typed argument slots.
+- [x] Preserve accessibility, instance/static context, shadowing, generic substitution and conversions.
+- [x] Copy immutable identity/type facts without AST fields or retained validation contexts.
+- [x] Cover bundled module properties, unsaved inherited types, overload alternatives and invalid narrowing.
+- [x] Extend protocol, cancellation/retention coverage and manual/automated playbook X81–X82.
+- [x] Pass the expanded backend, packaged-stdio and editor validation.
+
+`PartialCallResolver` enumerates the current receiver's compiler-composed properties, then validates
+each proposed name as a normal read in a discarded child context. The same method/function argument
+fitter used for local proposals decides whether insertion fits a candidate. No property is modeled
+as a fake register. Read validation supplies the actual identity and value type, including inherited
+generic substitution; Kotlin copies these into the existing partial model. Formal type properties
+retain their type-parameter kind. Static contexts enumerate constants only, and even unreadable
+locals shadow properties. The proposal does not modify written arguments or select an overload.
+
+The additive Java API is `CursorBinding.Property(name, identity, type)` plus the immutable
+`argumentProperties` component and `withArgumentProperties`. Three-, six-, seven- and eight-argument
+constructors remain; current record patterns have nine components. Existing `argumentValues`
+continues to mean accepted locals/parameters. All facts belong to the explicit cursor attempt and
+are copied on the compiler worker before entering the host. **No AST node, parser hook, mutable
+semantic cache or clone/reset rule changes in this slice.** The helper belongs beside compiler
+validation because only the live Context can authoritatively resolve and fit these names.
+
+TypeInfo inspection reports through the explicit host listener. Speculative read/fitting errors
+stay private, but collecting probe listeners retain failure state and cancellation. Existing normal
+diagnostics remain visible until an accepted edit triggers ordinary recompilation.
+
+**Compiler behavior established by this pass:** module `simpleName`/`qualifiedName` from the bundled
+XDK are valid String argument suggestions, alongside user members. Ordinary property reads do not
+receive local-variable flow narrowing: `Object value` still fails a String parameter after
+`if (value.is(String))`. The completion test checks the ordinary `COMPILER-150` rejection and offers
+no invalid value. This slice does not change the language's narrowing rules.
+
+**Limits:** enumeration covers the current receiver and its inherited properties, not arbitrary
+enclosing-instance chains or imported constants. Existing final-slot/prefix restrictions remain.
+Literal synthesis, compound/grouped argument fitting, slots before later arguments and specialized
+construction remain follow-ups. Tree-sitter remains the shipped default; compiler mode stays Java-only.
+
+| Group | Files / responsibility | Prerequisites |
+|---|---|---|
+| C15 | `CursorBinding` property facts/compatibility; `PartialCallResolver` read and argument probes | C13/C14 and the existing cursor/type-info foundations |
+| L28 | Kotlin fact copying, adapter/protocol/lifecycle controls, X81–X82 and capability/ownership docs | C15, L25/L26; editor runner L16 |
+
+These add two groups to the prior 55, bringing the working plan to **57**. Keep the compiler and
+host hunks separate during extraction; record the source commit when this checkpoint is committed.
+Each extracted PR still needs independent validation against its own prerequisites.
+
+**Backend verification (2026-09-25):** JUnit XML reports 512 Java tests (472 executed, 40 existing
+skips), 931 LSP tests (928 executed, three existing skips), and 29 packaged-stdio tests, all with
+zero failures/errors. All 19 new property cases, the 36 existing argument cases and 12 cursor
+lifecycle cases ran. The retention workload now includes property proposals: 120 cycles/960 edits,
+2,402 weak references, zero retained; rebuild p50 216 ms and p95 239 ms including debounce.
+These are bounded measurements, not an interactive soak or a completion latency guarantee.
+
+All **87 VS Code editor cases** passed, including X81–X82 and the existing configuration and
+diagnostic cases, with zero failures/skips. The report is
+`lang/vscode-extension/build/reports/compiler-playbook/run-y5oQPu/results.json`.
+The combined command passed in 6m 39s; TypeScript compilation, Kotlin formatting checks and root
+`spotlessCheck` passed. A final readability-only cleanup hoists the retention test's unchanged
+cursor cases out of its loop; test-source compilation and formatting checks also cover that cleanup.
+
+```bash
+./gradlew :javatools:test :lang:vscode-extension:testCompilerPlaybook spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
+```
+
+**Next bounded investigation:** specialized construction, followed by declaration/tuple/literal
+recovery. Automatic project discovery and persistent indexing remain separate work.
+
 ## IntelliJ compiler playbook and client configuration
 
 Implemented and validated on `lagergren/errs` in `4e46becb6`, following `156d02687`.
@@ -964,9 +1037,9 @@ and added local documentation links pass.
 ./gradlew :javatools:test :lang:vscode-extension:testCompilerPlaybook spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --console=plain
 ```
 
-**Next bounded investigation:** implicit property/constant values through the same compiler fitter,
-including accessibility, receiver context and conversions. Then investigate specialized construction
-and declaration/tuple/literal recovery. Automatic discovery and persistent indexing remain separate.
+**Follow-through:** implicit property/constant fitting is implemented in
+[C15/L28](#property-and-constant-argument-completion). Specialized construction and
+declaration/tuple/literal recovery remain next; automatic discovery and persistent indexing stay separate.
 
 #### Configured-graph implementation evidence
 
@@ -1130,7 +1203,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. I4 fixes bound-generic typing/binary-AST failures. I7 fixes reproduced atomic AST result/owner errors; bounded ToIntExpression metadata probes pass without a reporting change. Historical capture counts are not an exhaustive audit. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback; `CompilerBoundaryRequirementsTest` checks bound-generic artifact serialization; `CompilerEmissionAuditTest` checks atomic/switch output and diagnostic controls. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; binary/conditional prefixes and arguments following an incomplete member expression are now covered by C10. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. Additional value sources and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. Missing operands, declaration/tuple/literal recovery, enclosing-instance member completion, type-valued receiver fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and receiver-rewritten calls remain outside this slice. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. Literal synthesis and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. Missing operands, declaration/tuple/literal recovery, enclosing-instance member completion, type-valued receiver fallbacks, virtual/inner/array/annotated construction, omitted constructor class-type inference and receiver-rewritten calls remain outside this slice. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation, E5/L20 adds super-call facts, and L22 adds written Ref/Var annotation accessor targets. Native annotation storage and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
@@ -1226,7 +1299,7 @@ against each extracted slice's own prerequisites; the integrated result cannot e
 | Runtime pool name | Deprecated `getConstantPool()` still delegates to `ensureRuntimePool()` and retains its runtime-initialization behavior. Compiler clients use `Compilation.pool()` |
 | `Compilation` record | Three-, four- and five-argument constructors remain. Current six-component pattern includes module, file, ast, sourceTrees, callBindings and functionBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
 | `PartialAnalysis` record | Three-, four- and five-argument constructors remain; current six-component pattern adds callBindings, cursorBindings and functionBindings to sourceTrees, sites, pool |
-| `CursorBinding` record | Three-, six- and seven-argument constructors remain; the eight-component pattern adds argumentValues after functions. Function candidates expose types/positional mappings; argumentValues contains readable locals/parameters accepted by compiler trial fitting. |
+| `CursorBinding` record | Three-, six-, seven- and eight-argument constructors remain; the nine-component pattern adds argumentProperties after argumentValues. Function candidates expose types/positional mappings; argumentValues contains accepted locals/parameters and argumentProperties contains accepted property/constant identities and validated types. |
 | `InvocationBinding.Argument` record | Three- and four-argument constructors remain. Current five-component pattern includes `label`; positional and legacy construction has a null label. A legacy `named=true` is not proof that a label span was supplied |
 | LSP rename | Additive, bounded and negotiated through client `documentChanges` support. No unversioned fallback. The default adapter method retains existing synchronous adapters; compiler rename runs asynchronously |
 
@@ -1339,7 +1412,7 @@ the shipped default. No compiler, embedding API or AST changes were needed for t
 | Typed prefix text and replacement span | Original parser `Token`, copied to `PartialSemanticModel.MemberPrefix` | Decoded prefix filters candidates; the original UTF-16 token range supplies a completion edit, including escaped identifiers. No adapter source scanning or rewriting. |
 | Selected signature and source parameter mapping | Attempt-owned `InvocationBinding`, copied into `SemanticModel.CallSite` | Signature help for resolved qualified/unqualified, generic, named/default and nested calls. No selection is inferred for failed calls. |
 | Incomplete call candidates and argument slots | Ordinary compiler argument fitting, captured in `CursorBinding.Candidate` | Method and ordinary-constructor candidates, explicit constructor class type substitution, written mappings/expected types and positional/named slots. No best-overload selection is claimed. |
-| Compatible argument values | `PartialCallResolver` trial fitting into immutable `CursorBinding.argumentValues`; original prefix token on the incomplete call | Visible readable locals/parameters in empty final positional or pending named slots, including direct final bare-name prefixes; compiler inference/conversions remain authoritative. Kotlin supplies copied symbols/types and insertion or exact token replacement edits, without selecting an overload. |
+| Compatible argument values | `PartialCallResolver` trial fitting into immutable `CursorBinding.argumentValues`/`argumentProperties`; original prefix token on the incomplete call | Visible readable locals/parameters and implicit properties/constants in empty final positional or pending named slots, including direct final bare-name prefixes; compiler read validation, inference/conversions remain authoritative. Kotlin supplies copied symbols/types and insertion or exact token replacement edits, without selecting an overload. |
 | Incomplete function signatures | Trial callee/argument validation, captured in `CursorBinding.FunctionCandidate` | Full function parameter/return types and positional mappings without method targets, names or defaults; private speculative errors reject candidates without replacing document diagnostics. |
 | Current document/module lifetime | Adapter request identity and server `Document` identity | Cancellation reaches query work; edit/close/shutdown reject late responses without canceling shared analysis or replacing diagnostics. |
 
@@ -1974,6 +2047,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L25 | Complete compatible locals/parameters at missing argument slots | `f2896916b` host portion; argument-value completion above | C13, L8/L9/L23; editor runner L16; X25 synchronization in the same commit belongs to L16 |
 | C14 | Retain typed argument prefixes in their call fitting context | `dc3218d81` compiler portion; typed argument-prefix completion above | C13, C12; additive syntax token/factory/accessors and compiler prefix filter |
 | L26 | Replace typed argument prefixes with compiler-fitted values | `dc3218d81` host portion; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
+| C15 | Fit implicit property/constant reads as argument values | Uncommitted after `e1b9eed49`; property argument completion above | C13/C14; additive immutable facts, preserved constructors and compiler probes |
+| L28 | Copy property argument facts and verify editor acceptance | Uncommitted after `e1b9eed49`; property argument completion above | C15, L25/L26; L16 runner; X81–X82, protocol and lifecycle controls |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
@@ -1988,7 +2063,8 @@ L13 follows with an explicit artifact host API; L14 adds automatic rebuilding fo
 modules; L16 exposes those roots/edges through editor configuration. Automatic project/build
 discovery stays separate. L17 adds configured-graph references and method rename. These are
 thirty-five checkpoint PR groups; the seven post-L18 units, L22 and C11/L23/I6 bring the working
-plan to 46; I7 brings it to 47, C12/L24 to 49, C13/L25 to 51 and C14/L26 to 53, and I8/L27 to **55**. L18 extends property lookup after L10/L13. During current development,
+plan to 46; I7 brings it to 47, C12/L24 to 49, C13/L25 to 51, C14/L26 to 53, I8/L27 to 55,
+and C15/L28 to **57**. L18 extends property lookup after L10/L13. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
 
@@ -3012,6 +3088,8 @@ executable compatibility checks establish the bounded integrated API POC gate; p
 use and independent extracted-PR validation remain open. The bounded diagnostic audit has classified its
 inspected families and fixed demonstrated defects, including bound-generic emission (I4) and
 atomic result/owner metadata (I7). C12/L24 extends cursor recovery to enclosing call/group/index
-delimiters; C13/L25 adds compiler-fitted local/parameter values at missing argument slots, and C14/L26 extends those slots to direct final bare-name prefixes.
+delimiters; C13/L25 adds compiler-fitted local/parameter values at missing argument slots, and
+C14/L26 extends those slots to direct final bare-name prefixes. C15/L28 adds compiler-validated
+implicit property/constant values.
 Unexamined historical suppressions and the remaining documented syntax/API limits
 stay open; a green integrated run does not establish independent extracted-PR readiness.
