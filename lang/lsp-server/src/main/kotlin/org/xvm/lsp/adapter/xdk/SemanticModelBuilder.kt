@@ -468,6 +468,11 @@ private class SemanticModelBuilder(
         return PartialSemanticModel.Member(id, variable.name(), symbols[id]!!.kind, type(variable.type()), null)
     }
 
+    private fun sourceProperty(property: CursorBinding.Property): PartialSemanticModel.Member? {
+        val id = symbol(property.identity(), property.name(), kind(property.identity())) ?: return null
+        return PartialSemanticModel.Member(id, property.name(), symbols[id]!!.kind, type(property.type()), null)
+    }
+
     fun buildPartial(
         analysis: EmbeddingSupport.PartialAnalysis,
         errors: ErrorListener,
@@ -613,7 +618,10 @@ private class SemanticModelBuilder(
                             )
                         },
                     ),
-                    immutableList(cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable)),
+                    immutableList(
+                        cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
+                            cursor?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
+                    ),
                 )
             }
         return if (errors.isAbortDesired) {
