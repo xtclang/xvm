@@ -21,6 +21,7 @@ package charArrayTests {
         shouldCreateArrayInitializedWithZeroValue();
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
+        shouldCreateMaxBmpCharArray();
         shouldSliceConstantArray();
         shouldSliceUnicodeArray();
         shouldRejectSliceOutOfBounds();
@@ -70,6 +71,15 @@ package charArrayTests {
         Char[] array = ['a', 'b', 'z'];
         assert array.size == 3;
         assert array[0] == 'a' && array[1] == 'b' && array[2] == 'z';
+    }
+
+    void shouldCreateMaxBmpCharArray() {
+        // U+FFFF still fits in one UTF-16 code unit; supplementary characters start at U+10000
+        Char[] array = ['a', '\uFFFE', '\uFFFF', 'z'];
+        assert array.size == 4;
+        assert array[1].codepoint == 0xFFFE;
+        assert array[2].codepoint == 0xFFFF;
+        assert new String(array) == "a\uFFFE\uFFFFz";
     }
 
     void shouldSliceConstantArray() {

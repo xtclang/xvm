@@ -1194,7 +1194,7 @@ public final class Handy {
         StringBuilder sb  = new StringBuilder(cch);
         for (int ofch = 0; ofch < cch; ++ofch) {
             int ch = readUtf8Char(in);
-            if (ch >= 0xFFFF) {
+            if (ch > 0xFFFF) {
                 if (!Character.isSupplementaryCodePoint(ch)) {
                     throw new UTFDataFormatException(
                             "Character is outside of UTF-16 (including supplemental) range: " +
