@@ -22,6 +22,8 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.util.Lazy;
+
 /**
  * Native ListMap support.
  */
@@ -109,28 +111,30 @@ public class xListMap
                 ? new DeferredArrayHandle(clzValArray, ahVal)
                 : xArray.createImmutableArray(clzValArray, ahVal);
 
-        ObjectHandle[] ahArg = new ObjectHandle[CONSTRUCTOR.getMaxVars()];
+        MethodStructure constructor = ensureConstructor();
+        ObjectHandle[] ahArg = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = haKeys;
         ahArg[1] = haVals;
 
         if (fDeferredKey || fDeferredVal) {
             Frame.Continuation stepNext = frameCaller ->
-                construct(frameCaller, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+                construct(frameCaller, constructor, clzMap, null, ahArg, iReturn);
 
             return new Utils.GetArguments(ahArg, stepNext).doNext(frame);
         }
 
-        return construct(frame, CONSTRUCTOR, clzMap, null, ahArg, iReturn);
+        return construct(frame, constructor, clzMap, null, ahArg, iReturn);
     }
 
     /**
      * @return structure for "construct(Key[] keys, Value[] vals)"
      */
     public MethodStructure ensureConstructor() {
-        if (CONSTRUCTOR == null) {
-            CONSTRUCTOR = getStructure().findMethod("construct", m -> m.getParamCount() == 3);
-        }
-        return CONSTRUCTOR;
+        return constructor.get();
     }
-    private static MethodStructure CONSTRUCTOR;
+
+    // Each native template belongs to one runtime's prepared definitions. A static cache would
+    // retain an earlier runtime's method after INSTANCE has been replaced by a later bootstrap.
+    private final Lazy<MethodStructure> constructor = Lazy.of(
+            () -> getStructure().findMethod("construct", method -> method.getParamCount() == 3));
 }
