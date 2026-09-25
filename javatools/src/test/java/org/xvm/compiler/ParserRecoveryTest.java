@@ -206,6 +206,44 @@ public class ParserRecoveryTest {
     }
 
     @Test
+    public void argumentPrefixesRetainCallSyntaxAndCloneOwnership() {
+        for (String call : List.of("work(1, te", "work(first=1, second=te",
+                "new Box<String>(1, te", "new Box<String>(first=1, second=te")) {
+            String prefix = "module Recovery { void run() { " + call;
+            String text = prefix + "); } Int later = 42; }";
+            Source source = new Source(text);
+            prefix.chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            ErrorList errs = new ErrorList();
+            StatementBlock tree = Parser.forPartialAnalysis(source, cursor, errs).parseSource();
+            var sites = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).toList();
+            assertEquals(1, sites.size(), call);
+            var site = sites.getFirst();
+            assertTrue(site.isCall(), call);
+            assertEquals(1, site.getArguments().size());
+            assertEquals(1, site.getSeparators().size());
+            assertEquals("te", site.getArgumentPrefix().orElseThrow().getValueText());
+            assertEquals(prefix.length() - 2, Source.calculateOffset(
+                    site.getArgumentPrefix().orElseThrow().getStartPosition()));
+            assertEquals(call.contains("second=") ? "second" : "",
+                    site.getPendingArgumentName().map(Token::getValueText).orElse(""));
+            var clone = (IncompleteStatement) site.clone();
+            assertNotSame(site.getTarget(), clone.getTarget());
+            assertNotSame(site.getArguments().getFirst(), clone.getArguments().getFirst());
+            assertEquals(site.getArgumentPrefix(), clone.getArgumentPrefix());
+            assertEquals(site.getPendingArgumentName(), clone.getPendingArgumentName());
+            assertTrue(names(tree).contains("later"));
+            assertEquals(text, source.toRawString());
+            assertTrue(errs.getErrors().stream().allMatch(error -> error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
+            ErrorList ordinary = new ErrorList();
+            assertTrue(nodes(parse(text, ordinary)).stream().noneMatch(IncompleteStatement.class::isInstance));
+            assertFalse(ordinary.hasSeriousErrors());
+        }
+    }
+
+    @Test
     public void missingDelimiterRecoveryHonorsBudgetsCancellationAndSpeculation() {
         String prefix = "module Recovery { Int run(String value) { return ((value.";
         String text = prefix + "; } }";
