@@ -18,6 +18,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.TypeMetadata.MemberType;
 
 import org.xvm.runtime.ClassTemplate;
 import org.xvm.runtime.Container;
@@ -136,7 +137,8 @@ public class AnnotatedTypeConstant
      * @return the resolved annotation type
      */
     public TypeConstant getAnnotationType() {
-        TypeConstant typeAnno = m_typeAnno;
+        var metadata = getConstantPool().getTypeMetadata();
+        TypeConstant typeAnno = metadata.getMemberType(this, MemberType.Annotation);
         if (typeAnno != null) {
             return typeAnno;
         }
@@ -163,11 +165,12 @@ public class AnnotatedTypeConstant
                 mapResolve.put(sName, type);
             }
         }
-        return m_typeAnno = typeFormal.resolveGenerics(getConstantPool(), constFormal ->
+        typeAnno = typeFormal.resolveGenerics(pool, constFormal ->
             constFormal.getFormat() == Format.Property
                     ? mapResolve.get(constFormal.getName())
                     : null
         );
+        return metadata.cacheMemberType(this, MemberType.Annotation, typeAnno);
     }
 
     /**
@@ -679,7 +682,7 @@ public class AnnotatedTypeConstant
         m_constType  = pool.register(m_constType);
 
         // invalidate cached type
-        m_typeAnno = null;
+        getConstantPool().getTypeMetadata().clearMember(this);
     }
 
     @Override
@@ -769,9 +772,4 @@ public class AnnotatedTypeConstant
      * The type being annotated.
      */
     private TypeConstant m_constType;
-
-    /**
-     * Cached annotation type.
-     */
-    private transient TypeConstant m_typeAnno;
 }

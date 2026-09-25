@@ -12,6 +12,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.TypeMetadata.MemberType;
 import org.xvm.asm.XvmStructure;
 
 import org.xvm.asm.ast.ExprAST;
@@ -79,7 +80,8 @@ public class PropertyConstant
 
     @Override
     public TypeConstant getConstraintType() {
-        TypeConstant typeConstraint = m_typeConstraint;
+        var metadata = getConstantPool().getTypeMetadata();
+        TypeConstant typeConstraint = metadata.getMemberType(this, MemberType.Constraint);
         if (typeConstraint != null) {
             return typeConstraint;
         }
@@ -114,7 +116,7 @@ public class PropertyConstant
                 typeConstraint = pool.ensureParameterizedTypeConstant(typeConstraint, atypeFormal);
             }
         }
-        return m_typeConstraint = typeConstraint;
+        return metadata.cacheMemberType(this, MemberType.Constraint, typeConstraint);
     }
 
     @Override
@@ -228,11 +230,7 @@ public class PropertyConstant
      *         identity} as the target
      */
     public PropertyInfo getPropertyInfo() {
-        PropertyInfo info = m_info;
-        if (info == null) {
-            info = m_info = getPropertyInfo(null);
-        }
-        return info;
+        return getPropertyInfo(null);
     }
 
     /**
@@ -288,9 +286,8 @@ public class PropertyConstant
      * when there are any structural changes to the property that this constant identifies.
      */
     public void invalidateCache() {
-        m_type           = null;
-        m_constSig       = null;
-        m_typeConstraint = null;
+        getConstantPool().getTypeMetadata().clearMember(this);
+        m_constSig = null;
     }
 
     // ----- IdentityConstant methods --------------------------------------------------------------
@@ -363,13 +360,14 @@ public class PropertyConstant
 
     @Override
     public TypeConstant getType() {
-        TypeConstant type = m_type;
+        TypeConstant type = getConstantPool().getTypeMetadata().getMemberType(this, MemberType.Value);
         if (type == null) {
             // it's not our responsibility to report any errors
             PropertyStructure prop = (PropertyStructure) getComponent();
-            m_type = type = prop == null
-                    ? getConstantPool().typeObject()
-                    : prop.getType();
+            type = prop == null ? getConstantPool().typeObject() : prop.getType();
+            if (prop != null) {
+                type = getConstantPool().getTypeMetadata().cacheMemberType(this, MemberType.Value, type);
+            }
         }
         return type;
     }
@@ -426,7 +424,6 @@ public class PropertyConstant
         super.setContaining(parent);
         // Property metadata belongs to the destination definitions, not the source copy.
         invalidateCache();
-        m_info = null;
     }
 
     @Override
@@ -440,7 +437,7 @@ public class PropertyConstant
     protected void assemble(DataOutput out) throws IOException {
         super.assemble(out);
 
-        m_type     = null;
+        getConstantPool().getTypeMetadata().clearMember(this);
         m_constSig = null;
     }
 
@@ -467,24 +464,9 @@ public class PropertyConstant
     // ----- fields --------------------------------------------------------------------------------
 
     /**
-     * Cached type.
-     */
-    private transient TypeConstant m_type;
-
-    /**
      * Cached constant that represents the signature of this property.
      */
     private transient SignatureConstant m_constSig;
-
-    /**
-     * Cached constraint type.
-     */
-    protected transient TypeConstant m_typeConstraint;
-
-    /**
-     * Cached PropertyInfo.
-     */
-    protected transient PropertyInfo m_info;
 
     /**
      * Cached JIT property name.

@@ -2,8 +2,6 @@ package org.xvm.asm;
 
 import java.nio.file.attribute.FileTime;
 
-import java.util.List;
-
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.Component.Format;
@@ -13,7 +11,6 @@ import org.xvm.asm.constants.FSNodeConstant;
 import org.xvm.asm.constants.FileStoreConstant;
 import org.xvm.asm.constants.HandleConstant;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
-import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -138,24 +135,12 @@ class ConstantOwnershipTest {
         var source = sourceFile.getConstantPool();
         var destination = new FileStructure(sourceFile).getConstantPool();
         var type = source.ensureTupleType(source.typeString());
-        for (var name : List.of("ensureConsumesMap", "ensureProducesMap")) {
-            var method = TypeConstant.class.getDeclaredMethod(name);
-            method.setAccessible(true);
-            method.invoke(type);
-        }
+        var metadata = source.getTypeMetadata();
+        metadata.normalize(type, () -> type);
         var copy = destination.register(type);
-        for (var name : List.of("m_mapConsumes", "m_mapProduces")) {
-            var field = TypeConstant.class.getDeclaredField(name);
-            field.setAccessible(true);
-            assertNull(field.get(copy), name + " must be recomputed in the destination");
-        }
+        assertNotSame(metadata, destination.getTypeMetadata());
+        assertSame(copy, destination.getTypeMetadata().normalize(copy, () -> copy));
         assertNotSame(source.getTypeRelations(), destination.getTypeRelations());
-        var depth = TypeConstant.class.getDeclaredField("recursionDepth");
-        depth.setAccessible(true);
-        assertNotSame(depth.get(type), depth.get(copy));
-        var lock = ParameterizedTypeConstant.class.getDeclaredField("resolutionLock");
-        lock.setAccessible(true);
-        assertNotSame(lock.get(type), lock.get(copy));
     }
 
 }

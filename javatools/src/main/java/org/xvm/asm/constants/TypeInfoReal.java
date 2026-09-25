@@ -731,7 +731,7 @@ public class TypeInfoReal
     }
 
     @Override
-    int getInvalidationCount() {
+    public int getInvalidationCount() {
         return f_cInvalidations;
     }
 
@@ -2265,7 +2265,7 @@ public class TypeInfoReal
     }
 
     @Override
-    protected Progress getProgress() {
+    public Progress getProgress() {
         return f_progress;
     }
 

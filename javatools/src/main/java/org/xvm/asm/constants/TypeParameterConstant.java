@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.TypeMetadata.MemberType;
 
 import org.xvm.asm.ast.ExprAST;
 
@@ -82,7 +83,8 @@ public class TypeParameterConstant
 
     @Override
     public TypeConstant getConstraintType() {
-        TypeConstant typeConstraint = m_typeConstraint;
+        var metadata = getConstantPool().getTypeMetadata();
+        TypeConstant typeConstraint = metadata.getMemberType(this, MemberType.Constraint);
         if (typeConstraint != null) {
             return typeConstraint;
         }
@@ -101,7 +103,7 @@ public class TypeParameterConstant
 
         typeConstraint = atypeParams[nReg];
         if (typeConstraint.isGenericType()) {
-            return m_typeConstraint = typeConstraint;
+            return metadata.cacheMemberType(this, MemberType.Constraint, typeConstraint);
         }
 
         assert typeConstraint.isTypeOfType() && typeConstraint.isParamsSpecified();
@@ -109,7 +111,7 @@ public class TypeParameterConstant
         typeConstraint = typeConstraint.getParamType(0);
         if (typeConstraint.containsTypeParameter(true)) {
             // retain the formal constraint; the caller may need to call "resolveConstraints()"
-            return m_typeConstraint = typeConstraint;
+            return metadata.cacheMemberType(this, MemberType.Constraint, typeConstraint);
         }
 
         if (!typeConstraint.isParamsSpecified() && typeConstraint.isExplicitClassIdentity(true)) {
@@ -127,7 +129,7 @@ public class TypeParameterConstant
                 typeConstraint = pool.ensureParameterizedTypeConstant(typeConstraint, atypeFormal);
             }
         }
-        return m_typeConstraint = typeConstraint;
+        return metadata.cacheMemberType(this, MemberType.Constraint, typeConstraint);
     }
 
     @Override
@@ -223,7 +225,7 @@ public class TypeParameterConstant
         super.registerConstants(pool);
 
         // invalidate cached type
-        m_typeConstraint = null;
+        getConstantPool().getTypeMetadata().clearMember(this);
     }
 
     @Override
@@ -256,11 +258,6 @@ public class TypeParameterConstant
      * The register index.
      */
     private final int f_iReg;
-
-    /**
-     * Cached constraint type.
-     */
-    private transient TypeConstant m_typeConstraint;
 
     private transient TransientThreadLocal<Boolean> comparisonRecursion = new TransientThreadLocal<>();
 }

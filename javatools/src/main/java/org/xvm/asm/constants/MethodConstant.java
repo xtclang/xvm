@@ -15,6 +15,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
+import org.xvm.asm.TypeMetadata.MemberType;
 
 import org.xvm.javajit.NativeNames;
 import org.xvm.javajit.TypeSystem;
@@ -447,7 +448,8 @@ public class MethodConstant
 
     @Override
     public TypeConstant getType() {
-        TypeConstant type = m_type;
+        var metadata = getConstantPool().getTypeMetadata();
+        TypeConstant type = metadata.getMemberType(this, MemberType.Value);
         if (type == null) {
             if (isFunction()) {
                 type = getSignature().asFunctionType();
@@ -457,7 +459,7 @@ public class MethodConstant
                 TypeConstant     typeTarget;
 
                 if (idTarget.getComponent() instanceof ClassStructure clz) {
-                    typeTarget = clz.getFormalType();
+                    typeTarget = clz.getFormalType(pool);
                     if (isConstructor()) {
                         typeTarget = pool.ensureAccessTypeConstant(typeTarget, Access.STRUCT);
                     }
@@ -468,7 +470,7 @@ public class MethodConstant
             }
 
             if (!type.containsUnresolved()) {
-                m_type = type;
+                type = metadata.cacheMemberType(this, MemberType.Value, type);
             }
         }
         return type;
@@ -615,7 +617,7 @@ public class MethodConstant
 
     @Override
     protected void registerConstants(ConstantPool pool) {
-        m_type = null;
+        getConstantPool().getTypeMetadata().clearMember(this);
 
         // there is a possibility of creating a method for a lambda hosted by another lambda
         // while the containing lambda has not yet been injected with the signature
@@ -626,7 +628,7 @@ public class MethodConstant
     @Override
     protected void assemble(DataOutput out)
             throws IOException {
-        m_type = null;
+        getConstantPool().getTypeMetadata().clearMember(this);
 
         assert !isNascent();
 
@@ -707,11 +709,6 @@ public class MethodConstant
      * The lambda synthetic identity, separate from the signature.
      */
     private final int m_iLambda;
-
-    /**
-     * Cached type.
-     */
-    private transient TypeConstant m_type;
 
     /**
      * Cached JIT method name.

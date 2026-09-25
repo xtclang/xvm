@@ -112,18 +112,15 @@ public class PropertyClassTypeConstant
     }
 
     /**
-     * @return the PropertyInfo associated with this type
+     * @return the PropertyInfo from this owner's current parent metadata
      */
     public PropertyInfo getPropertyInfo() {
-        PropertyInfo info = m_info;
-        if (info == null) {
-            TypeConstant typeParent = m_typeParent;
-            if (typeParent.isSingleDefiningConstant() && !typeParent.isFormalType()) {
-                typeParent = typeParent.ensureAccess(Access.PRIVATE);
-            }
-            m_info = info = typeParent.ensureTypeInfo().findProperty(m_idProp);
-            assert info != null;
+        TypeConstant typeParent = m_typeParent;
+        if (typeParent.isSingleDefiningConstant() && !typeParent.isFormalType()) {
+            typeParent = typeParent.ensureAccess(Access.PRIVATE);
         }
+        PropertyInfo info = typeParent.ensureTypeInfo().findProperty(m_idProp);
+        assert info != null;
         return info;
     }
 
@@ -459,7 +456,6 @@ public class PropertyClassTypeConstant
         super.registerConstants(pool);
 
         m_idProp = pool.register(m_idProp);
-        m_info   = null;
     }
 
     @Override
@@ -489,9 +485,4 @@ public class PropertyClassTypeConstant
      * During disassembly, this holds the index of the PropertyConstant.
      */
     private transient int m_iProp;
-
-    /**
-     * Cached property info.
-     */
-    private transient PropertyInfo m_info;
 }

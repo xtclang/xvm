@@ -137,7 +137,8 @@ public abstract class TypeInfo {
      */
     public abstract TypeConstant getType();
 
-    abstract int getInvalidationCount();
+    /** @return the declaration-invalidation snapshot used to build this metadata */
+    public abstract int getInvalidationCount();
 
     /**
      * Determine if this TypeInfo is impacted by changes in the TypeInfos built for any of the
@@ -745,7 +746,8 @@ public abstract class TypeInfo {
      */
     public abstract String toString(boolean fRuntime);
 
-    protected abstract Progress getProgress();
+    /** @return the construction stage; only Complete results may be published across queries */
+    public abstract Progress getProgress();
 
     protected abstract boolean isPlaceHolder();
 

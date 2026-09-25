@@ -7,6 +7,7 @@ import java.util.Collections;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
+import org.xvm.asm.TypeMetadata.MemberType;
 
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.PropertyExprAST;
@@ -93,7 +94,8 @@ public class FormalTypeChildConstant
 
     @Override
     public TypeConstant getConstraintType() {
-        TypeConstant typeConstraint = m_typeConstraint;
+        var metadata = getConstantPool().getTypeMetadata();
+        TypeConstant typeConstraint = metadata.getMemberType(this, MemberType.Constraint);
         if (typeConstraint != null) {
             return typeConstraint;
         }
@@ -108,20 +110,20 @@ public class FormalTypeChildConstant
         String sName = getName();
         if (typeConstraint.containsGenericParam(sName)) {
             if (typeConstraint.isTuple()) {
-                return m_typeConstraint = getConstantPool().typeTuple();
+                return metadata.cacheMemberType(this, MemberType.Constraint, getConstantPool().typeTuple());
             }
 
-            TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType().
+            TypeConstant type = typeConstraint.getSingleUnderlyingClass(true).getFormalType(getConstantPool()).
                                     getGenericParamType(sName, Collections.emptyList());
             assert type.isGenericType();
 
             PropertyConstant idProp = (PropertyConstant) type.getDefiningConstant();
-            return m_typeConstraint = idProp.getConstraintType();
+            return metadata.cacheMemberType(this, MemberType.Constraint, idProp.getConstraintType());
         }
 
-        return m_typeConstraint = "OuterType".equals(sName) && typeConstraint.isVirtualChild()
+        return metadata.cacheMemberType(this, MemberType.Constraint, "OuterType".equals(sName) && typeConstraint.isVirtualChild()
                 ? typeConstraint.getParentType()
-                : getConstantPool().typeObject();
+                : getConstantPool().typeObject());
     }
 
     @Override

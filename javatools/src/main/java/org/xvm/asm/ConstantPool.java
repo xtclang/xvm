@@ -45,7 +45,6 @@ import org.xvm.util.Auto;
 import org.xvm.util.Lazy;
 import org.xvm.util.ListMap;
 import org.xvm.util.PackedInteger;
-import org.xvm.util.TransientThreadLocal;
 
 import static org.xvm.compiler.Lexer.isValidIdentifier;
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
@@ -2637,6 +2636,7 @@ public class ConstantPool
         requireSerializedIndices();
         verifyMutable();
         clearTypeRelations();
+        clearTypeMetadata();
         f_listConst.clear();
         m_mapConstants.clear();
         m_mapLocators.clear();
@@ -2952,33 +2952,17 @@ public class ConstantPool
      * @param type  the TypeConstant to defer the building of a TypeInfo for
      */
     void addDeferredTypeInfo(TypeConstant type) {
-        assert type != null;
-
-        List<TypeConstant> list = f_tlolistDeferred.computeIfAbsent(ArrayList::new);
-        if (!list.contains(type)) {
-            list.add(type);
-        }
+        getTypeMetadata().defer(type);
     }
 
-    /**
-     * @return true iff there are any TypeConstants that have deferred the building of a TypeInfo
-     */
+    /** @return whether this calculation still has recursive TypeInfo dependencies */
     boolean hasDeferredTypeInfo() {
-        return f_tlolistDeferred.get() != null;
+        return getTypeMetadata().hasDeferred();
     }
 
-    /**
-     * @return the List of TypeConstants to build (or rebuild) TypeInfo objects for
-     */
+    /** @return this calculation's next batch of recursive TypeInfo dependencies */
     List<TypeConstant> takeDeferredTypeInfo() {
-        List<TypeConstant> list = f_tlolistDeferred.get();
-        if (list == null) {
-            list = Collections.emptyList();
-        } else {
-            f_tlolistDeferred.remove();
-        }
-
-        return list;
+        return getTypeMetadata().takeDeferred();
     }
 
     /**
@@ -2994,6 +2978,10 @@ public class ConstantPool
         synchronized (f_listInvalidated) {
             f_listInvalidated.add(register(id));
             m_cInvalidated = f_listInvalidated.size();
+            if (typeMetadata.isComputed()) {
+                getTypeMetadata().clearDerived();
+            }
+            clearTypeRelations();
         }
     }
 
@@ -3028,6 +3016,22 @@ public class ConstantPool
      */
     public TypeRelations getTypeRelations() {
         return typeRelations.get(this);
+    }
+
+    /**
+     * Obtain this owner's disposable semantic metadata. Runtime descriptor stores own a separate
+     * table; constants and declaration images do not carry these derived answers when adopted.
+     *
+     * @return the metadata table for this exact definition/descriptor owner
+     */
+    public TypeMetadata getTypeMetadata() {
+        return typeMetadata.get(this);
+    }
+
+    private void clearTypeMetadata() {
+        if (typeMetadata.isComputed()) {
+            getTypeMetadata().clear();
+        }
     }
 
     /**
@@ -3493,11 +3497,14 @@ public class ConstantPool
         if (m_typeNakedRef != typeNakedRef) {
             verifyMutable();
             m_typeNakedRef = typeNakedRef;
+            clearTypeMetadata();
+            clearTypeRelations();
         }
     }
 
     public TypeInfo getNakedRefInfo(TypeConstant typeReferent) {
-        return f_mapRefTypes.computeIfAbsent(typeReferent, this::computeNakedRefInfo);
+        TypeConstant local = register(typeReferent);
+        return getTypeMetadata().nakedRef(local, () -> computeNakedRefInfo(local));
     }
 
     /**
@@ -3594,6 +3601,7 @@ public class ConstantPool
      */
     private void optimize() {
         clearTypeRelations();
+        clearTypeMetadata();
         ArrayList<Constant> list = f_listConst;
 
         // remove unused constants
@@ -3864,6 +3872,8 @@ public class ConstantPool
     private final ArrayList<Constant> f_listConst = new ArrayList<>();
 
     /** Semantic memoization is separate from the constant interner and its serialized indices. */
+    private final Lazy.Bound<ConstantPool, TypeMetadata> typeMetadata = Lazy.ofBound(TypeMetadata::new);
+
     private final Lazy.Bound<ConstantPool, TypeRelations> typeRelations = Lazy.ofBound(TypeRelations::new);
 
     /**
@@ -3897,12 +3907,6 @@ public class ConstantPool
     private final Map<String, IdentityConstant> f_implicits = new ConcurrentHashMap<>();
 
     /**
-     * A special "chicken and egg" list of TypeConstants that need to have their TypeInfos rebuilt.
-     */
-    private final TransientThreadLocal<List<TypeConstant>> f_tlolistDeferred =
-            new TransientThreadLocal<>();
-
-    /**
      * A list of classes that cause any derived TypeInfos to be invalidated.
      */
     private final List<IdentityConstant> f_listInvalidated = new Vector<>();
@@ -3911,11 +3915,6 @@ public class ConstantPool
      * Cached size of {@link #f_listInvalidated}.
      */
     private volatile int m_cInvalidated;
-
-    /**
-     * A cache of TypeInfo for parameterized NakedRef types.
-     */
-    private final Map<TypeConstant, TypeInfo> f_mapRefTypes = new ConcurrentHashMap<>();
 
     /**
      * The JIT primitive types, computed on demand and discarded by {@link #optimize}.

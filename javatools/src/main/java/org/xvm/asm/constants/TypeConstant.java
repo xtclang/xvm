@@ -12,18 +12,14 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
-
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import java.util.function.Function;
 
@@ -1214,14 +1210,8 @@ public abstract class TypeConstant
      *         type parameters to the corresponding canonical types
      */
     public TypeConstant normalizeParameters() {
-        TypeConstant typeNormalized = m_typeNormalized;
-        if (typeNormalized == null) {
-            typeNormalized = adoptParameters(getConstantPool(), (TypeConstant[]) null);
-            if (!typeNormalized.containsUnresolved()) {
-                m_typeNormalized = typeNormalized;
-            }
-        }
-        return typeNormalized;
+        return getConstantPool().getTypeMetadata().normalize(this,
+                () -> adoptParameters(getConstantPool(), (TypeConstant[]) null));
     }
 
     /**
@@ -1688,6 +1678,21 @@ public abstract class TypeConstant
      */
     public TypeInfo ensureTypeInfo(ErrorListener errs) {
         Objects.requireNonNull(errs, "errs");
+        if (getContext() != null) {
+            // A surrounding covariance probe describes a relation, not this type's declaration.
+            // Build/query metadata independently; the caller's relation scope is restored on return.
+            return ScopedValue.where(s_context, getConstantPool().typeNull())
+                    .call(() -> ensureTypeInfo(errs));
+        }
+        TypeInfo info = getTypeInfo();
+        if (isComplete(info) && isUpToDate(info)) {
+            info.replayDiagnostics(errs);
+            return info;
+        }
+        return getConstantPool().getTypeMetadata().calculateTypeInfo(() -> ensureTypeInfoImpl(errs));
+    }
+
+    private TypeInfo ensureTypeInfoImpl(ErrorListener errs) {
         // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
         ensureObjectTypeInfo(errs);
 
@@ -1783,7 +1788,7 @@ public abstract class TypeConstant
         private final TypeInfoRecorder parent;
     }
 
-    private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
+    private TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
         ConstantPool pool = getConstantPool();
         if (info == null) {
             // validate this TypeConstant (necessary before we build the TypeInfo)
@@ -1807,18 +1812,9 @@ public abstract class TypeConstant
             return info;
         }
 
-        // this is where things get very, very complicated. this method is responsible for returning
-        // a "completed" TypeInfo, but there are (theoretically) lots of threads trying to do the
-        // same or similar thing at the same time, and any thread can end up in a recursive
-        // situation in which to complete the TypeInfo for type X, it has to get the TypeInfo for
-        // type Y, and do build that, it has to get the TypeInfo for type X. this is a catch-22!
-        // so what we do to avoid this is to have two layers of requests:
-        // 1) the requests from the outside (naive) world come to ensureTypeInfo(), and those
-        //    requests *must* be responded to with a "completed" TypeInfo
-        // 2) internal requests, like the ones causing the catch-22, can be responded to with an
-        //    incomplete TypeInfo, which is sufficient to build the dependent TypeInfo, but which
-        //    in turn must be completed once the dependent (which is also a depended-upon) TypeInfo
-        //    is complete
+        // External queries require complete metadata; recursive internal queries may temporarily
+        // need a partial result. TypeMetadata keeps that graph, its placeholders and deferred work
+        // local to this calculation, so another thread cannot observe unfinished metadata.
 
         // there is a place-holder that signifies that a type is busy building a TypeInfo;
         // mark the type as having its TypeInfo building "in progress"
@@ -1867,7 +1863,7 @@ public abstract class TypeConstant
                             // infinite recursion, so be very careful about what can allow a
                             // TypeInfo to be built "incomplete" (it needs to be impossible to
                             // rebuild a TypeInfo and have it be incomplete for the second time)
-                            if (recursionDepth.get() > 2) {
+                            if (pool.getTypeMetadata().recursionDepth(this) > 2) {
                                 // an infinite loop
                                 throw new IllegalStateException("Infinite loop while producing a " +
                                         "TypeInfo for " + this + "; deferred type=" + typeDeferred);
@@ -1876,11 +1872,11 @@ public abstract class TypeConstant
                             // merge the errors only after the completed "buildTypeInfo" run
                             ErrorListener errsTemp = errs.branch(null);
 
-                            recursionDepth.incrementAndGet();
+                            pool.getTypeMetadata().changeRecursionDepth(this, 1);
                             try {
                                 infoDeferred = typeDeferred.buildRecordedTypeInfo(errsTemp);
                             } finally {
-                                recursionDepth.decrementAndGet();
+                                pool.getTypeMetadata().changeRecursionDepth(this, -1);
                             }
 
                             if (isComplete(infoDeferred)) {
@@ -1933,6 +1929,14 @@ public abstract class TypeConstant
      *         build the TypeInfo at this point due to recursion
      */
     protected TypeInfo ensureTypeInfoInternal(ErrorListener errs) {
+        if (getContext() != null) {
+            return ScopedValue.where(s_context, getConstantPool().typeNull())
+                    .call(() -> ensureTypeInfoInternal(errs));
+        }
+        return getConstantPool().getTypeMetadata().calculateTypeInfo(() -> buildTypeInfoInternal(errs));
+    }
+
+    private TypeInfo buildTypeInfoInternal(ErrorListener errs) {
         TypeInfo info = getTypeInfo();
         if (info == null) {
             // ensure the root Object is built first, since it helps to avoid chicken-and-egg issues
@@ -1942,13 +1946,8 @@ public abstract class TypeConstant
         }
 
         if (info != null && info.isPlaceHolder()) {
-            // the TypeInfo is already being built, so we're in the catch-22 situation; note that it
-            // is even more complicated, because it could be being built by a different thread, so
-            // always add it to the deferred list _on this thread_ so that we will force the rebuild
-            // of the TypeInfo if necessary (imagine that the other thread is super slow, so we need
-            // to preemptively duplicate its work on this thread, so we don't have to "wait" for
-            // the other thread); the one exception is for the root of the type system, Object, and
-            // any interfaces that it depends on
+            // Only this calculation can see its own placeholder. Record the cyclic dependency
+            // for a later completion pass; another thread builds independently.
             addDeferredTypeInfo(this);
             return null;
         }
@@ -2009,28 +2008,19 @@ public abstract class TypeConstant
                     log(errs, Severity.ERROR, VE_UNKNOWN, "Failed to create TypeInfo for root Object");
                 }
             } else {
-                // discard any partial TypeInfos created as part of creating the Object TypeInfo
-                for (Constant constant : pool.getConstants()) {
-                    if (constant instanceof TypeConstant type
-                            && type.getTypeInfo() != null && !type.isRootObject()) {
-                        type.clearTypeInfo();
-                    }
-                }
-                // discard the list of any "must retry building these TypeInfos" (since we're also
-                // discarding all built TypeInfos other than Object)
-                var ignoreDeferred = takeDeferredTypeInfo();
+                pool.getTypeMetadata().finishObjectBootstrap();
             }
         }
     }
 
     /**
-     * Obtain the TypeInfo associated with this type.
+     * Obtain this owner's TypeInfo for the type, including this calculation's provisional value.
      *
      * @return one of: null, a place-holder TypeInfo (if the TypeInfo is currently being built), an
      *         "incomplete" TypeInfo, or a finished TypeInfo
      */
     protected TypeInfo getTypeInfo() {
-        return s_typeinfo.get(this);
+        return getConstantPool().getTypeMetadata().getTypeInfo(this);
     }
 
     /**
@@ -2040,23 +2030,14 @@ public abstract class TypeConstant
      * @param info  the new TypeInfo
      */
     protected void setTypeInfo(TypeInfo info) {
-        TypeInfo infoOld;
-        while (rankTypeInfo(info) > rankTypeInfo(infoOld = s_typeinfo.get(this))
-                || info.isPlaceHolder()) {
-            // update the TypeInfo
-            if (s_typeinfo.compareAndSet(this, infoOld, info)) {
-                // update the invalidation count that we have caught up to at this point
-                setInvalidationCount(info.getInvalidationCount());
-                break;
-            }
-        }
+        getConstantPool().getTypeMetadata().setTypeInfo(this, info);
     }
 
     /**
      * @return the invalidation count that this TypeConstant has already processed
      */
     protected int getInvalidationCount() {
-        return s_cInvalidations.get(this);
+        return getConstantPool().getTypeMetadata().getInvalidationCount(this);
     }
 
     /**
@@ -2065,10 +2046,7 @@ public abstract class TypeConstant
      * @param cNew  the new invalidation count
      */
     protected void setInvalidationCount(int cNew) {
-        int cOld;
-        while ((cOld = s_cInvalidations.get(this)) < cNew) {
-            s_cInvalidations.compareAndSet(this, cOld, cNew);
-        }
+        getConstantPool().getTypeMetadata().setInvalidationCount(this, cNew);
     }
 
     /**
@@ -2096,17 +2074,20 @@ public abstract class TypeConstant
     }
 
     /**
-     * Clear out any cached TypeInfo for this one specific TypeConstant.
+     * Clear this owner's cached TypeInfo for this one specific TypeConstant.
      */
     protected void clearTypeInfo() {
-        s_typeinfo.set(this, null);
+        getConstantPool().getTypeMetadata().clearTypeInfo(this);
     }
 
     /**
-     * Clear out the "place-holder" TypeInfo for this one specific TypeConstant.
+     * Discard this calculation's placeholder without evicting another thread's completed result.
      */
     protected void clearTypeInfoPlaceholder() {
-        s_typeinfo.compareAndSet(this, getConstantPool().infoPlaceholder(), null);
+        TypeInfo info = getTypeInfo();
+        if (info != null && info.isPlaceHolder()) {
+            getConstantPool().getTypeMetadata().clearPlaceholder(this);
+        }
     }
 
     /**
@@ -6610,26 +6591,8 @@ public abstract class TypeConstant
      * @return true iff this type is a consumer of the specified formal type
      */
     public boolean consumesFormalType(String sTypeName, Access access) {
-        Map<String, Usage> mapUsage = ensureConsumesMap();
-
-        // WARNING: thread-unsafe
-        Usage usage = mapUsage.get(sTypeName);
-        if (usage == null) {
-            mapUsage.put(sTypeName, Usage.IN_PROGRESS);
-            try {
-                usage = checkConsumption(sTypeName, access, Collections.emptyList());
-            } catch (RuntimeException | Error e) {
-                mapUsage.remove(sTypeName);
-                throw e;
-            }
-
-            mapUsage.put(sTypeName, usage);
-        } else if (usage == Usage.IN_PROGRESS) {
-            // we are in recursion; the answer is "no"
-            mapUsage.put(sTypeName, usage = Usage.NO);
-        }
-
-        return usage == Usage.YES;
+        return getConstantPool().getTypeMetadata().variance(this, sTypeName, access, true,
+                () -> checkConsumption(sTypeName, access, Collections.emptyList()));
     }
 
     /**
@@ -6656,26 +6619,8 @@ public abstract class TypeConstant
      * @return {@link Usage#YES} if this type produces the formal type; {@link Usage#NO} otherwise
      */
     public boolean producesFormalType(String sTypeName, Access access) {
-        Map<String, Usage> mapUsage = ensureProducesMap();
-
-        // WARNING: thread-unsafe
-        Usage usage = mapUsage.get(sTypeName);
-        if (usage == null) {
-            mapUsage.put(sTypeName, Usage.IN_PROGRESS);
-            try {
-                usage = checkProduction(sTypeName, access, Collections.emptyList());
-            } catch (RuntimeException | Error e) {
-                mapUsage.remove(sTypeName);
-                throw e;
-            }
-
-            mapUsage.put(sTypeName, usage);
-        } else if (usage == Usage.IN_PROGRESS) {
-            // we are in recursion; the answer is "no"
-            mapUsage.put(sTypeName, usage = Usage.NO);
-        }
-
-        return usage == Usage.YES;
+        return getConstantPool().getTypeMetadata().variance(this, sTypeName, access, false,
+                () -> checkProduction(sTypeName, access, Collections.emptyList()));
     }
 
     /**
@@ -8067,15 +8012,6 @@ public abstract class TypeConstant
         assert isShared((ConstantPool) pool);
 
         super.setContaining(pool);
-
-        // clear any cached constants
-        m_cInvalidations = 0;
-        m_typeinfo       = null;
-        m_typeNormalized = null;
-        m_mapConsumes    = null;
-        m_mapProduces    = null;
-        m_fValidated     = false;
-        recursionDepth   = new AtomicInteger();
     }
 
     @Override
@@ -8089,10 +8025,12 @@ public abstract class TypeConstant
     public boolean validate(ErrorListener errs) {
         boolean fHalt = false;
 
-        if (!m_fValidated) {
+        if (!isValidated()) {
             fHalt |= super.validate(errs);
             fHalt |= isModifyingType() && getUnderlyingType().validate(errs);
-            m_fValidated = !fHalt;
+            if (!fHalt) {
+                getConstantPool().getTypeMetadata().markValidated(this);
+            }
         }
 
         return fHalt;
@@ -8102,7 +8040,7 @@ public abstract class TypeConstant
      * @return true iff this type constant has been validated
      */
     protected boolean isValidated() {
-        return m_fValidated;
+        return getConstantPool().getTypeMetadata().isValidated(this);
     }
 
     @Override
@@ -8141,22 +8079,6 @@ public abstract class TypeConstant
 
     void clearRelationMap() {
         getConstantPool().getTypeRelations().clear(this);
-    }
-
-    private Map<String, Usage> ensureConsumesMap() {
-        Map<String, Usage> mapConsumes = m_mapConsumes;
-        if (mapConsumes == null) {
-            mapConsumes = m_mapConsumes = new HashMap<>();
-        }
-        return mapConsumes;
-    }
-
-    private Map<String, Usage> ensureProducesMap() {
-        Map<String, Usage> mapProduces = m_mapProduces;
-        if (mapProduces == null) {
-            mapProduces = m_mapProduces = new HashMap<>();
-        }
-        return mapProduces;
     }
 
     /**
@@ -8355,48 +8277,9 @@ public abstract class TypeConstant
     public static final TypeConstant[] NO_TYPES = new TypeConstant[0];
 
     /**
-     * Keeps track of whether the TypeConstant has been validated.
-     */
-    private transient boolean m_fValidated;
-
-    /**
-     * The resolved information about the type, its properties, and its methods.
-     */
-    private transient volatile TypeInfo m_typeinfo;
-    private static final AtomicReferenceFieldUpdater<TypeConstant, TypeInfo> s_typeinfo =
-            AtomicReferenceFieldUpdater.newUpdater(TypeConstant.class, TypeInfo.class, "m_typeinfo");
-    private transient AtomicInteger recursionDepth = new AtomicInteger();
-
-    /**
-     * The last time that we checked the invalidations from the ConstantPool, we cached the number
-     * of invalidations that had been done up to that point in time. This is that number. This gives
-     * us a very quick way of verifying that no new invalidations have occurred.
-     * This value could be higher than the value in the TypeInfo, which represents the number of
-     * invalidations that had been done before we started to create the TypeInfo.
-     */
-    private transient volatile int m_cInvalidations;
-    private static final AtomicIntegerFieldUpdater<TypeConstant> s_cInvalidations =
-            AtomicIntegerFieldUpdater.newUpdater(TypeConstant.class, "m_cInvalidations");
-
-    /**
-     * A cache of "consumes" responses.
-     */
-    private transient Map<String, Usage> m_mapConsumes;
-
-    /**
-     * A cache of "produces" responses.
-     */
-    private transient Map<String, Usage> m_mapProduces;
-
-    /**
      * Cached JIT class name.
      */
     private transient String m_sJitName;
-
-    /**
-     * Cached normalized representation.
-     */
-    private transient TypeConstant m_typeNormalized;
 
     /**
      * Scoped value allowing to get the "current" TypeConstant context out of thin air. A missing

@@ -26,8 +26,9 @@ import org.xvm.asm.constants.TypeConstant;
  *
  * <p>The descriptor pool is a transitional adapter to existing constant factories. It has no XTC
  * indices and is not attached as a child of the image. Derived descriptors can grow without
- * extending the image's constant table. Metadata has not yet been separated from
- * {@link TypeConstant}; consequently this context must not be shared between containers.
+ * extending the image's constant table. Semantic metadata belongs to this context's separate
+ * table; executable preparation still has container-specific state, so this context must not be
+ * shared between containers.
  */
 public final class RuntimeTypeContext {
     /**
@@ -174,6 +175,17 @@ public final class RuntimeTypeContext {
      */
     public void clearRelations() {
         descriptors.getTypeRelations().clear();
+    }
+
+    /**
+     * Discard derived semantic answers while retaining canonical descriptors and the definition
+     * graph. Subsequent queries rebuild TypeInfo, member lookups, normalization and relations.
+     * Existing callers may finish using their completed metadata; this is not an execution-state
+     * reset, an image-generation change, or permission to mutate frozen declarations.
+     */
+    public void clearMetadata() {
+        descriptors.getTypeMetadata().clear();
+        clearRelations();
     }
 
     /**

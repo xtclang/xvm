@@ -10,8 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import java.util.concurrent.locks.StampedLock;
-
 import java.util.function.Consumer;
 
 import org.xvm.asm.ClassStructure;
@@ -23,7 +21,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.Register;
-import org.xvm.asm.XvmStructure;
 
 import org.xvm.util.Hash;
 import org.xvm.util.Severity;
@@ -271,23 +268,17 @@ public class ParameterizedTypeConstant
 
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
-        // don't cache results for non-constant (e.g. Frame) or "foreign type" resolvers
-        boolean fCache;
-        if (resolver instanceof TypeConstant typeResolver && pool == this.getConstantPool() &&
-                pool == typeResolver.getConstantPool()) {
-            fCache       = true;
-            typeResolver = typeResolver.removeAccess();
-            long stamp   = resolutionLock.tryOptimisticRead();
-            if (stamp != 0) {
-                TypeConstant typeResolvedPrev = m_typeResolvedPrev;
-                if (typeResolver.equals(m_typeResolverPrev) && resolutionLock.validate(stamp)) {
-                    return typeResolvedPrev;
-                }
-            }
-        } else {
-            fCache = false;
+        // Only a fixed, owner-local resolver is a memoizable semantic input. Frame and foreign
+        // resolvers must be evaluated for each call in the explicitly requested destination.
+        if (resolver instanceof TypeConstant typeResolver && pool == getConstantPool()
+                && pool == typeResolver.getConstantPool()) {
+            return pool.getTypeMetadata().resolve(this, typeResolver,
+                    () -> resolveGenericsUncached(pool, resolver));
         }
+        return resolveGenericsUncached(pool, resolver);
+    }
 
+    private TypeConstant resolveGenericsUncached(ConstantPool pool, GenericTypeResolver resolver) {
         TypeConstant constOriginal = m_constType;
         TypeConstant constResolved = constOriginal.resolveGenerics(pool, resolver);
 
@@ -313,14 +304,6 @@ public class ParameterizedTypeConstant
                 ? this
                 : pool.ensureParameterizedTypeConstant(constResolved, aconstResolved);
 
-        if (fCache) {
-            long stamp = resolutionLock.tryWriteLock();
-            if (stamp != 0) {
-                m_typeResolvedPrev = typeResolved;
-                m_typeResolverPrev = (TypeConstant) resolver;
-                resolutionLock.unlockWrite(stamp);
-            }
-        }
         return typeResolved;
     }
 
@@ -1041,22 +1024,11 @@ public class ParameterizedTypeConstant
     // ----- XvmStructure methods ------------------------------------------------------------------
 
     @Override
-    protected void setContaining(XvmStructure pool) {
-        super.setContaining(pool);
-        // A cloned type has independent calculation state, including its synchronization object.
-        resolutionLock = new StampedLock();
-    }
-
-    @Override
     protected void registerConstants(ConstantPool pool) {
         m_constType   = pool.register(m_constType);
         m_atypeParams = registerTypeConstants(pool, m_atypeParams);
 
-        // invalidate cached types
-        long stamp = resolutionLock.writeLock();
-        m_typeResolverPrev = null;
-        m_typeResolvedPrev = null;
-        resolutionLock.unlockWrite(stamp);
+        pool.getTypeMetadata().clear(this);
     }
 
     @Override
@@ -1121,21 +1093,6 @@ public class ParameterizedTypeConstant
      * The type parameters.
      */
     private TypeConstant[] m_atypeParams;
-
-    /**
-     * Lock protecting {@link #m_typeResolverPrev} and {@link #m_typeResolvedPrev}
-     */
-    private transient StampedLock resolutionLock = new StampedLock();
-
-    /**
-     * Cached conversion target.
-     */
-    private transient TypeConstant m_typeResolverPrev;
-
-    /**
-     * Cached conversion result.
-     */
-    private transient TypeConstant m_typeResolvedPrev;
 
     /**
      * Cached callable JIT type.
