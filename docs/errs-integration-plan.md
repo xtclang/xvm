@@ -10,6 +10,48 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## IntelliJ compiler playbook and client configuration
+
+Implemented and validated on `lagergren/errs` after `156d02687`; not yet committed.
+This work adds no Java embedding or AST API. Keep the following future slices separate:
+
+| Group | Scope | Prerequisites |
+|---|---|---|
+| I8 | IntelliJ IDEA 2026.2.3 / minimum build 262, LSP4IJ 0.21.0 and compatibility documentation | Existing IntelliJ plugin only; independent of compiler API changes |
+| L27 | `XtcLanguageClient` configuration delegation, Starter/Driver task and test dependencies, compiler editor cases and playbook instructions | I8 for the pinned test APIs; L16 compiler graph configuration and the existing compiler features exercised by each case |
+
+These add two groups to the prior 53, bringing the working plan to **55**. In the version catalog,
+I8 owns the IDE/LSP4IJ bumps; L27 owns Kodein, JetBrains coroutines and Starter reporting dependencies.
+Do not cherry-pick a mixed future commit as an independent PR without separating those hunks.
+
+The old client override answered only `xtc.formatting` and returned null for compiler sections.
+The new override specializes `findSettings` only for formatting. LSP4IJ owns asynchronous section
+lookup, unknown/null entries, live configuration notifications and listener disposal. Its existing
+XTC server Configuration JSON supplies nested `xtc.compiler.sourceModules`; these settings are
+IDE-wide, not a new project-local configuration service.
+
+Starter/Driver uses the packaged plugin and canonical Markdown fixtures. The first case set is
+startup, X2, X4 definition navigation, X7 completion, X45–X46, CFG1 clear/restore and 7a.8.
+Full IntelliJ playbook parity, rendered Problems tool-window checks and the interactive soak remain
+follow-ups. Tests explicitly require the free Community feature set, with Ultimate disabled;
+a developer's paid license must not make an acceptance run pass.
+
+LSP4IJ 0.20 added inline completion/color presentation and improved code actions; 0.21 contains
+IDE-freeze, timeout/deadlock, read-action and lifecycle fixes, including IntelliJ 2026.2 support.
+Those client improvements do not advertise additional XdkAdapter capabilities. See the
+[upstream release](https://github.com/redhat-developer/lsp4ij/releases/tag/0.21.0) and
+[IntelliJ run instructions](../lang/intellij-plugin/README.md#compiler-playbook-in-intellij).
+
+Validation on 2026-09-25: all eight IntelliJ editor cases passed in
+`lang/intellij-plugin/build/reports/compiler-playbook/run-5890396026268646363/results.json`,
+with zero IDE failures. Plugin JUnit XML reports 24 tests, zero failures/errors/skips. The new
+manifest regression limits required dependencies to Community platform/Java/Gradle/TextMate
+and LSP4IJ. `ktlintCheck`, root `spotlessCheck` and packaged-plugin construction pass. The ZIP's
+plugin classpath contains only the plugin JAR: Starter/Driver, Kodein, coroutines and service
+messages are not shipped. The bundled server remains isolated in `bin/`.
+A second eight-case run passed with configuration-cache reuse; its report is
+`lang/intellij-plugin/build/reports/compiler-playbook/run-1579176862811931900/results.json`.
+
 ## Recommendation
 
 **Current workflow:** develop, fix, test and commit directly on **`lagergren/errs`**. Record which
@@ -61,7 +103,8 @@ The editor bridge uses `xtcCompiler` initialization options and `xtc.compiler` s
 exposes `xtc.compiler.sourceModules` and sends live updates. Relative roots require one workspace
 folder; multi-root workspaces use absolute file URIs. Invalid settings retain the previous graph,
 late replies (including replies superseded by malformed updates) cannot restore old settings, and
-identical graphs preserve existing analysis. IntelliJ has no dedicated source-graph settings UI.
+identical graphs preserve existing analysis. IntelliJ now uses LSP4IJ's existing server Configuration
+JSON; a dedicated project-local source-graph settings UI remains separate (L27 above).
 
 Editor evidence on 2026-09-24: all eight VS Code extension-host tests passed. The compiler case
 exercised settings changes, unsaved dependency rebuilding at an unchanged consumer version,
@@ -1931,6 +1974,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L25 | Complete compatible locals/parameters at missing argument slots | `f2896916b` host portion; argument-value completion above | C13, L8/L9/L23; editor runner L16; X25 synchronization in the same commit belongs to L16 |
 | C14 | Retain typed argument prefixes in their call fitting context | `dc3218d81` compiler portion; typed argument-prefix completion above | C13, C12; additive syntax token/factory/accessors and compiler prefix filter |
 | L26 | Replace typed argument prefixes with compiler-fitted values | `dc3218d81` host portion; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
+| I8 | Target the released IntelliJ free feature set and update LSP4IJ | Uncommitted after `156d02687`; IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
+| L27 | IntelliJ compiler configuration and automated playbook | Uncommitted after `156d02687`; client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
@@ -1943,7 +1988,7 @@ L13 follows with an explicit artifact host API; L14 adds automatic rebuilding fo
 modules; L16 exposes those roots/edges through editor configuration. Automatic project/build
 discovery stays separate. L17 adds configured-graph references and method rename. These are
 thirty-five checkpoint PR groups; the seven post-L18 units, L22 and C11/L23/I6 bring the working
-plan to 46; I7 brings it to 47, C12/L24 to 49, C13/L25 to 51 and C14/L26 to **53**. L18 extends property lookup after L10/L13. During current development,
+plan to 46; I7 brings it to 47, C12/L24 to 49, C13/L25 to 51 and C14/L26 to 53, and I8/L27 to **55**. L18 extends property lookup after L10/L13. During current development,
 maintain their commit assignments on `errs`. Once submission preparation is requested, prepare only
 the next few for review and update dependent patches after their prerequisites land.
 

@@ -56,7 +56,8 @@ Then install manually:
 
 ## Prerequisites
 
-- IntelliJ IDEA 2026.1 or later
+- IntelliJ IDEA 2026.2 or later (build 262+); development and acceptance tests target 2026.2.3
+- The free feature set is sufficient; no Ultimate subscription is required
 - XDK installed and `xtc` command available in PATH
 - Gradle plugin for IntelliJ (bundled with most editions)
 
@@ -109,6 +110,58 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 | `buildPlugin` | `build/distributions/*.zip` | Install in any IntelliJ instance |
 | `runIde` | Launches sandbox IDE | Quick testing during development |
 | `verifyPlugin` | Verification report | Check IDE compatibility |
+
+### Compiler playbook in IntelliJ
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+This opt-in task uses JetBrains Starter/Driver to launch the packaged plugin and LSP4IJ 0.21.0
+in IntelliJ IDEA 2026.2.3. Starter explicitly disables Ultimate features and enables license
+checks, suppresses the paid module and prevents automatic trials. The suite asserts after every
+case that Ultimate remains unloaded. The unified IDEA download
+uses JetBrains' `IdeaUltimate` artifact name, but the tested features require only the free
+Community feature set. No personal settings or license are copied into the test profile.
+See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
+
+The initial suite has eight cases and covers startup, X2 compiler errors and clearing, the definition portion of X4,
+X7 completion acceptance, X45–X46 source-module navigation/recompilation, the CFG1 graph
+clear/restore transition and the 7a.8 duplicate-annotation warning. It reads fixtures from the
+[manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook). Remaining rows, the Problems
+tool-window layout, popup appearance and prolonged editing remain to be ported or checked manually.
+
+Reports are under `build/reports/compiler-playbook/run-*/results.json`; `ide-paths.txt` points to
+the isolated IDE's profile/log directory. Starter caches its IDE download below the same report
+root's `out/ide-tests/cache`. Ordinary unit tests do not launch an IDE. Starter/Driver follows the
+selected IDE build; Kodein, patched coroutines and the standalone launcher's Kotlin standard
+library are integration-test dependencies and are not bundled in the plugin.
+
+### Compiler source-module configuration
+
+With a compiler build, open **Settings → Languages & Frameworks → Language Servers**, select
+**XTC Language Server**, and edit its **Configuration** JSON:
+
+```json
+{
+  "xtc": {
+    "compiler": {
+      "sourceModules": [
+        { "name": "Library", "uri": "Library.x" },
+        { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
+      ]
+    }
+  }
+}
+```
+
+LSP4IJ stores these server settings at IDE scope. Relative paths resolve against the current
+single workspace folder; use absolute file URIs when needed. Applying settings notifies the
+running server. Setting `sourceModules` to `[]` clears the graph; omitting it preserves the
+current graph. This uses LSP4IJ's existing JSON editor, not a dedicated XTC project-settings UI.
+`XtcLanguageClient` delegates section lookup and configuration notifications to LSP4IJ; only
+`xtc.formatting` reads Ecstasy Code Style settings.
 
 ### Release-Grade Build And Publish
 
@@ -163,7 +216,7 @@ What matters is the Gradle task outcome:
 
 ### Installing the Built Plugin
 
-After running `buildPlugin`, you can install the ZIP in any IntelliJ IDEA 2025.1+ instance:
+After running `buildPlugin`, you can install the ZIP in an IntelliJ IDEA 2026.2+ instance:
 
 1. Locate the ZIP: `lang/intellij-plugin/build/distributions/intellij-plugin-<version>.zip`
 2. Open IntelliJ IDEA → **Settings/Preferences → Plugins**
@@ -250,15 +303,15 @@ stale sandbox state, or missing artifacts:
 
 ```
 [runIde] ─── Version Matrix (gradle/libs.versions.toml) ───
-[runIde]   IntelliJ IDEA: 2026.1 (sinceBuild=261)
-[runIde]   LSP4IJ:        0.19.2
+[runIde]   IntelliJ IDEA: 2026.2.3 (sinceBuild=262)
+[runIde]   LSP4IJ:        0.21.0
 [runIde]   XTC plugin:    0.4.4-SNAPSHOT
 [runIde] ─── Sandbox ───
-[runIde]   Path:      .../build/idea-sandbox/IC-2026.1
+[runIde]   Path:      .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3
 [runIde]   Status:    reused (existing sandbox with IDE caches/indices)
 [runIde]   Plugins:   [intellij-plugin, lsp4ij]
-[runIde]   IDE log:   .../build/idea-sandbox/IC-2026.1/log/idea.log
-[runIde]              tail -f .../build/idea-sandbox/IC-2026.1/log/idea.log
+[runIde]   IDE log:   .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
+[runIde]              tail -f .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
 [runIde] ─── mavenLocal XTC Artifacts ───
 [runIde]   ~/.m2/repository/org/xtclang
 [runIde]   xdk: 0.4.4-SNAPSHOT
@@ -306,9 +359,9 @@ These appear with a `[lsp-server]` prefix whenever the LSP server is active.
 noisy (indexing, VFS, GC, etc.). To view them in a separate terminal:
 
 ```bash
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2026.1/log/idea.log
+tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
 # Or filter to XTC-related entries:
-tail -f lang/intellij-plugin/build/idea-sandbox/IC-2026.1/log/idea.log | grep -i "xtc\|lsp"
+tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log | grep -i "xtc\|lsp"
 ```
 
 **LSP server file log** (always available, even outside `runIde`):
@@ -324,7 +377,7 @@ tail -f ~/.xtc/logs/lsp-server.log
 ./gradlew :lang:intellij-plugin:clean
 
 # Nuke everything including the downloaded IDE (re-downloads ~1.5 GB)
-rm -rf ~/.gradle/caches/modules-2/files-2.1/idea/ideaIC/2026.1
+rm -rf lang/.intellijPlatform/ides/IU-2026.2.3
 rm -rf lang/.intellijPlatform/localPlatformArtifacts
 ```
 

@@ -8,6 +8,14 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**IntelliJ client/playbook hardening (2026-09-25, uncommitted).**
+The client now delegates compiler configuration to LSP4IJ while retaining Ecstasy formatting
+settings. The IntelliJ target is 2026.2.3 (build 262+) with LSP4IJ 0.21.0; the free Community
+feature set is required. An opt-in Starter/Driver suite exercises real editor diagnostics,
+completion, navigation and source graph changes. Eight editor cases and 24 plugin tests pass,
+with Ultimate unloaded throughout. It adds no compiler or AST modifications.
+See [I8/L27 and the validation scope](errs-integration-plan.md#intellij-compiler-playbook-and-client-configuration).
+
 **Typed argument-prefix completion (2026-09-25, `dc3218d81`).**
 Direct final argument prefixes, including named values, now use the compiler's argument fitter.
 The editor replaces the exact original token, preserving labels and delimiters. Overload alternatives,
