@@ -43,7 +43,7 @@ class FrozenImageAudit {
         var errors = new ErrorList(100);
         var module = compiler.compile(Files.readString(Path.of(args[1])), repository, errors);
         if (module == null || errors.hasSeriousErrors()) {
-            throw new IllegalStateException("Compilation failed: " + errors);
+            throw new IllegalStateException("Compilation failed: " + errors.getErrors());
         }
 
         // Reload the compiled artifact so runtime native preparation sees the same input as the

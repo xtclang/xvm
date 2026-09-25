@@ -84,7 +84,13 @@ public class Call_0T
                 throw new IllegalStateException();
             }
 
-            checkReturnTupleRegister(frame, chain.getSuper(frame));
+            MethodStructure method = chain.getSuper(frame);
+            checkReturnTupleRegister(frame, method);
+
+            if (method.getReturnCount() != 1) {
+                // The scalar path below wraps one result; it would discard additional results.
+                return chain.callSuperN1(frame, Utils.OBJECTS_NONE, m_nRetValue, true);
+            }
 
             switch (chain.callSuper01(frame, A_STACK)) {
             case R_NEXT:

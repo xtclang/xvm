@@ -19,9 +19,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.xvm.api.EmbeddingSupport;
 
 import org.xvm.asm.ClassStructure;
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.FileStructure;
@@ -70,9 +72,19 @@ class ConstantPoolOwnershipTest {
     private static final EmbeddingSupport COMPILER = EmbeddingSupport.instance().configure(repository(), null);
 
     @ParameterizedTest
-    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x"})
+    @ValueSource(strings = {"Singletons.x", "SingletonPaths.x", "RuntimeDescriptors.x", "RuntimeConstruction.x"})
     @Timeout(60)
     void ownershipProgramsRunInIndependentApplications(String source) throws Exception {
+        runOwnershipProgram(source, false);
+    }
+
+    @Test
+    @Timeout(60)
+    void coldEntryAndGenericConstructionRunOverFrozenDefinitions() throws Exception {
+        runOwnershipProgram("RuntimeDescriptors.x", true);
+    }
+
+    private void runOwnershipProgram(String source, boolean freeze) throws Exception {
         var repository = repository();
         var runtime = new Runtime();
         try (var input = getClass().getResourceAsStream("/ownership/" + source)) {
@@ -96,12 +108,23 @@ class ConstantPoolOwnershipTest {
                 var file = root.createFileStructure(new FileStructure(module.getFileStructure()).getModule());
                 assertNull(file.linkModules(runtimeRepository, true));
                 var application = new MainContainer(runtime, root, file.getModuleId());
-                if (source.equals("RuntimeDescriptors.x")) {
+                if (!freeze && source.equals("RuntimeDescriptors.x")) {
                     verifyLateInitializer(application);
                     verifyRelationCache(application);
                 }
+                var constants = file.getConstantPool().getConstants();
+                var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
+                if (freeze) {
+                    // Freeze before entry/type queries, not after warming metadata. The second
+                    // execution uses another prepared image while retaining the native root.
+                    application.getTypeContext().freezeDefinitions();
+                }
                 application.start(Map.of());
                 application.invokeAsync("run").join();
+                if (freeze) {
+                    assertArrayEquals(constants, file.getConstantPool().getConstants());
+                    assertEquals(positions, Arrays.stream(constants).map(Constant::getPosition).toList());
+                }
             }
         } finally {
             runtime.shutdownXVM();
@@ -147,8 +170,8 @@ class ConstantPoolOwnershipTest {
         var box = ((ClassStructure) application.getModule().getComponent().getChild("Box"))
                 .getIdentityConstant().getType();
         var composition = application.resolveClass(pool.ensureParameterizedTypeConstant(box, pool.typeInt64()));
-        // Composition and metadata preparation are still image-backed. The new boundary starts
-        // at descriptor construction and executable generation, not at all metadata queries yet.
+        // Composition metadata and generated initializers belong to the execution context.
+        // Keep a separate cold/frozen execution test so this setup cannot hide image writes.
         var constants = pool.getConstants();
         var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
         var context = application.getTypeContext();
@@ -182,6 +205,71 @@ class ConstantPoolOwnershipTest {
         var arrayComposition = application.resolveClass(arrayType);
         assertSame(context.getDescriptorPool(), arrayComposition.getType().getConstantPool());
         assertSame(context.getDescriptorPool(), arrayComposition.getConstantPool());
+    }
+
+    @Test
+    void coldPropertyAnnotationsUseIndependentContextsOverAFrozenImage() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("ColdAnnotations").getModule());
+            var image = file.getConstantPool();
+            var declaration = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Holder", null);
+            var property = declaration.createProperty(false, Access.PUBLIC, Access.PUBLIC,
+                    image.typeString(), "value");
+            property.addAnnotation(image.clzRO());
+            property.addAnnotation(image.clzLazy());
+            var first = new MainContainer(runtime, root, file.getModuleId()).getTypeContext();
+            var second = new MainContainer(runtime, root, file.getModuleId()).getTypeContext();
+            var constants = image.getConstants();
+            var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
+            first.freezeDefinitions();
+
+            var firstAnnotations = property.getAnnotationGroups(first.getDescriptorPool());
+            var secondAnnotations = property.getAnnotationGroups(second.getDescriptorPool());
+            assertEquals(1, firstAnnotations.property().size());
+            assertEquals(1, firstAnnotations.reference().size());
+            assertEquals(firstAnnotations, secondAnnotations);
+            assertNotSame(firstAnnotations.reference().getFirst(), secondAnnotations.reference().getFirst());
+            for (var annotations : List.of(firstAnnotations.property(), firstAnnotations.reference())) {
+                assertSame(first.getDescriptorPool(), annotations.getFirst().getConstantPool());
+                assertThrows(UnsupportedOperationException.class, annotations::clear);
+            }
+            assertSame(second.getDescriptorPool(), secondAnnotations.reference().getFirst().getConstantPool());
+            assertEquals(firstAnnotations, property.getAnnotationGroups(first.getDescriptorPool()));
+            assertArrayEquals(constants, image.getConstants());
+            assertEquals(positions, Arrays.stream(image.getConstants()).map(Constant::getPosition).toList());
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
+    @Test
+    void nativeParameterizedConstructionDoesNotRegisterInTheFrozenImage() {
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository());
+            var file = root.createFileStructure(new FileStructure("NativeConstruction").getModule());
+            var application = new MainContainer(runtime, root, file.getModuleId());
+            var image = file.getConstantPool();
+            var context = application.getTypeContext();
+            var pool = context.getDescriptorPool();
+            var constants = image.getConstants();
+            var positions = Arrays.stream(constants).map(Constant::getPosition).toList();
+            context.freezeDefinitions();
+
+            for (var type : List.of(pool.typeRef(), pool.typeArray())) {
+                var template = application.getTemplate(type);
+                var composition = template.ensureParameterizedClass(application, pool.typeString());
+                assertSame(pool, composition.getType().getConstantPool());
+                assertSame(application, composition.getContainer());
+                assertSame(composition, template.ensureParameterizedClass(application, pool.typeString()));
+            }
+            assertArrayEquals(constants, image.getConstants());
+            assertEquals(positions, Arrays.stream(image.getConstants()).map(Constant::getPosition).toList());
+        } finally {
+            runtime.shutdownXVM();
+        }
     }
 
     @Test

@@ -409,6 +409,20 @@ public abstract class IdentityConstant
             return IdentityConstant.this;
         }
 
+        /**
+         * Materialize this query's resolved signature before transporting it to another runtime
+         * owner. The result keeps the declaring namespace but no longer depends on a captured
+         * generic resolver. Resolution occurs in the destination supplied when the query was made.
+         *
+         * @return the identity with its query-specific signature resolved
+         */
+        public IdentityConstant getResolvedIdentity() {
+            return m_resolver != null && IdentityConstant.this instanceof MethodConstant method
+                    ? destination.ensureMethodConstant(method.getParentConstant(),
+                            (SignatureConstant) resolve(method.getSignature()))
+                    : IdentityConstant.this;
+        }
+
         @Override
         public String toString() {
             // for member "m" of class "c", the string is "m"
@@ -686,9 +700,21 @@ public abstract class IdentityConstant
      * @return a formal type for the class represented by this constant
      */
     public TypeConstant getFormalType() {
+        return getFormalType(getConstantPool());
+    }
+
+    /**
+     * Describe this class's formal type in an explicit query context. Use a runtime descriptor
+     * destination when resolving a compiled method operand; the declaration may be read-only.
+     *
+     * @param pool  the destination for the formal type and its generic parameters
+     *
+     * @return the formal type owned by the destination
+     */
+    public TypeConstant getFormalType(ConstantPool pool) {
         Component component = getComponent();
         if (component instanceof ClassStructure struct) {
-            return struct.getFormalType();
+            return struct.getFormalType(pool);
         }
         throw new IllegalStateException("not a class type: " + this);
     }

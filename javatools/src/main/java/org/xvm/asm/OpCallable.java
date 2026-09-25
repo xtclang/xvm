@@ -201,7 +201,7 @@ public abstract class OpCallable extends Op {
      */
     protected MethodStructure getChildConstructor(Frame frame, ObjectHandle hParent) {
         // suffix "C" indicates the compile-time constants; "R" - the run-time
-        IdentityConstant idParentR   = hParent.getTemplate().getClassConstant();
+        IdentityConstant idParentR   = frame.runtimeConstant(hParent.getTemplate().getClassConstant());
         ServiceContext   context     = frame.f_context;
         MethodStructure  constructor = (MethodStructure) context.getOpInfo(this, Category.Constructor);
         if (constructor != null) {
@@ -231,7 +231,7 @@ public abstract class OpCallable extends Op {
                 if (clzChild == null) {
                     return null;
                 }
-                TypeInfo infoTarget = clzChild.getFormalType().
+                TypeInfo infoTarget = clzChild.getFormalType(frame.poolContext()).
                         ensureAccess(Access.PROTECTED).ensureTypeInfo();
                 MethodInfo infoConstr = infoTarget.getMethodBySignature(
                         constructor.getIdentityConstant().getSignature(), true);
@@ -339,13 +339,13 @@ public abstract class OpCallable extends Op {
 
         ConstantPool        pool       = frame.poolContext();
         GenericTypeResolver resolver   = frame.getGenericsResolver(false);
-        MethodConstant      idCtor     = frame.getConstant(m_nFunctionId, MethodConstant.class);
+        MethodConstant      idCtor     = frame.runtimeConstant(frame.getConstant(m_nFunctionId, MethodConstant.class));
         IdentityConstant    idTarget   = idCtor.getNamespace();
-        TypeConstant        typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
+        TypeConstant        typeTarget = idTarget.getFormalType(pool).resolveGenerics(pool, resolver);
 
         Virtual:
         if (typeTarget.isVirtualChild()) {
-            TypeConstant typeThis = frame.getThis().getType();
+            TypeConstant typeThis = frame.runtimeTypeOf(frame.getThis());
             if (!typeThis.isVirtualChild()) {
                 frame.raiseException("Not a virtual child: \"" + typeTarget.getValueString() + '"');
                 return null;
@@ -396,7 +396,7 @@ public abstract class OpCallable extends Op {
      */
     protected MethodStructure getMethodStructure(Frame frame) {
         ServiceContext   context    = frame.f_context;
-        MethodConstant   idFunction = frame.getConstant(m_nFunctionId, MethodConstant.class);
+        MethodConstant   idFunction = frame.runtimeConstant(frame.getConstant(m_nFunctionId, MethodConstant.class));
         MethodStructure  function   = (MethodStructure) context.getOpInfo(this, Category.Function);
         IdentityConstant idTarget   = idFunction.getNamespace();
 
@@ -408,7 +408,7 @@ public abstract class OpCallable extends Op {
                 ConstantPool        pool     = frame.poolContext();
                 GenericTypeResolver resolver = frame.getGenericsResolver(false);
 
-                TypeConstant typeTarget = idTarget.getFormalType().resolveGenerics(pool, resolver);
+                TypeConstant typeTarget = idTarget.getFormalType(pool).resolveGenerics(pool, resolver);
 
                 function = (MethodStructure) idFunction.getComponent();
                 if (function == null) {
@@ -510,7 +510,7 @@ public abstract class OpCallable extends Op {
             typeTarget = structChild.isInnerChild()
                     ? pool.ensureInnerChildTypeConstant(typeParent,
                         (ClassConstant) structChild.getIdentityConstant())
-                    : structChild.getCanonicalType();
+                    : structChild.getCanonicalType(pool);
         } else {
             typeTarget = typeChild;
         }
@@ -536,13 +536,14 @@ public abstract class OpCallable extends Op {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue)) {
-            int nMethodId = m_nFunctionId;
-            if (nMethodId == Op.A_SUPER) {
-                // the position should refer to the frame's context pool
-                nMethodId = frame.poolContext().getConstant(
-                                method.getIdentityConstant()).getPosition();
+            if (m_nFunctionId == Op.A_SUPER) {
+                // A descriptor has no compiled constant index. Resolve the selected super
+                // method's signature directly, just as for a multi-return super call.
+                frame.introduceResolvedVar(m_nRetValue,
+                        frame.resolveType(method.getReturn(0).getType()));
+            } else {
+                frame.introduceMethodReturnVar(m_nRetValue, m_nFunctionId, 0);
             }
-            frame.introduceMethodReturnVar(m_nRetValue, nMethodId, 0);
         }
     }
 
@@ -553,12 +554,13 @@ public abstract class OpCallable extends Op {
         assert !isMultiReturn();
 
         if (frame.isNextRegister(m_nRetValue)) {
-            int nMethodId = m_nFunctionId;
-            if (nMethodId == Op.A_SUPER) {
-                nMethodId = frame.poolContext().getConstant(
-                                method.getIdentityConstant()).getPosition();
+            if (m_nFunctionId == Op.A_SUPER) {
+                TypeConstant typeTuple = frame.poolContext().ensureTupleType(
+                        method.getIdentityConstant().getSignature().getRawReturns());
+                frame.introduceResolvedVar(m_nRetValue, frame.resolveType(typeTuple));
+            } else {
+                frame.introduceMethodReturnVar(m_nRetValue, m_nFunctionId, -1);
             }
-            frame.introduceMethodReturnVar(m_nRetValue, nMethodId, 0);
         }
     }
 

@@ -142,16 +142,17 @@ public class AnnotatedTypeConstant
         }
 
         ClassStructure anno = (ClassStructure) getAnnotationClass().getComponent();
+        ConstantPool pool = getConstantPool();
         if (!anno.isParameterizedDeep()) {
-            return anno.getCanonicalType();
+            return anno.getCanonicalType(pool);
         }
 
         // here we assume that the type parameters for the annotations are structurally and
         // semantically congruent with the type parameters for the class the annotation is mixing
         // into (regardless of the parameter name)
 
-        TypeConstant typeFormal = anno.getFormalType();
-        TypeConstant typeInto   = anno.getTypeInto();
+        TypeConstant typeFormal = anno.getFormalType(pool);
+        TypeConstant typeInto   = anno.getTypeInto(pool);
         TypeConstant typeActual = m_constType;
 
         Map<String, TypeConstant> mapResolve = new HashMap<>();

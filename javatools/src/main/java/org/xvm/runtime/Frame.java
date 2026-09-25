@@ -869,7 +869,7 @@ public class Frame
      * @param infoTo      the destination register
      */
     private void checkType(ObjectHandle hValueFrom, VarInfo infoTo) {
-        TypeConstant typeFrom = hValueFrom.getUnsafeType();
+        TypeConstant typeFrom = runtimeUnsafeTypeOf(hValueFrom);
         TypeConstant typeTo   = infoTo.getType();
         // Positions belong to an image, and runtime descriptors have no image position at all.
         // Only canonical object identity can bypass the relation check.
@@ -887,7 +887,7 @@ public class Frame
                 // fall through
             default:
                 // check the revealed type as the last resource
-                typeFrom = hValueFrom.revealOrigin().getType();
+                typeFrom = runtimeTypeOf(hValueFrom.revealOrigin());
                 switch (typeFrom.calculateRelation(typeTo)) {
                 case IS_A:
                     break;
@@ -1379,6 +1379,28 @@ public class Frame
     }
 
     /**
+     * Describe a compiled operand in this service's descriptor context. The executing body may
+     * belong to a shared receiver or sharing ancestor; its local table remains the source for
+     * decoding indices. A shared receiver may come from a child container, so its explicit value
+     * owner takes precedence over an ancestor search. Call before deriving metadata or types.
+     *
+     * @param constant  the operand from this method or its runtime metadata
+     * @param <T>       the operand's constant type
+     * @return the operand in this service's descriptor context
+     * @throws IllegalArgumentException if the operand has no permitted source owner
+     */
+    public <T extends Constant> T runtimeConstant(T constant) {
+        Container execution = f_context.getContainer();
+        if (!execution.getTypeContext().owns(constant.getConstantPool()) && f_hThis != null) {
+            Container source = f_hThis.getComposition().getContainer();
+            if (source.getTypeContext().owns(constant.getConstantPool())) {
+                return execution.importSharedConstant(constant, source);
+            }
+        }
+        return execution.resolveRuntimeConstant(constant);
+    }
+
+    /**
      * @return a String value of the specified StringConstant
      */
     public String getString(int iArg) {
@@ -1483,8 +1505,18 @@ public class Frame
         return resolveType((TypeConstant) getConstant(iArg)); // must exist
     }
 
+    /**
+     * Resolve a compiled operand or local descriptor for this frame. Adopt the operand before
+     * resolving formals or narrowing: an unchanged substitution must still leave the result in
+     * the runtime descriptor pool. Shared values from another container must first be described
+     * through {@link #runtimeTypeOf}, which validates their explicit value owner.
+     *
+     * @param type  a type from this execution's definitions or descriptor context
+     * @return the resolved runtime descriptor
+     */
     public TypeConstant resolveType(TypeConstant type) {
         ConstantPool pool = poolContext();
+        type = runtimeConstant(type);
         if (type.containsFormalType(true)) {
             type = type.resolveGenerics(pool, getGenericsResolver(type.containsDynamicType()));
 
@@ -1495,7 +1527,7 @@ public class Frame
         }
 
         if (f_hThis != null && type.containsAutoNarrowing(true)) {
-            type = type.resolveAutoNarrowing(pool, false, f_hThis.getType(), null);
+            type = type.resolveAutoNarrowing(pool, false, runtimeTypeOf(f_hThis), null);
         }
 
         return type;
@@ -1945,6 +1977,20 @@ public class Frame
                 : f_context.getContainer().importSharedType(type, value.getComposition().getContainer());
     }
 
+    /**
+     * Obtain the type used by an interpreter type test. Ordinary shared values are described in
+     * this frame's context. A proxy or foreign type handle can deliberately expose a different,
+     * unsafe type; preserve that representation instead of assigning it the composition's owner.
+     * Foreign value ownership remains a separate boundary from ordinary shared-value transport.
+     *
+     * @param value  the value being tested
+     * @return a local descriptor for an ordinary shared value, or its distinct unsafe representation
+     */
+    public TypeConstant runtimeUnsafeTypeOf(ObjectHandle value) {
+        TypeConstant type = value.getUnsafeType();
+        return type == value.getType() ? runtimeTypeOf(value) : type;
+    }
+
     @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
         Frame frame = this;
@@ -2366,7 +2412,7 @@ public class Frame
 
         @Override
         public int handleException(Frame frame, ExceptionHandle hException, int iGuard) {
-            TypeConstant typeException = hException.getType();
+            TypeConstant typeException = frame.runtimeTypeOf(hException);
 
             for (int iCatch = 0, c = f_anClassConstId.length; iCatch < c; iCatch++) {
                 TypeConstant typeCatch = frame.resolveType(f_anClassConstId[iCatch]);
@@ -2503,6 +2549,7 @@ public class Frame
                     type = m_resolver.resolve(Frame.this, m_nTargetId, auxiliaryId);
                     fDynamic = type.containsDynamicType();
                 } else {
+                    type = runtimeConstant(type);
                     fDynamic = type.containsDynamicType();
                     type = type.resolveGenerics(poolContext(), getGenericsResolver(fDynamic));
                 }

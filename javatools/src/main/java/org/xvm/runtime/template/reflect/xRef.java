@@ -468,7 +468,7 @@ public class xRef
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     protected int invokeGetReferent(Frame frame, RefHandle hRef, int iReturn) {
-        CallChain chain = hRef.getComposition().getMethodCallChain(s_sigGet);
+        CallChain chain = hRef.getComposition().getMethodCallChain(f_container, s_sigGet);
         return chain.isExplicit()
             ? chain.invoke(frame, hRef, iReturn)
             : getReferentImpl(frame, hRef, true, iReturn);

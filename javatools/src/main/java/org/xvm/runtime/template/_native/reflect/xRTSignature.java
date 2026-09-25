@@ -339,7 +339,7 @@ public class xRTSignature
             super(clz);
 
             f_idMethod = chain.getMethod(nDepth).getIdentityConstant();
-            f_type     = f_idMethod.getSignature().asFunctionType();
+            f_type     = clz.getContainer().resolveRuntimeConstant(f_idMethod.getSignature()).asFunctionType();
             f_method   = null;
             f_chain    = chain;
             f_nDepth   = nDepth;

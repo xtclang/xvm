@@ -52,6 +52,7 @@ public class xEnum
             RANGE_TEMPLATE = f_container.getTemplate("Range");
             RANGE_CTOR     = RANGE_TEMPLATE.getStructure().findMethod("construct", 4);
         } else if (getStructure().getFormat() == Format.ENUM) {
+            ConstantPool pool = f_container.getTypeContext().getDescriptorPool();
             Collection<? extends Component> listAll = getStructure().children();
             List<String>     listNames   = new ArrayList<>(listAll.size());
             List<EnumHandle> listHandles = new ArrayList<>(listAll.size());
@@ -59,7 +60,7 @@ public class xEnum
             int iOrdinal = 0;
             for (Component child : listAll) {
                 if (child.getFormat() == Format.ENUMVALUE) {
-                    TypeConstant type   = ((ClassStructure) child).getCanonicalType();
+                    TypeConstant type   = ((ClassStructure) child).getCanonicalType(pool);
                     EnumHandle   hValue = makeEnumHandle(ensureClass(f_container, type, type), iOrdinal++);
 
                     listNames.add(child.getName());
@@ -68,7 +69,7 @@ public class xEnum
                     // native enums don't require any initialization
                     if (!hValue.isStruct()) {
                         f_container.ensureSingletonState(
-                                pool().ensureSingletonConstConstant(child.getIdentityConstant())).setHandle(hValue);
+                                pool.ensureSingletonConstConstant(child.getIdentityConstant())).setHandle(hValue);
                     }
                 }
             }

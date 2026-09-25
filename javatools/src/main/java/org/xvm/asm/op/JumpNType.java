@@ -70,7 +70,7 @@ public class JumpNType
             }
         }
 
-        return hValue.getUnsafeType().isA(typeTest)
+        return frame.runtimeUnsafeTypeOf(hValue).isA(typeTest)
                 ? iPC + 1
                 : jump(frame, iPC + m_ofJmp, m_cExits);
     }

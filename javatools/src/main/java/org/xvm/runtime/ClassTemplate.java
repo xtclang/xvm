@@ -26,6 +26,7 @@ import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
+import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RegisterConstant;
@@ -159,7 +160,7 @@ public abstract class ClassTemplate
      * Obtain the canonical type that is represented by this {@link ClassTemplate}
      */
     public TypeConstant getCanonicalType() {
-        return f_struct.getCanonicalType();
+        return f_struct.getCanonicalType(f_container.getTypeContext().getDescriptorPool());
     }
 
     /**
@@ -180,6 +181,37 @@ public abstract class ClassTemplate
      */
     protected IdentityConstant getInceptionClassConstant() {
         return getClassConstant();
+    }
+
+    /**
+     * Bind a selected template's declaration to the receiving container's prepared image. The
+     * template supplies native implementation identity, not authority to modify that image.
+     * Call only after template selection for this container has established the binding.
+     *
+     * <p>Validate the source generation before looking up the receiving declaration. Native
+     * rebase identities are runtime descriptors: bind their declared interface, then construct
+     * the native wrapper outside the image. No missing declaration is synthesized here.
+     *
+     * @param container  the destination of the composition being constructed
+     * @param identity   this template's declared or native inception identity
+     *
+     * @return the corresponding identity in the container's descriptor context
+     */
+    protected IdentityConstant resolveClassIdentity(Container container, IdentityConstant identity) {
+        var source = f_container.getTypeContext().getDescriptorPool();
+        source.register(identity);
+        var declaration = identity instanceof NativeRebaseConstant nativeClass
+                ? nativeClass.getClassConstant()
+                : identity;
+        var prepared = (IdentityConstant) container.getConstantPool().getConstant(declaration);
+        if (prepared == null || !(prepared.getComponent() instanceof ClassStructure)) {
+            throw new IllegalArgumentException("Missing prepared template declaration: " + declaration);
+        }
+        var pool = container.getTypeContext().getDescriptorPool();
+        IdentityConstant local = pool.register(prepared);
+        return identity instanceof NativeRebaseConstant
+                ? pool.register(new NativeRebaseConstant((ClassConstant) local))
+                : local;
     }
 
     /**
@@ -221,8 +253,28 @@ public abstract class ClassTemplate
      * @param container  the pool to place the ClassComposition at
      */
     public ClassComposition getCanonicalClass(Container container) {
-        TypeConstant typeCanonical = getCanonicalType();
+        // Preserve native overrides such as @Future Var<Object>, while making the composition
+        // and any derived inception type belong to the requesting execution context.
+        TypeConstant typeCanonical = bindType(container, getCanonicalType());
         return (ClassComposition) ensureClass(container, computeInceptionType(container, typeCanonical), typeCanonical);
+    }
+
+    /**
+     * Resolve a composition operand after this template has been selected. Local operands use
+     * strict interning; a native template's own defaults use the explicit prepared native binding.
+     * Other template owners require ordinary module sharing.
+     *
+     * @param container  the destination of the composition
+     * @param type       a local type or a default supplied by this selected template
+     * @return the type in the composition's descriptor context
+     */
+    private TypeConstant bindType(Container container, TypeConstant type) {
+        if (container.getTypeContext().owns(type.getConstantPool())) {
+            return container.getTypeContext().intern(type);
+        }
+        return f_container instanceof NativeContainer
+                ? container.bindNativeType(type)
+                : container.importSharedType(type, f_container);
     }
 
     /**
@@ -236,8 +288,8 @@ public abstract class ClassTemplate
         // Native templates are selected explicitly from the runtime root. Bind their declaration
         // to the prepared application before deriving parameterizations; never import a native
         // root's canonical defaults into another descriptor context by structural equality.
-        IdentityConstant inception = pool.register(container.getConstantPool().register(getInceptionClassConstant()));
-        IdentityConstant declaration = pool.register(container.getConstantPool().register(getClassConstant()));
+        IdentityConstant inception = resolveClassIdentity(container, getInceptionClassConstant());
+        IdentityConstant declaration = resolveClassIdentity(container, getClassConstant());
         TypeConstant typeInception = pool.ensureParameterizedTypeConstant(
             inception.getType(), atypeParams).normalizeParameters();
 
@@ -254,6 +306,7 @@ public abstract class ClassTemplate
      *       (all formal parameters resolved)
      */
     public TypeComposition ensureClass(Container container, TypeConstant typeActual) {
+        typeActual = container.getTypeContext().intern(typeActual);
         return ensureClass(container, computeInceptionType(container, typeActual), typeActual);
     }
 
@@ -262,12 +315,10 @@ public abstract class ClassTemplate
      */
     private TypeConstant computeInceptionType(Container container, TypeConstant typeActual) {
         IdentityConstant identity = getInceptionClassConstant();
-        ConstantPool pool = typeActual.getConstantPool();
         // The selected template supplies a native binding, possibly from the root container.
         // Resolve that declaration in this container's prepared image, then import it into the
         // descriptor context. Never register the derived parameterization back into the image.
-        IdentityConstant constInception = pool.hasSerializedIndices() ? identity
-                : pool.register(container.getConstantPool().register(identity));
+        IdentityConstant constInception = resolveClassIdentity(container, identity);
         if (typeActual.getDefiningConstant().equals(constInception)) {
             return typeActual.isAccessSpecified()
                     ? typeActual.getUnderlyingType()
@@ -296,6 +347,8 @@ public abstract class ClassTemplate
      */
     public TypeComposition ensureClass(Container container,
                                        TypeConstant typeInception, TypeConstant typeMask) {
+        typeInception = bindType(container, typeInception);
+        typeMask      = bindType(container, typeMask);
         ClassComposition clz = container.ensureClassComposition(typeInception, this);
 
         assert typeMask.normalizeParameters().equals(typeMask);
@@ -723,7 +776,7 @@ public abstract class ClassTemplate
         assert idProp != null;
 
         TypeComposition clzTarget = hTarget.getComposition();
-        CallChain       chain     = clzTarget.getPropertyGetterChain(idProp);
+        CallChain       chain     = clzTarget.getPropertyGetterChain(frame.f_context.getContainer(), idProp);
 
         UnknownProperty:
         if (chain == null) {
@@ -732,7 +785,7 @@ public abstract class ClassTemplate
                     // this is likely a property access from a dynamically created Ref for a
                     // non-inflated property; ask the parent instead
                     clzTarget = clzProp.getParentComposition();
-                    chain     = clzTarget.getPropertyGetterChain(idProp);
+                    chain     = clzTarget.getPropertyGetterChain(frame.f_context.getContainer(), idProp);
                     if (chain != null) {
                         hTarget = hRef.getReferentHolder();
                         break UnknownProperty;
@@ -1006,7 +1059,7 @@ public abstract class ClassTemplate
         }
 
         TypeComposition clzTarget = hTarget.getComposition();
-        CallChain       chain     = clzTarget.getPropertySetterChain(idProp);
+        CallChain       chain     = clzTarget.getPropertySetterChain(frame.f_context.getContainer(), idProp);
 
         UnknownProperty:
         if (chain == null) {
@@ -1015,7 +1068,7 @@ public abstract class ClassTemplate
                 // this is likely a property setter for a non-inflated property; ask the parent
                 // instead
                 clzTarget = clzProp.getParentComposition();
-                chain     = clzTarget.getPropertySetterChain(idProp);
+                chain     = clzTarget.getPropertySetterChain(frame.f_context.getContainer(), idProp);
                 if (chain != null) {
                     hTarget = hRef.getReferentHolder();
                     break UnknownProperty;
@@ -1074,10 +1127,7 @@ public abstract class ClassTemplate
         }
 
         if (!(hValue instanceof InitializingHandle)) {
-            TypeConstant typeValue = hValue.getUnsafeType();
-            if (typeValue == hValue.getType()) {
-                typeValue = frame.runtimeTypeOf(hValue);
-            }
+            TypeConstant typeValue = frame.runtimeUnsafeTypeOf(hValue);
             if (!typeValue.isA(field.getType())) {
                 return frame.raiseException(xException.typeMismatch(frame, typeValue, field.getType()));
             }
@@ -1481,7 +1531,7 @@ public abstract class ClassTemplate
         }
 
         if (!hThis.containsField(idProp) &&
-                clzThis.getPropertyGetterChain(idProp) == null) {
+                clzThis.getPropertyGetterChain(frame.f_context.getContainer(), idProp) == null) {
             return frame.raiseException(
                 xException.unknownProperty(frame, idProp.getName(), hThis.getType()));
         }
@@ -1504,7 +1554,7 @@ public abstract class ClassTemplate
 
         if (infoProp.isConstant() && infoProp.isLazy()) {
             SingletonConstant constLazy =
-                    idProp.getConstantPool().ensureSingletonConstConstant(idProp);
+                    frame.poolContext().ensureSingletonConstConstant(frame.runtimeConstant(idProp));
             // we need to avoid to kick the computation logic; they only asked for a ref
             ObjectHandle hLazy = frame.f_context.f_container.ensureSingletonState(constLazy).getHandle();
             assert hLazy != null; // it must be there - assigned or not

@@ -190,6 +190,26 @@ public class PropertyStructure
     }
 
     /**
+     * Check a property annotation using the destination of the metadata query.
+     *
+     * @param pool    the destination for annotation classification
+     * @param idAnno  the annotation to find
+     *
+     * @return true if the annotation is present
+     */
+    public boolean containsPropertyAnnotation(ConstantPool pool, IdentityConstant idAnno) {
+        if (pool == getConstantPool()) {
+            return containsPropertyAnnotation(idAnno);
+        }
+        for (Annotation anno : getAnnotationGroups(pool).property()) {
+            if (anno.getAnnotationClass().equals(idAnno)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return an array of all annotations that are <i>"{@code into Property}"</i> annotations
      */
     public Annotation[] getPropertyAnnotations() {
@@ -287,6 +307,26 @@ public class PropertyStructure
     }
 
     /**
+     * Check a reference annotation using the destination of the metadata query.
+     *
+     * @param pool    the destination for annotation classification
+     * @param idAnno  the annotation to find
+     *
+     * @return true if the annotation is present
+     */
+    public boolean containsRefAnnotation(ConstantPool pool, IdentityConstant idAnno) {
+        if (pool == getConstantPool()) {
+            return containsRefAnnotation(idAnno);
+        }
+        for (Annotation anno : getAnnotationGroups(pool).reference()) {
+            if (anno.getAnnotationClass().equals(idAnno)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * @return an array of all annotations that are <i>not</i> property annotations
      */
     public Annotation[] getRefAnnotations() {
@@ -300,37 +340,66 @@ public class PropertyStructure
     }
 
     private void buildAnnotationArrays() {
-        ConstantPool     pool         = getConstantPool();
-        List<Annotation> listPropAnno = null;
-        List<Annotation> listRefAnno  = null;
+        var annotations = classifyAnnotations(getConstantPool());
+        m_aPropAnno = annotations.property().toArray(Annotation.NO_ANNOTATIONS);
+        m_aRefAnno  = annotations.reference().toArray(Annotation.NO_ANNOTATIONS);
+    }
+
+    /**
+     * Classify this property's annotations in the query's destination. Runtime metadata must
+     * supply its descriptor pool: classification can derive types and calculate relations even
+     * when it only appears to inspect a declaration.
+     *
+     * <p>Queries in the declaration's own pool retain the compiler's cached classification.
+     * A different destination receives adopted annotations without populating those caches or
+     * modifying the definition pool. The result lists are immutable.
+     *
+     * @param pool  the owner of the metadata being constructed
+     *
+     * @return the annotations grouped by their application to the property or its reference
+     */
+    public AnnotationGroups getAnnotationGroups(ConstantPool pool) {
+        return pool == getConstantPool()
+                ? new AnnotationGroups(List.of(getPropertyAnnotations()), List.of(getRefAnnotations()))
+                : classifyAnnotations(pool);
+    }
+
+    private AnnotationGroups classifyAnnotations(ConstantPool pool) {
+        var property = new ArrayList<Annotation>();
+        var reference = new ArrayList<Annotation>();
         for (Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Annotation) {
                 Annotation   annotation = contrib.getAnnotation();
+                if (pool != getConstantPool()) {
+                    annotation = pool.register(annotation);
+                }
                 Constant     constAnno  = annotation.getAnnotationClass();
                 TypeConstant typeAnno   = pool.ensureTerminalTypeConstant(constAnno);
                 if (typeAnno.isExplicitClassIdentity(true)
                         && typeAnno.getExplicitClassFormat() == Format.ANNOTATION
                         && pool.typeProperty().equals(
                                 typeAnno.getExplicitClassInto().getIntoPropertyType())) {
-                    if (listPropAnno == null) {
-                        listPropAnno = new ArrayList<>();
-                    }
-                    listPropAnno.add(annotation);
+                    property.add(annotation);
                 } else {
-                    if (listRefAnno == null) {
-                        listRefAnno = new ArrayList<>();
-                    }
-                    listRefAnno.add(annotation);
+                    reference.add(annotation);
                 }
             }
         }
 
-        m_aPropAnno = listPropAnno == null
-                ? Annotation.NO_ANNOTATIONS
-                : listPropAnno.toArray(Annotation.NO_ANNOTATIONS);
-        m_aRefAnno = listRefAnno == null
-                ? Annotation.NO_ANNOTATIONS
-                : listRefAnno.toArray(Annotation.NO_ANNOTATIONS);
+        return new AnnotationGroups(property, reference);
+    }
+
+    /**
+     * Annotation classification in one explicit query context.
+     *
+     * @param property   annotations applied to the property metadata
+     * @param reference  annotations applied to the property's Ref or Var
+     */
+    public record AnnotationGroups(List<Annotation> property, List<Annotation> reference) {
+        public AnnotationGroups {
+            property  = List.copyOf(property);
+            reference = List.copyOf(reference);
+        }
     }
 
     /**

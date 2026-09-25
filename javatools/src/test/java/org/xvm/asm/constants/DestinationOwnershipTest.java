@@ -51,6 +51,10 @@ class DestinationOwnershipTest {
                     .getNestedIdentity();
             assertEquals(nested, equivalent);
             assertEquals(0, nested.compareTo(equivalent));
+            var transported = nested.getResolvedIdentity();
+            assertSame(destination, transported.getConstantPool());
+            assertEquals(equivalent, transported.getNestedIdentity());
+            assertEquals(actual, ((MethodConstant) transported).getRawReturns()[0]);
         }
         assertSame(originalIdentity, actual.getDefiningConstant());
         assertSame(pool, actual.getConstantPool());

@@ -138,8 +138,10 @@ public class ImmutableTypeConstant
     @Override
     public TypeConstant resolveAutoNarrowing(ConstantPool pool, boolean fRetainParams,
                                              TypeConstant typeTarget, IdentityConstant idCtx) {
-        return getUnderlyingType()
-                .resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx).freeze();
+        TypeConstant resolved = getUnderlyingType().resolveAutoNarrowing(pool, fRetainParams, typeTarget, idCtx);
+        // Narrowing can return an unchanged source operand. Freeze in the caller's destination,
+        // rather than asking that operand to create an immutable type in the definition image.
+        return (resolved.getConstantPool() == pool ? resolved : pool.register(resolved)).freeze();
     }
 
     @Override

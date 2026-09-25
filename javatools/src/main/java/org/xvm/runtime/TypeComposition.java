@@ -7,7 +7,9 @@ import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.PropertyConstant;
+import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.GenericHandle;
@@ -162,11 +164,71 @@ public interface TypeComposition {
     CallChain getMethodCallChain(Object nidMethod);
 
     /**
+     * Resolve a caller's method identity against this value's composition. Callers crossing a
+     * container boundary supply their source explicitly so shared signatures can be translated
+     * before the target caches them. Unshared signatures retain the existing foreign lookup path;
+     * they are not adopted into the target's descriptor context.
+     *
+     * @param source     the caller that owns the resolved method identity
+     * @param nidMethod  a signature or nested identity resolved in the caller's context
+     * @return the call chain in this composition
+     */
+    default CallChain getMethodCallChain(Container source, Object nidMethod) {
+        Container target = getContainer();
+        if (source != target) {
+            if (nidMethod instanceof SignatureConstant signature) {
+                if (signature.isShared(target.getConstantPool())) {
+                    nidMethod = target.importSharedConstant(signature, source);
+                }
+            } else {
+                var identity = ((NestedIdentity) nidMethod).getResolvedIdentity();
+                if (identity.isShared(target.getConstantPool())) {
+                    nidMethod = target.importSharedConstant(identity, source).getNestedIdentity();
+                }
+            }
+        }
+        return getMethodCallChain(nidMethod);
+    }
+
+    /**
      * @param idProp  the property id
      *
      * @return a call chain for the specified property's getter
      */
     CallChain getPropertyGetterChain(PropertyConstant idProp);
+
+    /**
+     * Resolve a property read from the caller's compiled operand into the value owner's context.
+     *
+     * @param source  the caller's execution container
+     * @param idProp  the property operand from the caller or this composition's exact definitions
+     * @return the getter chain in this composition
+     */
+    default CallChain getPropertyGetterChain(Container source, PropertyConstant idProp) {
+        return getPropertyGetterChain(propertyInContext(source, idProp));
+    }
+
+    /**
+     * Resolve a property write from the caller's compiled operand into the value owner's context.
+     *
+     * @param source  the caller's execution container
+     * @param idProp  the property operand from the caller or this composition's exact definitions
+     * @return the setter chain in this composition
+     */
+    default CallChain getPropertySetterChain(Container source, PropertyConstant idProp) {
+        return getPropertySetterChain(propertyInContext(source, idProp));
+    }
+
+    private PropertyConstant propertyInContext(Container source, PropertyConstant idProp) {
+        Container target = getContainer();
+        if (target.getTypeContext().owns(idProp.getConstantPool())) {
+            return target.getTypeContext().getDescriptorPool().register(idProp);
+        }
+        idProp = source.resolveRuntimeConstant(idProp);
+        return source == target || !idProp.isShared(target.getConstantPool())
+                ? idProp
+                : target.importSharedConstant(idProp, source);
+    }
 
     /**
      * @param idProp  the property nid (String | NestedIdentity)
@@ -219,9 +281,10 @@ public interface TypeComposition {
     ObjectHandle[] getFieldValueArray(Frame frame, GenericHandle hValue);
 
     /**
-     * @return the ConstantPool for the container this TypeComposition belongs to
+     * @return the descriptor pool for runtime metadata and type construction in this composition;
+     *         compiled operands use the executing method's local constant table instead
      */
     default ConstantPool getConstantPool() {
-        return getContainer().getConstantPool();
+        return getContainer().getTypeContext().getDescriptorPool();
     }
 }

@@ -5,10 +5,11 @@ Status: staged implementation in progress, 2026-09-25. The experimental branch
 the first descriptor/index boundary, including late-generated field initializers, local reflective
 parameterization, a separate type-relation table and an explicit definition-freeze boundary.
 Broader reflection migration, the remaining metadata caches, other generated methods and
-activation with frozen images remain unfinished. The frozen-execution audit currently fails.
-Entry/frame construction and explicit shared-reference transport now pass ordinary ownership
-integration tests. Frozen execution still stops in property-annotation metadata; this is not yet
-a merge-ready activation change. See the staged validation and remaining boundaries below.
+activation with frozen images remain unfinished. Scope 1 now routes ordinary entry, frame and
+construction metadata through runtime descriptors. Cold generic construction and singleton-path
+workloads run with frozen definition graphs. Broader frozen execution reaches late delegation
+synthesis and native method marking, which belong to scope 3. Freezing is still opt-in; this is
+not a merge-ready activation change. See the scope-1 completion boundary and validation below.
 The correctness baseline is `lagergren/constant-pool-ownership-only`, extracted from
 master `601a68e8b` with prerequisite `d8c6c3176`, initial extraction `65e5ce149` and the subsequent
 narrowing that removes the general listener migration.
@@ -811,9 +812,11 @@ path; full frozen activation must not be enabled by default yet.
 
 ### Remaining commits before frozen activation
 
-1. Move ordinary entry lookup, frame/runtime type construction and cold metadata inputs to the
-   descriptor context. Start with `Container.findModuleMethod` and the contribution processing
-   exposed above. Preserve explicit destinations through nested metadata queries.
+1. **Completed for ordinary entry/frame/construction paths.** Entry lookup, frame type resolution,
+   composition construction and cold metadata inputs use the descriptor context, including nested
+   queries and shared receiver/ancestor operands. See the scope-1 completion record below. This
+   does not include the reflective/native adapters, executable synthesis or cache semantics in
+   scopes 2–5, and does not enable freezing by default.
 2. Finish TypeInfo, variance/normalization/member cache separation, including diagnostic replay,
    complete query inputs, recursion and failure/invalidation semantics. The relation table is
    the first completed slice, not this whole stage.
@@ -985,8 +988,8 @@ checks pass. Fresh-process execution of
 `Singletons.x`, `SingletonPaths.x` and `RuntimeDescriptors.x` passes as well; the multi-runtime
 suite was necessary to expose the static ListMap cache.
 
-Scope 1 is still incomplete. The manual frozen audit now gets through singleton composition
-selection and stops in `PropertyStructure.buildAnnotationArrays`: its annotation classification
+At this checkpoint scope 1 was still incomplete. The manual frozen audit got through singleton
+composition selection and stopped in `PropertyStructure.buildAnnotationArrays`: its annotation classification
 derives relation metadata in the declaration pool. Cold annotation queries need an explicit
 destination. Native declaration binding also still uses image registration before descriptor
 adoption and must become a lookup of prepared declarations. These are remaining construction
@@ -996,3 +999,80 @@ The JumpVal adjustment keeps a descriptor-backed handle in its current execution
 it does not make a cached Op safe to share across independent executions of the same method.
 Method/Op state remains scope 4. Other classloader-wide native state and foreign/captured-value
 ownership remain scope 5. Full frozen activation and the other stages remain open.
+
+
+### Scope 1 completion: ordinary runtime destinations
+
+This stage completes the ordinary entry/frame/construction migration. The definition image remains
+an input: it supplies declarations and each compiled method's local constant table. The execution's
+`RuntimeTypeContext` supplies new descriptors, metadata query inputs and composition types. No
+image position is assigned to a descriptor, and a descriptor's `-1` position is never used as a
+compiled call operand. The full separation project remains incomplete.
+
+The changes fall into these reviewable groups:
+
+| Files | Change and reason |
+| --- | --- |
+| `PropertyStructure`, `Annotation`, `ClassStructure` | Property/reference annotations are classified in an explicit query destination. Immutable `AnnotationGroups` carry the result without filling another owner's declaration caches. Inherited/default annotation targets, variance checks, unchanged contributions and substitutable signatures preserve the destination. Same-pool compiler operands and cached compiler queries retain their previous behavior. |
+| `AnnotatedTypeConstant`, `TerminalTypeConstant`, `TypeConstant`, `PropertyBody`, `PropertyInfo` | Carry the descriptor owner through annotation specialization, property metadata and nested queries, instead of falling back to declaration-owned helpers. |
+| `ImmutableTypeConstant`, `SignatureConstant`, `IdentityConstant` | Adopt unchanged narrowing/signature operands before deriving types. Identity formal-type queries accept a destination. A nested method identity can materialize its resolved signature before crossing containers, without transferring its captured resolver. |
+| `RuntimeTypeContext`, `Container` | Exact pool ownership is queryable without interning. Compiled operands may be translated from a sharing ancestor, but equal names or sibling images do not qualify. Template delegation follows the container's module-sharing policy, not structural pool equality. Native template binding separately validates the native root's source and binds the prepared private bridge copy. Literal/template lookup and ordinary class resolution use descriptors. |
+| `ClassTemplate`, `TypeComposition`, `PropertyComposition` | Preserve the requesting composition owner, including native canonical overrides such as `@Future Var<Object>`. Bind existing prepared declarations without image registration. Property compositions and accessor lookup use descriptor destinations. Shared method/property queries explicitly name the caller and target owners. |
+| `Frame`, `ConstHeap`, `IsType`, `IsNType`, `JumpType`, `JumpNType`, `JumpIsA`, `JumpVal_N`, `MoveCast` | Decode indices from the compiled body, then adopt semantic operands before metadata work. A method executing on a shared receiver can use that receiver's exact source, including a child-owned value executing in a parent service. Type tests and exception guards translate ordinary shared value types. Unsafe foreign/proxy representations retain their separate boundary. |
+| `OpCallable`, `OpInvocable`, `CallChain`, `Call_0T` | Constructor lookup, virtual-child types and call signatures use explicit destinations. `super()` return registers resolve the selected method's return types directly; tuple returns use the tuple resolver rather than return slot zero. The zero-argument tuple-super path now retains all return values instead of invoking the scalar path and discarding all but the first. |
+| `Utils`, `xEnum`, `xRTType`, `xRef`, `xVar` | Static property/lazy initialization, cold enum compositions, type literals and native Ref/Var calls preserve the runtime owner. Explicitly selected native signatures are translated before composition lookup. |
+| `xRTFunction`, `xRTSignature`, `xService`, `xContainerLinker`, `xContainerControl` | Finalizer/function compositions and async signatures derive their types outside the image. An async service call's descriptor belongs to its receiver, including child-owned resource providers invoked by the native linker. Resource lookup/close and shared call dispatch translate the signature at the call boundary. Captured function state is not generally redesigned in this stage. |
+
+Most of these paths happened to work while the image was writable: a read-like query could append
+an access, annotation, tuple or generic type to it. Frozen tests turn those hidden writes into
+failures. Other changes repair incompatibilities exposed by the migration: a descriptor has no
+serialized index; shared values may carry another container's descriptors; equal module names
+do not authorize template sharing. The tuple-super truncation is an independent call-path defect
+exposed by the new regression, not a cache-separation requirement. No claim of a master runtime
+reproduction is made for the newly exposed ownership exceptions.
+
+#### Scope-1 validation and limits
+
+- `RuntimeTypeContextTest` freezes before cold inherited/default annotation targets and unchanged
+  immutable narrowing. It checks destination identity and unchanged image constants.
+- `DestinationOwnershipTest` verifies that materializing a nested query preserves its resolved
+  signature and explicit destination under null and unrelated ambient bindings.
+- `SingletonOwnershipTest` resolves compiled and descriptor operands from an exact shared ancestor;
+  rejects a same-name sibling and an unshared ancestor; verifies shared versus private template
+  selection; and checks the frozen child's constant table remains unchanged.
+- XDK `ConstantPoolOwnershipTest` classifies cold property/reference annotations in two independent
+  contexts over one frozen image, and constructs native parameterizations without registering in
+  that image. Its frozen execution test runs `RuntimeDescriptors.x` twice with independently
+  prepared images and the same native root, freezing before entry lookup and verifying constant
+  membership and positions afterwards. It does not prewarm metadata to hide writes.
+- `RuntimeConstruction.x` asserts generic base/super constructors, overridden getters, single and
+  tuple `super()` results, ordinary tuple function results, virtual children and a generic type
+  literal. Like the existing ownership programs, it runs in two independent applications. It has
+  no timing assertions or pass messages. The Java unit tests require no installed XDK; integration
+  tests use the distribution already provisioned by the XDK test task.
+- `FrozenImageAudit.java` now prints every compilation diagnostic on failure. It remains a manual
+  audit with no additional CI task. Its failures are not treated as passing tests.
+
+The remaining boundary is explicit: the full frozen `Singletons.x` workload reaches
+`ClassStructure.ensureMethodDelegation`, which still creates executable declarations in the image.
+`RuntimeConstruction.x` reaches `TypeConstant.createMemberInfo` calling `MethodStructure.markNative`
+for a cold rebased member. Those are scope 3's executable/native declaration preparation work;
+they are not reasons to prewarm the queries, weaken the guard or enable freezing now.
+
+Scope 2 still owns TypeInfo/variance/normalization/member cache semantics and diagnostic replay.
+Scope 4 still owns method initialization, mutable decoded Ops, frame layout and instrumentation.
+Scope 5 still owns broader reflection, captured annotations/functions and native static value/cache
+lifetimes. Its legacy indexed reflective-handle and native composition adapters in
+`Container.ensureTypeHandle` and `ensureClassComposition` remain; ordinary entry/frame construction
+now supplies descriptors to these boundaries. The runtime root's native bootstrap is not frozen
+by the application audit. Scope 6 remains the full activation gate. No image-copy removal,
+JIT changes, Gradle execution-mode changes, benchmark claim or new CI dependency is included.
+
+
+Final verification for scope 1 used `RUN_INTEGRATION_TESTS=true`: the Java suite reports 501 tests,
+465 passed and 36 existing disabled/skipped tests, with no failures or errors. The XDK suite reports
+43 passed with no skips, including all 18 ownership cases. Every new regression executed.
+`spotlessCheck` and `git diff --check` pass. Counts are from JUnit XML. The final source changes after
+that test run were explanatory Javadocs only. Fresh-process frozen audits passed
+`RuntimeDescriptors.x` and `SingletonPaths.x`; the two broader failures above remain explicit,
+manual scope-3 reproduction cases rather than expected-failure automated tests.

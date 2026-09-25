@@ -1502,6 +1502,19 @@ public class ClassStructure
      * @return a TypeConstant of the "into" contribution
      */
     public TypeConstant getTypeInto() {
+        return getTypeInto(getConstantPool());
+    }
+
+    /**
+     * Resolve an annotation or mixin's target in the selected metadata context, including an
+     * inherited target or the default Object target. Runtime queries must use their descriptor
+     * pool so a cold fallback cannot add a type to the definition image.
+     *
+     * @param pool  the destination for the target type
+     *
+     * @return the target owned by the destination; same-pool compiler operands are preserved
+     */
+    public TypeConstant getTypeInto(ConstantPool pool) {
         switch (getFormat()) {
         case ANNOTATION, MIXIN:
             break;
@@ -1511,15 +1524,16 @@ public class ClassStructure
 
         Contribution contribInto = findContribution(Composition.Into);
         if (contribInto != null) {
-            return contribInto.getTypeConstant();
+            TypeConstant type = contribInto.getTypeConstant();
+            return type.getConstantPool() == pool ? type : pool.register(type);
         }
 
         ClassStructure structSuper = getSuper();
         if (structSuper != null) {
-            return structSuper.getTypeInto();
+            return structSuper.getTypeInto(pool);
         }
 
-        return getConstantPool().typeObject();
+        return pool.typeObject();
     }
 
     /**
@@ -2229,6 +2243,9 @@ public class ClassStructure
         for (Contribution contrib : getContributionsAsList()) {
             TypeConstant typeContrib = contrib.getTypeConstant();
             Composition  composition = contrib.getComposition();
+            if (typeContrib.getConstantPool() != pool) {
+                typeContrib = pool.register(typeContrib);
+            }
             switch (composition) {
             case Into:
                 if (!fAllowInto) {
@@ -2424,7 +2441,7 @@ public class ClassStructure
                     return true;
                 }
 
-                if (property.isExplicitReadOnly()) {
+                if (property.containsPropertyAnnotation(pool, pool.clzRO())) {
                     // read-only; skip the setter's check
                     continue;
                 }
@@ -2556,7 +2573,7 @@ public class ClassStructure
                     return true;
                 }
 
-                if (property.isExplicitReadOnly()) {
+                if (property.containsPropertyAnnotation(pool, pool.clzRO())) {
                     // read-only; skip the setter's check
                     continue;
                 }
@@ -2668,7 +2685,8 @@ public class ClassStructure
             if (child instanceof PropertyStructure prop) {
                 if (prop.isGenericTypeParameter()) {
                     if (!typeRight.containsGenericParam(prop.getName())) {
-                        setMiss.add(prop.getIdentityConstant().getSignature());
+                        SignatureConstant signature = prop.getIdentityConstant().getSignature();
+                        setMiss.add(signature.getConstantPool() == pool ? signature : pool.register(signature));
                     }
                 } else {
                     // TODO: should we check the "Var" access?
@@ -2677,6 +2695,9 @@ public class ClassStructure
                     }
 
                     SignatureConstant sig = prop.getIdentityConstant().getSignature();
+                    if (sig.getConstantPool() != pool) {
+                        sig = pool.register(sig);
+                    }
                     if (!listLeft.isEmpty()) {
                         if (resolver == null) {
                             resolver = new SimpleTypeResolver(pool, listLeft);
@@ -2696,6 +2717,9 @@ public class ClassStructure
                     }
 
                     SignatureConstant sig = method.getIdentityConstant().getSignature();
+                    if (sig.getConstantPool() != pool) {
+                        sig = pool.register(sig);
+                    }
 
                     if (method.isVirtualConstructor()) {
                         // a constructor cannot be duck-typed, because even if a base class has it,
@@ -2765,8 +2789,17 @@ public class ClassStructure
     public boolean containsSubstitutableMethod(ConstantPool pool, SignatureConstant signature,
                                                Access access, boolean fFunction,
                                                List<TypeConstant> listParams) {
+        // An unchanged generic substitution may return its original operand. Adopt the query
+        // inputs first so subsequent narrowing and relation checks cannot derive image types.
+        if (signature.getConstantPool() != pool) {
+            signature = pool.register(signature);
+        }
+        IdentityConstant identity = getIdentityConstant();
+        if (identity.getConstantPool() != pool) {
+            identity = pool.register(identity);
+        }
         return containsSubstitutableMethodImpl(pool, signature, access, fFunction,
-                listParams, getIdentityConstant(), true);
+                listParams, identity, true);
     }
 
     protected boolean containsSubstitutableMethodImpl(ConstantPool pool, SignatureConstant signature,
@@ -2793,6 +2826,9 @@ public class ClassStructure
                 for (MethodStructure method : mms.methods()) {
                     SignatureConstant sigMethod = method.getIdentityConstant().getSignature();
                     if (method.isAccessible(access) && method.isFunction() == fFunction) {
+                        if (sigMethod.getConstantPool() != pool) {
+                            sigMethod = pool.register(sigMethod);
+                        }
                         if (!fFunction) {
                             sigMethod = sigMethod.resolveGenericTypes(pool, resolver);
                         }

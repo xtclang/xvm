@@ -247,7 +247,7 @@ public class CallChain {
      */
     public int bindTarget(Frame frame, ObjectHandle hTarget, int iReturn) {
         return frame.assignValue(iReturn, hTarget.isService() ?
-                xRTFunction.makeAsyncHandle(frame, this).bindTarget(frame, hTarget) :
+                xRTFunction.makeAsyncHandle(hTarget, this).bindTarget(frame, hTarget) :
                 xRTFunction.makeHandle(frame, this, 0).bindTarget(frame, hTarget));
     }
 
@@ -321,7 +321,8 @@ public class CallChain {
     }
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig, int iReturn) {
-        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(
+                frame.f_context.getContainer(), frame.runtimeConstant(sig));
         return chain.isEmpty()
                 ? missingSuper(frame)
                 : chain.invoke(frame, hTarget, iReturn);
@@ -384,7 +385,8 @@ public class CallChain {
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
                                  ObjectHandle hArg, int iReturn) {
-        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(
+                frame.f_context.getContainer(), frame.runtimeConstant(sig));
         return chain.isEmpty()
                 ? missingSuper(frame)
                 : chain.invoke(frame, hTarget, hArg, iReturn);
@@ -450,7 +452,8 @@ public class CallChain {
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
                                  ObjectHandle[] ahArg, int iReturn, boolean fReturnTuple) {
-        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(
+                frame.f_context.getContainer(), frame.runtimeConstant(sig));
         return chain.isEmpty()
                 ? missingSuper(frame)
                 : fReturnTuple
@@ -507,7 +510,8 @@ public class CallChain {
 
     private int completeDelegate(Frame frame, ObjectHandle hTarget, SignatureConstant sig,
                                  ObjectHandle[] ahArg, int[] aiReturn) {
-        CallChain chain = hTarget.getComposition().getMethodCallChain(sig);
+        CallChain chain = hTarget.getComposition().getMethodCallChain(
+                frame.f_context.getContainer(), frame.runtimeConstant(sig));
         return chain.isEmpty()
                 ? missingSuper(frame)
                 : chain.invoke(frame, hTarget, ahArg, aiReturn);

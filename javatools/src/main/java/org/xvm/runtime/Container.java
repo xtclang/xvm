@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.Constants;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkerContext;
 import org.xvm.asm.MethodStructure;
@@ -145,6 +146,45 @@ public abstract class Container
 
     private Container getModuleOwner(ModuleConstant module) {
         return f_parent != null && isShared(module) ? f_parent.getModuleOwner(module) : this;
+    }
+
+    /**
+     * Bind a selected native template's type to the prepared execution image. The private native
+     * module is copied during preparation, not shared as application-visible state. Its exact
+     * root declaration may therefore be rebound here, while all other modules must obey ordinary
+     * sharing rules. This transfers only a descriptor; it grants no sharing of native handles.
+     *
+     * @param type  the implementation type supplied by this runtime's native root
+     * @return the corresponding type in this container's descriptor context
+     */
+    TypeConstant bindNativeType(TypeConstant type) {
+        Container root = getNativeContainer();
+        return getTypeContext().importShared(type, root.getTypeContext(),
+                module -> module.getName().equals(Constants.NATIVE_MODULE)
+                        || getModuleOwner(module) == root.getModuleOwner(module));
+    }
+
+    /**
+     * Adopt an execution operand into this runtime. A call on an ancestor-owned shared value can
+     * execute that ancestor's prepared method body in this service. Its local constant table still
+     * belongs to the ancestor, so select the source by exact pool ownership along this container's
+     * ancestry, then apply the normal module-sharing checks. Same-name sibling images and unrelated
+     * runtime descriptors are never accepted.
+     *
+     * <p>Use for compiled operands at a frame boundary. Transport from any other known container
+     * must use {@link #importSharedConstant} with that explicit source instead.
+     *
+     * @param constant  the operand read from a prepared method's local constant table
+     * @param <T>       the constant type
+     * @return the operand in this execution's descriptor context
+     */
+    public <T extends Constant> T resolveRuntimeConstant(T constant) {
+        for (Container source = this; source != null; source = source.f_parent) {
+            if (source.getTypeContext().owns(constant.getConstantPool())) {
+                return importSharedConstant(constant, source);
+            }
+        }
+        throw new IncompatibleTypeOwnerException("Execution operand has no owning ancestor: " + constant);
     }
 
     /**
@@ -377,47 +417,24 @@ public abstract class Container
     /**
      * Resolve a template under the container that can own the type's definitions.
      *
-     * <p>Delegate upward only when the type is shared with the parent pool. Otherwise this
-     * container must know the type, and registers it in its own pool for the local template cache.
+     * <p>Delegate upward only when the declaration's module is shared with the parent. Otherwise this
+     * container must know the type and adopts it into its descriptor context for template lookup.
      * Keeping application-specific types in that local cache avoids retaining a child request's
      * definitions in its longer-lived parent. The thread's ambient pool does not select this owner.
      *
      * @return a ClassTemplate for the specified type
      */
     public ClassTemplate getTemplate(TypeConstant type) {
-        if (!type.getConstantPool().hasSerializedIndices()) {
-            // Validate the context before any structural cache lookup. Native template selection
-            // uses declaration identities; never send a derived parameterization to a parent pool.
-            type = getTypeContext().intern(type);
-            ClassTemplate template = getTemplate(type.getSingleUnderlyingClass(true));
-            return type.isShared(template.f_container.getConstantPool())
-                    ? template.getTemplate(this, type)
-                    : template;
+        // Validate before any structural cache lookup. Delegate only the declaration identity;
+        // native specialization must retain the requester's parameterization and descriptor owner.
+        type = getTypeContext().intern(type);
+        if (!type.isSingleUnderlyingClass(true)) {
+            throw new UnsupportedOperationException();
         }
-        if (f_parent != null && type.isShared(f_parent.getConstantPool())) {
-            return f_parent.getTemplate(type);
-        }
-
-        ClassTemplate template = f_mapTemplatesByType.get(type);
-        if (template == null) {
-            if (type.isSingleUnderlyingClass(true)) {
-                // make sure we don't hold on other pool's constants
-                type = getConstantPool().register(type);
-
-                IdentityConstant idClass = type.getSingleUnderlyingClass(true);
-                template = getTemplate(idClass);
-
-                // native templates for parameterized classes may "promote" themselves based on the
-                // parameter type, but we can only do it within the same container
-                if (type.isShared(template.f_container.getConstantPool())) {
-                    template = template.getTemplate(this, type);
-                }
-                f_mapTemplatesByType.put(type, template);
-            } else {
-                throw new UnsupportedOperationException();
-            }
-        }
-        return template;
+        ClassTemplate template = getTemplate(type.getSingleUnderlyingClass(true));
+        return type.isShared(template.f_container.getConstantPool())
+                ? template.getTemplate(this, type)
+                : template;
     }
 
     /**
@@ -429,17 +446,27 @@ public abstract class Container
      * @return a ClassTemplate for the specified class identity
      */
     public ClassTemplate getTemplate(IdentityConstant idClass) {
-        if (f_parent != null && idClass.isShared(f_parent.getConstantPool())) {
-            return f_parent.getTemplate(idClass);
+        idClass = getTypeContext().getDescriptorPool().register(idClass);
+        if (f_parent != null && idClass.getModuleConstant().getName().equals(Constants.NATIVE_MODULE)) {
+            // Native template selection binds the copied private bridge declaration. This is
+            // distinct from sharing application-visible types or runtime values with the root.
+            NativeContainer root = getNativeContainer();
+            var prepared = (IdentityConstant) root.getConstantPool().getConstant(idClass);
+            if (prepared == null) {
+                throw new IllegalArgumentException("Missing native template declaration: " + idClass);
+            }
+            return root.getTemplate(prepared);
+        }
+        if (f_parent != null && isShared(idClass.getModuleConstant())) {
+            return f_parent.getTemplate(f_parent.importSharedConstant(idClass, this));
         }
 
+        // Identity.getType() may create a terminal type, even for an existing declaration.
+        // Resolve it in the descriptor store before consulting the local template cache.
         ClassTemplate template = f_mapTemplatesByType.get(idClass.getType());
         if (template != null) {
             return template;
         }
-
-        // make sure we don't hold on other pool's constants or structures
-        idClass = getConstantPool().register(idClass);
 
         ClassStructure structClass = (ClassStructure) idClass.getComponent();
         if (structClass == null) {
@@ -497,32 +524,29 @@ public abstract class Container
      * @return a TypeConstant associated with the specified constant
      */
     public TypeConstant getType(Constant constValue) {
-        if (constValue.getConstantPool() == getConstantPool()) {
-            if (constValue instanceof SingletonConstant constSingleton) {
-                return constSingleton.getType();
-            }
+        constValue = resolveRuntimeConstant(constValue);
+        if (constValue instanceof SingletonConstant constSingleton) {
+            return constSingleton.getType();
         }
-        return getNativeContainer().getConstType(constValue);
+        // Literal types derive from the adopted operand; implementation types come from the
+        // native root. Resolve the exact owner in either case before local template lookup.
+        TypeConstant type = getNativeContainer().getConstType(constValue);
+        return getTypeContext().owns(type.getConstantPool())
+                ? getTypeContext().intern(type)
+                : bindNativeType(type);
     }
 
     /**
      * Produce a TypeComposition based on the specified TypeConstant.
      */
     public TypeComposition resolveClass(TypeConstant type) {
-        if (!type.getConstantPool().hasSerializedIndices()) {
-            type = getTypeContext().intern(type);
-        }
+        // Compiled operands are definitions, not destinations for runtime specializations.
+        type = getTypeContext().intern(type);
         if (type instanceof PropertyClassTypeConstant typeProp) {
             ClassComposition clz = (ClassComposition) resolveClass(
                                         typeProp.getParentType().removeAccess());
             return clz.ensurePropertyComposition(typeProp.getPropertyInfo());
         }
-
-        // Runtime descriptors retain their context through composition creation. Image types
-        // continue to use the existing preparation path until that migration is complete.
-        type = type.getConstantPool().hasSerializedIndices()
-                ? getConstantPool().register(type)
-                : getTypeContext().intern(type);
 
         return getTemplate(type).ensureClass(this, type.normalizeParameters());
     }

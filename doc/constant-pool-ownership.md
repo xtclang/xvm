@@ -11,6 +11,10 @@ field initializers. Sections C15/C16 below distinguish the original singleton fi
 follow-up; the plan's descriptor prototype section records the newer changes and their limits.
 The rest of the ownership model remains in place. The plan records the wider
 mutation inventory, including runtime-generated methods and the remaining freeze blockers.
+Its [scope-1 completion record](constant-pool-architecture-plan.md#scope-1-completion-ordinary-runtime-destinations)
+now covers ordinary entry/frame/construction destinations, each changed file group and the cold
+frozen-image regressions. Later cache, executable, reflection/native-lifetime and activation scopes
+remain open; this does not extend the baseline into a whole-runtime freeze guarantee.
 The original combined work remains on `lagergren/constant-pool-ownership`; its
 [submission plan](https://github.com/xtclang/xvm/blob/lagergren/constant-pool-ownership/plugin/doc/plans/embedded-runtime-pr-plan.md)
 still governs the larger embedded-runtime series.
@@ -761,9 +765,11 @@ treated as disposable caches. In-progress recursive relations are calculation st
 published as completed answers. These experimental changes extend the catalogue above; they do
 not claim that the remaining metadata, foreign reflection or generated-method ownership is solved.
 
-The next commit adds an explicit definition-freeze boundary and closes read-only table/index
+An earlier separation commit added an explicit definition-freeze boundary and closed read-only table/index
 mutation gaps. Its [enforcement report and runnable audit](constant-pool-architecture-plan.md#enforced-definition-freeze-boundary)
-distinguish passing boundary tests from full execution: the latter currently fails while entry
-lookup constructs types in the image pool. The report lists the remaining migration commits.
+distinguish passing boundary tests from full execution. At that checkpoint, entry lookup still
+constructed types in the image pool. Scope 1 now passes cold frozen entry/construction workloads;
+the broader audit reaches late delegation synthesis and native marking in scope 3. The plan
+records the remaining migration scopes and the narrower limits of those passing workloads.
 Do not infer a completely frozen runtime or a universal ownership guarantee from the normal
 suite passing.

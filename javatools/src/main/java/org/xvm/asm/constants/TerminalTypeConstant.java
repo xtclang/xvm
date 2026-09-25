@@ -1266,7 +1266,7 @@ public class TerminalTypeConstant
             throw new IllegalStateException("Invalid format for " + structMixin);
         }
 
-        return structMixin.getTypeInto();
+        return structMixin.getTypeInto(getConstantPool());
     }
 
     /**

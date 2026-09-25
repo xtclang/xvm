@@ -172,7 +172,7 @@ public class xContainerControl
 
     private int closeResourceProvider(Frame frame, ObjectHandle hProvider) {
         TypeComposition clazz = hProvider.getComposition();
-        CallChain       chain = clazz.getMethodCallChain(frame.poolContext().sigClose());
+        CallChain       chain = clazz.getMethodCallChain(frame.f_context.getContainer(), frame.poolContext().sigClose());
         if (chain.isNative()) {
             return Op.R_NEXT;
         }

@@ -24,6 +24,7 @@ import org.xvm.asm.RuntimeMethodStructure;
 
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.HandleConstant;
+import org.xvm.asm.constants.ImmutableTypeConstant;
 import org.xvm.asm.constants.NativeRebaseConstant;
 import org.xvm.asm.constants.ParameterizedTypeConstant;
 import org.xvm.asm.constants.TerminalTypeConstant;
@@ -43,6 +44,42 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RuntimeTypeContextTest {
+    @Test
+    void unchangedNarrowingCreatesTheImmutableWrapperInTheDestination() {
+        var file = new Image();
+        var value = file.type("Value");
+        var immutable = new ImmutableTypeConstant(file.getConstantPool(), value);
+        var context = new RuntimeTypeContext(file.getConstantPool());
+        var constants = file.getConstantPool().getConstants();
+        context.freezeDefinitions();
+
+        var resolved = immutable.resolveAutoNarrowing(context.getDescriptorPool(), false, null, null);
+        assertSame(context.getDescriptorPool(), resolved.getConstantPool());
+        assertTrue(resolved.isImmutabilitySpecified());
+        assertSame(context.intern(value), resolved.getUnderlyingType());
+        assertArrayEquals(constants, file.getConstantPool().getConstants());
+    }
+
+    @Test
+    void coldAnnotationTargetsIncludingDefaultsUseTheQueryOwner() {
+        var file = new Image();
+        var value = file.type("Value");
+        var base = file.getModule().createClass(Access.PUBLIC, Format.ANNOTATION, "Base", null);
+        base.addContribution(Composition.Into, value);
+        var child = file.getModule().createClass(Access.PUBLIC, Format.ANNOTATION, "Child", null);
+        child.addContribution(Composition.Extends, base.getIdentityConstant().getType());
+        var defaulted = file.getModule().createClass(Access.PUBLIC, Format.ANNOTATION, "Defaulted", null);
+        var context = new RuntimeTypeContext(file.getConstantPool());
+        var constants = file.getConstantPool().getConstants();
+        context.freezeDefinitions();
+
+        assertSame(context.intern(value), context.typeOf(child.getIdentityConstant()).getExplicitClassInto());
+        var target = context.typeOf(defaulted.getIdentityConstant()).getExplicitClassInto();
+        assertSame(context.getDescriptorPool(), target.getConstantPool());
+        assertSame(context.getDescriptorPool().typeObject(), target);
+        assertArrayEquals(constants, file.getConstantPool().getConstants());
+    }
+
     @Test
     void explicitSharedImportRebindsWithoutOpeningOrdinaryInterning() {
         var first = new Image();

@@ -12,8 +12,10 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants;
+import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
 import org.xvm.asm.Op;
 
@@ -22,8 +24,10 @@ import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.runtime.ObjectHandle.InitializingHandle;
+import org.xvm.runtime.RuntimeTypeContext.IncompatibleTypeOwnerException;
 import org.xvm.runtime.ServiceContext.CallLaterRequest;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -33,6 +37,42 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SingletonOwnershipTest {
+    @Test
+    void sharedAncestorOperandsResolveLocallyWithoutAcceptingSiblingGenerations() {
+        var runtime = new Runtime();
+        try {
+            var file = image();
+            var original = file.getModule().createClass(Access.PUBLIC, Format.CLASS, "Value", null)
+                    .getIdentityConstant().getType();
+            var parent = new TestContainer(runtime, null, file, false);
+            var child = new TestContainer(runtime, parent, new FileStructure(file), true);
+            var unshared = new TestContainer(runtime, parent, new FileStructure(file), false);
+            var sibling = new TestContainer(runtime, parent, new FileStructure(file), true);
+            var foreign = sibling.getTypeContext().typeOf(
+                    sibling.getModule().getComponent().getChild("Value").getIdentityConstant());
+            var constants = child.getConstantPool().getConstants();
+            parent.getTypeContext().freezeDefinitions();
+            child.getTypeContext().freezeDefinitions();
+
+            var frame = new ImmediateFrame(child.main);
+            var local = frame.resolveType(original);
+            assertSame(child.getTypeContext().getDescriptorPool(), local.getConstantPool());
+            assertSame(local, frame.resolveType(parent.getTypeContext().intern(original)));
+            assertSame(local, frame.resolveType(local));
+            assertThrows(IncompatibleTypeOwnerException.class, () -> frame.resolveType(foreign));
+            assertThrows(IncompatibleTypeOwnerException.class,
+                    () -> unshared.resolveRuntimeConstant(original));
+            var privateClass = unshared.getModule().getComponent().getChild("Value");
+            assertSame(privateClass, unshared.getTemplate(privateClass.getIdentityConstant()).getStructure());
+            assertSame(parent.getModule().getComponent().getChild("Value"),
+                    child.getTemplate(child.getModule().getComponent().getChild("Value")
+                            .getIdentityConstant()).getStructure());
+            assertArrayEquals(constants, child.getConstantPool().getConstants());
+        } finally {
+            runtime.shutdownXVM();
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void identicalDefinitionObjectsDoNotGrantValueSharing(boolean shared) {

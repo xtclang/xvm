@@ -71,10 +71,11 @@ public class PropertyBody
                 // PropertyDeclarationStatement,validateContent);
                 // in that case we simply disregard the initializer
                 constInitFunc = null;
-            } else if (struct.isLazy()) {
+            } else if (struct.containsRefAnnotation(type.getConstantPool(), type.getConstantPool().clzLazy())) {
                 // a static lazy property must have an explicit implementation
                 impl = Implementation.Explicit;
-            } else if (constInitVal == null && constInitFunc == null && !struct.isInjected()) {
+            } else if (constInitVal == null && constInitFunc == null
+                    && !struct.containsRefAnnotation(type.getConstantPool(), type.getConstantPool().clzInject())) {
                 // this can only happen when we're building the TypeInfo for a partially compiled class,
                 // so we will need to invalidate the TypeInfo afterward;
                 // mark the implementation as "Implicit" just to assert it gets replaced later
@@ -378,7 +379,8 @@ public class PropertyBody
     public Annotation[] getRefAnnotations() {
         return m_structProp == null
                 ? Annotation.NO_ANNOTATIONS
-                : m_structProp.getRefAnnotations();
+                : m_structProp.getAnnotationGroups(m_type.getConstantPool()).reference()
+                        .toArray(Annotation.NO_ANNOTATIONS);
     }
 
     /**
@@ -437,7 +439,7 @@ public class PropertyBody
     public boolean isExplicitAbstract() {
         PropertyStructure prop = m_structProp;
         return prop != null && m_impl != Implementation.FromInto
-                && TypeInfo.containsAnnotation(prop.getPropertyAnnotations(), "Abstract");
+                && prop.containsPropertyAnnotation(m_type.getConstantPool(), m_type.getConstantPool().clzAbstract());
     }
 
     /**
@@ -456,7 +458,8 @@ public class PropertyBody
      */
     public boolean isExplicitOverride() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.FromInto && prop.isExplicitOverride();
+        return prop != null && m_impl != Implementation.FromInto
+                && prop.containsPropertyAnnotation(m_type.getConstantPool(), m_type.getConstantPool().clzOverride());
     }
 
     /**
@@ -464,7 +467,8 @@ public class PropertyBody
      */
     public boolean isExplicitReadOnly() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.FromInto && prop.isExplicitReadOnly();
+        return prop != null && m_impl != Implementation.FromInto
+                && prop.containsPropertyAnnotation(m_type.getConstantPool(), m_type.getConstantPool().clzRO());
     }
 
     /**
@@ -472,7 +476,8 @@ public class PropertyBody
      */
     public boolean isInjected() {
         PropertyStructure prop = m_structProp;
-        return prop != null && m_impl != Implementation.FromInto && prop.isInjected();
+        return prop != null && m_impl != Implementation.FromInto
+                && prop.containsRefAnnotation(m_type.getConstantPool(), m_type.getConstantPool().clzInject());
     }
 
     // ----- Object methods ------------------------------------------------------------------------

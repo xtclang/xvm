@@ -1008,7 +1008,8 @@ public class PropertyInfo
      * @return an array of the non-virtual annotations on the property declaration itself
      */
     public Annotation[] getPropertyAnnotations() {
-        return getHead().getStructure().getPropertyAnnotations();
+        return getHead().getStructure().getAnnotationGroups(pool()).property()
+                .toArray(Annotation.NO_ANNOTATIONS);
     }
 
     /**
@@ -1037,7 +1038,7 @@ public class PropertyInfo
                 if (prop == null) {
                     continue;
                 }
-                Annotation[] aAdd = prop.getRefAnnotations();
+                Annotation[] aAdd = body.getRefAnnotations();
                 if (aAdd.length > 0) {
                     if (list == null) {
                         if (aAnnos.length == 0) {

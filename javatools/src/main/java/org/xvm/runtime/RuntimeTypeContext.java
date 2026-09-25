@@ -73,6 +73,17 @@ public final class RuntimeTypeContext {
     }
 
     /**
+     * Test exact ownership of an operand pool, without a structural lookup or creating descriptors.
+     * Container uses this when a shared ancestor's compiled method executes in a child service.
+     *
+     * @param pool  the operand's pool
+     * @return true for this descriptor pool or an exact captured definition pool
+     */
+    boolean owns(ConstantPool pool) {
+        return pool == descriptors || descriptors.definitions.contains(pool);
+    }
+
+    /**
      * Translate a descriptor or declaration reference across an established sharing boundary. The source
      * context validates the complete graph first; every referenced module must then be approved
      * by the caller's sharing policy. Equal module names alone never authorize this operation.
@@ -183,7 +194,7 @@ public final class RuntimeTypeContext {
      * failures in descriptor construction or handle initialization must not be translated with it.
      */
     public static final class IncompatibleTypeOwnerException extends IllegalArgumentException {
-        private IncompatibleTypeOwnerException(String message) {
+        IncompatibleTypeOwnerException(String message) {
             super(message);
         }
     }

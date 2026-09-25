@@ -5307,7 +5307,8 @@ public abstract class TypeConstant
         String       sName = prop.getName();
 
         // scan the Property annotations
-        Annotation[] aPropAnno    = prop.getPropertyAnnotations();
+        var          annotations = prop.getAnnotationGroups(pool);
+        Annotation[] aPropAnno    = annotations.property().toArray(Annotation.NO_ANNOTATIONS);
         boolean      fHasRO       = false;
         boolean      fHasAbstract = false;
         boolean      fHasOverride = false;
@@ -5329,13 +5330,16 @@ public abstract class TypeConstant
         // check the non-Property annotations (including checking for verifier errors, since the
         // property dumps anything that isn't a well-formed "into Property" annotation into this
         // bucket)
-        Annotation[] aRefAnno    = prop.getRefAnnotations();
+        Annotation[] aRefAnno    = annotations.reference().toArray(Annotation.NO_ANNOTATIONS);
         boolean      fHasRefAnno = false;
         boolean      fHasVarAnno = false;
+        boolean      fHasLazy    = false;
         for (int i = 0, c = aRefAnno.length; i < c; ++i) {
             Annotation   annotation = aRefAnno[i];
             Constant     constAnno  = annotation.getAnnotationClass();
             TypeConstant typeAnno   = pool.ensureTerminalTypeConstant(constAnno);
+
+            fHasLazy |= constAnno.equals(pool.clzLazy());
 
             if (!typeAnno.isExplicitClassIdentity(true)
                     || typeAnno.getExplicitClassFormat() != Component.Format.ANNOTATION) {
@@ -5374,7 +5378,7 @@ public abstract class TypeConstant
         // functions and constants cannot have properties; methods cannot have constants
         IdentityConstant constParent = prop.getIdentityConstant().getParentConstant();
         boolean          fConstant   = prop.isStatic();
-        boolean          fLazyConst  = fConstant && prop.isLazy();
+        boolean          fLazyConst  = fConstant && fHasLazy;
         switch (constParent.getFormat()) {
         case Property:
             if (!fConstant && prop.getParent().isStatic()) {
@@ -5665,7 +5669,11 @@ public abstract class TypeConstant
             fRO = false;
         }
 
-        TypeConstant typeProp = prop.getType().resolveGenerics(pool, this);
+        TypeConstant typeProp = prop.getType();
+        if (typeProp.getConstantPool() != pool) {
+            typeProp = pool.register(typeProp);
+        }
+        typeProp = typeProp.resolveGenerics(pool, this);
 
         return new PropertyInfo(new PropertyBody(prop, impl, null, typeProp, fRO, fRW,
                 cCustomMethods > 0, effectGet, effectSet,  fField, fConstant, prop.getInitialValue(),

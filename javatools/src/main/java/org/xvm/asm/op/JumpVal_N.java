@@ -235,7 +235,7 @@ public class JumpVal_N
                     }
                 } else {
                     // this is an "is(_)" column
-                    TypeConstant     typeVal  = hValue.getUnsafeType();
+                    TypeConstant     typeVal  = frame.runtimeUnsafeTypeOf(hValue);
                     ObjectHandle[][] aahCases = m_aahCases;
 
                     for (int iRow = 0, cRows = aahCases.length; iRow < cRows; iRow++) {

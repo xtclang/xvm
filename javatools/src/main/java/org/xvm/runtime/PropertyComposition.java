@@ -207,12 +207,12 @@ public class PropertyComposition
         }
         return f_mapMethods.computeIfAbsent(nidMethod,
             nid -> {
-                PropertyConstant idBase   = f_infoProp.getIdentity();
+                PropertyConstant idBase   = pool.register(f_infoProp.getIdentity());
                 MethodConstant   idNested = (MethodConstant)
                     (nid instanceof NestedIdentity nested &&
                         nested.getIdentityConstant().getNestedDepth() > idBase.getNestedDepth()
                             ? nested.getIdentityConstant()
-                            : idBase.appendNestedIdentity(idBase.getConstantPool(), nid));
+                            : idBase.appendNestedIdentity(pool, nid));
 
                 TypeInfo   infoParent = getParentInfo();
                 MethodInfo info       = infoParent.getMethodByNestedId(idNested.getNestedIdentity(), true);
@@ -235,7 +235,7 @@ public class PropertyComposition
                 PropertyConstant idNested = id.getNestedDepth() > idBase.getNestedDepth()
                         ? id
                         : (PropertyConstant) idBase.appendNestedIdentity(
-                                idBase.getConstantPool(), id.getNestedIdentity());
+                                pool, id.getNestedIdentity());
 
                 MethodBody[] chain = getParentInfo().getOptimizedGetChain(idNested);
                 return chain == null
@@ -256,7 +256,7 @@ public class PropertyComposition
                 PropertyConstant idNested = id.getNestedDepth() > idBase.getNestedDepth()
                         ? id
                         : (PropertyConstant) idBase.appendNestedIdentity(
-                                idBase.getConstantPool(), id.getNestedIdentity());
+                                pool, id.getNestedIdentity());
 
                 MethodBody[] chain = getParentInfo().getOptimizedSetChain(idNested);
                 return chain == null

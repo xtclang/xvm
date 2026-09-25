@@ -159,7 +159,7 @@ public class xVar
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION}
      */
     protected int invokeSetReferent(Frame frame, RefHandle hRef, ObjectHandle hValue) {
-        CallChain chain = hRef.getComposition().getMethodCallChain(s_sigSet);
+        CallChain chain = hRef.getComposition().getMethodCallChain(f_container, s_sigSet);
         return chain.isExplicit()
             ? chain.invoke(frame, hRef, hValue, Op.A_IGNORE)
             : setReferentImpl(frame, hRef, true, hValue);

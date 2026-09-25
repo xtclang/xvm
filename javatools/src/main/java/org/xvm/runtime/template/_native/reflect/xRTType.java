@@ -172,7 +172,9 @@ public class xRTType
 
             assert typeTarget.isTypeOfType();
 
-            TypeConstant typeData = typeTarget.getParamType(0);
+            // The literal belongs to compiled definitions. Normalize only after adopting its
+            // data type into the executing frame's descriptor context, even without formals.
+            TypeConstant typeData = frame.runtimeConstant(typeTarget.getParamType(0));
 
             typeData = typeData.resolveGenerics(pool,
                     frame.getGenericsResolver(typeData.containsDynamicType()));

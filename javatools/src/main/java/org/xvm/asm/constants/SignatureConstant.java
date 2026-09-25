@@ -411,15 +411,19 @@ public class SignatureConstant
      * a library method against an application method supplies its application pool, so the
      * specialization is not retained in the library's pool.
      *
-     * <p>This parameter governs constants constructed during compatibility resolution. Existing
-     * operand types keep their owners; their assignability checks and derived caches follow
-     * {@link TypeConstant#calculateRelation} rather than moving all metadata to this pool.
+     * <p>A runtime descriptor destination adopts the signature operands before even the first
+     * assignability check: that check can itself derive types. Indexed compiler destinations
+     * preserve their existing operand ownership and in-progress compilation state.
      *
      * @param pool     the destination pool for type resolution
      * @param that     the signature of the matching method
      * @param typeCtx  the type within which "this" signature is used
      */
     public boolean isSubstitutableFor(ConstantPool pool, SignatureConstant that, TypeConstant typeCtx) {
+        if (!pool.hasSerializedIndices() && (getConstantPool() != pool
+                || that.getConstantPool() != pool || typeCtx != null && typeCtx.getConstantPool() != pool)) {
+            return pool.register(this).isSubstitutableFor(pool, pool.register(that), pool.register(typeCtx));
+        }
         /*
          * From Method.x # isSubstitutableFor() (where m2 == this and m1 == that)
          *

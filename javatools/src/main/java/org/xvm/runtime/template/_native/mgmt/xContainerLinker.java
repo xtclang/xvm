@@ -283,7 +283,8 @@ public class xContainerLinker
                 TypeHandle   hType = hProvider.getComposition().getContainer()
                         .ensureTypeHandle(key.f_type, container);
                 StringHandle hName = xString.makeHandle(key.f_sName);
-                CallChain    chain = hProvider.getComposition().getMethodCallChain(GET_RESOURCE);
+                CallChain    chain = hProvider.getComposition().getMethodCallChain(
+                        frameCaller.f_context.getContainer(), frameCaller.runtimeConstant(GET_RESOURCE));
 
                 ObjectHandle[] ahArg = new ObjectHandle[chain.getMaxVars()];
                 ahArg[0] = hType;

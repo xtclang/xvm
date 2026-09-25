@@ -73,6 +73,6 @@ public class IsNType
         }
 
         return frame.assignValue(m_nRetValue,
-                xBoolean.makeHandle(!hValue.getUnsafeType().isA(typeTest)));
+                xBoolean.makeHandle(!frame.runtimeUnsafeTypeOf(hValue).isA(typeTest)));
     }
 }

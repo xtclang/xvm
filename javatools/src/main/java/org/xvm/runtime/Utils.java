@@ -184,7 +184,8 @@ public abstract class Utils {
      */
     public static int callFreeze(Frame frame, ObjectHandle hValue, Boolean FInPlace,
                                  Frame.Continuation continuation) {
-        CallChain chain = hValue.getComposition().getMethodCallChain(SIG_FREEZE);
+        CallChain chain = hValue.getComposition().getMethodCallChain(
+                frame.f_context.getContainer(), frame.runtimeConstant(SIG_FREEZE));
         if (chain.isEmpty()) {
             return frame.raiseException(
                 "Missing method \"freeze()\" on " + hValue.getType().getValueString());
@@ -274,7 +275,8 @@ public abstract class Utils {
             });
         } else {
             TypeComposition clazz = hInjector.getComposition();
-            CallChain       chain = clazz.getMethodCallChain(SIG_GET_RESOURCE);
+            CallChain       chain = clazz.getMethodCallChain(
+                    frame.f_context.getContainer(), frame.runtimeConstant(SIG_GET_RESOURCE));
 
             if (chain.isEmpty()) {
                 return new DeferredCallHandle(xException.makeHandle(frame,
@@ -319,7 +321,8 @@ public abstract class Utils {
             });
         } else {
             TypeComposition clazz = hInjector.getComposition();
-            CallChain       chain = clazz.getMethodCallChain(SIG_INJECT);
+            CallChain       chain = clazz.getMethodCallChain(
+                    frame.f_context.getContainer(), frame.runtimeConstant(SIG_INJECT));
 
             if (chain.isEmpty()) {
                 return new DeferredCallHandle(xException.makeHandle(frame,
@@ -880,17 +883,19 @@ public abstract class Utils {
     /**
      * Call the static property initializer.
      *
-     * @param frame   the caller's frame
-     * @param idProp  the property id
+     * @param frame     the caller's frame
+     * @param property  the property id from the prepared method or runtime context
      *
      * @return one of the {@link Op#R_NEXT}, {@link Op#R_CALL} or {@link Op#R_EXCEPTION} values
      */
-    private static int callPropertyInitializer(Frame frame, PropertyConstant idProp) {
+    private static int callPropertyInitializer(Frame frame, PropertyConstant property) {
+        PropertyConstant idProp = frame.runtimeConstant(property);
         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
+        ConstantPool pool = frame.poolContext();
 
-        if (prop.isInjected()) {
-            TypeConstant typeRef = frame.poolContext().ensureAnnotatedTypeConstant(
-                    idProp.getRefType(null), prop.getRefAnnotations());
+        if (prop.containsRefAnnotation(pool, pool.clzInject())) {
+            TypeConstant typeRef = pool.ensureAnnotatedTypeConstant(idProp.getRefType(null),
+                    prop.getAnnotationGroups(pool).reference().toArray(Annotation.NO_ANNOTATIONS));
 
             TypeComposition clzRef  = typeRef.ensureClass(frame);
             VarSupport      support = (VarSupport) clzRef.getSupport();
@@ -912,7 +917,7 @@ public abstract class Utils {
             }
         }
 
-        if (prop.isLazy()) {
+        if (prop.containsRefAnnotation(pool, pool.clzLazy())) {
             // create an unassigned LazyHandle
             TypeComposition clzRef   = idProp.getRefType(null).ensureClass(frame);
             xLazy           template = (xLazy) frame.ensureTemplate(frame.poolContext().clzLazy());

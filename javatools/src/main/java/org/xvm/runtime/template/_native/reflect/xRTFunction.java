@@ -78,7 +78,7 @@ public class xRTFunction
         // from the run-time perspective, a function type is equivalent to its "full bound" type
         // (where there are no parameters) and the responsibility to check the parameter types
         // lies on the "invoke" implementation
-        ConstantPool pool = container.getConstantPool();
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
 
         assert typeActual.isFunction();
 
@@ -93,7 +93,7 @@ public class xRTFunction
      * @return a TypeComposition for the specified annotated function.
      */
     protected TypeComposition ensureClass(Container container, MethodStructure function) {
-        ConstantPool pool = container.getConstantPool();
+        ConstantPool pool = container.getTypeContext().getDescriptorPool();
 
         TypeConstant[] atypeR = function.getIdentityConstant().getRawReturns();
 
@@ -371,7 +371,8 @@ public class xRTFunction
          * Instantiate an immutable FunctionHandle for a function.
          */
         protected FunctionHandle(Container container, MethodStructure function) {
-            this(container, function.getIdentityConstant().getSignature().asFunctionType(), function);
+            this(container, container.resolveRuntimeConstant(function.getIdentityConstant().getSignature())
+                    .asFunctionType(), function);
 
             m_fMutable = false;
         }
@@ -380,8 +381,8 @@ public class xRTFunction
          * Instantiate an immutable FunctionHandle for a method.
          */
         protected FunctionHandle(Container container, CallChain chain, int nDepth) {
-            super(INSTANCE.ensureClass(container, chain.getMethod(nDepth).getIdentityConstant().
-                    getSignature().asFunctionType()), chain, nDepth);
+            super(INSTANCE.ensureClass(container, container.resolveRuntimeConstant(
+                    chain.getMethod(nDepth).getIdentityConstant().getSignature()).asFunctionType()), chain, nDepth);
 
             m_fMutable = false;
         }
@@ -1221,13 +1222,17 @@ public class xRTFunction
      * Create a function handle representing an asynchronous (service) call.
      *
      *
-     * @param frame  the current frame
-     * @param chain  the method chain
+     * <p>The method chain belongs to the receiver's composition. Build its function descriptor
+     * there, even when a parent service calls a child-owned resource provider. The caller's frame
+     * does not own that method's declarations.
+     *
+     * @param target  the service receiver that supplied the method chain
+     * @param chain   the method chain
      *
      * @return the corresponding function handle
      */
-    public static AsyncHandle makeAsyncHandle(Frame frame, CallChain chain) {
-        return new AsyncHandle(frame.f_context.f_container, chain);
+    public static AsyncHandle makeAsyncHandle(ObjectHandle target, CallChain chain) {
+        return new AsyncHandle(target.getComposition().getContainer(), chain);
     }
 
     /**

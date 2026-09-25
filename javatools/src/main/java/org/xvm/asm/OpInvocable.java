@@ -145,7 +145,7 @@ public abstract class OpInvocable extends Op {
 
         context.setOpInfo(this, Category.Composition, clazz);
 
-        MethodConstant  idMethod = frame.getConstant(m_nMethodId, MethodConstant.class);
+        MethodConstant  idMethod = frame.runtimeConstant(frame.getConstant(m_nMethodId, MethodConstant.class));
         MethodStructure method   = (MethodStructure) idMethod.getComponent();
 
         m_constMethod = idMethod; // used by "toString()" only
@@ -170,15 +170,16 @@ public abstract class OpInvocable extends Op {
             Object nid = idMethod.resolveNestedIdentity(
                     frame.poolContext(), frame.getGenericsResolver(true));
 
-            chain = clazz.getMethodCallChain(nid);
+            chain = clazz.getMethodCallChain(context.getContainer(), nid);
             if (chain.isEmpty()) {
                 if (hTarget instanceof RefHandle hRef && hRef.isProperty()) {
                     // this is likely an invocation on a dynamically created Ref for a non-inflated
                     // property; try to call the referent itself
-                    chain = hRef.getReferentHolder().getComposition().getMethodCallChain(nid);
+                    chain = hRef.getReferentHolder().getComposition()
+                            .getMethodCallChain(context.getContainer(), nid);
                 } else {
                     // try an unresolved nid
-                    chain = clazz.getMethodCallChain(
+                    chain = clazz.getMethodCallChain(context.getContainer(),
                             idMethod.resolveNestedIdentity(frame.poolContext(), null));
                 }
             }
