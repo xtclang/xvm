@@ -4,9 +4,10 @@ Status: staged implementation in progress, 2026-09-25. The experimental branch
 `lagergren/constant-pool-state-separation` implements the singleton execution-state boundary and
 the first descriptor/index boundary, including late-generated field initializers, local reflective
 parameterization, a separate type-relation table and an explicit definition-freeze boundary.
-Broader reflection migration, the remaining metadata caches, other generated methods and
-activation with frozen images remain unfinished. Scope 1 now routes ordinary entry, frame and
-construction metadata through runtime descriptors. Cold generic construction and singleton-path
+Broader reflection migration, other generated methods and activation with frozen images remain
+unfinished. Scope 2 now separates semantic metadata from descriptors; its completion and validation
+record is below. Scope 1 routes ordinary entry, frame and construction metadata through runtime
+descriptors. Cold generic construction and singleton-path
 workloads run with frozen definition graphs. Broader frozen execution reaches late delegation
 synthesis and native method marking, which belong to scope 3. Freezing is still opt-in; this is
 not a merge-ready activation change. See the scope-1 completion boundary and validation below.
@@ -817,9 +818,10 @@ path; full frozen activation must not be enabled by default yet.
    queries and shared receiver/ancestor operands. See the scope-1 completion record below. This
    does not include the reflective/native adapters, executable synthesis or cache semantics in
    scopes 2–5, and does not enable freezing by default.
-2. Finish TypeInfo, variance/normalization/member cache separation, including diagnostic replay,
-   complete query inputs, recursion and failure/invalidation semantics. The relation table is
-   the first completed slice, not this whole stage.
+2. **Completed for semantic tables and query inputs.** TypeInfo, variance, normalization, generic
+   substitution and declaration-derived member types now have explicit table owners; recursion,
+   failure, invalidation and diagnostic replay are covered below. Executable preparation within
+   metadata remains in scopes 3 and 4; this does not authorize cross-container TypeInfo sharing.
 3. Move late method/property delegation and accessors into the executable overlay. Finish stable
    const-helper/native declaration synthesis before publication; generated initializers alone
    do not cover these cases.
@@ -1059,7 +1061,8 @@ The remaining boundary is explicit: the full frozen `Singletons.x` workload reac
 for a cold rebased member. Those are scope 3's executable/native declaration preparation work;
 they are not reasons to prewarm the queries, weaken the guard or enable freezing now.
 
-Scope 2 still owns TypeInfo/variance/normalization/member cache semantics and diagnostic replay.
+At the scope-1 checkpoint, TypeInfo/variance/normalization/member cache semantics and diagnostic
+replay remained in scope 2; the completion record below now covers those changes.
 Scope 4 still owns method initialization, mutable decoded Ops, frame layout and instrumentation.
 Scope 5 still owns broader reflection, captured annotations/functions and native static value/cache
 lifetimes. Its legacy indexed reflective-handle and native composition adapters in
@@ -1076,3 +1079,126 @@ Final verification for scope 1 used `RUN_INTEGRATION_TESTS=true`: the Java suite
 that test run were explanatory Javadocs only. Fresh-process frozen audits passed
 `RuntimeDescriptors.x` and `SingletonPaths.x`; the two broader failures above remain explicit,
 manual scope-3 reproduction cases rather than expected-failure automated tests.
+
+
+## Scope 2: owner-specific semantic metadata
+
+This stage moves derived semantic answers into `TypeMetadata`, owned by each compiler pool or
+runtime descriptor context. It does not change interning, serialized indices, the selected image
+or singleton sharing. The compiler still serializes declaration changes; this is not concurrent
+compilation support. Runtime contexts have independent tables even over the exact same definitions.
+
+### Query inputs and publication
+
+| Query | Complete inputs / owner | Publication rule |
+|---|---|---|
+| TypeInfo | Exact descriptor owner, receiver including access/arguments; compiler invalidation watermark | Only completed, error-free entries from a successful calculation are published; surrounding relation-probe scopes do not select declaration metadata |
+| Formal variance | Receiver identity, parameter name, access, consumption/production, scoped context for calculation-local work | Recursive NO is provisional; unresolved and context-dependent queries remain local |
+| Normalization | Owner and receiver including actual arguments | Unresolved or upstream compiler results are not retained; runtime results must be local |
+| Generic substitution | Owner, parameterized receiver, full constant resolver including access | One last result per receiver, preserving the prior bounded cache; mutable/frame/foreign resolvers bypass it |
+| Declaration-derived value/constraint/annotation types | Owner-local member identity and kind of result | Existing incomplete compiler cases remain uncached; invalidation discards derived results |
+| NakedRef specialization | Owner's configured bootstrap prototype and referent | Completed results only; replacing the prototype invalidates metadata |
+| Member lookup | TypeInfo owner, signature/identity, receiver where applicable, compiler/runtime mode; name/operator/arity/kind/parent for searches | Inferred matches are separate from declaration indices; runtime compatibility cannot contaminate compiler lookup |
+
+The ambient constant pool is never consulted to choose a table. Inputs from another runtime
+context must go through the existing checked import boundary first. Compiler resolution can
+legitimately return an upstream constraint before adoption is possible; that value is returned for
+the current calculation without being retained as this owner's normalized answer.
+
+TypeInfo describes its explicit receiver, not the caller's optional union/covariance probe. Its query
+boundary temporarily clears that relation scope and restores it on return; otherwise a transient
+relation assumption could change a declaration cache answer. Access/class-specific entry points
+continue to resolve the receiver explicitly.
+
+TypeInfo placeholders, incomplete results, deferred lists and retry depths belong to one thread's
+calculation. A nested query joins it; failures discard pending results, including when an outer
+caller catches a failed nested query. Independent threads can build independently without per-type
+locks or observing each other's placeholders. Only the successful outer boundary publishes.
+This isolates calculation state; it does not certify concurrent executable synthesis against
+shared definitions, which remains in scopes 3 and 4.
+Object bootstrap retains all access-qualified Object views, and drops its other provisional
+participants. Retaining only public Object caused a Range.Element.toString compilation failure
+in the first implementation; retaining the same root views as the old algorithm fixes that error.
+
+Variance keeps dependency-aware provisional answers within one calculation while their assumptions
+are active. This avoids exponential traversal of unresolved compiler graphs without publishing a
+partial answer. The JSON library rebuild exposed the need for this local reuse. A completed recursive
+root can be published; an inner result depending on an active ancestor cannot.
+
+### Clearing, invalidation and diagnostics
+
+`RuntimeTypeContext.clearMetadata()` discards semantic answers and relations without resetting
+canonical descriptors, changing definitions or resetting execution state. Existing consumers may
+finish using their already-completed metadata. Full clears detach publication maps, so an older
+in-flight TypeInfo/variance calculation cannot repopulate the replacement. Compiler invalidation
+keeps its class-dependency/watermark protocol for TypeInfo and discards the other derived answers.
+Constant-table pruning/deserialization releases memo keys before dropping their constants.
+
+The existing TypeInfo recorder still captures definition-relative diagnostic values, never the
+request's listener. Cached and rebuilt answers replay warnings through the current request's source
+site and branch/merge policy. Error-listener API migration remains a different project.
+
+### Changed code and reasons
+
+| Area | Change and reason | Classification |
+|---|---|---|
+| `TypeMetadata`, `ConstantPool`, `RuntimeTypeContext` | Give semantic tables, invalidation and calculation state explicit owners and a disposable lifetime | Architectural separation |
+| `TypeConstant` | Remove TypeInfo, variance, normalization, validation and retry fields; retain the algebra and completion algorithm | Architectural separation; avoid shared provisional state |
+| `ParameterizedTypeConstant` | Move its last constant-resolver result and remove its per-constant lock | Architectural separation; full resolver key |
+| `PropertyConstant`, `PropertyClassTypeConstant`, `FormalTypeChildConstant`, `TypeParameterConstant`, `MethodConstant`, `AnnotatedTypeConstant` | Move declaration-derived types; resolve PropertyInfo through its owning current TypeInfo, including after a clear | Architectural separation and consistent invalidation |
+| `TypeInfo`, `TypeInfoReal` | Expose construction status to the table; separate inferred member matches, use full record keys and synchronize lazily built member indices | Cache-input and publication corrections |
+| `TypeMetadataTest`, `ConstantOwnershipTest` | Exercise owner rejection, complete keys, invalidation, recursion/failure, bounded resolver behavior and latch-coordinated publication | Unit regressions without installed-library assumptions |
+| XDK ownership tests and `MetadataQueries.x` | Exercise actual variance, lookup modes, property metadata refresh, warning replay, independent frozen-image contexts and interpreter execution | Distribution-provisioned integration regressions |
+| `xRTDelegate.GenericArrayDelegate.checkAssign`, `MoveRef`, `OpCallable.constructChild`, `xRef.ensureClassHandle`, `UnionTypeConstant` runtime dispatch | Import shared value types through their known composition owner before comparing or constructing local types | Missed runtime destination boundaries exposed by the new `.x` test; separate correction commit |
+
+The access omission in variance and compiler/runtime-mode omission in inferred member matches were
+present in the old cache keys; these are correctness fixes, not requirements invented by moving
+fields. The bootstrap and unresolved-query issues above were regressions in the migration and are
+recorded as such. No claim is made that an end-user program on master was reproduced for every
+cache-input defect.
+
+The new program initially exposed two remaining shared-value transport sites from the earlier
+runtime migration. Inserting a core String into an application-owned generic array compared descriptors
+from different contexts directly; the owner guard rejected that operation. While rendering the
+resulting exception, `MoveRef` constructed `Ref<Exception>` with the same ownership mismatch.
+The array now translates the value through its composition's container, and `MoveRef` uses
+`Frame.runtimeTypeOf`. The added exception-rendering assertion then exposed the same boundary in
+inner-child construction (a String iterator) and ordinary `Ref.class` lookup. Those paths import
+the parent's inception type and referent's exposed composition type respectively; constructor
+identities also use the executing frame's operand boundary. Union equality during rendering also
+required translating actual values and union branches before relation lookup; ordering and hashing
+use the same rule. None permits foreign contexts to pass by structural equality, and masked/foreign
+reflective paths keep their existing separate handling.
+`MetadataQueries.x` covers generic array insertion and exception rendering in two independent
+applications. These focused boundary fixes are a separate commit; they do not complete the broader
+native and reflection audit in scope 5.
+
+Descriptor construction shortcuts (cached hashes, structural signature comparisons, synthetic
+property signatures and a virtual child's explicit origin parent) are not hierarchy-derived
+TypeInfo answers. Their existing ownership rules remain in place. TypeInfo-owned MethodInfo/PropertyInfo graphs still contain executable preparation
+and generated-method paths covered by scopes 3 and 4; this stage does not claim those are immutable
+or permit arbitrary cross-container reuse. Reflection/captured values and native lifetime remain
+scope 5. Full frozen activation remains scope 6.
+
+### Reviewable commits
+
+1. `a02d9124b` — shared-value destination corrections, with the assertion-only `.x` regression.
+   These reuse the existing import APIs and do not depend on the semantic table redesign.
+2. `e59d5b597` — owner-specific semantic tables, declaration-derived queries and deterministic
+   unit regressions.
+3. The following member-cache commit — complete lookup keys, cold/cleared integration checks and
+   this scope/completion record.
+
+### Validation
+
+- `./gradlew :javatools:test --tests org.xvm.asm.TypeMetadataTest --tests org.xvm.asm.ConstantOwnershipTest --rerun :javatools:jar --console=plain`: 24 passed, no skips.
+- `RUN_INTEGRATION_TESTS=true ./gradlew :xdk:test --rerun :javatools:test --rerun --console=plain`:
+  the distribution rebuilt successfully; 519 Java cases reported 483 passed and 36 existing skips,
+  with no failures/errors. All 45 XDK cases passed without skips, including 20 ownership cases.
+  All 18 new metadata unit cases executed. Counts come from the JUnit XML reports.
+- `./gradlew spotlessCheck --console=plain` and `git diff --check` passed.
+
+The new `.x` program also passed in a direct interpreter reproduction, including exception
+rendering, before the final full run. No JIT execution, Gradle lifecycle changes or new automatic
+CI task dependencies were added. Scope 2 is complete within the boundary above; scope 3 (remaining
+generated declarations and delegation/accessor executable overlays) is next. Scopes 4–6 remain open.

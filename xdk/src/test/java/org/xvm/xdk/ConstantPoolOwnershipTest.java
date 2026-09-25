@@ -32,6 +32,7 @@ import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.Op;
 import org.xvm.asm.RuntimeMethodStructure;
 
+import org.xvm.asm.constants.PropertyClassTypeConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 
@@ -292,6 +293,13 @@ class ConstantPoolOwnershipTest {
             assertTrue(TypeConstant.isComplete(secondInfo));
             assertNotSame(firstInfo, secondInfo);
             assertSame(firstInfo, firstType.ensureTypeInfo());
+            assertSame(secondInfo, secondType.ensureTypeInfo());
+            first.getTypeContext().clearMetadata();
+            var rebuilt = firstType.ensureTypeInfo();
+            assertNotSame(firstInfo, rebuilt);
+            assertEquals(firstInfo.getMethods().keySet(), rebuilt.getMethods().keySet());
+            assertEquals(firstInfo.getProperties().keySet(), rebuilt.getProperties().keySet());
+            assertSame(firstType, first.getTypeContext().typeOf(file.getModuleId()));
             assertSame(secondInfo, secondType.ensureTypeInfo());
             assertArrayEquals(constants, file.getConstantPool().getConstants());
             assertEquals(positions, Arrays.stream(file.getConstantPool().getConstants())
@@ -569,7 +577,76 @@ class ConstantPoolOwnershipTest {
             var rebuiltErrors = new ErrorList(100);
             assertNotSame(info, concrete.ensureTypeInfo(rebuiltErrors));
             assertTrue(rebuiltErrors.hasError("VERIFY-75"), rebuiltErrors.getErrors()::toString);
+            // A full semantic clear must replay the same definition-relative warnings to a new
+            // request, without retaining the source site or listener from earlier queries.
+            pool.getTypeMetadata().clear();
+            var clearedErrors = new ErrorList(100);
+            var clearedInfo = concrete.ensureTypeInfo(clearedErrors);
+            assertNotSame(info, clearedInfo);
+            assertEquals(rebuiltErrors.getErrors().stream().map(error -> error.getCode()).toList(),
+                    clearedErrors.getErrors().stream().map(error -> error.getCode()).toList());
             assertSame(unrelated, ConstantPool.getCurrentPool());
+        }
+    }
+
+    @Test
+    void runtimeMethodMatchesDoNotContaminateCompilerLookups() {
+        var repository = repository();
+        var errors = new ErrorList(100);
+        var module = COMPILER.compile("""
+                module LookupOwner {
+                    class Target {
+                        Int value = 0;
+                        void take(String value) {}
+                    }
+                    class Producer<Element> {
+                        Element get() { assert; }
+                        private void take(Element value) {}
+                    }
+                }
+                """, repository, errors);
+        assertNotNull(module, errors::toString);
+        assertFalse(errors.hasSeriousErrors(), errors::toString);
+        var runtime = new Runtime();
+        try {
+            var root = new NativeContainer(runtime, repository);
+            var file = root.createFileStructure(module);
+            var application = new MainContainer(runtime, root, file.getModuleId());
+            var context = application.getTypeContext();
+            var declaration = (ClassStructure) file.getModule().getChild("Target");
+            var type = context.typeOf(declaration.getIdentityConstant());
+            var pool = context.getDescriptorPool();
+            var producer = (ClassStructure) file.getModule().getChild("Producer");
+            var formal = producer.getFormalType(pool);
+            assertFalse(formal.consumesFormalType("Element", Access.PUBLIC));
+            assertTrue(formal.consumesFormalType("Element", Access.PRIVATE));
+            assertTrue(formal.producesFormalType("Element", Access.PUBLIC));
+            assertFalse(formal.consumesFormalType("Element", Access.PUBLIC));
+            var info = type.ensureTypeInfo();
+            var propertyType = (PropertyClassTypeConstant) pool.ensurePropertyClassTypeConstant(type,
+                    pool.ensurePropertyConstant(type.getSingleUnderlyingClass(true), "value"));
+            var propertyInfo = propertyType.getPropertyInfo();
+            // Runtime lookup allows the wider Object parameter as a compatibility fallback;
+            // compiler substitutability correctly rejects it for take(String).
+            var signature = pool.ensureSignatureConstant("take",
+                    new TypeConstant[] {pool.typeObject()}, TypeConstant.NO_TYPES);
+            assertNull(info.getMethodBySignature(signature, type, false));
+            assertNotNull(info.getMethodBySignature(signature, type, true));
+            assertNull(info.getMethodBySignature(signature, type, false));
+            assertNotNull(info.getMethodByNestedId(signature, true));
+            assertNull(info.getMethodByNestedId(signature, false));
+            var identity = pool.ensureMethodConstant(type.getSingleUnderlyingClass(true), signature);
+            assertNotNull(info.getMethodById(identity, true));
+            assertNull(info.getMethodById(identity, false));
+            context.clearMetadata();
+            var rebuilt = type.ensureTypeInfo();
+            assertNotSame(info, rebuilt);
+            assertNotSame(propertyInfo, propertyType.getPropertyInfo());
+            assertEquals(propertyInfo.getIdentity(), propertyType.getPropertyInfo().getIdentity());
+            assertNull(rebuilt.getMethodBySignature(signature, type, false));
+            assertNotNull(rebuilt.getMethodBySignature(signature, type, true));
+        } finally {
+            runtime.shutdownXVM();
         }
     }
 

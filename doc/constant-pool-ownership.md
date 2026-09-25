@@ -13,8 +13,10 @@ The rest of the ownership model remains in place. The plan records the wider
 mutation inventory, including runtime-generated methods and the remaining freeze blockers.
 Its [scope-1 completion record](constant-pool-architecture-plan.md#scope-1-completion-ordinary-runtime-destinations)
 now covers ordinary entry/frame/construction destinations, each changed file group and the cold
-frozen-image regressions. Later cache, executable, reflection/native-lifetime and activation scopes
-remain open; this does not extend the baseline into a whole-runtime freeze guarantee.
+frozen-image regressions. The [scope-2 record](constant-pool-architecture-plan.md#scope-2-owner-specific-semantic-metadata)
+tracks the semantic table split, query keys, failure/recursion handling, diagnostics and its tests.
+Executable, reflection/native-lifetime and activation scopes remain open; this does not extend the
+baseline into a whole-runtime freeze guarantee.
 The original combined work remains on `lagergren/constant-pool-ownership`; its
 [submission plan](https://github.com/xtclang/xvm/blob/lagergren/constant-pool-ownership/plugin/doc/plans/embedded-runtime-pr-plan.md)
 still governs the larger embedded-runtime series.

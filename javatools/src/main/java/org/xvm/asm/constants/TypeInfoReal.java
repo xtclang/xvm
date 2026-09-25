@@ -1035,7 +1035,7 @@ public class TypeInfoReal
     }
 
     @Override
-    public Map<String, PropertyInfo> ensurePropertiesByName() {
+    public synchronized Map<String, PropertyInfo> ensurePropertiesByName() {
         Map<String, PropertyInfo> map = m_mapPropertiesByName;
 
         if (map == null) {
@@ -1312,7 +1312,7 @@ public class TypeInfoReal
     }
 
     @Override
-    public Map<SignatureConstant, MethodInfo> ensureMethodsBySignature() {
+    public synchronized Map<SignatureConstant, MethodInfo> ensureMethodsBySignature() {
         Map<SignatureConstant, MethodInfo> map = m_mapMethodsBySignature;
 
         if (map == null) {
@@ -1335,6 +1335,10 @@ public class TypeInfoReal
     @Override
     public MethodInfo getMethodBySignature(
             SignatureConstant sig, TypeConstant typeThis, boolean fRuntime) {
+        if (!pool().hasSerializedIndices()) {
+            sig = pool().register(sig);
+            typeThis = pool().register(typeThis);
+        }
         MethodInfo method = f_mapVirtMethods.get(sig);
         if (method != null) {
             return method;
@@ -1343,6 +1347,16 @@ public class TypeInfoReal
         Map<SignatureConstant, MethodInfo> mapBySig = ensureMethodsBySignature();
 
         method = mapBySig.get(sig);
+        if (method != null) {
+            return method;
+        }
+
+        boolean cacheable = sig.getConstantPool() == pool()
+                && typeThis != null && typeThis.getConstantPool() == pool()
+                && !sig.containsUnresolved() && !typeThis.containsUnresolved()
+                && TypeConstant.getContext() == null;
+        var query = new SignatureQuery(sig, typeThis, fRuntime);
+        method = cacheable ? signatureMatches.get(query) : null;
         if (method != null) {
             return method;
         }
@@ -1426,17 +1440,23 @@ public class TypeInfoReal
         }
 
         if (methodBest != null) {
-            mapBySig.putIfAbsent(sig, methodBest);
+            if (cacheable) {
+                signatureMatches.putIfAbsent(query, methodBest);
+            }
             return methodBest;
         }
 
         if (methodCapped != null) {
-            mapBySig.putIfAbsent(sig, methodCapped);
+            if (cacheable) {
+                signatureMatches.putIfAbsent(query, methodCapped);
+            }
             return methodCapped;
         }
 
         if (methodRT != null) {
-            mapBySig.putIfAbsent(sig, methodRT);
+            if (cacheable) {
+                signatureMatches.putIfAbsent(query, methodRT);
+            }
             return methodRT;
         }
 
@@ -1446,7 +1466,9 @@ public class TypeInfoReal
                 Set<MethodConstant> set = findMethods("invoke", 1, MethodKind.Method);
                 assert set.size() == 1;
                 method = getMethodById(set.iterator().next(), true);
-                mapBySig.putIfAbsent(sig, method);
+                if (cacheable) {
+                    signatureMatches.putIfAbsent(query, method);
+                }
                 return method;
             }
         }
@@ -1496,6 +1518,9 @@ public class TypeInfoReal
 
     @Override
     public MethodInfo getMethodById(MethodConstant id, boolean fRuntime) {
+        if (!pool().hasSerializedIndices()) {
+            id = pool().register(id);
+        }
         ensureCaches();
 
         MethodInfo infoMethod = f_cacheById.get(id);
@@ -1503,10 +1528,18 @@ public class TypeInfoReal
             return infoMethod;
         }
 
+        boolean cacheable = id.getConstantPool() == pool() && !id.containsUnresolved()
+                && TypeConstant.getContext() == null;
+        var query = new IdentityQuery(id, fRuntime);
+        infoMethod = cacheable ? identityMatches.get(query) : null;
+        if (infoMethod != null) {
+            return infoMethod;
+        }
+
         // try to find a method with the same signature
         infoMethod = getMethodByNestedId(id.resolveNestedIdentity(pool(), f_type), fRuntime);
-        if (infoMethod != null) {
-            f_cacheById.put(id, infoMethod);
+        if (infoMethod != null && cacheable) {
+            identityMatches.put(query, infoMethod);
         }
 
         return infoMethod;
@@ -1516,9 +1549,12 @@ public class TypeInfoReal
     public MethodInfo getMethodByNestedId(Object nid, boolean fRuntime) {
         ensureCaches();
 
-        // TODO remove
-        if (nid == null) {
-            int q=0;
+        if (!pool().hasSerializedIndices()) {
+            nid = switch (nid) {
+                case SignatureConstant signature -> pool().register(signature);
+                case NestedIdentity identity -> pool().register(identity.getResolvedIdentity()).getNestedIdentity();
+                default -> throw new IllegalArgumentException("Expected a method nested identity");
+            };
         }
 
         MethodInfo info = f_cacheByNid.get(nid);
@@ -1526,10 +1562,26 @@ public class TypeInfoReal
             return info;
         }
 
+        boolean cacheable = TypeConstant.getContext() == null && switch (nid) {
+            case SignatureConstant signature -> signature.getConstantPool() == pool()
+                    && !signature.containsUnresolved();
+            case NestedIdentity identity -> identity.isCacheable()
+                    && identity.getIdentityConstant().getConstantPool() == pool()
+                    && !identity.getIdentityConstant().containsUnresolved();
+            default -> false;
+        };
+        var query = new NestedQuery(nid, fRuntime);
+        info = cacheable ? nestedMatches.get(query) : null;
+        if (info != null) {
+            return info;
+        }
+
         if (nid instanceof SignatureConstant sig) {
             info = getMethodBySignature(sig, fRuntime);
             if (info != null) {
-                f_cacheByNid.put(sig, info);
+                if (cacheable) {
+                    nestedMatches.put(query, info);
+                }
                 return info;
             }
         } else {
@@ -1537,8 +1589,8 @@ public class TypeInfoReal
             IdentityConstant id       = idNested.getIdentityConstant();
             for (MethodInfo infoTest : f_mapMethods.values()) {
                 if (infoTest.getIdentity().equals(id)) {
-                    if (!fRuntime || idNested.isCacheable()) {
-                        f_cacheByNid.put(idNested, infoTest);
+                    if (cacheable) {
+                        nestedMatches.put(query, infoTest);
                     }
                     return infoTest;
                 }
@@ -1762,7 +1814,7 @@ public class TypeInfoReal
 
     @Override
     public Set<MethodConstant> findOpMethods(String sName, String sOp, int cParams) {
-        Map<String, Set<MethodConstant>> mapOps = m_mapOps;
+        Map<OperatorQuery, Set<MethodConstant>> mapOps = m_mapOps;
         if (mapOps == null) {
             synchronized (this) {
                 mapOps = m_mapOps;
@@ -1772,10 +1824,10 @@ public class TypeInfoReal
             }
         }
 
-        String sKey = sName + sOp + cParams;
-        Set<MethodConstant> setOps = mapOps.get(sKey);
+        var key = new OperatorQuery(sName, sOp, cParams);
+        Set<MethodConstant> setOps = mapOps.get(key);
         if (setOps == null) {
-            setOps = mapOps.computeIfAbsent(sKey, key -> {
+            setOps = mapOps.computeIfAbsent(key, _ -> {
                 Set<MethodConstant> set = null;
                 for (MethodInfo method : getOpMethodInfos()) {
                     if (method.isOp(sName, sOp, cParams)) {
@@ -1890,31 +1942,24 @@ public class TypeInfoReal
         return idMethod;
     }
 
-    private Map<String, Set<MethodConstant>> ensureMethodsByNameCache() {
-        Map<String, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
+    private Map<MethodQuery, Set<MethodConstant>> ensureMethodsByNameCache() {
+        Map<MethodQuery, Set<MethodConstant>> mapMethods = m_mapMethodsByName;
         if (mapMethods == null) {
             m_mapMethodsByName = mapMethods = new HashMap<>();
         }
         return mapMethods;
     }
 
-    private static String cacheKey(String sName, int cParams, MethodKind kind) {
-        if (kind == MethodKind.Any && cParams < 0) {
-            return sName;
-        }
+    /** Query arguments are retained structurally, without lossy display-name concatenation. */
+    private record SignatureQuery(SignatureConstant signature, TypeConstant receiver, boolean runtime) {}
 
-        StringBuilder buf = new StringBuilder();
-        buf.append(sName);
-        if (cParams >= 0) {
-            buf.append('(').append(cParams).append(')');
-        } else {
-            buf.append("(?)");
-        }
-        if (kind != MethodKind.Any) {
-            buf.append(kind.key);
-        }
-        return buf.toString();
-    }
+    private record IdentityQuery(MethodConstant identity, boolean runtime) {}
+
+    private record NestedQuery(Object identity, boolean runtime) {}
+
+    private record MethodQuery(Object parent, String name, int parameters, MethodKind kind) {}
+
+    private record OperatorQuery(String name, String operator, int parameters) {}
 
     private static Set<MethodConstant> addMatch(
             Set<MethodConstant> set,
@@ -1929,18 +1974,18 @@ public class TypeInfoReal
     @Override
     public synchronized Set<MethodConstant> findMethods(
             String sName, int cParams, MethodKind kind) {
-        String              sKey       = cacheKey(sName, cParams, kind);
-        Set<MethodConstant> setMethods = ensureMethodsByNameCache().get(sKey);
+        var key = new MethodQuery(null, sName, cParams, kind);
+        Set<MethodConstant> setMethods = ensureMethodsByNameCache().get(key);
         if (setMethods == null) {
             // assume no matches
             setMethods = Collections.emptySet();
 
             // the call to info.getTopmostMethodStructure(this) may change the content of
             // mapBySignature, so collect all the matching names first
-            Map.Entry<MethodConstant, MethodInfo>[] candidates = f_mapMethods.entrySet().stream()
+            var candidates = f_mapMethods.entrySet().stream()
                     .filter(e -> e.getKey().getName().equals(sName) && e.getKey().isTopLevel() &&
                             (!e.getValue().isCapped() || e.getValue().getHead().isUnion()) && // TODO CP:
-                        kind.matches(e.getValue())).toArray(Map.Entry[]::new);
+                        kind.matches(e.getValue())).toList();
 
             for (Entry<MethodConstant, MethodInfo> entry : candidates) {
                 MethodConstant  id        = entry.getKey();
@@ -1952,7 +1997,7 @@ public class TypeInfoReal
             }
 
             // cache the result
-            ensureMethodsByNameCache().put(sKey, setMethods);
+            ensureMethodsByNameCache().put(key, setMethods);
         }
         return setMethods;
     }
@@ -1962,10 +2007,13 @@ public class TypeInfoReal
             IdentityConstant idContainer,
             String           sName,
             int              cParams) {
-        Object              nid        = idContainer.getNestedIdentity();
-        String              sNid       = nid instanceof SignatureConstant sig ? sig.getValueString() : nid.toString();
-        String              sKey       = cacheKey(sNid + '#' + sName, cParams, MethodKind.Any);
-        Set<MethodConstant> setMethods = ensureMethodsByNameCache().get(sKey);
+        if (!pool().hasSerializedIndices()) {
+            idContainer = pool().register(idContainer);
+        }
+        boolean cacheable = idContainer.getConstantPool() == pool() && !idContainer.containsUnresolved()
+                && TypeConstant.getContext() == null;
+        var key = new MethodQuery(idContainer.getNestedIdentity(), sName, cParams, MethodKind.Any);
+        Set<MethodConstant> setMethods = cacheable ? ensureMethodsByNameCache().get(key) : null;
         if (setMethods == null) {
             // assume no matches
             setMethods = Collections.emptySet();
@@ -1990,7 +2038,9 @@ public class TypeInfoReal
                     }
                 }
             }
-            ensureMethodsByNameCache().put(sKey, setMethods);
+            if (cacheable) {
+                ensureMethodsByNameCache().put(key, setMethods);
+            }
         }
         return setMethods;
     }
@@ -2033,10 +2083,13 @@ public class TypeInfoReal
 
     @Override
     public synchronized MethodConstant findConversion(TypeConstant typeDesired) {
+        typeDesired = pool().register(typeDesired);
+        boolean cacheable = typeDesired.getConstantPool() == pool()
+                && TypeConstant.getContext() == null && !typeDesired.containsUnresolved();
         MethodConstant methodMatch = null;
 
-        // check the cached result
-        if (typeDesired.equals(m_typeAuto)) {
+        // A library's metadata must not retain a downstream compiler query's type.
+        if (cacheable && typeDesired.equals(m_typeAuto)) {
             methodMatch = m_methodAuto;
         } else {
             for (MethodInfo info : getAutoMethodInfos()) {
@@ -2067,8 +2120,10 @@ public class TypeInfoReal
             }
 
             // cache the result
-            m_typeAuto   = typeDesired;
-            m_methodAuto = methodMatch;
+            if (cacheable) {
+                m_typeAuto   = typeDesired;
+                m_methodAuto = methodMatch;
+            }
         }
 
         return methodMatch;
@@ -2493,12 +2548,18 @@ public class TypeInfoReal
     private final Map<MethodConstant, MethodInfo> f_cacheById;
     private final Map<Object, MethodInfo>         f_cacheByNid;
 
+    // These are results over this TypeInfo's definition graph, not additions to its declaration
+    // indices. In particular, a runtime-callable match must not become a compiler-visible method.
+    private final Map<SignatureQuery, MethodInfo> signatureMatches = new ConcurrentHashMap<>();
+    private final Map<IdentityQuery, MethodInfo> identityMatches = new ConcurrentHashMap<>();
+    private final Map<NestedQuery, MethodInfo> nestedMatches = new ConcurrentHashMap<>();
+
     private transient          TypeInfoReal                                     m_delegates;
     private transient          Set<MethodInfo>                                  m_setAuto;
     private transient          Set<MethodInfo>                                  m_setOps;
     private transient          TypeConstant                                     m_typeAuto;
     private transient          MethodConstant                                   m_methodAuto;
-    private transient volatile Map<String, Set<MethodConstant>>                 m_mapOps;
-    private transient          Map<String, Set<MethodConstant>>                 m_mapMethodsByName;
+    private transient volatile Map<OperatorQuery, Set<MethodConstant>>          m_mapOps;
+    private transient          Map<MethodQuery, Set<MethodConstant>>            m_mapMethodsByName;
     private transient          Map<IdentityConstant, Map<String, PropertyInfo>> m_mapNestedProperties;
 }
