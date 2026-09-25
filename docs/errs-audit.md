@@ -599,7 +599,7 @@ and releases all 2,402 observed references; no AST ownership changes were needed
 
 ## Specialized constructor and declaration recovery audit (2026-09-25)
 
-The working changes after `cd4ad0d64` close the next cursor API gaps. Constructor probes reuse
+Commit `46d6c1442` closes the next cursor API gaps. Constructor probes reuse
 normal preparation for inner/virtual/annotated/formal types and required-type inference; array
 sizes remain written arguments before a parenthesized supplier. Provisional class inference does
 not constrain later arguments more than normal compilation does. Accepted completions are checked

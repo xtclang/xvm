@@ -12,9 +12,9 @@ the two Markdown files above.
 
 ## Specialized constructors and declaration/literal cursor recovery
 
-Implemented on `lagergren/errs` after the pushed property checkpoint `ace732d5c` and map update
-`cd4ad0d64`. This section describes the current uncommitted changes; record their hashes when
-committed. Keep implementation on this integrated branch until the playbook checkpoint is accepted.
+Implemented on `lagergren/errs` in `46d6c1442`, after the pushed property checkpoint `ace732d5c`
+and map update `cd4ad0d64`. Keep implementation on this integrated branch until the playbook
+checkpoint is accepted.
 
 - [x] Reuse normal constructor preparation for qualified/implicit inner classes, virtual `new`,
   annotated types and formal constructors.
@@ -70,7 +70,7 @@ still the shipped default; compiler mode remains Java-only.
 
 These add four groups to 57, bringing the future extraction map to **61**. Parser,
 IncompleteStatement, protocol, retention and playbook files contain hunks from both slices; do not
-cherry-pick the eventual mixed commit as an independent PR. Each extracted group still needs its
+cherry-pick the mixed commit `46d6c1442` as an independent PR. Each extracted group still needs its
 own prerequisite build and tests. The integrated branch's results do not establish that.
 
 **Backend verification (2026-09-25):** JUnit XML reports 513 Java tests (473 executed, 40 existing
@@ -2141,10 +2141,10 @@ above identify old candidate patches, not additional changes to merge into the i
 | L26 | Replace typed argument prefixes with compiler-fitted values | `dc3218d81` host portion; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
 | C15 | Fit implicit property/constant reads as argument values | `ace732d5c`; property argument completion above | C13/C14; additive immutable facts, preserved constructors and compiler probes |
 | L28 | Copy property argument facts and verify editor acceptance | `ace732d5c`; property argument completion above | C15, L25/L26; L16 runner; X81–X82, protocol and lifecycle controls |
-| C16 | Specialized constructor preparation and cursor fitting | Uncommitted after `cd4ad0d64`; specialized-constructor section above | C11, C13–C15 |
-| L29 | Specialized-constructor copying and editor consumers | Same working changes; X83–X85 | C16, L23/L25/L26/L28, L16 |
-| C17 | Declaration/tuple/literal recovery and source-owned initializers | Same working changes; recovery section above | C12 and cursor collectors |
-| L30 | Declaration/literal recovery consumers and editor controls | Same working changes; X86–X87 | C17, L24, L16 |
+| C16 | Specialized constructor preparation and cursor fitting | `46d6c1442` (compiler constructor hunks); specialized-constructor section above | C11, C13–C15 |
+| L29 | Specialized-constructor copying and editor consumers | `46d6c1442` (constructor consumers); X83–X85 | C16, L23/L25/L26/L28, L16 |
+| C17 | Declaration/tuple/literal recovery and source-owned initializers | `46d6c1442` (compiler recovery hunks); recovery section above | C12 and cursor collectors |
+| L30 | Declaration/literal recovery consumers and editor controls | `46d6c1442` (recovery consumers); X86–X87 | C17, L24, L16 |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
