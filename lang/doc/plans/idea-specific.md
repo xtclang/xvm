@@ -11,6 +11,14 @@
 > [current capability matrix](plan-ide-integration.md#adapter-capability-matrix) and
 > [manual playbook](../manual-test-plan.md#xdkadapter-playbook) for supported behavior.
 
+> **Compiler client/playbook checkpoint, 2026-09-25:** The target is IDEA 2026.2.3 with
+> LSP4IJ 0.21.0; only the free Community feature set is required. Compiler source graphs now use
+> LSP4IJ's existing server Configuration JSON, including initial lookup and live updates.
+> The opt-in Starter/Driver suite passes eight startup/configuration/diagnostic/navigation/
+> completion cases with Ultimate explicitly unloaded. This does not close the native IDE work
+> below or establish full IntelliJ playbook parity. See the
+> [runner instructions](../../intellij-plugin/README.md#compiler-playbook-in-intellij).
+
 ## Context
 
 The XTC IntelliJ plugin currently delegates most intelligence to the out-of-process
