@@ -17,6 +17,7 @@ import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
+import org.xvm.asm.constants.MethodBody.Implementation;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
@@ -682,32 +683,48 @@ public abstract class OpCallable extends Op {
             int        nDepth    = bctx.callDepth + 1;
             MethodBody bodySuper = bctx.callChain[nDepth];
 
-            MethodConstant   idSuper  = bodySuper.getIdentity();
-            IdentityConstant idCallee = idSuper.getNamespace();
-            Format           format   = idCallee.getComponent().getFormat();
-
-            if (format == Format.MIXIN) {
-                // we need to generate a synthetic super
-                cdTarget   = ClassDesc.of(bctx.className);
-                sJitName   = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
-                           + HASH + nDepth;
-
-                bctx.buildSuper(sJitName, nDepth);
-                fInterface = false;
-            } else {
-                TypeConstant typeTarget = bctx.isSpecialized
-                        ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
-                        : idCallee.getType();
-                cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
-                sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
-                        ensureJitMethodName(ts);
-                fInterface = typeTarget.isJitInterface();
-            }
-            jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
-            fSpecial = true;
-            fCond    = bodySuper.getMethodStructure().isConditionalReturn();
-            fFunky   = false;
             code.aload(0); // super() can only be on "this"
+            if (bodySuper.getImplementation() == Implementation.Delegating) {
+                // super() can reach a synthetic delegation body; invoke the method on the
+                // delegate property instead of looking for executable code on that body
+                TypeConstant typeTarget = bctx.builder.loadProperty(code, bctx.thisType,
+                        bodySuper.getPropertyConstant(), false, bctx.ctxSlot(code)).getType();
+                TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+                MethodInfo   infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
+
+                cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                sJitName   = infoMethod.ensureJitMethodName(ts);
+                jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
+                fSpecial   = false;
+                fInterface = typeTarget.isJitInterface();
+                fCond      = infoMethod.isConditionalReturn(infoTarget);
+            } else {
+                MethodConstant   idSuper  = bodySuper.getIdentity();
+                IdentityConstant idCallee = idSuper.getNamespace();
+                Format           format   = idCallee.getComponent().getFormat();
+
+                if (format == Format.MIXIN) {
+                    // we need to generate a synthetic super
+                    cdTarget   = ClassDesc.of(bctx.className);
+                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
+                               + HASH + nDepth;
+
+                    bctx.buildSuper(sJitName, nDepth);
+                    fInterface = false;
+                } else {
+                    TypeConstant typeTarget = bctx.isSpecialized
+                            ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
+                            : idCallee.getType();
+                    cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
+                            ensureJitMethodName(ts);
+                    fInterface = typeTarget.isJitInterface();
+                }
+                jmdCall  = bodySuper.getJitDesc(bctx.builder, bctx.thisType);
+                fSpecial = true;
+                fCond    = bodySuper.getMethodStructure().isConditionalReturn();
+            }
+            fFunky = false;
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant   idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
             IdentityConstant idCallee = idMethod.getNamespace();
@@ -884,8 +901,13 @@ public abstract class OpCallable extends Op {
             // to use invokespecial on an interface method, which is only legal if we don't
             // skip levels in the hierarchy
             code.invokespecial(cdTarget, sJitName, mdCall, fInterface);
-        } else if (fFunky) {
-            code.invokeinterface(cdTarget, sJitName, mdCall);
+        } else if (fFunky || m_nFunctionId == A_SUPER) {
+            // funky functions and delegating super calls dispatch on the loaded receiver
+            if (fInterface) {
+                code.invokeinterface(cdTarget, sJitName, mdCall);
+            } else {
+                code.invokevirtual(cdTarget, sJitName, mdCall);
+            }
         } else {
             code.invokestatic(cdTarget, sJitName, mdCall, fInterface);
         }

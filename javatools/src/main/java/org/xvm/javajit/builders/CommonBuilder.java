@@ -4337,8 +4337,7 @@ public class CommonBuilder
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
         Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
-            Set.of("calc",    // TODO: applied @Lazy property state is not available on the host
-                   "toArray")), // TODO: super call resolves to a synthetic MethodBody
+            Set.of("calc")), // TODO: applied @Lazy property state is not available on the host
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
             Set.of("calc",        // TODO: applied @Lazy property state is not available on the host
                    "evaluateInto")), // TODO: requires HashSet compilation
