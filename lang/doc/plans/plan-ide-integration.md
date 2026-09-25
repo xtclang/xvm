@@ -134,7 +134,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations |
 | Document links | Regex | AST nodes + best-effort import targets | Not implemented |
-| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets |
+| Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets and single-dimensional bracket slots fit the size parameter |
 | Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; ordinary instance methods additionally require an explicit source graph; client versioned-edit support required |
 | Rename (cross-file) | - | - | **Partial** - ordinary instance-method override families across the configured graph; full recompilation plus binding/call/dispatch checks; no discovery of outside consumers |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
@@ -277,7 +277,11 @@ supplier slot. X86–X87 retain tuple/typed-tuple/list/set/map closers, declarat
 and parameter-default closers before a body. Property initializers containing a cursor hole use their
 source-owned validation context. No AST fields or clone-remapping rules are added. X88–X89 prepare
 source-owned anonymous declarations, fit own/superclass constructors and preserve captured-local
-syntax without capture analysis or emission. Array-dimension cursors, multidimensional construction, unfinished declaration
+syntax without capture analysis or emission. X90 adds empty/final-prefix single-dimensional array
+size cursors with real constructor fitting, original-token replacement, active size hints and missing
+bracket recovery. A written supplier after the cursor is parsed but is not validated by that prefix
+query. Normal compilation still checks suppliers and element defaults. Compiler mode advertises `[` as
+a signature-help trigger. Multidimensional construction, unfinished declaration
 names/types, missing operands/map entries and unterminated literal contents remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
 enclosing-instance member enumeration, arbitrary type-valued receiver
