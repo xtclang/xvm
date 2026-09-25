@@ -426,6 +426,40 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
+        scenario("X91") { data ->
+            val editor = open(data.text("file"))
+            data.strings("variants").forEach { variant ->
+                val marked = SharedScenarios.text(data.text("source"), variant)
+                val at = marked.indexOf('|')
+                editor.text = marked.replace("|", "")
+                editor.awaitError()
+                signature(editor, at) { it.isEmpty() }
+                lookup(editor, at) { items ->
+                    val names = items.map { it.getLookupString() }
+                    names.containsAll(data.strings("include")) && data.strings("exclude").none { it in names }
+                }
+                invokeAction("EditorEscape", component = editor.component)
+                accept(editor, at, data.text("selected"))
+                check(
+                    editor.text == marked.take(at - data.values["prefixLength"].asInt) +
+                        data.text("selected") + marked.substring(at + 1),
+                )
+                editor.awaitDiagnostics(emptyList())
+            }
+            restore(data.text("file"))
+        }
+        scenario("X92") { data ->
+            val editor = open(data.text("file"))
+            data.strings("parameters").forEach { parameters ->
+                editor.text = SharedScenarios.text(data.text("source"), parameters)
+                editor.awaitError()
+                problems(editor)
+                editor.text = SharedScenarios.text(data.text("source"), data.text("repairedParameters"))
+                editor.awaitDiagnostics(emptyList())
+                problems(editor)
+            }
+            restore(data.text("file"))
+        }
     }
 
     private fun Driver.problems(editor: JEditorUiComponent) {
