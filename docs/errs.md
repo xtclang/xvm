@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**IntelliJ client/playbook hardening (2026-09-25, uncommitted).**
+**IntelliJ client/playbook hardening (2026-09-25, `4e46becb6`).**
 The client now delegates compiler configuration to LSP4IJ while retaining Ecstasy formatting
 settings. The IntelliJ target is 2026.2.3 (build 262+) with LSP4IJ 0.21.0; the free Community
 feature set is required. An opt-in Starter/Driver suite exercises real editor diagnostics,

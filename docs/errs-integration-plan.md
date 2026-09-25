@@ -12,7 +12,7 @@ the two Markdown files above.
 
 ## IntelliJ compiler playbook and client configuration
 
-Implemented and validated on `lagergren/errs` after `156d02687`; not yet committed.
+Implemented and validated on `lagergren/errs` in `4e46becb6`, following `156d02687`.
 This work adds no Java embedding or AST API. Keep the following future slices separate:
 
 | Group | Scope | Prerequisites |
@@ -1974,8 +1974,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L25 | Complete compatible locals/parameters at missing argument slots | `f2896916b` host portion; argument-value completion above | C13, L8/L9/L23; editor runner L16; X25 synchronization in the same commit belongs to L16 |
 | C14 | Retain typed argument prefixes in their call fitting context | `dc3218d81` compiler portion; typed argument-prefix completion above | C13, C12; additive syntax token/factory/accessors and compiler prefix filter |
 | L26 | Replace typed argument prefixes with compiler-fitted values | `dc3218d81` host portion; typed argument-prefix completion above | C14, L25, L24; editor runner L16; X79–X80 and lifecycle/protocol controls |
-| I8 | Target the released IntelliJ free feature set and update LSP4IJ | Uncommitted after `156d02687`; IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
-| L27 | IntelliJ compiler configuration and automated playbook | Uncommitted after `156d02687`; client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
+| I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
+| L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
 Suggested landing order: I1, I2 and R1 first; I3 alongside C1; then C2, C3, E1, C4, L1 and L2.
 E2, L3 and L4 can follow without delaying the diagnostics milestone; E3, L5 and L6 extend it
