@@ -127,13 +127,14 @@ class XdkCursorRequestTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["member", "empty", "typed"])
+    @ValueSource(strings = ["member", "empty", "typed", "property"])
     fun `canceling converted completion results cancels their compiler request`(kind: String) {
         val compiler = PausedCursor()
         val prefix =
             when (kind) {
                 "member" -> prefix("String")
                 "empty" -> "module Editing { void take(String value) {} void run(String text) { take("
+                "property" -> "module Editing { String text=\"x\"; void take(String value) {} void run() { take(te"
                 else -> "module Editing { void take(String value) {} void run(String text) { take(te"
             }
         val source = "$prefix } }"
