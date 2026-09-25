@@ -36,7 +36,7 @@ const TimeOfDay(Int picos)
      *                also supported
      * @param picos   the number of picoseconds, in the range `0..999999999999`
      */
-    construct(Int hour, Int minute, Int second=0, Int picos=0) {
+    construct(Int hour, Int minute, Int second = 0, Int picos = 0) {
         assert 0 <= hour   < 24;
         assert 0 <= minute < 60;
         assert 0 <= second < 60
@@ -120,7 +120,7 @@ const TimeOfDay(Int picos)
      *
      * @return True iff the passed values are in their allowed ranges
      */
-    static Boolean validate(Int hour, Int minute, Int second=0, Int picos=0) {
+    static Boolean validate(Int hour, Int minute, Int second = 0, Int picos = 0) {
         return 0 <= hour   < 24
             && 0 <= minute < 60
             && (0 <= second < 60

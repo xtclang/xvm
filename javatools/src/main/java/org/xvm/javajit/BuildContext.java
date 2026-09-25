@@ -1377,7 +1377,7 @@ public class BuildContext {
      * @return true iff this register has been assigned
      */
     public boolean isAssigned(RegisterInfo reg) {
-        return !unassignedRegisters.containsKey(reg);
+        return !unassignedRegisters.containsKey(reg.original());
     }
 
     /**

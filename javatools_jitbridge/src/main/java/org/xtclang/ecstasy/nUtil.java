@@ -15,7 +15,7 @@ public final class nUtil {
         }
     }
 
-    public static void appendTo(Ctx ctx, StringBuilder buffer, Object value) {
+    public static void appendValue(Ctx ctx, StringBuilder buffer, Object value) {
         if (buffer.length() > MAX_LEN) {
             return;
         }

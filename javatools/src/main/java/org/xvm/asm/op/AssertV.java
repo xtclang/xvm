@@ -230,120 +230,108 @@ public class AssertV
 
     @Override
     protected void buildMessage(BuildContext bctx, CodeBuilder code) {
-        String[]       asParts         = splitMessage(bctx.getString(m_nMsgConstId));
-        ClassDesc      cdBuilder       = ClassDesc.of(StringBuilder.class.getName());
-        MethodTypeDesc mdBuilderInit   = md(CD_void);
-        MethodTypeDesc mdAppendText    = md(CD_void, cdBuilder, CD_JavaString);
-        MethodTypeDesc mdAppendValue   = md(CD_void, CD_Ctx, cdBuilder, CD_Object);
-        MethodTypeDesc mdJavaToString  = md(CD_JavaString);
+        String[] asParts = splitMessage(bctx.getString(m_nMsgConstId));
 
         bctx.loadCtx(code);
-        code.new_(cdBuilder)
+        code.new_(CD_StringBuilder)
             .dup()
-            .invokespecial(cdBuilder, INIT_NAME, mdBuilderInit);
+            .invokespecial(CD_StringBuilder, INIT_NAME, MD_BuilderInit);
         for (int i = 0, c = m_anValue.length; i < c; ++i) {
-            appendString(code, mdAppendText, asParts[i]);
-            appendValue(bctx, code, mdAppendValue, m_anValue[i], asParts, i);
+            appendString(code, asParts[i]);
+            appendValue(bctx, code, m_anValue[i]);
         }
-        code.invokevirtual(cdBuilder, "toString", mdJavaToString)
+        code.invokevirtual(CD_StringBuilder, "toString", MD_JavaToString)
             .invokestatic(CD_String, "of", MD_StringOf);
     }
 
-    private void appendValue(BuildContext bctx, CodeBuilder code, MethodTypeDesc mdAppendValue,
-                             int nValue, String[] asParts, int index) {
-        RegisterInfo reg = nValue >= 0
-                ? bctx.getRegisterInfo(nValue)
-                : null;
-        if (nValue >= 0) {
-            if (reg == null) {
-                return;
-            }
-            String sName       = reg.name();
-            String sExpression = asParts[0];
-
-            // The 'asParts[index]' is the message text before this value placeholder, such as
-            // ", range=" for a named value or ", range1.covers(range2)=" for a call result;
-            // the "(" check identifies method-call trace labels, which use compiler-created
-            // Boolean temps that may have no value when short-circuiting skips the call loading;
-            // skip these call-result temps and keep ordinary named Boolean values
-            boolean fSkip = index > 0
-                    && sName != null
-                    && sName.startsWith("v$")
-                    && asParts[index].contains("(")
-                    && reg.type().isA(bctx.pool().typeBoolean())
-                    && (sExpression.contains("&&") || sExpression.contains("||"));
-            if (fSkip) {
-                return;
-            }
-            RegisterInfo original = reg.original();
-            if (original != reg) {
-                // narrowed temps may not exist on all failure paths - print the source value;
-                // keep ctx and buffer live after appendTo consumes its arguments
-                code.dup2();
-                original.load(code);
-                appendLoadedRegister(code, mdAppendValue, original);
+    /**
+     * Append a best-effort diagnostic value. We do not track whether a capture executed at runtime,
+     * so a short-circuited primitive expression can incorrectly be reported using an existing or
+     * verifier-initialized default value (such as zero or False), rather than being omitted.
+     */
+    private void appendValue(BuildContext bctx, CodeBuilder code, int argId) {
+        RegisterInfo reg = null;
+        if (argId >= 0) {
+            reg = bctx.getRegisterInfo(argId);
+            if (reg == null || !bctx.isAssigned(reg) ||
+                    bctx.typeMatrix.needsInitialization(argId, getAddress())) {
+                // short-circuiting can skip both the declaration and the store of a capture
                 return;
             }
         }
 
-        // keep ctx and buffer live after appendTo consumes its arguments
+        // keep ctx and buffer on stack after "appendValue" consumes its arguments
         code.dup2();
-        reg = bctx.loadArgument(code, nValue);
-        appendLoadedRegister(code, mdAppendValue, reg);
+        if (argId >= 0) {
+            // narrowing may initialize primitive slots only on one branch;
+            // use the original representation, which is available on every failure path
+            reg = reg.original().load(code);
+        } else {
+            reg = bctx.loadArgument(code, argId);
+        }
+        appendLoadedRegister(code, reg);
     }
 
-    private void appendLoadedRegister(CodeBuilder code, MethodTypeDesc mdAppendValue,
-                                      RegisterInfo reg) {
+    private void appendLoadedRegister(CodeBuilder code, RegisterInfo reg) {
         JitFlavor flavor = reg.flavor();
         if (flavor.isOptimized) {
             switch (flavor) {
                 case Primitive, XvmPrimitive -> {
                     Builder.box(code, reg);
-                    appendLoadedValue(code, mdAppendValue);
+                    appendLoadedValue(code);
                 }
                 case NullablePrimitive ->
-                    appendNullablePrimitiveValue(code, mdAppendValue, reg);
+                    appendNullablePrimitive(code, reg);
 
                 case NullableXvmPrimitive ->
-                    appendNullableXvmPrimitiveValue(code, mdAppendValue, reg);
+                    appendNullableXvmPrimitive(code, reg);
 
                 default ->
                     throw new UnsupportedOperationException("Unsupported flavor: " + flavor);
             }
         }
         else {
-            appendLoadedValue(code, mdAppendValue);
+            // a verifier-only default can be Java null; Ecstasy Null is a real object
+            Label labelNull = code.newLabel();
+            Label labelDone = code.newLabel();
+            code.dup().ifnull(labelNull);
+            appendLoadedValue(code);
+            code.goto_(labelDone)
+                .labelBinding(labelNull)
+                .pop()
+                .pop2()
+                .labelBinding(labelDone);
         }
     }
 
-    private void appendNullablePrimitiveValue(CodeBuilder code, MethodTypeDesc mdAppendValue,
-                                              RegisterInfo reg) {
+    private void appendNullablePrimitive(CodeBuilder code, RegisterInfo reg) {
         // stack: ctx, buffer, ctx, buffer, primitive value, isNull
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
+
         TypeConstant type = reg.type().removeNullable();
         Builder.box(code, type);
-        appendLoadedValue(code, mdAppendValue);
+        appendLoadedValue(code);
         code.goto_(endIf)
             .labelBinding(ifNull);
 
         // stack: ctx, buffer, ctx, buffer, primitive value
         Builder.pop(code, reg.cd());
         Builder.loadNull(code);
-        appendLoadedValue(code, mdAppendValue);
+        appendLoadedValue(code);
         code.labelBinding(endIf);
     }
 
-    private void appendNullableXvmPrimitiveValue(CodeBuilder code, MethodTypeDesc mdAppendValue,
-                                                 RegisterInfo reg) {
+    private void appendNullableXvmPrimitive(CodeBuilder code, RegisterInfo reg) {
         // stack: ctx, buffer, ctx, buffer, xvm primitive slot values, isNull
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
+
         TypeConstant type = reg.type().removeNullable();
         Builder.box(code, type);
-        appendLoadedValue(code, mdAppendValue);
+        appendLoadedValue(code);
         code.goto_(endIf)
             .labelBinding(ifNull);
 
@@ -353,19 +341,21 @@ public class AssertV
             Builder.pop(code, cds[i]);
         }
         Builder.loadNull(code);
-        appendLoadedValue(code, mdAppendValue);
+        appendLoadedValue(code);
         code.labelBinding(endIf);
     }
 
-    private void appendLoadedValue(CodeBuilder code, MethodTypeDesc mdAppendValue) {
-        code.invokestatic(CD_nUtil, "appendTo", mdAppendValue);
+    private void appendLoadedValue(CodeBuilder code) {
+        // stack: ctx, buffer, value
+        code.invokestatic(CD_nUtil, "appendValue", MD_AppendValue);
     }
 
-    private void appendString(CodeBuilder code, MethodTypeDesc mdAppendText, String sText) {
+    private void appendString(CodeBuilder code, String sText) {
+        // stack: buffer
         if (!sText.isEmpty()) {
             code.dup()
                 .ldc(sText)
-                .invokestatic(CD_nUtil, "appendText", mdAppendText);
+                .invokestatic(CD_nUtil, "appendText", MD_AppendText);
         }
     }
 
@@ -393,6 +383,12 @@ public class AssertV
     }
 
     // ----- fields --------------------------------------------------------------------------------
+
+    private static final ClassDesc      CD_StringBuilder = ClassDesc.of(StringBuilder.class.getName());
+    private static final MethodTypeDesc MD_BuilderInit   = md(CD_void);
+    private static final MethodTypeDesc MD_AppendText    = md(CD_void, CD_StringBuilder, CD_JavaString);
+    private static final MethodTypeDesc MD_AppendValue   = md(CD_void, CD_Ctx, CD_StringBuilder, CD_Object);
+    private static final MethodTypeDesc MD_JavaToString  = md(CD_JavaString);
 
     private int[] m_anValue;
 

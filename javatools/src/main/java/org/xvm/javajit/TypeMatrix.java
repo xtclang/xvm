@@ -113,11 +113,17 @@ public class TypeMatrix {
     public void declare(int currAddr, int regId, TypeConstant type) {
         assert type != null;
 
-        if (currAddr != -1) {
+        if (currAddr == -1) {
+            ensureMutableView(0).types.put(regId, type);
+        } else if (views[currAddr + 1] == null) {
             follow(currAddr, currAddr + 1, regId);
+            ensureMutableView(currAddr + 1).types.put(regId, type);
+        } else {
+            // a jump can bypass an initialized declaration and meet its fall-through path
+            OpView outgoingView = views[currAddr].copy();
+            outgoingView.types.put(regId, type);
+            follow(outgoingView, currAddr + 1, -1);
         }
-
-        ensureMutableView(currAddr + 1).types.put(regId, type);
 
         if (regId >= 0) {
             bctx.scope.declareRegister(regId);
@@ -175,13 +181,20 @@ public class TypeMatrix {
 
         OpView nextView = ensureMutableView(nextAddr);
         if (incomingType == null) {
-            nextView.types.put(regId, type);
+            // another incoming path may bypass even the register's declaration
+            nextView.types.put(regId, incomingView == null
+                    ? type
+                    : new UnassignedTypeConstant(type));
         } else {
-            if (incomingType instanceof UnassignedTypeConstant unassigned) {
+            boolean unassigned = incomingType instanceof UnassignedTypeConstant;
+            if (unassigned) {
                 bctx.registerConditionalAssignment(regId);
-                incomingType = unassigned.getUnderlyingType();
+                incomingType = unwrap(incomingType);
             }
             mergeType(nextView.types, regId, type, incomingType);
+            if (unassigned) {
+                nextView.types.compute(regId, (_, merged) -> new UnassignedTypeConstant(unwrap(merged)));
+            }
         }
     }
 
@@ -314,26 +327,25 @@ public class TypeMatrix {
                 continue;
             }
 
-            // an UnassignedTypeConstant (UTC) produces six possible merge scenarios:
-            // - UTC(A) + null   -> UTC(A)
-            // - A      + null   -> A
-            // - UTC(A) + UTC(B) -> UTC(merge(A, B))
-            // - UTC(A) + B      -> merge(A, B) and register the conditional assignment
-            // - A      + UTC(B) -> merge(A, B) and register the conditional assignment
-            // - A      + B      -> merge(A, B)
+            // an UnassignedTypeConstant (UTC) preserves a possibly unassigned incoming path:
+            // 1) UTC(A) + null   -> UTC(A)
+            // 2) A      + null   -> UTC(A); even the declaration may have been skipped
+            // 3) UTC(A) + UTC(B) -> UTC(merge(A, B))
+            // 4) UTC(A) + B      -> UTC(merge(A, B)) and register the conditional assignment
+            // 5) A      + UTC(B) -> UTC(merge(A, B)) and register the conditional assignment
+            // 6) A      + B      -> merge(A, B)
             TypeConstant currType        = entry.getValue();
             TypeConstant nextType        = nextView.types.get(regId);
             boolean      currUnassigned  = currType instanceof UnassignedTypeConstant;
             boolean      nextUnassigned  = nextType == null ||
                                            nextType instanceof UnassignedTypeConstant;
-            boolean      mergeUnassigned = false;
+            boolean      mergeUnassigned = currUnassigned || nextUnassigned;
             if (currUnassigned == nextUnassigned) {
                 if (currType.equals(nextType)) {
                     continue;
-                } else {
-                    mergeUnassigned = currUnassigned;
                 }
             } else if (nextType != null) {
+                // rules 4 and 5: only one incoming path is assigned
                 bctx.registerConditionalAssignment(regId);
             }
 
@@ -352,9 +364,22 @@ public class TypeMatrix {
             }
 
             if (mergeUnassigned) {
-                nextView.types.compute(regId, (_, type) -> new UnassignedTypeConstant(type));
-            } else if (currUnassigned || nextUnassigned) {
-                nextView.types.compute(regId, (_, type) -> unwrap(type));
+                // rules 1-5: preserve the possibly unassigned path
+                nextView.types.compute(regId, (_, type) -> new UnassignedTypeConstant(unwrap(type)));
+            }
+        }
+
+        // rule 2 with the views reversed: if currView is missing entries present in nextView,
+        // mark those registers as potentially unassigned
+        for (var entry : nextView.types.entrySet()) {
+            int          regId    = entry.getKey();
+            TypeConstant nextType = entry.getValue();
+            if (regId >= 0 && regId != exceptId && !currView.types.containsKey(regId) &&
+                    !(nextType instanceof UnassignedTypeConstant)) {
+                if (nextView.isImmutable) {
+                    views[nextAddr] = nextView = nextView.copy();
+                }
+                nextView.types.replace(regId, new UnassignedTypeConstant(nextType));
             }
         }
         return changeSet;

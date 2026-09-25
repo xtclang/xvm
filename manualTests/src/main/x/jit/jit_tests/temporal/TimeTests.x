@@ -35,8 +35,7 @@ class TimeTests {
     }
 
     void testCreateTimeFromString() {
-        // TODO: Time.construct(String) is exempted from JIT compilation because its ternary
-        // conditional-return path leaves a JVM local uninitialized
+        // TODO: String.split calls a missing Array<Object>.freeze$p(Ctx, boolean, boolean) bridge
         // Time utc = new Time("1970-01-01T00:00:01Z");
         // assert utc.epochPicos == Duration.Second.picoseconds;
         // assert utc.date == new Date(1970, 1, 1);
