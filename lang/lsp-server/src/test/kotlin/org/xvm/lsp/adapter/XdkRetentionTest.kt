@@ -82,6 +82,8 @@ class XdkRetentionTest {
                     "take(" to "box",
                     "take(bo" to "box",
                     "textTake(te" to "textValue",
+                    "new String[2](te" to "textValue",
+                    "Object parts = [textValue.si" to "size",
                 )
             repeat(CYCLES) { cycle ->
                 adapter.replaceDependencies(listOf(artifacts[cycle % artifacts.size]))
