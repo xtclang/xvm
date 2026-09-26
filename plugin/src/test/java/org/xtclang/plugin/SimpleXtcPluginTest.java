@@ -26,6 +26,7 @@ import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.LibraryElements;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.plugins.PluginManager;
+import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.SourceSet;
@@ -77,7 +78,7 @@ public class SimpleXtcPluginTest {
         final var project = newProject("lateSourceRoot");
         project.getPluginManager().apply(org.gradle.api.plugins.JavaBasePlugin.class);
         project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
-        final var compile = (XtcCompileTask) project.getTasks().getByName("compileXtc");
+        final var compile = project.getTasks().named("compileXtc", XtcCompileTask.class).get();
         final var sources = XtcProjectDelegate.getMainSourceSet(project).getExtensions()
             .getByType(XtcSourceDirectorySet.class);
         final var directory = project.getProjectDir().toPath().resolve("src/main/x/runtime");
@@ -91,15 +92,62 @@ public class SimpleXtcPluginTest {
     }
 
     @Test
+    public void resourcesFollowLateRootsAndFilters() throws IOException {
+        final var project = newProject("lateResourceRoot");
+        project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
+        final var copy = project.getTasks().named("processXtcResources", Copy.class).get();
+        final var resources = XtcProjectDelegate.getMainSourceSet(project).getResources();
+        final var directory = project.getProjectDir().toPath().resolve("extra-resources");
+        Files.createDirectories(directory);
+        final var included = Files.writeString(directory.resolve("included.txt"), "included");
+        Files.writeString(directory.resolve("excluded.txt"), "excluded");
+
+        resources.setSrcDirs(List.of(directory));
+        resources.exclude("excluded.txt");
+
+        assertEquals(Set.of(included.toFile()), copy.getSource().getFiles());
+    }
+
+    @Test
+    public void compileDirectoriesFollowLateBuildDirectory() {
+        final var project = newProject("lateBuildDirectory");
+        project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
+        final var compile = project.getTasks().named("compileXtc", XtcCompileTask.class).get();
+
+        project.getLayout().getBuildDirectory().set(project.file("relocated-build"));
+
+        assertEquals(project.file("relocated-build/xtc/main/lib"), compile.getOutputDirectoryInternal().getAsFile());
+        assertEquals(project.file("relocated-build/xtc/main/resources"), compile.getResourceDirectoryInternal().getAsFile());
+    }
+
+    @Test
+    public void launcherRedirectsFollowLateExtensionConfiguration() {
+        final var project = newProject("lateRedirects");
+        project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
+        final var compile = project.getTasks().named("compileXtc", XtcCompileTask.class).get();
+        final var extension = XtcProjectDelegate.resolveXtcCompileExtension(project);
+
+        extension.getStdoutPath().set("compiler.out");
+        extension.getStderrPath().set("compiler.err");
+
+        assertEquals("compiler.out", compile.getStdoutPath().getOrNull());
+        assertEquals("compiler.err", compile.getStderrPath().getOrNull());
+        compile.getStdoutPath().set("task.out");
+        extension.getStdoutPath().set("extension.out");
+        assertEquals("task.out", compile.getStdoutPath().get());
+    }
+
+    @Test
     public void verifyTestSourceSetCompilationDependsOnMainOutputAndTestsDependOnCompilation() {
         final Project project = newProject("verifyTestSourceSetCompilationDependsOnMainOutputAndTestsDependOnCompilation");
         final var pluginManager = project.getPluginManager();
         pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
         pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
 
-        final XtcCompileTask compileXtc = (XtcCompileTask) project.getTasks().getByName("compileXtc");
-        final XtcCompileTask compileTestXtc = (XtcCompileTask) project.getTasks().getByName("compileTestXtc");
-        final XtcTestTask testXtc = (XtcTestTask) project.getTasks().getByName(XTC_TEST_TASK_NAME);
+        final var tasks = project.getTasks();
+        final var compileXtc = tasks.named("compileXtc", XtcCompileTask.class).get();
+        final var compileTestXtc = tasks.named("compileTestXtc", XtcCompileTask.class).get();
+        final var testXtc = tasks.named(XTC_TEST_TASK_NAME, XtcTestTask.class).get();
 
         final var mainOutputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(
             project,
@@ -128,7 +176,8 @@ public class SimpleXtcPluginTest {
         pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
         pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
 
-        final TaskProvider<Task> javaToolsJar = project.getTasks().register("produceJavaTools");
+        final var tasks = project.getTasks();
+        final TaskProvider<Task> javaToolsJar = tasks.register("produceJavaTools");
         final File javaToolsFile = project.getLayout().getBuildDirectory().file("libs/javatools.jar").get().getAsFile();
         final ConfigurableFileCollection javaToolsFiles = project.files(javaToolsFile).builtBy(javaToolsJar);
         project.getDependencies().getArtifactTypes().getByName("jar").getAttributes().attribute(
@@ -141,7 +190,7 @@ public class SimpleXtcPluginTest {
         );
         project.getDependencies().add(XDK_CONFIG_NAME_JAVATOOLS_INCOMING, javaToolsFiles);
 
-        final XtcCompileTask compileXtc = (XtcCompileTask) project.getTasks().getByName("compileXtc");
+        final var compileXtc = tasks.named("compileXtc", XtcCompileTask.class).get();
 
         assertTrue(
             compileXtc.getInputXtcJavaToolsConfig().getFiles().contains(javaToolsFile),
