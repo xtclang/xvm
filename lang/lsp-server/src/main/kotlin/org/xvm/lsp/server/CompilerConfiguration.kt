@@ -1,6 +1,6 @@
 package org.xvm.lsp.server
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
@@ -9,7 +9,7 @@ import java.net.URI
 internal object CompilerConfiguration {
     const val SECTION = "xtc.compiler"
     const val INITIALIZATION_KEY = "xtcCompiler"
-    private val gson = Gson()
+    private val gson = GsonBuilder().serializeNulls().create()
 
     fun initial(options: Any?): JsonElement? = objectValue(options)?.get(INITIALIZATION_KEY)
 

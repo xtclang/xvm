@@ -1,5 +1,12 @@
 # Ecstasy Language Tooling
 
+Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
+compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
+broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
+and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
+See [scope, ownership and validation](../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
+
+
 Language tooling for the Ecstasy programming language, including LSP server, IDE plugins,
 and editor support.
 

@@ -242,7 +242,8 @@
         "parserCodePrefix": "PARSER-",
         "retainedSymbol": "Holder",
         "anchor": "return value;",
-        "offset": 7
+        "offset": 7,
+        "libraryTarget": "String"
       },
       "intellij": {
         "coverage": "not-implemented",
@@ -864,7 +865,7 @@
       }
     },
     "X35": {
-      "title": "formal types resolve without invented library locations",
+      "title": "formal types and matching library sources resolve",
       "manual": [],
       "values": {
         "file": "Lookups.x",
@@ -873,7 +874,10 @@
         "formalTargets": [
           "T"
         ],
-        "binaryUse": "String map"
+        "binaryUse": "String map",
+        "binaryTargets": [
+          "String"
+        ]
       },
       "intellij": {
         "coverage": "not-implemented",
@@ -2858,6 +2862,68 @@
       "intellij": {
         "coverage": "full",
         "limitations": []
+      }
+    },
+    "X99": {
+      "title": "unsaved discovered imports refresh dependent diagnostics",
+      "manual": [],
+      "values": {
+        "file": "LiveConsumer.x",
+        "original": "module LiveConsumer {}",
+        "changed": "module LiveConsumer { package lib import LiveLibrary; Int run()=lib.value(); }",
+        "library": "LiveLibrary.x",
+        "libraryText": "module LiveLibrary { static Int value()=1; }",
+        "brokenLibrary": "module LiveLibrary { static String value()=\"text\"; }",
+        "anchor": "value()",
+        "target": "value"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native source/discovery assertions are added in the next parity checkpoint."
+        ]
+      }
+    },
+    "X100": {
+      "title": "healthy graph navigation survives a broken neighbor",
+      "manual": [],
+      "values": {
+        "file": "HealthyGraph.x",
+        "source": "module HealthyGraph { class Base {} class Child extends Base {} }",
+        "neighbor": "BrokenNeighbor.x",
+        "neighborText": "module BrokenNeighbor {}",
+        "brokenNeighbor": "module BrokenNeighbor { Missing broken; }",
+        "anchor": "Base",
+        "child": "Child"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native source/discovery assertions are added in the next parity checkpoint."
+        ]
+      }
+    },
+    "X101": {
+      "title": "bundled XDK definition and type targets open matching read-only source",
+      "manual": [
+        "Verify the library editor refuses saving changes to the original read-only file."
+      ],
+      "values": {
+        "file": "LibrarySource.x",
+        "source": "module LibrarySource { package xml import xml.xtclang.org; void accept(xml.Document document, String text) {} }",
+        "types": [
+          "Document",
+          "String"
+        ],
+        "variable": "text",
+        "variableType": "String",
+        "renameRejection": "Rename not allowed at this position"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native source/discovery assertions are added in the next parity checkpoint."
+        ]
       }
     },
     "CFG1": {

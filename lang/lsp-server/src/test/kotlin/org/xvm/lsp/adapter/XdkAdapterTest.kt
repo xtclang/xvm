@@ -387,7 +387,7 @@ class XdkAdapterTest {
         adapter().use { xdk ->
             xdk.compile("file:///Resolve.x", RESOLVE)
 
-            assertThat(xdk.findDefinition("file:///Resolve.x", 13, 8)).`as`("Int").isNull()
+            assertThat(xdk.findDefinition("file:///Resolve.x", 13, 8)).`as`("bundled Int source").isNotNull()
             assertThat(xdk.findDefinition("file:///Resolve.x", 0, 0)).`as`("not on anything").isNull()
         }
     }

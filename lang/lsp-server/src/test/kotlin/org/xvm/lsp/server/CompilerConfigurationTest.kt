@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
@@ -34,6 +35,14 @@ import java.util.concurrent.TimeUnit.SECONDS
 class CompilerConfigurationTest {
     @TempDir
     lateinit var directory: Path
+
+    @Test
+    fun `explicit null restores automatic discovery through JSON and host maps`() {
+        assertThat(CompilerConfiguration.automatic(mapOf("sourceModules" to null))).isTrue()
+        val settings = JsonParser.parseString("""{"xtc":{"compiler":{"sourceModules":null}}}""")
+        assertThat(CompilerConfiguration.automatic(CompilerConfiguration.changed(settings))).isTrue()
+        assertThat(CompilerConfiguration.automatic(emptyMap<String, Any>())).isFalse()
+    }
 
     @Test
     fun `strict configuration accepts maps and wire JSON while preserving absent versus empty`() {
