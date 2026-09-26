@@ -102,12 +102,16 @@ public class DefaultXtcRunModule implements XtcRunModule {
 
     @Override
     public boolean equals(final Object o) {
-        return o instanceof DefaultXtcRunModule && compareTo((DefaultXtcRunModule) o) == 0;
+        return this == o || o instanceof DefaultXtcRunModule other
+            && moduleName.isPresent() && other.moduleName.isPresent()
+            && moduleName.get().equals(other.moduleName.get());
     }
 
     @Override
     public int hashCode() {
-        return moduleName.hashCode() ^ methodName.hashCode();
+        // Configured modules retain their existing name-based equality. Until a name is
+        // supplied, each DSL object has its own identity and need not resolve a provider.
+        return moduleName.isPresent() ? moduleName.get().hashCode() : System.identityHashCode(this);
     }
 
     @Override
