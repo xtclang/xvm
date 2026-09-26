@@ -39,17 +39,19 @@ internal object XdkCursorQueries {
             .filter { it.name.startsWith(prefix.text) }
             .map { member ->
                 CompletionItem(
-                    member.name,
-                    when (member.kind) {
-                        SemanticModel.SymbolKind.METHOD -> CompletionKind.METHOD
-                        SemanticModel.SymbolKind.VARIABLE, SemanticModel.SymbolKind.PARAMETER -> CompletionKind.VARIABLE
-                        SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.TYPE_PARAMETER -> CompletionKind.CLASS
-                        else -> CompletionKind.PROPERTY
-                    },
-                    member.signature?.let { signature(model.semantics, member.name, it).label }
-                        ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
-                    member.name,
-                    TextEdit(range, member.name),
+                    label = member.name,
+                    kind =
+                        when (member.kind) {
+                            SemanticModel.SymbolKind.METHOD -> CompletionKind.METHOD
+                            SemanticModel.SymbolKind.VARIABLE, SemanticModel.SymbolKind.PARAMETER -> CompletionKind.VARIABLE
+                            SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.TYPE_PARAMETER -> CompletionKind.CLASS
+                            else -> CompletionKind.PROPERTY
+                        },
+                    detail =
+                        member.signature?.let { signature(model.semantics, member.name, it).label }
+                            ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
+                    insertText = member.name,
+                    textEdit = TextEdit(range, member.name),
                 )
             }.distinctBy { it.label to it.detail }
     }
@@ -80,12 +82,12 @@ internal object XdkCursorQueries {
                     .mapNotNull { candidate ->
                         candidate.member.signature?.let {
                             signature(
-                                model.semantics,
-                                candidate.member.name,
-                                it,
-                                site.parameterAt(candidate, position),
-                                "Candidate signature; written arguments fit, overload not selected.",
-                                candidate.constructor,
+                                model = model.semantics,
+                                name = candidate.member.name,
+                                signature = it,
+                                active = site.parameterAt(candidate, position),
+                                documentation = "Candidate signature; written arguments fit, overload not selected.",
+                                constructor = candidate.constructor,
                             )
                         }
                     }.distinctBy { it.label }

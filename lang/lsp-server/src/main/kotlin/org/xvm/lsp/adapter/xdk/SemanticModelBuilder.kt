@@ -358,27 +358,31 @@ private class SemanticModelBuilder(
         val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
         val facts =
             SemanticModel.Facts(
-                symbols,
-                types,
-                hierarchy,
-                typeIds.entries.associate { (constant, id) -> id to typeDefinitions(constant) },
-                implementations.entries
-                    .mapNotNull { (target, implementations) ->
-                        constants[target]?.let { it to implementations.mapNotNull(constants::get) }
-                    }.toMap(),
-                callables,
+                symbols = symbols,
+                types = types,
+                typeDeclarations = hierarchy,
+                typeDefinitions = typeIds.entries.associate { (constant, id) -> id to typeDefinitions(constant) },
+                implementations =
+                    implementations.entries
+                        .mapNotNull { (target, implementations) ->
+                            constants[target]?.let { it to implementations.mapNotNull(constants::get) }
+                        }.toMap(),
+                callables = callables,
             )
         return immutableList(
             nodes.map { it.source?.fileName }.distinct().map { source ->
                 SemanticModel(
-                    id,
-                    if (complete) Status.COMPLETE else Status.PARTIAL,
-                    source,
-                    facts,
-                    occurrences.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
-                    expressions.filterKeys { it.sourceName == source }.map { (location, type) -> ExpressionType(location.range, type) },
-                    calls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
-                    functionCalls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
+                    id = id,
+                    status = if (complete) Status.COMPLETE else Status.PARTIAL,
+                    sourceName = source,
+                    facts = facts,
+                    occurrences = occurrences.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
+                    expressions =
+                        expressions.filterKeys { it.sourceName == source }.map { (location, type) ->
+                            ExpressionType(location.range, type)
+                        },
+                    calls = calls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
+                    functionCalls = functionCalls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                 )
             },
         )
@@ -401,22 +405,24 @@ private class SemanticModelBuilder(
         val callee = node.invokedExpression
         calls[site] =
             SemanticModel.CallSite(
-                site.range,
-                location(node.source, callee.startPosition, callee.endPosition).range,
-                target,
-                selected,
-                immutableList(
-                    binding.arguments().map {
-                        SemanticModel.CallArgument(
-                            location(node.source, it.startPosition(), it.endPosition()).range,
-                            it.parameterIndex(),
-                            it.named(),
-                        )
-                    },
-                ),
-                generateSequence(node.parent) { it.parent }
-                    .firstOrNull { it in callableNodes || it is PropertyDeclarationStatement || it is TypeCompositionStatement }
-                    ?.let(callableNodes::get),
+                range = site.range,
+                callee = location(node.source, callee.startPosition, callee.endPosition).range,
+                method = target,
+                signature = selected,
+                arguments =
+                    immutableList(
+                        binding.arguments().map {
+                            SemanticModel.CallArgument(
+                                location(node.source, it.startPosition(), it.endPosition()).range,
+                                it.parameterIndex(),
+                                it.named(),
+                            )
+                        },
+                    ),
+                caller =
+                    generateSequence(node.parent) { it.parent }
+                        .firstOrNull { it in callableNodes || it is PropertyDeclarationStatement || it is TypeCompositionStatement }
+                        ?.let(callableNodes::get),
             )
     }
 
@@ -429,14 +435,18 @@ private class SemanticModelBuilder(
         val callee = node.invokedExpression
         functionCalls[at] =
             SemanticModel.FunctionCallSite(
-                at.range,
-                location(node.source, callee.startPosition, callee.endPosition).range,
-                signature,
-                immutableList(
-                    binding.arguments().map {
-                        SemanticModel.CallArgument(location(node.source, it.startPosition(), it.endPosition()).range, it.parameterIndex())
-                    },
-                ),
+                range = at.range,
+                callee = location(node.source, callee.startPosition, callee.endPosition).range,
+                signature = signature,
+                arguments =
+                    immutableList(
+                        binding.arguments().map {
+                            SemanticModel.CallArgument(
+                                location(node.source, it.startPosition(), it.endPosition()).range,
+                                it.parameterIndex(),
+                            )
+                        },
+                    ),
             )
     }
 
@@ -445,7 +455,16 @@ private class SemanticModelBuilder(
         val parameters = pool.extractFunctionParams(function) ?: return null
         val returns = pool.extractFunctionReturns(function) ?: return null
         return Signature(
-            immutableList(parameters.map { SemanticModel.Parameter(null, type(it) ?: return null, false, false) }),
+            immutableList(
+                parameters.map {
+                    SemanticModel.Parameter(
+                        name = null,
+                        type = type(it) ?: return null,
+                        typeParameter = false,
+                        defaulted = false,
+                    )
+                },
+            ),
             immutableList(returns.map { type(it) ?: return null }),
             false,
         )
@@ -546,64 +565,97 @@ private class SemanticModelBuilder(
                         emptyList()
                     }
                 PartialSemanticModel.Site(
-                    when {
-                        site.isCall -> PartialSemanticModel.Kind.CALL
-                        site.isNameCompletion -> PartialSemanticModel.Kind.NAME
-                        else -> PartialSemanticModel.Kind.MEMBER_ACCESS
-                    },
-                    location(site.source, site.startPosition, site.endPosition).range,
-                    location(site.source, site.operator.startPosition, site.operator.endPosition).range,
-                    receiver?.let { location(site.source, it.startPosition, it.endPosition).range },
-                    type(receiverType),
-                    callee,
-                    scope,
-                    immutableList(
-                        (site.leadingArguments + site.arguments).map {
-                            PartialSemanticModel.Argument(
-                                location(site.source, it.startPosition, it.endPosition).range,
-                                (it as? LabeledExpression)?.name,
-                                type(validatedType(it)),
+                    kind =
+                        when {
+                            site.isCall -> PartialSemanticModel.Kind.CALL
+                            site.isNameCompletion -> PartialSemanticModel.Kind.NAME
+                            else -> PartialSemanticModel.Kind.MEMBER_ACCESS
+                        },
+                    range = location(site.source, site.startPosition, site.endPosition).range,
+                    operator = location(site.source, site.operator.startPosition, site.operator.endPosition).range,
+                    receiver = receiver?.let { location(site.source, it.startPosition, it.endPosition).range },
+                    receiverType = type(receiverType),
+                    calleeName = callee,
+                    scope = scope,
+                    arguments =
+                        immutableList(
+                            (site.leadingArguments + site.arguments).map {
+                                PartialSemanticModel.Argument(
+                                    location(site.source, it.startPosition, it.endPosition).range,
+                                    (it as? LabeledExpression)?.name,
+                                    type(validatedType(it)),
+                                )
+                            },
+                        ),
+                    separators =
+                        immutableList(
+                            site.separators.map {
+                                Position(
+                                    Source.calculateLine(it.startPosition),
+                                    Source.calculateOffset(it.startPosition),
+                                )
+                            },
+                        ),
+                    members = immutableList(members),
+                    memberPrefix =
+                        (site.argumentPrefix.orElse(null) ?: site.memberName.orElse(null))?.let { name ->
+                            PartialSemanticModel.MemberPrefix(
+                                name.valueText,
+                                location(site.source, name.startPosition, name.endPosition).range,
+                            )
+                        } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range),
+                    callCandidates =
+                        cursor?.takeIf { it.callsInspected() }?.candidates()?.let { candidates ->
+                            immutableList(
+                                candidates.mapNotNull { candidate ->
+                                    val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
+                                    val signature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
+                                    val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
+                                    val name =
+                                        when {
+                                            !method.isConstructor -> {
+                                                method.name
+                                            }
+
+                                            method.containingClass.isAnonInnerClass -> {
+                                                "new ${site.target.children().filterIsInstance<TypeExpression>().single()}"
+                                            }
+
+                                            else -> {
+                                                "new ${method.containingClass.name}"
+                                            }
+                                        }
+                                    PartialSemanticModel.CallCandidate(
+                                        member =
+                                            PartialSemanticModel.Member(
+                                                id,
+                                                name,
+                                                SymbolKind.METHOD,
+                                                null,
+                                                signature,
+                                            ),
+                                        arguments =
+                                            immutableList(
+                                                candidate.arguments().map {
+                                                    SemanticModel.CallArgument(
+                                                        location(site.source, it.startPosition(), it.endPosition()).range,
+                                                        it.parameterIndex(),
+                                                    )
+                                                },
+                                            ),
+                                        converting = candidate.converting(),
+                                        constructor = method.isConstructor,
+                                    )
+                                },
                             )
                         },
-                    ),
-                    immutableList(
-                        site.separators.map { Position(Source.calculateLine(it.startPosition), Source.calculateOffset(it.startPosition)) },
-                    ),
-                    immutableList(members),
-                    (site.argumentPrefix.orElse(null) ?: site.memberName.orElse(null))?.let { name ->
-                        PartialSemanticModel.MemberPrefix(
-                            name.valueText,
-                            location(site.source, name.startPosition, name.endPosition).range,
-                        )
-                    } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range),
-                    cursor?.takeIf { it.callsInspected() }?.candidates()?.let { candidates ->
+                    pendingArgumentName = site.pendingArgumentName.orElse(null)?.valueText,
+                    functions =
                         immutableList(
-                            candidates.mapNotNull { candidate ->
-                                val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
-                                val signature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
-                                val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
-                                val name =
-                                    when {
-                                        !method.isConstructor -> {
-                                            method.name
-                                        }
-
-                                        method.containingClass.isAnonInnerClass -> {
-                                            "new ${site.target.children().filterIsInstance<TypeExpression>().single()}"
-                                        }
-
-                                        else -> {
-                                            "new ${method.containingClass.name}"
-                                        }
-                                    }
-                                PartialSemanticModel.CallCandidate(
-                                    PartialSemanticModel.Member(
-                                        id,
-                                        name,
-                                        SymbolKind.METHOD,
-                                        null,
-                                        signature,
-                                    ),
+                            cursor?.functions().orEmpty().mapNotNull { candidate ->
+                                val signature = functionSignature(candidate.type()) ?: return@mapNotNull null
+                                PartialSemanticModel.FunctionCandidate(
+                                    signature,
                                     immutableList(
                                         candidate.arguments().map {
                                             SemanticModel.CallArgument(
@@ -612,34 +664,15 @@ private class SemanticModelBuilder(
                                             )
                                         },
                                     ),
-                                    candidate.converting(),
-                                    method.isConstructor,
                                 )
                             },
-                        )
-                    },
-                    site.pendingArgumentName.orElse(null)?.valueText,
-                    immutableList(
-                        cursor?.functions().orEmpty().mapNotNull { candidate ->
-                            val signature = functionSignature(candidate.type()) ?: return@mapNotNull null
-                            PartialSemanticModel.FunctionCandidate(
-                                signature,
-                                immutableList(
-                                    candidate.arguments().map {
-                                        SemanticModel.CallArgument(
-                                            location(site.source, it.startPosition(), it.endPosition()).range,
-                                            it.parameterIndex(),
-                                        )
-                                    },
-                                ),
-                            )
-                        },
-                    ),
-                    immutableList(
-                        cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
-                            cursor?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
-                    ),
-                    site.leadingArguments.size,
+                        ),
+                    argumentValues =
+                        immutableList(
+                            cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
+                                cursor?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
+                        ),
+                    argumentOffset = site.leadingArguments.size,
                 )
             }
         return if (errors.isAbortDesired) {
@@ -775,14 +808,14 @@ private class SemanticModelBuilder(
         if (target is Register) registers[target] = symbol else constants[target as Constant] = symbol
         symbols[symbol] =
             Symbol(
-                symbol,
-                name,
-                kind,
-                location?.range,
-                type(declaredType(target)),
-                signature(target),
-                location?.sourceName,
-                modifiers(target),
+                id = symbol,
+                name = name,
+                kind = kind,
+                declaration = location?.range,
+                type = type(declaredType(target)),
+                signature = signature(target),
+                declarationSource = location?.sourceName,
+                modifiers = modifiers(target),
                 dependency = dependency?.key,
             )
         return symbol
@@ -902,10 +935,10 @@ private class SemanticModelBuilder(
         val parameters =
             method.paramArray.withIndex().drop(if (visibleOnly) method.typeParamCount else 0).map { (index, parameter) ->
                 SemanticModel.Parameter(
-                    parameter.name,
-                    type(parameterTypes[index]) ?: return null,
-                    parameter.isTypeParameter,
-                    parameter.hasDefaultValue(),
+                    name = parameter.name,
+                    type = type(parameterTypes[index]) ?: return null,
+                    typeParameter = parameter.isTypeParameter,
+                    defaulted = parameter.hasDefaultValue(),
                 )
             }
         val returns = signature.rawReturns.map { type(it) ?: return null }
