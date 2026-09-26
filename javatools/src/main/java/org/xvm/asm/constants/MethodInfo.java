@@ -1572,6 +1572,12 @@ public class MethodInfo
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
             case Capped -> {
+                // TODO CP: quite unexpectedly we produce a capped cap:
+                // void construct(this:class(Duplicable))
+                //    [0] maps.HashMap.construct(this:class(Duplicable)) {sig=void construct(this:class(Duplicable)), impl=Capped, target=void construct(this:class(HashMap)<Int, Object>)}
+                //    [1] maps.HasherMap.construct(this:class(Duplicable)) {sig=void construct(this:class(Duplicable)), impl=Capped, target=void construct(this:class(ecstasy:maps.HasherMap)<Int, Object>)}
+                //    [*] Duplicable.construct(this:class(Duplicable)) {sig=void construct(this:class(Duplicable)), impl=Declared}
+
                 // successive subclasses can cap the same declaration more than once;
                 // retain its wider signature by skipping all synthetic caps
                 MethodBody[] aBody = getChain();
