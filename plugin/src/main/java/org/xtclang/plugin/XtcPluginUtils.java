@@ -147,15 +147,18 @@ public final class XtcPluginUtils {
          * it belongs.
          *
          * @param file file to check
+         * @param artifactVersion retained for compatibility; the launcher's own manifest
+         *                        supplies its version, independently of the consumer project
          * @return true if the file is a valid JavaTools jar file, false otherwise.
          */
         public static boolean isValidJavaToolsArtifact(final File file, final String artifactVersion) {
             final String name = file.getName();
-            final String expectedVersionedName = "javatools-" + artifactVersion + ".jar";
-
-            // Check for exact name (XDK distribution) or exact versioned name (configuration resolution)
-            return (XDK_JAVATOOLS_NAME_JAR.equals(name) || expectedVersionedName.equals(name))
-                && hasJarExtension(file) && readXdkVersionFromJar(file) != null;
+            if (!XDK_JAVATOOLS_NAME_JAR.equals(name) && !name.matches("javatools-[0-9].*\\.jar")) {
+                return false;
+            }
+            final String version = readXdkVersionFromJar(file);
+            return version != null && (XDK_JAVATOOLS_NAME_JAR.equals(name)
+                || ("javatools-" + version + ".jar").equals(name));
         }
 
         /**
