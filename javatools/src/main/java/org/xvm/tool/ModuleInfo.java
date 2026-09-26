@@ -932,9 +932,7 @@ public class ModuleInfo {
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            for (ErrorInfo err : f_errs.getErrors()) {
-                errs.log(err);
-            }
+            f_errs.logTo(errs);
             f_errs.clear();
         }
 
