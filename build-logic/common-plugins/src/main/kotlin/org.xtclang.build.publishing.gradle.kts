@@ -120,6 +120,9 @@ extensions.configure<MavenPublishBaseExtension> {
     }
 }
 
+val snapshotBundleRepository = xdkProperties.string("org.xtclang.publish.snapshotBundleRepo", "").orNull
+    ?.trim()?.takeIf { it.isNotEmpty() }?.let { uri(it) }
+
 // Always register GitHub Packages repository (will be skipped at task level if disabled)
 extensions.configure<PublishingExtension> {
     repositories {
@@ -133,13 +136,10 @@ extensions.configure<PublishingExtension> {
             credentials(PasswordCredentials::class)
         }
 
-        val snapshotBundleRepo = xdkProperties.string("org.xtclang.publish.snapshotBundleRepo", "").orNull
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
-        if (snapshotBundleRepo != null) {
+        if (snapshotBundleRepository != null) {
             maven {
                 name = "snapshotBundle"
-                url = uri(snapshotBundleRepo)
+                url = snapshotBundleRepository
             }
         }
     }
@@ -209,9 +209,22 @@ val validateCredentials = tasks.register<ValidateCredentialsTask>("validateCrede
     signingInMemoryKey.set(xdkPublishingCredentials.signingInMemoryKey)
 }
 
-// Make all publish tasks depend on validateCredentials to fail fast before publishing
+val validateSnapshotBundle = tasks.register<ValidateSnapshotBundleTask>("validateSnapshotBundle") {
+    group = PUBLISH_TASK_GROUP
+    description = "Validate the snapshot version and local bundle destination without publishing"
+    publicationVersion.set(project.version.toString())
+    repositoryUrl.set(snapshotBundleRepository?.toString().orEmpty())
+}
+
+// Validate each publishing action, including direct task invocation.
 tasks.withType<PublishToMavenRepository>().configureEach {
-    dependsOn(validateCredentials)
+    val publicationTask = this
+    val bundleValidation = validateSnapshotBundle
+    val remoteValidation = validateCredentials
+    // Gradle assigns the repository after configureEach callbacks. Resolve the guard with dependencies.
+    dependsOn(providers.provider {
+        if (publicationTask.repository.name == "snapshotBundle") bundleValidation else remoteValidation
+    })
 }
 
 // These tasks register upload/release actions with Vanniktech's build service.
