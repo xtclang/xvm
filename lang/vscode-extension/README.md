@@ -314,7 +314,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X95, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs X1–X96, configuration and compiler-diagnostic cases in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -341,7 +341,7 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 100 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 101 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its

@@ -573,6 +573,43 @@ class XdkStdioTest {
         }
     }
 
+    @Test
+    fun `generic header completions preserve whole token edits over stdio`() {
+        val variants =
+            listOf(
+                "List<§>" to "Element",
+                "List<Ele§>" to "Element",
+                "Owner<String>.Ali§" to "Alias",
+                "List<Str§ing>" to "String",
+            )
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            variants.forEachIndexed { index, (marked, selected) ->
+                val prefix =
+                    "module Stdio {\r\n /* 😀 */ class Owner<T> { typedef T as Alias; } " +
+                        "class Container<Element> { void damaged(" + marked.substringBefore('§')
+                val suffix = marked.substringAfter('§') + " value) {} } }"
+                val version = index * 2 + 1
+                if (index == 0) session.open(prefix + suffix) else session.change(prefix + suffix, version)
+                session.diagnosticsAt(version)
+                val column = prefix.substringAfterLast('\n').length
+                val before = prefix.takeLastWhile { it.isLetterOrDigit() || it == '_' }.length
+                val after = suffix.takeWhile { it.isLetterOrDigit() || it == '_' }.length
+                val service = session.server.textDocumentService
+                val document = TextDocumentIdentifier(URI)
+                val cursor = Position(1, column)
+                val items = session.await(service.completion(CompletionParams(document, cursor))).left
+                val edit = items.single { it.label == selected }.textEdit.left
+                assertThat(edit.range).isEqualTo(Range(Position(1, column - before), Position(1, column + after)))
+                assertThat(edit.newText).isEqualTo(selected)
+                assertThat(session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))?.signatures.orEmpty()).isEmpty()
+                session.change(prefix.dropLast(before) + edit.newText + suffix.drop(after), version + 1)
+                assertThat(session.diagnosticsAt(version + 1).diagnostics).isEmpty()
+            }
+            session.shutdownAndExit()
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["new Int[nu|]", "new Int[nu|", "new String[nu|](\"x\")"])
     fun `array size edits and signature fitting round trip over stdio`(expression: String) {

@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X95 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X96 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1066,13 +1066,14 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It implements startup and 47 shared scenarios: 44 fully and three partially. Native
+disabled. It implements startup and 48 shared scenarios: 45 fully and three partially. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
 cases verify received compiler metadata, Problems rows, Next Problem navigation and clearing.
 X45/X46 check unopened dependencies, unchanged consumer text versions and unsaved library bytes.
-X91–X95 cover simple, qualified, parameterized/compound and class/interface composition headers.
+X91–X96 cover simple, qualified, parameterized/compound and class/interface composition headers,
+registered formals, empty generic arguments and whole-token replacement.
 
 The three partials remain explicit: X20 verifies selected-overload navigation and suppressed
 parameter metadata, but LSP4IJ 0.21.0 renders `<no parameters>` in the popup; X81/X82 check native
@@ -1086,7 +1087,7 @@ Structure and exact folding checks after `2e98860e1`; X18 then fails explicitly 
 during a popup check. Earlier `run-2648196190918026067/results.json` records **28 passed, one
 partial, one failed, 17 not-run and 53 not-implemented**, including strengthened constructor
 assertions through X90; its X92 fold failure exposed the now-fixed production defect. These runs
-are separate evidence, not a complete pass. X93/X94 still await native execution.
+are separate evidence, not a complete pass. X93/X94/X95/X96 still await native execution.
 
 Results are under `lang/intellij-plugin/build/reports/compiler-playbook/run-*/results.json`.
 `ide-paths.txt` identifies the separate IDE profile/log directory. A graphical desktop is
@@ -1120,7 +1121,7 @@ For example, rerun the class/interface header case:
     -PcompilerPlaybookCases=X95
 ```
 
-Use `-PcompilerPlaybookCases=X94,X95` for a small group. Without that property the existing full
+Use `-PcompilerPlaybookCases=X94,X95,X96` for the related type-completion group. Without that property the existing full
 playbook plus host checks run. With an assembled extension, the direct equivalent from
 `lang/vscode-extension` is `npm run test:playbook -- --cases=X95`.
 Unknown, duplicate or empty IDs fail before VS Code opens. Reports state `focused`, list selected
@@ -1132,21 +1133,21 @@ This selector currently applies to VS Code; IntelliJ native checks remain occasi
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 100 scenarios: X1–X95, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 101 scenarios: X1–X96, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 100 cases. IntelliJ implements 44 fully and three partially, plus a separate startup check;
+all 101 cases. IntelliJ implements 45 fully and three partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
 as a full pass. A failed implemented check fails the Gradle task.
 These counts describe implemented assertions. Native evidence is recorded above: strict X92 now
 passes both variants, but the latest run stopped at X18 on focus loss with 27 implemented cases
-not-run. X93/X94/X95 remain unverified natively. Both recorded IntelliJ reports predate X95 and use catalog SHA-256
+not-run. X93/X94/X95/X96 remain unverified natively. Both recorded IntelliJ reports predate X95 and use catalog SHA-256
 `a58f0e0c42402e5233741c996a79cd48a22337817c665cd2b45b0c103c1a87b2`.
 
 Both reports include the shared file, SHA-256 and complete ID list. Both drivers compare catalog
@@ -1827,6 +1828,7 @@ module Advanced {
 | X93 | In the same temporary `Editing.x` module, complete `ecstasy.text.Str` as a parameter type, property type and return type (return `new StringBuffer()`). Accept `StringBuffer`. Then use the X93 source below (also in the shared catalog): `Owner` extends `Base` and declares public/private/protected nested types, a typedef and a value; `Alias` imports `Owner`. Complete `Owner.Ite` and `Alias.Ite`, accepting `ItemPublic` and `ItemAlias`. Restore the fixture. | The bundled XDK qualifier resolves; only `Str` or `Ite` is replaced. Owner/alias candidates include inherited `ItemBase`, public `ItemPublic` and typedef `ItemAlias`, and exclude `ItemPrivate`, `ItemProtected`, `ItemValue` and enclosing `StringValue`. No call signature appears. Every accepted edit compiles and clears diagnostics. Both native drivers use the shared variants and assertions. |
 | X94 | In temporary `Editing.x`, complete `Str` in `List<Str>`, `Map<Int, List<Str>>`, `Map<Str, Int>`, `List<(Int \| Str)>`, `Object + Str` and `Object - Str` parameter headers. Also try `List<Str>` property/return types and `List<ecstasy.text.Str>`. Use the shared X94 variants. Finally remove both `>` from the nested `Map` header, accept `String`, then restore `>>`. | Only the selected leaf token changes; generic arguments, compound operators and qualifiers stay intact. Values such as `StringValue` are excluded and no call signature appears. Complete accepted headers clear Problems. Missing `>` still reports an error after acceptance; adding the closers clears it. Type suggestions establish visibility, not generic-constraint compatibility. Both drivers consume the same nine variants. |
 | X95 | In temporary `Editing.x`, use the shared X95 replacement program. Complete the marked type in class `extends`, interface `extends`, `implements`, `delegates`, `incorporates` and mixin `into` headers. Also try `Owner.Nes`, `List<Str>` and the missing-`>` variant. Accept the selected entry, then restore the repaired declaration. | Completion replaces only the final token and offers visible types rather than values. Complete accepted headers clear Problems; accepting `String` with a missing `>` leaves an error until the closer is restored. No signature appears in a type slot. Both drivers consume the same nine variants; IntelliJ native execution is pending. |
+| X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ execution is pending. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -1867,8 +1869,10 @@ visibility, inherited types and final-token edits. X94 adds written leaf names i
 and compound headers, nullable/array wrappers (API tests), and bounded missing angle/group closers.
 X95 adds class/interface composition type slots, qualified/generic leaves and missing-angle repair.
 Candidates are visible types; the full generic constraints are checked by normal compilation.
-Trailing dots, empty generic slots/operands, parameterized qualifiers, generic base-name prefixes,
-function/sequence types, formal-type candidates, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
+X96 adds registered formals, empty generic slots, parameterized qualifiers and whole-final-token edits.
+The focused X94–X96 run `run-MdzjLq` passes all three cases; 98 other cases are not selected.
+Trailing dots, empty operands, qualifier-middle edits, generic base-name prefixes, function/sequence
+types, unregistered header formals, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
 size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
 prefix query does not validate a following supplier. Types without an element default still require
 a supplier when compiled normally. Multidimensional construction, unfinished declaration names

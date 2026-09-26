@@ -2549,6 +2549,122 @@
         "limitations": []
       }
     },
+    "X96": {
+      "title": "generic type completion resolves formals and parameterized qualifiers with whole-token edits",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { class Owner<Element> { class Item {} typedef Element as Alias; } class Container<Element> { ${0} } }",
+        "marker": "\u00a7",
+        "variants": [
+          {
+            "declaration": "void damaged(Ele\u00a7 value) {}",
+            "selected": "Element",
+            "include": [
+              "Element"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Element value) {}"
+          },
+          {
+            "declaration": "void damaged(List<\u00a7> value) {}",
+            "selected": "Element",
+            "include": [
+              "Element"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<Element> value) {}"
+          },
+          {
+            "declaration": "void damaged(Map<\u00a7, Int> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Map<String, Int> value) {}"
+          },
+          {
+            "declaration": "void damaged(Owner<String>.Ite\u00a7 value) {}",
+            "selected": "Item",
+            "include": [
+              "Item"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Owner<String>.Item value) {}"
+          },
+          {
+            "declaration": "void damaged(Owner<String>.Ali\u00a7 value) {}",
+            "selected": "Alias",
+            "include": [
+              "Alias"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Owner<String>.Alias value) {}"
+          },
+          {
+            "declaration": "void damaged(List<Str\u00a7ing> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 3,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<String> value) {}"
+          },
+          {
+            "declaration": "void damaged(ecstasy.text.Str\u00a7ingBuffer value) {}",
+            "selected": "StringBuffer",
+            "include": [
+              "StringBuffer"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 9,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(ecstasy.text.StringBuffer value) {}"
+          },
+          {
+            "declaration": "void damaged(Owner<String>.Ite\u00a7m value) {}",
+            "selected": "Item",
+            "include": [
+              "Item"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 1,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Owner<String>.Item value) {}"
+          }
+        ],
+        "prefixLength": 0,
+        "exclude": [
+          "value",
+          "damaged"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
