@@ -39,6 +39,10 @@ import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FileOperationFilter
+import org.eclipse.lsp4j.FileOperationOptions
+import org.eclipse.lsp4j.FileOperationPattern
+import org.eclipse.lsp4j.FileOperationsServerCapabilities
 import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
@@ -645,6 +649,10 @@ class XtcLanguageServer(
             if (adapter is XdkAdapter) {
                 workspace =
                     WorkspaceServerCapabilities().apply {
+                        fileOperations =
+                            FileOperationsServerCapabilities().apply {
+                                didRename = FileOperationOptions(listOf(FileOperationFilter(FileOperationPattern("**/*.x"), "file")))
+                            }
                         workspaceFolders =
                             WorkspaceFoldersOptions().apply {
                                 supported = true
