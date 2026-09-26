@@ -92,6 +92,11 @@ import org.xvm.util.TransientThreadLocal;
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
 
+import static org.xvm.asm.ErrorListener.Silence.CASCADE;
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+import static org.xvm.asm.ErrorListener.tee;
+
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.MD_xvmClass;
 import static org.xvm.javajit.Builder.OPT;
@@ -111,12 +116,6 @@ import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
-
-import static org.xvm.asm.ErrorListener.tee;
-
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.silent;
-import static org.xvm.asm.ErrorListener.Silence.CASCADE;
 
 /**
  * A base class for the various forms of Constants that will represent data types.
