@@ -83,6 +83,8 @@ data class FoldingRange(
     val startLine: Int,
     val endLine: Int,
     val kind: FoldingKind? = null,
+    val startCharacter: Int? = null,
+    val endCharacter: Int? = null,
 ) {
     enum class FoldingKind {
         COMMENT,
