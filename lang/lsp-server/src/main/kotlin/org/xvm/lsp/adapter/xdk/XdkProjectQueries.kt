@@ -9,7 +9,11 @@ import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.tool.ModuleInfo
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.io.IOException
+import java.security.MessageDigest
+import java.util.HexFormat
 import java.util.concurrent.CancellationException
 
 /**
@@ -18,7 +22,7 @@ import java.util.concurrent.CancellationException
  * Only detached locations/edits leave this object; compiler identities die with each query.
  */
 internal class XdkProjectQueries(
-    project: XdkProject,
+    private val project: XdkProject,
     private val overlays: Map<String, String>,
     private val dependencies: XdkDependencies,
     private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
@@ -27,6 +31,40 @@ internal class XdkProjectQueries(
     private val sources = project.buildOrder().associateWith { XdkSources.capture(it.root, overlays, cancelled) }
     private val texts = sources.values.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value }
     private val uris = sources.values.flatMap { it.sourceUris.entries }.associate { it.toPair() }
+
+    fun navigation(): XdkWorkspaceNavigation? {
+        val facts = compile(texts) ?: return null
+        val models = facts.models
+        val declared = models.associate { it.sourceName to it.id }
+        val aliases = models.flatMap { it.symbols }.distinctBy { it.id }
+            .groupBy { symbol -> facts.constants[symbol.id] ?: symbol.location() ?: symbol.id }
+            .values.flatMap { group ->
+                val canonical = group.firstOrNull { declared[it.declarationSource] == it.id.snapshot } ?: group.first()
+                group.map { it.id to canonical.id }
+            }.toMap()
+        val views = SemanticModel.joined(models, aliases).associateBy { uris.getValue(requireNotNull(it.sourceName)) }
+        return if (isCurrent()) XdkWorkspaceNavigation(views, revision()) else null
+    }
+
+    private fun revision(): String {
+        val bytes = ByteArrayOutputStream().also { bytes ->
+            DataOutputStream(bytes).use { output ->
+                fun value(text: String) {
+                    val utf8 = text.toByteArray(Charsets.UTF_8)
+                    output.writeInt(utf8.size)
+                    output.write(utf8)
+                }
+                project.buildOrder().forEach { module ->
+                    value(module.name)
+                    value(module.uri)
+                    value(module.dependencies.sorted().joinToString("\u0000"))
+                }
+                texts.toSortedMap().forEach { (path, text) -> value(path); value(text) }
+                dependencies.modules.toSortedMap().forEach { (name, artifact) -> value(name); value(artifact.revision) }
+            }
+        }.toByteArray()
+        return "graph:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+    }
 
     fun symbols(query: String): List<SymbolInfo> {
         val facts = compile(texts, allowIncomplete = true) ?: return emptyList()
