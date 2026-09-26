@@ -8,6 +8,17 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Class/interface composition headers (2026-09-26, `ef2b0b870` / `9ff95ec35`).**
+Bounded malformed headers retain the written name and body. Composition type queries resolve in
+the enclosing scope, including qualified and nested generic leaf prefixes. The new syntax-only
+recovery node has a final immutable cursor list and an explicit constructor-based clone; no partial
+class, inheritance or body components register. Shared X95 is implemented in both clients; native
+IntelliJ execution remains deferred. See [C23/L39](errs-integration-plan.md#class-and-interface-composition-headers)
+for verification status, bounds and the remaining functionality order. Validation passes 493
+compiler and 1,097 LSP tests (existing skips recorded separately), all 50 stdio tests and all
+100 VS Code scenarios. All 2,443 tracked objects are released. The subsequent L40 harness change (`0b82e609f`)
+adds focused case reruns with explicit `not-selected` reporting and verified configuration-cache reuse.
+
 **Parameterized/compound declaration types (2026-09-26, `3571d265d` / `3c68c2dfe`).**
 Header queries now select written leaf types inside nested generics, unions/intersections/differences
 and grouped/nullable/array/immutable syntax. They reuse the existing owned cursor target and compiler
@@ -1487,6 +1498,7 @@ zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
 | `IncompleteStatement.isCall()` and delimiter display (C19) | Bracket sizes are arguments of array construction; the retained opening token distinguishes them from ordinary index expressions. | Existing target/argument children and final token only. No new field, public signature or clone/reset rule. `getLeadingArguments()` stays empty for size slots; initializer-parenthesis slots still include their preceding dimensions. |
 | `Parser` dimension lookahead (C19) | Type parsing must count dimensions before `NewExpression` owns their expressions. A cursor must survive that ambiguity and report once. | Existing listener branch is discarded on token restore and merged when consumed/failed. The owning parse retains original cursor tokens. A following supplier is consumed for recovery but is outside the retained prefix proof. |
 | `IncompleteDeclarationStatement` (C20) | Preserve written declaration kind/name/range when no valid method or property component can be registered; own the selected type cursor. | Final metadata and ordinary AST child list adoption/cloning. The skipped body contributes only its original range. No component, parameter register, retained Context or lazy cache. AST placement is required for source ownership, structural features and stage traversal. |
+| `IncompleteTypeCompositionStatement` (C23), plus a protected syntax constructor on `TypeCompositionStatement` | Retain the written category/name/body/range and selected header cursor, including a member-file type root. | Final immutable cursor list; explicit clone constructs fresh cursor/body children and preserves parent/stage. No component registration, inherited semantic state, Context or resolver cache. AST placement is needed for source ownership, module assembly and structural traversal; `isComponentNode()` is false. |
 | `IncompleteStatement.isTypeCompletion()` and `CursorScope.declarationTypes` (C20) | Distinguish a type-only header query and resolve enclosing type candidates without inventing a method scope. | Kind is derived from the real parent; existing NameResolver performs lookup. Existing CursorBinding.NamedType carries copied identities. No new cursor field or host-side type resolver. |
 | `Parser` header recovery (C20) | Parser owns missing-header boundaries and distinguishes unqualified type prefixes from values. | Retains an actual name only when written; stops at body/semicolon/enclosing brace/EOF and checks cancellation while skipping the body. Qualified names are extended by C21 below; generic/type-composition headers remain follow-ups. |
 | `IncompleteStatement.forDeclarationType` (C21) | Preserve the complete written qualified type, and identify the final identifier for replacement. | Existing target child owns the original unvalidated NamedTypeExpression. Its final token is reused as cursor metadata; ordinary adoption/cloning handles independent ownership. No new fields or cached resolver. |

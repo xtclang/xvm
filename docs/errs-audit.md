@@ -762,3 +762,27 @@ Tests distinguish accepted complete types from accepted names whose missing clos
 errors. A non-deduplicating parser listener sees exactly one cursor diagnostic. The ordinary parser
 control still rejects missing closers. Shared X94, UTF-16/CRLF stdio variants and nested-generic
 retention queries extend the consumer proof. See the [verification record](errs-integration-plan.md#parameterized-and-compound-declaration-types).
+
+## Class/interface header audit (2026-09-26)
+
+C23/L39 extends bounded structural recovery to type-composition headers. Reusing a real registered
+class with an omitted base would invent inheritance and could register its members in the wrong
+scope. Instead, the retained syntax is a `TypeCompositionStatement` subtype with no component.
+It remains compatible with member-file assembly and existing outline/folding readers. Compiler
+stages defer its body; only a selected header type is queried from the real enclosing scope.
+
+The new cursor list is final and immutable. A specialized constructor-based clone copies/adopts
+body and cursor syntax independently, rather than letting reflective cloning replace a final field.
+No new mutable field, Context, NameResolver or listener is retained. Tests cover cloning, attempted
+list mutation, strict speculative parsing, first-error/cancellation stopping, qualified visibility,
+unsaved root/member invalidation, exact edits and ordinary diagnostic repair. The initial qualified
+probe exposed NameResolver's requirement that dotted lookup originate at a NameResolving syntax
+node; lookup now retains the original type node and skips the syntax-only declaration as a component
+scope. Test fixture corrections removed an illegal class-extends-interface repair and compare the
+member document cache's diagnostics/symbols rather than module-wide metadata. The first editor run
+passed 99 cases but rejected X95's attempt to extend another owner's virtual nested class. The
+fixture now makes that base static; the compiler correctly kept the illegal-inheritance diagnostic.
+
+Candidates prove visibility, not inheritance-kind compatibility or generic constraints. Formal type
+parameters and the other unproven grammar shapes remain follow-ups. See
+[C23/L39](errs-integration-plan.md#class-and-interface-composition-headers) for final verification.
