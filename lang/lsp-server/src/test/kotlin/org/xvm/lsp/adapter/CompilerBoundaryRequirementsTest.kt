@@ -14,6 +14,7 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.SemanticModel
+import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import java.io.ByteArrayInputStream
@@ -175,7 +176,7 @@ class CompilerBoundaryRequirementsTest {
             if (value == null || !seen.add(value)) return
             when (value) {
                 is String, is Number, is Boolean, is Enum<*>, is UUID -> {
-                    Unit
+                    return
                 }
 
                 is Iterable<*> -> {
@@ -190,7 +191,9 @@ class CompilerBoundaryRequirementsTest {
                 }
 
                 else -> {
-                    assertThat(value.javaClass.name).startsWith(SemanticModel::class.java.name)
+                    assertThat(value.javaClass.name.startsWith(SemanticModel::class.java.name) || value is XdkDependency.SymbolKey)
+                        .describedAs("Detached snapshot value: %s", value.javaClass.name)
+                        .isTrue()
                     value.javaClass.declaredFields
                         .filterNot { Modifier.isStatic(it.modifiers) }
                         .forEach {

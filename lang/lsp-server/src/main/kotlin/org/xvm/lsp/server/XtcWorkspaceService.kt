@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
@@ -52,6 +53,10 @@ class XtcWorkspaceService(
             adapter.didChangeWatchedFile(change.uri, change.type.value)
             server.refreshForFile(change.uri)
         }
+    }
+
+    override fun didChangeWorkspaceFolders(params: DidChangeWorkspaceFoldersParams) {
+        server.changeCompilerWorkspaceFolders(params.event.added.map { it.uri }, params.event.removed.map { it.uri })
     }
 
     /**
