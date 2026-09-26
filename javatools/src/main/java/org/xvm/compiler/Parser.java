@@ -94,8 +94,6 @@ public class Parser {
             throw new IllegalArgumentException("Source required");
         }
 
-        requireNonNull(errs, "errs");
-
         m_source          = source;
         f_errs            = new Reporting(requireNonNull(errs, "errs"));
         m_lexer           = lexer;
