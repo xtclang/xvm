@@ -10,6 +10,30 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Current integrated commit map
+
+These are local checkpoints after pushed `d046db4a8`; all changes remain together on `lagergren/errs`.
+They are extraction sources, not a claim that cherry-picking each subset is already independently green.
+
+| Commit | Future slice | Keep together when extracting |
+|---|---|---|
+| `d6039532d` | L47 live discovery | Incremental catalog, buffer/close/folder lifecycle, explicit-null configuration fix, diagnostic invalidation and X99 |
+| `d6039532d` | L48 detached graph queries | Revision/cache ownership, healthy partial navigation, complete-reference boundary, source-over-binary shadow guard and X100 |
+| `d6039532d` | L49 matching XDK sources | Gradle source variant and server resource consumer, binary/source revision pairing, declaration lookup, read-only boundaries, X5/X35/X101 |
+| `82204932a` | L50a property families | `CompilerPropertyRelations`, property facts in the copier, family closure and dispatch comparison, property rename guards and X102 |
+| `82204932a` | L50b member-file type moves | In-memory replay membership, renamed source identities in binding proof, `WorkspaceEdit.renames`, protocol resource capabilities/order and X103 |
+| `82204932a` | L50c explicit aliases | Both `ImportStatement` accessors, `CompilerImportAliases`, detached alias facts, prepare/rename routing and X104 |
+| `82204932a` | L50d auto-import repair | Public candidate index, partial repair facts, dependency ordering/explicit graph guards, preservation of known bindings, range-specific query cancellation and X105 |
+| `a5955fd2f` | C27/L51 function and sequence headers | Parser header flag/traversal, ownership/ordinary-parser controls, adapter positive/negative expectations, shared X106 and both consumers |
+| `a5955fd2f` | L52 native navigation parity | X33/X35 actions, X101 read-only navigation, catalog coverage metadata and test fixture setup |
+
+L50a–d share `XdkProjectQueries`, `XdkRename` and the refactoring test file: split their corresponding
+hunks, not whole files. All require L45's graph proof; L50d additionally needs L47 automatic discovery.
+C27/L51 must include removal of the old unsupported-function-header expectations. L52 follows L49
+and can be extracted independently of C27/L51. Each slice carries its associated manual/feature
+updates and must pass its own checks after extraction. Native execution for the new L52/X106
+assertions remains pending and must not be converted into a passing receipt during extraction.
+
 ## Function/sequence header completion and native parity (C27/L51/L52)
 
 Step 5 extends visible-type completion to written leaf identifiers inside function parameter types,
