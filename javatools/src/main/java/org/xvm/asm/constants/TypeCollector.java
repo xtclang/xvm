@@ -179,7 +179,7 @@ public class TypeCollector {
         if (typeRequired != null &&
                 (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
-            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), silent(PROBE));
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.getFirst(), silent(PROBE));
             for (int i = 1; i < cTypes; i++) {
                 typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), silent(PROBE));
             }
@@ -216,7 +216,7 @@ public class TypeCollector {
 
             default:
                 List<TypeConstant> listTypes = getSingle();
-                if (listTypes.size() == 1 && listTypes.get(0).isTuple()) {
+                if (listTypes.size() == 1 && listTypes.getFirst().isTuple()) {
                     fPacked      = true;
                     typeRequired = f_pool.ensureTupleType(atypeRequired);
                 } else {

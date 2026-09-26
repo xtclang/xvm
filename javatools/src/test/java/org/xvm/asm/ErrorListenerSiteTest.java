@@ -33,7 +33,7 @@ public class ErrorListenerSiteTest {
 
         errs.error(CODE, in(source, 3, 7), "a", "b");
 
-        ErrorInfo err = errs.getErrors().get(0);
+        ErrorInfo err = errs.getErrors().getFirst();
         assertEquals(Severity.ERROR, err.getSeverity());
         assertEquals(CODE, err.getCode());
         assertEquals(List.of("a", "b"), List.of(err.getParams()));
@@ -66,7 +66,7 @@ public class ErrorListenerSiteTest {
         errs.error(CODE, in(source, 3, 7), "a", "b");
         errs.error(CODE, NOWHERE, "c", "d");
 
-        assertInstanceOf(Site.In.class, errs.getErrors().get(0).site());
+        assertInstanceOf(Site.In.class, errs.getErrors().getFirst().site());
         assertInstanceOf(Site.None.class, errs.getErrors().get(1).site());
 
         var published = errs.getErrors().stream().map(err -> switch (err.site()) {
