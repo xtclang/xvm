@@ -388,6 +388,29 @@ public abstract class ObjectHandle
                     : getField(frame, field);
         }
 
+        /**
+         * Read a field for display only. Unlike {@link #getField(Frame, String)} this builds
+         * nothing: that one allocates a DeferredCallHandle when the property is absent, routes
+         * transient fields through the frame, and reads a field layout that may not exist yet.
+         *
+         * @return the field's value, or null if it cannot be read without building anything
+         */
+        protected ObjectHandle peekField(String sProp) {
+            TypeComposition clz = getComposition();
+            if (clz == null || !clz.isFieldLayoutComputed()) {
+                return null;
+            }
+
+            FieldInfo      field    = clz.getFieldInfo(sProp);
+            ObjectHandle[] ahFields = m_aFields;
+            if (field == null || field.isTransient() || ahFields == null) {
+                return null;
+            }
+
+            int iField = field.getIndex();
+            return iField < ahFields.length ? ahFields[iField] : null;
+        }
+
         private ObjectHandle missingPropertyException(Frame frame, String sProp) {
             return new DeferredCallHandle(
                     xException.makeHandle(frame, "Missing property: " + sProp));
@@ -662,10 +685,13 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            ObjectHandle hText = getField(null, "text");
+            // WrapperException.toString() delegates here, so this runs on every stack-trace
+            // print: peekField() rather than getField(), which allocates, and getValue() rather
+            // than getStringValue(), which memoizes
+            ObjectHandle hText = peekField("text");
             return super.toString() +
                 (hText instanceof StringHandle hString
-                    ? Handy.quotedString(hString.getStringValue())
+                    ? Handy.quotedString(new String(hString.getValue()))
                     : "");
         }
 
