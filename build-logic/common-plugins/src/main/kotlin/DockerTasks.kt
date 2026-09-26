@@ -1,10 +1,11 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
-import org.gradle.api.provider.ListProperty
-import org.gradle.api.provider.Property
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.CacheableTask
+import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
@@ -13,15 +14,19 @@ import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-@CacheableTask
+@UntrackedTask(because = "Docker images and registry state cannot be represented by a local marker file")
 abstract class DockerTask : DefaultTask() {
     @get:Inject
     abstract val execOperations: ExecOperations
+
+    @get:Inject
+    abstract val fileSystemOperations: FileSystemOperations
 
     @get:Input
     abstract val platforms: ListProperty<String>
@@ -84,7 +89,7 @@ abstract class DockerTask : DefaultTask() {
     abstract val dockerDir: DirectoryProperty
 
     @get:OutputFile
-    abstract val buildMarkerFile: org.gradle.api.file.RegularFileProperty
+    abstract val buildMarkerFile: RegularFileProperty
 
     @TaskAction
     fun buildDockerImage() {
@@ -112,8 +117,15 @@ abstract class DockerTask : DefaultTask() {
             throw GradleException("Distribution ZIP not found: $distZip")
         }
 
-        // Copy the distribution ZIP to the Docker build context with the expected name
-        val contextDistZip = File(dockerDir.get().asFile, "xdk-dist.zip")
+        // Give each task a private context; preserve any archive in the source directory.
+        val contextDir = File(temporaryDir, "context")
+        fileSystemOperations.sync {
+            from(dockerDir) {
+                exclude("build/**", ".gradle/**", "xdk-dist.zip")
+            }
+            into(contextDir)
+        }
+        val contextDistZip = File(contextDir, "xdk-dist.zip")
         logger.info("Copying XDK distribution ZIP to Docker build context: ${distZipFile.absolutePath} -> ${contextDistZip.absolutePath}")
         distZipFile.copyTo(contextDistZip, overwrite = true)
 
@@ -168,18 +180,16 @@ abstract class DockerTask : DefaultTask() {
 
             execOperations.exec {
                 commandLine(cmd)
-                workingDir(dockerDir.get().asFile)
+                workingDir(contextDir)
             }
 
-            // Write marker file to track successful build
+            // Diagnostic report only; Docker's external state must be checked on every invocation.
             val markerFile = buildMarkerFile.get().asFile
             markerFile.parentFile.mkdirs()
             markerFile.writeText("Docker image built successfully at ${java.time.Instant.now()}\nTags: ${computedTags.joinToString(", ")}\n")
         } finally {
-            // Clean up the copied distribution ZIP
-            if (contextDistZip.exists()) {
-                contextDistZip.delete()
-                logger.info("Cleaned up copied distribution ZIP: ${contextDistZip.absolutePath}")
+            fileSystemOperations.delete {
+                delete(contextDir)
             }
         }
     }

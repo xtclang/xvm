@@ -32,6 +32,11 @@ All Docker tasks are now organized in the `docker/` subproject. Run from project
 
 ## Building Images
 
+Build and push tasks invoke the container CLI on every run because image and registry state
+are external to Gradle; the marker files are diagnostic reports. Docker/BuildKit can still reuse
+its own layers. Each task stages a private build context under its temporary directory and
+cleans it afterward, preserving any `docker/xdk-dist.zip` in the source tree.
+
 ### Build Both Platforms
 ```bash
 # Multi-platform build (recommended for local development)
