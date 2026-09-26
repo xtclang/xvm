@@ -15,6 +15,16 @@ export const sharedScenarioHash = createHash('sha256').update(contents).digest('
 export const catalog: Catalog = JSON.parse(contents);
 assert.strictEqual(catalog.schemaVersion, 2, 'Unsupported shared playbook schema');
 export const sharedScenarioIds = Object.keys(catalog.cases) as ScenarioId[];
+
+/** Exact IDs only: a typo or empty selection must fail before opening the editor. */
+export function selectedScenarioIds(selection: string | undefined): ScenarioId[] {
+    if (selection === undefined) return sharedScenarioIds;
+    const requested = selection.split(',').map(id => id.trim());
+    assert.ok(requested.every(id => sharedScenarioIds.includes(id as ScenarioId)), `Unknown or empty playbook case in: ${selection}`);
+    assert.strictEqual(new Set(requested).size, requested.length, 'Duplicate playbook case IDs');
+    return sharedScenarioIds.filter(id => requested.includes(id));
+}
+
 const expectedIds = [...Array.from({ length: 95 }, (_, index) => `X${index + 1}`), 'CFG1', 'CFG2', 'CFG3', '7a.8', '7a.9'];
 assert.deepStrictEqual(sharedScenarioIds, expectedIds, 'The catalog must describe the complete playbook in order');
 for (const [id, scenario] of Object.entries(catalog.cases)) {

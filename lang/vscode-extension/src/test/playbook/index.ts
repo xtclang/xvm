@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import Mocha from 'mocha';
 import * as vscode from 'vscode';
-import { sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
+import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
 import { cases } from './support';
 
 async function hostResults() {
@@ -24,7 +24,10 @@ async function hostResults() {
 export async function run(): Promise<void> {
     const directory = process.env.XTC_PLAYBOOK_REPORT_DIR;
     assert.ok(directory, 'Launch with npm run test:playbook or the Gradle playbook task');
+    const selected = selectedScenarioIds(process.env.XTC_PLAYBOOK_CASES);
     const mocha = new Mocha({ ui: 'tdd', color: true, timeout: 90_000 });
+    const ids = selected.map(id => id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    mocha.grep(new RegExp(`(?:^| )(?:${ids}):`));
     mocha.addFile(path.join(__dirname, 'playbook.test.js'));
     const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
     const failures = await new Promise<number>(resolve => {
@@ -40,11 +43,13 @@ export async function run(): Promise<void> {
         commit: process.env.XTC_PLAYBOOK_COMMIT, dirtyPaths: process.env.XTC_PLAYBOOK_DIRTY,
         vscode: vscode.version, finished: new Date().toISOString(), failures,
         sharedScenarios: { file: sharedScenarioPath, sha256: sharedScenarioHash, ids: sharedScenarioIds },
+        selection: { mode: selected.length === sharedScenarioIds.length ? 'full' : 'focused', ids: selected },
         cases: [...cases].map(([id, description]) => ({ ...description, id,
-            ...(results.find(result => result.id === id) ?? { status: 'not-run' }) })),
+            ...(results.find(result => result.id === id) ?? { status: selected.some(value => value === id) ? 'not-run' : 'not-selected' }) })),
         errors: results.filter(result => !cases.has(result.id)),
         scope: 'VS Code extension-host/provider checks. Visual appearance and physical key/menu interaction remain manual.',
         hostChecks: await hostResults(),
+        hostChecksNote: 'Existing Gradle XML evidence; inspect timestamps. Focused editor runs do not rerun host checks.',
         supportingCoverage: {
             '7a.1–7a.2': 'XdkStdioTest: packaged compiler with absent and invalid XDK_HOME',
             '7a.3–7a.4': 'Case timings and XdkRetentionTest latency output; interactive cold/warm log interpretation remains manual',
@@ -61,11 +66,14 @@ export async function run(): Promise<void> {
     await fs.writeFile(path.join(directory, 'results.json'), JSON.stringify(report, null, 2) + '\n');
     await fs.writeFile(path.join(directory, 'results.txt'), [
         `Compiler playbook at ${report.commit}; VS Code ${report.vscode}`,
+        `Selection: ${report.selection.mode} (${selected.join(', ')})`,
         ...report.cases.map(item => `${item.id}: ${item.status} — ${item.title}${'error' in item && item.error ? `\n  ${item.error}` : ''}${item.manual.length ? `\n  Manual: ${item.manual.join('; ')}` : ''}`),
         ...report.hostChecks.map(item => `Host ${item.task}: ${item.status} (${item.suites.reduce((sum, suite) => sum + suite.tests, 0)} XDK tests; XML timestamps in results.json)`),
+        report.hostChecksNote,
         ...Object.entries(report.supportingCoverage).map(([id, coverage]) => `${id}: ${coverage}`),
         ...report.errors.map(error => error.error ?? error.title), report.scope
     ].join('\n') + '\n');
     assert.strictEqual(failures, 0, `Compiler playbook failed; see ${directory}/results.json`);
-    assert.strictEqual(report.cases.filter(item => item.status !== 'passed').length, 0, 'No silently skipped playbook cases');
+    assert.strictEqual(report.cases.filter(item => selected.some(id => id === item.id) && item.status !== 'passed').length,
+        0, 'No silently skipped selected playbook cases');
 }
