@@ -127,7 +127,9 @@ class XdkPresentationTest {
             assertThat(adapter.getInlayHints(URI, ALL)).hasSize(1)
             assertThat(adapter.compile(URI, "module Presentation {").success).isFalse()
             assertThat(adapter.getInlayHints(URI, ALL)).isEmpty()
-            assertThat(adapter.getSemanticTokens(URI)?.data.orEmpty()).isEmpty()
+            // Current lexical keywords remain; no previous resolved names may leak into the failed replacement.
+            assertThat(decode(adapter.getSemanticTokens(URI)!!).map { it.take(2) })
+                .doesNotContain(listOf(0, source.indexOf("count")))
             adapter.closeDocument(URI)
             assertThat(adapter.getSemanticTokens(URI)).isNull()
         }
