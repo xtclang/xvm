@@ -485,12 +485,12 @@ private class SemanticModelBuilder(
 
     private fun sourceVariable(variable: CursorBinding.Variable): PartialSemanticModel.Member? {
         val id = symbol(variable.register(), variable.name(), SymbolKind.VARIABLE) ?: return null
-        return PartialSemanticModel.Member(id, variable.name(), symbols[id]!!.kind, type(variable.type()), null)
+        return PartialSemanticModel.Member(id, variable.name(), symbols.getValue(id).kind, type(variable.type()), null)
     }
 
     private fun sourceProperty(property: CursorBinding.Property): PartialSemanticModel.Member? {
         val id = symbol(property.identity(), property.name(), kind(property.identity())) ?: return null
-        return PartialSemanticModel.Member(id, property.name(), symbols[id]!!.kind, type(property.type()), null)
+        return PartialSemanticModel.Member(id, property.name(), symbols.getValue(id).kind, type(property.type()), null)
     }
 
     fun buildPartial(
