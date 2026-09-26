@@ -8,6 +8,19 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Five-area functionality batch (2026-09-26, C25–C26 / L42–L46).**
+Separate development commits add fitted qualified/grouped argument values and earlier slots,
+automatic workspace module discovery with unopened-source indexing, cross-module navigation and
+hierarchy, proven inline-type/static-member rename and import cleanup, and bounded Java-lexer
+editor features plus generic base-name completion. The LSP now bundles all 24 XDK distribution
+module artifacts through the same Gradle dependency bundle as the distribution. Every bundled
+module name is reserved against workspace replacement; binary targets remain read-only.
+The Java changes derive argument ownership and generic cursor selection from existing syntax;
+no mutable AST field or new cloning burden is introduced. Compiler mode remains Java-only and
+Tree-sitter remains the shipped default. Shared X97/X98 run through both editor drivers; native
+IntelliJ execution is deferred. See the [five-area scope and verification record](errs-integration-plan.md#five-area-functionality-batch)
+for commit boundaries, validation status and remaining limitations.
+
 **Generic type completion batch (2026-09-26, C24 `1f843896f` / L41 `45e3a0998`).**
 Registered class/method formals, empty generic slots, complete parameterized qualifiers and
 middle-of-final-token edits now have compiler/LSP consumers. Parameterized aliases preserve the
@@ -1508,6 +1521,8 @@ zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
 | `IncompleteStatement.isCall()` and delimiter display (C19) | Bracket sizes are arguments of array construction; the retained opening token distinguishes them from ordinary index expressions. | Existing target/argument children and final token only. No new field, public signature or clone/reset rule. `getLeadingArguments()` stays empty for size slots; initializer-parenthesis slots still include their preceding dimensions. |
 | `Parser` dimension lookahead (C19) | Type parsing must count dimensions before `NewExpression` owns their expressions. A cursor must survive that ambiguity and report once. | Existing listener branch is discarded on token restore and merged when consumed/failed. The owning parse retains original cursor tokens. A following supplier is consumed for recovery but is outside the retained prefix proof. |
 | `IncompleteDeclarationStatement` (C20) | Preserve written declaration kind/name/range when no valid method or property component can be registered; own the selected type cursor. | Final metadata and ordinary AST child list adoption/cloning. The skipped body contributes only its original range. No component, parameter register, retained Context or lazy cache. AST placement is required for source ownership, structural features and stage traversal. |
+| `IncompleteStatement.getArgumentCall()` / package-local `PartialArgument` (C25) | Derive the containing call and selected argument by walking written labels/groups. Trial replacements preserve later arguments and receiver syntax for ordinary compiler fitting. | No new field, cache or clone override. Copies belong to the query; multidimensional array syntax is excluded from ordinary positional-call fitting. AST placement follows real child/parent ownership, not LSP state. |
+| `Parser.declarationTypePrefix` generic-base selection (C26) | Select a base identifier before its written type arguments, including a cursor inside that identifier. | Reuses the existing owned `NamedTypeExpression` and cursor token. Normal child adoption/cloning suffices; the parser regression verifies independent parameter children and source ancestry. |
 | `IncompleteStatement.getCompletionPrefix()` (C24) | Derive the decoded text before the cursor while retaining the entire written token for replacement. | No field or cache; requires normal source adoption. Mid-token syntax and cloned qualifier children remain independently owned. |
 | `CursorScope` parameterized/formal queries and `CursorBinding.NamedType.type()` (C24) | Resolve registered formal names and preserve qualifier-substituted candidate types for the host. | Probe syntax, compiler staging, TypeInfo and listeners are call-local. Nothing is stored on ordinary AST nodes; the result lives only in the existing compilation-attempt binding collector. The old two-argument candidate constructor remains; two-component record patterns need migration. |
 | `IncompleteTypeCompositionStatement` (C23), plus a protected syntax constructor on `TypeCompositionStatement` | Retain the written category/name/body/range and selected header cursor, including a member-file type root. | Final immutable cursor list; explicit clone constructs fresh cursor/body children and preserves parent/stage. No component registration, inherited semantic state, Context or resolver cache. AST placement is needed for source ownership, module assembly and structural traversal; `isComponentNode()` is false. |
