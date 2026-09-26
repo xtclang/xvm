@@ -109,7 +109,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
 ): CompilerRenameFacts =
     ConstantPool.withPool(pool()).use {
         val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
-        val models = builder.build(this)
+        val models = builder.build(this, errors)
         CompilerRenameFacts(models, builder.constantBindings(), builder.methodRelations(this, errors))
     }
 
