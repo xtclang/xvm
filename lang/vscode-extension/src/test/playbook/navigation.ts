@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { editScenario, scenarioOffset, scenarioRegex, shared } from './shared';
-import { diagnostics, diagnosticCode, fixture, hover, nextProblem, noErrors, playbook, position, symbolNames, symbols, targets } from './support';
+import { diagnostics, diagnosticCode, fixture, hover, nextProblem, noErrors, playbook, position, symbolNames, symbols, targetNames, targets } from './support';
 
 export function navigationCases(): void {
     playbook('X1', async (workspace, data) => {
@@ -81,7 +81,7 @@ export function navigationCases(): void {
 
     playbook('X5', async (workspace, data) => {
         const document = await workspace.open(data.file);
-        assert.deepStrictEqual(await targets(document, 'Definition', position(document, data.libraryType)), []);
+        assert.deepStrictEqual(await targetNames(await targets(document, 'Definition', position(document, data.libraryType))), [data.libraryTarget]);
         await workspace.replace(document, fixture(data.file).slice(0, fixture(data.file).lastIndexOf(data.missingCloser)));
         await diagnostics(document.uri, values => values.some(item => diagnosticCode(item).startsWith(data.parserCodePrefix)), 'Parser recovery diagnostic');
         assert.ok(symbolNames(await symbols(document)).some(name => name.includes(data.retainedSymbol)));

@@ -10,6 +10,62 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Live workspace and source-navigation checkpoint (L47–L49)
+
+Requested order: finish 1–3, validate them together and commit the checkpoint before implementing
+4–5. All work stays on `lagergren/errs` after pushed checkpoint `d046db4a8`.
+
+1. [x] **L47 live discovery:** parse changed buffer headers incrementally, restore disk on close,
+   add buffer-only module roots, handle workspace-folder notifications, refresh current-version
+   consumer diagnostics, and preserve explicit `sourceModules` overrides. Duplicate/cyclic edited
+   graphs retire old facts and publish `SOURCE-GRAPH` until corrected; rejected edited headers stay
+   in the catalog so correction in a different file works. Explicit JSON nulls survive configuration
+   conversion, so `sourceModules: null` actually restores discovery after an explicit graph.
+2. [x] **L48 detached navigation cache:** reuse copied graph results by complete source/URI/configuration/
+   binary digest; reread disk membership before reuse. Healthy modules retain navigation/hierarchy
+   with a broken independent neighbor. References and refactoring still require a complete graph.
+3. [x] **L49 matching bundled sources:** a consumable `xtc-sources` Gradle variant supplies sources for
+   the same XDK dependency bundle as the binaries. Binary identity, compiler source paths and debug
+   spans identify declarations; no global name matching. Materialized library files are read-only,
+   outside workspace compilation, and excluded from rename/format edits.
+4. [x] Validate L47–L49 together; commit this checkpoint before the next features.
+5. [ ] Broader proven refactoring: property/accessor families, file-moving type rename, aliases,
+   and unresolved-name imports; retain explicit unsupported boundaries when proof is incomplete.
+6. [ ] Remaining cursor/header forms and shared IntelliJ assertions, with occasional native runs.
+
+No Java compiler or AST changes are needed for L47–L49. Discovery retains immutable parsed headers;
+query reuse retains detached semantic models only. Source attachment reads existing compiler metadata
+and uses the Java parser for written declaration tokens. It does not put resolver state on AST nodes.
+
+Future extraction: L47 follows L43 discovery and server lifecycle; L48 follows L44 graph identity joins;
+L49 follows the bundled-library variant and semantic source-location API. The Gradle plugin's new
+source artifact and the server consumer belong together in L49. Tests/docs follow their feature.
+Final verification on 2026-09-26:
+
+- Java: 535 reported / 495 executed / 40 existing skips; Gradle plugin: 19 passed.
+- Full LSP suite: 1,169 reported / 1,166 executed / three existing skips, zero failures.
+  After the final source-shadowing guard, 42 focused graph/boundary cases pass; after preserving
+  configuration nulls, all 13 configuration/project-server cases pass. These later runs add two
+  regression tests to the full-suite baseline; they are not reported as another full-suite run.
+- Packaged stdio: all 51 pass. Both editor drivers compile; Kotlin checks and root Spotless pass.
+  The resource/source-variant task stores and reuses the configuration cache.
+- VS Code X5, X35 and X99–X101: all five pass, 101 not selected, in
+  `lang/vscode-extension/build/reports/compiler-playbook/run-psziUN/results.json` (catalog SHA-256
+  `cabf674637cce938c61412f4a253dcb7e071dda89e194a43f3a79181249754f5`). Native IntelliJ is deferred.
+
+The first editor run exposed a real null-configuration conversion bug; the passing rerun includes
+its fix. It also corrected a harness command name and VS Code's empty formatting-result convention.
+The full-suite source-navigation expectation updates check actual matching declaration text, and the
+snapshot-purity test still recursively rejects retained compiler objects. Full-suite XML is retained
+locally under `/private/tmp/errs-l47-full-results` before focused runs replace Gradle's report files.
+
+Bounds: query reuse is process-local, not a persistent workspace database. Broken dependencies also
+exclude their consumers; healthy partial results are not a proof of complete references. Source
+attachment covers matching bundled artifacts only; host binaries still need the existing explicit
+source index. Ambiguous/missing debug metadata gives no target. Opening a materialized library file
+is a source viewer, not a new editable module with full semantic analysis. Shared X99–X101 cover live
+imports, partial navigation and library source targets; native coverage remains separately reported.
+
 ## Remaining functionality order
 
 Work continues on `lagergren/errs`; the pushed checkpoint before the current batch is `5c334f919`.
@@ -102,9 +158,9 @@ This is a focused editor pass; the backend results above came from the preceding
 
 Remaining functional work after these bounded implementations:
 
-- [ ] Refresh source dependency edges for unsaved import changes and dynamic workspace folders.
-- [ ] Reuse graph query results and support healthy partial graphs for navigation/hierarchy.
-- [ ] Add binary source attachment; bundled types currently resolve without navigable source ranges.
+- [x] Refresh source dependency edges for unsaved import changes and dynamic workspace folders (L47).
+- [x] Reuse graph query results and support healthy partial graphs for navigation/hierarchy (L48).
+- [x] Attach matching bundled XDK source ranges (L49); host binaries retain the explicit source-index API.
 - [ ] Prove instance-property/accessor-family rename, file-moving type rename, import-alias rename
   and unresolved-name auto-import before advertising them.
 - [ ] Extend the remaining cursor/header forms and inferred displays only from concrete compiler facts.

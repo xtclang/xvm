@@ -38,7 +38,7 @@ export function semanticCases(): void {
     playbook('X35', async (workspace, data) => {
         const document = await workspace.open(data.file);
         assert.deepStrictEqual(await targetNames(await targets(document, 'TypeDefinition', position(document, data.formalUse, data.offset))), data.formalTargets);
-        assert.deepStrictEqual(await targets(document, 'TypeDefinition', position(document, data.binaryUse)), []);
+        assert.deepStrictEqual(await targetNames(await targets(document, 'TypeDefinition', position(document, data.binaryUse))), data.binaryTargets);
     });
 
     playbook('X36', async (workspace, data) => {
