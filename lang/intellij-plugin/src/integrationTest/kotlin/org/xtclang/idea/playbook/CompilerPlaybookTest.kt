@@ -43,17 +43,47 @@ class CompilerPlaybookTest {
                 fixture.file to text
             }
         val manualIds = Regex("^\\| (X\\d+) \\|", RegexOption.MULTILINE).findAll(manual).map { it.groupValues[1] }.toList()
-        // These source-view cases supply complete source in the shared catalog instead of a code block.
-        listOf("X101").forEach { id ->
+
+        // These cases supply complete sources in the shared catalog instead of duplicate code blocks.
+        fun fixture(
+            file: String,
+            text: String,
+        ) {
+            val target = workspace.resolve(file)
+            Files.createDirectories(target.parent)
+            Files.writeString(target, text)
+        }
+        listOf("X101", "X102", "X103", "X104").forEach { id ->
             val data = shared.scenarios.getValue(id)
-            Files.writeString(workspace.resolve(data.text("file")), data.text("source"))
+            fixture(if (id == "X101") data.text("file") else "$id/${data.text("file")}", data.text("source"))
+        }
+        shared.scenarios.getValue("X99").let {
+            fixture("X99/${it.text("file")}", it.text("original"))
+            fixture("X99/${it.text("library")}", it.text("libraryText"))
+        }
+        shared.scenarios.getValue("X100").let {
+            fixture("X100/${it.text("file")}", it.text("source"))
+            fixture("X100/${it.text("neighbor")}", it.text("neighborText"))
+        }
+        shared.scenarios.getValue("X103").let { fixture("X103/${it.text("member")}", it.text("memberSource")) }
+        shared.scenarios.getValue("X105").let {
+            fixture("X105/${it.text("file")}", "module AutoImports {}")
+            fixture("X105/${it.text("library")}", it.text("libraryText"))
         }
         require(shared.ids.filter { it.startsWith("X") } == manualIds) { "Shared catalog and manual playbook rows differ" }
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
         val lsp4ijVersion = System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
-        val cases = CompilerPlaybook(fixtures, shared, lsp4ijVersion)
+        val selection =
+            System
+                .getProperty("xtc.playbook.cases", "")
+                .split(',')
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .toSet()
+        require(selection.all { it in shared.implementedIds }) { "Unknown or unimplemented native case: $selection" }
+        val cases = CompilerPlaybook(fixtures, shared, lsp4ijVersion, selection.ifEmpty { shared.implementedIds })
         val previousDi = di
         di =
             DI {
@@ -133,6 +163,7 @@ class CompilerPlaybookTest {
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
                     "adapter" to "compiler",
+                    "selectedCases" to selection.ifEmpty { shared.implementedIds },
                     "sharedScenarios" to mapOf("file" to scenarioPath.toString(), "sha256" to shared.sourceHash, "ids" to shared.ids),
                     "cases" to cases.results,
                     "counts" to cases.results.groupingBy { it.status }.eachCount(),

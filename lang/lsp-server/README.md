@@ -2,8 +2,8 @@
 
 C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
 arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
-implemented in both editors. IntelliJ also adds native X33/X35 and partial X101 assertions;
-these newly implemented native checks await a later execution checkpoint.
+implemented in both editors. IntelliJ now asserts X33/X35 navigation and the complete X101
+read-only checks; native execution receipts are tracked separately in the active validation plan.
 
 L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
 type moves and public-type auto-import repairs. See the
@@ -154,6 +154,9 @@ binding/dispatch comparison. Import actions remove proven-unused ordinary import
 imports while retaining comments; they use versioned edits. Source property/accessor families,
 explicit import aliases and simple member-file type moves also use compiler proof. File moves require
 client resource-operation support and exclude module roots, collisions and companion directories.
+Compiler mode handles `workspace/didRenameFiles` for local XTC files, refreshing old and new
+locations even without watcher events. This also enables LSP4IJ's close/open sequence for renamed
+buffers, preventing stale overlays when an open member is renamed again.
 Unresolved public type imports are offered only when the proposed import repairs the complete graph
 without changing known bindings. Automatic discovery can add source edges; explicit graphs must
 already declare them. Binary contracts, annotation/delegation dispatch and unresolved graphs remain
@@ -241,8 +244,8 @@ recover around a cursor hole. Expression-bodied declarations/property initialize
 terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
 their real source-owned compiler context. Member/return and parameter type prefixes use the
 enclosing compiler scope, including flat qualified names, without registering incomplete declarations.
-Missing operands, declaration/parameter names, generic-method/module/package headers, missing map
-entries and unterminated literal contents remain outside this recovery. The
+Missing value operands, declaration/parameter names, missing map entries and unterminated literal
+contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
 Declaration-header recovery retains malformed method names and source extents for outline and
@@ -258,9 +261,10 @@ missing angle/group closers also work. These are visible-type suggestions; norma
 checks generic constraints. Registered class/method formals, empty generic slots and complete
 parameterized qualifiers also work; aliases retain their substituted type. Mid-token queries
 replace the entire final identifier, including a generic base before written type arguments.
-Empty operands, qualifier-middle edits, trailing dots, unregistered generic-method/type-header formals,
-multi-return and module/package headers remain follow-ups; see
-[shared X91–X98 and X106](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+Empty type operands, qualifier-middle edits, trailing dots, generic-method/multi-return declarations,
+constraints and module/package composition headers now have bounded recovery. Unregistered header
+formals hide outer names but are not fabricated completion candidates; see
+[shared X91–X98 and X106–X108](../doc/manual-test-plan.md#xdkadapter-playbook) and the
 [C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
 Class/interface headers now retain their written name and body for structure when a bounded header

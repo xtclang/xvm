@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Driver
+import com.intellij.driver.client.impl.DriverCallException
 import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.FileEditorManager
@@ -20,6 +21,8 @@ import com.intellij.driver.sdk.ui.components.common.ideFrame
 import com.intellij.driver.sdk.waitFor
 import com.intellij.driver.sdk.waitForIndicators
 import com.intellij.driver.sdk.waitForProblemsViewFile
+import com.intellij.driver.sdk.waitNotNull
+import com.intellij.openapi.progress.ProcessCanceledException
 import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,6 +35,7 @@ class CompilerPlaybook(
     private val fixtures: Map<String, String>,
     private val shared: SharedScenarios,
     private val lsp4ijVersion: String,
+    private val selectedIds: Set<String> = shared.implementedIds,
 ) {
     data class Result(
         val id: String,
@@ -79,6 +83,7 @@ class CompilerPlaybook(
                 val lsp = requireNotNull(getPlugin("com.redhat.devtools.lsp4ij"))
                 check(lsp.isEnabled() && lsp.getVersion() == lsp4ijVersion)
             }
+            configure(shared.graph)
             case(shared.dependencyNavigation.id, "Initial compiler configuration and cross-module definition") {
                 val scenario = shared.dependencyNavigation
                 configure(shared.graph)
@@ -278,6 +283,7 @@ class CompilerPlaybook(
             }
             signatureScenarios()
             additionalScenarios()
+            workspaceScenarios()
             for (id in listOf("X71", "X75")) {
                 scenario(id) { data ->
                     val editor = open(data.text("file"))
@@ -325,8 +331,8 @@ class CompilerPlaybook(
                 }
                 restore(data.text("file"))
             }
-            check(completed.filter { it.id != "START" }.map { it.id }.toSet() == shared.implementedIds) {
-                "Every case declared implemented or partial must execute; unimplemented cases must stay explicit"
+            check(completed.filter { it.id != "START" }.map { it.id }.toSet() == selectedIds) {
+                "Every selected implemented case must execute; omitted cases remain not-run"
             }
         }
 
@@ -569,7 +575,7 @@ class CompilerPlaybook(
             }
             restore(data.text("file"))
         }
-        listOf("X94", "X95", "X96", "X97", "X98", "X106").forEach { id ->
+        listOf("X94", "X95", "X96", "X97", "X98", "X106", "X107", "X108").forEach { id ->
             scenario(id) { data ->
                 val editor = open(data.text("file"))
                 data.rows("variants").forEach { variant ->
@@ -586,10 +592,12 @@ class CompilerPlaybook(
                             data.strings("exclude").none { it in names }
                     }
                     invokeAction("EditorEscape", component = editor.component)
-                    accept(editor, at, variant["selected"].asString)
-                    check(
-                        editor.text == marked.take(at - before) +
-                            variant["selected"].asString + marked.substring(at + data.text("marker").length + after),
+                    accept(
+                        editor,
+                        at,
+                        variant["selected"].asString,
+                        marked.take(at - before) + variant["selected"].asString +
+                            marked.substring(at + data.text("marker").length + after),
                     )
                     if (variant["validAfterAcceptance"].asBoolean) {
                         editor.awaitDiagnostics(emptyList())
@@ -627,6 +635,31 @@ class CompilerPlaybook(
     }
 
     private fun Driver.additionalScenarios() {
+        scenario("X34") { data ->
+            val editor = open(data.text("file"))
+            editor.awaitDiagnostics(emptyList())
+            declaration(
+                definition(
+                    editor,
+                    editor.text.lastIndexOf(data.text("narrowedUse")) + data.values["narrowedOffset"].asInt,
+                    "LSP.GotoTypeDefinition",
+                ),
+                data.strings("narrowedTargets").single(),
+            )
+            val reopened = open(data.text("file"))
+            focusEditor(reopened)
+            caret(reopened, reopened.text.indexOf(data.text("unionUse")) + data.values["unionOffset"].asInt)
+            invokeAction("LSP.GotoTypeDefinition", component = reopened.component)
+            val expected = data.strings("unionTargets")
+            chooseTargets(expected, expected.last())
+            waitFor("selected union declaration opens", 30.seconds) {
+                withContext(OnDispatcher.EDT) {
+                    service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
+                        reopened.text.substring(selected.getCaretModel().getOffset()).startsWith(expected.last())
+                    } == true
+                }
+            }
+        }
         scenario("X33") { data ->
             data.rows("variants").forEach { variant ->
                 val editor = open(data.text("file"))
@@ -651,7 +684,15 @@ class CompilerPlaybook(
             data.strings("types").forEach { name ->
                 val editor = open(data.text("file"))
                 editor.awaitDiagnostics(emptyList())
-                libraryDeclaration(definition(editor, editor.text.indexOf(name)), name)
+                val target = definition(editor, editor.text.indexOf(name))
+                libraryDeclaration(target, name)
+                val library = ideFrame().codeEditorForFile(Path.of(target.first).fileName.toString())
+                val original = library.text
+                rejectFormatting(library)
+                check(library.text == original && Files.readString(Path.of(target.first)) == original)
+                check(!Files.isWritable(Path.of(target.first)))
+                val reopened = open(data.text("file"))
+                rejectRename(reopened, reopened.text.indexOf(name), data.text("renameRejection"))
             }
             val editor = open(data.text("file"))
             libraryDeclaration(
@@ -922,11 +963,12 @@ class CompilerPlaybook(
         editor: JEditorUiComponent,
         at: Int,
         label: String,
+        expectedText: String? = null,
     ) {
         val before = editor.text
         check(at in 0..before.length)
         val prefix = before.take(at).takeLastWhile { it.isLetterOrDigit() || it == '_' }
-        val expected = before.replaceRange(at - prefix.length, at, label)
+        val expected = expectedText ?: before.replaceRange(at - prefix.length, at, label)
         focusEditor(editor)
         caret(editor, at)
         invokeAction("CodeCompletion", component = editor.component)
@@ -955,6 +997,7 @@ class CompilerPlaybook(
         description: String,
         action: () -> Unit,
     ) {
+        if (id != "START" && id !in selectedIds) return
         check(completed.none { it.id == id }) { "Duplicate native case $id" }
         val start = TimeSource.Monotonic.markNow()
         println("IntelliJ playbook $id: $description")
@@ -967,6 +1010,127 @@ class CompilerPlaybook(
         } catch (failure: Throwable) {
             completed += Result(id, description, "failed", start.elapsedNow().inWholeMilliseconds, failure.stackTraceToString())
             throw failure
+        }
+    }
+
+    private fun Driver.workspaceScenarios() {
+        scenario("X99") {
+            discovered("X99") { data ->
+                val consumer = open(data.text("file"))
+                consumer.text = data.text("changed")
+                consumer.awaitDiagnostics(emptyList())
+                declaration(definition(consumer, consumer.text.indexOf(data.text("anchor"))), data.text("target"))
+                val library = open(data.text("library"))
+                library.text = data.text("brokenLibrary")
+                open(data.text("file")).awaitError()
+                val discarded = open(data.text("library"))
+                check(Files.readString(Path.of(discarded.editor.getVirtualFile().getPath())) == data.text("libraryText"))
+                discarded.text = data.text("libraryText")
+                withContext(OnDispatcher.EDT) {
+                    service<FileEditorManager>(singleProject()).closeFile(discarded.editor.getVirtualFile())
+                }
+                val restored = open(data.text("file"))
+                restored.awaitDiagnostics(emptyList())
+                check(Files.readString(Path.of(restored.editor.getVirtualFile().getPath())) == data.text("original"))
+                restored.text = data.text("original")
+            }
+        }
+        scenario("X100") {
+            discovered("X100") { data ->
+                val neighbor = open(data.text("neighbor"))
+                neighbor.text = data.text("brokenNeighbor")
+                neighbor.awaitError()
+                val healthy = open(data.text("file"))
+                partialGraphHierarchy(
+                    healthy,
+                    healthy.text.indexOf(data.text("anchor")),
+                    data.text("child"),
+                    healthy.text.lastIndexOf(data.text("anchor")),
+                )
+                val restored = open(data.text("neighbor"))
+                restored.text = data.text("neighborText")
+                restored.awaitDiagnostics(emptyList())
+            }
+        }
+        listOf("X102", "X104").forEach { id ->
+            scenario(id) {
+                discovered(id) { data ->
+                    val editor = open(data.text("file"))
+                    editor.awaitDiagnostics(emptyList())
+                    rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
+                    waitFor("all source rename edits applied", 45.seconds) {
+                        editor.text.split(data.text("replacement")).size - 1 == data.values["edits"].asInt
+                    }
+                    editor.awaitDiagnostics(emptyList())
+                    data.values["preserved"]?.let { check(it.asString in editor.text) }
+                    editor.text = data.text("source")
+                    editor.awaitDiagnostics(emptyList())
+                }
+            }
+        }
+        scenario("X103") {
+            discovered("X103") { data ->
+                val editor = open(data.text("file"))
+                editor.awaitDiagnostics(emptyList())
+                val root = Path.of(editor.editor.getVirtualFile().getPath()).parent
+                rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
+                waitFor("type rename moves the member file", 45.seconds) {
+                    Files.exists(root.resolve(data.text("destination"))) && !Files.exists(root.resolve(data.text("member"))) &&
+                        editor.text.contains(data.text("replacement"))
+                }
+                val moved = open("X103/${data.text("destination")}")
+                check(moved.text == data.text("memberSource").replace(data.text("anchor"), data.text("replacement")))
+                val reopened = open(data.text("file"))
+                reopened.awaitDiagnostics(emptyList())
+                // Restore through the same native refactoring path, including the reverse move.
+                rename(reopened, reopened.text.indexOf(data.text("replacement")), data.text("anchor"))
+                waitFor("reverse rename restores source and the member", 45.seconds) {
+                    Files.exists(root.resolve(data.text("member"))) && !Files.exists(root.resolve(data.text("destination"))) &&
+                        reopened.text == data.text("source")
+                }
+                reopened.awaitDiagnostics(emptyList())
+                check(Files.readString(root.resolve(data.text("member"))) == data.text("memberSource"))
+            }
+        }
+        scenario("X105") {
+            discovered("X105") { data ->
+                val editor = open(data.text("file"))
+                data.rows("variants").forEach { variant ->
+                    editor.text = variant["source"].asString
+                    editor.awaitError()
+                    quickFix(editor, editor.text.indexOf(variant["anchor"].asString), variant["title"].asString)
+                    waitFor("native import quick fix applied", 45.seconds) { variant["importText"].asString in editor.text }
+                    editor.awaitDiagnostics(emptyList())
+                }
+                editor.text = "module AutoImports {}"
+                editor.awaitDiagnostics(emptyList())
+            }
+        }
+    }
+
+    private fun Driver.discovered(
+        id: String,
+        action: (SharedScenarios.Scenario) -> Unit,
+    ) {
+        val original = shared.scenarios.getValue(id)
+        val data =
+            original.copy(
+                values =
+                    original.values.deepCopy().apply {
+                        listOf("file", "library", "neighbor").filter(::has).forEach { key -> addProperty(key, "$id/${get(key).asString}") }
+                    },
+            )
+        // Match VS Code's per-case discovery workspace so unrelated teaching fixtures cannot
+        // silently alter this scenario's graph or the scope of its refactoring proof.
+        open(data.text("file"))
+        val root = Path.of(singleProject().getBasePath())
+        changeWorkspaceFolders(root, root.resolve(id))
+        configure("""{"xtc":{"compiler":{"sourceModules":null}}}""")
+        try {
+            action(data)
+        } finally {
+            configure(shared.graph)
+            changeWorkspaceFolders(root.resolve(id), root)
         }
     }
 
@@ -990,7 +1154,17 @@ class CompilerPlaybook(
             service<FileEditorManager>(singleProject()).openFile(requireNotNull(target), false, false)
         }
         // Tool windows such as Find Usages also contain editors; bind actions to this file's tab.
-        return ideFrame().codeEditorForFile(Path.of(file).fileName.toString())
+        val editor = ideFrame().codeEditorForFile(Path.of(file).fileName.toString())
+        // A focused run may edit the very first file. Wait for the client's initial snapshot to be
+        // sent before changing its document; merely opening the tab does not mean LSP startup ended.
+        waitFor("language client opened $file", 45.seconds) {
+            service<LanguageClients>(singleProject())
+                .getStartedServers()
+                .flatMap { it.getOpenedDocuments() }
+                .filter { it.getFile().getPath() == editor.editor.getVirtualFile().getPath() }
+                .any { it.getSynchronizer().getDidOpenFuture().let { future -> future.isDone() && !future.isCompletedExceptionally() } }
+        }
+        return editor
     }
 
     private fun Driver.caret(
@@ -1024,6 +1198,7 @@ class CompilerPlaybook(
         action: String = "GotoDeclaration",
     ): Pair<String, Int> {
         val origin = editor.editor.getVirtualFile().getPath() to at
+        focusEditor(editor)
         caret(editor, at)
         invokeAction(action, component = editor.component)
 
@@ -1033,7 +1208,11 @@ class CompilerPlaybook(
                     it.getVirtualFile().getPath() to it.getCaretModel().getOffset()
                 }
             }
-        waitFor("$action navigates to a single declaration", 45.seconds) { selected()?.let { it != origin } == true }
+        waitFor(
+            message = "$action navigates to a single declaration",
+            errorMessage = { "Origin: $origin; selected: ${selected()}; diagnostics: ${editor.diagnostics()}" },
+            timeout = 45.seconds,
+        ) { selected()?.let { it != origin } == true }
         return requireNotNull(selected())
     }
 
@@ -1064,11 +1243,20 @@ class CompilerPlaybook(
     )
 
     private fun JEditorUiComponent.diagnostics(): List<Diagnostic> =
-        getAllHighlights().mapNotNull { highlight ->
-            val severity = highlight.getSeverity().getName()
-            if (severity in setOf("ERROR", "WARNING")) {
-                Diagnostic(severity, highlight.getDescription().orEmpty(), highlight.getHighlighter()?.getStartOffset() ?: -1)
-            } else {
+        waitNotNull("read editor diagnostics", 5.seconds) {
+            try {
+                getAllHighlights().mapNotNull { highlight ->
+                    val severity = highlight.getSeverity().getName()
+                    if (severity in setOf("ERROR", "WARNING")) {
+                        Diagnostic(severity, highlight.getDescription().orEmpty(), highlight.getHighlighter()?.getStartOffset() ?: -1)
+                    } else {
+                        null
+                    }
+                }
+            } catch (e: DriverCallException) {
+                // Editing can cancel the daemon's lazy quick-fix pass while the driver reads it.
+                // Retry that transient read; never turn cancellation into an empty problem list.
+                if (generateSequence<Throwable>(e) { it.cause }.none { it is ProcessCanceledException }) throw e
                 null
             }
         }
@@ -1078,6 +1266,10 @@ class CompilerPlaybook(
     }
 
     private fun JEditorUiComponent.awaitDiagnostics(expected: List<Diagnostic>) {
-        waitFor("diagnostics $expected", 45.seconds) { diagnostics() == expected }
+        waitFor(
+            message = "diagnostics $expected",
+            errorMessage = { "Expected $expected; editor diagnostics: ${diagnostics()}" },
+            timeout = 45.seconds,
+        ) { diagnostics() == expected }
     }
 }
