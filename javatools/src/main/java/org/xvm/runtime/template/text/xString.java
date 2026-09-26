@@ -35,7 +35,7 @@ import org.xvm.runtime.template._native.collections.arrays.xRTCharDelegate.CharA
 import org.xvm.runtime.template._native.collections.arrays.xRTDelegate.DelegateHandle;
 import org.xvm.runtime.template._native.collections.arrays.xRTSlicingDelegate.SliceHandle;
 
-import org.xvm.util.Handy;
+import static org.xvm.util.Handy.quotedString;
 
 /**
  * Native String implementation.
@@ -388,10 +388,11 @@ public class xString
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder(super.toString());
-            sb.append('\"');
-            Handy.appendString(sb, getStringValue());
-            return sb.append('\"').toString();
+            // not getStringValue(): it memoizes. Single read of m_sValue, as getStringValue() does,
+            // so the null check and the use cannot disagree.
+            String sValue = m_sValue;
+            return super.toString()
+                 + quotedString(sValue == null ? new String(m_achValue) : sValue);
         }
     }
 

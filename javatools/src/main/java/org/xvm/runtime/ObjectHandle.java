@@ -662,10 +662,12 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
+            // WrapperException.toString() delegates here too. Read the stored text without
+            // populating its Java String cache during display or stack-trace printing.
             ObjectHandle hText = getField(null, "text");
             return super.toString() +
                 (hText instanceof StringHandle hString
-                    ? Handy.quotedString(hString.getStringValue())
+                    ? Handy.quotedString(new String(hString.getValue()))
                     : "");
         }
 
