@@ -501,6 +501,7 @@ private class SemanticModelBuilder(
         collect(nodes, analysis.callBindings(), analysis.functionBindings(), analysis.pool().orElse(null))
         val sites =
             analysis.sites().map { site ->
+                val operation = site.argumentCall.orElse(site)
                 val parents = generateSequence(site.parent) { it.parent }.toList()
                 val owner = parents.filterIsInstance<TypeCompositionStatement>().firstOrNull()?.component as? ClassStructure
                 val scope =
@@ -509,7 +510,7 @@ private class SemanticModelBuilder(
                         .firstOrNull()
                         ?.let(::identity)
                         ?.let { constants[it] }
-                val receiver = site.receiver.orElse(null)
+                val receiver = operation.receiver.orElse(null)
                 val receiverType = validatedType(receiver)
                 val cursor = analysis.cursorBindings()[site]
                 val callFacts = cursor?.callFacts()
@@ -526,7 +527,7 @@ private class SemanticModelBuilder(
                         staticType != null -> Lookup.STATIC
                         else -> Lookup.INSTANCE
                     }
-                val callee = (site.target as? NameExpression)?.name.takeIf { site.isCall }
+                val callee = (operation.target as? NameExpression)?.name.takeIf { operation.isCall }
                 val locals =
                     cursor
                         ?.variables()
@@ -551,7 +552,7 @@ private class SemanticModelBuilder(
                     } else if (site.isNameCompletion) {
                         locals.filter { local -> scopeTypes.none { it.symbol == local.symbol } } +
                             scopeMembers.filter { member -> scopeTypes.none { it.name == member.name } } + scopeTypes
-                    } else if (site.isCall && receiver == null) {
+                    } else if (operation.isCall && receiver == null) {
                         scopeMembers.filter { it.kind == SymbolKind.METHOD && it.name == callee }
                     } else if (receiverType != null && owner != null && !errors.isAbortDesired) {
                         receiverMembers(
@@ -560,7 +561,7 @@ private class SemanticModelBuilder(
                             errors,
                             lookupKind,
                         ).filter {
-                            !site.isCall || (it.kind == SymbolKind.METHOD && it.name == callee)
+                            !operation.isCall || (it.kind == SymbolKind.METHOD && it.name == callee)
                         }
                     } else {
                         emptyList()
@@ -568,19 +569,19 @@ private class SemanticModelBuilder(
                 PartialSemanticModel.Site(
                     kind =
                         when {
-                            site.isCall -> PartialSemanticModel.Kind.CALL
+                            operation.isCall -> PartialSemanticModel.Kind.CALL
                             site.isNameCompletion -> PartialSemanticModel.Kind.NAME
                             else -> PartialSemanticModel.Kind.MEMBER_ACCESS
                         },
                     range = location(site.source, site.startPosition, site.endPosition).range,
-                    operator = location(site.source, site.operator.startPosition, site.operator.endPosition).range,
+                    operator = location(site.source, operation.operator.startPosition, operation.operator.endPosition).range,
                     receiver = receiver?.let { location(site.source, it.startPosition, it.endPosition).range },
                     receiverType = type(receiverType),
                     calleeName = callee,
                     scope = scope,
                     arguments =
                         immutableList(
-                            (site.leadingArguments + site.arguments).map {
+                            (operation.leadingArguments + operation.arguments).map {
                                 PartialSemanticModel.Argument(
                                     location(site.source, it.startPosition, it.endPosition).range,
                                     (it as? LabeledExpression)?.name,
@@ -590,7 +591,7 @@ private class SemanticModelBuilder(
                         ),
                     separators =
                         immutableList(
-                            site.separators.map {
+                            operation.separators.map {
                                 Position(
                                     Source.calculateLine(it.startPosition),
                                     Source.calculateOffset(it.startPosition),
@@ -619,7 +620,7 @@ private class SemanticModelBuilder(
                                             }
 
                                             method.containingClass.isAnonInnerClass -> {
-                                                "new ${site.target.childNodes().filterIsInstance<TypeExpression>().single()}"
+                                                "new ${operation.target.childNodes().filterIsInstance<TypeExpression>().single()}"
                                             }
 
                                             else -> {
@@ -650,7 +651,7 @@ private class SemanticModelBuilder(
                                 },
                             )
                         },
-                    pendingArgumentName = site.pendingArgumentName.orElse(null)?.valueText,
+                    pendingArgumentName = operation.pendingArgumentName.orElse(null)?.valueText,
                     functions =
                         immutableList(
                             callFacts?.functions().orEmpty().mapNotNull { candidate ->
@@ -673,7 +674,7 @@ private class SemanticModelBuilder(
                             callFacts?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
                                 callFacts?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
                         ),
-                    argumentOffset = site.leadingArguments.size,
+                    argumentOffset = operation.leadingArguments.size,
                 )
             }
         return if (errors.isAbortDesired) {

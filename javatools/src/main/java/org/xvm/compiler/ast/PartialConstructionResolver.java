@@ -70,7 +70,7 @@ final class PartialConstructionResolver {
                 .filter(method -> !anonymous || target != info || targets.getLast().getFormat() == Format.INTERFACE
                         || !target.getMethodById(method).getTopmostMethodStructure(target).isSynthetic())
                 .map(method -> new Constructor(target, method))).toList();
-        var written = arguments(site, site.getArguments());
+        var written = arguments(site, PartialCallResolver.writtenArguments(site));
         var candidates = methods.stream()
                 .takeWhile(method -> !errs.isAbortDesired())
                 .flatMap(method -> site.probeCallCandidate(ctx, method.info().getType(), method.info(),
