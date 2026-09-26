@@ -86,10 +86,14 @@ internal class XdkProject(
     fun affected(scope: String): Set<String> {
         val changed = modules.values.firstOrNull { it.uri == scope } ?: return setOf(scope)
         val names = mutableSetOf(changed.name)
-        return ordered
-            .filter { module ->
-                (module.name in names || module.dependencies.any(names::contains)).also { if (it) names += module.name }
-            }.mapTo(linkedSetOf()) { it.uri }
+        return buildSet {
+            ordered.forEach { module ->
+                if (module.name in names || module.dependencies.any(names::contains)) {
+                    names += module.name
+                    add(module.uri)
+                }
+            }
+        }
     }
 
     fun orderedScopes(scopes: Set<String>): Set<String> =
