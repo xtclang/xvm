@@ -872,7 +872,7 @@ public class xFuture
          *
          * @return a description of the future's state
          */
-        static String describe(CompletableFuture<ObjectHandle> future) {
+        private static String describe(CompletableFuture<ObjectHandle> future) {
             if (future == null) {
                 return "<no future>";
             }
