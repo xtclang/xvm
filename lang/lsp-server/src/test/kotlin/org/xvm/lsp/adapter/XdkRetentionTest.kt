@@ -100,7 +100,8 @@ class XdkRetentionTest {
                 val (marked, expected) =
                     when {
                         !headerQuery -> cursorCases[cycle % cursorCases.size]
-                        cycle % 2 == 0 -> "void probe(Str| value) {}" to "String"
+                        (cycle / (cursorCases.size + 1)) % 3 == 0 -> "void probe(Str| value) {}" to "String"
+                        (cycle / (cursorCases.size + 1)) % 3 == 1 -> "void probe(Map<Int, List<Str|>> value) {}" to "String"
                         else -> "void probe(ecstasy.text.Str| value) {}" to "StringBuffer"
                     }
                 val prefix = marked.substringBefore('|')
