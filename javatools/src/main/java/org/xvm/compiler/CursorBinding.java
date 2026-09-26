@@ -126,7 +126,12 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         }
     }
 
-    public record NamedType(String name, IdentityConstant identity) {}
+    /** A compiler-resolved type name; type preserves parameterized qualifier substitution. */
+    public record NamedType(String name, IdentityConstant identity, TypeConstant type) {
+        public NamedType(String name, IdentityConstant identity) {
+            this(name, identity, identity.getType());
+        }
+    }
 
     /** Fits the written arguments; missing arguments cannot establish a selected overload. */
     public record Candidate(MethodConstant method, SignatureConstant signature,
