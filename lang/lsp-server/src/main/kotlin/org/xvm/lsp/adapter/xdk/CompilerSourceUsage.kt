@@ -24,8 +24,7 @@ internal fun compilerWrites(nodes: List<AstNode>): List<Pair<NameExpression, Usa
 
             is SequentialAssignExpression -> {
                 node
-                    .children()
-                    .iterator()
+                    .childNodes()
                     .asSequence()
                     .flatMap { writeTargets(it) }
                     .map { it to Usage.READ_WRITE }
@@ -46,8 +45,7 @@ private fun writeTargets(node: AstNode): List<NameExpression> =
 
         is MultipleLValueStatement, is TupleExpression, is ParenthesizedExpression -> {
             node
-                .children()
-                .iterator()
+                .childNodes()
                 .asSequence()
                 .flatMap { writeTargets(it) }
                 .toList()
