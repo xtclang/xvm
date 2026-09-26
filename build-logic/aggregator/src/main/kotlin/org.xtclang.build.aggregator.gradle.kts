@@ -39,9 +39,8 @@ private class XdkBuildAggregator(val project: Project) : Runnable {
     private fun aggregateTasks(taskNames: List<String>, group: String, taskType: String, ignored: Set<String>) {
         taskNames.forEach { taskName ->
             logger.info("[aggregator] Creating aggregated $taskType task: ':$taskName' in project '${project.name}'")
-            // Use findByName first, then create or configure
-            val task = tasks.findByName(taskName) ?: tasks.register(taskName).get()
-            task.apply {
+            val task = if (taskName in tasks.names) tasks.named(taskName) else tasks.register(taskName)
+            task.configure {
                 this.group = group
                 description = "Aggregates and executes the '$taskName' task for all included builds."
 
