@@ -157,6 +157,10 @@ The tree-sitter grammar must be compiled into a native shared library (`.dylib`,
 by the JVM-based LSP server. We use **Zig** for cross-compilation, enabling builds for all platforms from
 any development machine.
 
+Downloads are verified against `native-tool-checksums.properties` before extraction, including when
+reusing the configuration cache. When changing tool versions in `gradle/libs.versions.toml`, update
+the corresponding checksum pins from their recorded upstream sources in the same change.
+
 ### Why Zig for Cross-Compilation?
 
 Traditional C/C++ cross-compilation requires platform-specific toolchains:

@@ -1,7 +1,9 @@
 import de.undercouch.gradle.tasks.download.Download
+import de.undercouch.gradle.tasks.download.Verify
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import java.security.MessageDigest
+import java.util.Properties
 import java.util.zip.GZIPInputStream
 import kotlin.time.measureTime
 
@@ -90,6 +92,14 @@ val scannerCFile: Provider<RegularFile> = generatedDir.map { it.dir("src").file(
 val treeSitterCliExe: Provider<String> = treeSitterCliDir.map { it.file("tree-sitter").asFile.absolutePath }
 val nativeLibFile: Provider<RegularFile> = nativeOutputDir.map { it.file("libtree-sitter-xtc.$nativeLibExt") }
 
+val nativeToolChecksums = Properties().apply {
+    providers.fileContents(layout.projectDirectory.file("native-tool-checksums.properties"))
+        .asText.get().reader().use { load(it) }
+}
+
+fun nativeToolChecksum(key: String): String = nativeToolChecksums.getProperty(key)
+    ?: throw GradleException("Pin the SHA-256 for '$key' in native-tool-checksums.properties before using this tool version")
+
 // =============================================================================
 // Tree-sitter CLI Download
 // =============================================================================
@@ -110,6 +120,7 @@ val downloadTreeSitterCliGz = tasks.register<Download>("downloadTreeSitterCliGz"
     src(url)
     dest(destGzFile)
     overwrite(false)
+    tempAndMove(true)
     quiet(true)
     inputs.property("cliVersion", version)
     outputs.file(destGzFile)
@@ -120,6 +131,16 @@ val downloadTreeSitterCliGz = tasks.register<Download>("downloadTreeSitterCliGz"
     }
 }
 
+val verifyTreeSitterCli = tasks.register<Verify>("verifyTreeSitterCli") {
+    dependsOn(downloadTreeSitterCliGz)
+    enabled = treeSitterPlatformSupported
+    src(treeSitterCliDir.map { it.file("tree-sitter-$treeSitterPlatform.gz") })
+    algorithm("SHA-256")
+    if (treeSitterPlatformSupported) {
+        checksum(nativeToolChecksum("tree-sitter-cli.$treeSitterCliVersion.$treeSitterPlatform"))
+    }
+}
+
 /**
  * Extract the tree-sitter CLI from the downloaded gzip file.
  * Uses Java's built-in GZIPInputStream for platform independence.
@@ -127,7 +148,7 @@ val downloadTreeSitterCliGz = tasks.register<Download>("downloadTreeSitterCliGz"
 val extractTreeSitterCli = tasks.register("extractTreeSitterCli") {
     group = "tree-sitter"
     description = "Extract tree-sitter CLI from gzip"
-    dependsOn(downloadTreeSitterCliGz)
+    dependsOn(verifyTreeSitterCli)
     enabled = treeSitterPlatformSupported
 
     val gzFile = treeSitterCliDir.map { it.file("tree-sitter-$treeSitterPlatform.gz").asFile }
@@ -162,7 +183,8 @@ val extractTreeSitterCli = tasks.register("extractTreeSitterCli") {
 // This is needed by jtreesitter at runtime in addition to our grammar library.
 
 val treeSitterRuntimeVersion: String = libs.versions.lang.tree.sitter.cli.get()
-val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-source")
+val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-source/$treeSitterRuntimeVersion")
+val treeSitterSourceArchive = layout.buildDirectory.file("downloads/tree-sitter-$treeSitterRuntimeVersion.tar.gz")
 
 /**
  * Download tree-sitter source code for building the runtime library.
@@ -173,11 +195,12 @@ val downloadTreeSitterSource = tasks.register<Download>("downloadTreeSitterSourc
 
     val version = treeSitterRuntimeVersion
     val url = "https://github.com/tree-sitter/tree-sitter/archive/refs/tags/v$version.tar.gz"
-    val destFile = treeSitterSourceDir.map { it.file("tree-sitter-$version.tar.gz") }
+    val destFile = treeSitterSourceArchive
     val destPath = destFile.get().asFile.absolutePath
     src(url)
     dest(destFile)
     overwrite(false)
+    tempAndMove(true)
     quiet(true)
     // Declare the downloaded tar.gz as a Gradle output so the standard
     // up-to-date check re-runs the task when the file goes missing on
@@ -194,20 +217,25 @@ val downloadTreeSitterSource = tasks.register<Download>("downloadTreeSitterSourc
     }
 }
 
+val verifyTreeSitterSource = tasks.register<Verify>("verifyTreeSitterSource") {
+    dependsOn(downloadTreeSitterSource)
+    src(treeSitterSourceArchive)
+    algorithm("SHA-256")
+    checksum(nativeToolChecksum("tree-sitter-source.$treeSitterRuntimeVersion"))
+}
+
 /**
  * Extract tree-sitter source code.
  */
 val extractTreeSitterSource = tasks.register("extractTreeSitterSource") {
     group = "tree-sitter"
     description = "Extract tree-sitter source"
-    dependsOn(downloadTreeSitterSource)
-    val tarGzFile = treeSitterSourceDir.map { it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz").asFile }
+    dependsOn(verifyTreeSitterSource)
+    val tarGzFile = treeSitterSourceArchive.map { it.asFile }
     val outputDir = treeSitterSourceDir.map { it.asFile }
     val version = treeSitterRuntimeVersion
 
-    // NOTE: Wire download task outputs as inputs (not inputs.file()) — Gradle 9.4 validates
-    // inputs.file() paths at graph time, before the download task has run.
-    inputs.files(downloadTreeSitterSource)
+    inputs.file(tarGzFile)
     outputs.dir(outputDir)
 
     doLast {
@@ -251,6 +279,7 @@ val zigPlatform: String = when {
 }
 
 val zigPlatformSupported = zigPlatform != "unsupported"
+val zigExtractDir = File(zigDir, "extracted-$zigPlatform")
 val zigArchiveExt = if (osName.contains("windows")) "zip" else "tar.xz"
 val zigExeName = if (osName.contains("windows")) "zig.exe" else "zig"
 
@@ -272,12 +301,23 @@ val downloadZig = tasks.register<Download>("downloadZig") {
     src(url)
     dest(destFile)
     overwrite(false)
+    tempAndMove(true)
     quiet(true)
     outputs.file(destFile)
 
     logTimed("[zig] Downloading Zig compiler v$version ($platform)...\n[zig]   URL:  $url\n[zig]   Dest: $destPath") { elapsed ->
         val size = File(destPath).length().humanSize()
         "[zig] Zig download complete ($size in $elapsed) -> $destPath"
+    }
+}
+
+val verifyZig = tasks.register<Verify>("verifyZig") {
+    dependsOn(downloadZig)
+    enabled = zigPlatformSupported
+    src(downloadZig.map { it.dest })
+    algorithm("SHA-256")
+    if (zigPlatformSupported) {
+        checksum(nativeToolChecksum("zig.$zigVersion.$zigPlatform"))
     }
 }
 
@@ -340,15 +380,15 @@ abstract class ExtractZigTask @Inject constructor(
 val extractZig = tasks.register<ExtractZigTask>("extractZig") {
     group = "zig"
     description = "Extract Zig compiler from archive (cached in ~/.gradle/caches/zig/)"
-    dependsOn(downloadZig)
+    dependsOn(verifyZig)
     enabled = zigPlatformSupported
 
     archiveFile.set(layout.file(downloadZig.map { it.dest }))
-    outputDir.set(layout.dir(provider { zigDir }))
+    outputDir.set(zigExtractDir)
     archiveExt.set(zigArchiveExt)
 }
 
-val zigExe: String = File(zigDir, "zig-$zigPlatform-$zigVersion/$zigExeName").absolutePath
+val zigExe: String = File(zigExtractDir, "zig-$zigPlatform-$zigVersion/$zigExeName").absolutePath
 
 // =============================================================================
 // Copy Grammar Files from DSL Project
