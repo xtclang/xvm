@@ -79,7 +79,6 @@ import org.xtclang.plugin.internal.DefaultXtcExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
 import org.xtclang.plugin.internal.DefaultXtcTestExtension;
-import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
@@ -116,9 +115,6 @@ public class XtcProjectDelegate {
     }
 
     public XtcProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
-        // Assert that we're in configuration phase - XtcProjectDelegate should never be used during execution
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcProjectDelegate construction");
-
         this.projectName = project.getName();
         this.objects = project.getObjects();
         this.layout = project.getLayout();
@@ -229,9 +225,6 @@ public class XtcProjectDelegate {
     }
 
     protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {
-        // Assert that we're in configuration phase - extensions can only be created during configuration
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "ensureExtension for " + name);
-
         final var exts = project.getExtensions();
         if (exts.findByType(clazz) == null) {
             return exts.create(name, clazz);
@@ -310,9 +303,6 @@ public class XtcProjectDelegate {
      * This method, "apply", is a delegate target call for an XTC project delegating plugin
      */
     public void apply(final Project project) {
-        // Assert that we're in configuration phase - all XTC plugin setup happens during configuration
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcProjectDelegate.apply()");
-
         applyJavaPlugin(tasks, project);
         createXtcComponents(project);
 

@@ -21,7 +21,6 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SkipWhenEmpty;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.api.tasks.util.PatternSet;
 
@@ -34,8 +33,6 @@ import org.xtclang.plugin.XtcProjectDelegate;
 
 @DisableCachingByDefault(because = "Abstract base class; concrete subclasses should declare caching intent")
 public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension> implements PatternFilterable {
-    private static final String XDK_TURTLE_SOURCE_FILENAME = "mack.x";
-
     private final PatternFilterable patternSet;
     private ConfigurableFileCollection sourceFiles;
 
@@ -178,23 +175,4 @@ public abstract class XtcSourceTask extends XtcLauncherTask<XtcCompilerExtension
         return file.isFile() && hasFileExtension(file, XTC_SOURCE_FILE_EXTENSION);
     }
 
-    @SuppressWarnings("unused")
-    protected boolean isTopLevelXtcSourceFile(final SourceSet sourceSet, final File file) {
-        return !file.isDirectory() && isXtcSourceFile(file) && isTopLevelSource(sourceSet, file);
-    }
-
-    protected boolean isTopLevelSource(final SourceSet sourceSet, final File file) {
-        assert file.isFile();
-        final var topLevelSourceDirs = new java.util.HashSet<>(sourceSet.getAllSource().getSrcDirs());
-        final var dir = file.getParentFile();
-        assert dir != null && dir.isDirectory();
-        final var isTopLevelSrc = topLevelSourceDirs.contains(dir);
-        logger.debug("{} Checking if {} is a module definition (currently, just checking if it's a top level file): {}",
-            "[plugin]", file.getAbsolutePath(), isTopLevelSrc);
-        if (isTopLevelSrc || XDK_TURTLE_SOURCE_FILENAME.equalsIgnoreCase(file.getName())) {
-            logger.info("{} Found module definition: {}", "[plugin]", file.getAbsolutePath());
-            return true;
-        }
-        return false;
-    }
 }

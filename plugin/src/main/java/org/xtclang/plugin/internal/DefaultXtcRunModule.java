@@ -31,11 +31,6 @@ public class DefaultXtcRunModule implements XtcRunModule {
         this.moduleArgs = objects.listProperty(String.class).empty();
     }
 
-    @Deprecated //TODO: Figure out a better way to override/resolve dependencies for the run configurations and the tasks that inherit it.
-    static List<Object> getModuleInputs(final XtcRunModule module) {
-        return List.of(module.getModuleName(), module.getMethodName(), module.getModuleArgs());
-    }
-
     @Override
     public Property<@NotNull String> getModuleName() {
         return moduleName;

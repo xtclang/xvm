@@ -305,7 +305,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @TaskAction
     @Override
     public void executeTask() {
-        super.executeTask();
 
         // Validate that parallel execution is not enabled (not yet implemented)
         if (getParallel().get()) {

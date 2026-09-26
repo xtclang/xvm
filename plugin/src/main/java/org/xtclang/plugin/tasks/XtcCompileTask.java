@@ -128,10 +128,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return sourceSetName;
     }
 
-    private boolean isMainSourceSetCompileTask() {
-        return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
-    }
-
     /**
      * Override to return source-set-specific dependencies for compilation.
      * This avoids the circular dependency where a compile task's own output
@@ -317,7 +313,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @TaskAction
     @Override
     public void executeTask() {
-        super.executeTask();
 
         // Create and execute the compile strategy (builds CompilerOptions internally after javatools is loaded)
         final var strategy = createCompileStrategy();
@@ -403,18 +398,4 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return from;
     }
 
-    @Override
-    protected List<SourceSet> getDependentSourceSets() {
-        // Note: The parent implementation now captures source set output directories at configuration time
-        // to avoid Project references during execution, so we can safely use it
-        return super.getDependentSourceSets().stream()
-            .filter(sourceSet -> {
-                // For main source set compile tasks, only include the main source set
-                if (isMainSourceSetCompileTask()) {
-                    return sourceSet.getName().equals(getCompileSourceSetName());
-                }
-                return true;
-            })
-            .toList();
-    }
 }
