@@ -41,7 +41,7 @@ public final class ForkedCommandLineBuilder {
             args.addAll(List.of("-L", relativize(projectDir, modulePath.toPath())));
         }
 
-        final String moduleVersion = task.resolveXtcVersion();
+        final String moduleVersion = task.getXtcVersion().getOrNull();
         if (moduleVersion != null && !moduleVersion.isBlank()) {
             args.addAll(List.of("--set-version", XtcCompileTask.semanticVersion(moduleVersion)));
         }
