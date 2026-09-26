@@ -441,7 +441,7 @@ export function advancedCases(): void {
     typeHeaderCases(['X94', 'X95', 'X96', 'X97', 'X98']);
 }
 
-export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | 'X98' | 'X106')[]): void {
+export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | 'X98' | 'X106' | 'X107' | 'X108')[]): void {
     for (const id of ids) {
         playbook(id, async (workspace, data) => {
             const document = await workspace.open(data.file);

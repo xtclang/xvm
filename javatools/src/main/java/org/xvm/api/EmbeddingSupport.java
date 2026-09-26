@@ -581,8 +581,11 @@ public class EmbeddingSupport {
      * name and range but registers no method/property component or parameters. Written leaf
      * names inside parameterized and compound types also participate, including bounded missing
      * angle/group closers. These are visible-type suggestions, not proof of generic constraints.
-     * Empty qualified/type-argument slots, parameterized qualifiers, generic base-name prefixes,
-     * function/sequence types, generic-method and type-composition headers remain unsupported.
+     * Empty type/qualified slots, selected qualifier tokens, parameterized qualifiers, generic
+     * base names and function/sequence types are supported. Generic-method, multiple-return and
+     * type-composition headers query their enclosing scope; unregistered formals hide outer names
+     * without acquiring invented identities. A root module header registers only its written
+     * namespace/core import; its incomplete body and compositions cannot emit or contribute facts.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,

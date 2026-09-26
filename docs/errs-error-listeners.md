@@ -1,5 +1,16 @@
 # Error listeners in the compiler and embedding API
 
+L54 hardens delivery beyond the compiler listener: analysis/query completion and cancellation
+callbacks leave the compiler/transport thread before acquiring server lifecycle locks. Native
+testing exposed both lock cycles. File-rename notifications also refresh diagnostic ownership at
+old/new URIs. These server fixes preserve the compiler listener contract and add no AST state.
+
+C28/L53 extends explicit header queries to empty type operands, trailing dots, qualifier tokens,
+multiple-return declarations, generic constraints and module/package compositions. Immutable written
+formal-name sets prevent accidental lookup of shadowed outer types; root recovery retains only the
+written module namespace. The parser and AST ownership changes, native parity additions and
+validation are documented in the [current batch](errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+
 C27/L51 adds written function/sequence type-header completion using existing parser recovery and
 listener branches; no new listener path or AST state. Single-report, clone/source ownership and
 ordinary-parser controls accompany the shared X106 scenario. Native parity additions and remaining

@@ -1349,7 +1349,9 @@ public class TypeCompositionStatement
         }
 
         // recursively register structures
-        mgr.processChildren();
+        if (!mgr.isChildrenDeferred()) {
+            mgr.processChildren();
+        }
 
         // if there are any constructor parameters, then that implies the existence both of
         // properties and of a constructor; we will handle the constructor creation later (the
@@ -1859,7 +1861,9 @@ public class TypeCompositionStatement
             }
         }
 
-        mgr.processChildren();
+        if (!mgr.isChildrenDeferred()) {
+            mgr.processChildren();
+        }
 
         Map<String, Component> mapChildren        = component.getChildByNameMap();
         MultiMethodStructure   constructors       = (MultiMethodStructure) mapChildren.get("construct");

@@ -398,24 +398,18 @@ public class Parser {
         }
 
         Mark header = mark();
-        boolean recoverable = category.getId() != Id.MODULE && category.getId() != Id.PACKAGE;
-        List<Parameter> typeParams;
+        List<Parameter> typeParams = null;
         List<Parameter> constructorParams;
         List<CompositionNode> compositions;
         try {
-            typeParams        = parseTypeParameterList(false);
+            typeParams        = parseTypeParameterList(false, true);
             constructorParams = parseParameterList(false);
-            compositions      = parseCompositions(recoverable);
+            compositions      = parseCompositions(true);
         } catch (IncompleteHeader error) {
-            if (!recoverable) {
-                throw error;
-            }
-            return retainTypeDeclaration(header, lStartPos, category, name, List.of(error.site), error);
+            return retainTypeDeclaration(header, lStartPos, category, name, qualified,
+                    List.of(error.site), error.withFormals(typeParams));
         } catch (CompilerException error) {
-            if (!recoverable) {
-                throw error;
-            }
-            return retainTypeDeclaration(header, lStartPos, category, name, List.of(), error);
+            return retainTypeDeclaration(header, lStartPos, category, name, qualified, List.of(), error);
         }
 
         // TypeCompositionBody
@@ -815,12 +809,19 @@ public class Parser {
         case CONDITIONAL:
         case VOID: {
             // it's definitely a method or a function
-            List<Parameter> typeVars    = peek(Id.COMP_LT) ? parseTypeParameterList(true) : null;
-            Token           conditional = match(Id.CONDITIONAL);
-            List<Parameter> returns     = parseReturnList();
-            Token           name        = expect(Id.IDENTIFIER);
-            return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                    modifiers, annotations, typeVars, conditional, returns, name);
+            Mark header = mark();
+            List<Parameter> typeVars = null;
+            try {
+                typeVars = peek(Id.COMP_LT) ? parseTypeParameterList(true, true) : null;
+                Token conditional = match(Id.CONDITIONAL);
+                List<Parameter> returns = parseDeclarationReturns();
+                Token name = expect(Id.IDENTIFIER);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, typeVars, conditional, returns, name);
+            } catch (IncompleteHeader error) {
+                return retainDeclaration(header, lStartPos, null, IncompleteDeclarationStatement.Kind.METHOD,
+                        List.of(error.site), error.withFormals(typeVars));
+            }
         }
 
         case CONSTRUCT: {
@@ -845,6 +846,22 @@ public class Parser {
         }
 
         case L_PAREN: {
+            if (!fInMethod && f_cursor != NO_CURSOR) {
+                // Outside a method this is declaration syntax, not a tuple value. Probe the
+                // type grammar without letting a discarded interpretation publish diagnostics.
+                Mark header = mark();
+                var branch = f_errs.get().branch(null);
+                try (var ignored = reportingTo(branch)) {
+                    parseDeclarationReturns();
+                } catch (IncompleteHeader error) {
+                    branch.merge();
+                    return retainDeclaration(header, lStartPos, null, IncompleteDeclarationStatement.Kind.METHOD,
+                            List.of(error.site), error);
+                } catch (CompilerException ignored) {
+                    // The ordinary declaration grammar below owns non-cursor failures.
+                }
+                restore(header);
+            }
             // it's a property or a method, but the property type is parenthesized (odd!) or
             // the method return types (with optional names) are parenthesized (multi-return),
             // which means that to know it's a method, we have to find one of:
@@ -1176,7 +1193,7 @@ public class Parser {
         } catch (IncompleteHeader e) {
             // This incomplete method has no registered type parameters or own scope yet.
             return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
-                    typeVars == null || typeVars.isEmpty() ? List.of(e.site) : List.of(), e);
+                    List.of(e.site), e.withFormals(typeVars));
         } catch (CompilerException e) {
             return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
                     List.of(), e);
@@ -4478,6 +4495,7 @@ public class Parser {
      * @return a type expression
      */
     TypeExpression parseNonBiTypeExpression(boolean fExtended, boolean fHeader) {
+        retainEmptyTypeArgument(fHeader);
         TypeExpression type;
         Token tokAccess = null;
         switch (peek().getId()) {
@@ -4712,7 +4730,22 @@ public class Parser {
             }
 
             // QualifiedName
-            List<Token> names = parseQualifiedName();
+            List<Token> names = new ArrayList<>();
+            do {
+                boolean hole = fHeader && f_cursor != NO_CURSOR && canRetainTypeSlot();
+                Token name = hole ? new Token(f_cursor, f_cursor, Id.IDENTIFIER, "") : expect(Id.IDENTIFIER);
+                names.add(name);
+                // A cursor in a qualifier owns this token only; the remaining dotted suffix
+                // stays in source. A trailing dot owns a zero-width insertion slot.
+                if (fHeader && (hole || peek(Id.DOT) && name.getStartPosition() < f_cursor
+                        && f_cursor <= name.getEndPosition())) {
+                    var selected = expr == null
+                            ? new NamedTypeExpression(null, names, tokAccess, null, null, name.getEndPosition())
+                            : new NamedTypeExpression(expr, names, null, name.getEndPosition());
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    throw new IncompleteHeader(IncompleteStatement.forDeclarationType(selected, f_cursor));
+                }
+            } while (match(Id.DOT) != null);
 
             if (tokAccess != null && expr != null) {
                 log(Severity.ERROR, NO_CHILD_ACCESS, tokAccess.getStartPosition(),
@@ -4948,6 +4981,10 @@ public class Parser {
      * @return a list of zero or more type parameters, or null if there were no angle brackets
      */
     List<Parameter> parseTypeParameterList(boolean required) {
+        return parseTypeParameterList(required, false);
+    }
+
+    private List<Parameter> parseTypeParameterList(boolean required, boolean header) {
         List<Parameter> typeParams = null;
         if (match(Id.COMP_LT, required) != null) {
             typeParams = new ArrayList<>();
@@ -4962,7 +4999,12 @@ public class Parser {
                 Token          param = expect(Id.IDENTIFIER);
                 TypeExpression type  = null;
                 if (match(Id.EXTENDS) != null) {
-                    type = parseExtendedTypeExpression();
+                    try {
+                        type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
+                    } catch (IncompleteHeader error) {
+                        throw error.withFormals(Stream.concat(typeParams.stream(),
+                                Stream.of(new Parameter(null, param))).toList());
+                    }
                 }
                 typeParams.add(new Parameter(type, param));
             }
@@ -5047,14 +5089,21 @@ public class Parser {
 
     /** An explicit empty generic slot has no invented type expression or generic owner. */
     private void retainEmptyTypeArgument(boolean header) {
-        if (header && !f_errs.get().isAbortDesired() && prev().getEndPosition() <= f_cursor
-                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
-                && (switch (peek().getId()) {
-                    case COMP_GT, COMP_GTEQ, SHR, SHR_ASN, USHR, USHR_ASN -> true;
-                    default -> canRetainIncomplete();
-                })) {
+        if (header && f_cursor != NO_CURSOR && canRetainTypeSlot()) {
             throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
         }
+    }
+
+    /** Only explicit cursor probes can select an empty type slot at a grammar boundary. */
+    private boolean canRetainTypeSlot() {
+        return m_cSpeculating == 0 && !m_fAvoidRecovery && !f_errs.get().isAbortDesired()
+                && prev().getEndPosition() <= f_cursor
+                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && (switch (peek().getId()) {
+                    case COMP_GT, COMP_GTEQ, SHR, SHR_ASN, USHR, USHR_ASN, BIT_OR, ADD, SUB -> true;
+                    case IDENTIFIER -> f_cursor < peek().getStartPosition();
+                    default -> canRetainIncomplete();
+                });
     }
 
     /**
@@ -5214,16 +5263,28 @@ public class Parser {
 
     private static class IncompleteHeader extends CompilerException {
         private IncompleteHeader(IncompleteStatement site) {
+            this(site, Set.of());
+        }
+
+        private IncompleteHeader(IncompleteStatement site, Set<String> formals) {
             super("Incomplete declaration header");
             this.site = site;
+            this.formals = formals;
+        }
+
+        private IncompleteHeader withFormals(List<Parameter> parameters) {
+            return parameters == null ? this : new IncompleteHeader(site,
+                    Stream.concat(formals.stream(), parameters.stream().map(Parameter::getName))
+                            .collect(Collectors.toUnmodifiableSet()));
         }
 
         private final IncompleteStatement site;
+        private final Set<String> formals;
     }
 
     /** Keep a type's real body for structure, but never register an unfinished inheritance header. */
     private TypeCompositionStatement retainTypeDeclaration(Mark header, long start, Token category,
-            Token name, List<IncompleteStatement> sites, CompilerException error) {
+            Token name, List<Token> qualified, List<IncompleteStatement> sites, CompilerException error) {
         if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
             throw error;
         }
@@ -5234,16 +5295,18 @@ public class Parser {
             }
             if (peek(Id.L_CURLY)) {
                 StatementBlock body = parseTypeCompositionBody(category);
-                return new IncompleteTypeCompositionStatement(m_source, category, name, body,
-                        start, body.getEndPosition(), sites);
+                return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, body,
+                        start, body.getEndPosition(), sites,
+                        error instanceof IncompleteHeader incomplete ? incomplete.formals : Set.of());
             }
             if (match(Id.SEMICOLON) != null) {
                 break;
             }
             current();
         }
-        return new IncompleteTypeCompositionStatement(m_source, category, name,
-                start, prev().getEndPosition(), sites);
+        return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, null,
+                start, prev().getEndPosition(), sites,
+                error instanceof IncompleteHeader incomplete ? incomplete.formals : Set.of());
     }
 
     /**
@@ -5283,7 +5346,26 @@ public class Parser {
             }
             current();
         }
-        return new IncompleteDeclarationStatement(kind, name, start, prev().getEndPosition(), sites);
+        return new IncompleteDeclarationStatement(kind, name, start, prev().getEndPosition(), sites,
+                error instanceof IncompleteHeader incomplete ? incomplete.formals : Set.of());
+    }
+
+    /** Declaration return slots select types without publishing an unfinished callable. */
+    private List<Parameter> parseDeclarationReturns() {
+        if (f_cursor == NO_CURSOR) {
+            return parseReturnList();
+        }
+        if (match(Id.VOID) != null) {
+            return List.of();
+        }
+        if (match(Id.L_PAREN) == null) {
+            return List.of(new Parameter(parseDeclarationType()));
+        }
+        List<Parameter> returns = new ArrayList<>();
+        do {
+            returns.add(new Parameter(parseDeclarationType(), matchNameOrAny()));
+        } while (match(Id.R_PAREN, match(Id.COMMA) == null) == null);
+        return returns;
     }
 
     /**
