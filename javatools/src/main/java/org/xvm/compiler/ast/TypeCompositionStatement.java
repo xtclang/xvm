@@ -120,6 +120,14 @@ public class TypeCompositionStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
 
+    /** Written syntax for recovery subclasses that deliberately register no component. */
+    protected TypeCompositionStatement(Source source, Token category, Token name, long start, long end) {
+        super(start, end);
+        this.source   = source;
+        this.category = category;
+        this.name     = name;
+    }
+
     public TypeCompositionStatement(
             Source                     source,
             long                       lStartPos,

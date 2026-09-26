@@ -396,14 +396,26 @@ public class Parser {
             name      = qualified.get(0);
         }
 
-        // optional type parameters
-        List<Parameter> typeParams = parseTypeParameterList(false);
-
-        // optional constructor definition
-        List<Parameter> constructorParams = parseParameterList(false);
-
-        // sequence of compositions
-        List<CompositionNode> compositions = parseCompositions();
+        Mark header = mark();
+        boolean recoverable = category.getId() != Id.MODULE && category.getId() != Id.PACKAGE;
+        List<Parameter> typeParams;
+        List<Parameter> constructorParams;
+        List<CompositionNode> compositions;
+        try {
+            typeParams        = parseTypeParameterList(false);
+            constructorParams = parseParameterList(false);
+            compositions      = parseCompositions(recoverable);
+        } catch (IncompleteHeader error) {
+            if (!recoverable) {
+                throw error;
+            }
+            return retainTypeDeclaration(header, lStartPos, category, name, List.of(error.site), error);
+        } catch (CompilerException error) {
+            if (!recoverable) {
+                throw error;
+            }
+            return retainTypeDeclaration(header, lStartPos, category, name, List.of(), error);
+        }
 
         // TypeCompositionBody
         StatementBlock body = null;
@@ -426,7 +438,7 @@ public class Parser {
      *
      * @return a list of compositions
      */
-    List<CompositionNode> parseCompositions() {
+    List<CompositionNode> parseCompositions(boolean header) {
         List<CompositionNode> compositions = new ArrayList<>();
         while (true) {
             // the keywords below require "match()" to extract them, because they are context
@@ -434,18 +446,19 @@ public class Parser {
             Token keyword;
             if ((keyword = match(Id.EXTENDS)) != null) {
                 do {
-                    TypeExpression   type = parseExtendedTypeExpression();
+                    TypeExpression   type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
                     List<Expression> args = parseArgumentList(false, false, false);
                     compositions.add(new CompositionNode.Extends(null, keyword, type, args,
                             prev().getEndPosition()));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.IMPLEMENTS)) != null) {
                 do {
-                    compositions.add(new CompositionNode.Implements(null, keyword, parseExtendedTypeExpression()));
+                    compositions.add(new CompositionNode.Implements(null, keyword,
+                            header ? parseDeclarationType(true) : parseExtendedTypeExpression()));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.DELEGATES)) != null) {
                 do {
-                    TypeExpression type = parseExtendedTypeExpression();
+                    TypeExpression type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
                     expect(Id.L_PAREN);
                     Expression expr = parseExpression();
                     Token tokEnd = expect(Id.R_PAREN);
@@ -461,7 +474,7 @@ public class Parser {
                     TypeExpression  type        = null;
                     List<Parameter> constraints = null;
                     if (match(Id.CONDITIONAL) == null) {
-                        type = parseTypeExpression();
+                        type = header ? parseDeclarationType() : parseTypeExpression();
                     } else {
                         do {
                             // parse the type parameter list e.g. "<Key extends Int, Value>",
@@ -495,7 +508,8 @@ public class Parser {
                     compositions.add(new CompositionNode.Incorporates(null, keyword, type, args, constraints));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.INTO)) != null) {
-                compositions.add(new CompositionNode.Into(null, keyword, parseExtendedTypeExpression()));
+                compositions.add(new CompositionNode.Into(null, keyword,
+                        header ? parseDeclarationType(true) : parseExtendedTypeExpression()));
             } else { // not context-sensitive keywords
                 switch (peek().getId()) {
                 case IMPORT: {
@@ -5121,12 +5135,16 @@ public class Parser {
 
     /** A header type prefix is queried in its enclosing declaration, never as a value. */
     private TypeExpression parseDeclarationType() {
+        return parseDeclarationType(false);
+    }
+
+    private TypeExpression parseDeclarationType(boolean extended) {
         if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
             throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
         }
         boolean header = f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
                 && !f_errs.get().isAbortDesired();
-        TypeExpression type = parseIntersectingTypeExpression(false, header);
+        TypeExpression type = parseIntersectingTypeExpression(extended, header);
         if (header) {
             var prefix = declarationTypePrefix(type);
             if (prefix.isPresent()) {
@@ -5181,6 +5199,31 @@ public class Parser {
         }
 
         private final IncompleteStatement site;
+    }
+
+    /** Keep a type's real body for structure, but never register an unfinished inheritance header. */
+    private TypeCompositionStatement retainTypeDeclaration(Mark header, long start, Token category,
+            Token name, List<IncompleteStatement> sites, CompilerException error) {
+        if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            throw error;
+        }
+        restore(header);
+        while (!eof() && !peek(Id.R_CURLY)) {
+            if (f_errs.get().isAbortDesired()) {
+                throw error;
+            }
+            if (peek(Id.L_CURLY)) {
+                StatementBlock body = parseTypeCompositionBody(category);
+                return new IncompleteTypeCompositionStatement(m_source, category, name, body,
+                        start, body.getEndPosition(), sites);
+            }
+            if (match(Id.SEMICOLON) != null) {
+                break;
+            }
+            current();
+        }
+        return new IncompleteTypeCompositionStatement(m_source, category, name,
+                start, prev().getEndPosition(), sites);
     }
 
     /**
