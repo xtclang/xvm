@@ -1437,6 +1437,22 @@ persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
 
+**Child traversal compatibility cleanup (2026-09-26):** `AstNode.childNodes()` adds a plain
+`Iterable<AstNode>` view that starts an independent traversal for each iterator. It belongs on
+the AST because the existing reflective child-field model defines child order and membership.
+It adds no field, cached list, source ownership or clone/reset rule. The view is live and does
+not synchronize compiler mutation; LSP readers copy it when they need a stable list.
+
+The existing `children(): ChildIterator` signature, both of that interface's supertypes, and
+its one-shot `iterator() == this`, `replaceWith` and removal behaviour remain unchanged.
+This compatibility matters: enhanced-for compiler passes can replace the node selected by that
+same cursor. The dual-interface design originated in `efff0a7cf` (2018-02-02), already on
+master; the Kotlin `asSequence()` ambiguity exposed it during modernization. New LSP readers use
+`childNodes()`, so they see only the iterable contract. Regression coverage explicitly checks
+independent/interleaved traversal, live views versus copied snapshots, scalar/list mutation,
+legacy enhanced-for replacement, empty children and parent adoption. All six cases pass with
+zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
+
 **Constructor/declaration recovery follow-up (2026-09-25):**
 
 | Changed source | Why it belongs here | State / ownership |

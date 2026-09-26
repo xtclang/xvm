@@ -46,7 +46,7 @@ internal object XdkAst {
                     locations[structure.identityConstant] = locations.getValue(structure)
                 }
             }
-            node.children().forEachRemaining(::visit)
+            node.childNodes().forEach(::visit)
         }
         roots.forEach(::visit)
         return locations
@@ -57,7 +57,7 @@ internal object XdkAst {
         buildMap {
             fun visit(node: AstNode) {
                 node.source?.fileName?.let { putIfAbsent(it, node) }
-                node.children().forEachRemaining(::visit)
+                node.childNodes().forEach(::visit)
             }
             root?.let(::visit)
         }
@@ -131,7 +131,7 @@ internal object XdkAst {
      * [AstNode.children] is an iterator that supports replacement during a compiler pass; a
      * reader wants a list, taken once.
      */
-    private fun AstNode.childList(): List<AstNode> = children().toList()
+    private fun AstNode.childList(): List<AstNode> = childNodes().toList()
 
     private fun AstNode.contains(
         line: Int,
