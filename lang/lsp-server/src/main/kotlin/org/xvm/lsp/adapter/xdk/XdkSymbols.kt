@@ -72,21 +72,20 @@ internal object XdkSymbols {
         uri: String,
         node: AstNode,
         source: Source?,
-    ): List<SymbolInfo> {
-        val found = mutableListOf<SymbolInfo>()
-        node.children().forEach { child ->
-            // Recovered syntax has no compilation parentage yet; an absent source inherits the
-            // enclosing syntax tree's source. An explicitly different source is a module member.
-            if (child.source != null && child.source !== source) return@forEach
-            val symbol = symbolOf(uri, child)
-            if (symbol == null) {
-                found += declarationsIn(uri, child, source)
-            } else {
-                found += symbol.withChildren(declarationsIn(uri, child, source))
+    ): List<SymbolInfo> =
+        buildList {
+            node.children().forEach { child ->
+                // Recovered syntax has no compilation parentage yet; an absent source inherits the
+                // enclosing syntax tree's source. An explicitly different source is a module member.
+                if (child.source != null && child.source !== source) return@forEach
+                val symbol = symbolOf(uri, child)
+                if (symbol == null) {
+                    addAll(declarationsIn(uri, child, source))
+                } else {
+                    add(symbol.withChildren(declarationsIn(uri, child, source)))
+                }
             }
         }
-        return found
-    }
 
     private fun symbolOf(
         uri: String,
