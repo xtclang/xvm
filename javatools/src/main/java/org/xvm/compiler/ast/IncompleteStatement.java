@@ -58,6 +58,12 @@ public final class IncompleteStatement extends Statement {
         this(new NameExpression(name), name, List.of(), List.of(), cursor, diagnosticCode, name);
     }
 
+    /** A declaration type prefix; retain its qualifiers as syntax and replace only the final token. */
+    public static IncompleteStatement forDeclarationType(NamedTypeExpression type, long cursor) {
+        Token name = type.getNameToken();
+        return new IncompleteStatement(type, name, List.of(), List.of(), cursor, Parser.INCOMPLETE_EXPRESSION, name);
+    }
+
     /** A call whose last written name is a named argument awaiting its value. */
     public static IncompleteStatement forNamedArgument(Expression callee, Token open,
             List<Expression> arguments, List<Token> separators, long cursor, Token name) {
@@ -90,7 +96,7 @@ public final class IncompleteStatement extends Statement {
         this.argumentPrefix = argumentPrefix;
     }
 
-    /** The written receiver (member access) or callee (call); a call is never overload-resolved. */
+    /** The written receiver, callee or declaration type; a call is never overload-resolved. */
     public Expression getTarget() {
         return target;
     }
