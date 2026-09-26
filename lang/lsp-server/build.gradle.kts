@@ -75,7 +75,8 @@ logger.info("[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemantic
 val generateBuildInfo =
     tasks.register("generateBuildInfo") {
         val outputDir = layout.buildDirectory.dir("generated/resources/buildinfo")
-        val buildTime = Instant.now().toString()
+        val sourceDateEpoch = providers.gradleProperty("sourceDateEpoch")
+            .orElse(providers.environmentVariable("SOURCE_DATE_EPOCH"))
         val projectVersion = project.version.toString() // Capture at configuration time
         val adapter = lspAdapter // Capture at configuration time
         val semanticTokens = lspSemanticTokens // Capture at configuration time
@@ -84,9 +85,12 @@ val generateBuildInfo =
         inputs.property("adapter", adapter)
         inputs.property("semanticTokens", semanticTokens)
         inputs.property("version", projectVersion)
+        inputs.property("sourceDateEpoch", sourceDateEpoch.orElse(""))
         outputs.dir(outputDir)
 
         doLast {
+            // Reused artifacts retain their build time; reproducible builds can supply a fixed epoch.
+            val buildTime = sourceDateEpoch.orNull?.let { Instant.ofEpochSecond(it.toLong()) } ?: Instant.now()
             val outFile = outputDir.get().file("lsp-version.properties").asFile
             outFile.parentFile.mkdirs()
             outFile.writeText(
