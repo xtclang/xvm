@@ -2,10 +2,13 @@ package org.xtclang.plugin.tasks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.Project;
 import org.gradle.testfixtures.ProjectBuilder;
 
@@ -65,6 +68,16 @@ class XtcRunConfigurationTest {
         assertTrue(run.getParallel().get());
         assertFalse(other.getParallel().get());
         assertFalse(XtcProjectDelegate.resolveXtcRuntimeExtension(project).getParallel().get());
+    }
+
+    @Test
+    void testFailuresRetainTheirCause() {
+        final var task = newProject().getTasks().named("testXtc", XtcTestTask.class).get();
+        task.getParallel().set(true);
+
+        final var failure = assertThrows(GradleException.class, task::executeTask);
+        final var cause = assertInstanceOf(UnsupportedOperationException.class, failure.getCause());
+        assertTrue(cause.getMessage().contains("Parallel module execution"));
     }
 
     private static Project newProject() {

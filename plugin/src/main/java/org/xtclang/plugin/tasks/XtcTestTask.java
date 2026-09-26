@@ -93,7 +93,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
             super.executeTask();
         } catch (final Exception e) {
             if (getFailOnTestFailure().get()) {
-                throw failure("Test failure.", e);
+                throw failure(e, "Test failure.");
             }
             logger.warn("[plugin] Test execution failed but failOnTestFailure is false", e);
         }
