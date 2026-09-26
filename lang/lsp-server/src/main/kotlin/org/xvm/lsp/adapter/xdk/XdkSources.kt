@@ -63,6 +63,11 @@ internal class XdkSources private constructor(
     override fun readSource(file: File): CharArray =
         text[file]?.toCharArray() ?: throw IOException("Source is absent from this compilation snapshot: $file")
 
+    private data class Overlay(
+        val uri: String,
+        val text: String,
+    )
+
     companion object {
         /** Replay an exact snapshot with proposed edits; never read or write the filesystem. */
         fun replay(
@@ -105,7 +110,7 @@ internal class XdkSources private constructor(
             overlays: Map<String, String>,
             cancelled: () -> Boolean,
         ): XdkSources {
-            val buffers = overlays.entries.mapNotNull { (uri, text) -> file(uri)?.let { it to (uri to text) } }.toMap()
+            val buffers = overlays.entries.mapNotNull { (uri, text) -> file(uri)?.let { it to Overlay(uri, text) } }.toMap()
             val directory = File(root.parentFile, root.nameWithoutExtension).toPath()
             val files = linkedSetOf(root)
             val directories = linkedSetOf<File>()
@@ -128,9 +133,9 @@ internal class XdkSources private constructor(
             val text =
                 files.associateWith { file ->
                     if (cancelled()) throw CancellationException()
-                    buffers[file]?.second ?: file.readText()
+                    buffers[file]?.text ?: file.readText()
                 }
-            return XdkSources(root, text, directories, buffers.filterKeys { it in files }.mapValues { it.value.first })
+            return XdkSources(root, text, directories, buffers.filterKeys { it in files }.mapValues { it.value.uri })
         }
     }
 }
