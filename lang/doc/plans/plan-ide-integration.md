@@ -126,7 +126,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes; simple unqualified member/return and parameter-header type prefixes use the enclosing compiler scope |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes; member/return and parameter-header type prefixes use the enclosing compiler scope; flat qualified names use visible nested types and final-token edits |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -216,11 +216,15 @@ a method signature. Unbounded headers and lexer failures can still leave gaps. S
 syntax covers that position. An edit invalidates the old analysis; queries do not reuse semantic
 positions from an older document version. No Tree-sitter fallback is used in compiler mode.
 
-Simple unqualified property/return and method-parameter type prefixes, including empty parameter
-type slots, use the enclosing compiler name resolver. Imports, aliases, nested types, typedefs,
-shadowing and module overlays are respected; value names and fabricated parameter names are not
-proposed. Shared X91–X92 verify completion, structure and diagnostic repair. Generic-method,
-multi-return, qualified/compound and type-composition headers remain outside this bounded slice.
+Property/return and method-parameter type prefixes use the enclosing compiler name resolver.
+Unqualified prefixes include empty parameter type slots. Flat qualified prefixes such as
+`ecstasy.text.Str` resolve the written qualifier, enumerate visible nested types through TypeInfo,
+and replace only the final identifier. Module/package/class names and import aliases work, including
+inherited nested types and typedef candidates. Hidden qualifier ancestors and value names are
+excluded; same-owner private types remain available. Unsaved module overlays are respected.
+Shared X91–X93 verify completion, structure and diagnostic repair. Trailing dots without a written
+identifier, cursors inside a token, parameterized/compound types, generic-method/multi-return and
+type-composition headers remain outside this bounded slice. No declaration names are fabricated.
 
 The separate embedding `analyzeIncomplete` probe can validate intact receivers and ordinary
 arguments in one standalone incomplete statement. The original overload handles trailing EOF;
@@ -288,8 +292,9 @@ syntax without capture analysis or emission. X90 adds empty/final-prefix single-
 size cursors with real constructor fitting, original-token replacement, active size hints and missing
 bracket recovery. A written supplier after the cursor is parsed but is not validated by that prefix
 query. Normal compilation still checks suppliers and element defaults. Compiler mode advertises `[` as
-a signature-help trigger. Multidimensional construction, unfinished declaration
-names/types, missing operands/map entries and unterminated literal contents remain unsupported.
+a signature-help trigger. X91–X93 add the bounded declaration-header recovery described above.
+Multidimensional construction, unfinished declaration names, missing operands/map entries and
+unterminated literal contents remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
 enclosing-instance member enumeration, arbitrary type-valued receiver
 fallbacks and receiver-to-argument rewrites. Qualified/grouped/compound expressions and prefixes before later
