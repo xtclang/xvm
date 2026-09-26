@@ -15,12 +15,15 @@ internal object CompilerConfiguration {
 
     fun changed(settings: Any?): JsonElement? = objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
 
+    fun automatic(raw: Any?): Boolean = objectValue(raw)?.get("sourceModules")?.isJsonNull == true
+
     fun modules(
         raw: Any?,
         workspaceUris: List<String>,
     ): List<XdkSourceModule>? {
         val config = objectValue(raw) ?: return null
         val entries = config.get("sourceModules") ?: return null
+        if (entries.isJsonNull) return null
         require(entries.isJsonArray) { "sourceModules must be an array" }
         return entries.asJsonArray.map { entry ->
             require(entry.isJsonObject) { "Each source module must be an object" }
