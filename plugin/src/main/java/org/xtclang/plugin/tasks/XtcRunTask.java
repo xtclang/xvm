@@ -85,6 +85,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
     private final Property<@NotNull Boolean> jit;
+    private final Property<@NotNull Boolean> parallel;
 
     // Command-line override properties (set via --module, --method, --args options)
     private final Property<String> cliModuleName;
@@ -112,6 +113,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         this.cliMethodName = objects.property(String.class);
         this.cliModuleArgs = objects.listProperty(String.class);
         this.jit = objects.property(Boolean.class).convention(ext.getJit());
+        this.parallel = objects.property(Boolean.class).convention(ext.getParallel());
     }
 
     @Input
@@ -277,7 +279,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Input
     @Override
     public Property<@NotNull Boolean> getParallel() {
-        return getExtension().getParallel();
+        return parallel;
     }
 
     @Internal
