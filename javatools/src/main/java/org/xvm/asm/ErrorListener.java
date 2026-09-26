@@ -169,7 +169,7 @@ public interface ErrorListener {
             @Override
             public void log(ErrorInfo err) {
                 Severity severity = err.getSeverity();
-                if (severity.ordinal() > m_severity.ordinal()) {
+                if (severity.isWorseThan(m_severity)) {
                     m_severity = severity;
                 }
                 f_setCodes.add(err.getCode());
@@ -183,7 +183,7 @@ public interface ErrorListener {
 
             @Override
             public boolean hasSeriousErrors() {
-                return m_severity.compareTo(Severity.ERROR) >= 0;
+                return m_severity.isAtLeast(Severity.ERROR);
             }
 
             @Override

@@ -69,7 +69,7 @@ public class CompilerDiagnosticsTest {
 
             Site.In in = (Site.In) site;
             assertTrue(in.lPosEnd() >= in.lPosStart(), "the span does not run backwards");
-            assertTrue(err.getSeverity().compareTo(Severity.WARNING) >= 0);
+            assertTrue(err.getSeverity().isAtLeast(Severity.WARNING));
         }
     }
 
