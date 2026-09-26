@@ -43,6 +43,11 @@ class CompilerPlaybookTest {
                 fixture.file to text
             }
         val manualIds = Regex("^\\| (X\\d+) \\|", RegexOption.MULTILINE).findAll(manual).map { it.groupValues[1] }.toList()
+        // These source-view cases supply complete source in the shared catalog instead of a code block.
+        listOf("X101").forEach { id ->
+            val data = shared.scenarios.getValue(id)
+            Files.writeString(workspace.resolve(data.text("file")), data.text("source"))
+        }
         require(shared.ids.filter { it.startsWith("X") } == manualIds) { "Shared catalog and manual playbook rows differ" }
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
