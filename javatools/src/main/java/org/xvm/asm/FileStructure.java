@@ -1,7 +1,5 @@
 package org.xvm.asm;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
