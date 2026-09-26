@@ -94,11 +94,19 @@ internal class CompilerRenameFacts(
     val models: List<SemanticModel>,
     val constants: Map<SymbolId, Constant>,
     val methods: CompilerMethodRelations = CompilerMethodRelations(emptySet(), emptyList()),
+    val properties: CompilerPropertyRelations = CompilerPropertyRelations(),
 )
 
 internal fun EmbeddingSupport.Compilation.renameFacts(): CompilerRenameFacts =
     ConstantPool.withPool(pool()).use {
         val builder = SemanticModelBuilder()
+        CompilerRenameFacts(builder.build(this), builder.constantBindings())
+    }
+
+/** Partial facts for a repair proof; never resume failed validation or inspect its TypeInfo. */
+internal fun EmbeddingSupport.Compilation.repairFacts(dependencies: XdkDependencies.Open): CompilerRenameFacts =
+    ConstantPool.withPool(pool()).use {
+        val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
         CompilerRenameFacts(builder.build(this), builder.constantBindings())
     }
 
@@ -110,7 +118,12 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
     ConstantPool.withPool(pool()).use {
         val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
         val models = builder.build(this, errors)
-        CompilerRenameFacts(models, builder.constantBindings(), builder.methodRelations(this, errors))
+        CompilerRenameFacts(
+            models,
+            builder.constantBindings(),
+            builder.methodRelations(this, errors),
+            builder.propertyRelations(this, errors),
+        )
     }
 
 /** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
@@ -170,6 +183,11 @@ private class SemanticModelBuilder(
         compilation: EmbeddingSupport.Compilation,
         errors: ErrorListener,
     ): CompilerMethodRelations = compilerMethodRelations(nodesIn(requireNotNull(compilation.parsed())), errors)
+
+    fun propertyRelations(
+        compilation: EmbeddingSupport.Compilation,
+        errors: ErrorListener,
+    ): CompilerPropertyRelations = compilerPropertyRelations(nodesIn(requireNotNull(compilation.parsed())), errors)
 
     fun declarations(): Map<IdentityConstant, SourceLocation> =
         constants.entries
@@ -382,6 +400,7 @@ private class SemanticModelBuilder(
                         },
                     calls = calls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                     functionCalls = functionCalls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
+                    imports = if (complete) compilerImportAliases(nodes, source, occurrences, constants) else emptyList(),
                 )
             },
         )

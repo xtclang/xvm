@@ -1,5 +1,11 @@
 # Failures with nowhere to go
 
+L50 refactoring extends compiler-proven edits without changing listener delivery. Successful graph
+attempts inspect property dispatch using the host listener; failed repair attempts only copy existing
+facts, and every proposed import must then compile completely. The only added AST API consists of
+two passive import accessors. Scope and ownership are recorded in the
+[refactoring checkpoint](errs-integration-plan.md#broader-refactoring-checkpoint-l50).
+
 Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
 compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
 broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
