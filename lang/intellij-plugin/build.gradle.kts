@@ -517,12 +517,12 @@ val searchableOptionsStatus =
 logger.info("[ide] Searchable options: $searchableOptionsStatus")
 
 val buildSearchableOptions =
-    tasks.named("buildSearchableOptions") {
+    tasks.named<JavaExec>("buildSearchableOptions") {
         enabled = buildSearchableOptionsEnabled
         inputs.property("buildSearchableOptionsEnabled", buildSearchableOptionsEnabled)
         // IntelliJ headless tasks use custom classloading that triggers harmless CDS/class-sharing
         // warnings from the JVM. Suppress them consistently so normal builds stay readable.
-        (this as JavaExec).jvmArgs("-Xlog:cds=off")
+        jvmArgs("-Xlog:cds=off")
     }
 
 // =============================================================================
@@ -792,7 +792,7 @@ val stopLspLogTail =
 // Ensure TextMate files, LSP server JAR, and mavenLocal artifacts are ready before IDE starts
 // NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
 val runIde =
-    tasks.named("runIde") {
+    tasks.named<JavaExec>("runIde") {
         parentPublishLocal.forEach { dependsOn(it) }
         dependsOn(
             copyTextMateToSandbox,
@@ -806,20 +806,18 @@ val runIde =
 
         // Pass log level to the IDE JVM so the IntelliJ plugin can forward it to the
         // out-of-process LSP server. Set both system property and env var for robustness.
-        (this as JavaExec).apply {
-            systemProperty("xtc.logLevel", logLevel)
-            environment("XTC_LOG_LEVEL", logLevel)
-            systemProperty("xtc.lsp.semanticTokens", ideLspSemanticTokens)
-            environment("XTC_LSP_SEMANTIC_TOKENS", ideLspSemanticTokens)
-            // IntelliJ's classloader setup disables JVM CDS optimizations and otherwise prints
-            // harmless class-sharing warnings. Suppress those so runIde output stays focused.
-            jvmArgs("-Xlog:cds=off")
-            // Sandbox plugin auto-reload is convenient during plugin development, but in this
-            // project it can leave IntelliJ holding a stale or partially reloaded plugin JAR
-            // while Gradle is still rebuilding and copying artifacts into the sandbox.
-            // Disable it for deterministic startup and classloading.
-            systemProperty("idea.auto.reload.plugins", "false")
-        }
+        systemProperty("xtc.logLevel", logLevel)
+        environment("XTC_LOG_LEVEL", logLevel)
+        systemProperty("xtc.lsp.semanticTokens", ideLspSemanticTokens)
+        environment("XTC_LSP_SEMANTIC_TOKENS", ideLspSemanticTokens)
+        // IntelliJ's classloader setup disables JVM CDS optimizations and otherwise prints
+        // harmless class-sharing warnings. Suppress those so runIde output stays focused.
+        jvmArgs("-Xlog:cds=off")
+        // Sandbox plugin auto-reload is convenient during plugin development, but in this
+        // project it can leave IntelliJ holding a stale or partially reloaded plugin JAR
+        // while Gradle is still rebuilding and copying artifacts into the sandbox.
+        // Disable it for deterministic startup and classloading.
+        systemProperty("idea.auto.reload.plugins", "false")
 
         finalizedBy(stopLspLogTail)
     }
