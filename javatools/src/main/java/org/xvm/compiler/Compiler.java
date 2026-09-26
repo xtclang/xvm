@@ -46,10 +46,8 @@ public class Compiler {
         if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
-        requireNonNull(errs, "errs");
-
         m_stmtModule = stmtModule;
-        f_errs       = errs;
+        f_errs       = requireNonNull(errs, "errs");
         f_bindings   = requireNonNull(bindings, "bindings");
         f_cursors    = requireNonNull(cursors, "cursors");
     }
