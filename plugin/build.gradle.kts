@@ -1,3 +1,5 @@
+import com.gradle.publish.PublishExistingTask
+import com.gradle.publish.PublishTask
 import com.vanniktech.maven.publish.GradlePlugin
 import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SourcesJar
@@ -74,6 +76,15 @@ dependencies {
 xdkPublishing {
     pomName.set("Ecstasy Gradle Plugin")
     pomDescription.set("Ecstasy Gradle Plugin")
+}
+
+// Portal publishing does not use Gradle's PublishToMavenRepository task type.
+val validateCredentials = tasks.named("validateCredentials")
+tasks.withType<PublishTask>().configureEach {
+    dependsOn(validateCredentials)
+}
+tasks.withType<PublishExistingTask>().configureEach {
+    dependsOn(validateCredentials)
 }
 
 // Configure publication type as Gradle Plugin (vanniktech will handle plugin marker automatically)

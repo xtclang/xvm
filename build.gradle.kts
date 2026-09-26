@@ -156,38 +156,7 @@ val publish = tasks.register("publish") {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to both local Maven and remote repositories."
 
-    // Capture version and allowRelease as Providers for configuration cache compatibility
-    val versionProvider = xdkProperties.string("xdk.version")
-    val allowReleaseProvider = xdkProperties.boolean("org.xtclang.allowRelease", false)
-
-    doFirst {
-        // Safety check: prevent accidental release publishing
-        val currentVersion = versionProvider.get()
-        val isSnapshot = currentVersion.endsWith("-SNAPSHOT")
-        val allowRelease = allowReleaseProvider.getOrElse(false)
-
-        if (!isSnapshot && !allowRelease) {
-            throw GradleException(
-                """
-                |❌ Cannot publish release version without explicit approval!
-                |
-                |Current version: $currentVersion
-                |
-                |This is a RELEASE version (no -SNAPSHOT suffix).
-                |To publish a release, you must explicitly set -Porg.xtclang.allowRelease=true
-                |
-                |Example: ./gradlew publish -Porg.xtclang.allowRelease=true
-                |
-                |This safety check prevents accidental release publishing.
-                """.trimMargin()
-            )
-        }
-        logger.lifecycle("${if (isSnapshot) "📦" else "⚠️ "} Publishing ${if (isSnapshot) "SNAPSHOT" else "RELEASE"} version: $currentVersion (allowRelease=$allowRelease)")
-    }
-
-    // Validate credentials before attempting remote publishing (use xdk's validateCredentials task)
-    dependsOn(xdk.task(":validateCredentials"))
-
+    // Each remote publishing task validates release approval and credentials before its action.
     // Always publish to both local and remote
     dependsOn(publishLocal)
 
