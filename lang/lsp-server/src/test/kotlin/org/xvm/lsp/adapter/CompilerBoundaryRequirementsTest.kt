@@ -18,6 +18,7 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.lang.reflect.Modifier
 import java.time.Instant
 import java.util.Collections
 import java.util.IdentityHashMap
@@ -191,10 +192,8 @@ class CompilerBoundaryRequirementsTest {
                 else -> {
                     assertThat(value.javaClass.name).startsWith(SemanticModel::class.java.name)
                     value.javaClass.declaredFields
-                        .filterNot {
-                            java.lang.reflect.Modifier
-                                .isStatic(it.modifiers)
-                        }.forEach {
+                        .filterNot { Modifier.isStatic(it.modifiers) }
+                        .forEach {
                             it.isAccessible = true
                             visit(it.get(value))
                         }

@@ -12,8 +12,6 @@ import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-
 /**
  * A module compiler for Ecstasy code.
  * <p/>
