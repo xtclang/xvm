@@ -8,9 +8,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 // Build-classpath security constraints: the IntelliJ Platform Gradle Plugin drags vulnerable
 // transitive dependencies onto this project's build classpath. Force known-patched versions
@@ -47,11 +44,6 @@ val releaseChannelProvider = xdkProperties.string("xdk.intellij.release.channel"
 // named JETBRAINS_TOKEN. xdkProperties resolves that env var via the local key "jetbrains.token".
 val jetbrainsTokenProvider = xdkProperties.string("jetbrains.token", "")
 val jetbrainsPublishSuffixOverrideProvider = xdkProperties.string("jetbrains.publish.suffix", "")
-val utcPublishTimestamp: String =
-    DateTimeFormatter
-        .ofPattern("yyyyMMddHHmmss")
-        .withZone(ZoneOffset.UTC)
-        .format(Instant.now())
 val jetbrainsPublishVersionProvider =
     providers.provider {
         val baseVersion = xdkVersionProvider.get()
@@ -59,11 +51,13 @@ val jetbrainsPublishVersionProvider =
         if (!publishEnabled || !baseVersion.endsWith("-SNAPSHOT")) {
             return@provider baseVersion
         }
-        val suffix = jetbrainsPublishSuffixOverrideProvider.get().ifBlank { utcPublishTimestamp }
+        // CI already supplies its publication ID. An explicit suffix keeps that ID stable on cache reuse.
+        val suffix = jetbrainsPublishSuffixOverrideProvider.get().trim()
+        if (suffix.isEmpty()) {
+            throw GradleException("Snapshot publication requires -Pjetbrains.publish.suffix=<unique-build-id>, such as a UTC timestamp.")
+        }
         "$baseVersion.$suffix"
     }
-val usesGeneratedJetBrainsPublishSuffix: Boolean =
-    enablePublish && xdkVersion.endsWith("-SNAPSHOT") && jetbrainsPublishSuffixOverrideProvider.get().isBlank()
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // Propagated to the IDE JVM as a system property and environment variable, so the
@@ -500,9 +494,6 @@ val publishPlugin =
         // invokes publishPlugin (CI, local, snapshot pipeline). Catches removed/
         // changed APIs and missing dependencies that would otherwise reach users.
         dependsOn(verifyPlugin)
-        if (usesGeneratedJetBrainsPublishSuffix) {
-            notCompatibleWithConfigurationCache("JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness.")
-        }
     }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
