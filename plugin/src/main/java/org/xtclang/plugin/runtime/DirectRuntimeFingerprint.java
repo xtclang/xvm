@@ -3,8 +3,11 @@ package org.xtclang.plugin.runtime;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -35,7 +38,7 @@ record DirectRuntimeFingerprint(
     static DirectRuntimeFingerprint from(final XtcLauncherRuntime runtime, final URL pluginCodeSource) {
         return new DirectRuntimeFingerprint(
             runtime.source(),
-            pluginCodeSource.toExternalForm(),
+            describeCodeSource(pluginCodeSource),
             runtime.classpath().stream()
                 .map(DirectRuntimeFingerprint::describeFile)
                 .toList()
@@ -45,6 +48,27 @@ record DirectRuntimeFingerprint(
     private static String describeFile(final File file) {
         // Path alone is not enough here because self-hosting builds can rewrite jars in place.
         return file.getAbsolutePath() + "::" + sha256(file);
+    }
+
+    private static String describeCodeSource(final URL location) {
+        try {
+            final var path = Path.of(location.toURI());
+            if (!Files.isDirectory(path)) {
+                return describeFile(path.toFile());
+            }
+            // TestKit and development builds can load the plugin from a class directory.
+            // Include relative names and contents; neither timestamps nor sizes identify code.
+            final var digest = MessageDigest.getInstance("SHA-256");
+            try (var files = Files.walk(path)) {
+                files.filter(Files::isRegularFile).sorted().forEach(file -> {
+                    final var name = path.relativize(file).toString().replace(File.separatorChar, '/');
+                    digest.update((name + '\0' + sha256(file.toFile()) + '\0').getBytes(StandardCharsets.UTF_8));
+                });
+            }
+            return path.toAbsolutePath() + "::" + toHex(digest.digest());
+        } catch (final IOException | URISyntaxException | NoSuchAlgorithmException | IllegalArgumentException e) {
+            throw failure(e, "Failed to fingerprint plugin code source: {}", location);
+        }
     }
 
     private static String sha256(final File file) {
