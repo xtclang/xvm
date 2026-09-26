@@ -1,5 +1,40 @@
 # Failures with nowhere to go
 
+Native open-member rename (L54): advertising and handling `workspace/didRenameFiles` enables
+LSP4IJ's file-rename lifecycle. Without that capability, its VFS listener skipped old-URI close
+and new-URI open; reversing a rename with the member open retained a duplicate source overlay.
+The notification now refreshes both paths, with server diagnostic relocation and native round-trip
+regressions. This changes server protocol handling, not compiler/AST ownership.
+
+Large-graph refactoring follow-up (L54): the 24-module IntelliJ teaching workspace produced no
+property rename edit despite individually compiling roots; isolated direct probes exhausted the
+normal test heap during the combined proof. Investigate peak compiler-pool/fact retention and the
+refusal reason before claiming large-workspace rename support. Native scenarios now match VS
+Code's per-case discovery folders; that corrects test scope and does not resolve the larger audit.
+
+Native cancellation deadlock (L54): X103 also reproduced an inversion between LSP4J's request-map
+lock and the server's document lock. Result cleanup and backend cancellation must run outside the
+transport cancellation thread. A bounded regression fails against synchronous cleanup and checks
+that cancellation returns while navigation owns the document lock.
+
+Native hierarchy deadlock (L54): X100 reproduced a document-lock/compiler-worker cycle. A hierarchy
+request waited for queued compilation while a preceding analysis/query completion waited for the
+server publication lock. Publication callbacks are dispatched off the compiler worker; version and
+close guards still run under the same lock. The regression covers both callback kinds.
+
+IntelliJ startup follow-up (L54): bulk replacement of the first document before LSP4IJ's initial
+`didOpen` completed left diagnostics out of sync and exposed stale folding ranges in
+`run-5679669588027986266`. Waiting for client readiness makes focused playbook fixtures reliable;
+it is a harness fix, not a production cure for that startup race. Reproduce ordinary edits during
+server startup before submission and fix/report the client behavior if confirmed. See the
+[current validation record](errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+
+C28/L53 extends explicit header queries to empty type operands, trailing dots, qualifier tokens,
+multiple-return declarations, generic constraints and module/package compositions. Immutable written
+formal-name sets prevent accidental lookup of shadowed outer types; root recovery retains only the
+written module namespace. The parser and AST ownership changes, native parity additions and
+validation are documented in the [current batch](errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+
 C27/L51 adds written function/sequence type-header completion using existing parser recovery and
 listener branches; no new listener path or AST state. Single-report, clone/source ownership and
 ordinary-parser controls accompany the shared X106 scenario. Native parity additions and remaining

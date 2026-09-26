@@ -37,7 +37,7 @@ suite('XdkAdapter playbook', function () {
     propertyCases();
     advancedCases();
     liveWorkspaceCases();
-    typeHeaderCases(['X106']);
+    typeHeaderCases(['X106', 'X107', 'X108']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

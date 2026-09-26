@@ -405,6 +405,40 @@ public class ParserRecoveryTest {
     }
 
     @Test
+    public void headerSlotsAndGenericDeclarationsHaveOneOwnedCursor() {
+        List.of("void damaged(ecstasy.text.§ value) {}", "void damaged(ecstasy.te§xt.String value) {}",
+                "void damaged(Int | § value) {}", "void damaged(List<(Int | §)> value) {}",
+                "(Int, Str§) damaged() {}", "(Int count, Str§ text) damaged() {}",
+                "<T> (T first, Str§ second,) damaged(T value) {}",
+                "<T> void damaged(Str§ value) {}", "<T> Str§ damaged(T value) {}",
+                "<T extends Str§> void damaged(T value) {}").forEach(header -> {
+            String marked = "module Recovery { " + header + " Int later=1; }";
+            String text = marked.replace("§", "");
+            Source source = new Source(text);
+            marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            var reports = new ArrayList<String>();
+            var tree = Parser.forPartialAnalysis(source, cursor,
+                    ErrorListener.collecting(error -> reports.add(error.getCode()))).parseSource();
+            assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, header);
+            var copy = (StatementBlock) tree.clone();
+            var original = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+            var site = nodes(copy).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+            assertNotSame(original.getTarget(), site.getTarget());
+            assertSame(site, site.getTarget().getParent());
+            assertTrue(site.isTypeCompletion());
+            assertEquals(List.of("Recovery", "later"), names(copy));
+            assertEquals(text, source.toRawString());
+            var ordinary = new ErrorList();
+            parse(text, ordinary);
+            assertFalse(ordinary.getErrors().stream().anyMatch(error -> error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
+        });
+    }
+
+    @Test
     public void compoundHeadersRetainOnlyTheSelectedLeafWithIndependentOwnership() {
         List.of("void damaged(Map<Int, List<Str§>> value) {}",
                 "void damaged(Map<Str§, Int> value) {}", "void damaged(List<(Int | Str§)> value) {}",
