@@ -69,7 +69,7 @@ private fun TypeInfo.propertyImplementationTargets(errors: ErrorListener): Map<I
             val written = property.writtenAccessors(getter)
             val implementation = accessorImplementation(property, getter, errors) ?: continue
             val declarations =
-                property.propertyBodies.map { it.identity } + written.map { it.second } +
+                property.propertyBodies.map { it.identity } + written.map { it.identity } +
                     method
                         ?.chain
                         .orEmpty()
@@ -157,11 +157,16 @@ private fun TypeInfo.accessorImplementation(
     if (property.isRefAnnotated) return null
     val written = property.writtenAccessors(getter)
     // Explicit accessors precede interface defaults; storage overrides a default accessor.
-    val selected = written.firstOrNull { it.first == Implementation.Explicit } ?: written.firstOrNull()
-    return selected?.takeUnless { it.first == Implementation.Default && property.hasField() }?.second ?: property.sourceField()
+    val selected = written.firstOrNull { it.implementation == Implementation.Explicit } ?: written.firstOrNull()
+    return selected?.takeUnless { it.implementation == Implementation.Default && property.hasField() }?.identity ?: property.sourceField()
 }
 
-private fun PropertyInfo.writtenAccessors(getter: Boolean): List<Pair<Implementation, IdentityConstant>> =
+private data class WrittenAccessor(
+    val implementation: Implementation,
+    val identity: IdentityConstant,
+)
+
+private fun PropertyInfo.writtenAccessors(getter: Boolean): List<WrittenAccessor> =
     propertyBodies
         .filter { it.implementation in setOf(Implementation.Explicit, Implementation.Default) }
         .mapNotNull { body ->
@@ -171,5 +176,5 @@ private fun PropertyInfo.writtenAccessors(getter: Boolean): List<Pair<Implementa
                     !getter && body.hasSetter() -> body.structure?.setter
                     else -> null
                 }
-            member?.takeUnless { it.isAbstract || it.isNative }?.let { body.implementation to it.identityConstant }
+            member?.takeUnless { it.isAbstract || it.isNative }?.let { WrittenAccessor(body.implementation, it.identityConstant) }
         }
