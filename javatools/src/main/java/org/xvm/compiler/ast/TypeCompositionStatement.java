@@ -450,8 +450,8 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition()), sModule);
+                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.getFirst().getStartPosition(),
+                            qualified.getLast().getEndPosition()), sModule);
                     return;
                 }
 

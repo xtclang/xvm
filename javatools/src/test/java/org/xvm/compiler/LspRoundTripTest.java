@@ -127,7 +127,7 @@ public class LspRoundTripTest {
     public void testTheRangePointsAtTheOffendingLine() {
         List<Published> found = compile(URI_A, BROKEN_A, new ErrorList(UNLIMITED));
 
-        Published first = found.get(0);
+        Published first = found.getFirst();
         assertEquals(2, first.startLine(), "zero-based line 2 is the console.print line");
         assertTrue(first.startCol() > 0, "and it is not column zero");
     }
