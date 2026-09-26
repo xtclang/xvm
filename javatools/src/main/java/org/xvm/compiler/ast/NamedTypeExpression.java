@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -175,13 +176,11 @@ public class NamedTypeExpression
         var tokens = new ArrayList<Token>();
         collectNameTokens(tokens);
         List<Constant> resolved = m_resolver == null ? List.of() : m_resolver.getResolvedNames();
-        var bindings = new ArrayList<NameBinding>(tokens.size());
-        for (int i = 0; i < tokens.size(); ++i) {
+        return IntStream.range(0, tokens.size()).mapToObj(i -> {
             Constant target = i < resolved.size() ? resolved.get(i)
                     : i == tokens.size() - 1 ? m_constId : null;
-            bindings.add(new NameBinding(tokens.get(i), target));
-        }
-        return List.copyOf(bindings);
+            return new NameBinding(tokens.get(i), target);
+        }).toList();
     }
 
     private void collectNameTokens(List<Token> tokens) {
