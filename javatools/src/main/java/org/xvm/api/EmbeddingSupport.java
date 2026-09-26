@@ -575,9 +575,11 @@ public class EmbeddingSupport {
      * types through the enclosing compiler scope. Flat qualified names resolve their qualifier
      * and visible nested types, replacing only the final written identifier. Unqualified empty
      * parameter slots are also supported. An unfinished header retains its written declaration
-     * name and range but registers no method/property component or parameters. Empty qualified
-     * slots, generic-method headers, parameterized/compound types and type-composition headers
-     * do not participate in this type-prefix query.
+     * name and range but registers no method/property component or parameters. Written leaf
+     * names inside parameterized and compound types also participate, including bounded missing
+     * angle/group closers. These are visible-type suggestions, not proof of generic constraints.
+     * Empty qualified/type-argument slots, parameterized qualifiers, generic base-name prefixes,
+     * function/sequence types, generic-method and type-composition headers remain unsupported.
      * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
      */
     public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,

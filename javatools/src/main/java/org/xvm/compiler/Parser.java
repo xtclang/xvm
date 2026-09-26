@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.stream.Collectors;
@@ -4369,11 +4370,16 @@ public class Parser {
      * @return a type expression
      */
     TypeExpression parseIntersectingTypeExpression(boolean fExtended) {
-        TypeExpression expr = parseUnionedTypeExpression(fExtended);
+        return parseIntersectingTypeExpression(fExtended, false);
+    }
+
+    /** Pass header recovery explicitly through the type grammar; other type contexts stay strict. */
+    private TypeExpression parseIntersectingTypeExpression(boolean fExtended, boolean fHeader) {
+        TypeExpression expr = parseUnionedTypeExpression(fExtended, fHeader);
         Token tokOp;
         do {
             if ((tokOp = match(Id.ADD)) != null || (tokOp = match(Id.SUB)) != null) {
-                expr = new BiTypeExpression(expr, tokOp, parseUnionedTypeExpression(fExtended));
+                expr = new BiTypeExpression(expr, tokOp, parseUnionedTypeExpression(fExtended, fHeader));
             }
         } while (tokOp != null);
         return expr;
@@ -4396,10 +4402,10 @@ public class Parser {
      *
      * @return a type expression
      */
-    TypeExpression parseUnionedTypeExpression(boolean fExtended) {
-        TypeExpression expr = parseNonBiTypeExpression(fExtended);
+    TypeExpression parseUnionedTypeExpression(boolean fExtended, boolean fHeader) {
+        TypeExpression expr = parseNonBiTypeExpression(fExtended, fHeader);
         while (peek(Id.BIT_OR)) {
-            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression(fExtended));
+            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression(fExtended, fHeader));
         }
         return expr;
     }
@@ -4459,18 +4465,18 @@ public class Parser {
      *
      * @return a type expression
      */
-    TypeExpression parseNonBiTypeExpression(boolean fExtended) {
+    TypeExpression parseNonBiTypeExpression(boolean fExtended, boolean fHeader) {
         TypeExpression type;
         Token tokAccess = null;
         switch (peek().getId()) {
         case L_PAREN:
             expect(Id.L_PAREN);
-            type = parseExtendedTypeExpression();
-            expect(Id.R_PAREN);
+            type = parseIntersectingTypeExpression(true, fHeader);
+            expectHeaderTypeClose(Id.R_PAREN, List.of(type), fHeader);
             break;
 
         case AT:
-            type = parseAnnotatedTypeExpression(fExtended);
+            type = parseAnnotatedTypeExpression(fExtended, fHeader);
             break;
 
         case FUNCTION:
@@ -4494,7 +4500,7 @@ public class Parser {
                 }
             }
 
-            type = new DecoratedTypeExpression(tokImmut, parseNonBiTypeExpression(fExtended));
+            type = new DecoratedTypeExpression(tokImmut, parseNonBiTypeExpression(fExtended, fHeader));
             break;
         }
 
@@ -4523,7 +4529,7 @@ public class Parser {
                 }
                 tokAccess = match(Id.STRUCT);
             }
-            type = parseNamedTypeExpression(tokAccess);
+            type = parseNamedTypeExpression(tokAccess, fHeader);
             break;
         }
 
@@ -4614,9 +4620,9 @@ public class Parser {
      *
      * @return an AnnotatedTypeExpression
      */
-    AnnotatedTypeExpression parseAnnotatedTypeExpression(boolean fExtended) {
+    AnnotatedTypeExpression parseAnnotatedTypeExpression(boolean fExtended, boolean fHeader) {
         AnnotationExpression annotation = parseAnnotation(true);
-        TypeExpression type = parseNonBiTypeExpression(fExtended);
+        TypeExpression type = parseNonBiTypeExpression(fExtended, fHeader);
 
         return new AnnotatedTypeExpression(annotation, type);
     }
@@ -4679,6 +4685,10 @@ public class Parser {
      * @return a NamedTypeExpression
      */
     NamedTypeExpression parseNamedTypeExpression(Token tokAccess) {
+        return parseNamedTypeExpression(tokAccess, false);
+    }
+
+    private NamedTypeExpression parseNamedTypeExpression(Token tokAccess, boolean fHeader) {
         NamedTypeExpression expr = null;
         do {
             if (expr != null) {
@@ -4704,7 +4714,7 @@ public class Parser {
             }
 
             // TypeParameterTypeList
-            List<TypeExpression> params = parseTypeParameterTypeList(false, true);
+            List<TypeExpression> params = parseTypeParameterTypeList(false, true, fHeader);
 
             if (expr == null) {
                 expr = new NamedTypeExpression(null, names, tokAccess, tokNarrow, params,
@@ -4966,13 +4976,18 @@ public class Parser {
      * @return a list of zero or more types, or null if there were no angle brackets
      */
     List<TypeExpression> parseTypeParameterTypeList(boolean required, boolean fAllowTypeSequence) {
+        return parseTypeParameterTypeList(required, fAllowTypeSequence, false);
+    }
+
+    private List<TypeExpression> parseTypeParameterTypeList(boolean required, boolean fAllowTypeSequence,
+                                                           boolean fHeader) {
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null) {
             if (match(Id.COMP_GT) != null) {
                 types = Collections.emptyList();
             } else {
-                types = parseTypeExpressionList(fAllowTypeSequence);
-                expect(Id.COMP_GT);
+                types = parseTypeExpressionList(fAllowTypeSequence, fHeader);
+                expectHeaderTypeClose(Id.COMP_GT, types, fHeader);
             }
         }
         return types;
@@ -4990,6 +5005,10 @@ public class Parser {
      * @return a list of type expressions
      */
     List<TypeExpression> parseTypeExpressionList(boolean fAllowTypeSequence) {
+        return parseTypeExpressionList(fAllowTypeSequence, false);
+    }
+
+    private List<TypeExpression> parseTypeExpressionList(boolean fAllowTypeSequence, boolean fHeader) {
         List<TypeExpression> types = new ArrayList<>();
         while (true) {
             if (!types.isEmpty() && match(Id.COMMA) == null) {
@@ -5002,7 +5021,7 @@ public class Parser {
                 Token tokEnd   = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
             } else {
-                types.add(parseExtendedTypeExpression());
+                types.add(parseIntersectingTypeExpression(true, fHeader));
             }
         }
     }
@@ -5108,15 +5127,49 @@ public class Parser {
         if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
             throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
         }
-        TypeExpression type = parseTypeExpression();
-        if (f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
-                && !f_errs.get().isAbortDesired() && type instanceof NamedTypeExpression named
-                && !named.children().hasNext() && named.getModule() == null
-                && named.getNameToken().getEndPosition() == f_cursor && type.getEndPosition() == f_cursor) {
-            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
-            throw new IncompleteHeader(IncompleteStatement.forDeclarationType(named, f_cursor));
+        boolean header = f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired();
+        TypeExpression type = parseIntersectingTypeExpression(false, header);
+        if (header) {
+            var prefix = declarationTypePrefix(type);
+            if (prefix.isPresent()) {
+                log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                throw new IncompleteHeader(IncompleteStatement.forDeclarationType(prefix.orElseThrow(), f_cursor));
+            }
         }
         return type;
+    }
+
+    /**
+     * Select a written leaf type, without retaining its incomplete generic/compound owner. The
+     * caller transfers this original node into the cursor site; ordinary adoption and cloning
+     * then own it. This is syntax selection, not validation of the enclosing type's constraints.
+     */
+    private Optional<NamedTypeExpression> declarationTypePrefix(TypeExpression type) {
+        if (type instanceof NamedTypeExpression named && !named.children().hasNext()
+                && named.getModule() == null && named.getNameToken().getEndPosition() == f_cursor
+                && named.getEndPosition() == f_cursor) {
+            return Optional.of(named);
+        }
+        if (type instanceof FunctionTypeExpression || type instanceof TupleTypeExpression) {
+            return Optional.empty();
+        }
+        return StreamSupport.stream(type.children().spliterator(), false)
+                .filter(TypeExpression.class::isInstance).map(TypeExpression.class::cast)
+                .flatMap(child -> declarationTypePrefix(child).stream()).findFirst();
+    }
+
+    /** Missing type closers are tolerated only around a selected header prefix, never in normal parsing. */
+    private void expectHeaderTypeClose(Id close, List<TypeExpression> types, boolean header) {
+        if (match(close) != null) {
+            return;
+        }
+        if (header && m_cSpeculating == 0 && !m_fAvoidRecovery && !f_errs.get().isAbortDesired()
+                && (atMissingClose() || peek(Id.IDENTIFIER) || peek(Id.COMP_GT))
+                && types.stream().anyMatch(type -> declarationTypePrefix(type).isPresent())) {
+            return;
+        }
+        expect(close);
     }
 
     private IncompleteHeader incompleteHeader(Token prefix) {

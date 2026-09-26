@@ -373,6 +373,44 @@ public class ParserRecoveryTest {
     }
 
     @Test
+    public void compoundHeadersRetainOnlyTheSelectedLeafWithIndependentOwnership() {
+        List.of("void damaged(Map<Int, List<Str§>> value) {}",
+                "void damaged(Map<Str§, Int> value) {}", "void damaged(List<(Int | Str§)> value) {}",
+                "void damaged(List<ecstasy.text.Str§> value) {}", "List<Str§> property;",
+                "List<Str§> damaged() {}", "void damaged(List<Str§ value) {}",
+                "void damaged(Map<Int, List<Str§ value) {}", "void damaged(List<(Int | Str§ value) {}")
+                .forEach(header -> {
+                    String prefix = "module Recovery { " + header.substring(0, header.indexOf('§'));
+                    String text = prefix + header.substring(header.indexOf('§') + 1) + " Int later=1; }";
+                    Source source = new Source(text);
+                    prefix.chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var reports = new ArrayList<String>();
+                    var tree = Parser.forPartialAnalysis(source, cursor,
+                            ErrorListener.collecting(error -> reports.add(error.getCode()))).parseSource();
+                    assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, header);
+                    var declaration = nodes(tree).stream().filter(IncompleteDeclarationStatement.class::isInstance)
+                            .map(IncompleteDeclarationStatement.class::cast).findFirst().orElseThrow();
+                    var site = (IncompleteStatement) declaration.children().next();
+                    assertFalse(site.getTarget().children().hasNext());
+                    assertEquals(cursor, site.getTarget().getEndPosition());
+                    var clone = (IncompleteDeclarationStatement) declaration.clone();
+                    var clonedSite = (IncompleteStatement) clone.children().next();
+                    assertTrue(clonedSite.isTypeCompletion(), header);
+                    assertSame(clone, clonedSite.getParent());
+                    assertNotSame(site.getTarget(), clonedSite.getTarget());
+                    assertSame(clonedSite, clonedSite.getTarget().getParent());
+                    assertEquals(List.of("Recovery", "later"), names(tree));
+                    assertEquals(text, source.toRawString());
+                    var ordinary = new ErrorList();
+                    parse(text, ordinary);
+                    assertFalse(ordinary.getErrors().stream().anyMatch(error -> error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
+                    assertEquals(header.contains("§ value"), ordinary.hasSeriousErrors(), header);
+                });
+    }
+
+    @Test
     public void declarationRecoveryHonorsBudgetsCancellationAndSpeculation() {
         String text = "module Recovery { void damaged(Int) {} Int later=1; }";
         var budget = new ErrorList(ErrorList.FIRST_ERROR);
