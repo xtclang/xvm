@@ -183,9 +183,7 @@ fun logPublishingConfiguration(logger: Logger, version: String, isSnapshot: Bool
 }
 
 // Determine if this is a snapshot or release version
-// Keep allowRelease as a Provider for configuration cache compatibility
-val isSnapshot = publicationVersion.contains("SNAPSHOT", ignoreCase = true)
-val allowReleaseProvider = xdkPublishingCredentials.allowRelease
+val isSnapshot = publicationVersion.endsWith("-SNAPSHOT")
 
 // Log publishing configuration
 logPublishingConfiguration(logger, publicationVersion, isSnapshot)
@@ -214,4 +212,13 @@ val validateCredentials = tasks.register<ValidateCredentialsTask>("validateCrede
 // Make all publish tasks depend on validateCredentials to fail fast before publishing
 tasks.withType<PublishToMavenRepository>().configureEach {
     dependsOn(validateCredentials)
+}
+
+// These tasks register upload/release actions with Vanniktech's build service.
+// Guard them before registration, including when invoked directly.
+// Their Kotlin task classes are internal, so configure the registered task names lazily.
+listOf("prepareMavenCentralPublishing", "enableAutomaticMavenCentralPublishing").forEach { taskName ->
+    tasks.named(taskName) {
+        dependsOn(validateCredentials)
+    }
 }
