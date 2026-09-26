@@ -198,6 +198,61 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":testXtc").getOutcome());
     }
 
+    @Test
+    void lateSourceSetTasksExecuteWithConfigurationCache() throws IOException {
+        Files.writeString(testProjectDir.resolve("settings.gradle.kts"), "rootProject.name = \"late-source-set\"\n");
+        Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
+            import org.xtclang.plugin.tasks.XtcCompileTask
+            import org.xtclang.plugin.tasks.XtcRunTask
+
+            plugins {
+                id("org.xtclang.xtc-plugin")
+            }
+            version = "1.0"
+            tasks.named<XtcRunTask>("runXtc").get()
+            sourceSets.create("extra")
+            dependencies.add("xtcModuleExtra", files("dependency.xtc"))
+            tasks.named<XtcCompileTask>("compileExtraXtc") {
+                actions.clear()
+                val selected = moduleSources
+                val destination = outputDirectory
+                doLast {
+                    val output = destination.get().asFile
+                    output.mkdirs()
+                    output.resolve("modules.txt").writeText(selected.files.single().name)
+                }
+            }
+            tasks.named<XtcRunTask>("runXtc") {
+                actions.clear()
+                val names = sourceSetNames
+                val dependencies = xtcModuleDependencies
+                val destination = layout.buildDirectory.file("observed.txt")
+                outputs.file(destination)
+                doLast {
+                    destination.get().asFile.writeText(names.joinToString() + "|" +
+                        dependencies.files.map { it.name }.sorted().joinToString())
+                }
+            }
+            """);
+        Files.createDirectories(testProjectDir.resolve("build/xtc/xdk/lib"));
+        Files.writeString(testProjectDir.resolve("dependency.xtc"), "dependency");
+        final var sources = Files.createDirectories(testProjectDir.resolve("src/extra/x"));
+        Files.writeString(sources.resolve("Example.x"), "module Example {}");
+        final var resources = Files.createDirectories(testProjectDir.resolve("src/extra/resources"));
+        Files.writeString(resources.resolve("included.txt"), "resource");
+
+        final var first = runBuild("runXtc");
+        assertEquals(TaskOutcome.SUCCESS, first.task(":compileExtraXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, first.task(":processExtraXtcResources").getOutcome());
+        assertTrue(Files.readString(testProjectDir.resolve("build/observed.txt")).contains("extra"));
+        assertTrue(Files.readString(testProjectDir.resolve("build/observed.txt")).contains("dependency.xtc"));
+        assertEquals("Example.x", Files.readString(testProjectDir.resolve("build/xtc/extra/lib/modules.txt")));
+        final var reused = runBuild("runXtc");
+        assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":compileExtraXtc").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, reused.task(":runXtc").getOutcome());
+    }
+
     private BuildResult runBuild(final String... tasksAndOptions) {
         final var arguments = new ArrayList<>(List.of(tasksAndOptions));
         arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace"));

@@ -31,10 +31,11 @@ import org.xtclang.plugin.launchers.ModulePathResolver;
 import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 import org.gradle.work.DisableCachingByDefault;
@@ -100,11 +101,15 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         this.xdkFileTree = xdkContentsDir.map(dir -> objects.fileTree().setDir(dir));
 
         final var sourceSets = XtcProjectDelegate.getSourceSets(project);
-        this.sourceSetNames = sourceSets.stream().map(SourceSet::getName).toList();
-        this.sourceSetOutputDirs = sourceSets.stream()
-            .collect(Collectors.toMap(SourceSet::getName,
-                sourceSet -> XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet)
-            ));
+        this.sourceSetNames = new ArrayList<>();
+        this.sourceSetOutputDirs = new LinkedHashMap<>();
+        // Source sets may be added after this task is realized. Retain only their names
+        // and directory providers for execution, not the source-set model objects.
+        sourceSets.all(sourceSet -> {
+            sourceSetNames.add(sourceSet.getName());
+            sourceSetOutputDirs.put(sourceSet.getName(),
+                XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet));
+        });
 
         this.stdoutPath = objects.property(String.class).convention(ext.getStdoutPath());
         this.stderrPath = objects.property(String.class).convention(ext.getStderrPath());
@@ -331,7 +336,7 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
      */
     @Input
     public List<String> getSourceSetNames() {
-        return sourceSetNames;
+        return sourceSetNames.stream().sorted().toList();
     }
 
     @Internal

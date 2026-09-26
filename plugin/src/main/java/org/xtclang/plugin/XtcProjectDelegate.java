@@ -603,11 +603,9 @@ public class XtcProjectDelegate {
     }
 
     private void createXtcDependencyConfigs(final Project project) {
-        for (final SourceSet sourceSet : getSourceSets(project)) {
-            createXtcDependencyConfigs(sourceSet, project);
-        }
         createXdkDependencyConfigs(project);
         createJavaToolsConfig(); // Ensure javatools config exists before tasks are created
+        getSourceSets(project).all(sourceSet -> createXtcDependencyConfigs(sourceSet, project));
     }
 
     // Attributes for anything that consumes xtc files from external projects
@@ -788,7 +786,7 @@ public class XtcProjectDelegate {
     }
 
     private void createDefaultSourceSets(final Project project) {
-        for (final SourceSet sourceSet : getSourceSets(project)) {
+        getSourceSets(project).all(sourceSet -> {
             logger.info("[plugin] Creating and adding XTC source directory to inherited Java source set: {}", sourceSet.getName());
             // Create a source directory set named "xtc" for this existing source set.
             final var sourceSetName = sourceSet.getName();
@@ -811,7 +809,7 @@ public class XtcProjectDelegate {
             logger.info("[plugin] Configured sourceSets.{}.outputResources  : {}", sourceSetName, outputResources.get());
             output.dir(outputResources);
             output.dir(outputModules);
-        }
+        });
     }
 
     private void createResolutionStrategy() {
