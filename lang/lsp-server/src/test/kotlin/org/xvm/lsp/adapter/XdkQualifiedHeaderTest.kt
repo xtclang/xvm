@@ -127,8 +127,8 @@ class XdkQualifiedHeaderTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "void damaged(ecstasy.te|xt.StringBuffer value) {}",
-            "void damaged(ecstasy.text.| value) {}", "<T> void damaged(ecstasy.text.Str| value) {}",
+            "void damaged(missing.te|xt.StringBuffer value) {}",
+            "void damaged(missing.text.| value) {}", "<ecstasy> void damaged(ecstasy.text.Str| value) {}",
         ],
     )
     fun `unsupported cursor positions and generic headers remain empty`(declaration: String) {
