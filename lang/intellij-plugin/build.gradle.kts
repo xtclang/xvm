@@ -659,7 +659,7 @@ val configureDisabledPlugins =
         val configDir = sandboxConfigDir // Capture for configuration cache
         val pluginsList = disabledSandboxPlugins
         inputs.property("disabledPlugins", pluginsList)
-        outputs.dir(configDir) // Output is the config directory
+        outputs.file(configDir.map { it.resolve("disabled_plugins.txt") })
 
         doLast {
             val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")
@@ -680,7 +680,7 @@ val configureSandboxLogging =
         mustRunAfter(prepareSandbox)
 
         val configDir = sandboxConfigDir
-        outputs.dir(configDir)
+        outputs.file(configDir.map { it.resolve("options/log-categories.xml") })
 
         doLast {
             val optionsDir = configDir.get().resolve("options")
@@ -706,7 +706,7 @@ val configureSandboxAppearance =
         mustRunAfter(prepareSandbox)
 
         val configDir = sandboxConfigDir
-        outputs.dir(configDir)
+        doNotTrackState("Removes invalid overrides from user-managed sandbox settings on each IDE launch")
 
         doLast {
             val colorsSchemeFile = configDir.get().resolve("options/colors.scheme.xml")
