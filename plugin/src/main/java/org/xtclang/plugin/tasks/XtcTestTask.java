@@ -124,7 +124,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         logger.info("[plugin] Auto-discovered {} test module(s):", discoveredModules.size());
         discoveredModules.forEach(module -> logger.info("[plugin]    Test module: {}", module.getModuleName().get()));
 
-        return discoveredModules;
+        return discoveredModules.stream().map(this::applyCliOverrides).toList();
     }
 
     /**
