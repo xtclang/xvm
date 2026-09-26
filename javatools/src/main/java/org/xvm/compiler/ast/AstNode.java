@@ -139,13 +139,27 @@ public abstract class AstNode
     }
 
     /**
-     * Return an Iterable/Iterator that represents all the child nodes of this node.
+     * Return a one-shot cursor over the child nodes of this node. The cursor supports replacement
+     * and removal during compiler traversal. Its Iterable view uses the same cursor, not a new
+     * traversal; use {@link #childNodes()} when an independently iterable view is needed.
      *
-     * @return an Iterable of child nodes (from whence an Iterator can be obtained)
+     * @return a mutable traversal cursor
      */
     public ChildIterator children() {
         Field[] fields = getChildFields();
         return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
+    }
+
+    /**
+     * Return a view of this node's children that starts an independent traversal for each iterator.
+     * This is a live view, not a snapshot: subsequent traversals see subsequent AST changes.
+     * Callers that need a stable list must copy it while they own the tree; iteration does not
+     * provide synchronization with compiler mutation.
+     *
+     * @return an iterable view of the child nodes
+     */
+    public Iterable<AstNode> childNodes() {
+        return this::children;
     }
 
     /**
@@ -1984,7 +1998,10 @@ public abstract class AstNode
     // ----- inner class: ChildIterator ------------------------------------------------------------
 
     /**
-     * Represents an Iterator that can also replace the most recently iterated element.
+     * Represents an Iterator that can also replace the most recently iterated element. Iterable
+     * is retained for compatibility with enhanced-for loops that mutate through this same cursor.
+     * Calling {@link #iterator()} does not restart traversal; readers can use
+     * {@link AstNode#childNodes()} for independent iterations.
      */
     public interface ChildIterator
             extends Iterable<AstNode>, Iterator<AstNode> {
