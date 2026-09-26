@@ -233,7 +233,7 @@
       }
     },
     "X5": {
-      "title": "library target absence and parser recovery",
+      "title": "library source navigation and parser recovery",
       "manual": [],
       "values": {
         "file": "Navigation.x",
@@ -2923,6 +2923,97 @@
         "coverage": "not-implemented",
         "limitations": [
           "Native source/discovery assertions are added in the next parity checkpoint."
+        ]
+      }
+    },
+    "X102": {
+      "title": "property rename includes source accessor families",
+      "manual": [
+        "Inspect the preview before applying and undo after verification."
+      ],
+      "values": {
+        "file": "PropertyRename.x",
+        "source": "module PropertyRename { class Base { Int value { Int get()=1; } } class Child extends Base { @Override Int value { Int get()=2; } } Int run(Base base, Child child)=base.value+child.value; }",
+        "anchor": "value",
+        "replacement": "amount",
+        "edits": 4
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native refactoring and quick-fix application assertions are pending."
+        ]
+      }
+    },
+    "X103": {
+      "title": "member type rename applies a file move after source edits",
+      "manual": [
+        "Inspect the preview before applying and undo after verification."
+      ],
+      "values": {
+        "file": "MoveType.x",
+        "source": "module MoveType { Item make()=new Item(); }",
+        "member": "MoveType/Item.x",
+        "memberSource": "class Item {}",
+        "destination": "MoveType/Renamed.x",
+        "anchor": "Item",
+        "replacement": "Renamed"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native refactoring and quick-fix application assertions are pending."
+        ]
+      }
+    },
+    "X104": {
+      "title": "explicit alias rename preserves the imported declaration",
+      "manual": [
+        "Inspect the preview before applying and undo after verification."
+      ],
+      "values": {
+        "file": "AliasRename.x",
+        "source": "module AliasRename { import ecstasy.text.StringBuffer as Buffer; Buffer make()=new Buffer(); }",
+        "anchor": "Buffer;",
+        "replacement": "Builder",
+        "edits": 3,
+        "preserved": "ecstasy.text.StringBuffer"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native refactoring and quick-fix application assertions are pending."
+        ]
+      }
+    },
+    "X105": {
+      "title": "auto import repairs a bundled or discovered source type",
+      "manual": [
+        "Inspect the preview before applying and undo after verification."
+      ],
+      "values": {
+        "file": "AutoImports.x",
+        "variants": [
+          {
+            "source": "module AutoImports { Document echo(Document doc)=doc; }",
+            "anchor": "Document",
+            "title": "Import 'Document' from xml.xtclang.org",
+            "importText": "import xml.Document;"
+          },
+          {
+            "source": "module AutoImports { Widget make()=new Widget(); }",
+            "anchor": "Widget",
+            "title": "Import 'Widget' from ImportLibrary",
+            "importText": "import importLibrary.Widget;"
+          }
+        ],
+        "library": "ImportLibrary.x",
+        "libraryText": "module ImportLibrary { class Widget {} }"
+      },
+      "intellij": {
+        "coverage": "not-implemented",
+        "limitations": [
+          "Native refactoring and quick-fix application assertions are pending."
         ]
       }
     },

@@ -20,13 +20,17 @@ internal object XdkRename {
     class Plan(
         val original: Map<String, String>,
         val edits: Map<String, List<Edit>>,
+        val moves: Map<String, String> = emptyMap(),
     ) {
         val proposed =
-            original.mapValues { (source, text) ->
-                edits[source].orEmpty().sortedByDescending { it.start }.fold(text) { value, edit ->
-                    value.replaceRange(edit.start, edit.end, edit.text)
-                }
+            original.entries.associate { (source, text) ->
+                sourceAfter(source) to
+                    edits[source].orEmpty().sortedByDescending { it.start }.fold(text) { value, edit ->
+                        value.replaceRange(edit.start, edit.end, edit.text)
+                    }
             }
+
+        fun sourceAfter(source: String): String = moves[source] ?: source
 
         fun map(
             source: String,
@@ -81,17 +85,33 @@ internal object XdkRename {
         plan: Plan,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected = edges(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val expected = edges(before, plan.original, plan::sourceAfter) { source, offset -> plan.map(source, offset) } ?: return false
         val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
         if (expected != actual) return false
-        val expectedDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val expectedDispatch =
+            dispatch(before, plan.original, plan::sourceAfter) { source, offset -> plan.map(source, offset) } ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
         return expectedDispatch == actualDispatch
     }
 
+    /** A repair may bind unresolved names, but cannot change any binding already established. */
+    fun preservesKnownBindings(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+    ): Boolean {
+        if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val expected = edges(before, plan.original, allowUnresolved = true) { source, offset -> plan.map(source, offset) } ?: return false
+        val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
+        if (expected.any { (site, target) -> actual[site] != target }) return false
+        val knownDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
+        return actualDispatch.containsAll(knownDispatch)
+    }
+
     private data class Dispatch(
         val owner: Target,
-        val methods: List<Target>,
+        val members: List<Target>,
         val supported: Boolean,
     )
 
@@ -99,6 +119,7 @@ internal object XdkRename {
     private fun dispatch(
         facts: CompilerRenameFacts,
         texts: Map<String, String>,
+        moved: (String) -> String = { it },
         translate: (String, Int) -> Int?,
     ): Set<Dispatch>? {
         val declarations =
@@ -115,11 +136,14 @@ internal object XdkRename {
             val range = symbol.declaration ?: return null
             val start = offset(text, range.start)?.let { translate(source, it) } ?: return null
             val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
-            return Target.Declaration(Site(source, start, end), symbol.kind)
+            return Target.Declaration(Site(moved(source), start, end), symbol.kind)
         }
         return facts.methods.chains.mapTo(linkedSetOf()) { chain ->
             Dispatch(target(chain.owner) ?: return null, chain.methods.map { target(it) ?: return null }, chain.supported)
-        }
+        } +
+            facts.properties.chains.map { chain ->
+                Dispatch(target(chain.owner) ?: return null, chain.properties.map { target(it) ?: return null }, chain.supported)
+            }
     }
 
     private data class Site(
@@ -143,6 +167,8 @@ internal object XdkRename {
     private fun edges(
         facts: CompilerRenameFacts,
         texts: Map<String, String>,
+        moved: (String) -> String = { it },
+        allowUnresolved: Boolean = false,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
         fun site(
@@ -153,7 +179,7 @@ internal object XdkRename {
             val text = texts[source] ?: return null
             val start = offset(text, range.start)?.let { translate(source, it) } ?: return null
             val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
-            return Site(source, start, end, call)
+            return Site(moved(source), start, end, call)
         }
 
         fun target(
@@ -173,7 +199,9 @@ internal object XdkRename {
         facts.models.forEach { model ->
             val source = model.sourceName ?: return null
             model.occurrences.forEach { occurrence ->
-                result[site(source, occurrence.range) ?: return null] = target(model, occurrence.symbol) ?: return null
+                if (!allowUnresolved || occurrence.symbol != null) {
+                    result[site(source, occurrence.range) ?: return null] = target(model, occurrence.symbol) ?: return null
+                }
             }
             model.calls.forEach { call ->
                 result[site(source, call.callee, true) ?: return null] = target(model, call.method) ?: return null
@@ -182,7 +210,7 @@ internal object XdkRename {
         return result
     }
 
-    private fun identifier(name: String): Boolean {
+    internal fun identifier(name: String): Boolean {
         val errors = ErrorList()
         val lexer = Lexer(Source(name), errors)
         if (!lexer.hasNext()) return false

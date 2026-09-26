@@ -19,6 +19,7 @@ class SemanticModel internal constructor(
     expressions: List<ExpressionType>,
     calls: List<CallSite> = emptyList(),
     functionCalls: List<FunctionCallSite> = emptyList(),
+    imports: List<ImportAlias> = emptyList(),
 ) {
     enum class Status { UNAVAILABLE, PARTIAL, COMPLETE }
 
@@ -189,6 +190,26 @@ class SemanticModel internal constructor(
         val parents: List<Supertype>,
     )
 
+    /** Explicit local import name and the compiler-bound occurrences visible through this import. */
+    class ImportAlias(
+        val name: String,
+        val declaration: Range,
+        uses: List<Range>,
+    ) {
+        val uses: List<Range> = immutableList(uses)
+    }
+
+    val imports: List<ImportAlias> = immutableList(imports)
+
+    fun importAt(
+        line: Int,
+        column: Int,
+    ): ImportAlias? =
+        imports.singleOrNull { alias ->
+            val position = Position(line, column)
+            position in alias.declaration || alias.uses.any { position in it }
+        }
+
     val symbols: List<Symbol> = facts.symbols
     val types: List<Type> = facts.types
     val occurrences: List<Occurrence> = immutableList(occurrences)
@@ -346,6 +367,7 @@ class SemanticModel internal constructor(
                     model.expressions,
                     model.calls.map { it.copy(method = canonical(it.method), caller = it.caller?.let(::canonical)) },
                     model.functionCalls,
+                    model.imports,
                 )
             }
         }

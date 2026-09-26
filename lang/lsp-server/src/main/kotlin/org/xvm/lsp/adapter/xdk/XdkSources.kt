@@ -74,8 +74,17 @@ internal class XdkSources private constructor(
             root: File,
             inputs: Inputs,
             text: Map<String, String>,
+            moves: Map<String, String> = emptyMap(),
         ): XdkSources =
-            XdkSources(root, inputs.text.mapValues { (file, original) -> text[file.path] ?: original }, inputs.directories, inputs.aliases)
+            XdkSources(
+                root,
+                inputs.text.entries.associate { (file, original) ->
+                    val path = moves[file.path] ?: file.path
+                    File(path) to (text[path] ?: original)
+                },
+                inputs.directories,
+                inputs.aliases.filterKeys { it.path !in moves },
+            )
 
         /** Canonical paths join editor URIs, compiler source names and filesystem notifications. */
         fun file(name: String): File? =

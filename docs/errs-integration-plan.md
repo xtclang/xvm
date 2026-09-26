@@ -10,10 +10,57 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Broader refactoring checkpoint (L50)
+
+Step 4 extends the existing whole-graph proof to source instance-property/accessor families,
+simple member-file type moves, explicit import aliases and unresolved-name type imports.
+All work stays on `lagergren/errs`; L47–L49 remain commit `d6039532d`.
+
+- Property families come from compiler-composed `PropertyInfo` bodies, including written getters
+  and setters. Renaming the property preserves accessor names and setter parameter names. The proof
+  compares property dispatch as well as method dispatch, so accidentally creating an override is rejected.
+- A type whose name matches its member `.x` filename can move to a sibling filename. Replay proves
+  changed source membership without touching disk. Versioned text edits precede `RenameFile`, which
+  requires the client's resource-operation capability and never requests overwrite. Module roots,
+  destination collisions and companion-directory moves are excluded.
+- Explicit, differently spelled, unconditional import aliases use resolved compiler identity and
+  lexical import ownership. Renaming an alias changes only its declaration and uses; nested aliases
+  with the same spelling and the imported declaration remain distinct.
+- Quick fixes search public type declarations in the source graph and bundled XDK. Each candidate
+  must repair the complete graph and preserve every previously resolved occurrence/call and known
+  dispatch chain. Failed attempts are copied without resuming validation or inspecting their TypeInfo.
+  New source edges are proved in dependency order and offered only with automatic discovery; explicit
+  graph settings remain authoritative. Cycles, other unresolved errors and inaccessible types yield
+  no action. Ambiguous names produce separate, independently proved choices. Proof work is capped at
+  32 candidates per request; there is no speculative literal or member-import synthesis.
+
+**AST placement:** `ImportStatement.getAliasToken()` exposes its existing written token;
+`getImportedIdentity()` reads an existing resolver result without initiating resolution. These are
+passive source/identity facts owned by the import node. No new AST field, listener, clone override,
+cache or retained context is introduced. Alias scope selection, graph proof, property relationships
+and edit construction stay in the Kotlin LSP library. This is the only Java change in L50.
+
+**Extraction:** L50 follows L45 graph refactoring and L47 live discovery. Keep the two import
+accessors with alias tests/copying; keep file replay and protocol capability negotiation with file
+move tests; keep property facts with dispatch comparisons; keep auto-import candidate generation
+with partial-fact and complete repair proofs. Shared X102–X105 and documentation follow this slice.
+Validation on 2026-09-26: 49 focused refactoring, rename, protocol and snapshot-purity tests pass
+with no skips; after the code-action concurrency fix, all 9 lifecycle tests pass without skips.
+Both editor drivers compile, Kotlin checks and root Spotless pass. VS Code X102–X105 all pass in
+`run-92TmWV` (four passed, 106 not selected; catalog SHA-256 `7c145f2c974bf4891b3e2f79117c66f780371c17240dd8ab11653f2ba9452639`).
+Native IntelliJ assertions for these four refactoring cases are not yet implemented.
+
+The editor pass found that VS Code's generic execute-rename command round trip regroups file
+operations before text edits. X103 therefore invokes the registered Rename provider and applies its
+ordered WorkspaceEdit, matching the real provider path. It verifies the physical file move and
+recompilation, not just returned protocol objects. Background code actions now use range-specific
+query keys so they cannot cancel a quick fix elsewhere in the file; a blocked-worker regression
+covers both requests completing. Cancellation from document/lifecycle changes still retires them.
+
 ## Live workspace and source-navigation checkpoint (L47–L49)
 
 Requested order: finish 1–3, validate them together and commit the checkpoint before implementing
-4–5. All work stays on `lagergren/errs` after pushed checkpoint `d046db4a8`.
+4–5. All work stays on `lagergren/errs`; steps 1–3 are committed locally as `d6039532d` after pushed checkpoint `d046db4a8`.
 
 1. [x] **L47 live discovery:** parse changed buffer headers incrementally, restore disk on close,
    add buffer-only module roots, handle workspace-folder notifications, refresh current-version
@@ -28,8 +75,8 @@ Requested order: finish 1–3, validate them together and commit the checkpoint 
    the same XDK dependency bundle as the binaries. Binary identity, compiler source paths and debug
    spans identify declarations; no global name matching. Materialized library files are read-only,
    outside workspace compilation, and excluded from rename/format edits.
-4. [x] Validate L47–L49 together; commit this checkpoint before the next features.
-5. [ ] Broader proven refactoring: property/accessor families, file-moving type rename, aliases,
+4. [x] Validate and commit L47–L49 as `d6039532d` before the next features.
+5. [x] Broader proven refactoring (L50): property/accessor families, file-moving type rename, aliases,
    and unresolved-name imports; retain explicit unsupported boundaries when proof is incomplete.
 6. [ ] Remaining cursor/header forms and shared IntelliJ assertions, with occasional native runs.
 
@@ -161,8 +208,8 @@ Remaining functional work after these bounded implementations:
 - [x] Refresh source dependency edges for unsaved import changes and dynamic workspace folders (L47).
 - [x] Reuse graph query results and support healthy partial graphs for navigation/hierarchy (L48).
 - [x] Attach matching bundled XDK source ranges (L49); host binaries retain the explicit source-index API.
-- [ ] Prove instance-property/accessor-family rename, file-moving type rename, import-alias rename
-  and unresolved-name auto-import before advertising them.
+- [x] Prove instance-property/accessor-family rename, file-moving type rename, import-alias rename
+  and unresolved-name auto-import (L50, bounded as recorded above).
 - [ ] Extend the remaining cursor/header forms and inferred displays only from concrete compiler facts.
 - [ ] Complete the separate native IntelliJ parity checkpoint; implemented shared scenarios do not
   establish a native pass, and 53 catalog cases remain unimplemented in that driver.
