@@ -12,22 +12,75 @@ the two Markdown files above.
 
 ## Remaining functionality order
 
-Work continues on `lagergren/errs`; the pushed checkpoint before this slice is `69e125d01`.
+Work continues on `lagergren/errs`; the pushed checkpoint before the current batch is `885293f82`.
 These are additive functional steps, separate from the occasional native IntelliJ verification.
 
 1. [x] Class/interface/type-composition header recovery and type completion — verified below.
-2. [ ] Remaining type-completion forms: formal type parameters, empty generic arguments,
-   parameterized qualifiers and middle-of-identifier replacement. Prove each form separately.
+2. [x] Registered class/method formals, empty generic arguments, parameterized qualifiers and
+   middle-of-final-identifier replacement — C24/L41 below. Unregistered header formals stay deferred.
 3. [ ] Qualified/grouped argument values and arguments followed by later arguments, preserving
    compiler expected-type fitting and overload ambiguity.
 4. [ ] Automatic project discovery and workspace indexing beyond the explicit configured graph.
 5. [ ] Broader compiler-proven rename and import actions. Formatting and code lenses remain later work.
 
+## Generic type completion batch
+
+C24 is committed as `1f843896f` and L41 as `45e3a0998`, after `885293f82`. All work stays on `lagergren/errs`. The extraction map has **79 groups**.
+The four forms were implemented together before targeted validation, as requested.
+
+- Registered class formals are offered in member/return/parameter and nested type headers. A valid
+  generic method exposes its formals during body completion without duplicate local/type entries.
+  Normal contextual lookup still decides shadowing. An unfinished generic method or type header
+  does not acquire invented type parameters or a compiler component.
+- Empty generic slots work at the first or later argument, including nested `>>`/`>>>` closers,
+  whitespace and actual EOF. They retain only an empty cursor marker; no type argument is fabricated.
+- A complete parameterized qualifier such as `Owner<String>.Ali` resolves through a disposable AST
+  copy and compiler staging/TypeInfo. Nested children and aliases keep their substituted type;
+  hidden/unknown/value qualifiers return no enclosing-scope fallback.
+- A cursor inside a final identifier filters on its typed prefix and replaces the entire original
+  token, preserving qualifiers and generic suffixes. Qualifier-middle edits and generic base-name
+  edits such as `Lis|<String>` remain outside this slice.
+
+**AST and API placement:** no fields or cloning rules are added to ordinary AST nodes.
+`IncompleteStatement.getCompletionPrefix()` derives text from the cursor and original token on
+source-adopted syntax. `CursorScope` owns stack-local qualifier copies, resolvers and cancellable
+collecting PROBE listeners; retained syntax remains unresolved/unvalidated. `CursorBinding.NamedType`
+adds a `type()` component so consumers preserve qualifier substitution instead of deriving a naked
+identity type. The old two-argument constructor and existing accessors remain, but source record
+patterns with two components must migrate; this is recorded as part of the embedding API policy.
+Kotlin copies the resulting type and drops duplicate formal entries by compiler symbol identity.
+No compiler objects escape into the copied LSP model.
+
+| Slice | Commit | Additive extraction contents | Prerequisites |
+|---|---|---|---|
+| C24 | `1f843896f` | Generic-slot and mid-token parser selection, formal/parameterized scope lookup, substituted candidate type, passive prefix accessor and parser ownership tests | C22, C23 |
+| L41 | `45e3a0998` | Copied type/prefix consumption, formal deduplication, adapter and UTF-16 stdio tests, shared X96 and both editor consumers, capability/playbook updates | C24, L39; L40 for focused editor validation |
+
+Shared X96 has eight acceptance variants. The catalog now contains 101 scenarios; IntelliJ
+implements 45 full and three partial scenarios plus START, with 53 unimplemented. This describes
+implemented checks, not native execution. Native IntelliJ is deliberately deferred for this batch.
+**Targeted validation (2026-09-26):** 22 parser tests and 143 related LSP tests pass with zero
+failures/errors/skips. The packaged stdio test passes four request/acceptance/repair variants,
+including CRLF and UTF-16 offsets. Both editor drivers compile and Kotlin/TypeScript checks pass.
+VS Code X94–X96 pass in `lang/vscode-extension/build/reports/compiler-playbook/run-MdzjLq/results.json`:
+**three passed, 98 not-selected, zero failures/not-run**, 24 seconds for the Gradle invocation.
+Catalog SHA-256: `d8472c18b0994bf6d79c536c276236af9f360709476667da3d97808f9f108eea`.
+Root Spotless and `git diff --check` pass. These are focused results; the prior C23 full-suite and
+retention counts are historical, not rerun for this batch.
+
+Final review tightened formal-register recognition to require the actual formal register identity;
+a `Type<String>` or `Type<Other>` value shadowing a formal must remain a value candidate. The
+final focused generic-header suite passes **35 tests, zero failures/errors/skips** after that guard.
+Each shadowing fixture is first compiled with a valid body. The initially self-shadowing
+`Type<Element> Element` fixture was replaced with `Type<Other> Element`; production diagnostics
+were not suppressed. The editor and stdio results above precede this register-only tightening;
+they were not needlessly rerun. The final focused invocation took 20 seconds.
+
 ## Class and interface composition headers
 
 C23 is committed as `ef2b0b870` and L39 as `9ff95ec35`, after checkpoint `69e125d01`.
 The independent L40 harness follow-up is `0b82e609f`. All remain on `lagergren/errs`; no extracted
-branch or PR is created. The map now has **77 distinct groups**.
+branch or PR is created. That checkpoint had **77 distinct groups**.
 
 - [x] Retain the written type name and body when a bounded header fails, including member-file roots.
 - [x] Query written type prefixes and empty composition slots in `extends`, `implements`, `delegates`,
@@ -57,8 +110,8 @@ independent child ownership and reject list mutation.
 particular composition keyword or satisfies a generic constraint. Normal compilation validates
 acceptance. Header type variables, conditional-incorporation constraints, module/package headers,
 trailing dots, parameterized qualifiers, empty generic slots and mid-token positions remain outside
-this slice. Recovery needs a brace, semicolon or actual EOF boundary; header expressions containing
-their own braces may still limit structural recovery. No Tree-sitter fallback or public result
+this historical slice; C24 above adds the last three forms. Recovery needs a brace, semicolon or
+actual EOF boundary; header expressions containing their own braces may still limit structural recovery. No Tree-sitter fallback or public result
 shape is added.
 
 | Slice | Commit | Additive extraction contents | Prerequisites |
@@ -2053,7 +2106,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. I4 fixes bound-generic typing/binary-AST failures. I7 fixes reproduced atomic AST result/owner errors; bounded ToIntExpression metadata probes pass without a reporting change. Historical capture counts are not an exhaustive audit. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback; `CompilerBoundaryRequirementsTest` checks bound-generic artifact serialization; `CompilerEmissionAuditTest` checks atomic/switch output and diagnostic controls. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; binary/conditional prefixes and arguments following an incomplete member expression are now covered by C10. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. Literal synthesis and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. C19/L34 adds single-dimensional array-size fitting and missing-bracket recovery. C20/L35 adds unqualified declaration type prefixes and structural header recovery; C21/L36 adds visible flat qualified type prefixes; C22/L37 adds written leaf names inside parameterized/compound types and bounded missing type closers. C23/L39 adds class/interface composition header recovery and visible-type queries without registering partial inheritance. Trailing dots, empty generic slots, parameterized qualifiers, generic base-name prefixes, function/sequence types, module/package headers, missing operands, unfinished declaration names, enclosing-instance member completion, type-valued receiver fallbacks and receiver-rewritten calls remain outside the proven scope. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. Literal synthesis and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. C19/L34 adds single-dimensional array-size fitting and missing-bracket recovery. C20/L35 adds unqualified declaration type prefixes and structural header recovery; C21/L36 adds visible flat qualified type prefixes; C22/L37 adds written leaf names inside parameterized/compound types and bounded missing type closers. C23/L39 adds class/interface composition header recovery and visible-type queries without registering partial inheritance. C24/L41 adds registered formals, empty generic slots, parameterized qualifiers with substituted types and whole-final-token edits. Trailing dots, qualifier-middle edits, unregistered header formals, generic base-name prefixes, function/sequence types, module/package headers, missing operands, unfinished declaration names, enclosing-instance member completion, type-valued receiver fallbacks and receiver-rewritten calls remain outside the proven scope. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation, E5/L20 adds super-call facts, and L22 adds written Ref/Var annotation accessor targets. Native annotation storage and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |
