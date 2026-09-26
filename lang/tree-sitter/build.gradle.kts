@@ -2,7 +2,6 @@ import de.undercouch.gradle.tasks.download.Download
 import de.undercouch.gradle.tasks.download.Verify
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
-import java.security.MessageDigest
 import java.util.Properties
 import java.util.zip.GZIPInputStream
 import kotlin.time.measureTime
@@ -21,7 +20,7 @@ plugins {
 // - Validating generated grammar (tree-sitter generate)
 // - Testing parser on XDK corpus files
 // - Building native parser library (.so/.dylib/.dll)
-// - Staleness detection for pre-built libraries
+// - Content-based persistent caching for native libraries
 // =============================================================================
 
 // Depend on DSL project for generated grammar.js and scanner.c
@@ -50,15 +49,6 @@ val nativeLibExt: String = when {
     else -> "so"
 }
 
-val nativePlatformDir: String = when {
-    osName.contains("windows") && osArch in listOf("amd64", "x86_64") -> "windows-x64"
-    osName.contains("mac") && osArch in listOf("aarch64", "arm64") -> "darwin-arm64"
-    osName.contains("mac") && osArch in listOf("amd64", "x86_64") -> "darwin-x64"
-    osName.contains("linux") && osArch in listOf("aarch64", "arm64") -> "linux-arm64"
-    osName.contains("linux") && osArch in listOf("amd64", "x86_64") -> "linux-x64"
-    else -> throw GradleException("Unsupported platform: $osName/$osArch")
-}
-
 // =============================================================================
 // Directory Layout
 // =============================================================================
@@ -73,8 +63,8 @@ val nativeOutputDir: Provider<Directory> = layout.buildDirectory.dir("native")
 // =============================================================================
 // Native libraries are cached persistently in the Gradle user home directory.
 // This avoids checking binaries into source control while still providing fast
-// incremental builds. The cache is keyed by a hash of the inputs (grammar.js,
-// scanner.c, CLI version).
+// incremental builds. The key covers sources, generated headers, compiler contents,
+// tool versions, compiler arguments and the target platform.
 //
 // First build: Downloads Zig (~45MB) + compiles (~20s)
 // Subsequent builds: Instant (uses cache)
@@ -821,8 +811,16 @@ abstract class ZigCrossCompileTask @Inject constructor(
     private val execOps: ExecOperations
 ) : DefaultTask() {
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val zigCompiler: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val zigLibraries: DirectoryProperty
+
     @get:Input
-    abstract val zigPath: Property<String>
+    val compilerArguments: List<String> get() = NativeLibraryCommands.compilerFlags
 
     @get:Input
     abstract val targetTriple: Property<String> // e.g., "aarch64-macos"
@@ -831,12 +829,15 @@ abstract class ZigCrossCompileTask @Inject constructor(
     abstract val targetPlatform: Property<String> // e.g., "darwin-arm64"
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val parserC: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val scannerC: RegularFileProperty
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val includeDir: DirectoryProperty
 
     @get:OutputFile
@@ -853,17 +854,10 @@ abstract class ZigCrossCompileTask @Inject constructor(
 
         val duration = measureTime {
             execOps.exec {
-                executable(zigPath.get())
-                args(
-                    "cc",
-                    "-shared",
-                    "-fPIC",
-                    "-target", triple,
-                    "-I", includeDir.get().asFile.absolutePath,
-                    parserC.get().asFile.absolutePath,
-                    scannerC.get().asFile.absolutePath,
-                    "-o", outputFile.absolutePath
-                )
+                executable(zigCompiler.get().asFile)
+                args(NativeLibraryCommands.grammar(
+                    triple, includeDir.get().asFile, parserC.get().asFile, scannerC.get().asFile, outputFile
+                ))
             }
         }
 
@@ -898,7 +892,8 @@ crossCompileTargets.forEach { (platform, zigTarget) ->
         dependsOn(extractZig, validateTreeSitterGrammar)
         enabled = zigPlatformSupported
 
-        zigPath.set(zigExe)
+        zigCompiler.set(file(zigExe))
+        zigLibraries.set(file(zigExe).parentFile.resolve("lib"))
         targetTriple.set(zigTarget)
         targetPlatform.set(platform)
         parserC.set(generatedDir.map { it.file("src/parser.c") })
@@ -921,8 +916,16 @@ abstract class ZigBuildRuntimeTask @Inject constructor(
     private val execOps: ExecOperations
 ) : DefaultTask() {
 
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val zigCompiler: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val zigLibraries: DirectoryProperty
+
     @get:Input
-    abstract val zigPath: Property<String>
+    val compilerArguments: List<String> get() = NativeLibraryCommands.compilerFlags
 
     @get:Input
     abstract val targetTriple: Property<String>
@@ -931,6 +934,7 @@ abstract class ZigBuildRuntimeTask @Inject constructor(
     abstract val targetPlatform: Property<String>
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val libSrcDir: DirectoryProperty
 
     @get:OutputFile
@@ -954,17 +958,8 @@ abstract class ZigBuildRuntimeTask @Inject constructor(
 
         val duration = measureTime {
             execOps.exec {
-                executable(zigPath.get())
-                args(
-                    "cc",
-                    "-shared",
-                    "-fPIC",
-                    "-target", triple,
-                    "-I", File(libSrc, "include").absolutePath,
-                    "-I", File(libSrc, "src").absolutePath,
-                    libC.absolutePath,
-                    "-o", outputFile.absolutePath
-                )
+                executable(zigCompiler.get().asFile)
+                args(NativeLibraryCommands.runtime(triple, libSrc, outputFile))
             }
         }
 
@@ -983,7 +978,8 @@ crossCompileTargets.forEach { (platform, zigTarget) ->
         dependsOn(extractZig, extractTreeSitterSource)
         enabled = zigPlatformSupported
 
-        zigPath.set(zigExe)
+        zigCompiler.set(file(zigExe))
+        zigLibraries.set(file(zigExe).parentFile.resolve("lib"))
         targetTriple.set(zigTarget)
         targetPlatform.set(platform)
         libSrcDir.set(treeSitterLibSrc)
@@ -1020,6 +1016,11 @@ val populateNativeLibraryCache = tasks.register("populateNativeLibraryCache") {
     val crossBuildDir = layout.buildDirectory.dir("native-cross")
     val grammarFileValue = grammarJsFile.map { it.asFile }
     val scannerFileValue = scannerCFile.map { it.asFile }
+    val parserDirValue = generatedDir.map { it.dir("src").asFile }
+    val runtimeDirValue = treeSitterLibSrc.map { it.asFile }
+    val compilerValue = file(zigExe)
+    val compilerLibrariesValue = compilerValue.parentFile.resolve("lib")
+    val targets = crossCompileTargets
     val cliVersionValue = treeSitterCliVersion
     val zigVersionValue = zigVersion
     val cacheDirValue = nativeLibCacheDir
@@ -1027,18 +1028,21 @@ val populateNativeLibraryCache = tasks.register("populateNativeLibraryCache") {
     val platformsWithExtensions = crossCompileTargets.keys.associateWith { libExtForPlatform(it) }
 
     inputs.dir(crossBuildDir)
+    inputs.files(grammarFileValue, scannerFileValue, compilerValue).withPathSensitivity(PathSensitivity.NONE)
+    inputs.files(parserDirValue, runtimeDirValue, compilerLibrariesValue).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.property("cliVersion", cliVersionValue)
+    inputs.property("zigVersion", zigVersionValue)
+    inputs.property("targets", targets)
+    inputs.property("extensions", platformsWithExtensions)
+    inputs.property("compilerArguments", NativeLibraryCommands.compilerFlags)
 
     doLastTask {
+        val nativeInputs = NativeLibraryInputs(
+            cliVersionValue, zigVersionValue, compilerValue, compilerLibrariesValue,
+            grammarFileValue.get(), scannerFileValue.get(), parserDirValue.get(), runtimeDirValue.get()
+        )
         platformsWithExtensions.forEach { (platform, ext) ->
-            // Compute hash (same algorithm as BuildNativeLibraryOnDemandTask)
-            val digest = MessageDigest.getInstance("SHA-256")
-            digest.update(cliVersionValue.toByteArray())
-            digest.update(zigVersionValue.toByteArray())
-            digest.update(platform.toByteArray())
-            listOf(grammarFileValue.get(), scannerFileValue.get()).forEach { file ->
-                if (file.exists()) digest.update(file.readBytes())
-            }
-            val hash = digest.digest().joinToString("") { "%02x".format(it) }
+            val hash = nativeInputs.fingerprint(platform, targets.getValue(platform), ext)
 
             val cacheDir = File(cacheDirValue, "$hash/$platform")
             cacheDir.mkdirs()
@@ -1071,153 +1075,6 @@ val populateNativeLibraryCache = tasks.register("populateNativeLibraryCache") {
 }
 
 // =============================================================================
-// On-Demand Native Library Build with Persistent Caching
-// =============================================================================
-// Native libraries are built on first use and cached in ~/.gradle/caches/tree-sitter-xtc/
-// The cache is keyed by a hash of: grammar.js + scanner.c + CLI version + platform
-//
-// First build:  Download Zig (~45MB) + compile (~20s)
-// Subsequent:   Instant (cache hit)
-//
-// This replaces the old approach of checking in pre-built binaries to source control.
-
-/**
- * Task that ensures native libraries are available, building on-demand if needed.
- * Uses a persistent cache in ~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/
- */
-abstract class BuildNativeLibraryOnDemandTask @Inject constructor(
-    private val execOps: ExecOperations
-) : DefaultTask() {
-
-    @get:InputFile
-    abstract val grammarFile: RegularFileProperty
-
-    @get:InputFile
-    abstract val scannerFile: RegularFileProperty
-
-    @get:InputDirectory
-    abstract val parserSrcDir: DirectoryProperty
-
-    @get:Input
-    abstract val cliVersion: Property<String>
-
-    @get:Input
-    abstract val zigVersion: Property<String>
-
-    @get:Input
-    abstract val platform: Property<String>
-
-    @get:Input
-    abstract val zigTarget: Property<String>
-
-    @get:Input
-    abstract val libExtension: Property<String>
-
-    @get:Input
-    abstract val zigExePath: Property<String>
-
-    @get:Input
-    abstract val treeSitterLibSrcPath: Property<String>
-
-    @get:Input
-    abstract val cacheDir: Property<String>
-
-    @get:OutputFile
-    abstract val grammarLibOutput: RegularFileProperty
-
-    @get:OutputFile
-    abstract val runtimeLibOutput: RegularFileProperty
-
-    private fun computeHash(): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(cliVersion.get().toByteArray())
-        digest.update(zigVersion.get().toByteArray())
-        digest.update(platform.get().toByteArray())
-        listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
-            if (file.exists()) digest.update(file.readBytes())
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
-    @TaskAction
-    fun execute() {
-        val hash = computeHash()
-        val platformDir = platform.get()
-        val ext = libExtension.get()
-        val cacheRoot = File(cacheDir.get())
-        val cachedDir = File(cacheRoot, "$hash/$platformDir")
-
-        val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
-        val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
-
-        val grammarOutput = grammarLibOutput.get().asFile
-        val runtimeOutput = runtimeLibOutput.get().asFile
-
-        // Check cache
-        if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
-            logger.info("Using cached native libraries (hash: ${hash.take(12)}...)")
-            grammarOutput.parentFile.mkdirs()
-            cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-            cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-            return
-        }
-
-        logger.info("Building native libraries (hash: ${hash.take(12)}...)")
-        logger.info("  This will take ~20s on first build. Libraries will be cached for future builds.")
-
-        cachedDir.mkdirs()
-
-        // Build grammar library
-        val parserC = File(parserSrcDir.get().asFile, "parser.c")
-        val scannerC = scannerFile.get().asFile
-        val includeDir = parserSrcDir.get().asFile
-
-        logger.info("  Building libtree-sitter-xtc.$ext for $platformDir...")
-        execOps.exec {
-            executable(zigExePath.get())
-            args(
-                "cc", "-shared", "-fPIC",
-                "-target", zigTarget.get(),
-                "-I", includeDir.absolutePath,
-                parserC.absolutePath,
-                scannerC.absolutePath,
-                "-o", cachedGrammarLib.absolutePath
-            )
-        }
-
-        // Build runtime library
-        val treeSitterLibSrc = File(treeSitterLibSrcPath.get())
-        val libC = File(treeSitterLibSrc, "src/lib.c")
-        if (!libC.exists()) {
-            throw GradleException("tree-sitter lib.c not found at: ${libC.absolutePath}")
-        }
-
-        logger.info("  Building libtree-sitter.$ext for $platformDir...")
-        execOps.exec {
-            executable(zigExePath.get())
-            args(
-                "cc", "-shared", "-fPIC",
-                "-target", zigTarget.get(),
-                "-I", File(treeSitterLibSrc, "include").absolutePath,
-                "-I", File(treeSitterLibSrc, "src").absolutePath,
-                libC.absolutePath,
-                "-o", cachedRuntimeLib.absolutePath
-            )
-        }
-
-        // Copy to output locations
-        grammarOutput.parentFile.mkdirs()
-        cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-        cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-
-        logger.info("Native libraries built and cached successfully.")
-    }
-}
-
-// Map platform directory name to Zig target triple
-val currentZigTarget: String = crossCompileTargets[nativePlatformDir] ?: "unsupported"
-
-// =============================================================================
 // Multi-Platform Native Library Build with Caching
 // =============================================================================
 // Build native libraries for ALL platforms using Zig cross-compilation.
@@ -1232,12 +1089,15 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
 ) : DefaultTask() {
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val grammarFile: RegularFileProperty
 
     @get:InputFile
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val scannerFile: RegularFileProperty
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val parserSrcDir: DirectoryProperty
 
     @get:Input
@@ -1246,11 +1106,20 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
     @get:Input
     abstract val zigVersion: Property<String>
 
-    @get:Input
-    abstract val zigExePath: Property<String>
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val zigCompiler: RegularFileProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val zigLibraries: DirectoryProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val runtimeSources: DirectoryProperty
 
     @get:Input
-    abstract val treeSitterLibSrcPath: Property<String>
+    val compilerArguments: List<String> get() = NativeLibraryCommands.compilerFlags
 
     @get:Input
     abstract val cacheDir: Property<String>
@@ -1264,28 +1133,21 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
-    private fun computeHash(platform: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(cliVersion.get().toByteArray())
-        digest.update(zigVersion.get().toByteArray())
-        digest.update(platform.toByteArray())
-        listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
-            if (file.exists()) digest.update(file.readBytes())
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
     @TaskAction
     fun execute() {
         val platformMap = platforms.get()
         val extMap = platformExtensions.get()
         val cacheRoot = File(cacheDir.get())
         val outDir = outputDir.get().asFile
-        val zigPath = zigExePath.get()
-        val treeSitterLibSrc = File(treeSitterLibSrcPath.get())
+        val zigPath = zigCompiler.get().asFile
+        val treeSitterLibSrc = runtimeSources.get().asFile
         val parserC = File(parserSrcDir.get().asFile, "parser.c")
         val scannerC = scannerFile.get().asFile
         val includeDir = parserSrcDir.get().asFile
+        val nativeInputs = NativeLibraryInputs(
+            cliVersion.get(), zigVersion.get(), zigPath, zigLibraries.get().asFile,
+            grammarFile.get().asFile, scannerC, includeDir, treeSitterLibSrc
+        )
 
         logger.info(
             """
@@ -1302,7 +1164,7 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
         val totalDuration = measureTime {
             platformMap.forEach { (platform, zigTarget) ->
                 val ext = extMap[platform] ?: error("No extension for platform: $platform")
-                val hash = computeHash(platform)
+                val hash = nativeInputs.fingerprint(platform, zigTarget, ext)
                 val cachedDir = File(cacheRoot, "$hash/$platform")
                 val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
                 val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
@@ -1328,28 +1190,13 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
                     // Build grammar library
                     execOps.exec {
                         executable(zigPath)
-                        args(
-                            "cc", "-shared", "-fPIC",
-                            "-target", zigTarget,
-                            "-I", includeDir.absolutePath,
-                            parserC.absolutePath,
-                            scannerC.absolutePath,
-                            "-o", cachedGrammarLib.absolutePath
-                        )
+                        args(NativeLibraryCommands.grammar(zigTarget, includeDir, parserC, scannerC, cachedGrammarLib))
                     }
 
                     // Build runtime library
-                    val libC = File(treeSitterLibSrc, "src/lib.c")
                     execOps.exec {
                         executable(zigPath)
-                        args(
-                            "cc", "-shared", "-fPIC",
-                            "-target", zigTarget,
-                            "-I", File(treeSitterLibSrc, "include").absolutePath,
-                            "-I", File(treeSitterLibSrc, "src").absolutePath,
-                            libC.absolutePath,
-                            "-o", cachedRuntimeLib.absolutePath
-                        )
+                        args(NativeLibraryCommands.runtime(zigTarget, treeSitterLibSrc, cachedRuntimeLib))
                     }
                 }
                 logger.info("[zig]   $platform: compiled in $duration")
@@ -1389,8 +1236,9 @@ val buildAllNativeLibrariesOnDemand = tasks.register<BuildAllNativeLibrariesOnDe
     parserSrcDir.set(generatedDir.map { it.dir("src") })
     cliVersion.set(treeSitterCliVersion)
     this.zigVersion.set(libs.versions.lang.zig)
-    zigExePath.set(zigExe)
-    treeSitterLibSrcPath.set(treeSitterLibSrc.map { it.asFile.absolutePath })
+    zigCompiler.set(file(zigExe))
+    zigLibraries.set(file(zigExe).parentFile.resolve("lib"))
+    runtimeSources.set(treeSitterLibSrc)
     cacheDir.set(nativeLibCacheDir.absolutePath)
     platforms.set(crossCompileTargets)
     platformExtensions.set(crossCompileTargets.keys.associateWith { libExtForPlatform(it) })
