@@ -1,5 +1,13 @@
 # Threading `errs` through the compiler
 
+The active [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
+operations and native validation. All 24 adapter capability categories have implementations;
+that is not full protocol or language coverage. See the
+[current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
+The immediate order remains large-graph proof memory, startup editing, semantic header/value
+completion and inferred displays, followed by a combined validation/native parity checkpoint.
+
 L54 native validation also exposed compiler-worker and JSON-RPC cancellation lock cycles, now
 covered by server regressions. File-rename notifications preserve the client close/open lifecycle
 and refresh diagnostics at both paths. These fixes change server delivery, not `ErrorListener` or

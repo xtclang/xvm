@@ -10,6 +10,191 @@ bodies, and the current compiler, embedding API, adapter, server and build confi
 There are no `errs.log` or `errs-audit.log` files in this checkout; the corresponding records are
 the two Markdown files above.
 
+## Full compiler LSP completion checklist
+
+Current inventory: 2026-09-27, code checkpoint `511195564`. This is the active task list;
+the dated implementation records below retain their historical scope and results. L55 onward
+are planned work, not completed commits or new capabilities. Compiler API changes get separate
+C-series extraction boundaries when their implementations establish what is required.
+
+**We have broad editor support, not full LSP coverage.** XdkAdapter implements all 24 entries
+in our `AdapterCapability` enum, plus compiler diagnostics and document/workspace synchronization.
+That enum is a project abstraction, not a list of every LSP feature. Completion, signatures,
+rename, actions, formatting, semantic tokens, hints and hierarchies still have explicit limits.
+Separate go-to-declaration is an inherited stub. Several other protocol features have no handler.
+The [adapter matrix and absent-feature inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
+separate those states. Tree-sitter remains the shipped default; compiler mode remains opt-in.
+
+The protocol inventory is checked against Microsoft's
+[LSP 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/),
+[3.18 method model](https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.18/metaModel/metaModel.json)
+and the installed LSP4J 1.0.0 service interfaces. LSP capabilities are optional: an unadvertised
+optional feature is not by itself a protocol violation. Here, **full implementation** means
+finishing the applicable editor features and validating the protocol contract. Any deliberately
+excluded feature must remain explicitly marked out of scope, never silently counted as done.
+Debugging execution/stepping belongs to DAP; LSP inline values are listed separately below.
+
+### Immediate hardening order
+
+Complete these changes in sequence, keep useful local commit boundaries, then run combined
+backend/protocol validation and one announced, selected native checkpoint. Focused reproductions
+needed to identify a failure can run earlier; a complete playbook after every edit is unnecessary.
+
+- [ ] **L55 — Large-workspace proof memory and rename refusal.** Reproduce the 24-module
+  teaching workspace with only the target open and with multiple buffers open. Identify why
+  the native property rename returned no edit and what retains compiler pools/facts across
+  before/after proof. Bound peak memory without weakening binding/dispatch checks. Acceptance:
+  successful and rejected renames under a declared heap budget, unchanged diagnostics, and
+  release of all query-owned compiler objects after success, cancellation and failure.
+- [ ] **L56 — Editing during IntelliJ startup.** Reproduce ordinary edits while initial
+  `didOpen` is pending; trace document text/version ordering through LSP4IJ and the server.
+  Fix confirmed synchronization or stale-result delivery, including shortened-document folds.
+  Acceptance: typing, bulk replacement and close/reopen during startup converge to current
+  diagnostics/folds without a test-only readiness wait or IDE exceptions.
+- [ ] **L57 — Semantic formals in unfinished headers.** Resolve written but unregistered class
+  and method formals through real compiler facts, with constraints, shadowing and qualifier
+  substitution. Current names only suppress invalid outer-name candidates. Acceptance:
+  positive completion/hover/type facts where justified, negative unresolved constraints, and
+  no fabricated components, mutable AST cache or retained compiler context.
+- [ ] **L58 — Missing value operands and remaining callable recovery.** Extend recovery and
+  compiler fitting beyond the proven qualified/grouped argument cases: missing/compound value
+  operands, enclosing-instance members, type-valued receiver fallback and receiver-rewritten
+  calls. Cover each syntax form with positive, rejection and repair cases; preserve ordinary
+  compiler diagnostics and exact edits. Literal synthesis, imported constant enumeration and
+  broader enclosing-instance enumeration need explicit compiler-backed rules.
+- [ ] **L59 — Inferred-type presentation.** Broaden hover/inlay displays beyond successful
+  inferred locals and selected positional parameter names, starting with destructuring and
+  lambda parameters/returns where the compiler supplies an actual type. Preserve uncertainty
+  in partial source; add shared scenarios and current-version invalidation checks.
+- [ ] **L60 — Native parity checkpoint.** Run the implemented but unverified IntelliJ X93–X98
+  scenarios, then close the highest-value missing assertions and scenarios. Track each of the
+  50 unimplemented native cases in `scenarios.json`; resolve X20's signature display discrepancy
+  and X81/X82's missing Property-kind assertions. Record assertions implemented, cases selected
+  and cases passed separately. Run the broader checkpoint occasionally, not after each change.
+
+### Finish the existing editor features
+
+- [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
+  capability and advertise it only when implemented. Define declaration versus selected-body
+  behavior for interfaces/overrides, aliases, locals and indexed libraries; preserve multiple
+  source targets where required. The existing empty inherited implementation is not support.
+- [ ] **L62 — Rename scope and resource edits.** Extend beyond the current proven source
+  types/static members/ordinary method and property families/aliases/locals. Audit constructor
+  names, module/package/directory moves, companion directories, annotation/mixin/delegation
+  dispatch and public-parameter contracts. Keep binary declarations read-only and reject
+  unknown external consumers. Add collision, changed binding, changed dispatch and undo tests.
+- [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
+  import cleanup/public-type imports: missing declarations or members, implement/override
+  members, extract local/method, inline and safe delete. Record supported XTC forms per action;
+  code generation/doc comments and reference/test lenses are separate subfeatures. Use the
+  compiler for semantic transformations and verify versioned multi-file edits.
+- [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover remaining
+  declaration-name, keyword/snippet and callable contexts, candidate documentation/ranking,
+  import-producing edits, and overload/active-argument displays. Test exact token replacement,
+  named/default arguments, inaccessible candidates and supported client edit formats.
+- [ ] **L65 — Navigation, hierarchy and semantic classification.** Audit remaining conditional
+  mixin/composition edges, synthetic/native/redirect bodies, dynamic/function-valued call
+  relationships and ambiguous or missing binary source metadata. Extend resolved token kinds,
+  modifiers and read/write classification where facts exist. Never invent executable targets
+  or source locations; document runtime relationships that static analysis cannot enumerate.
+- [ ] **L66 — Structural and editing breadth.** Extend token-preserving indentation to the
+  agreed formatter style, expression wrapping and comment/string layout; add import/source
+  links and broader proven linked-editing scopes. Audit outline/selection/folding recovery
+  across remaining damaged constructs. Preserve literal contents, CRLF and Unicode positions.
+- [ ] **L67 — Workspace indexing and dependencies at scale.** Extend the on-demand detached
+  graph cache with measured incremental/persistent indexing where needed; cover large graphs,
+  source/binary replacement, ambiguous source indices and library source availability. Live
+  unsaved import edges and workspace-folder refresh are already implemented. Complete-graph
+  references/refactorings must retain their proof requirements beside broken neighbors.
+
+### Implement the missing protocol operations
+
+These are absent operations or optional extensions to working base features. They are not
+evidence that existing push diagnostics, full tokens or eagerly populated responses are broken.
+
+- [ ] **L68 — Pull diagnostics.** Implement `textDocument/diagnostic`, `workspace/diagnostic`
+  and `workspace/diagnostic/refresh`, result IDs/unchanged reports, related documents,
+  cancellation and closed-file reporting. Negotiate push/pull behavior without duplicate or
+  stale Problems entries. Existing diagnostics use `publishDiagnostics`.
+- [ ] **L69 — Semantic token range/delta.** Add `textDocument/semanticTokens/range` and
+  `textDocument/semanticTokens/full/delta`, result-ID lifetime and capability-aware refresh.
+  Existing requests return full-document tokens only.
+- [ ] **L70 — Lazy resolve operations.** Add capability-negotiated `completionItem/resolve`,
+  `codeAction/resolve`, `codeLens/resolve`, `documentLink/resolve`, `inlayHint/resolve` and
+  `workspaceSymbol/resolve`. Carry stable detached IDs, reject obsolete data and respect each
+  client's supported resolve properties. Current responses eagerly supply their supported data.
+- [ ] **L71 — File-operation participation.** Add `workspace/willCreateFiles`, `willRenameFiles`,
+  `willDeleteFiles`, `didCreateFiles` and `didDeleteFiles`, including folder operations and
+  proven import/reference updates for moves initiated in the IDE's file tree. Existing
+  `didRenameFiles` and watched-file notifications refresh sources; they do not compute those
+  pre-operation edits. Exercise operation ordering, cancellation and duplicate notifications.
+- [ ] **L72 — Save hooks, incremental sync and multiple-range formatting.** Add negotiated
+  `willSave`/`willSaveWaitUntil`, optional incremental `didChange` support and
+  `textDocument/rangesFormatting`. Full document synchronization, didSave handling and
+  single-range formatting already exist. Test sequential patches, CRLF and surrogate pairs;
+  an advertised Full-sync server must continue rejecting incremental patches safely.
+- [ ] **L73 — Server commands and edit application.** Implement an explicit
+  `workspace/executeCommand` registry if server-run actions are required, with negotiated
+  `workspace/applyEdit` and failure handling. Current module Run lenses use a client command;
+  no server execute-command provider is advertised. Do not conflate running XTC with debugging.
+- [ ] **L74 — Cross-project symbol identities.** Implement `textDocument/moniker` and stable
+  import/export identities tied to module/artifact versions; snapshot-local symbol IDs cannot
+  substitute for cross-project identities. Verify unrelated projects and binary/source matches.
+- [ ] **L75 — Read-only document content.** Add LSP 3.18 `workspace/textDocumentContent` and
+  its refresh request for clients supporting server-provided library/virtual documents.
+  Existing matching XDK sources use read-only file views. Define URI/revision ownership and
+  invalidation; do not make binary-backed targets editable.
+
+### Additional LSP features with no implementation
+
+These need explicit language/product scope as well as code. Keep them open until implemented
+and tested, or record a deliberate exclusion from the full XTC editor target.
+
+- [ ] **L76 — Inline completion.** Implement `textDocument/inlineCompletion` for justified
+  compiler/snippet suggestions and trigger/selection behavior. Ordinary completion is separate;
+  this does not imply adding a generative service.
+- [ ] **L77 — Color support.** Define supported XTC color values, then implement
+  `textDocument/documentColor` and `textDocument/colorPresentation`, including exact round-trip
+  edits. No color provider is currently advertised.
+- [ ] **L78 — Notebook documents.** Define XTC cell/module semantics and implement
+  `notebookDocument/didOpen`, `didChange`, `didSave`, `didClose` and notebook synchronization
+  capabilities. Current source trees/file overlays do not constitute notebook support.
+- [ ] **L79 — Debug inline values.** Define a debugger integration, then implement
+  `textDocument/inlineValue` and `workspace/inlineValue/refresh`. Compiler type inlay hints do
+  not provide runtime values. DAP breakpoints, stepping and evaluation remain a separate project.
+
+### Protocol correctness and the completion gate
+
+- [ ] **L80 — Initialization and capability negotiation.** Audit against the 3.18 method
+  model and client capabilities. Move watcher registration out of `initialize` into the
+  post-`initialized` phase and honor dynamic-registration support; handle registration failure
+  and lifecycle cleanup. Audit workspace-folder fallback, UTF-16/default versus negotiated
+  encodings, markup/location-link support, diagnostic versions/tags/related information,
+  symbol kinds/tags, code-action kinds/`context.only`, snippets/edit formats and workspace-edit
+  resource/failure capabilities. Unsupported optional features must remain unadvertised.
+- [ ] **L81 — Progress, refresh, tracing and transport lifecycle.** Add negotiated work-done
+  progress/create/cancel and partial results for long graph operations; propagate cancellation
+  without transport/compiler lock cycles. Implement `$/setTrace`/`$/logTrace` behavior and
+  negotiated refresh for semantic tokens, inlays, lenses, folding and new providers. Audit
+  shutdown/exit, pre-initialize errors, malformed requests, stale handles and pending work.
+  LSP4J transport support alone does not establish correct application behavior. Audit use of
+  client requests (`showDocument`, messages, workspace folders/configuration, applyEdit) as
+  needed; telemetry is not required to implement language features.
+- [ ] **L82 — Completion evidence and API closure.** For every applicable task, require a
+  meaningful backend regression, advertised-capability/protocol test and shared editor scenario
+  where observable. Cover supported, rejected, canceled and stale requests. Re-run the combined
+  compiler/LSP/stdio suites, retention/peak-memory workload and VS Code playbook after the code
+  batch; run selected native cases first and a full implemented IntelliJ checkpoint before
+  submission. Update this checklist, the capability matrix, playbook, AST/API ownership record
+  and commit extraction map together. Validate each later extracted PR independently.
+
+Current native automation inventory: **113 shared cases; 60 full implementations, 3 partial,
+50 unimplemented**, plus startup. These describe driver assertions, not pass receipts or missing
+server features. Latest passing receipts cover 13 selected cases across two native runs; X93–X98
+still need their first native receipt. See the C28/L53/L54 validation record immediately below.
+Completion requires explicit evidence per feature; neither 24 capability flags nor a passing
+selected playbook is a percentage of total LSP completeness.
+
 ## Header slots and native editor parity (C28/L53/L54)
 
 The integrated batch is implemented on `lagergren/errs`; backend and VS Code validation pass.
