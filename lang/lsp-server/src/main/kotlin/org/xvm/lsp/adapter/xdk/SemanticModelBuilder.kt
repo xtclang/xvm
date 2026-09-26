@@ -512,6 +512,7 @@ private class SemanticModelBuilder(
                 val receiver = site.receiver.orElse(null)
                 val receiverType = validatedType(receiver)
                 val cursor = analysis.cursorBindings()[site]
+                val callFacts = cursor?.callFacts()
                 val identity = (receiver as? NameExpression)?.resolvedTarget
                 val staticType =
                     when (identity) {
@@ -604,7 +605,7 @@ private class SemanticModelBuilder(
                             )
                         } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range),
                     callCandidates =
-                        cursor?.takeIf { it.callsInspected() }?.candidates()?.let { candidates ->
+                        callFacts?.takeIf { it.inspected() }?.candidates()?.let { candidates ->
                             immutableList(
                                 candidates.mapNotNull { candidate ->
                                     val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
@@ -651,7 +652,7 @@ private class SemanticModelBuilder(
                     pendingArgumentName = site.pendingArgumentName.orElse(null)?.valueText,
                     functions =
                         immutableList(
-                            cursor?.functions().orEmpty().mapNotNull { candidate ->
+                            callFacts?.functions().orEmpty().mapNotNull { candidate ->
                                 val signature = functionSignature(candidate.type()) ?: return@mapNotNull null
                                 PartialSemanticModel.FunctionCandidate(
                                     signature,
@@ -668,8 +669,8 @@ private class SemanticModelBuilder(
                         ),
                     argumentValues =
                         immutableList(
-                            cursor?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
-                                cursor?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
+                            callFacts?.argumentValues().orEmpty().mapNotNull(::sourceVariable) +
+                                callFacts?.argumentProperties().orEmpty().mapNotNull(::sourceProperty),
                         ),
                     argumentOffset = site.leadingArguments.size,
                 )
