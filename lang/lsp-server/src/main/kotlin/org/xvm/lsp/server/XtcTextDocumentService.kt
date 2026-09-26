@@ -98,6 +98,7 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
 import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
+import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
 import org.xvm.lsp.model.Location as DiagnosticLocation
 
 /**
@@ -719,78 +720,40 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
-        ) { edit ->
-            edit?.takeIf { !it.versioned || server.supportsVersionedEdits }?.let {
-                val changes =
-                    edit.changes.mapValues { (_, edits) ->
-                        edits.map { TextEdit(it.range.toLsp(), it.newText) }
-                    }
-                WorkspaceEdit().apply {
-                    if (edit.versioned) {
-                        this.changes = null
-                        documentChanges =
-                            changes.map { (uri, edits) ->
-                                Either.forLeft(
-                                    TextDocumentEdit(
-                                        VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
-                                        edits.map { Either.forLeft(it) },
-                                    ),
-                                )
-                            }
-                    } else {
-                        this.changes = changes
-                    }
+        ) { edit -> edit?.let(::protocolEdit) }
+
+    /** Called while the document lifecycle is locked, after the query's version checks. */
+    private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
+        if (edit.versioned && !server.supportsVersionedEdits) return null
+        val changes = edit.changes.mapValues { (_, edits) -> edits.map { TextEdit(it.range.toLsp(), it.newText) } }
+        return WorkspaceEdit().apply {
+            if (edit.versioned) {
+                this.changes = null
+                documentChanges = changes.map { (uri, edits) ->
+                    Either.forLeft(TextDocumentEdit(VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
+                        edits.map { Either.forLeft(it) }))
                 }
-            }
+            } else this.changes = changes
         }
+    }
 
-    /**
-     * LSP: textDocument/codeAction
-     * @see org.eclipse.lsp4j.services.TextDocumentService.codeAction
-     */
     override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> =
-        supplyAsync(
+        queryAsync(
             "textDocument/codeAction",
-            "${params.textDocument.uri} range=${params.range.fmt()} diagnostics=${params.context.diagnostics?.size ?: 0}",
-            { result ->
-                val titles =
-                    result.take(5).joinToString { either ->
-                        either.right?.title ?: either.left?.title ?: "<unknown>"
-                    }
-                "${result.size} actions${if (titles.isNotEmpty()) " [$titles]" else ""}"
-            },
-            uri = params.textDocument.uri,
-        ) {
-            val adapterDiagnostics = params.context.diagnostics.map { Diagnostic.fromLsp(params.textDocument.uri, it) }
-
-            adapter
-                .getCodeActions(
-                    params.textDocument.uri,
-                    toAdapterRange(params.range),
-                    adapterDiagnostics,
-                ).map { a ->
-                    Either.forRight(
-                        CodeAction().apply {
-                            title = a.title
-                            kind = a.kind.toLsp()
-                            isPreferred = a.isPreferred
-                            a.edit?.let { e ->
-                                edit =
-                                    WorkspaceEdit().apply {
-                                        changes =
-                                            e.changes.mapValues { (_, edits) ->
-                                                edits.map { te ->
-                                                    TextEdit().apply {
-                                                        this.range = te.range.toLsp()
-                                                        newText = te.newText
-                                                    }
-                                                }
-                                            }
-                                    }
-                            }
-                        },
-                    )
-                }
+            params.textDocument.uri,
+            { adapter.getCodeActionsAsync(params.textDocument.uri, toAdapterRange(params.range),
+                params.context.diagnostics.orEmpty().map { Diagnostic.fromLsp(params.textDocument.uri, it) }) },
+            workspace = true,
+        ) { actions ->
+            actions.mapNotNull { action ->
+                val proposed = action.edit?.let { protocolEdit(it) ?: return@mapNotNull null }
+                Either.forRight<Command, CodeAction>(CodeAction().apply {
+                    title = action.title
+                    kind = action.kind.toLsp()
+                    isPreferred = action.isPreferred
+                    edit = proposed
+                })
+            }
         }
 
     /**
