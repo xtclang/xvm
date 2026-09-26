@@ -4,6 +4,11 @@ package delegationTests {
     typedef String|Int as StringOrInt;
 
     void run() {
+        testSimpleDelegation();
+        testSuperDelegation();
+    }
+
+    void testSimpleDelegation() {
         Test t = new Test("text", 17);
         assert t.showText() == "text";
         assert t.showValue() == 17;
@@ -13,7 +18,6 @@ package delegationTests {
         Char ch = 'A';
         assert ch.toInt()    == 65;
         assert ch.toInt128() == 65;
-
     }
 
     service Test
@@ -56,5 +60,19 @@ package delegationTests {
     class ReportableNullableInt
             implements ReportableAsNullableInt {
         @Override Int showNullable(Int? value) = value ?: -1;
+    }
+
+    void testSuperDelegation() {
+        class Wrapper(ReportableAsString value1, ReportableAsNullableInt value2)
+                delegates ReportableAsString-Object(value1)
+                delegates ReportableAsNullableInt(value2) {
+            @Override String showText() = super() + "!";
+            @Override Int showNullable(Int? value) = super(value) + 1;
+        }
+
+        Wrapper wrapper = new Wrapper(new ReportableString("text"), new ReportableNullableInt());
+        assert wrapper.showText() == "text!";
+        assert wrapper.showNullable(19) == 20;
+        assert wrapper.showNullable(Null) == 0;
     }
 }

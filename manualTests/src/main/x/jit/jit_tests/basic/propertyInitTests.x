@@ -14,6 +14,7 @@ package propertyInitTests {
         testDefaultProperty();
         testNullablePropertyTarget();
         testNullablePrimitiveProperty();
+        testNarrowUnsignedPropertyEquality();
         testStaticServiceProperty();
         testSingletonService();
         testSingletonConstWithService();
@@ -136,29 +137,105 @@ package propertyInitTests {
      */
     void testNullablePrimitiveProperty() {
         class Test {
-            Byte?   b    = 0xFD;
-            Int8?   i8   = -5;
-            UInt16? u16  = 60000;
-            Bit?    bit  = 1;
-            Int64?  i64  = 1234567890123;
-            Byte?   none = Null;
+            Byte?     b    = 0xFD;
+            Int8?     i8   = -5;
+            UInt16?   u16  = 60000;
+            Bit?      bit  = 1;
+            Int64?    i64  = 1234567890123;
+            Int128?   i128 = -12345678901234567890;
+            UInt128?  u128 = 12345678901234567890;
+            Dec64?    dec  = 12.5;
+            Duration? dur  = Duration:PT1H2M3S;
+            Byte?     none = Null;
         }
 
         Test t = new Test();
 
-        String sb   = $"{t.b}";
-        String si8  = $"{t.i8}";
-        String su16 = $"{t.u16}";
-        String sbit = $"{t.bit}";
-        String si64 = $"{t.i64}";
-        String snil = $"{t.none}";
+        String sb    = $"{t.b}";
+        String si8   = $"{t.i8}";
+        String su16  = $"{t.u16}";
+        String sbit  = $"{t.bit}";
+        String si64  = $"{t.i64}";
+        String si128 = $"{t.i128}";
+        String su128 = $"{t.u128}";
+        String sdec  = $"{t.dec}";
+        String sdur  = $"{t.dur}";
+        String snil  = $"{t.none}";
 
-        assert sb   == "253";
-        assert si8  == "-5";
-        assert su16 == "60000";
-        assert sbit == "1";
-        assert si64 == "1234567890123";
-        assert snil == "Null";
+        assert sb    == "253";
+        assert si8   == "-5";
+        assert su16  == "60000";
+        assert sbit  == "1";
+        assert si64  == "1234567890123";
+        assert si128 == "-12345678901234567890";
+        assert su128 == "12345678901234567890";
+        assert sdec  == "12.5";
+        assert sdur  == "1:02:03"; // Duration's default format is not ISO-8601
+        assert snil  == "Null";
+
+        // assert captures each property value in a temporary register for its failure message;
+        // the string template then moves that saved value into a Stringable register; unlike the
+        // assignments above, this exercises nullable boxing
+        assert $"{t.b}"    == "253";
+        assert $"{t.i8}"   == "-5";
+        assert $"{t.u16}"  == "60000";
+        assert $"{t.bit}"  == "1";
+        assert $"{t.i64}"  == "1234567890123";
+        assert $"{t.i128}" == "-12345678901234567890";
+        assert $"{t.u128}" == "12345678901234567890";
+        assert $"{t.dec}"  == "12.5";
+        assert $"{t.dur}"  == "1:02:03";
+        assert $"{t.none}" == "Null";
+
+        // Null primitives must discard all components, not box their placeholder values
+        t.b    = Null;
+        t.i8   = Null;
+        t.u16  = Null;
+        t.bit  = Null;
+        t.i64  = Null;
+        t.i128 = Null;
+        t.u128 = Null;
+        t.dec  = Null;
+        t.dur  = Null;
+        assert $"{t.b}"    == "Null";
+        assert $"{t.i8}"   == "Null";
+        assert $"{t.u16}"  == "Null";
+        assert $"{t.bit}"  == "Null";
+        assert $"{t.i64}"  == "Null";
+        assert $"{t.i128}" == "Null";
+        assert $"{t.u128}" == "Null";
+        assert $"{t.dec}"  == "Null";
+        assert $"{t.dur}"  == "Null";
+    }
+
+    /**
+     * Byte/UInt8 lives in a signed byte field and UInt16 in a signed short, but their register form
+     * is unsigned, so a field load sign-extends them. Without masking that back off, a value whose
+     * high bit is set compares unequal to its own literal. Printing such a property hid this,
+     * because boxing masks on the way through; comparing does not box.
+     */
+    void testNarrowUnsignedPropertyEquality() {
+        class Test {
+            Byte    b    = 0xFD;
+            UInt16  u16  = 60000;
+            Int8    i8   = -3;
+            Byte    low  = 5;
+            Nibble  nib  = 0xF;
+            Byte?   nb   = 0xFD;
+            UInt16? nu16 = 60000;
+        }
+
+        Test t = new Test();
+
+        assert t.b   == 0xFD;
+        assert t.u16 == 60000;
+        assert t.nb  == 0xFD;
+        assert t.nu16 == 60000;
+
+        // the cases that were already correct, so the masking must not disturb them
+        assert t.i8  == -3;
+        assert t.low == 5;
+        assert t.nib == 0xF;
     }
 
     void testStaticServiceProperty() {

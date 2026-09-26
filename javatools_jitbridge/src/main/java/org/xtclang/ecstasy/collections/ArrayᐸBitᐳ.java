@@ -37,6 +37,13 @@ public class ArrayᐸBitᐳ
         super(ctx, type);
     }
 
+    /**
+     * Create a constant biy array from packed data.
+     */
+    public ArrayᐸBitᐳ(Ctx ctx, TypeConstant type, long[] data, long size) {
+        super(ctx, type, data, size);
+    }
+
     // ----- Array API -----------------------------------------------------------------------------
 
     /**

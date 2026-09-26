@@ -98,7 +98,7 @@ package arrayTests {
 //        assert result.contains(3);
 //        assert !result.contains(4);
 
-//        TODO: requires DeferredCollection.toArray() and applied @Lazy support
+//        TODO: requires @Lazy getter generation for DeferredCollection.reified
 //        Int[] array = result.toArray();
 //
 //        assert array.size == 3;
@@ -120,7 +120,7 @@ package arrayTests {
 //        assert result.contains("three");
 //        assert !result.contains("four");
 
-//        TODO: requires DeferredCollection.toArray() and applied @Lazy support
+//        TODO: requires @Lazy getter generation for DeferredCollection.reified
 //        String[] array = result.toArray();
 //
 //        assert array.size == 3;

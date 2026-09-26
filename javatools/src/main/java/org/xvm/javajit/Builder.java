@@ -247,8 +247,8 @@ public abstract class Builder {
                         code.ldc(n < 0 ? -1L : 0L);
                     }
                     yield intConstant.getFormat() == Int128
-                            ? new MultiSlot(bctx, XvmPrimitive, type, CD_Int128, CDs_LongLong)
-                            : new MultiSlot(bctx, XvmPrimitive, type, CD_UInt128, CDs_LongLong);
+                            ? new MultiSlot(XvmPrimitive, type, CD_Int128, CDs_LongLong)
+                            : new MultiSlot(XvmPrimitive, type, CD_UInt128, CDs_LongLong);
                 }
                 case IntN, UIntN -> {
                     TypeConstant type  = intConstant.getType();
@@ -274,20 +274,20 @@ public abstract class Builder {
                     TypeConstant type = decConstant.getType();
                     Decimal32    dec  = (Decimal32) decConstant.getValue();
                     code.ldc(dec.toIntBits());
-                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec32, CDs_Int);
+                    yield new MultiSlot(XvmPrimitive, type, CD_Dec32, CDs_Int);
                 }
                 case Dec64 -> {
                     TypeConstant type = decConstant.getType();
                     Decimal64    dec  = (Decimal64) decConstant.getValue();
                     code.ldc(dec.toLongBits());
-                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec64, CDs_Long);
+                    yield new MultiSlot(XvmPrimitive, type, CD_Dec64, CDs_Long);
                 }
                 case Dec128 -> {
                     TypeConstant type = decConstant.getType();
                     Decimal128   dec  = (Decimal128) decConstant.getValue();
                     code.ldc(dec.getLowBits());
                     code.ldc(dec.getHighBits());
-                    yield new MultiSlot(bctx, XvmPrimitive, type, CD_Dec128, CDs_LongLong);
+                    yield new MultiSlot(XvmPrimitive, type, CD_Dec128, CDs_LongLong);
                 }
                 default ->
                     throw new IllegalStateException("Unsupported IntConstant type "
@@ -340,6 +340,7 @@ public abstract class Builder {
                 TypeConstant propType  = singleton.getType();
                 JitTypeDesc  jtd       = propType.getJitDesc(this);
 
+                RegisterInfo singletonReg = new SingleSlot(propType, jtd.flavor, jtd.cd, "");
                 if (isContainerScoped(propInfo)) {
                     assert !jtd.flavor.isOptimized;
 
@@ -350,7 +351,7 @@ public abstract class Builder {
                                 propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
                         .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic);
                     code.checkcast(jtd.cd);
-                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                    return singletonReg;
                 }
 
                 switch (jtd.flavor) {
@@ -359,12 +360,12 @@ public abstract class Builder {
                             propId.ensureJitPropertyName(typeSystem),
                             JitTypeDesc.requirePrimitiveFieldClass(propType));
                     normalizePrimitiveField(code, propType);
-                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                    return singletonReg;
 
                 case Specific, Widened:
                     code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
-                    return new SingleSlot(propType, jtd.flavor, jtd.cd, "");
+                    return singletonReg;
 
                 case XvmPrimitive:
                     ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(propType);
@@ -372,7 +373,7 @@ public abstract class Builder {
                     for (int i = 0; i < cds.length; i++) {
                         code.getstatic(jtd.cd, name + i, cds[i]);
                     }
-                    return new MultiSlot(bctx, jtd.flavor, propType, jtd.cd, cds);
+                    return new MultiSlot(jtd.flavor, propType, jtd.cd, cds);
 
                 default:
                     throw new UnsupportedOperationException("Load property singleton " +
@@ -459,8 +460,7 @@ public abstract class Builder {
                 case NullablePrimitive:
                     // load the null flag value from the context to the stack
                     loadFromContext(code, CD_boolean, 0, ctxSlot);
-                    return new ExtendedSlot(bctx, Op.A_STACK, 0, 0, jtd.flavor, type,
-                            jtd.cd, "");
+                    return new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, type, jtd.cd, "");
 
                 case XvmPrimitive:
                 case NullableXvmPrimitive:
@@ -475,7 +475,7 @@ public abstract class Builder {
                         // load the boolean Null flag from the context
                         loadFromContext(code, CD_boolean, slot, ctxSlot);
                     }
-                    return new MultiSlot(bctx, jtd.flavor, type, jtd.cd, cds);
+                    return new MultiSlot(jtd.flavor, type, jtd.cd, cds);
                 case Specific, Primitive, Widened:
                     // single property value is on the stack
                     return new SingleSlot(type, jtd.flavor, jtd.cd, "");
@@ -491,6 +491,7 @@ public abstract class Builder {
 
             // 1) ensure the method exists
             TypeConstant containerType = bctx.thisType;
+            ClassDesc    containerCD   = ClassDesc.of(bctx.className);
             String       jitName;
             MethodBody   body;
             TypeConstant sigType; // function or method type
@@ -503,19 +504,31 @@ public abstract class Builder {
                 // generate the method itself
                 bctx.buildMethod(jitName, body);
             } else {
-                MethodInfo method = bctx.typeInfo.getMethodById(methodId);
+                IdentityConstant containerId   = methodId.getClassIdentity();
+                TypeInfo         containerInfo = bctx.typeInfo;
+                boolean          alias         = !containerId.equals(containerInfo.getIdentity());
+                if (alias) {
+                    // an alias can refer to a method on another type, e.g. FPConvertible.toDec
+                    containerType = containerId.getType();
+                    containerCD   = ensureClassDesc(containerType);
+                    containerInfo = bctx.getTypeInfo(containerType);
+                }
+
+                MethodInfo method = containerInfo.getMethodById(methodId);
+                assert method != null;
+
                 jitName = method.ensureJitMethodName(typeSystem);
                 body    = method.getHead();
                 sigType = body.getIdentity().getType();
-                if (body.getIdentity().getNestedDepth() > 2) {
-                    // methods nested inside properties or methods are not visible otherwise
-                    // and need to built on-the-spot
+
+                if (!alias && body.getIdentity().getNestedDepth() > 2) {
+                    // methods nested inside properties or methods are not visible otherwise and
+                    // need to be built on-the-spot
                     bctx.buildMethod(jitName, body);
                 }
             }
 
             // 2) create the MethodHandle(s)
-            ClassDesc     containerCD = ClassDesc.of(bctx.className);
             JitMethodDesc jmd         = body.getJitDesc(this, containerType);
             boolean       isFunction  = body.getMethodStructure().isFunction();
             boolean       isInterface = containerType.isJitInterface();
@@ -940,7 +953,7 @@ public abstract class Builder {
      * Build the code to load an XTC String value on the Java stack. Note that String.of() is
      * tolerant to the absence of Ctx argument.
      */
-    public static void loadString(CodeBuilder code, String value, int ctxSlot) {
+    public static CodeBuilder loadString(CodeBuilder code, String value, int ctxSlot) {
         if (ctxSlot >= 0) {
             code.aload(ctxSlot);
         } else {
@@ -948,6 +961,7 @@ public abstract class Builder {
         }
         code.ldc(value)
             .invokestatic(CD_String, "of", MD_StringOf);
+        return code;
     }
 
     /**
@@ -1034,11 +1048,12 @@ public abstract class Builder {
         return xvmInfo;
     }
 
-    public static void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
+    public static CodeBuilder loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md) {
         loadOptimizedReturnsToStack(code, md, code.parameterSlot(0));
+        return code;
     }
 
-    public static void loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md, int ctxSlot) {
+    public static CodeBuilder loadOptimizedReturnsToStack(CodeBuilder code, JitMethodDesc md, int ctxSlot) {
         // if the return type is Nullable, the caller should have already processed the extension
         // flag
         JitParamDesc[] params = md.optimizedReturns;
@@ -1048,6 +1063,7 @@ public abstract class Builder {
         for (int i = 1; i < count; i++) {
             loadFromContext(code, params[i].cd, params[i].altIndex, ctxSlot);
         }
+        return code;
     }
 
     /**
@@ -1084,7 +1100,7 @@ public abstract class Builder {
     /**
      * Generate a value "store" for the specified Java class.
      */
-    public static void store(CodeBuilder code, ClassDesc cd, int slot) {
+    public static CodeBuilder store(CodeBuilder code, ClassDesc cd, int slot) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
             case "I", "S", "B", "Z":
@@ -1105,12 +1121,13 @@ public abstract class Builder {
         } else {
             code.astore(slot);
         }
+        return code;
     }
 
     /**
      * Generate a default value "load" for the specified Java class.
      */
-    public static void defaultLoad(CodeBuilder code, ClassDesc cd) {
+    public static CodeBuilder defaultLoad(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
             case "I", "S", "B", "Z":
@@ -1131,12 +1148,13 @@ public abstract class Builder {
         } else {
             code.aconst_null();
         }
+        return code;
     }
 
     /**
      * Generate stores of default Java values into all slots for the specified register.
      */
-    public static void defaultStore(CodeBuilder code, RegisterInfo reg) {
+    public static CodeBuilder defaultStore(CodeBuilder code, RegisterInfo reg) {
         if (reg instanceof ExtendedSlot ext) {
             defaultLoad(code, ext.cd());
             store(code, ext.cd(), ext.slot());
@@ -1150,7 +1168,7 @@ public abstract class Builder {
                 store(code, cds[i], slots[i]);
             }
 
-            if (multi.extSlot() != MultiSlot.NO_SLOT) {
+            if (multi.extSlot() != MultiSlot.NO_EXT) {
                 code.iconst_1()
                     .istore(multi.extSlot());
             }
@@ -1158,6 +1176,7 @@ public abstract class Builder {
             defaultLoad(code, reg.cd());
             store(code, reg.cd(), reg.slot());
         }
+        return code;
     }
 
     /**
@@ -1192,7 +1211,7 @@ public abstract class Builder {
      * @param reg      the register containing the vale to check
      * @param lblNull  the label to jump to if the register is "Null".
      */
-    public static void checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
+    public static CodeBuilder checkNull(CodeBuilder code, RegisterInfo reg, Label lblNull) {
         if (reg instanceof ExtendedSlot extSlot) {
             assert reg.cd().isPrimitive();
 
@@ -1210,6 +1229,7 @@ public abstract class Builder {
             loadNull(code);
             code.if_acmpeq(lblNull);
         }
+        return code;
     }
 
     /**
@@ -1217,7 +1237,7 @@ public abstract class Builder {
      *
      * @param lblNotNull  the label to jump to if the register is "not Null".
      */
-    public static void checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
+    public static CodeBuilder checkNotNull(CodeBuilder code, RegisterInfo reg, Label lblNotNull) {
         if (reg instanceof ExtendedSlot extSlot) {
             assert reg.cd().isPrimitive();
 
@@ -1235,44 +1255,48 @@ public abstract class Builder {
             loadNull(code);
             code.if_acmpne(lblNotNull);
         }
+        return code;
     }
 
     /**
      * Generate a "load" for the XTC `Null` value.
      */
-    public static void loadNull(CodeBuilder code) {
+    public static CodeBuilder loadNull(CodeBuilder code) {
         code.getstatic(CD_Nullable, "Null", CD_Nullable);
+        return code;
     }
 
     /**
      * Generate a "load" for a boolean value
      */
-    public static void loadBoolean(CodeBuilder code, boolean value) {
+    public static CodeBuilder loadBoolean(CodeBuilder code, boolean value) {
         if (value) {
             code.iconst_1();
         } else {
             code.iconst_0();
         }
+        return code;
     }
 
     /**
      * Invoke the specified method with the opcode required by the property's JVM owner
      * representation.
      */
-   public static void invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
+   public static CodeBuilder invoke(CodeBuilder code, TypeConstant targetType, ClassDesc cd,
                                String methodName, MethodTypeDesc md) {
         if (targetType.isJitInterface()) {
             code.invokeinterface(cd, methodName, md);
         } else {
             code.invokevirtual(cd, methodName, md);
         }
+       return code;
     }
 
     /**
      * Generate a default return for the specified Java class assuming the corresponding value
      * is already on java stack.
      */
-    public static void addReturn(CodeBuilder code, ClassDesc cd) {
+    public static CodeBuilder addReturn(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
             case "I", "S", "B", "Z":
@@ -1296,6 +1320,7 @@ public abstract class Builder {
         } else {
             code.areturn();
         }
+        return code;
     }
 
     /**
@@ -1303,25 +1328,27 @@ public abstract class Builder {
      *
      * @param cd the target ClassDesc
      */
-    public static void invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
+    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
         invokeDefaultConstructor(code, cd, code.parameterSlot(0));
+        return code;
     }
 
     /**
      * Call the default constructor for the target class using the Ctx in the specified slot.
      */
-    public static void invokeDefaultConstructor(CodeBuilder code, ClassDesc cd, int ctxSlot) {
+    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd, int ctxSlot) {
         code.new_(cd)
             .dup()
             .aload(ctxSlot)
             .invokespecial(cd, INIT_NAME, MD_xvmVoid);
+        return code;
    }
 
     /**
      * Generate a "pop()" opcode for a type, assuming the corresponding value is already on the Java
      * stack.
      */
-    public static void pop(CodeBuilder code, Builder builder, TypeConstant type) {
+    public static CodeBuilder pop(CodeBuilder code, Builder builder, TypeConstant type) {
         TypeConstant baseType = type.removeNullable();
         if (baseType.isXvmPrimitive()) {
             for (ClassDesc cd : JitTypeDesc.getXvmPrimitiveClasses(baseType)) {
@@ -1330,13 +1357,14 @@ public abstract class Builder {
         } else {
             pop(code, JitTypeDesc.getJitClass(builder, baseType));
         }
+        return code;
     }
 
     /**
      * Generate a "pop()" opcode for Java class assuming the corresponding value is already on java
      * stack.
      */
-    public static void pop(CodeBuilder code, ClassDesc cd) {
+    public static CodeBuilder pop(CodeBuilder code, ClassDesc cd) {
         if (cd.isPrimitive()) {
             switch (cd.descriptorString()) {
             case "J", "D":
@@ -1348,6 +1376,7 @@ public abstract class Builder {
         } else {
             code.pop();
         }
+        return code;
     }
 
     /**
@@ -1359,17 +1388,17 @@ public abstract class Builder {
      *
      * @param type  the primitive type for the boxed value
      */
-    public static void unboxNullable(CodeBuilder code, TypeConstant type, ClassDesc cd) {
+    public static CodeBuilder unboxNullable(CodeBuilder code, TypeConstant type, ClassDesc cd) {
         Label        lblNotNull   = code.newLabel();
         Label        lblDone      = code.newLabel();
         TypeConstant typeSansNull = type.removeNullable();
         ClassDesc[]  primitiveCds = typeSansNull.isXvmPrimitive()
-                                    ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
-                                    : new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeSansNull)};
+                ? JitTypeDesc.getXvmPrimitiveClasses(typeSansNull)
+                : new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeSansNull)};
 
         code.dup();
-        loadNull(code);
-        code.if_acmpne(lblNotNull)
+        loadNull(code)
+            .if_acmpne(lblNotNull)
             .pop();
         for (ClassDesc primitiveCd : primitiveCds) {
             defaultLoad(code, primitiveCd);
@@ -1378,35 +1407,40 @@ public abstract class Builder {
             .goto_(lblDone)
             .labelBinding(lblNotNull)
             .checkcast(cd);
-        unbox(code, type);
-        code.iconst_0()
+        unbox(code, type)
+            .iconst_0()
             .labelBinding(lblDone);
+        return code;
     }
 
     /**
-     * Generate boxing opcodes for a nullable Java primitive on the Java stack.
+     * Generate boxing opcodes for a nullable JIT primitive on the Java stack.
      *
-     * <p>In: the primitive value followed by its "is Null" extension flag<br>
+     * <p>In: the primitive components followed by the "is Null" extension flag<br>
      * Out: the boxed reference, or Ecstasy {@code Null} when that flag was set
      *
-     * <p>This is the inverse of {@link #unboxNullable}. A {@code NullablePrimitive} occupies two
-     * Java slots, so it cannot simply be boxed the way a plain primitive can: the extension flag
-     * decides whether there is a value to box at all.
+     * <p>This is the inverse of {@link #unboxNullable}. Both {@code NullablePrimitive} and
+     * {@code NullableXvmPrimitive} carry an additional flag, so they cannot simply be boxed the
+     * way a plain primitive can: the extension flag decides whether there is a value to box at all.
      *
      * @param type  the nullable primitive type of the value on the stack
      */
-    public static void boxNullable(CodeBuilder code, TypeConstant type) {
+    public static CodeBuilder boxNullable(CodeBuilder code, TypeConstant type) {
         TypeConstant sansNull = type.removeNullable();
         Label        lblNull  = code.newLabel();
         Label        lblDone  = code.newLabel();
 
         code.ifne(lblNull);
-        box(code, sansNull);
-        code.goto_(lblDone)
+        box(code, sansNull)
+            .goto_(lblDone)
             .labelBinding(lblNull);
-        pop(code, JitTypeDesc.requireJavaPrimitive(sansNull));
-        loadNull(code);
-        code.labelBinding(lblDone);
+        ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(sansNull);
+        for (int i = cds.length - 1; i >= 0; i--) {
+            pop(code, cds[i]);
+        }
+        loadNull(code)
+            .labelBinding(lblDone);
+        return code;
     }
 
     /**
@@ -1417,8 +1451,9 @@ public abstract class Builder {
      *
      * @param reg  the RegisterInfo for the unboxed value
      */
-    public static void unbox(CodeBuilder code, RegisterInfo reg) {
+    public static CodeBuilder unbox(CodeBuilder code, RegisterInfo reg) {
         unbox(code, reg.type());
+        return code;
     }
 
     /**
@@ -1429,17 +1464,17 @@ public abstract class Builder {
      *
      * @param type  the primitive type for the boxed value
      */
-    public static void unbox(CodeBuilder code, TypeConstant type) {
+    public static CodeBuilder unbox(CodeBuilder code, TypeConstant type) {
         String name = type.removeNullable()
                 .getSingleUnderlyingClass(false)
                 .getName();
 
         switch (name) {
-            case "Bit"     -> code.getfield(CD_Bit,     "$value", CD_int);
-            case "Boolean" -> code.getfield(CD_Boolean, "$value", CD_boolean);
-            case "Char"    -> code.getfield(CD_Char,    "$value", CD_int);
-            case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",  CD_int);
-            case "Dec64"   -> code.getfield(CD_Dec64,   "$bits",  CD_long);
+            case "Bit"     -> code.getfield(CD_Bit,     "$value",    CD_int);
+            case "Boolean" -> code.getfield(CD_Boolean, "$value",    CD_boolean);
+            case "Char"    -> code.getfield(CD_Char,    "codepoint", CD_int);
+            case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",     CD_int);
+            case "Dec64"   -> code.getfield(CD_Dec64,   "$bits",     CD_long);
             case "Dec128"  -> {
                 // stack is Dec128
                 code.dup();
@@ -1502,6 +1537,7 @@ public abstract class Builder {
             }
             default -> throw new UnsupportedOperationException("Cannot unbox " + name);
         }
+        return code;
     }
 
     /**
@@ -1512,8 +1548,9 @@ public abstract class Builder {
      *
      * @param reg  the RegisterInfo for the unboxed value
      */
-    public static void box(CodeBuilder code, RegisterInfo reg) {
+    public static CodeBuilder box(CodeBuilder code, RegisterInfo reg) {
         box(code, reg.type());
+        return code;
     }
 
     /**
@@ -1526,7 +1563,7 @@ public abstract class Builder {
      * @param code  the {@link CodeBuilder} to use to generate byte codes
      * @param type  the type to box the values from the stack into
      */
-    public static void box(CodeBuilder code, TypeConstant type) {
+    public static CodeBuilder box(CodeBuilder code, TypeConstant type) {
         String name = type.removeNullable()
                           .getSingleUnderlyingClass(false)
                           .getName();
@@ -1559,6 +1596,7 @@ public abstract class Builder {
             case "Duration" -> code.invokestatic(CD_Duration, "$box", MD_Duration_box);
             default         -> throw new UnsupportedOperationException("Cannot box " + name);
         }
+        return code;
     }
 
     /**
@@ -1568,7 +1606,7 @@ public abstract class Builder {
      * <p>In: an unboxed primitive value<br>
      * Out: the boxed Java reference
      */
-    public static void boxJava(CodeBuilder code, ClassDesc cd) {
+    public static CodeBuilder boxJava(CodeBuilder code, ClassDesc cd) {
         assert cd.isPrimitive();
 
         switch (cd.descriptorString()) {
@@ -1603,6 +1641,7 @@ public abstract class Builder {
         default:
             throw new UnsupportedOperationException();
         }
+        return code;
     }
 
     /**
@@ -1643,14 +1682,15 @@ public abstract class Builder {
      *
      * @param returnIndex the index of the value in the Ctx object
      */
-    public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+    public static CodeBuilder loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         loadFromContext(code, cd, returnIndex, code.parameterSlot(0));
+        return code;
     }
 
     /**
      * Generate a load of a return value from the specified context slot.
      */
-    public static void loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex, int ctxSlot) {
+    public static CodeBuilder loadFromContext(CodeBuilder code, ClassDesc cd, int returnIndex, int ctxSlot) {
         assert returnIndex >= 0;
 
         code.aload(ctxSlot);
@@ -1695,20 +1735,22 @@ public abstract class Builder {
                 code.checkcast(cd);
             }
         }
+        return code;
     }
 
     /**
      * Generate a "store the return value to the context" for the specified Java class.
      * In: The value to store is at the java stack top.
      */
-    public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
+    public static CodeBuilder storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex) {
         storeToContext(code, cd, returnIndex, code.parameterSlot(0));
+        return code;
     }
 
     /**
      * Generate a store of a return value into the specified context slot.
      */
-    public static void storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex, int ctxSlot) {
+    public static CodeBuilder storeToContext(CodeBuilder code, ClassDesc cd, int returnIndex, int ctxSlot) {
         assert returnIndex >= 0;
 
         code.aload(ctxSlot);
@@ -1763,6 +1805,7 @@ public abstract class Builder {
                     .aastore();
             }
         }
+        return code;
     }
 
     /**
@@ -1796,14 +1839,15 @@ public abstract class Builder {
      * Add the code to throw an Ecstasy exception. The code we produce is equivalent to:
      * {@code throw new Exception(ctx).$init(ctx, text, null);}
      */
-    public static void throwException(CodeBuilder code, ClassDesc exCD, String text) {
+    public static CodeBuilder throwException(CodeBuilder code, ClassDesc exCD, String text) {
         throwException(code, exCD, text, code.parameterSlot(0));
+        return code;
     }
 
     /**
      * Add the code to throw an Ecstasy exception using the Ctx in the specified slot.
      */
-    public static void throwException(CodeBuilder code, ClassDesc exCD, String text, int ctxSlot) {
+    public static CodeBuilder throwException(CodeBuilder code, ClassDesc exCD, String text, int ctxSlot) {
         invokeDefaultConstructor(code, exCD, ctxSlot);
         code.aload(ctxSlot);
         code.loadConstant(text)
@@ -1811,34 +1855,39 @@ public abstract class Builder {
             .invokevirtual(exCD, "$init", md(
                 CD_nException, CD_Ctx, CD_JavaString, CD_Throwable))
             .athrow();
+        return code;
     }
 
     /**
      * Add the code to throw a "TypeMismatch" exception.
      */
-    public static void throwTypeMismatch(CodeBuilder code, String text, int ctxSlot) {
+    public static CodeBuilder throwTypeMismatch(CodeBuilder code, String text, int ctxSlot) {
         throwException(code, ClassDesc.of(N_TypeMismatch), text, ctxSlot);
+        return code;
     }
 
     /**
      * Add the code to throw an "OutOfBounds" exception.
      */
-    public static void throwOutOfBounds(CodeBuilder code, String text, int ctxSlot) {
+    public static CodeBuilder throwOutOfBounds(CodeBuilder code, String text, int ctxSlot) {
         throwException(code, ClassDesc.of(N_OutOfBounds), text, ctxSlot);
+        return code;
     }
 
     /**
      * Add the code to throw an "IllegalState" exception.
      */
-    public static void throwIllegalState(CodeBuilder code, String text, int ctxSlot) {
+    public static CodeBuilder throwIllegalState(CodeBuilder code, String text, int ctxSlot) {
         throwException(code, ClassDesc.of(N_IllegalState), text, ctxSlot);
+        return code;
     }
 
     /**
      * Add the code to throw an "ReadOnly" exception.
      */
-    public static void throwReadOnly(CodeBuilder code, String text, int ctxSlot) {
+    public static CodeBuilder throwReadOnly(CodeBuilder code, String text, int ctxSlot) {
         throwException(code, ClassDesc.of(N_ReadOnly), text, ctxSlot);
+        return code;
     }
 
     /**
@@ -1960,7 +2009,7 @@ public abstract class Builder {
     /**
      * Adjust the int value on the stack according to its type.
      */
-    public static void adjustIntValue(CodeBuilder code, TypeConstant type) {
+    public static CodeBuilder adjustIntValue(CodeBuilder code, TypeConstant type) {
         switch (type.getSingleUnderlyingClass(false).getName()) {
             case "Bit"    -> code.i2b().ldc(0x01).iand();
             case "Nibble" -> code.ldc(0x0F).iand();
@@ -1973,6 +2022,7 @@ public abstract class Builder {
                  "Char"   -> {}
             default       -> throw new IllegalStateException();
         }
+        return code;
     }
 
     /**
@@ -1984,21 +2034,28 @@ public abstract class Builder {
      * Out: that same single value in the register form the rest of the generated code expects.
      * The stack depth never changes.
      *
-     * <p>{@code Float8e4} and {@code Float8e5} are the only types this method normalizes: they
-     * are stored in a {@code byte} field, but their register form is the raw 8-bit encoding held
-     * as an unsigned {@code int}, so the sign extension performed by the field load has to be
-     * masked off again. Every other type is taken as is and nothing at all is emitted for it.
+     * <p>The types that need normalizing are the ones whose register form is unsigned but whose
+     * field carrier is a signed {@code byte} or {@code short}: {@code Byte}/{@code UInt8} and
+     * {@code Float8e4}/{@code Float8e5} in a {@code byte}, {@code UInt16} in a {@code short}. For
+     * those the field load sign-extends, so the high bits have to be masked off again to get back
+     * the unsigned register form, exactly as {@link #adjustIntValue} does after arithmetic.
+     *
+     * <p>Everything else is taken as is: the signed types want the sign extension, {@code Nibble}
+     * holds 0 to 15 and so is always positive in its {@code byte}, {@code Bit} and {@code Boolean}
+     * load as 0 or 1, and the remaining carriers are not narrowed at all.
      *
      * @param code  the code builder
      * @param type  the type of the field that was just loaded; a nullable form is accepted
      */
-    public static void normalizePrimitiveField(CodeBuilder code, TypeConstant type) {
+    public static CodeBuilder normalizePrimitiveField(CodeBuilder code, TypeConstant type) {
         TypeConstant baseType = type.removeNullable();
         if (baseType.isJavaPrimitive()) {
             switch (baseType.getSingleUnderlyingClass(false).getName()) {
-                case "Float8e4", "Float8e5" -> code.ldc(0xFF).iand();
+                case "Byte", "UInt8", "Float8e4", "Float8e5" -> code.ldc(0xFF).iand();
+                case "UInt16"                                -> code.ldc(0xFFFF).iand();
             }
         }
+        return code;
     }
 
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
@@ -2006,10 +2063,11 @@ public abstract class Builder {
     /**
      * Adds a log message generation (this also allows to break in the debugger).
      */
-    public static void addLog(CodeBuilder code, int ctxSlot, String message) {
+    public static CodeBuilder addLog(CodeBuilder code, int ctxSlot, String message) {
         code.aload(ctxSlot)
             .loadConstant(message)
             .invokevirtual(CD_Ctx, "log", md(CD_void, CD_JavaString));
+        return code;
     }
 
     /**

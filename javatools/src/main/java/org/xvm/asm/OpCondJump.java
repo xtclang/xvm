@@ -333,12 +333,23 @@ public abstract class OpCondJump
             }
 
             case OP_JMP_TYPE, OP_JMP_NTYPE: {
-                // we can only infer types for registers and constant types
-                if (!bctx.isRegister(m_nArg) || m_nArg2 > CONSTANT_OFFSET) {
+                boolean isRegister = bctx.isRegister(m_nArg);
+                boolean isGeneric  = bctx.isGenericProperty(m_nArg);
+
+                // we can only infer types for registers and generic properties
+                if (!isRegister && !isGeneric || m_nArg2 > CONSTANT_OFFSET) {
                     break;
                 }
-                TypeConstant typeTarget = bctx.getArgumentType(m_nArg);
-                TypeConstant typeTest   = bctx.getTypeConstant(m_nArg2);
+
+                TypeConstant typeTest = bctx.getTypeConstant(m_nArg2);
+                TypeConstant typeTarget;
+                if (isGeneric) {
+                    assert typeTest.isTypeOfType();
+                    typeTest   = typeTest.getParamType(0);
+                    typeTarget = tmx.getType(m_nArg, nAddrThis);
+                } else {
+                    typeTarget = bctx.getArgumentType(m_nArg);
+                }
 
                 if (typeTarget.isJavaPrimitive()) {
                     // we can statically compute the result, which most probably means that a formal

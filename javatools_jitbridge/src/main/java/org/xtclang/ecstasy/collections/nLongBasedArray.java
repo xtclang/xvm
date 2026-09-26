@@ -486,7 +486,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     protected long $get21bitUnsignedElement(long index) {
         // frdc algorithm: https://arxiv.org/abs/1902.01961
         return ($storage[(int) ((index *= 0x55555556L) >>> 32)] >>>
-               (21 * (2 - ((int) (((index & 0xFFFFFFFFL) * 3) >>> 32)))));
+               (21 * (2 - ((int) (((index & 0xFFFFFFFFL) * 3) >>> 32))))) & 0x1FFFFFL;
     }
 
     /**

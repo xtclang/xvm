@@ -7,8 +7,10 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
 /**
- * A synthetic type used by the JIT type matrix to mark a declared but unassigned register.
- * This type is transient and cannot be stored in a {@link ConstantPool}.
+ * A synthetic type used by the JIT type matrix to mark a register that may be unassigned or absent
+ * on an incoming control-flow path.
+ *
+ * <p>This type is transient and cannot be stored in a {@link ConstantPool}.
  */
 public class UnassignedTypeConstant
         extends TypeConstant {

@@ -17,11 +17,14 @@ package charArrayTests {
     }
 
     void run() {
-
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
+        shouldCreateMaxBmpCharArray();
+        shouldSliceConstantArray();
+        shouldSliceUnicodeArray();
+        shouldRejectSliceOutOfBounds();
         shouldBeEmpty();
         shouldAddElement();
         shouldAddElementUsingOperator();
@@ -42,7 +45,6 @@ package charArrayTests {
         shouldIterateUsingIterator();
         shouldDeleteSpecificIndexFromArray();
         shouldInsertValueIntoArray();
-
     }
 
     void shouldCreateWithCapacity() {
@@ -69,6 +71,60 @@ package charArrayTests {
         Char[] array = ['a', 'b', 'z'];
         assert array.size == 3;
         assert array[0] == 'a' && array[1] == 'b' && array[2] == 'z';
+    }
+
+    void shouldCreateMaxBmpCharArray() {
+        // U+FFFF still fits in one UTF-16 code unit; supplementary characters start at U+10000
+        Char[] array = ['a', '\uFFFE', '\uFFFF', 'z'];
+        assert array.size == 4;
+        assert array[1].codepoint == 0xFFFE;
+        assert array[2].codepoint == 0xFFFF;
+        assert new String(array) == "a\uFFFE\uFFFFz";
+    }
+
+    void shouldSliceConstantArray() {
+        Char[] chars = "abcdefghijklmnop".chars;
+
+        // the slice crosses a packed-storage boundary and starts between packed characters
+        Char[] slice = chars[2 ..< 11];
+        assert slice.mutability == Constant;
+        assert new String(slice) == "cdefghijk";
+        assert new String(chars[10 >.. 2]) == "jihgfedc";
+        assert new String(chars[2 >..< 6]) == "def";
+        assert new String(slice[1 .. 3]) == "def";
+        assert new String(chars[4 .. 4]) == "e";
+        assert chars[0 ..< 0].empty;
+        assert chars[16 ..< 16].empty;
+        assert "".chars[0 ..< 0].empty;
+    }
+
+    void shouldSliceUnicodeArray() {
+        Char[] chars = "aΩ🙂b界c".chars;
+
+        // Unicode uses three 21-bit codepoints per storage word, including supplementary chars
+        assert chars[1] == 'Ω';
+        assert chars[2].codepoint == 0x1F642;
+        // TODO CP: the lexer represents Char literals as Java chars, truncating this codepoint
+        // assert chars[2] == '\U0001F642';
+        assert new String(chars[1 ..< 5]) == "Ω🙂b界";
+        assert new String(chars[4 .. 1]) == "界b🙂Ω";
+        assert new String(chars[2 .. 2]) == "🙂";
+    }
+
+    void shouldRejectSliceOutOfBounds() {
+        Char[] chars = "abc".chars;
+        try {
+            Char[] slice = chars[-1 .. 1];
+            assert as "expected OutOfBounds for a negative lower bound";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        try {
+            Char[] slice = chars[0 .. 3];
+            assert as "expected OutOfBounds for an upper bound past the end";
+        } catch (OutOfBounds e) {
+            // expected
+        }
     }
 
     void shouldBeEmpty() {
@@ -114,18 +170,30 @@ package charArrayTests {
         Char c = ++array[1];
         assert c == 'c';
         assert array[1] == 'c';
+
+        // crossing 255 promotes the whole array from eight to three characters per storage word
+        array = "ab\u00FFdefghij".chars.toArray(Mutable);
+        c = ++array[2];
+        assert c == '\u0100';
+        assert new String(array) == "ab\u0100defghij";
+
+        // an existing 21-bit slot must be replaced without leaving bits from its previous value
+        array[3] = '\u01FF';
+        c = ++array[3];
+        assert c == '\u0200';
+        assert new String(array) == "ab\u0100\u0200efghij";
     }
 
-// ToDo requires utf21 support in ArrayᐸCharᐳ.java
     void shouldPreIncOutOfBounds() {
-//        Char[] array = ['a', 'b', 'z'];
-//        array[1] = maxChar();
-//        try {
-//            Char c = ++array[1];
-//            assert as "expected OutOfBounds to be thrown";
-//        } catch (OutOfBounds e) {
-//            // expected
-//        }
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
+        array[1] = maxChar();
+        try {
+            Char c = ++array[1];
+            assert as "expected OutOfBounds to be thrown";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        assert array[0] == 'a' && array[1] == maxChar() && array[2] == 'z';
     }
 
     void shouldPostInc() {
@@ -133,18 +201,29 @@ package charArrayTests {
         Char c = array[1]++;
         assert c == 'b';
         assert array[1] == 'c';
+
+        // promote a character beyond the first eight-character storage word
+        array = "abcdefgh\u00FFj".chars.toArray(Mutable);
+        c = array[8]++;
+        assert c == '\u00FF';
+        assert new String(array) == "abcdefgh\u0100j";
+
+        array[9] = '\u01FF';
+        c = array[9]++;
+        assert c == '\u01FF';
+        assert new String(array) == "abcdefgh\u0100\u0200";
     }
 
-// ToDo requires utf21 support in ArrayᐸCharᐳ.java
     void shouldPostIncOutOfBounds() {
-//        Char[] array = ['a', 'b', 'z'];
-//        array[1] = maxChar();
-//        try {
-//            Char c = array[1]++;
-//            assert as "expected OutOfBounds to be thrown";
-//        } catch (OutOfBounds e) {
-//            // expected
-//        }
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
+        array[1] = maxChar();
+        try {
+            Char c = array[1]++;
+            assert as "expected OutOfBounds to be thrown";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        assert array[0] == 'a' && array[1] == maxChar() && array[2] == 'z';
     }
 
     void shouldPreDec() {
@@ -189,16 +268,16 @@ package charArrayTests {
         assert array[1] == 'g';
     }
 
-// ToDo requires utf21 support in ArrayᐸCharᐳ.java
     void shouldAddInPlaceOutOfBounds() {
-//        Char[] array = ['a', 'b', 'z'];
-//        array[1] = maxChar();
-//        try {
-//            array[1] += 5;
-//            assert as "expected OutOfBounds to be thrown";
-//        } catch (OutOfBounds e) {
-//            // expected
-//        }
+        Char[] array = ['a', 'b', 'z'].toArray(Mutable);
+        array[1] = maxChar();
+        try {
+            array[1] += 5;
+            assert as "expected OutOfBounds to be thrown";
+        } catch (OutOfBounds e) {
+            // expected
+        }
+        assert array[0] == 'a' && array[1] == maxChar() && array[2] == 'z';
     }
 
     void shouldSubInPlace() {

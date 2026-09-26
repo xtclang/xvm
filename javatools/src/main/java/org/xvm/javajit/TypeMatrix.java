@@ -11,6 +11,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
 import org.xvm.asm.constants.CastTypeConstant;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnassignedTypeConstant;
 
@@ -28,6 +29,11 @@ public class TypeMatrix {
 
     private final BuildContext bctx;
     private final OpView[]     views;
+
+    /**
+     * The local constant ids for generic properties tracked by this matrix.
+     */
+    private final Map<PropertyConstant, Integer> generics = new HashMap<>();
 
     public record OpView(Map<Integer, TypeConstant> types, boolean isImmutable) {
         /**
@@ -59,7 +65,8 @@ public class TypeMatrix {
     /**
      * Propagate all register types from current op to the destination op.
      *
-     * @param exceptId  if not negative, indicates the register id **not** to propagate
+     * @param exceptId  if not {@code -1}, indicates the register or generic property id **not** to
+     *                  propagate
      *
      * @return the set of registers that have widened their types
      */
@@ -70,7 +77,8 @@ public class TypeMatrix {
     /**
      * Propagate all register types from the specified view to another op.
      *
-     * @param exceptId  if not negative, indicates the register id **not** to propagate
+     * @param exceptId  if not {@code -1}, indicates the register or generic property id **not** to
+     *                  propagate
      *
      * @return the set of registers that have widened their types
      */
@@ -105,15 +113,31 @@ public class TypeMatrix {
     public void declare(int currAddr, int regId, TypeConstant type) {
         assert type != null;
 
-        if (currAddr != -1) {
+        if (currAddr == -1) {
+            ensureMutableView(0).types.put(regId, type);
+        } else if (views[currAddr + 1] == null) {
             follow(currAddr, currAddr + 1, regId);
+            ensureMutableView(currAddr + 1).types.put(regId, type);
+        } else {
+            // a jump can bypass an initialized declaration and meet its fall-through path
+            OpView outgoingView = views[currAddr].copy();
+            outgoingView.types.put(regId, type);
+            follow(outgoingView, currAddr + 1, -1);
         }
-
-        ensureMutableView(currAddr + 1).types.put(regId, type);
 
         if (regId >= 0) {
             bctx.scope.declareRegister(regId);
         }
+    }
+
+    /**
+     * Declare a generic property whose value can participate in type narrowing.
+     */
+    public void declareGenericProperty(int propertyId, PropertyConstant property) {
+        assert property.isFormalType();
+
+        generics.put(property, propertyId);
+        declare(-1, propertyId, property.getConstraintType().resolveConstraints());
     }
 
     /**
@@ -130,7 +154,7 @@ public class TypeMatrix {
     public void assign(int currAddr, int nextAddr, int regId, TypeConstant type) {
         assert currAddr >= 0 && type != null;
 
-        if (bctx.isProperty(regId)) {
+        if (bctx.isProperty(regId) && !bctx.isGenericProperty(regId)) {
             // some ops can store their result directly into a property; its declared type must not
             // participate in register type flow
             follow(currAddr, nextAddr, -1);
@@ -157,13 +181,20 @@ public class TypeMatrix {
 
         OpView nextView = ensureMutableView(nextAddr);
         if (incomingType == null) {
-            nextView.types.put(regId, type);
+            // another incoming path may bypass even the register's declaration
+            nextView.types.put(regId, incomingView == null
+                    ? type
+                    : new UnassignedTypeConstant(type));
         } else {
-            if (incomingType instanceof UnassignedTypeConstant unassigned) {
+            boolean unassigned = incomingType instanceof UnassignedTypeConstant;
+            if (unassigned) {
                 bctx.registerConditionalAssignment(regId);
-                incomingType = unassigned.getUnderlyingType();
+                incomingType = unwrap(incomingType);
             }
             mergeType(nextView.types, regId, type, incomingType);
+            if (unassigned) {
+                nextView.types.compute(regId, (_, merged) -> new UnassignedTypeConstant(unwrap(merged)));
+            }
         }
     }
 
@@ -292,30 +323,29 @@ public class TypeMatrix {
         Set<Integer> changeSet = Collections.emptySet();
         for (var entry : currView.types.entrySet()) {
             Integer regId = entry.getKey();
-            if (regId < 0 || regId == exceptId) {
+            if (regId == -1 || regId == exceptId) {
                 continue;
             }
 
-            // an UnassignedTypeConstant (UTC) produces six possible merge scenarios:
-            // - UTC(A) + null   -> UTC(A)
-            // - A      + null   -> A
-            // - UTC(A) + UTC(B) -> UTC(merge(A, B))
-            // - UTC(A) + B      -> merge(A, B) and register the conditional assignment
-            // - A      + UTC(B) -> merge(A, B) and register the conditional assignment
-            // - A      + B      -> merge(A, B)
+            // an UnassignedTypeConstant (UTC) preserves a possibly unassigned incoming path:
+            // 1) UTC(A) + null   -> UTC(A)
+            // 2) A      + null   -> UTC(A); even the declaration may have been skipped
+            // 3) UTC(A) + UTC(B) -> UTC(merge(A, B))
+            // 4) UTC(A) + B      -> UTC(merge(A, B)) and register the conditional assignment
+            // 5) A      + UTC(B) -> UTC(merge(A, B)) and register the conditional assignment
+            // 6) A      + B      -> merge(A, B)
             TypeConstant currType        = entry.getValue();
             TypeConstant nextType        = nextView.types.get(regId);
             boolean      currUnassigned  = currType instanceof UnassignedTypeConstant;
             boolean      nextUnassigned  = nextType == null ||
                                            nextType instanceof UnassignedTypeConstant;
-            boolean      mergeUnassigned = false;
+            boolean      mergeUnassigned = currUnassigned || nextUnassigned;
             if (currUnassigned == nextUnassigned) {
                 if (currType.equals(nextType)) {
                     continue;
-                } else {
-                    mergeUnassigned = currUnassigned;
                 }
             } else if (nextType != null) {
+                // rules 4 and 5: only one incoming path is assigned
                 bctx.registerConditionalAssignment(regId);
             }
 
@@ -334,9 +364,22 @@ public class TypeMatrix {
             }
 
             if (mergeUnassigned) {
-                nextView.types.compute(regId, (_, type) -> new UnassignedTypeConstant(type));
-            } else if (currUnassigned || nextUnassigned) {
-                nextView.types.compute(regId, (_, type) -> unwrap(type));
+                // rules 1-5: preserve the possibly unassigned path
+                nextView.types.compute(regId, (_, type) -> new UnassignedTypeConstant(unwrap(type)));
+            }
+        }
+
+        // rule 2 with the views reversed: if currView is missing entries present in nextView,
+        // mark those registers as potentially unassigned
+        for (var entry : nextView.types.entrySet()) {
+            int          regId    = entry.getKey();
+            TypeConstant nextType = entry.getValue();
+            if (regId >= 0 && regId != exceptId && !currView.types.containsKey(regId) &&
+                    !(nextType instanceof UnassignedTypeConstant)) {
+                if (nextView.isImmutable) {
+                    views[nextAddr] = nextView = nextView.copy();
+                }
+                nextView.types.replace(regId, new UnassignedTypeConstant(nextType));
             }
         }
         return changeSet;
@@ -393,7 +436,45 @@ public class TypeMatrix {
     // ----- retrieval phase -----------------------------------------------------------------------
 
     /**
-     * @return the type for the specified register at the specified address
+     * @return true iff the incoming register type is unknown or marked as "unassigned", in which
+     *         case code generation may need to supply a default value to satisfy the verifier
+     */
+    public boolean needsInitialization(int regId, int addr) {
+        OpView       view = views[addr];
+        TypeConstant type = view == null ? null : view.types.get(regId);
+        return type == null || type instanceof UnassignedTypeConstant;
+    }
+
+    /**
+     * Augment a property type with any generic type narrowing known at the specified address.
+     */
+    public TypeConstant augmentPropertyType(TypeConstant type, int addr) {
+        return type.containsFormalType(true)
+                ? type.resolveGenerics(bctx.pool(),
+                    formal -> formal instanceof PropertyConstant prop
+                        ? getGenericType(prop, addr)
+                        : null)
+                : type;
+    }
+
+    /**
+     * Resolve a generic type from the narrowing information at the specified address.
+     */
+    private TypeConstant getGenericType(PropertyConstant formal, int addr) {
+        Integer propId = generics.get(formal);
+        if (propId == null) {
+            return null;
+        }
+
+        OpView       view = views[addr];
+        TypeConstant type = view == null ? null : unwrap(view.types.get(propId));
+        return type instanceof CastTypeConstant castType
+                ? castType.getUnderlyingType2()
+                : type;
+    }
+
+    /**
+     * @return the type for the specified register or generic property at the specified address
      */
     public TypeConstant getType(int regId, int addr) {
         OpView view = views[addr];

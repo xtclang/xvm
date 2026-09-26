@@ -1572,7 +1572,14 @@ public class MethodInfo
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
             case Capped -> {
-                MethodBody target = getChain()[1];
+                // successive subclasses can cap the same declaration more than once;
+                // retain its wider signature by skipping all synthetic caps
+                MethodBody[] aBody = getChain();
+                int          iBody = 1;
+                while (aBody[iBody].getImplementation() == Implementation.Capped) {
+                    iBody++;
+                }
+                MethodBody target = aBody[iBody];
                 if (target.getImplementation() != Implementation.Delegating ||
                         target.getMethodStructure() != null) {
                     yield target.getJitDesc(builder, typeContainer);

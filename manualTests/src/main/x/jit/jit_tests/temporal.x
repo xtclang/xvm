@@ -12,6 +12,7 @@ package temporal {
             try {
                 passed &= runTest(() -> new DateTests().run());
                 passed &= runTest(() -> new DurationTests().run());
+                passed &= runTest(() -> new TimeTests().run());
 
             } catch (IllegalState e) {
                 console.print(e);

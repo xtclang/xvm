@@ -9,6 +9,7 @@ package stringArrayTests {
         shouldCreateArrayInitializedWithZeroValue();
         shouldCreateArrayInitializedWithValue();
         shouldCreateConstantArray();
+        shouldFreeze();
         shouldBeEmpty();
         shouldAddElement();
         shouldAddElementUsingOperator();
@@ -43,6 +44,26 @@ package stringArrayTests {
         String[] array = ["apple", "banana", "cherry"];
         assert array.size == 3;
         assert array[0] == "apple" && array[1] == "banana" && array[2] == "cherry";
+    }
+
+    void shouldFreeze() {
+        String[] array = new String[];
+        array.add("before");
+
+        // freezing defaults to a copy; later writes must not affect the frozen array
+        String[] frozen = array.freeze();
+        assert frozen.mutability == Constant;
+        assert array.mutability == Mutable;
+        array[0] = "after";
+        assert frozen[0] == "before";
+
+        String[] inPlace = array.freeze(True);
+        assert inPlace.mutability == Constant;
+        assert array.mutability == Constant;
+        assert inPlace[0] == "after";
+
+        String[] empty = new String[];
+        assert empty.freeze().empty;
     }
 
     void shouldBeEmpty() {

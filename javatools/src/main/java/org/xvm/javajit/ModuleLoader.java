@@ -176,7 +176,8 @@ public class ModuleLoader
                     out.println("Fields:");
                     model.fields()
                             .stream()
-                            .map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString())
+                            .map(f -> "  " + f.fieldName() + " " + f.fieldTypeSymbol().descriptorString() +
+                                    (f.flags().has(AccessFlag.STATIC) ? " static" : ""))
                             .forEach(out::println);
 
                     out.println("Methods:");

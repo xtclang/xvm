@@ -468,8 +468,8 @@ public class HandyTest {
             "this\nis\ta test of the \nemergency broadcasting system! eèêeėēeęįœøō",
         };
 
-        for (final String s : as) {
-            var sb = new StringBuilder();
+        for (String s : as) {
+            StringBuilder sb = new StringBuilder();
             writeUtf8String(dos(sb), s);
             assertEquals(s, readUtf8String(dis(sb.toString())));
         }
@@ -477,24 +477,24 @@ public class HandyTest {
 
     // ----- helpers -------------------------------------------------------------------------------
 
-    static DataInput dis(final String s) {
+    static DataInput dis(String s) {
         return new DataInputStream(new ByteArrayInputStream(hexStringToByteArray(s)));
     }
 
-    static @NotNull DataOutput dos(final @NotNull StringBuilder sb) {
+    static @NotNull DataOutput dos(@NotNull StringBuilder sb) {
         return new DataOutputStream(new OutputStream() {
             @Override
-            public void write(final int b) {
+            public void write(int b) {
                 appendByteAsHex(sb, b);
             }
 
             @Override
-            public void write(final @NotNull byte[] b) {
+            public void write(@NotNull byte[] b) {
                 appendByteArrayAsHex(sb, b);
             }
 
             @Override
-            public void write(final @NotNull byte[] b, final int off, final int len) {
+            public void write(@NotNull byte[] b, int off, int len) {
                 appendByteArrayAsHex(sb, b, off, len);
             }
         });

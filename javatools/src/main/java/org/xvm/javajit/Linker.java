@@ -208,7 +208,7 @@ public class Linker {
      * Obtain a read-only Map of all defined (or marked-as-undefined) names within this Linker.
      *
      * @return a Map from name to its defined/undefined setting, for each name defined (or
-     *     marked as undefined) within this Linker
+     *         marked as undefined) within this Linker
      */
     public Map<String, Boolean> defines() {
         return Collections.unmodifiableMap(defines);
@@ -230,8 +230,7 @@ public class Linker {
     }
 
     /**
-     * @return the ModuleRepository that the Linker will use to load a Module if necessary, or
-     *     null
+     * @return the ModuleRepository that the Linker will use to load a Module if necessary, or null
      */
     public ModuleRepository repo() {
         return repo;
@@ -253,8 +252,7 @@ public class Linker {
     }
 
     /**
-     * @return the Refiner that the Linker will use to refine a Module if necessary, or
-     *     null
+     * @return the Refiner that the Linker will use to refine a Module if necessary, or null
      */
     public Refiner refiner() {
         return refiner;

@@ -16,7 +16,10 @@ import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.BuildContext;
+import org.xvm.javajit.Builder;
 import org.xvm.javajit.RegisterInfo;
+
+import org.xvm.javajit.registers.SingleSlot;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -33,6 +36,8 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nMethod;
 import static org.xvm.javajit.Builder.CD_nObject;
 import static org.xvm.javajit.Builder.md;
+
+import static org.xvm.javajit.JitFlavor.Specific;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -124,6 +129,21 @@ public class MBind
 
         assert regMethod.type().isMethod() && regMethod.cd() == CD_nMethod;
 
+        if (regTarget.flavor().isOptimized) {
+            // interface MethodHandle(s) bind a boxed receiver, even for an optimized return;
+            // e.g. UInt.toDec binds FPConvertible.toDec64 to the boxed UInt
+            TypeConstant typeTarget = regTarget.type();
+            regTarget.load(code);
+            if (regTarget.flavor().isNullablePrimitive()) {
+                Builder.boxNullable(code, typeTarget);
+            } else {
+                Builder.box(code, typeTarget);
+            }
+            ClassDesc cdTarget = bctx.builder.ensureClassDesc(typeTarget);
+            int       slot     = bctx.storeTempValue(code, cdTarget);
+            regTarget = new SingleSlot(A_STACK, slot, Specific, typeTarget, cdTarget, "");
+        }
+
         /* The code we need to generate looks like the following:
 
               MethodHandle std = method.stdMethod.bindTo(target);
@@ -154,7 +174,7 @@ public class MBind
         if (regTarget.type().isJitInterface()) {
             code.checkcast(CD_nObject);
         }
-        code.invokevirtual(regTarget.cd(), "$isImmut", md(CD_boolean));
+        code.invokevirtual(CD_nObject, "$isImmut", md(CD_boolean));
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());

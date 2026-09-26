@@ -16,12 +16,17 @@ import org.xtclang.ecstasy.text.String;
 import org.xtclang.ecstasy.temporal.Duration;
 import org.xtclang.ecstasy.temporal.Date;
 
+import org.xvm.asm.ConstantPool;
+
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.ByteHashCollector;
+
+import static org.xvm.javajit.Builder.NEW;
 
 /**
  * All Ecstasy `Type` types must extend this class.
@@ -87,6 +92,42 @@ public class nType
         throw Exception.$unsupported(ctx, "Type " + $dataType);
     }
 
+    /**
+     * Native implementation of "conditional Hasher<DataType> hashed()".
+     *
+     * TODO: this is temporary - it needs to be removed here and naturally generated
+     */
+    public boolean hashed$p(Ctx ctx) {
+        ConstantPool pool = ctx.pool();
+        if (!$dataType.isA(pool.typeHashable())) {
+            return false;
+        }
+        if (!$dataType.isSingleUnderlyingClass(true)) {
+            throw Exception.$unsupported(ctx, "Type.hashed() for " + $dataType.getValueString());
+        }
+        if ($dataType.findCallable(pool.sigHashCode()) == null ||
+                $dataType.findCallable(pool.sigEquals()) == null) {
+            return false;
+        }
+
+        TypeConstant hasherType = pool.ensureParameterizedTypeConstant(
+                pool.ensureEcstasyTypeConstant("collections.NaturalHasher"), $dataType);
+        TypeSystem       typeSystem = ctx.container.typeSystem;
+        MethodConstant   ctorId     = hasherType.ensureTypeInfo().findConstructor();
+        java.lang.String newName    = ctorId.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        try {
+            // use the generated factory so the hasher implements the correct specialized interface
+            java.lang.Class<?> hasherClass = typeSystem.loader.loadClass(
+                    hasherType.getCallableJitType().ensureJitClassName(typeSystem));
+            ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, TypeConstant.class)
+                    .invoke(null, ctx, hasherType);
+            return true;
+        } catch (ReflectiveOperationException e) {
+            throw new Exception(ctx).$init(ctx,
+                    "Failed to create a natural hasher for " + $dataType.getValueString(), e);
+        }
+    }
+
     // TODO: Stringable methods below are temporary; remove when we can compile Type.x
     public long estimateStringLength$p(Ctx ctx) {
         return 0;
@@ -127,18 +168,18 @@ public class nType
                 return false;
             }
             return switch (value1) {
-                case Bit n1     -> n1.$value == ((Bit)     value2).$value;
-                case Boolean b1 -> b1.$value == ((Boolean) value2).$value;
-                case Char c1    -> c1.$value == ((Char)    value2).$value;
-                case Nibble n1  -> n1.$value == ((Nibble)  value2).$value;
-                case Int8 n1    -> n1.$value == ((Int8)    value2).$value;
-                case Int16 n1   -> n1.$value == ((Int16)   value2).$value;
-                case Int32 n1   -> n1.$value == ((Int32)   value2).$value;
-                case Int64 n1   -> n1.$value == ((Int64)   value2).$value;
-                case UInt8 n1   -> n1.$value == ((UInt8)   value2).$value;
-                case UInt16 n1  -> n1.$value == ((UInt16)  value2).$value;
-                case UInt32 n1  -> n1.$value == ((UInt32)  value2).$value;
-                case UInt64 n1  -> n1.$value == ((UInt64)  value2).$value;
+                case Bit n1     -> n1.$value    == ((Bit)     value2).$value;
+                case Boolean b1 -> b1.$value    == ((Boolean) value2).$value;
+                case Char c1    -> c1.codepoint == ((Char)    value2).codepoint;
+                case Nibble n1  -> n1.$value    == ((Nibble)  value2).$value;
+                case Int8 n1    -> n1.$value    == ((Int8)    value2).$value;
+                case Int16 n1   -> n1.$value    == ((Int16)   value2).$value;
+                case Int32 n1   -> n1.$value    == ((Int32)   value2).$value;
+                case Int64 n1   -> n1.$value    == ((Int64)   value2).$value;
+                case UInt8 n1   -> n1.$value    == ((UInt8)   value2).$value;
+                case UInt16 n1  -> n1.$value    == ((UInt16)  value2).$value;
+                case UInt32 n1  -> n1.$value    == ((UInt32)  value2).$value;
+                case UInt64 n1  -> n1.$value    == ((UInt64)  value2).$value;
 
                 case Int128 n1 -> Int128.$equals(n1.$lowValue, n1.$highValue,
                         ((Int128) value2).$lowValue, ((Int128) value2).$highValue);
@@ -249,7 +290,7 @@ public class nType
             collector = switch (value) {
                 case Bit n1     -> collector.addInt8(n1.$value);
                 case Boolean b  -> collector.addInt8(b.$value ? 1 : 0);
-                case Char c     -> collector.addInt32(c.$value);
+                case Char c     -> collector.addInt32(c.codepoint);
                 case Nibble n1  -> collector.addInt8(n1.$value);
                 case Int8 n1    -> collector.addInt8(n1.$value);
                 case Int16 n1   -> collector.addInt16(n1.$value);

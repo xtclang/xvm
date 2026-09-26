@@ -11,7 +11,6 @@ import org.xtclang.ecstasy.text.String;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.ModuleLoader;
 
 import org.xvm.runtime.template._native.io.xTerminalConsole;
 

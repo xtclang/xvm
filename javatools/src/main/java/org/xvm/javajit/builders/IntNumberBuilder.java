@@ -147,11 +147,10 @@ public class IntNumberBuilder extends NumberBuilder {
                     addPrimitiveReturn(code, jmd);
                     break;
                 default:
-                    throw new UnsupportedOperationException("Unsupported XVM primitive number "
-                            + thisType);
+                    throw unsupportedXvmPrimitive();
             }
         } else {
-            throw new UnsupportedOperationException("Unsupported number type: " + thisType);
+            throw unsupportedNumber();
         }
     }
 
@@ -205,11 +204,10 @@ public class IntNumberBuilder extends NumberBuilder {
                     addPrimitiveReturn(code, jmd);
                     break;
                 default:
-                    throw new UnsupportedOperationException("Unsupported XVM primitive number "
-                            + thisType);
+                    throw unsupportedXvmPrimitive();
             }
         } else {
-            throw new UnsupportedOperationException("Unsupported number type: " + thisType);
+            throw unsupportedNumber();
         }
     }
 
@@ -284,11 +282,10 @@ public class IntNumberBuilder extends NumberBuilder {
                             code.parameterSlot(1), code.parameterSlot(0));
                     break;
                 default:
-                    throw new UnsupportedOperationException("Unsupported XVM primitive number "
-                            + thisType);
+                    throw unsupportedXvmPrimitive();
             }
         } else {
-            throw new UnsupportedOperationException("Unsupported number type: " + thisType);
+            throw unsupportedNumber();
         }
     }
 
@@ -336,11 +333,10 @@ public class IntNumberBuilder extends NumberBuilder {
                             code.parameterSlot(0), code.parameterSlot(1));
                     break;
                 default:
-                    throw new UnsupportedOperationException("Unsupported XVM primitive number "
-                            + thisType);
+                    throw unsupportedXvmPrimitive();
             }
         } else {
-            throw new UnsupportedOperationException("Unsupported number type: " + thisType);
+            throw unsupportedNumber();
         }
     }
 
@@ -425,7 +421,7 @@ public class IntNumberBuilder extends NumberBuilder {
         FixedInt target = FixedInt.of(jmd.optimizedReturns[0].type);
 
         if (needsLowerCheck(source, target) || needsUpperCheck(source, target)) {
-            int[] checkParams = jmd.getAllOptimizedParams(0);
+            int[] checkParams = jmd.getAllOptimizedParamIndexes(0);
             assert checkParams.length == 2;
             assert !jmd.optimizedParams[checkParams[0]].extension;
             assert jmd.optimizedParams[checkParams[1]].extension;
@@ -740,6 +736,20 @@ public class IntNumberBuilder extends NumberBuilder {
         }
 
         addPrimitiveReturn(code, jmd);
+    }
+
+    /**
+     * @return the exception to throw for a multi-slot XVM primitive this builder cannot handle
+     */
+    private UnsupportedOperationException unsupportedXvmPrimitive() {
+        return new UnsupportedOperationException("Unsupported XVM primitive number " + thisType);
+    }
+
+    /**
+     * @return the exception to throw for a number type this builder cannot handle at all
+     */
+    private UnsupportedOperationException unsupportedNumber() {
+        return new UnsupportedOperationException("Unsupported number type: " + thisType);
     }
 
     private static final ClassDesc CD_BigInteger = ClassDesc.of(BigInteger.class.getName());

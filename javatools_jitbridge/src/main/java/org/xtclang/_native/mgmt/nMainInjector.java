@@ -7,6 +7,10 @@ import java.util.function.Function;
 
 import org.xtclang._native.io.TerminalConsole;
 
+import org.xtclang._native.numbers.RTRandom;
+
+import org.xtclang._native.temporal.LocalClock;
+
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.ConstantPool;
@@ -47,11 +51,19 @@ public class nMainInjector
      * This method is called by the JitConnector via reflection.
      */
     public void addNativeResources() {
-        ConstantPool pool     = xvm.ecstasyPool;
-        TypeConstant pureType = pool.ensureEcstasyTypeConstant("io.Console");
+        ConstantPool pool = xvm.ecstasyPool;
 
+        TypeConstant consoleType = pool.ensureEcstasyTypeConstant("io.Console");
         Class temporaryLoadStringClassToPrimeConstTypeInfo = String.class;
+        suppliers.put(new Resource(consoleType, "console"), TerminalConsole::$create);
 
-        suppliers.put(new Resource(pureType, "console"), TerminalConsole::$create);
+        TypeConstant randomType = pool.ensureEcstasyTypeConstant("numbers.Random");
+        suppliers.put(new Resource(randomType, "rnd"),    RTRandom::$create);
+        suppliers.put(new Resource(randomType, "random"), RTRandom::$create);
+
+        TypeConstant clockType = pool.ensureEcstasyTypeConstant("temporal.Clock");
+        suppliers.put(new Resource(clockType, "clock"),      LocalClock::$createUtcClock);
+        suppliers.put(new Resource(clockType, "utcClock"),   LocalClock::$createUtcClock);
+        suppliers.put(new Resource(clockType, "localClock"), LocalClock::$createLocalClock);
     }
 }
