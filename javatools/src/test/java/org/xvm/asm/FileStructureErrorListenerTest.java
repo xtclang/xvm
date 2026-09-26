@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,12 +34,11 @@ public class FileStructureErrorListenerTest {
      */
     @Test
     public void aStructureDoesNotAnswerForDiagnostics() {
-        for (Class<?> clz : new Class<?>[]{XvmStructure.class, FileStructure.class,
-                                           Component.class, TypeConstant.class}) {
+        List.<Class<?>>of(XvmStructure.class, FileStructure.class, Component.class, TypeConstant.class).forEach(clz -> {
             assertFalse(Arrays.stream(clz.getMethods())
                             .anyMatch(m -> m.getName().equals("getErrorListener")),
                     clz.getSimpleName() + " must not offer a listener to route through");
-        }
+        });
     }
 
     /**
@@ -47,12 +47,12 @@ public class FileStructureErrorListenerTest {
      */
     @Test
     public void aStructuresReportingCannotBeRedirected() {
-        for (Class<?> clz : new Class<?>[]{XvmStructure.class, FileStructure.class}) {
+        List.<Class<?>>of(XvmStructure.class, FileStructure.class).forEach(clz -> {
             assertFalse(Arrays.stream(clz.getMethods())
                             .anyMatch(m -> m.getName().equals("setErrorListener")
                                         || m.getName().equals("reportingTo")),
                     clz.getSimpleName() + " must not offer a way to redirect reporting");
-        }
+        });
     }
 
     /**

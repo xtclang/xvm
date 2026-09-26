@@ -37,13 +37,13 @@ public class ErrorListenerSilenceTest {
 
         assertNotSame(silent(PROBE), silent(DISCARD), "they are separate constants");
 
-        for (ErrorListener errs : List.of(silent(PROBE), silent(CASCADE), silent(DISCARD))) {
+        List.of(silent(PROBE), silent(CASCADE), silent(DISCARD)).forEach(errs -> {
             errs.log(Severity.ERROR, CODE, in(source, 0, 1), "a");
             assertFalse(errs.isAbortDesired());
             assertFalse(errs.hasSeriousErrors());
             assertTrue(errs.isSilent());
             assertSame(errs, errs.merge(), "a silent listener absorbs its own branch");
-        }
+        });
     }
 
     /**

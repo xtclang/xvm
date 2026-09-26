@@ -136,7 +136,7 @@ public class ErrorListenerCancelTest {
 
     @Test
     public void testSilencingReportsPreservesCancellation() {
-        for (ErrorListener.Silence why : ErrorListener.Silence.values()) {
+        List.of(ErrorListener.Silence.values()).forEach(why -> {
             ErrorList     errs  = new ErrorList(UNLIMITED);
             AtomicBoolean stop  = new AtomicBoolean();
             ErrorListener quiet = cancellable(errs, stop::get).silence(why);
@@ -147,7 +147,7 @@ public class ErrorListenerCancelTest {
             stop.set(true);
             assertTrue(quiet.isAbortDesired());
             assertTrue(quiet.branch(null).isAbortDesired());
-        }
+        });
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";

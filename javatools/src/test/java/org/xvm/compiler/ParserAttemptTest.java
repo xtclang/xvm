@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 import org.xvm.asm.ErrorList;
@@ -163,7 +165,7 @@ public class ParserAttemptTest {
 
     @Test
     public void testModuleNameScanRestoresDestinationForValidAndMalformedNames() {
-        for (var source : new String[] {"module example.com {}", "module 123 {}", "class Other {}"}) {
+        List.of("module example.com {}", "module 123 {}", "class Other {}").forEach(source -> {
             var errors = new ErrorList(UNLIMITED);
             var parser = new Parser(new Source(source), errors);
             assertEquals(source.startsWith("module example") ? "example.com" : null,
@@ -171,7 +173,7 @@ public class ParserAttemptTest {
             assertTrue(errors.getErrors().isEmpty());
             parser.log(Severity.WARNING, CODE, 0, 1);
             assertEquals(1, errors.getErrors().size());
-        }
+        });
     }
 
     private static final String SOURCE = "module TestSimple { void run() {} }";

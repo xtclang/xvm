@@ -63,12 +63,12 @@ public class CompilerDiagnosticsTest {
                 """, collecting(heard::add));
 
         assertFalse(heard.isEmpty(), "broken source produces diagnostics");
-        for (ErrorListener.ErrorInfo err : heard) {
+        heard.forEach(err -> {
             Site.In in = assertInstanceOf(Site.In.class, err.site(),
                     "a source diagnostic belongs in the source");
             assertTrue(in.lPosEnd() >= in.lPosStart(), "the span does not run backwards");
             assertTrue(err.getSeverity().isAtLeast(Severity.WARNING));
-        }
+        });
     }
 
     /**

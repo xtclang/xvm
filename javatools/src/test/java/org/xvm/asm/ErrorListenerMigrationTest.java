@@ -64,12 +64,12 @@ class ErrorListenerMigrationTest {
         branch.error("PARSER-03", ErrorListener.at(structure), "new", "report");
         branch.merge();
         assertEquals(2, errors.getErrors().size());
-        for (var error : errors.getErrors()) {
+        errors.getErrors().forEach(error -> {
             var site = assertInstanceOf(Site.In.class, error.site());
             assertSame(source, site.source());
             assertEquals(node.getStartPosition(), site.lPosStart());
             assertEquals(node.getEndPosition(), site.lPosEnd());
-        }
+        });
     }
 
     @Test
