@@ -159,6 +159,12 @@ Every report lists all 113 scenario IDs, including the 50 unimplemented entries 
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
+**Parity is unfinished:** all 50 missing IntelliJ scenarios already have VS Code implementations.
+The [required L60 backlog](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
+covers every missing case and all three partial cases. Selected completion/signature and native
+lifecycle checkpoints do not close that work. Native actions must verify editor behavior;
+installed-client protocol assertions must verify details such as versions, cancellation and stale
+handles that have no visible UI. Those assertion layers must be identified in the coverage record.
 The catalog is a declared Gradle task input and its SHA-256 identifies the data used by each run.
 Native playbook runs are reserved for occasional checkpoints during compiler feature development.
 Select cases with `-PintellijPlaybookCases=X34,X99,X100,X101,X102,X103,X104,X105,X107,X108`;
