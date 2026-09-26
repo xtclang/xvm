@@ -73,6 +73,7 @@ import org.gradle.api.tasks.SourceSetOutput;
 import org.gradle.api.tasks.TaskCollection;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
+import org.gradle.api.tasks.bundling.Zip;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
 
 import org.jetbrains.annotations.NotNull;
@@ -691,6 +692,24 @@ public class XtcProjectDelegate {
                 artifact.setType(ArtifactTypeDefinition.DIRECTORY_TYPE);
             });
         });
+
+        // Sources travel as their own variant, paired with the same source set as the binaries.
+        final var sourceElements = configs.register(sourceSet.getName() + "XtcSourcesElements", config -> {
+            config.setCanBeResolved(false);
+            config.setCanBeConsumed(true);
+            config.attributes(attributes -> {
+                attributes.attribute(CATEGORY_ATTRIBUTE, objects.named(Category.class, LIBRARY));
+                attributes.attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named(LibraryElements.class,
+                    MAIN_SOURCE_SET_NAME.equals(sourceSet.getName()) ? "xtc-sources" : "xtc-test-sources"));
+            });
+        });
+        final var sourceFiles = sourceSet.getExtensions().getByType(XtcSourceDirectorySet.class);
+        final var sourceArchive = tasks.register(sourceSet.getTaskName("", "xtcSources"), Zip.class, task -> {
+            task.getArchiveClassifier().set(sourceSet.getName() + "-xtc-sources");
+            task.getDestinationDirectory().set(project.getLayout().getBuildDirectory().dir("sources"));
+            task.from(sourceFiles);
+        });
+        project.getArtifacts().add(sourceElements.getName(), sourceArchive);
 
         // TODO:
         //   Ensure that any produced XTC module files are publishable if we publish the xtcComponent.

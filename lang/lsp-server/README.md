@@ -131,14 +131,15 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 The compiler backend bundles the same complete library set as the XDK distribution through a shared
 Gradle dependency bundle. All bundled modules are available as read-only binary dependencies, with
-no invented source locations or rename targets. Application sources are discovered from workspace
+matching read-only source targets for declarations with unambiguous compiler metadata. Application sources are discovered from workspace
 folders unless an explicit source graph is configured. `sourceModules: []` disables discovery;
-`sourceModules: null` restores it. Discovery refreshes on startup and watched-file changes; unsaved
-import-graph edits and dynamic workspace-folder changes are not yet discovered. Workspace symbol
+`sourceModules: null` restores it. Discovery refreshes on startup, watched files, unsaved header edits, close and workspace-folder changes.
+Invalid edited graphs retire old semantic facts and report `SOURCE-GRAPH` until repaired. Workspace symbol
 search compiles unopened modules on demand and retains healthy independent modules when others fail.
 Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
 compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary
-revisions; these queries currently require a fully compiling graph and recompile it on demand.
+revisions. Detached query results are reused for unchanged inputs; healthy modules remain navigable
+when independent neighbors fail. Exact references and refactoring require complete graph proof.
 Graph rename additionally covers inline source types and static members through recompilation and
 binding/dispatch comparison. Import actions remove proven-unused ordinary imports or sort contiguous
 imports while retaining comments; they use versioned edits. Member-file moves, general instance
@@ -342,9 +343,10 @@ call `XdkAdapter.replaceDependencies(dependencies)` and reschedule the returned 
 Each compiler attempt deserializes fresh structures. Symbol keys identify a constant only within
 the exact artifact/source-index revision; they are not permanent identities across library rebuilds.
 
-This is a Kotlin host API, with no editor setting or JSON-RPC configuration endpoint yet. Project
-discovery of unsaved import changes and a persistent workspace reference index remain open. Bundled XDK binaries have no
-source index. See the
+This is a Kotlin host API, with no editor setting or JSON-RPC configuration endpoint yet. A persistent
+workspace reference database remains open. Bundled XDK sources use the matching `xtc-sources` Gradle
+variant and existing compiler source/debug metadata. Library files open as read-only source views;
+they do not become editable compiler sessions. Missing or ambiguous metadata supplies no target. See the
 [dependency API verification](../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23)
 for ownership, cancellation and replacement guarantees.
 
@@ -366,7 +368,7 @@ overlapping source graphs are rejected. Closing sessions prunes unused cached ar
 
 This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
 declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
-settings. Unsaved import-edge changes and dynamic workspace-folder changes remain follow-ups.
+settings. Unsaved import-edge edits, document close and workspace-folder changes also refresh discovery.
 It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
 

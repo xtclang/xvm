@@ -129,6 +129,18 @@ val compilerModules =
         }
     }
 
+// Source archives are consumed as resources; no distribution installation or extraction task.
+val compilerSources =
+    configurations.create("compilerSources") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        isTransitive = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc-sources"))
+        }
+    }
+
 val treeSitterNativeLib =
     configurations.create("treeSitterNativeLib") {
         isCanBeConsumed = false
@@ -141,6 +153,7 @@ val treeSitterNativeLib =
 
 dependencies {
     compilerModules(libs.bundles.xdk.libraries)
+    compilerSources(libs.bundles.xdk.libraries)
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
 
@@ -197,6 +210,13 @@ val compilerModuleIndex =
         property("modules", compilerModuleFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
     }
 
+val compilerSourceIndex =
+    tasks.register<WriteProperties>("compilerSourceIndex") {
+        destinationFile.set(layout.buildDirectory.file("generated/compiler/sources.properties"))
+        inputs.files(compilerSources).withPathSensitivity(PathSensitivity.NONE)
+        property("archives", compilerSources.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+    }
+
 // Add native library resources to source sets
 sourceSets.main {
     resources.srcDir(copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") })
@@ -208,6 +228,8 @@ val processResources =
         dependsOn(copyNativeLibToResources)
         from(compilerModuleFiles) { into("org/xvm/lsp/xdk") }
         from(compilerModuleIndex) { into("org/xvm/lsp/xdk") }
+        from(compilerSourceIndex) { into("org/xvm/lsp/xdk") }
+        from(compilerSources) { into("org/xvm/lsp/xdk/sources") }
     }
 
 tasks.withType<JavaCompile>().configureEach {

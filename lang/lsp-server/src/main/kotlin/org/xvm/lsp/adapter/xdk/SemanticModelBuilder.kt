@@ -805,7 +805,7 @@ private class SemanticModelBuilder(
         val existing = if (target is Register) registers[target] else constants[target as Constant]
         if (existing != null) return existing
         val symbol = SymbolId(id, symbols.size)
-        val dependency = (target as? IdentityConstant)?.let(dependencies::get)
+        val dependency = (target as? IdentityConstant)?.let { dependencies[it] ?: XdkLibrarySources.declaration(it) }
         val location = declaration ?: dependency?.location
         if (target is Register) registers[target] = symbol else constants[target as Constant] = symbol
         symbols[symbol] =

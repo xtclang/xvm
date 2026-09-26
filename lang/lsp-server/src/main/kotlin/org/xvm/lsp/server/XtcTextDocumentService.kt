@@ -77,6 +77,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
@@ -266,8 +267,9 @@ class XtcTextDocumentService(
         content: String,
         version: Int,
     ) {
+        val changedGraph = (adapter as? XdkAdapter)?.updateDocument(uri, content).orEmpty()
         analyseOne(uri, content, version)
-        refreshScopes(adapter.affectedAnalysisScopes(uri) - adapter.analysisScope(uri))
+        refreshScopes((changedGraph + adapter.affectedAnalysisScopes(uri)) - adapter.analysisScope(uri))
     }
 
     private fun refreshScopes(scopes: Set<String>) {
@@ -363,10 +365,16 @@ class XtcTextDocumentService(
             val document = openDocuments.remove(uri)
             invalidateQueries(setOf(uri))
             document?.analysis?.cancel(false)
-            adapter.closeDocument(uri)
+            val retired =
+                if (adapter is XdkAdapter) {
+                    adapter.closeDocumentAndRefresh(uri)
+                } else {
+                    adapter.closeDocument(uri)
+                    emptySet()
+                }
             if (closed) return
             server.publishDiagnostics(uri, emptyList(), document?.version)
-            refreshScopes(affected)
+            refreshScopes(affected + retired)
             if (openDocuments.values.none { it.scope == document?.scope }) {
                 clearUnowned(publishedByScope.remove(document?.scope).orEmpty() - uri)
             }

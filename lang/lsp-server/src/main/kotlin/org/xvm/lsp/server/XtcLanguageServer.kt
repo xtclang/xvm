@@ -91,6 +91,8 @@ import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.WorkspaceFoldersOptions
+import org.eclipse.lsp4j.WorkspaceServerCapabilities
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -627,6 +629,16 @@ class XtcLanguageServer(
 
             // --- Workspace features ---
             workspaceSymbolProvider = Either.forLeft(true)
+            if (adapter is XdkAdapter) {
+                workspace =
+                    WorkspaceServerCapabilities().apply {
+                        workspaceFolders =
+                            WorkspaceFoldersOptions().apply {
+                                supported = true
+                                changeNotifications = Either.forRight(true)
+                            }
+                    }
+            }
 
             // Code lenses: Run action on module declarations (TreeSitterAdapter)
             codeLensProvider = CodeLensOptions(false)
@@ -774,6 +786,25 @@ class XtcLanguageServer(
     // =========================================================================
     // Helper Methods
     // =========================================================================
+
+    fun changeCompilerWorkspaceFolders(
+        added: List<String>,
+        removed: List<String>,
+    ) {
+        val compiler = adapter as? XdkAdapter ?: return
+        synchronized(compilerSettings) {
+            compilerSettings.updateAndGet { settings ->
+                settings.copy(folders = (settings.folders.filterNot { it in removed } + added).distinct(), revision = settings.revision + 1)
+            }
+        }
+        try {
+            textDocumentService.refreshDependencies { compiler.changeWorkspaceFolders(added, removed) }
+        } catch (failure: IllegalArgumentException) {
+            reportCompilerConfigError(failure)
+        } catch (failure: IOException) {
+            logger.warn("Workspace discovery failed; keeping previous graph: {}", failure.message)
+        }
+    }
 
     fun refreshCompilerDiscovery() {
         val compiler = adapter as? XdkAdapter ?: return

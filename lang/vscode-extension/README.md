@@ -1,5 +1,12 @@
 # Ecstasy (XTC) Language Support for VS Code
 
+Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
+compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
+broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
+and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
+See [scope, ownership and validation](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
+
+
 Official Visual Studio Code extension for the **[Ecstasy programming language](https://xtclang.org)** (file extension `.x`, runtime XVM, compiler `xtc`).
 
 Ecstasy is a modular, object-oriented language designed for secure, multi-tenant cloud computing. The language is statically typed, uses a verifiable bytecode format, and ships with first-class support for services, fibers, and immutability. This extension brings rich IDE tooling for Ecstasy directly into VS Code: syntax highlighting, semantic tokens, hover, completion, navigation, debugging, project scaffolding, and Gradle task integration.
@@ -341,7 +348,7 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 103 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 106 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its
