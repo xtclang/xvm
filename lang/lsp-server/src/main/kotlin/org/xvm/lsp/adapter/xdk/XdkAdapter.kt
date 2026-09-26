@@ -929,8 +929,7 @@ class XdkAdapter internal constructor(
      * Blocks and declarations that span more than one line. An editor offers a fold per region,
      * so a region per expression would be noise rather than help.
      */
-    override fun getFoldingRanges(uri: String): List<FoldingRange> =
-        XdkAst.foldingRegions(analysis(uri)?.ast).map { (start, end) -> FoldingRange(start, end) }
+    override fun getFoldingRanges(uri: String): List<FoldingRange> = XdkAst.foldingRegions(analysis(uri)?.ast)
 
     /**
      * Expanding a selection walks out through the tree, which is exactly what the parent chain of

@@ -63,6 +63,7 @@ class XdkRecoveryTest {
                 assertThat(adapter.getFoldingRanges(URI)).anySatisfy {
                     assertThat(it.startLine).isEqualTo(1)
                     assertThat(it.endLine).isEqualTo(2)
+                    assertThat(it.endCharacter).isEqualTo(text.lines().last().length)
                 }
                 val cursor = Position(2, text.lines().last().length)
                 val selection = adapter.getSelectionRanges(URI, listOf(cursor)).single()

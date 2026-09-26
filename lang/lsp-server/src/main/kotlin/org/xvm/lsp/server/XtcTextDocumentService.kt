@@ -612,6 +612,8 @@ class XtcTextDocumentService(
             adapter.getFoldingRanges(params.textDocument.uri).map { r ->
                 FoldingRange(r.startLine, r.endLine).apply {
                     kind = r.kind?.toLsp()
+                    startCharacter = r.startCharacter
+                    endCharacter = r.endCharacter
                 }
             }
         }
