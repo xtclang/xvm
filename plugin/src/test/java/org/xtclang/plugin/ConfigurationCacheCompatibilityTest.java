@@ -253,6 +253,60 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals(TaskOutcome.SUCCESS, reused.task(":runXtc").getOutcome());
     }
 
+    @Test
+    void generatedSourceRootsComposeWithFiltersAndProducerDependencies() throws IOException {
+        Files.writeString(testProjectDir.resolve("settings.gradle.kts"), "rootProject.name = \"generated-sources\"\n");
+        Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
+            import org.xtclang.plugin.tasks.XtcCompileTask
+
+            plugins {
+                id("org.xtclang.xtc-plugin")
+            }
+            version = "1.0"
+            val generateSources = tasks.register<Copy>("generateSources") {
+                from("templates")
+                into(layout.buildDirectory.dir("generated/x"))
+            }
+            sourceSets.main {
+                xtc.srcDir(generateSources)
+                xtc.exclude("Ignored.x")
+            }
+            // Public Gradle consumers must be able to nest the typed XTC source set.
+            val combined = objects.sourceDirectorySet("combined", "combined sources")
+                .source(sourceSets.main.get().xtc)
+            tasks.named<XtcCompileTask>("compileXtc") {
+                actions.clear()
+                val modules = moduleSources
+                val allSources = combined.asFileTree
+                val destination = outputDirectory
+                doLast {
+                    val output = destination.get().asFile
+                    output.mkdirs()
+                    check(allSources.files.map { it.name }.sorted() == modules.files.map { it.name }.sorted())
+                    output.resolve("sources.txt").writeText(allSources.singleFile.readText())
+                }
+            }
+            """);
+        final var templates = Files.createDirectory(testProjectDir.resolve("templates"));
+        final var source = Files.writeString(templates.resolve("Example.x"), "module Example {}");
+        Files.writeString(templates.resolve("Ignored.x"), "module Ignored {}");
+        final var output = testProjectDir.resolve("build/xtc/main/lib/sources.txt");
+
+        final var first = runBuild("compileXtc");
+        assertEquals(TaskOutcome.SUCCESS, first.task(":generateSources").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, first.task(":compileXtc").getOutcome());
+        assertEquals("module Example {}", Files.readString(output));
+        final var reused = runBuild("compileXtc");
+        assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":compileXtc").getOutcome());
+        Files.writeString(source, "module Example { /* changed */ }");
+        final var changed = runBuild("compileXtc");
+        assertTrue(changed.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.SUCCESS, changed.task(":generateSources").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, changed.task(":compileXtc").getOutcome());
+        assertEquals("module Example { /* changed */ }", Files.readString(output));
+    }
+
     private BuildResult runBuild(final String... tasksAndOptions) {
         final var arguments = new ArrayList<>(List.of(tasksAndOptions));
         arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace"));
