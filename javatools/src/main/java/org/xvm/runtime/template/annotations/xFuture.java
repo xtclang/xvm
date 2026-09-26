@@ -859,17 +859,32 @@ public class xFuture
 
         @Override
         public String toString() {
-            return "(" + m_clazz + ") " + (
-                    getFuture().isDone() ? "Completed: " + toSafeString(): "Not completed"
-                    );
+            return "(" + m_clazz + ") " + describe(getFuture());
         }
 
-        protected String toSafeString() {
-            try {
-                return String.valueOf(getFuture().get());
-            } catch (Throwable e) {
-                return Utils.translate(e).toString();
+        /**
+         * Describe a future's state without blocking, allocating or throwing. Cancellation is
+         * tested before exceptional completion, because a cancelled future is also completed
+         * exceptionally.
+         *
+         * @param future  the future to describe, or null - {@link FutureTupleHandle} has none when
+         *                it holds no {@link FutureHandle}
+         *
+         * @return a description of the future's state
+         */
+        private static String describe(CompletableFuture<ObjectHandle> future) {
+            if (future == null) {
+                return "<no future>";
             }
+            if (!future.isDone()) {
+                return "Not completed";
+            }
+            if (future.isCancelled()) {
+                return "<cancelled>";
+            }
+            return future.isCompletedExceptionally()
+                    ? "<failed>"
+                    : "Completed: " + future.getNow(null);
         }
     }
 
