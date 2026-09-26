@@ -24,10 +24,10 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -210,7 +210,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private String resolveJavaExecutable() {
         final String executable = toolchainExecutable.getOrNull();
         if (executable == null) {
-            throw new org.gradle.api.GradleException("Java toolchain not configured - cannot resolve java executable for forked execution");
+            throw new GradleException("Java toolchain not configured - cannot resolve java executable for forked execution");
         }
         return executable;
     }

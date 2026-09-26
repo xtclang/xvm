@@ -57,10 +57,8 @@ import org.gradle.api.attributes.LibraryElements;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.ProjectLayout;
-import org.gradle.api.internal.tasks.DefaultSourceSet;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
@@ -72,6 +70,7 @@ import org.gradle.api.tasks.TaskCollection;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -470,7 +469,7 @@ public class XtcProjectDelegate {
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
             task.dependsOn(configs.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
-            task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME)); // Register this task as an XTC language compiler. Not a Java compiler.
+            task.setSource(sourceSet.getExtensions().getByType(XtcSourceDirectorySet.class));
 
             // Test source set should depend on main source set compilation
             // This mirrors Java's behavior where testCompileJava depends on compileJava
@@ -791,7 +790,7 @@ public class XtcProjectDelegate {
             // Create a source directory set named "xtc" for this existing source set.
             final var sourceSetName = sourceSet.getName();
             // Create the xtcSourceDirectorySet
-            final var xtcSourceDirectorySet = createXtcSourceDirectorySet(sourceSet.getName(), ((DefaultSourceSet)sourceSet).getDisplayName(), project);
+            final var xtcSourceDirectorySet = createXtcSourceDirectorySet(sourceSetName, sourceSetName, project);
             // Create the source set output, so that we can add processed resources and build source code (.xtc module) locations to it.
             final SourceSetOutput output = sourceSet.getOutput();
             // Add the "xtc" source set.
