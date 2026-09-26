@@ -13,6 +13,15 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class XdkGenericHeaderTest {
     @ParameterizedTest
+    @ValueSource(strings = [
+        "void damaged(Li§st<String> value) {}", "void damaged(Li§<String> value) {}",
+        "void damaged(Map<Int, Li§st<String>> value) {}", "Li§st<String> damaged() = [\"x\"];",
+    ])
+    fun `generic base completion preserves all written type arguments`(declaration: String) {
+        completion("module Headers { $declaration }", "List", 2, if (declaration.contains("Li§st")) 2 else 0)
+    }
+
+    @ParameterizedTest
     @ValueSource(
         strings = [
             "void damaged(List<§> value) {}",
