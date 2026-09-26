@@ -229,6 +229,11 @@ Fields and relative paths are framed to avoid ambiguous concatenation. Absolute 
 and timestamps do not affect identity. The corresponding files and options are also declared
 as Gradle task inputs, so a changed input triggers the cache lookup.
 
+Each cache entry is immutable after publication. Builders write both libraries into a private
+sibling directory, require two nonempty regular files, then publish the directory with an atomic
+rename. Concurrent builds can reuse the winning complete entry; failed builds never expose a
+partial pair. Existing incomplete entries fail with their path instead of being silently reused.
+
 ### Generated Libraries
 
 ```
