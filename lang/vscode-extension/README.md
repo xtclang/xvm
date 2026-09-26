@@ -335,6 +335,12 @@ missing, and records remaining visual/manual checks explicitly. `latest-run.txt`
 latest `results.txt`/`results.json` and retained scratch workspace. After assembling the compiler
 extension, `npm run test:playbook` runs only its editor checks; the Gradle command also supplies
 host/protocol regression evidence. The existing default-backend smoke suite remains separate.
+For a bounded correction, append `-PcompilerPlaybookCases=X95` to the Gradle playbook command,
+or use a comma-separated group such as `X94,X95`. Focused runs build the extension but skip the
+host/protocol test dependencies. After assembly, `npm run test:playbook -- --cases=X95` does the
+same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
+coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
+
 All 100 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the

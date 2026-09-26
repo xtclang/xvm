@@ -205,8 +205,13 @@ val testVscodeExtension = tasks.register<NpmTask>("testVscodeExtension") {
 tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
     description = "Run XdkAdapter playbook in VS Code (requires -Plsp.adapter=compiler)"
-    dependsOn("assemble", ":lsp-server:test", ":lsp-server:compilerStdioTest")
-    args.set(listOf("run", "test:playbook"))
+    val selectedCases = providers.gradleProperty("compilerPlaybookCases")
+    dependsOn("assemble")
+    if (!selectedCases.isPresent) {
+        dependsOn(":lsp-server:test", ":lsp-server:compilerStdioTest")
+    }
+    args.set(selectedCases.map { listOf("run", "test:playbook", "--", "--cases=$it") }
+        .orElse(listOf("run", "test:playbook")))
     inputs.dir(layout.projectDirectory.dir("src/test"))
     inputs.file(layout.projectDirectory.file("../doc/manual-test-plan.md"))
     inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))

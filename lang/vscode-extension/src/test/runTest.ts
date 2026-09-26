@@ -15,7 +15,18 @@ async function main(): Promise<void> {
     // __dirname at runtime resolves to <ext>/out/test, so the extension
     // root and the fixtures directory are two levels up.
     const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
-    const playbook = process.argv.includes('--playbook');
+    const args = process.argv.slice(2);
+    if (args.some(argument => argument !== '--playbook' && !argument.startsWith('--cases='))) {
+        throw new Error('Expected --playbook and optional --cases=ID[,ID]');
+    }
+    const playbook = args.includes('--playbook');
+    const selections = args.filter(argument => argument.startsWith('--cases='));
+    if (selections.length > 1 || (selections.length > 0 && !playbook)) {
+        throw new Error('Use --cases=ID[,ID] once, with --playbook');
+    }
+    const selected = playbook
+        ? (await import('./playbook/shared.js')).selectedScenarioIds(selections[0]?.slice('--cases='.length))
+        : [];
     const extensionTestsPath = path.resolve(__dirname, playbook ? 'playbook' : 'suite', 'index');
     const reports = path.join(extensionDevelopmentPath, 'build', 'reports', 'compiler-playbook');
     if (playbook) { await fs.mkdir(reports, { recursive: true }); }
@@ -49,6 +60,7 @@ async function main(): Promise<void> {
             ] : [])],
             extensionTestsEnv: runDirectory ? {
                 XTC_PLAYBOOK_REPORT_DIR: runDirectory,
+                XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
                 XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
             } : undefined,
