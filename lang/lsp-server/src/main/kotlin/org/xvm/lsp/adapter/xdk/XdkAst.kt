@@ -131,11 +131,7 @@ internal object XdkAst {
      * [AstNode.children] is an iterator that supports replacement during a compiler pass; a
      * reader wants a list, taken once.
      */
-    private fun AstNode.childList(): List<AstNode> {
-        val kids = mutableListOf<AstNode>()
-        children().forEachRemaining { kids += it }
-        return kids
-    }
+    private fun AstNode.childList(): List<AstNode> = children().toList()
 
     private fun AstNode.contains(
         line: Int,
