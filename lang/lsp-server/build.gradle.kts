@@ -75,8 +75,10 @@ logger.info("[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemantic
 val generateBuildInfo =
     tasks.register("generateBuildInfo") {
         val outputDir = layout.buildDirectory.dir("generated/resources/buildinfo")
-        val sourceDateEpoch = providers.gradleProperty("sourceDateEpoch")
-            .orElse(providers.environmentVariable("SOURCE_DATE_EPOCH"))
+        val sourceDateEpoch =
+            providers
+                .gradleProperty("sourceDateEpoch")
+                .orElse(providers.environmentVariable("SOURCE_DATE_EPOCH"))
         val projectVersion = project.version.toString() // Capture at configuration time
         val adapter = lspAdapter // Capture at configuration time
         val semanticTokens = lspSemanticTokens // Capture at configuration time
@@ -105,7 +107,7 @@ val generateBuildInfo =
     }
 
 sourceSets.main {
-    resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
+    resources.srcDir(generateBuildInfo)
 }
 
 // JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
@@ -118,7 +120,7 @@ repositories {
 // =============================================================================
 // Native Library from Tree-sitter
 // =============================================================================
-// Consume the tree-sitter native library for the current platform.
+// Consume the tree-sitter native libraries for all supported platforms.
 // This library is built on-demand using Zig cross-compilation.
 
 val treeSitterNativeLib =
@@ -168,24 +170,20 @@ dependencies {
 // library based on the current platform.
 
 val copyNativeLibToResources =
-    tasks.register<Copy>("copyNativeLibToResources") {
+    tasks.register<Sync>("copyNativeLibToResources") {
         group = "build"
         description = "Copy tree-sitter native libraries for all platforms to resources"
 
-        from(treeSitterNativeLib)
-        into(layout.buildDirectory.dir("generated/resources/native"))
+        from(treeSitterNativeLib) {
+            into("native")
+        }
+        into(layout.buildDirectory.dir("generated/resources/native-libraries"))
     }
 
 // Add native library resources to source sets
 sourceSets.main {
-    resources.srcDir(copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") })
+    resources.srcDir(copyNativeLibToResources)
 }
-
-// Ensure native library is copied before processResources
-val processResources =
-    tasks.named("processResources") {
-        dependsOn(copyNativeLibToResources)
-    }
 
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
