@@ -54,19 +54,15 @@ public class LspRoundTripTest {
             // source that does not compile is the ordinary case for an editor, not an exception
         }
 
-        List<Published> published = new ArrayList<>();
-        for (ErrorInfo err : heard) {
-            published.add(switch (err.site()) {
-                case Site.In in -> new Published(uri,
-                        Source.calculateLine(in.lPosStart()), Source.calculateOffset(in.lPosStart()),
-                        Source.calculateLine(in.lPosEnd()),   Source.calculateOffset(in.lPosEnd()),
-                        err.getSeverity(), err.getCode(), err.getMessage());
-                case Site.At at -> new Published(uri, 0, 0, 0, 0,
-                        err.getSeverity(), err.getCode(), at.xs().getDescription());
-                case Site.None _ -> new Published(uri, 0, 0, 0, 0, err.getSeverity(), err.getCode(), err.getMessage());
-            });
-        }
-        return published;
+        return heard.stream().map(err -> switch (err.site()) {
+            case Site.In in -> new Published(uri,
+                    Source.calculateLine(in.lPosStart()), Source.calculateOffset(in.lPosStart()),
+                    Source.calculateLine(in.lPosEnd()),   Source.calculateOffset(in.lPosEnd()),
+                    err.getSeverity(), err.getCode(), err.getMessage());
+            case Site.At at -> new Published(uri, 0, 0, 0, 0,
+                    err.getSeverity(), err.getCode(), at.xs().getDescription());
+            case Site.None _ -> new Published(uri, 0, 0, 0, 0, err.getSeverity(), err.getCode(), err.getMessage());
+        }).toList();
     }
 
     /**
@@ -117,15 +113,12 @@ public class LspRoundTripTest {
         assertTrue(afterFirst > 0);
         assertTrue(errs.getErrors().size() > afterFirst, "the second document adds to the list");
 
-        List<String> names = new ArrayList<>();
-        for (ErrorInfo err : errs.getErrors()) {
+        var names = errs.getErrors().stream().map(err -> {
             Site.In in = assertInstanceOf(Site.In.class, err.site(), "every problem is placed");
             String name = in.source().getFileName();
             assertNotNull(name, "and names the document it came from");
-            if (!names.contains(name)) {
-                names.add(name);
-            }
-        }
+            return name;
+        }).distinct().toList();
         assertEquals(List.of(URI_A, URI_B), names, "both documents are represented");
     }
 
