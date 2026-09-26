@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.xvm.asm.ClassStructure;
@@ -105,7 +106,8 @@ final class PartialConstructionResolver {
         }
         var validation = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         var trial = ctx.enter();
-        List<Expression> ordered = new ArrayList<>(written.stream().map(value -> (Expression) value.clone()).toList());
+        List<Expression> ordered = written.stream().map(value -> (Expression) value.clone())
+                .collect(Collectors.toCollection(ArrayList::new));
         if (creation.containsNamedArgs(ordered)) {
             ordered = creation.rearrangeNamedArgs(method, ordered, validation);
             if (ordered == null) {

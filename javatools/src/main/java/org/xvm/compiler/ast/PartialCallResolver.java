@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.xvm.asm.ClassStructure;
@@ -186,8 +187,8 @@ final class PartialCallResolver {
         if (parameters == null || parameters.length < written.size()) {
             return List.of();
         }
-        var arguments = new ArrayList<>(written.stream()
-                .map(argument -> (Expression) argument.clone()).toList());
+        var arguments = written.stream().map(argument -> (Expression) argument.clone())
+                .collect(Collectors.toCollection(ArrayList::new));
         if (site.validateExpressions(trial, arguments, parameters, validation) == null
                 || validation.hasSeriousErrors() || validation.isAbortDesired()
                 || arguments.stream().anyMatch(argument -> !argument.isSingle() || !argument.getTypeFit().isFit())) {
