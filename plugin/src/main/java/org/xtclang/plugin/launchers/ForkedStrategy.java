@@ -82,9 +82,7 @@ public abstract class ForkedStrategy implements ExecutionStrategy {
         logger.info("[plugin] execute(XtcRunTask): {} (runConfig: {})", getDesc(), runConfig);
 
         try {
-            final var moduleName = runConfig.getModuleName().get();
-            final var moduleArgs = runConfig.getModuleArgs().get();
-            final var programArgs = new ForkedCommandLineBuilder().buildRunnerArgs(task, moduleName, moduleArgs);
+            final var programArgs = new ForkedCommandLineBuilder().buildRunnerArgs(task, runConfig);
             final var pb = buildProcess(task, programArgs);
             final StreamPlan streamPlan = configureIO(pb, task);
             final Process process = pb.start();

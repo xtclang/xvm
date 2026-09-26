@@ -91,7 +91,7 @@ public class DirectStrategy implements ExecutionStrategy {
         );
     }
 
-    private static DirectRunRequest createRunRequest(final XtcRunTask task, final XtcRunModule runConfig) {
+    static DirectRunRequest createRunRequest(final XtcRunTask task, final XtcRunModule runConfig) {
         return new DirectRunRequest(
             task.getProjectDirectory().get().getAsFile(),
             task.resolveFullModulePath(),
@@ -99,7 +99,7 @@ public class DirectStrategy implements ExecutionStrategy {
             task.getVerbose().get(),
             task.getJit().get(),
             runConfig.getModuleName().get(),
-            task.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
+            runConfig.getMethodName().getOrElse(DEFAULT_METHOD_NAME),
             runConfig.getModuleArgs().get()
         );
     }
