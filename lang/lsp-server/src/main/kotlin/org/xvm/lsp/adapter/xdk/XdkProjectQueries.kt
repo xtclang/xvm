@@ -16,6 +16,7 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Worker-only whole-graph queries. Capture every configured module before compiling any of them.
@@ -28,13 +29,26 @@ internal class XdkProjectQueries(
     private val dependencies: XdkDependencies,
     private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
     private val cancelled: () -> Boolean,
+    private val cache: AtomicReference<Map<String, XdkWorkspaceNavigation>> = AtomicReference(emptyMap()),
 ) {
-    private val sources = project.buildOrder().associateWith { XdkSources.capture(it.root, overlays, cancelled) }
+    private val captured =
+        project.buildOrder().associateWith { module ->
+            try {
+                Result.success(XdkSources.capture(module.root, overlays, cancelled))
+            } catch (
+                failure: IOException,
+            ) {
+                Result.failure(failure)
+            }
+        }
+    private val sources = captured.mapNotNull { (module, result) -> result.getOrNull()?.let { module to it } }.toMap()
     private val texts = sources.values.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value }
     private val uris = sources.values.flatMap { it.sourceUris.entries }.associate { it.toPair() }
 
     fun navigation(): XdkWorkspaceNavigation? {
-        val facts = compile(texts) ?: return null
+        val revision = revision()
+        cache.get()[revision]?.let { return if (isCurrent()) it else null }
+        val facts = compile(texts, allowIncomplete = true) ?: return null
         val models = facts.models
         val declared = models.associate { it.sourceName to it.id }
         val aliases =
@@ -48,7 +62,9 @@ internal class XdkProjectQueries(
                     group.map { it.id to canonical.id }
                 }.toMap()
         val views = SemanticModel.joined(models, aliases).associateBy { uris.getValue(requireNotNull(it.sourceName)) }
-        return if (isCurrent()) XdkWorkspaceNavigation(views, revision()) else null
+        if (!isCurrent()) return null
+        val complete = project.modules.values.all { module -> models.any { it.sourceName == module.root.path } }
+        return XdkWorkspaceNavigation(views, revision, complete).also { cache.set(mapOf(revision to it)) }
     }
 
     private fun revision(): String {
@@ -66,6 +82,10 @@ internal class XdkProjectQueries(
                             value(module.uri)
                             value(module.dependencies.sorted().joinToString("\u0000"))
                         }
+                        uris.toSortedMap().forEach { (source, uri) ->
+                            value(source)
+                            value(uri)
+                        }
                         texts.toSortedMap().forEach { (path, text) ->
                             value(path)
                             value(text)
@@ -79,87 +99,14 @@ internal class XdkProjectQueries(
         return "graph:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
     }
 
-    fun symbols(query: String): List<SymbolInfo> {
-        val facts = compile(texts, allowIncomplete = true) ?: return emptyList()
-        val symbols =
-            facts.models.flatMap { model ->
-                model.symbols
-                    .filter { symbol ->
-                        symbol.declarationSource == model.sourceName && symbol.declaration != null &&
-                            symbol.kind in
-                            setOf(
-                                SemanticModel.SymbolKind.TYPE,
-                                SemanticModel.SymbolKind.METHOD,
-                                SemanticModel.SymbolKind.PROPERTY,
-                                SemanticModel.SymbolKind.MODULE,
-                                SemanticModel.SymbolKind.PACKAGE,
-                            ) &&
-                            (query.isBlank() || symbol.name.contains(query, ignoreCase = true))
-                    }.map { symbol ->
-                        val range = requireNotNull(symbol.declaration)
-                        SymbolInfo.of(
-                            symbol.name,
-                            when (symbol.kind) {
-                                SemanticModel.SymbolKind.METHOD -> SymbolInfo.SymbolKind.METHOD
-                                SemanticModel.SymbolKind.PROPERTY -> SymbolInfo.SymbolKind.PROPERTY
-                                SemanticModel.SymbolKind.MODULE -> SymbolInfo.SymbolKind.MODULE
-                                SemanticModel.SymbolKind.PACKAGE -> SymbolInfo.SymbolKind.PACKAGE
-                                else -> SymbolInfo.SymbolKind.CLASS
-                            },
-                            Location(
-                                uris.getValue(requireNotNull(model.sourceName)),
-                                range.start.line,
-                                range.start.column,
-                                range.end.line,
-                                range.end.column,
-                            ),
-                        )
-                    }
-            }
-        return if (isCurrent()) symbols.distinctBy { it.location }.sortedBy { it.name } else emptyList()
-    }
+    fun symbols(query: String): List<SymbolInfo> = navigation()?.symbols(query).orEmpty()
 
     fun references(
         uri: String,
         line: Int,
         column: Int,
         includeDeclaration: Boolean,
-    ): List<Location> {
-        val facts = compile(texts) ?: return emptyList()
-        val source = XdkSources.file(uri)?.path ?: return emptyList()
-        val model = facts.models.singleOrNull { it.sourceName == source } ?: return emptyList()
-        val target = model.symbolAt(line, column) ?: return emptyList()
-        val declaration = target.location()
-        val constant = facts.constants[target.id]
-        val found =
-            facts.models.flatMap { view ->
-                view.occurrences
-                    .filter { occurrence ->
-                        val symbol = occurrence.symbol?.let(view::symbol)
-                        (
-                            symbol?.id == target.id || (declaration != null && symbol?.location() == declaration) ||
-                                (constant != null && symbol?.id?.let(facts.constants::get) == constant)
-                        ) &&
-                            (includeDeclaration || occurrence.role != SemanticModel.Role.DECLARATION)
-                    }.map { occurrence ->
-                        val range = occurrence.range
-                        Location(
-                            uris.getValue(requireNotNull(view.sourceName)),
-                            range.start.line,
-                            range.start.column,
-                            range.end.line,
-                            range.end.column,
-                        )
-                    }
-            }
-        return if (isCurrent()) {
-            found.distinct().sortedWith(
-                compareBy(Location::uri, Location::startLine, Location::startColumn),
-            )
-        } else {
-            emptyList()
-        }
-    }
+    ): List<Location> = navigation()?.references(uri, line, column, includeDeclaration).orEmpty()
 
     /** Rename ordinary source methods and their complete compiler override family in this graph. */
     fun rename(
@@ -246,7 +193,8 @@ internal class XdkProjectQueries(
         allowIncomplete: Boolean = false,
     ): CompilerRenameFacts? {
         checkCurrent()
-        val artifacts = dependencies.modules.filterKeys { name -> sources.keys.none { it.name == name } }.toMutableMap()
+        if (!allowIncomplete && sources.size != project.modules.size) return null
+        val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val attempts =
             sources.mapNotNull { (module, source) ->
                 checkCurrent()
@@ -266,7 +214,11 @@ internal class XdkProjectQueries(
                     return null
                 }
                 val facts = compilation.projectRenameFacts(open, errors)
-                if (heard.hasSeriousErrors() || errors.isAbortDesired) return null
+                if (heard.hasSeriousErrors() || errors.isAbortDesired) {
+                    checkCurrent()
+                    if (allowIncomplete) return@mapNotNull null
+                    return null
+                }
                 artifacts[module.name] = compilation.toDependency()
                 facts
             }
@@ -289,9 +241,16 @@ internal class XdkProjectQueries(
     private fun isCurrent(): Boolean {
         checkCurrent()
         return try {
-            sources
-                .all { (module, source) -> XdkSources.capture(module.root, overlays, cancelled).inputs == source.inputs }
-                .also { checkCurrent() }
+            captured
+                .all { (module, original) ->
+                    val current =
+                        try {
+                            XdkSources.capture(module.root, overlays, cancelled).inputs
+                        } catch (_: IOException) {
+                            null
+                        }
+                    current == original.getOrNull()?.inputs
+                }.also { checkCurrent() }
         } catch (_: IOException) {
             false
         }

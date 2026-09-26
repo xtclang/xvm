@@ -5,16 +5,20 @@ import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.DefinitionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
+import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceFolder
+import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -226,6 +230,47 @@ class XdkProjectServerTest {
         }
     }
 
+    @Test
+    fun `live discovered edges propagate unsaved edits and folder notifications refresh diagnostics`() {
+        val first =
+            directory
+                .toRealPath()
+                .resolve("first")
+                .toFile()
+                .also { it.mkdirs() }
+        val library = first.resolve("Library.x").also { it.writeText(LIBRARY) }
+        val consumer = first.resolve("Consumer.x").also { it.writeText("module Consumer {}") }
+        Session(library, consumer, automatic = true).use { session ->
+            session.open(consumer, consumer.readText(), 7)
+            session.expect(consumer, 0, 7, false)
+            var mark = session.published.size
+            session.change(consumer, CONSUMER, 8)
+            session.expect(consumer, mark, 8, false)
+            mark = session.published.size
+            session.open(library, INCOMPATIBLE, 2)
+            session.expect(consumer, mark, 8, true)
+            session.closeDocument(library)
+            session.expect(consumer, mark, 8, false)
+
+            val second = directory.resolve("second").toFile().also { it.mkdirs() }
+            val external = second.resolve("External.x").also { it.writeText("module External { static Int value()=1; }") }
+            val folder = WorkspaceFolder(second.toURI().toString(), "second")
+            // The second folder is outside the original folder's automatic scan.
+            session.server.workspaceService.didChangeWorkspaceFolders(
+                DidChangeWorkspaceFoldersParams(WorkspaceFoldersChangeEvent(listOf(folder), emptyList())),
+            )
+            mark = session.published.size
+            session.change(consumer, CONSUMER.replace("Library", "External"), 9)
+            session.expect(consumer, mark, 9, false)
+            mark = session.published.size
+            session.server.workspaceService.didChangeWorkspaceFolders(
+                DidChangeWorkspaceFoldersParams(WorkspaceFoldersChangeEvent(emptyList(), listOf(folder))),
+            )
+            session.expect(consumer, mark, 9, true)
+            assertThat(external.isFile).isTrue()
+        }
+    }
+
     private fun file(
         name: String,
         text: String,
@@ -238,6 +283,7 @@ class XdkProjectServerTest {
         library: File,
         consumer: File,
         bridge: File? = null,
+        automatic: Boolean = false,
     ) : AutoCloseable {
         val adapter = XdkAdapter()
         val server = XtcLanguageServer(adapter)
@@ -251,13 +297,22 @@ class XdkProjectServerTest {
                 null
             }.`when`(client).publishDiagnostics(any())
             server.connect(client)
-            server.replaceCompilerSourceModules(
-                buildList {
-                    add(XdkSourceModule("Library", library.toURI().toString()))
-                    bridge?.let { add(XdkSourceModule("Bridge", it.toURI().toString(), setOf("Library"))) }
-                    add(XdkSourceModule("Consumer", consumer.toURI().toString(), setOf(if (bridge == null) "Library" else "Bridge")))
-                },
-            )
+            if (automatic) {
+                server
+                    .initialize(
+                        InitializeParams().apply {
+                            workspaceFolders = listOf(WorkspaceFolder(consumer.parentFile.toURI().toString(), "workspace"))
+                        },
+                    ).get(30, SECONDS)
+            } else {
+                server.replaceCompilerSourceModules(
+                    buildList {
+                        add(XdkSourceModule("Library", library.toURI().toString()))
+                        bridge?.let { add(XdkSourceModule("Bridge", it.toURI().toString(), setOf("Library"))) }
+                        add(XdkSourceModule("Consumer", consumer.toURI().toString(), setOf(if (bridge == null) "Library" else "Bridge")))
+                    },
+                )
+            }
         }
 
         fun open(
