@@ -80,6 +80,61 @@ class XtcRunConfigurationTest {
         assertTrue(cause.getMessage().contains("Parallel module execution"));
     }
 
+    @Test
+    void modulePropertyOverridesAreTaskLocal() {
+        final var project = newProject();
+        final var tasks = project.getTasks();
+        final var run = tasks.named("runXtc", XtcRunTask.class).get();
+        final var other = tasks.register("otherRun", XtcRunTask.class, project).get();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        extension.moduleName("Shared");
+
+        run.getModules().empty();
+
+        assertTrue(run.isEmpty());
+        assertEquals("Shared", other.getModules().get().getFirst().getModuleName().get());
+        assertEquals(1, extension.size());
+    }
+
+    @Test
+    void explicitEmptyModuleListOverridesExtension() {
+        final var project = newProject();
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        extension.moduleName("Shared");
+
+        run.setModules(List.of());
+
+        assertTrue(run.isEmpty());
+        assertEquals(0, run.size());
+        assertEquals(1, extension.size());
+    }
+
+    @Test
+    void localModuleDslReplacesInheritedModules() {
+        final var project = newProject();
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        extension.moduleName("Shared");
+
+        run.moduleNames("LocalOne", "LocalTwo");
+
+        assertEquals(List.of("LocalOne", "LocalTwo"), run.getModules().get().stream()
+            .map(module -> module.getModuleName().get()).toList());
+        assertEquals(1, extension.size());
+    }
+
+    @Test
+    void inheritedModulesFollowLateExtensionChanges() {
+        final var project = newProject();
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var extension = XtcProjectDelegate.resolveXtcRuntimeExtension(project);
+        extension.moduleName("First");
+        assertEquals(1, run.size());
+        extension.moduleName("Second");
+        assertEquals(2, run.size());
+    }
+
     private static Project newProject() {
         final var project = ProjectBuilder.builder().build();
         project.setVersion("1.0");
