@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-09-26 (five-area compiler functionality batch; verification recorded in the integration plan)
+> **Last Updated**: 2026-09-27 (compiler capability inventory and explicit L55–L82 completion checklist)
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -133,6 +133,8 @@ are filtered into the server's
 [advertised capabilities](../../lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt).
 Diagnostics and document synchronization are provided separately. Unimplemented compiler features
 are not advertised; inherited adapter stubs or basic formatting helpers do not enable them.
+**Done** below means implemented within the scope written in that row; it is not a claim of
+support for every XTC construct, optional LSP extension or native editor presentation.
 
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
@@ -162,24 +164,70 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
 | Linked editing | - | Same-file identifiers | **Partial** - resolved rename-eligible local-variable occurrences in one successful source snapshot; no proposed-name proof |
 | Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
-| Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
+| Go-to-declaration (separate LSP request) | - | - | **Not implemented** - inherited stub; semantic go-to-definition is available across source graphs and indexed libraries |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
 | Find implementations | - | - | **Partial** - compiler composition targets across the complete source graph, including unopened source consumers; generic/inherited/mixin/delegated methods and property accessors; no invented binary source target |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges across the complete source graph; generic parents retained, digest-bound handles reject stale closed files |
 | Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls across the complete source graph, with method/lambda ownership and incoming/outgoing grouping; digest-bound handles reject stale sources |
 
+#### Compiler completeness snapshot
+
+Source audit at `511195564` (2026-09-27): **all 24 project-defined adapter capabilities have
+compiler implementations**, plus push diagnostics and document/workspace synchronization.
+This covers the usual editor feature families, but several are bounded and some LSP operations
+are entirely absent. The 24-entry enum does not include all of LSP. We should describe the
+backend as broadly implemented with substantial partial areas, not as fully implemented.
+
+The active [full completion checklist, L55–L82](../../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+is the task source of truth. It distinguishes implementation work, confirmed reliability gaps,
+investigations and optional features requiring a scope decision. The protocol inventory uses
+LSP 3.18 and the installed LSP4J 1.0.0 interfaces. Unadvertised optional features do not by
+themselves violate LSP; an inherited empty method does not count as an implementation.
+
+| Entirely absent feature or extension | What exists today | Task |
+|---|---|---|
+| Separate go-to-declaration | Go-to-definition/type-definition; declaration handler reaches an inherited stub | L61 |
+| Extract/inline/safe-delete refactorings, implement/override generation and general semantic quick fixes | Bounded proven rename, import cleanup and public-type imports | L62–L63 |
+| Pull document/workspace diagnostics | Versioned push diagnostics and Problems updates | L68 |
+| Semantic-token range/delta requests | Full-document tokens | L69 |
+| Completion/action/lens/link/inlay/workspace-symbol resolve requests | Eager results for the currently supported facts | L70 |
+| File-operation pre-edit requests; explicit create/delete notifications | Watched-file refresh and `didRenameFiles` lifecycle handling | L71 |
+| Save-time edits, incremental sync, multiple-range formatting | Full synchronization, didSave handling, whole/single-range/on-type formatting | L72 |
+| Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
+| Cross-project monikers | Detached identities scoped to compiler snapshots/graphs | L74 |
+| Server-provided document content/refresh | Matching bundled/host-indexed source files, opened read-only | L75 |
+| Inline completion | Ordinary completion popup | L76 |
+| Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
+| Notebook synchronization | File/module document sessions | L78 |
+| Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
+| Application work-done progress/partial-result streaming and trace controls | Logging plus request cancellation; no complete progress/trace implementation | L81 |
+
+The remaining limits within implemented features are tracked separately: malformed/header/value
+completion and signatures (L57/L58/L64), inferred displays (L59), rename proof and editable target
+scope (L55/L62), hierarchy/classification (L65), formatting/links/linked editing (L66), and index
+scale/source metadata (L67). Native startup synchronization remains an investigation (L56).
+Capability negotiation and refresh still need the L80/L81 audit, including moving dynamic watcher
+registration until after `initialized`. No production fix for the startup race is claimed yet.
+
+**Implementation and validation are separate.** The shared playbook has 113 cases. IntelliJ has
+60 full and 3 partial driver implementations, with 50 not implemented; these are harness coverage
+counts, not 50 missing compiler features. Only 13 selected native cases have passing receipts in
+the latest checkpoint, across two runs. X93–X98 are implemented but still awaiting native execution.
+See L60/L82 and the [validation record](../../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
 diagnostics untouched. References distinguish overloads and concrete overrides; they do not expand
 to an entire override family. Method rename does expand that family, including generic interface
-contracts, then rejects changed bindings or dispatch relationships. Incomplete graphs return no
-results. Edits, close, settings/repository changes and cancellation retire outstanding queries;
+contracts, then rejects changed bindings or dispatch relationships. Exact references and refactoring
+require a complete graph; navigation can retain healthy independent modules beside a broken one.
+Edits, close, settings/repository changes and cancellation retire outstanding queries;
 closed source text/membership is checked again before returning. Preparing rename checks only a
 candidate; the final proof can reject it. Binary contracts (including bundled XDK methods),
 instance-property/accessor families, constructors and mixin/delegating/capped chains remain
 outside method rename. Inline types and static functions/properties use direct-identity proofs. Ordinary `super(...)` calls retain the selected written body and participate
 in binding comparison, while the keyword itself is never renamed. This proves closure over discovered/configured sources only. Discovery scans workspace folders at
-startup and on watched-file changes; unsaved import-edge changes, dynamic workspace-folder changes
-and a persistent index remain follow-ups. See playbook X59–X63.
+startup, watched-file changes, unsaved import-edge changes, close and workspace-folder changes.
+Persistent indexing and large-graph proof memory remain follow-ups. See playbook X59–X63 and X99–X105.
 
 Type-definition returns all available source targets for union/intersection operands, unwraps
 modifiers and follows aliases for value types without navigating into generic argument types.
@@ -435,7 +483,7 @@ Full tree-sitter support for fast, incremental parsing:
    **Compiler tokens -- bounded implementation complete:**
    - Resolved type/property/local/parameter names and module-file identities
    - Declaration, readonly/static/abstract and modification modifiers where established
-   - Broader syntax and additional modifiers remain follow-ups; lexical coloring stays in TextMate
+   - Java lexical tokens cover comments, literals and keywords; broader semantic classifications/modifiers remain follow-ups
 
 3. **Complete VS Code extension**
    - Finish LSP client integration
@@ -470,7 +518,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Preserve regression coverage for type-parameter declarations and anonymous-class captures
    - Versioned dependency artifacts/source indices and consumer invalidation now have an explicit host API
    - Explicit source roots/edges now enable automatic dependency builds and consumer diagnostic refresh
-   - Workspace discovery and on-demand graph queries now cover unopened sources; add unsaved import-edge/dynamic folder refresh and persistent indexing
+   - Workspace discovery and on-demand graph queries cover unopened sources, unsaved import-edge changes and dynamic folders; persistent indexing and proof memory remain
    - Direct source type hierarchy, type-definition and actual method-chain implementation lookup are implemented
    - Static selected-call hierarchy, resolved-name tokens, read/write highlights and bounded hints are implemented
    - Scope, imported types, static lookup and bounded incomplete-call fitting now have compiler-backed consumers
@@ -488,17 +536,15 @@ Full tree-sitter support for fast, incremental parsing:
 ### Long-term (Advanced Features)
 
 8. **Refactoring support (cross-file)**
-   - Rename symbol (same file) is implemented by Mock and Tree-sitter; compiler mode advertises bounded locals/private-parameter rename to clients supporting versioned edits
-   - Cross-file rename (requires compiler)
-   - Extract method/variable
-   - Safe delete
+   - Compiler rename already covers bounded locals/private parameters and graph-backed source types, static members, ordinary method/property families and aliases, including simple member-file moves
+   - Extend target/resource scope and harden large-graph proof memory (L55/L62)
+   - Extract method/variable, inline and safe delete have no implementation (L63)
 
 9. **Code actions (semantic)**
-   - ~~Organize imports~~ ✅ COMPLETE (both adapters)
-   - ~~Auto-import (workspace-index-backed)~~ ✅ COMPLETE (tree-sitter)
+   - Organize imports is implemented in Tree-sitter and bounded by compiler proof in XdkAdapter
+   - Auto-import is implemented in Tree-sitter; XdkAdapter offers proven unresolved public-type imports
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
-   - Quick fixes for common errors (requires compiler)
-   - Generate code (getters, toString, etc.)
+   - Broader semantic fixes and code generation remain unimplemented (L63)
 
 9. **Debugging (DAP)**
    - Debug Adapter Protocol integration
