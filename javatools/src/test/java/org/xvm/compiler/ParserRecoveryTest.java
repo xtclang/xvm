@@ -18,6 +18,7 @@ import org.xvm.compiler.ast.IncompleteDeclarationStatement;
 import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.IncompleteTypeCompositionStatement;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
+import org.xvm.compiler.ast.NamedTypeExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.StatementBlock;
@@ -373,6 +374,33 @@ public class ParserRecoveryTest {
             assertTrue(names(tree).contains("later"));
             assertEquals(text, source.toRawString());
         });
+    }
+
+    @Test
+    public void genericBaseCursorKeepsWrittenArgumentsWithIndependentCloning() {
+        List.of("void damaged(Li§st<String> value) {}", "void damaged(Map<Int, Li§st<String>> value) {}")
+                .forEach(header -> {
+                    String prefix = "module Recovery { " + header.substring(0, header.indexOf('§'));
+                    String text = prefix + header.substring(header.indexOf('§') + 1) + " Int later=1; }";
+                    Source source = new Source(text);
+                    prefix.chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var errors = new ErrorList();
+                    var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    var site = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                            .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+                    var type = assertInstanceOf(NamedTypeExpression.class, site.getTarget());
+                    assertEquals("List", type.getName());
+                    assertEquals(1, type.getParamTypes().size());
+                    assertEquals("Li", site.getCompletionPrefix());
+                    var copy = (IncompleteStatement) site.clone();
+                    var copied = assertInstanceOf(NamedTypeExpression.class, copy.getTarget());
+                    assertNotSame(type.getParamTypes().getFirst(), copied.getParamTypes().getFirst());
+                    assertSame(copied, copied.getParamTypes().getFirst().getParent());
+                    assertEquals(text, source.toRawString());
+                    assertTrue(names(tree).contains("later"));
+                });
     }
 
     @Test

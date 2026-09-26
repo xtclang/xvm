@@ -438,7 +438,7 @@ export function advancedCases(): void {
         }
     });
 
-    for (const id of ['X94', 'X95', 'X96'] as const) {
+    for (const id of ['X94', 'X95', 'X96', 'X97', 'X98'] as const) {
         playbook(id, async (workspace, data) => {
             const document = await workspace.open(data.file);
             for (const variant of data.variants) {
@@ -453,7 +453,9 @@ export function advancedCases(): void {
                 const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
                 assert.ok(variant.include.every(name => items.some(item => label(item) === name)));
                 assert.ok(data.exclude.every(name => items.every(item => label(item) !== name)));
-                assert.ok(!(await workspace.signature(document, at))?.signatures.length);
+                const help = await workspace.signature(document, at);
+                if ('callContext' in data && data.callContext) assert.ok(help?.signatures.length);
+                else assert.ok(!help?.signatures.length);
                 const selected = items.find(item => label(item) === variant.selected)!;
                 assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -before), at.translate(0, after))));
                 await workspace.accept(document, selected);

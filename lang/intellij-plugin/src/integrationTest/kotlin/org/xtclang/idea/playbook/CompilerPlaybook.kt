@@ -569,7 +569,7 @@ class CompilerPlaybook(
             }
             restore(data.text("file"))
         }
-        listOf("X94", "X95", "X96").forEach { id ->
+        listOf("X94", "X95", "X96", "X97", "X98").forEach { id ->
             scenario(id) { data ->
                 val editor = open(data.text("file"))
                 data.rows("variants").forEach { variant ->
@@ -579,7 +579,7 @@ class CompilerPlaybook(
                     val after = variant["suffixLength"]?.asInt ?: 0
                     editor.text = marked.replace(data.text("marker"), "")
                     if (variant["initiallyValid"]?.asBoolean == true) editor.awaitDiagnostics(emptyList()) else editor.awaitError()
-                    signature(editor, at) { it.isEmpty() }
+                    signature(editor, at) { if (data.values["callContext"]?.asBoolean == true) it.isNotEmpty() else it.isEmpty() }
                     lookup(editor, at) { items ->
                         val names = items.map { it.getLookupString() }
                         names.containsAll(variant["include"].asJsonArray.map { it.asString }) &&

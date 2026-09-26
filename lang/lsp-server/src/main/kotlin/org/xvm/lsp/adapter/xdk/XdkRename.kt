@@ -211,7 +211,7 @@ internal object XdkRename {
         return (start + position.column).takeIf { it <= end }
     }
 
-    private fun position(
+    internal fun position(
         text: String,
         offset: Int,
     ): Position {

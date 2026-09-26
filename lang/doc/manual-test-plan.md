@@ -2,7 +2,23 @@
 
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
-### Current development batch: discovery and complete XDK
+#For the new workspace queries, add an unopened Consumer subclass overriding Library's method.
+From Library, check implementations and subtype hierarchy, then incoming calls from Consumer.
+Edit Consumer on disk and verify a previously opened hierarchy does not silently reuse stale edges.
+Rename an inline Library class, static function or static property and inspect the versioned edits
+in both modules. In a compiling file with an unused ordinary import and a used aliased import,
+request import cleanup: only a removal that preserves compilation/bindings should be offered.
+Sort adjacent imports and verify comments remain in place.
+
+For compiler editing features, format a file containing CRLF, string spaces and URL comments;
+only indentation/outer whitespace should change. Format a selected range, then type a closing
+brace and check its indentation. An unterminated string must yield no formatting edits. Ctrl-click
+an HTTP(S) URL in a comment/string. Check the module Run lens uses the normal client run action.
+Linked editing on a local should include that declaration's uses while ignoring an equal-spelled
+local in another method. Semantic highlighting should include lexical comments/literals/keywords
+as well as resolved names; inlays retain their existing compiler-derived scope.
+
+## Current development batch: discovery and complete XDK
 
 These additions are implemented but await the combined five-area verification run. In a fresh
 compiler-mode workspace, set `xtc.compiler.sourceModules` to `null` (or leave it unconfigured in
@@ -1036,7 +1052,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X96 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X98 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1082,7 +1098,7 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It implements startup and 48 shared scenarios: 45 fully and three partially. Native
+disabled. It implements startup and 50 shared scenarios: 47 fully and three partially. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1149,14 +1165,14 @@ This selector currently applies to VS Code; IntelliJ native checks remain occasi
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 101 scenarios: X1–X96, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 103 scenarios: X1–X98, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 101 cases. IntelliJ implements 45 fully and three partially, plus a separate startup check;
+all 103 cases. IntelliJ implements 47 fully and three partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1845,6 +1861,8 @@ module Advanced {
 | X94 | In temporary `Editing.x`, complete `Str` in `List<Str>`, `Map<Int, List<Str>>`, `Map<Str, Int>`, `List<(Int \| Str)>`, `Object + Str` and `Object - Str` parameter headers. Also try `List<Str>` property/return types and `List<ecstasy.text.Str>`. Use the shared X94 variants. Finally remove both `>` from the nested `Map` header, accept `String`, then restore `>>`. | Only the selected leaf token changes; generic arguments, compound operators and qualifiers stay intact. Values such as `StringValue` are excluded and no call signature appears. Complete accepted headers clear Problems. Missing `>` still reports an error after acceptance; adding the closers clears it. Type suggestions establish visibility, not generic-constraint compatibility. Both drivers consume the same nine variants. |
 | X95 | In temporary `Editing.x`, use the shared X95 replacement program. Complete the marked type in class `extends`, interface `extends`, `implements`, `delegates`, `incorporates` and mixin `into` headers. Also try `Owner.Nes`, `List<Str>` and the missing-`>` variant. Accept the selected entry, then restore the repaired declaration. | Completion replaces only the final token and offers visible types rather than values. Complete accepted headers clear Problems; accepting `String` with a missing `>` leaves an error until the closer is restored. No signature appears in a type slot. Both drivers consume the same nine variants; IntelliJ native execution is pending. |
 | X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ execution is pending. |
+| X97 | In temporary `Editing.x`, run the nine shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values and construction. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. Both editor consumers are implemented; execution is pending. |
+| X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. Both editor consumers are implemented; execution is pending. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
