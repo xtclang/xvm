@@ -67,10 +67,14 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   lambda parameters/returns where the compiler supplies an actual type. Preserve uncertainty
   in partial source; add shared scenarios and current-version invalidation checks.
 - [ ] **L60 — Native parity checkpoint.** Run the implemented but unverified IntelliJ X93–X98
-  scenarios, then close the highest-value missing assertions and scenarios. Track each of the
-  50 unimplemented native cases in `scenarios.json`; resolve X20's signature display discrepancy
-  and X81/X82's missing Property-kind assertions. Record assertions implemented, cases selected
-  and cases passed separately. Run the broader checkpoint occasionally, not after each change.
+  scenarios, then implement all 50 missing scenarios and close all three partial cases.
+  Every missing IntelliJ case already has a VS Code implementation. Track each case in
+  `scenarios.json`; resolve X20's signature display discrepancy
+  and X81/X82's missing Property-kind assertions. Use native editor actions for user-visible
+  behavior and the installed client transport for protocol-only assertions such as stale handles,
+  cancellation and edit versions. Label those layers explicitly. Record assertions implemented,
+  cases selected and cases passed separately. Full parity is required work; a selected passing
+  subset does not close L60. Run the broader checkpoint occasionally, not after each change.
 
 ### Finish the existing editor features
 
@@ -194,6 +198,79 @@ server features. Latest passing receipts cover 13 selected cases across two nati
 still need their first native receipt. See the C28/L53/L54 validation record immediately below.
 Completion requires explicit evidence per feature; neither 24 capability flags nor a passing
 selected playbook is a percentage of total LSP completeness.
+
+### IntelliJ parity backlog (L60)
+
+All 50 scenarios below have concrete VS Code implementations; this is uncompleted IntelliJ
+driver work. Source comparison checks every ID against `lang/vscode-extension/src/test/playbook/`.
+The VS Code fixture loader also requires a registration for every shared catalog ID. Native
+popup/lifecycle fixes and the added completion scenarios did not finish this migration. Full
+parity was requested and remains required. Implement in coherent groups before the combined test
+run, with separate checkpoints; do not replace missing UI assertions with protocol calls and
+then label the native behavior verified.
+
+- [ ] X3 — narrowed hover and declaration identity.
+- [ ] X5 — library navigation exclusions and parser-recovery outline.
+- [ ] X14 — UTF-16 completion edits and CRLF bytes.
+- [ ] X21 — closed-member references and workspace symbols.
+- [ ] X22 — cross-file generic type hierarchy.
+- [ ] X23 — unsaved root changes and sibling diagnostics.
+- [ ] X24 — completion against repeated unsaved root types.
+- [ ] X25 — unsaved nonexistent member open/close lifecycle.
+- [ ] X26 — discard/reopen restores disk semantics.
+- [ ] X27 — file watcher creation/deletion and diagnostic ownership.
+- [ ] X28 — rejection of obsolete type-hierarchy handles.
+- [ ] X29 — rapid edits and concurrent cursor requests.
+- [ ] X30 — cancellation, close/reopen and server restart.
+- [ ] X31 — initialized capabilities and formatting provider.
+- [ ] X32 — absent compiler completions distinguished from IDE suggestions.
+- [ ] X36 — exact nominal implementation targets.
+- [ ] X37 — overloaded method implementation identities/ranges.
+- [ ] X38 — cross-file semantic targets through moving/broken overlays.
+- [ ] X39 — incoming/outgoing call hierarchy and grouped sites.
+- [ ] X40 — lambda ownership and absent dynamic-call edges.
+- [ ] X41 — semantic-token kinds/modifiers and read/write highlights.
+- [ ] X42 — inferred-type/parameter inlay labels, kinds and positions.
+- [ ] X43 — obsolete call-hierarchy handles and recovery.
+- [ ] X44 — incoming calls from closed members/current overlays.
+- [ ] X47 — dependency diagnostic ownership and stale-target removal.
+- [ ] X48 — discarded dependency overlay restores the disk artifact.
+- [ ] X49 — dependency deletion/restoration notifications.
+- [ ] X50 — unsaved/saved dependency members and consumer invalidation.
+- [ ] X51 — rapid dependency changes preserve unrelated sessions.
+- [ ] X52 — transitive source changes and diagnostic ownership.
+- [ ] X53 — local rename includes captured uses and exact edits.
+- [ ] X54 — private-parameter rename includes named labels.
+- [ ] X55 — rename rejects capture of an untouched property.
+- [ ] X56 — unsupported rename targets produce no edits.
+- [ ] X57 — edit versions, stale client rejection and close/reopen.
+- [ ] X58 — broken-source recovery and invalid/conflicting rename rejection.
+- [ ] X59 — exact references in unopened configured consumers.
+- [ ] X60 — generic override rename across unsaved/versioned documents.
+- [ ] X61 — graph rename rejects changed overload binding.
+- [ ] X62 — bundled member signatures/hover and binary rename rejection.
+- [ ] X63 — current consumer overlays and incomplete-graph rejection.
+- [ ] X64 — generic property/accessor implementation identity.
+- [ ] X65 — distinct getter/setter/default-field implementation sets.
+- [ ] X66 — no invented abstract/delegated/annotated/binary targets.
+- [ ] X67 — closed accessor positions and parse-recovery navigation.
+- [ ] X68 — chained delegation to written method/getter bodies.
+- [ ] X69 — super definition, outgoing calls and rename rejection.
+- [ ] X72 — annotation accessors and explicit override composition.
+- [ ] CFG2 — rejected cyclic configuration preserves the valid graph.
+- [ ] CFG3 — unchanged settings preserve semantics/document versions.
+
+Partial cases also remain open:
+
+- [ ] X20 — preserve the ambiguous signature label in the native Parameter Info display,
+  while suppressing unsupported parameter/active-argument metadata. Record any upstream fix.
+- [ ] X81 — inspect Property completion-kind metadata in addition to candidates/type/edit.
+- [ ] X82 — inspect Property completion-kind metadata in addition to candidates/edit.
+
+X93–X98 need execution receipts, not missing driver implementations. Complete L60 only when
+all the above assertions are implemented, each case has a passing receipt on the integrated
+branch and the complete implemented native suite passes together. A client limitation must be
+reported explicitly; it cannot silently remove an expected shared assertion.
 
 ## Header slots and native editor parity (C28/L53/L54)
 
