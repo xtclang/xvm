@@ -1,5 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
+L50 validation: X102–X105 all pass in `run-92TmWV` (four passed, 106 not selected),
+including a physical member-file move and applying bundled/source auto-imports. X103 uses the
+registered Rename provider because the generic execute-command round trip changes operation order.
+Native IntelliJ execution for these cases remains pending.
+
 L47–L49 validation: focused VS Code X5/X35/X99–X101 all pass in `run-psziUN` (five passed,
 101 not selected). The backend, protocol and Gradle checks are recorded in the
 [integration checkpoint](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
@@ -1061,7 +1066,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X101 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X105 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1174,14 +1179,14 @@ This selector currently applies to VS Code; IntelliJ native checks remain occasi
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 106 scenarios: X1–X101, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 110 scenarios: X1–X105, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 106 cases. IntelliJ implements 47 fully and three partially, plus a separate startup check;
+all 110 cases. IntelliJ implements 47 fully and three partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1878,6 +1883,10 @@ module Advanced {
 | X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value()=1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run()=lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
 | X100 | Create a healthy module with `class Base {}` and `class Child extends Base {}`, plus an independent module. Break the neighbor with `Missing broken;`, then request Base's subtypes. | Child remains navigable. Exact references return no complete answer while the graph is broken. Repairing the neighbor restores full graph queries. |
 | X101 | Open `module LibrarySource { package xml import xml.xtclang.org; void accept(xml.Document document, String text) {} }`. Go to Definition on `Document` and `String`, and Type Definition on `text`. | Matching XDK source opens at the declaration token, read-only. Library symbols cannot be renamed; formatting the source view returns no edits. Missing/ambiguous source metadata gives no guessed target. |
+| X102 | In a source graph, declare Base's `Int value` getter and Child's `@Override Int value` getter; use both properties. Rename `value` to `amount`. | Both declarations and uses change. `get`, `set` and setter parameters keep their names. Binary contracts and annotation/delegation families remain unavailable. |
+| X103 | Create `MoveType.x` using `Item` and `MoveType/Item.x` declaring it. Rename `Item` to `Renamed`. | Source edits and `Item.x` → `Renamed.x` are applied together. The resulting module compiles. Existing destination files, module roots and companion directories block the move. |
+| X104 | Import `ecstasy.text.StringBuffer as Buffer`; use `Buffer` in a type and construction. Rename the alias to `Builder`. | Three alias tokens change; `StringBuffer` and nested aliases remain unchanged. |
+| X105 | Use unresolved `Document` in a type header; apply the import quick fix for `xml.xtclang.org`. Then try unresolved `Widget` declared in a separate discovered source module. | Only imports whose complete graph compiles are offered; applying clears diagnostics. Source imports also add the discovered dependency edge. Explicit graphs do not silently gain dependencies. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.

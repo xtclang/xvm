@@ -358,6 +358,7 @@ class XdkAdapter internal constructor(
     private data class ProjectQueryKey(
         val uri: String,
         val kind: ProjectQueryKind,
+        val range: Range? = null,
     )
 
     private class ProjectRequest<T>(
@@ -436,6 +437,7 @@ class XdkAdapter internal constructor(
                                             compileTree,
                                             ::stale,
                                             navigationCache,
+                                            discoverImports = !discovery.get().explicit,
                                         ),
                                     )
                                 } catch (_: IOException) {
@@ -1266,6 +1268,13 @@ class XdkAdapter internal constructor(
         column: Int,
     ): PrepareRenameResult? {
         val model = module(uri)?.takeIf { it.succeeded }?.document(uri)?.semantics ?: return null
+        if (hasProject(uri)) {
+            model.importAt(line, column)?.let { alias ->
+                val position = SemanticModel.Position(line, column)
+                val range = (alias.uses + alias.declaration).single { position in it }
+                return PrepareRenameResult(range.toRange(), alias.name)
+            }
+        }
         val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectTarget(uri, it) } ?: return null
         val range =
             model.occurrences
@@ -1281,10 +1290,7 @@ class XdkAdapter internal constructor(
         symbol: SemanticModel.Symbol,
     ): Boolean =
         symbol.name != "construct" &&
-            (
-                symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.TYPE) ||
-                    (symbol.kind == SemanticModel.SymbolKind.PROPERTY && SemanticModel.Modifier.STATIC in symbol.modifiers)
-            ) &&
+            symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PROPERTY) &&
             symbol.declarationSource?.let {
                 synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
             } == true
@@ -1301,7 +1307,7 @@ class XdkAdapter internal constructor(
         diagnostics: List<Diagnostic>,
     ): CompletableFuture<List<CodeAction>> =
         if (hasProject(uri)) {
-            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS), emptyList()) { it.importActions(uri) }
+            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS, range), emptyList()) { it.importActions(uri, range) }
         } else {
             CompletableFuture.completedFuture(emptyList())
         }
@@ -1323,8 +1329,9 @@ class XdkAdapter internal constructor(
                 module(uri)
                     ?.document(uri)
                     ?.semantics
-                    ?.symbolAt(line, column)
-                    ?.let { isProjectTarget(uri, it) } == true
+                    ?.let { model ->
+                        model.importAt(line, column) != null || model.symbolAt(line, column)?.let { isProjectTarget(uri, it) } == true
+                    } == true && project.scope(uri) != null
             }
         ) {
             return projectQuery<WorkspaceEdit?>(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null) {

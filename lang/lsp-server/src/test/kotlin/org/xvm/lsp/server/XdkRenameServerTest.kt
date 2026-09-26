@@ -11,11 +11,13 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameFile
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
+import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -192,6 +194,51 @@ class XdkRenameServerTest {
             ).isEmpty()
         } finally {
             server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
+    fun `member file rename requires resource operation support and follows versioned text edits`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("App.x").toFile().also { it.writeText("module App { Item make()=new Item(); }") }
+        val member =
+            directory.resolve("App/Item.x").toFile().also {
+                it.parentFile.mkdirs()
+                it.writeText("class Item {}")
+            }
+        listOf(false, true).forEach { enabled ->
+            val server = XtcLanguageServer(XdkAdapter())
+            server.connect(mock(LanguageClient::class.java))
+            try {
+                val params =
+                    parameters().apply {
+                        workspaceFolders = listOf(WorkspaceFolder(directory.toUri().toString(), "workspace"))
+                        capabilities.workspace.workspaceEdit.resourceOperations = if (enabled) listOf("rename") else emptyList()
+                    }
+                server.initialize(params).get(20, SECONDS)
+                val documents = server.textDocumentService
+                val uri = root.toURI().toString()
+                documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, root.readText())))
+                documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).get(30, SECONDS)
+                val edit =
+                    documents
+                        .rename(
+                            RenameParams(TextDocumentIdentifier(uri), Position(0, root.readText().indexOf("Item")), "Renamed"),
+                        ).get(30, SECONDS)
+                if (!enabled) {
+                    assertThat(edit).isNull()
+                } else {
+                    val changes = requireNotNull(edit).documentChanges
+                    assertThat(changes.dropLast(1)).allMatch { it.isLeft }
+                    val move = changes.last().right as RenameFile
+                    assertThat(move.oldUri).isEqualTo(member.toURI().toString())
+                    assertThat(move.newUri).endsWith("/Renamed.x")
+                    assertThat(move.options.overwrite).isFalse()
+                }
+                assertThat(member.isFile).isTrue()
+            } finally {
+                server.shutdown().get(20, SECONDS)
+            }
         }
     }
 
