@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.compiler.Source
+import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.IncompleteDeclarationStatement
 import org.xvm.compiler.ast.MethodDeclarationStatement
@@ -121,17 +122,14 @@ internal object XdkSymbols {
      * the outline should say.
      */
     private fun kindOf(node: TypeCompositionStatement): SymbolKind =
-        when (
-            node.category.id.TEXT
-                ?.lowercase()
-        ) {
-            "module" -> SymbolKind.MODULE
-            "package" -> SymbolKind.PACKAGE
-            "interface" -> SymbolKind.INTERFACE
-            "mixin", "annotation" -> SymbolKind.MIXIN
-            "service" -> SymbolKind.SERVICE
-            "const" -> SymbolKind.CONST
-            "enum" -> SymbolKind.ENUM
+        when (node.category.id) {
+            Token.Id.MODULE -> SymbolKind.MODULE
+            Token.Id.PACKAGE -> SymbolKind.PACKAGE
+            Token.Id.INTERFACE -> SymbolKind.INTERFACE
+            Token.Id.MIXIN, Token.Id.ANNOTATION -> SymbolKind.MIXIN
+            Token.Id.SERVICE -> SymbolKind.SERVICE
+            Token.Id.CONST -> SymbolKind.CONST
+            Token.Id.ENUM -> SymbolKind.ENUM
             else -> SymbolKind.CLASS
         }
 
