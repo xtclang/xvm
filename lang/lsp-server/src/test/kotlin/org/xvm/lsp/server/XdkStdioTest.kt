@@ -311,7 +311,11 @@ class XdkStdioTest {
                     .map { it.name },
             ).containsExactly("editing")
             val folds = session.await(service.foldingRange(FoldingRangeRequestParams(document)))
-            assertThat(folds).anyMatch { it.startLine == 1 && it.endLine == 2 }
+            assertThat(folds).anySatisfy {
+                assertThat(it.startLine).isEqualTo(1)
+                assertThat(it.endLine).isEqualTo(2)
+                assertThat(it.endCharacter).isEqualTo(text.lines().last().length)
+            }
             val cursor = Position(2, text.lines().last().length)
             val selected = session.await(service.selectionRange(SelectionRangeParams(document, listOf(cursor)))).single()
             assertThat(selected.range.end).isEqualTo(cursor)
@@ -323,6 +327,31 @@ class XdkStdioTest {
             session.shutdownAndExit()
         }
         assertThat(Files.readString(directory.resolve("stderr.log"))).doesNotContain("loadXtcLanguage", "TreeSitterAdapter")
+    }
+
+    @Test
+    fun `recovered method fold boundaries survive transport without capturing following declarations`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            listOf("\n", "\r\n").forEachIndexed { index, newline ->
+                val closingLine = " /* 😀 */ } Int later=1; }"
+                val text = listOf("module Stdio {", " void damaged(Int) {", " Int hidden=1;", closingLine).joinToString(newline)
+                val version = index + 2
+                session.change(text, version)
+                assertThat(session.diagnosticsAt(version).diagnostics).isNotEmpty()
+                val folds =
+                    session.await(
+                        session.server.textDocumentService.foldingRange(FoldingRangeRequestParams(TextDocumentIdentifier(URI))),
+                    )
+                val method = folds.single { it.startLine == 1 }
+                assertThat(method.endLine).isEqualTo(3)
+                assertThat<Int?>(method.startCharacter).isNull()
+                assertThat(method.endCharacter).isEqualTo(closingLine.indexOf('}'))
+            }
+            session.shutdownAndExit()
+        }
     }
 
     @Test
