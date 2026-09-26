@@ -426,8 +426,8 @@ val clean = tasks.named("clean") {
 }
 
 // Restore the proper distribution task dependencies using the existing utility
-tasks.filter { XdkDistribution.isDistributionArchiveTask(it) }.forEach {
-    it.dependsOn(tasks.named<Copy>("processXtcResources"))
+tasks.withType<AbstractArchiveTask>().matching { XdkDistribution.isDistributionArchiveTask(it) }.configureEach {
+    dependsOn(tasks.named<Copy>("processXtcResources"))
 }
 
 // Also ensure install tasks depend on processXtcResources (install tasks use the same content)
