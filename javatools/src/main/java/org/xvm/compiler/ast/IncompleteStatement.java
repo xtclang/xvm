@@ -11,6 +11,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -129,6 +130,18 @@ public final class IncompleteStatement extends Statement {
         return Optional.ofNullable(argumentPrefix);
     }
 
+    /** The real containing call for a direct, labeled or parenthesized argument cursor. */
+    public Optional<IncompleteStatement> getArgumentCall() {
+        AstNode parent = getParent();
+        while (parent instanceof IncompleteExpression || parent instanceof ParenthesizedExpression
+                || parent instanceof LabeledExpression) {
+            parent = parent.getParent();
+        }
+        return parent instanceof IncompleteStatement call && call.isCall()
+                && PartialArgument.of(call).map(argument -> argument.cursor() == this).orElse(false)
+                ? Optional.of(call) : Optional.empty();
+    }
+
     /** Complete written arguments; excludes the missing value or cursor-selected argument prefix. */
     public List<Expression> getArguments() {
         return List.copyOf(arguments);
@@ -215,8 +228,10 @@ public final class IncompleteStatement extends Statement {
                 }
             }
         });
-        if (bindings.isEnabled() && isCall() && !errs.isAbortDesired()) {
-            bindings.record(this, PartialCallResolver.inspect(this, ctx, required, errs));
+        CursorBinding call = bindings.isEnabled() && isCall() && !errs.isAbortDesired()
+                ? PartialCallResolver.inspect(this, ctx, required, errs) : null;
+        if (call != null) {
+            bindings.record(this, call);
         }
         for (int i = 0; i < arguments.size() && !errs.isAbortDesired(); ++i) {
             Expression argument = arguments.get(i);
@@ -230,6 +245,9 @@ public final class IncompleteStatement extends Statement {
             if (validated != null) {
                 arguments.set(i, validated);
             }
+        }
+        if (call != null && !errs.isAbortDesired()) {
+            PartialArgument.of(this).ifPresent(argument -> bindings.record(argument.cursor(), call));
         }
         errs.error(diagnosticCode, in(getSource(), endPosition, endPosition));
         return null;
