@@ -65,7 +65,7 @@ final class PartialCallResolver {
         var candidates = methods.stream()
                 .takeWhile(method -> !errs.isAbortDesired())
                 .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
-                        site.getArguments(), probe).stream())
+                        writtenArguments(site), probe).stream())
                 .filter(candidate -> acceptsLabel(site, candidate))
                 .toList();
         var result = scope.withCandidates(candidates);
@@ -77,7 +77,7 @@ final class PartialCallResolver {
 
     private static CursorBinding functionScope(IncompleteStatement site, Context ctx,
                                               CursorBinding scope, ErrorListener errs) {
-        var functions = function(site, ctx, site.getArguments(), errs);
+        var functions = function(site, ctx, writtenArguments(site), errs);
         var result = scope.withFunctions(functions);
         return functions.isEmpty() ? result : argumentValues(site, ctx, result, errs,
                 arguments -> !function(site, ctx, arguments, errs).isEmpty());
@@ -91,14 +91,20 @@ final class PartialCallResolver {
     static CursorBinding argumentValues(IncompleteStatement site, Context ctx,
             CursorBinding scope, ErrorListener errs, Predicate<List<Expression>> fits) {
         var written = site.getArguments();
-        if (site.getPendingArgumentName().isEmpty()
+        var nested = PartialArgument.of(site);
+        var cursor = nested.map(PartialArgument::cursor).orElse(site);
+        boolean qualified = !cursor.isCall() && cursor.getReceiver().isPresent();
+        if (nested.isEmpty() && site.getPendingArgumentName().isEmpty()
                 && (written.size() != site.getSeparators().size()
                     || written.stream().anyMatch(LabeledExpression.class::isInstance))) {
             return scope;
         }
-        String prefix = site.getArgumentPrefix().map(Token::getValueText).orElse("");
+        String prefix = cursor.getCompletionPrefix();
         Predicate<String> fitsName = name -> {
-            Expression value = proposedName(site, name);
+            Expression value = proposedName(cursor, name);
+            if (nested.isPresent()) {
+                return fits.test(nested.orElseThrow().proposed(site, value));
+            }
             Expression argument = site.getPendingArgumentName()
                     .<Expression>map(label -> new LabeledExpression(label, value)).orElse(value);
             argument.setParent(site);
@@ -107,7 +113,7 @@ final class PartialCallResolver {
             arguments.add(argument);
             return fits.test(arguments);
         };
-        var variables = scope.variables().stream().filter(CursorBinding.Variable::readable)
+        var variables = scope.variables().stream().filter(variable -> !qualified && variable.readable())
                 .filter(variable -> variable.name().startsWith(prefix))
                 .takeWhile(variable -> !errs.isAbortDesired())
                 .filter(variable -> fitsName.test(variable.name())).toList();
@@ -116,18 +122,23 @@ final class PartialCallResolver {
             return result;
         }
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(errs::log), errs::isAbortDesired);
-        var info = scope.thisType().ensureTypeInfo(ctx.getThisClassId(), lookup);
+        var receiver = qualified ? ((Expression) cursor.getReceiver().orElseThrow().clone())
+                .validate(ctx.enter(), null, lookup) : null;
+        if (qualified && (receiver == null || !receiver.getTypeFit().isFit())) {
+            return result;
+        }
+        var info = (qualified ? receiver.getType() : scope.thisType()).ensureTypeInfo(ctx.getThisClassId(), lookup);
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired()) {
             return result;
         }
         var properties = info.ensurePropertiesByName().values().stream()
                 .filter(property -> property.getName().startsWith(prefix))
-                .filter(property -> scope.instance() || property.isConstant())
-                .filter(property -> scope.variables().stream().noneMatch(variable -> variable.name().equals(property.getName())))
+                .filter(property -> qualified || scope.instance() || property.isConstant())
+                .filter(property -> qualified || scope.variables().stream().noneMatch(variable -> variable.name().equals(property.getName())))
                 .filter(property -> info.getType().getAccess() == Access.PRIVATE || property.isVisible(ctx.getThisClassId()))
                 .map(property -> property.getName()).sorted()
                 .takeWhile(name -> !errs.isAbortDesired())
-                .map(name -> propertyValue(site, ctx, name, errs))
+                .map(name -> propertyValue(cursor, ctx, name, errs))
                 .filter(Objects::nonNull)
                 .filter(property -> fitsName.test(property.name()))
                 .toList();
@@ -148,8 +159,12 @@ final class PartialCallResolver {
 
     private static NameExpression proposedName(IncompleteStatement site, String name) {
         long cursor = site.getEndPosition();
-        var expression = new NameExpression(new Token(cursor, cursor, Id.IDENTIFIER, name));
+        var token = new Token(cursor, cursor, Id.IDENTIFIER, name);
+        var expression = !site.isCall() && site.getReceiver().isPresent()
+                ? new NameExpression((Expression) site.getReceiver().orElseThrow().clone(), null, token, null, cursor)
+                : new NameExpression(token);
         expression.setParent(site);
+        expression.introduceParentage();
         return expression;
     }
 
@@ -170,7 +185,7 @@ final class PartialCallResolver {
             IncompleteStatement site, Context ctx, List<Expression> written, ErrorListener errs) {
         if (errs.isAbortDesired() || site.getPendingArgumentName().isPresent()
                 || written.stream().anyMatch(argument -> argument instanceof LabeledExpression
-                        || argument instanceof NonBindingExpression)) {
+                        || argument instanceof NonBindingExpression && PartialArgument.of(site).isEmpty())) {
             return List.of();
         }
         var validation = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
@@ -189,9 +204,16 @@ final class PartialCallResolver {
         }
         var arguments = written.stream().map(argument -> (Expression) argument.clone())
                 .collect(Collectors.toCollection(ArrayList::new));
-        if (site.validateExpressions(trial, arguments, parameters, validation) == null
-                || validation.hasSeriousErrors() || validation.isAbortDesired()
-                || arguments.stream().anyMatch(argument -> !argument.isSingle() || !argument.getTypeFit().isFit())) {
+        boolean fit = IntStream.range(0, arguments.size()).allMatch(index -> {
+            Expression argument = arguments.get(index);
+            if (argument instanceof NonBindingExpression && PartialArgument.of(site).isPresent()) {
+                return true;
+            }
+            var value = argument.validate(trial, parameters[index], validation);
+            return value != null && value.isSingle() && value.getTypeFit().isFit()
+                    && !validation.hasSeriousErrors() && !validation.isAbortDesired();
+        });
+        if (!fit) {
             return List.of();
         }
         var mapping = IntStream.range(0, written.size()).mapToObj(index -> {
@@ -199,6 +221,11 @@ final class PartialCallResolver {
             return new InvocationBinding.Argument(argument.getStartPosition(), argument.getEndPosition(), index);
         }).toList();
         return List.of(new CursorBinding.FunctionCandidate(type, mapping));
+    }
+
+    /** Preserve later arguments while letting an unknown slot remain unbound during enumeration. */
+    static List<Expression> writtenArguments(IncompleteStatement site) {
+        return PartialArgument.of(site).map(argument -> argument.unbound(site)).orElseGet(site::getArguments);
     }
 
     private static Target target(NameExpression callee, Context ctx, ErrorListener errs) {
