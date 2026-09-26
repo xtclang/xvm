@@ -1,5 +1,10 @@
 # Ecstasy LSP Server
 
+C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
+arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
+implemented in both editors. IntelliJ also adds native X33/X35 and partial X101 assertions;
+these newly implemented native checks await a later execution checkpoint.
+
 L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
 type moves and public-type auto-import repairs. See the
 [scope and proof boundaries](../../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
@@ -253,9 +258,9 @@ missing angle/group closers also work. These are visible-type suggestions; norma
 checks generic constraints. Registered class/method formals, empty generic slots and complete
 parameterized qualifiers also work; aliases retain their substituted type. Mid-token queries
 replace the entire final identifier, including a generic base before written type arguments.
-Empty operands, qualifier-middle edits, function/sequence types, trailing dots, unregistered generic-method/type-header formals,
+Empty operands, qualifier-middle edits, trailing dots, unregistered generic-method/type-header formals,
 multi-return and module/package headers remain follow-ups; see
-[shared X91–X98](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+[shared X91–X98 and X106](../doc/manual-test-plan.md#xdkadapter-playbook) and the
 [C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
 Class/interface headers now retain their written name and body for structure when a bounded header
@@ -279,7 +284,7 @@ argument labels. It recompiles proposed edits and compares all recorded bindings
 untouched names must keep their targets. The client must support versioned document edits. Source
 edits, dependency replacement, cancellation and close invalidate pending rename work. Unknown
 bindings, failed compilation, public/lambda/constructor parameters and method-value escapes remain
-unsupported for parameter rename. An explicit source graph additionally enables ordinary instance-
+unsupported for parameter rename. A discovered/configured source graph additionally enables ordinary instance-
 method override rename: it recompiles all configured modules and checks dispatch chains as well as
 written bindings. Generic interface contracts and closed/transitive consumers are covered. Binary
 contracts (including source overrides of bundled XDK methods), constructors and mixin/delegating/capped

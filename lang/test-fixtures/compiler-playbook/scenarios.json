@@ -832,10 +832,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X34": {
@@ -880,10 +878,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X36": {
@@ -2920,9 +2916,9 @@
         "renameRejection": "Rename not allowed at this position"
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native source/discovery assertions are added in the next parity checkpoint."
+          "Native definition/type-definition actions and read-only filesystem ownership are checked; formatting and rename rejection still lack native assertions."
         ]
       }
     },
@@ -3015,6 +3011,98 @@
         "limitations": [
           "Native refactoring and quick-fix application assertions are pending."
         ]
+      }
+    },
+    "X106": {
+      "title": "function and type-sequence headers complete their written leaf types",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { ${0} }",
+        "marker": "\u00a7",
+        "prefixLength": 3,
+        "exclude": [
+          "value",
+          "damaged"
+        ],
+        "variants": [
+          {
+            "declaration": "void damaged(function Str\u00a7(Int) value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(function String(Int) value) {}"
+          },
+          {
+            "declaration": "void damaged(function void(Str\u00a7) value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(function void(String) value) {}"
+          },
+          {
+            "declaration": "void damaged(function (Int, Str\u00a7)(Int) value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(function (Int, String)(Int) value) {}"
+          },
+          {
+            "declaration": "void damaged(function void(List<Str\u00a7>) value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(function void(List<String>) value) {}"
+          },
+          {
+            "declaration": "void damaged(Function<<Str\u00a7>, <Int>> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Function<<String>, <Int>> value) {}"
+          },
+          {
+            "declaration": "void damaged(Function<<Int>, <Str\u00a7>> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Function<<Int>, <String>> value) {}"
+          },
+          {
+            "declaration": "void damaged(function void(Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": false,
+            "repairedDeclaration": "void damaged(function void(String) value) {}"
+          },
+          {
+            "declaration": "void damaged(Function<<Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": false,
+            "repairedDeclaration": "void damaged(Function<<String>, <Int>> value) {}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
       }
     },
     "CFG1": {
