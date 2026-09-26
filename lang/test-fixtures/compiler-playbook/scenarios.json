@@ -2449,6 +2449,106 @@
         "limitations": []
       }
     },
+    "X95": {
+      "title": "class and interface composition headers complete visible types without inventing inheritance",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { class Base {} interface Face {} mixin Feature {} class Owner { static class Nested {} } String StringValue=\"x\"; ${0} Int later=1; }",
+        "marker": "\u00a7",
+        "variants": [
+          {
+            "declaration": "class Damaged extends Bas\u00a7 { Int inside=1; }",
+            "selected": "Base",
+            "include": [
+              "Base"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged extends Base { Int inside=1; }"
+          },
+          {
+            "declaration": "interface Damaged extends Fac\u00a7 {}",
+            "selected": "Face",
+            "include": [
+              "Face"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "interface Damaged extends Face {}"
+          },
+          {
+            "declaration": "class Damaged implements Fac\u00a7 {}",
+            "selected": "Face",
+            "include": [
+              "Face"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged implements Face {}"
+          },
+          {
+            "declaration": "mixin Damaged into Bas\u00a7 {}",
+            "selected": "Base",
+            "include": [
+              "Base"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "mixin Damaged into Base {}"
+          },
+          {
+            "declaration": "class Damaged incorporates Fea\u00a7 {}",
+            "selected": "Feature",
+            "include": [
+              "Feature"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged incorporates Feature {}"
+          },
+          {
+            "declaration": "class Damaged(Face value) delegates Fac\u00a7(value) {}",
+            "selected": "Face",
+            "include": [
+              "Face"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged(Face value) delegates Face(value) {}"
+          },
+          {
+            "declaration": "class Damaged extends Owner.Nes\u00a7 {}",
+            "selected": "Nested",
+            "include": [
+              "Nested"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged extends Owner.Nested {}"
+          },
+          {
+            "declaration": "interface Damaged extends List<Str\u00a7> {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "interface Damaged extends List<String> {}"
+          },
+          {
+            "declaration": "interface Damaged extends List<Str\u00a7 {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": false,
+            "repairedDeclaration": "interface Damaged extends List<String> {}"
+          }
+        ],
+        "exclude": [
+          "StringValue"
+        ],
+        "prefixLength": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
