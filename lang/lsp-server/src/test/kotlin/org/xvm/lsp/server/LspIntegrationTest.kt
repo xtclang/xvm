@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.mockito.ArgumentCaptor
-import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
@@ -207,7 +207,7 @@ class LspIntegrationTest {
             openFile("TestSimple.x")
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
-            verify(mockClient, atLeastOnce()).publishDiagnostics(captor.capture())
+            verify(mockClient, timeout(5000).atLeastOnce()).publishDiagnostics(captor.capture())
 
             val published = captor.value
             assertThat(published.uri).isEqualTo(testFiles.getValue("TestSimple.x").uri)

@@ -137,14 +137,14 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 111 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 113 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It implements startup and 54 scenarios: 50 fully and four partially. Coverage includes native
+It implements startup and 63 scenarios: 60 fully and three partially. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
 highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
-Parameter Info, argument-value fitting and declaration recovery through X106. Native type-definition assertions cover X33/X35; X101 checks
-read-only library navigation but still lacks formatting/rename rejection assertions. These additions
-compile and await native execution. The disposable IDE
+Parameter Info, argument-value fitting and declaration recovery through X108. Native checks include the X34 multi-target chooser, X99/X100
+live discovery and partial hierarchy, X101 library edit guards, and X102–X105 refactoring/quick fixes.
+Native validation uses selected cases; see the execution receipts below. The disposable IDE
 profile disables sole-candidate auto-insertion and automatic completion popups so tests can inspect
 every requested completion list first. Autosave is disabled to preserve unsaved-overlay checks;
 shipped plugin defaults are unchanged.
@@ -155,26 +155,27 @@ invalid calls must clear an earlier hint. X20 remains partial because LSP4IJ 0.2
 navigation is checked. X81/X82 remain partial because native completion Property-kind metadata
 is not inspected. Problems-row clicking and visual layout remain manual.
 
-Every report lists all 111 scenario IDs, including the 57 unimplemented entries with concrete
+Every report lists all 113 scenario IDs, including the 50 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
 The catalog is a declared Gradle task input and its SHA-256 identifies the data used by each run.
 Native playbook runs are reserved for occasional checkpoints during compiler feature development.
-The expanded driver compiles and passes lint. Runtime validation is incomplete: the latest report,
-`run-469432121529144568/results.json`, has **19 passed (including startup), one failed, 27 not-run
-and 53 not-implemented**, with no IDE internal failures. X92 verifies both recovered headers in
-native Structure and the exact fold boundary after compiler fix `2e98860e1`. X18 then fails on
-explicit loss of IDE focus during its popup check. The earlier
-`run-2648196190918026067/results.json` has **28 passed, one partial, one failed, 17 not-run and
-53 not-implemented**, including the strengthened constructor checks through X90; its X92 failure
-exposed the now-fixed fold defect. X93–X98 still await native execution. These separate reports
-do not establish a complete native pass. Both reports predate X95 and use shared catalog SHA-256
-`a58f0e0c42402e5233741c996a79cd48a22337817c665cd2b45b0c103c1a87b2`.
+Select cases with `-PintellijPlaybookCases=X34,X99,X100,X101,X102,X103,X104,X105,X107,X108`;
+unselected implementations remain `not-run` in the full catalog report.
+Discovery/refactoring cases switch the installed client's workspace folder to their own fixture
+directory, matching VS Code's scope, then restore it. X103 also reverses the native file rename
+with its member buffer open, checking both source restoration and cleared diagnostics.
+The expanded driver compiles and passes lint. X33–X35 and X99–X108 have passing native receipts
+across the checkpoint and focused X105 rerun. The receipts and the failures fixed during validation
+are recorded in the [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+They do not establish a complete 63-case native pass. Earlier runs verified X92 Structure/folding
+and constructor checks through X90; X93–X98 still await native execution. Coverage metadata records
+implemented assertions independently of these runtime receipts.
 
 Leave the isolated IDE focused during completion and Parameter Info checks: switching applications
-can dismiss those native popups even without editing. The driver requests programmatic focus only
-for that phase and fails explicitly if focus is lost. It no longer uses Driver `ensureFocused()`
+can dismiss those native popups even without editing. The driver requests programmatic focus for active-editor actions and popup checks,
+and fails explicitly if the application loses focus. Owned navigation popups count as IDE focus. It no longer uses Driver `ensureFocused()`
 and its title-bar mouse click; ordinary file opening and caret movement request no focus. Native
 UI controls may still use the mouse. A failed check closes the disposable IDE during cleanup.
 

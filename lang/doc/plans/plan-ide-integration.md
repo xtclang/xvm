@@ -2,8 +2,8 @@
 
 C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
 arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
-implemented in both editors. IntelliJ also adds native X33/X35 and partial X101 assertions;
-these newly implemented native checks await a later execution checkpoint.
+implemented in both editors. IntelliJ now asserts X33/X35 navigation and the complete X101
+read-only checks; native execution receipts are tracked separately in the active validation plan.
 
 Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
 compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
@@ -243,9 +243,15 @@ nullable, array and immutable wrappers, with bounded missing angle/group closers
 visible types; normal compilation validates constraints on the whole type. Registered class/method
 formals, empty generic arguments and complete parameterized qualifiers now work, including
 substituted typedef types. Mid-token queries replace the whole final identifier, including generic
-base names before written type arguments. Shared X91–X98 and X106 cover completion, structure and diagnostic
-repair. Trailing dots, empty operands, qualifier-middle edits, unregistered declaration-header formals,
-generic-method/multi-return and module/package headers remain outside this bounded slice.
+base names before written type arguments. Shared X91–X98 and X106–X108 cover completion, structure and diagnostic repair. Trailing dots,
+empty type operands, selected qualifier tokens, generic-method/multiple-return declarations,
+constraints and module/package compositions now recover. Unregistered header formals shadow outer
+names without becoming invented type candidates. Native workspace/refactoring assertions are
+implemented for X99–X105. Selected native X33–X35 and X99–X108 have passing receipts across the
+checkpoint and focused rerun recorded in the
+[integration plan](../../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+This does not establish a complete native-suite pass. The run also drove server cancellation,
+publication and file-rename lifecycle fixes; no additional AST state was needed for those fixes.
 Class/interface composition headers retain the written name and body for structural queries.
 Type prefixes in `extends`, `implements`, `delegates`, ordinary `incorporates` and `into` use the
 real enclosing scope, including empty composition slots and qualified/generic leaf prefixes.

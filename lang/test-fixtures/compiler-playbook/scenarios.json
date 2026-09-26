@@ -856,10 +856,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X35": {
@@ -2874,10 +2872,8 @@
         "target": "value"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native source/discovery assertions are added in the next parity checkpoint."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X100": {
@@ -2893,10 +2889,8 @@
         "child": "Child"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native source/discovery assertions are added in the next parity checkpoint."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X101": {
@@ -2916,10 +2910,8 @@
         "renameRejection": "Rename not allowed at this position"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native definition/type-definition actions and read-only filesystem ownership are checked; formatting and rename rejection still lack native assertions."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X102": {
@@ -2935,10 +2927,8 @@
         "edits": 4
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native refactoring and quick-fix application assertions are pending."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X103": {
@@ -2956,10 +2946,8 @@
         "replacement": "Renamed"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native refactoring and quick-fix application assertions are pending."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X104": {
@@ -2976,10 +2964,8 @@
         "preserved": "ecstasy.text.StringBuffer"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native refactoring and quick-fix application assertions are pending."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X105": {
@@ -3007,10 +2993,8 @@
         "libraryText": "module ImportLibrary { class Widget {} }"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native refactoring and quick-fix application assertions are pending."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X106": {
@@ -3097,6 +3081,214 @@
             ],
             "validAfterAcceptance": false,
             "repairedDeclaration": "void damaged(Function<<String>, <Int>> value) {}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X107": {
+      "title": "empty type operands and qualifier edits preserve exact ranges",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { ${0} }",
+        "marker": "\u00a7",
+        "prefixLength": 0,
+        "exclude": [
+          "value",
+          "damaged"
+        ],
+        "variants": [
+          {
+            "declaration": "void damaged(ecstasy.text.\u00a7 value) {}",
+            "selected": "StringBuffer",
+            "include": [
+              "StringBuffer"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(ecstasy.text.StringBuffer value) {}"
+          },
+          {
+            "declaration": "void damaged(ecstasy.te\u00a7xt.StringBuffer value) {}",
+            "selected": "text",
+            "include": [
+              "text"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 2,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(ecstasy.text.StringBuffer value) {}"
+          },
+          {
+            "declaration": "void damaged((Int | \u00a7) value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged((Int | String) value) {}"
+          },
+          {
+            "declaration": "void damaged(List<(Int | \u00a7)> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<(Int | String)> value) {}"
+          },
+          {
+            "declaration": "void damaged(Object + \u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Object + String value) {}"
+          },
+          {
+            "declaration": "void damaged(Object - \u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Object - String value) {}"
+          },
+          {
+            "declaration": "void damaged((\u00a7 | Int) value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged((String | Int) value) {}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X108": {
+      "title": "multiple-return generic and package headers complete in the enclosing scope",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { ${0} }",
+        "marker": "\u00a7",
+        "prefixLength": 3,
+        "exclude": [
+          "value",
+          "damaged"
+        ],
+        "variants": [
+          {
+            "declaration": "(Int, Str\u00a7) damaged() { return 1, \"x\"; }",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "(Int, String) damaged() { return 1, \"x\"; }"
+          },
+          {
+            "declaration": "(Int count, Str\u00a7 text) damaged() { return 1, \"x\"; }",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "(Int count, String text) damaged() { return 1, \"x\"; }"
+          },
+          {
+            "declaration": "<T> void damaged(Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "<T> void damaged(String value) {}"
+          },
+          {
+            "declaration": "<T> Str\u00a7 damaged(T value) = \"x\";",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "<T> String damaged(T value) = \"x\";"
+          },
+          {
+            "declaration": "<T extends Str\u00a7> void damaged(T value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "<T extends String> void damaged(T value) {}"
+          },
+          {
+            "declaration": "class Damaged<T extends Str\u00a7> {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged<T extends String> {}"
+          },
+          {
+            "declaration": "package damaged incorporates SharedMi\u00a7 {} mixin SharedMixin into Package {}",
+            "selected": "SharedMixin",
+            "include": [
+              "SharedMixin"
+            ],
+            "prefixLength": 8,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "package damaged incorporates SharedMixin {} mixin SharedMixin into Package {}"
           }
         ]
       },
