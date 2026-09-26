@@ -98,7 +98,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
         // Build source-set-specific module dependencies for compilation
         // Main compile: only xtcModule (external deps)
-        // Test compile: xtcModule + xtcModuleTest (external deps + main output)
+        // Other source sets: xtcModule + their own incoming module configuration.
+        // The test configuration also includes main output.
         // This avoids the circular dependency where a task's output is also its input
         this.compileModuleDependencies = objects.fileCollection();
         final var configurations = project.getConfigurations();
@@ -106,10 +107,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         if (mainConfig != null) {
             compileModuleDependencies.from(mainConfig);
         }
-        if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) {
-            final var testConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(SourceSet.TEST_SOURCE_SET_NAME));
-            if (testConfig != null) {
-                compileModuleDependencies.from(testConfig);
+        if (!SourceSet.MAIN_SOURCE_SET_NAME.equals(sourceSet.getName())) {
+            final var sourceConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(sourceSet));
+            if (sourceConfig != null) {
+                compileModuleDependencies.from(sourceConfig);
             }
         }
 
