@@ -138,10 +138,8 @@
         "offset": 7
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native outline, folding and selection-range assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X2": {
@@ -178,10 +176,8 @@
         "cleanAppend": "// ERROR: test\n"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Editor severity, source spans, clearing, and Problems Current File row locations/counts are checked; diagnostic code/source and navigation by clicking a Problems row are not inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X3": {
@@ -232,10 +228,8 @@
         ]
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Both definition targets are checked; references and document highlights are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X5": {
@@ -277,10 +271,8 @@
         "validStatement": "String selected = box.item;"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Both receiver forms, exact insertion and corrected-source diagnostics are checked; compiler type detail and excluded method labels are not inspected when IntelliJ auto-inserts the sole candidate."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X7": {
@@ -492,10 +484,8 @@
         "argumentOffset": 7
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature popup, active argument and completed-call diagnostics are checked; selected-call declaration navigation is not yet driven."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X17": {
@@ -572,7 +562,7 @@
       "intellij": {
         "coverage": "partial",
         "limitations": [
-          "Native request confirms suppressed parameter metadata and no bold argument. LSP4IJ 0.21.0 displays \"no parameters\" instead of retaining the signature label; selected-overload navigation is not yet driven."
+          "Native suppressed metadata, no bold active argument, and selected-overload navigation implemented. LSP4IJ renders no parameters instead of retaining the signature label."
         ]
       }
     },
@@ -1115,10 +1105,8 @@
         }
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Cross-module target and clean diagnostics are checked; unopened-library state is not explicitly inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X46": {
@@ -1134,10 +1122,8 @@
         }
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Consumer errors and recovery are checked; unchanged consumer version, diagnostic code and unchanged library disk bytes are not inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X47": {
@@ -1723,10 +1709,8 @@
         "targetName": "fn"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native function signature labels and definition navigation are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X71": {
@@ -1808,10 +1792,8 @@
         "rejectedSignatureCount": 0
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X74": {
@@ -1875,10 +1857,8 @@
         "activeParameter": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X77": {
@@ -1917,10 +1897,8 @@
         "label": "text"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native completion selection, source-edit and scope assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X78": {
@@ -1944,10 +1922,8 @@
         "signatureCount": 2
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X79": {
@@ -1986,10 +1962,8 @@
         "prefixLength": 2
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native completion selection, source-edit and scope assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X80": {
@@ -2009,10 +1983,8 @@
         "acceptedCall": "choose(${0});"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native parameter-info label, overload and active-parameter assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X81": {
@@ -2038,9 +2010,9 @@
         "replacementStartDelta": -2
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native completion selection, source-edit and scope assertions are not implemented."
+          "Native candidates, type detail, exact accepted edit and clean diagnostics implemented; completion Property-kind metadata not inspected."
         ]
       }
     },
@@ -2057,9 +2029,9 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
+        "coverage": "partial",
         "limitations": [
-          "Native completion selection, source-edit and scope assertions are not implemented."
+          "Native exact candidates, exact accepted edit and clean diagnostics implemented; completion Property-kind metadata not inspected."
         ]
       }
     },
@@ -2086,10 +2058,8 @@
         ]
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X84": {
@@ -2119,10 +2089,8 @@
         "label": "text"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X85": {
@@ -2146,10 +2114,8 @@
         ]
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X86": {
@@ -2224,10 +2190,8 @@
         ]
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X89": {
@@ -2249,10 +2213,8 @@
         "replacementStartDelta": -2
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature information and rendered active parameter are checked for every variant; completion candidates and accepted edits are not yet driven."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X90": {
@@ -2272,10 +2234,8 @@
         "replacementStartDelta": -2
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native signature, bold size parameter, exact accepted edit, diagnostic persistence and repair are checked; IntelliJ may auto-insert the sole completion before its full candidate list can be inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X91": {
@@ -2325,10 +2285,8 @@
         "repairedParameters": "Int value"
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native diagnostics, Problems rows and repair are checked; native outline and folding assertions are not yet implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X93": {
@@ -2382,6 +2340,106 @@
           "ItemPrivate",
           "ItemProtected",
           "ItemValue",
+          "StringValue"
+        ],
+        "prefixLength": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X94": {
+      "title": "parameterized and compound header types preserve leaf edits and missing-delimiter diagnostics",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { String StringValue=\"x\"; ${0} Int later=1; }",
+        "marker": "\u00a7",
+        "variants": [
+          {
+            "declaration": "void damaged(Map<Int, List<Str\u00a7>> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Map<Int, List<String>> value) {}"
+          },
+          {
+            "declaration": "void damaged(Map<Str\u00a7, Int> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Map<String, Int> value) {}"
+          },
+          {
+            "declaration": "List<Str\u00a7> property;",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "List<String> property;"
+          },
+          {
+            "declaration": "List<Str\u00a7> damaged() = [\"x\"];",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "List<String> damaged() = [\"x\"];"
+          },
+          {
+            "declaration": "void damaged(List<(Int | Str\u00a7)> value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<(Int | String)> value) {}"
+          },
+          {
+            "declaration": "void damaged(Object + Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Object + String value) {}"
+          },
+          {
+            "declaration": "void damaged(Object - Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Object - String value) {}"
+          },
+          {
+            "declaration": "void damaged(List<ecstasy.text.Str\u00a7> value) {}",
+            "selected": "StringBuffer",
+            "include": [
+              "StringBuffer"
+            ],
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<ecstasy.text.StringBuffer> value) {}"
+          },
+          {
+            "declaration": "void damaged(Map<Int, List<Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "validAfterAcceptance": false,
+            "repairedDeclaration": "void damaged(Map<Int, List<String>> value) {}"
+          }
+        ],
+        "exclude": [
           "StringValue"
         ],
         "prefixLength": 3
@@ -2467,10 +2525,8 @@
         }
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Warning count, severity, location, message, clearing, and Problems Current File rows are checked; code/source, navigation by clicking a row and coexistence with errors in another file are not inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "7a.9": {
@@ -2486,10 +2542,8 @@
         "diagnosticCode": "EMB-5"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Bounded diagnostic-count and internal-error code assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     }
   }

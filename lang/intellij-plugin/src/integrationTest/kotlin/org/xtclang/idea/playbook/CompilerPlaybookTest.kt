@@ -81,6 +81,32 @@ class CompilerPlaybookTest {
                 installPluginFromPath(Path.of(System.getProperty("path.to.build.plugin")))
                 disablePlugins("com.intellij.kubernetes", "com.intellij.clouds.kubernetes")
             }
+            // Keep even a sole candidate visible until the driver inspects and accepts it.
+            // This affects only the disposable test IDE, not the packaged plugin's defaults.
+            Files.writeString(
+                Files.createDirectories(context.paths.configDir.resolve("options")).resolve("editor.xml"),
+                """
+                <application>
+                  <component name="CodeInsightSettings">
+                    <option name="AUTOCOMPLETE_ON_CODE_COMPLETION" value="false" />
+                    <option name="AUTOCOMPLETE_ON_SMART_TYPE_COMPLETION" value="false" />
+                    <option name="AUTO_POPUP_COMPLETION_LOOKUP" value="false" />
+                  </component>
+                </application>
+                """.trimIndent(),
+            )
+            // Unsaved-overlay scenarios must not be silently saved by an application focus change.
+            Files.writeString(
+                context.paths.configDir.resolve("options/ide.general.xml"),
+                """
+                <application>
+                  <component name="GeneralSettings">
+                    <option name="autoSaveFiles" value="false" />
+                    <option name="autoSaveIfInactive" value="false" />
+                  </component>
+                </application>
+                """.trimIndent(),
+            )
             context
                 .disableUltimateModule()
                 .applyVMOptionsPatch {
@@ -95,6 +121,8 @@ class CompilerPlaybookTest {
                 }
             check(ideFailures.isEmpty()) { ideFailures.joinToString("\n\n") }
         } finally {
+            // Restore global Starter state even if serializing or writing the report fails.
+            di = previousDi
             val report =
                 mapOf(
                     "ideVersion" to ideVersion,
@@ -109,7 +137,6 @@ class CompilerPlaybookTest {
                 )
             Files.writeString(run.resolve("results.json"), GsonBuilder().setPrettyPrinting().create().toJson(report) + "\n")
             println("IntelliJ compiler playbook report: ${run.resolve("results.json")}")
-            di = previousDi
         }
     }
 }
