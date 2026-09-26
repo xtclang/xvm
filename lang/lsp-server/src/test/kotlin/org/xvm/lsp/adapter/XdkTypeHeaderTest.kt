@@ -150,8 +150,8 @@ class XdkTypeHeaderTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "class Damaged extends Ow§ner.Base",
-            "class Damaged extends Owner.§", "module Headers extends Ba§",
+            "class Damaged extends Missing.Ow§ner.Base",
+            "class Damaged extends Owner.§", "module Headers extends Missing.Ba§",
         ],
     )
     fun `unsupported composition prefixes do not invent a scope`(declaration: String) {

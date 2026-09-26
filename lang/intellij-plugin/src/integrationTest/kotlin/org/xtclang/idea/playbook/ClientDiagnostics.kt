@@ -44,6 +44,8 @@ interface LanguageClients {
 @Remote("com.redhat.devtools.lsp4ij.LanguageServerWrapper", plugin = "com.redhat.devtools.lsp4ij")
 interface StartedLanguageServer {
     fun getOpenedDocuments(): Collection<ClientDocument>
+
+    fun getLanguageServer(): RemoteLanguageServer
 }
 
 @Remote("com.redhat.devtools.lsp4ij.OpenedDocument", plugin = "com.redhat.devtools.lsp4ij")
@@ -51,6 +53,20 @@ interface ClientDocument {
     fun getFile(): VirtualFile
 
     fun getDiagnostics(): Collection<ClientDiagnostic>
+
+    fun getSynchronizer(): DocumentSynchronizer
+}
+
+@Remote("com.redhat.devtools.lsp4ij.DocumentContentSynchronizer", plugin = "com.redhat.devtools.lsp4ij")
+interface DocumentSynchronizer {
+    fun getDidOpenFuture(): DocumentOpenFuture
+}
+
+@Remote("java.util.concurrent.CompletableFuture")
+interface DocumentOpenFuture {
+    fun isDone(): Boolean
+
+    fun isCompletedExceptionally(): Boolean
 }
 
 @Remote("org.eclipse.lsp4j.Diagnostic", plugin = "com.redhat.devtools.lsp4ij")

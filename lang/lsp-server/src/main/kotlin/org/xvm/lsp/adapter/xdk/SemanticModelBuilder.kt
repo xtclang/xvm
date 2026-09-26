@@ -967,7 +967,7 @@ private class SemanticModelBuilder(
     }
 
     private fun type(constant: TypeConstant?): TypeId? {
-        if (constant == null || constant.containsUnresolved()) return null
+        if (constant == null || !copyableType(constant)) return null
         typeIds[constant]?.let { return it }
         val id = TypeId(id, typeIds.size)
         typeIds[constant] = id // intern before following recursive type relationships
@@ -1001,6 +1001,27 @@ private class SemanticModelBuilder(
             }
         types[id] = Type(id, constant.valueString, form, immutableList(arguments), immutableList(underlying), constant.isNullable)
         return id
+    }
+
+    /** A formal identity can be resolved while its written constraint is still unresolved. */
+    private fun copyableType(
+        constant: TypeConstant,
+        seen: Set<TypeConstant> = emptySet(),
+    ): Boolean {
+        if (constant in seen) return true
+        if (constant.containsUnresolved()) return false
+        val visited = seen + constant
+        if (constant.isSingleDefiningConstant && constant.definingConstant is TypeParameterConstant) {
+            val formal = constant.definingConstant as TypeParameterConstant
+            val method = formal.method
+            if (method.isNascent || !copyableType(method.rawParams[formal.register], visited)) return false
+        }
+        if (constant.isParamsSpecified && !constant.isRelationalType && !constant.paramTypes.all { copyableType(it, visited) }) return false
+        return when {
+            constant.isRelationalType -> copyableType(constant.underlyingType, visited) && copyableType(constant.underlyingType2, visited)
+            constant.isModifyingType -> copyableType(constant.underlyingType, visited)
+            else -> true
+        }
     }
 
     /** Resolve only type identity. Modifiers unwrap; relational operands retain multiple targets. */

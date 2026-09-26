@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
@@ -26,11 +27,22 @@ public final class IncompleteDeclarationStatement extends Statement {
 
     public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end,
                                           List<IncompleteStatement> cursors) {
+        this(kind, name, start, end, cursors, Set.of());
+    }
+
+    public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end,
+                                          List<IncompleteStatement> cursors, Set<String> formals) {
         this.kind = kind;
         this.name = name;
         this.start = start;
         this.end = end;
         this.cursors = new ArrayList<>(cursors);
+        this.formals = Set.copyOf(formals);
+    }
+
+    /** Written but unregistered formals shadow enclosing names without inventing type identities. */
+    Set<String> formalNames() {
+        return formals;
     }
 
     public Kind getKind() {
@@ -104,10 +116,11 @@ public final class IncompleteDeclarationStatement extends Statement {
     // Only real syntax children use the AST's ordinary adoption and clone mechanism.
     protected List<IncompleteStatement> cursors;
 
-    private final Kind  kind;
-    private final Token name;
-    private final long  start;
-    private final long  end;
+    private final Kind        kind;
+    private final Token       name;
+    private final long        start;
+    private final long        end;
+    private final Set<String> formals;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteDeclarationStatement.class, "cursors");
 }

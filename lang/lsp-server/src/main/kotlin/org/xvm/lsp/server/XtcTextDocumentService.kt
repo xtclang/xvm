@@ -173,7 +173,9 @@ class XtcTextDocumentService(
         fun stale(): Boolean = closed || openDocuments[uri] !== document || (documents != null && documents != openDocuments)
         val started = System.nanoTime()
         logger.info("{}: {}", method, uri)
-        result.whenComplete { _, failure ->
+        // A JSON-RPC cancellation can complete this future under the transport's request lock.
+        // Release that thread before entering either the document or compiler lifecycle.
+        result.whenCompleteAsync { _, failure ->
             synchronized(lifecycle) { pendingQueries.remove(result) }
             val outcome = if (failure == null) "completed" else "canceled or failed"
             logger.info(
@@ -193,9 +195,11 @@ class XtcTextDocumentService(
                         if (stale()) throw contentModified()
                         request()
                     }
-                // Register after starting work: if cancellation won the race, this runs immediately.
-                result.whenComplete { _, failure -> if (failure != null) work.cancel(false) }
-                work.whenComplete { value, failure ->
+                // Register after starting work: prior cancellation still schedules backend cleanup.
+                result.whenCompleteAsync { _, failure -> if (failure != null) work.cancel(false) }
+                // Do not occupy the compiler worker while acquiring the publication lock: a
+                // synchronous navigation request can hold it while awaiting that same worker.
+                work.whenCompleteAsync { value, failure ->
                     synchronized(lifecycle) {
                         if (!result.isDone) {
                             when {
@@ -241,6 +245,7 @@ class XtcTextDocumentService(
     override fun didOpen(params: DidOpenTextDocumentParams) {
         synchronized(lifecycle) {
             if (closed) return
+            logger.info("textDocument/didOpen: {} version={}", params.textDocument.uri, params.textDocument.version)
             analyse(params.textDocument.uri, params.textDocument.text, params.textDocument.version)
         }
     }
@@ -306,7 +311,8 @@ class XtcTextDocumentService(
             .distinct()
             .filter { it !== analysis }
             .forEach { it.cancel(false) }
-        analysis.whenComplete { result, failure ->
+        // Publication must not block the compiler worker behind a queued navigation request.
+        analysis.whenCompleteAsync { result, failure ->
             synchronized(lifecycle) {
                 if (!closed && current.all { (documentUri, document) -> openDocuments[documentUri] === document }) {
                     if (failure == null) {
@@ -364,6 +370,7 @@ class XtcTextDocumentService(
     override fun didClose(params: DidCloseTextDocumentParams) {
         synchronized(lifecycle) {
             val uri = params.textDocument.uri
+            logger.info("textDocument/didClose: {}", uri)
             val affected = adapter.affectedAnalysisScopes(uri)
             val document = openDocuments.remove(uri)
             invalidateQueries(setOf(uri))

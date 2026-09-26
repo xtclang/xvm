@@ -3,6 +3,9 @@ package org.xvm.lsp.server
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
@@ -48,8 +51,22 @@ class XtcWorkspaceService(
      */
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
         logger.info("workspace/didChangeWatchedFiles: {} changes", params.changes.size)
+        refreshFiles(params.changes)
+    }
+
+    /** File operations can arrive without watcher notifications, especially after a client edit. */
+    override fun didRenameFiles(params: RenameFilesParams) {
+        logger.info("workspace/didRenameFiles: {} renames", params.files.size)
+        refreshFiles(
+            params.files.flatMap {
+                listOf(FileEvent(it.oldUri, FileChangeType.Deleted), FileEvent(it.newUri, FileChangeType.Created))
+            },
+        )
+    }
+
+    private fun refreshFiles(changes: List<FileEvent>) {
         server.refreshCompilerDiscovery()
-        for (change in params.changes) {
+        changes.forEach { change ->
             adapter.didChangeWatchedFile(change.uri, change.type.value)
             server.refreshForFile(change.uri)
         }
