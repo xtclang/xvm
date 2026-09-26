@@ -114,6 +114,14 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 ### Backend Comparison
 
+Compiler mode has implementations for all 24 capabilities in this project's adapter interface,
+plus push diagnostics and document/workspace synchronization. Several implementations remain
+bounded; the interface does not cover every LSP feature. Separate go-to-declaration, pull
+diagnostics, monikers, inline completion/values, colors, notebooks and broader refactorings are
+among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
+and [active L55–L82 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
+Capability coverage, semantic completeness and native test coverage are tracked separately.
+
 | Feature | Mock | Tree-sitter | XDK compiler |
 |---------|------|-------------|--------------|
 | Symbol detection | Regex | Syntax AST | Compiler AST |
@@ -124,8 +132,8 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
-| Rename | Basic | Implemented with syntax limits | Locals/private parameters; graph instance-method families, inline types and static members; compiler proof and versioned edits |
-| Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup; Java-lexer indentation and whitespace edits with token-preservation checks |
+| Rename | Basic | Implemented with syntax limits | Locals/private parameters; graph method/property families, types, static members and aliases; simple member-file moves; compiler proof and versioned edits |
+| Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup and unresolved public-type imports; Java-lexer indentation and whitespace edits with token-preservation checks |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; folds retain the actual closing-brace column |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | HTTP(S) URLs inside Java-lexer comments/literals |
@@ -163,6 +171,11 @@ already declare them. Binary contracts, annotation/delegation dispatch and unres
 outside rename scope.
 The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
 [validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
+The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. Large-workspace
+rename refusal/peak memory and editing during IntelliJ startup remain open investigations, even
+though isolated native refactoring cases pass. The active checklist records those limits and the
+current native inventory: 60 full, 3 partial and 50 unimplemented driver cases out of 113 shared
+cases; X93–X98 still await a native pass receipt.
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
 and its member tree together, including unsaved member files and packages. Non-file URIs remain
