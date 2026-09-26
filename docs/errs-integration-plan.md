@@ -33,7 +33,7 @@ this batch are development checkpoints until that final pass; no intermediate gr
 2. [x] Workspace source discovery, unopened-module symbols and the complete bundled XDK implemented (L43); verification deferred.
 3. [x] Workspace navigation, implementations and hierarchy implemented (L44); verification deferred.
 4. [x] Broader proven refactoring and import actions implemented (L45); verification deferred.
-5. [ ] Remaining type editing and editor features (C26/L46).
+5. [x] Generic base editing and compiler-only editor features implemented (C26/L46); verification deferred.
 6. [ ] Combined compiler/LSP/protocol verification, focused shared editor scenarios, formatting;
    update the final evidence and commit map. Native IntelliJ remains an occasional checkpoint.
 
@@ -43,6 +43,32 @@ only the cursor in disposable argument copies and fit alongside all later argume
 property reads use normal compiler validation. No mutable AST field is added. L42 copies the
 containing call's facts while retaining the inner cursor's exact replacement token. Tests are
 written alongside each area and intentionally deferred until the complete batch.
+
+### C26/L46 editing features (development checkpoint)
+
+The parser now retains a selected generic base name even when its written type arguments follow
+the cursor, so `Li|st<String>` replaces `List` and preserves `<String>`. This is a selection change
+in `declarationTypePrefix`, with independent-clone coverage; it adds no AST fields or new semantic
+API. Constraint legality remains the responsibility of normal compilation after acceptance.
+
+The Java lexer supplies bounded brace/parenthesis/bracket indentation, trailing-whitespace/final-
+newline edits, range/on-type formatting and HTTP(S) links inside comments/literals. Multiline token
+contents are untouched. Formatting refuses lexical errors and verifies that every token's kind and
+raw spelling survive the complete proposed edit. It does not implement expression wrapping,
+continuation alignment for generic headers or unbraced control-flow layout. Semantic tokens add
+lexical comments/literals/keywords while resolved names retain priority. Existing compiler-proven
+inlays remain unchanged; additional inference displays still need concrete compiler facts.
+
+Module code lenses use the existing `xtc.runModule` client command. Linked editing is limited to
+resolved, rename-eligible locals in one successful source snapshot; unrelated equal spellings,
+binaries and parameters do not acquire linked ranges. Linked typing has no proposed-name input,
+so it is not a substitute for rename's compile-and-binding proof.
+
+Shared X97 (nine argument-context variants) and X98 (three generic-base variants) are consumed by
+both editors. The catalog contains 103 scenarios: X1–X98, CFG1–3 and 7a.8–9. IntelliJ implements
+47 full and three partial cases, with 53 not implemented, plus separate startup; native execution
+is deferred. New compiler/adapter/protocol tests are written. All five implementation areas now
+exist as local development commits; the combined validation pass is next.
 
 ### L45 broader refactoring (development checkpoint)
 

@@ -5171,15 +5171,14 @@ public class Parser {
     }
 
     /**
-     * Select a written leaf type, without retaining its incomplete generic/compound owner. The
+     * Select a written type name, including a generic base whose arguments follow the cursor. The
      * caller transfers this original node into the cursor site; ordinary adoption and cloning
      * then own it. This is syntax selection, not validation of the enclosing type's constraints.
      */
     private Optional<NamedTypeExpression> declarationTypePrefix(TypeExpression type) {
         if (type instanceof NamedTypeExpression named && named.getModule() == null
                 && named.getNameToken() != null && named.getNameToken().getStartPosition() < f_cursor
-                && f_cursor <= named.getNameToken().getEndPosition()
-                && named.getEndPosition() == named.getNameToken().getEndPosition()) {
+                && f_cursor <= named.getNameToken().getEndPosition()) {
             return Optional.of(named);
         }
         if (type instanceof FunctionTypeExpression || type instanceof TupleTypeExpression) {
