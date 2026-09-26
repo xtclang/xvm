@@ -1,5 +1,10 @@
 # Failures with nowhere to go
 
+C27/L51 adds written function/sequence type-header completion using existing parser recovery and
+listener branches; no new listener path or AST state. Single-report, clone/source ownership and
+ordinary-parser controls accompany the shared X106 scenario. Native parity additions and remaining
+bounds are in the [current checkpoint](errs-integration-plan.md#functionsequence-header-completion-and-native-parity-c27l51l52).
+
 L50 refactoring extends compiler-proven edits without changing listener delivery. Successful graph
 attempts inspect property dispatch using the host listener; failed repair attempts only copy existing
 facts, and every proposed import must then compile completely. The only added AST API consists of
@@ -419,7 +424,7 @@ bytes. This is an inspection-boundary finding, not a new claim about an upstream
 
 Delegating and Ref/Var-annotated properties remain explicit negative cases. Delegation's optimized
 chain APIs can generate forwarding methods, so resolving their source meaning needs its own consumer
-and output/lifetime checks before enabling it. Property rename remains disabled.
+and output/lifetime checks before enabling it. Property rename was disabled at this checkpoint; L50 now proves ordinary source families.
 
 ## Post-L18 diagnostic and emission findings (2026-09-24)
 
