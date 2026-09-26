@@ -111,6 +111,14 @@ public final class IncompleteStatement extends Statement {
         return isCall() ? Optional.empty() : Optional.ofNullable(cursorName);
     }
 
+    /** Typed text before the cursor; the original token still supplies the whole replacement range. */
+    public String getCompletionPrefix() {
+        return getArgumentPrefix().or(this::getMemberName).map(name ->
+                endPosition < name.getEndPosition()
+                        ? getSource().toString(name.getStartPosition(), endPosition)
+                        : name.getValueText()).orElse("");
+    }
+
     /** The named argument at the cursor, whose value is absent or retained only as a name prefix. */
     public Optional<Token> getPendingArgumentName() {
         return isCall() ? Optional.ofNullable(cursorName) : Optional.empty();

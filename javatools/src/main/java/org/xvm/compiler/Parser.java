@@ -5033,6 +5033,7 @@ public class Parser {
                                                            boolean fHeader) {
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null) {
+            retainEmptyTypeArgument(fHeader);
             if (match(Id.COMP_GT) != null) {
                 types = Collections.emptyList();
             } else {
@@ -5065,6 +5066,8 @@ public class Parser {
                 return types;
             }
 
+            retainEmptyTypeArgument(fHeader);
+
             if (fAllowTypeSequence && peek(Id.COMP_LT)) {
                 Token tokStart = peek();
                 List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
@@ -5073,6 +5076,18 @@ public class Parser {
             } else {
                 types.add(parseIntersectingTypeExpression(true, fHeader));
             }
+        }
+    }
+
+    /** An explicit empty generic slot has no invented type expression or generic owner. */
+    private void retainEmptyTypeArgument(boolean header) {
+        if (header && !f_errs.get().isAbortDesired() && prev().getEndPosition() <= f_cursor
+                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && (switch (peek().getId()) {
+                    case COMP_GT, COMP_GTEQ, SHR, SHR_ASN, USHR, USHR_ASN -> true;
+                    default -> canRetainIncomplete();
+                })) {
+            throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
         }
     }
 
@@ -5200,9 +5215,10 @@ public class Parser {
      * then own it. This is syntax selection, not validation of the enclosing type's constraints.
      */
     private Optional<NamedTypeExpression> declarationTypePrefix(TypeExpression type) {
-        if (type instanceof NamedTypeExpression named && !named.children().hasNext()
-                && named.getModule() == null && named.getNameToken().getEndPosition() == f_cursor
-                && named.getEndPosition() == f_cursor) {
+        if (type instanceof NamedTypeExpression named && named.getModule() == null
+                && named.getNameToken() != null && named.getNameToken().getStartPosition() < f_cursor
+                && f_cursor <= named.getNameToken().getEndPosition()
+                && named.getEndPosition() == named.getNameToken().getEndPosition()) {
             return Optional.of(named);
         }
         if (type instanceof FunctionTypeExpression || type instanceof TupleTypeExpression) {
