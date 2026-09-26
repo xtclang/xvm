@@ -671,9 +671,8 @@ public class Parser {
                 }
 
                 stmts.add(stmt);
-                if (stmt instanceof MethodDeclarationStatement) {
-                    MethodDeclarationStatement stmtFinally =
-                            ((MethodDeclarationStatement) stmt).getConstructorFinally();
+                if (stmt instanceof MethodDeclarationStatement method) {
+                    MethodDeclarationStatement stmtFinally = method.getConstructorFinally();
                     if (stmtFinally != null) {
                         stmts.add(stmtFinally);
                     }
