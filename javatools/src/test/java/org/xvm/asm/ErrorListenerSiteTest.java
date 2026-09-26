@@ -1,10 +1,10 @@
 package org.xvm.asm;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.ErrorListener.Site;
 
 import org.xvm.compiler.Source;
@@ -33,7 +33,7 @@ public class ErrorListenerSiteTest {
 
         errs.error(CODE, in(source, 3, 7), "a", "b");
 
-        ErrorListener.ErrorInfo err = errs.getErrors().get(0);
+        ErrorInfo err = errs.getErrors().get(0);
         assertEquals(Severity.ERROR, err.getSeverity());
         assertEquals(CODE, err.getCode());
         assertEquals(List.of("a", "b"), List.of(err.getParams()));
@@ -49,8 +49,7 @@ public class ErrorListenerSiteTest {
         errs.error(CODE, in(source, 2, 3), "x", "y");
         errs.fatal(CODE, in(source, 3, 4), "x", "y");
 
-        List<Severity> actual = new ArrayList<>();
-        errs.getErrors().forEach(err -> actual.add(err.getSeverity()));
+        var actual = errs.getErrors().stream().map(ErrorInfo::getSeverity).toList();
         assertEquals(List.of(Severity.INFO, Severity.WARNING, Severity.ERROR, Severity.FATAL), actual);
     }
 
@@ -70,14 +69,11 @@ public class ErrorListenerSiteTest {
         assertInstanceOf(Site.In.class, errs.getErrors().get(0).site());
         assertInstanceOf(Site.None.class, errs.getErrors().get(1).site());
 
-        List<String> published = new ArrayList<>();
-        for (ErrorListener.ErrorInfo err : errs.getErrors()) {
-            published.add(switch (err.site()) {
-                case Site.In site -> site.lPosStart() + ".." + site.lPosEnd();
-                case Site.At site -> site.xs().getDescription();
-                case Site.None _ -> "whole file";
-            });
-        }
+        var published = errs.getErrors().stream().map(err -> switch (err.site()) {
+            case Site.In site -> site.lPosStart() + ".." + site.lPosEnd();
+            case Site.At site -> site.xs().getDescription();
+            case Site.None _ -> "whole file";
+        }).toList();
         assertEquals(List.of("3..7", "whole file"), published);
     }
 

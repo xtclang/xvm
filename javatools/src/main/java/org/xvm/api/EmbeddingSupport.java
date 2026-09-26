@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.time.Instant;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -115,12 +116,10 @@ public class EmbeddingSupport {
      * @return the repository, or null if none of the directories exist
      */
     private static ModuleRepository repoOver(File... dirs) {
-        List<ModuleRepository> list = new ArrayList<>();
-        for (File dir : dirs) {
-            if (dir.isDirectory()) {
-                list.add(new DirRepository(dir, true));
-            }
-        }
+        List<ModuleRepository> list = Arrays.stream(dirs)
+                .filter(File::isDirectory)
+                .<ModuleRepository>map(dir -> new DirRepository(dir, true))
+                .toList();
         return switch (list.size()) {
             case 0  -> null;
             case 1  -> list.getFirst();
