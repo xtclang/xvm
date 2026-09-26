@@ -101,7 +101,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
     @Inject
     public XtcRunTask(final ObjectFactory objects, final Project project) {
-        super(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
+        this(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
+    }
+
+    protected XtcRunTask(final ObjectFactory objects, final Project project, final XtcRuntimeExtension extension) {
+        super(objects, project, extension);
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
         this.cliModuleName = objects.property(String.class);
