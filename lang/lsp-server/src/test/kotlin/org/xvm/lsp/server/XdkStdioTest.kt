@@ -514,13 +514,15 @@ class XdkStdioTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "void damaged(Str| value) {}", "Str| property;",
-            "void damaged(ecstasy.text.Str| value) {}", "ecstasy.text.Str| property;",
+            "void damaged(Str§ value) {}", "Str§ property;",
+            "void damaged(ecstasy.text.Str§ value) {}", "ecstasy.text.Str§ property;",
+            "void damaged(Map<Int, List<Str§>> value) {}", "List<ecstasy.text.Str§> property;",
+            "void damaged((Int | Str§) value) {}",
         ],
     )
     fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
-        val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('|')
-        val suffix = declaration.substringAfter('|') + "\r\n Int later=1; }"
+        val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('§')
+        val suffix = declaration.substringAfter('§') + "\r\n Int later=1; }"
         val selected = if (declaration.contains("ecstasy.text.")) "StringBuffer" else "String"
         val column = prefix.substringAfterLast('\n').length
         Session(packagedJar(), directory).use { session ->
