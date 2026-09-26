@@ -3,6 +3,7 @@ import com.github.gradle.node.task.NodeTask
 
 plugins {
     base
+    alias(libs.plugins.xdk.build.properties) apply false // Shared build task types
     alias(libs.plugins.lang.node.gradle)
 }
 
@@ -35,40 +36,35 @@ val copyTextMateGrammar = tasks.register<Copy>("copyTextMateGrammar") {
 }
 
 // Copy language configuration
-val copyLanguageConfig = tasks.register<Copy>("copyLanguageConfig") {
+val copyLanguageConfig = tasks.register<CopyFileTask>("copyLanguageConfig") {
     description = "Copy language configuration from generated output"
-    from(textMateGrammar) {
+    val languageConfig = textMateGrammar.asFileTree.matching {
         include("language-configuration.json")
     }
-    into(layout.projectDirectory)
+    sourceFile.set(layout.file(languageConfig.elements.map { it.single().asFile }))
+    outputFile.set(layout.projectDirectory.file("language-configuration.json"))
 }
 
 // Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
-val copyLspServer = tasks.register<Copy>("copyLspServer") {
+val copyLspServer = tasks.register<CopyFileTask>("copyLspServer") {
     description = "Copy LSP server fat JAR"
-    dependsOn(project(":lsp-server").tasks.named("fatJar"))
-    from(project(":lsp-server").tasks.named("fatJar"))
-    into(layout.projectDirectory.dir("server"))
-    rename { "lsp-server.jar" }
+    sourceFile.set(project(":lsp-server").tasks.named<Jar>("fatJar").flatMap { it.archiveFile })
+    outputFile.set(layout.projectDirectory.file("server/lsp-server.jar"))
 }
 
 // Copy DAP server JAR (bundled for debugging support)
-val copyDapServer = tasks.register<Copy>("copyDapServer") {
+val copyDapServer = tasks.register<CopyFileTask>("copyDapServer") {
     description = "Copy DAP server JAR"
-    dependsOn(project(":dap-server").tasks.named("jar"))
-    from(project(":dap-server").tasks.named("jar")) {
-        include("*.jar")
-    }
-    into(layout.projectDirectory.dir("server"))
-    rename { "dap-server.jar" }
+    sourceFile.set(project(":dap-server").tasks.named<Jar>("jar").flatMap { it.archiveFile })
+    outputFile.set(layout.projectDirectory.file("server/dap-server.jar"))
 }
 
 // Copy LICENSE from repository root
-val copyLicense = tasks.register<Copy>("copyLicense") {
+val copyLicense = tasks.register<CopyFileTask>("copyLicense") {
     description = "Copy LICENSE from repository root"
     val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
-    from(File(compositeRoot, "LICENSE.md"))
-    into(layout.projectDirectory)
+    sourceFile.set(File(compositeRoot, "LICENSE.md"))
+    outputFile.set(layout.projectDirectory.file("LICENSE.md"))
 }
 
 // Generate the marketplace icon (xtc.png, 256x256) and the language file icon
