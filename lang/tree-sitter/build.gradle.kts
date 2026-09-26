@@ -386,17 +386,22 @@ val zigExe: String = File(zigDir, "zig-$zigPlatform-$zigVersion/$zigExeName").ab
 /**
  * Copy generated grammar.js and scanner.c from the DSL project.
  */
-val copyGrammarFiles = tasks.register<Copy>("copyGrammarFiles") {
+val copyGrammar = tasks.register<CopyFileTask>("copyGrammar") {
+    dependsOn(dslProject.tasks.named("generateTreeSitter"))
+    sourceFile.set(dslProject.layout.buildDirectory.file("generated/grammar.js"))
+    outputFile.set(grammarJsFile)
+}
+
+val copyScanner = tasks.register<CopyFileTask>("copyScanner") {
+    dependsOn(dslProject.tasks.named("generateScannerC"))
+    sourceFile.set(dslProject.layout.buildDirectory.file("generated/src/scanner.c"))
+    outputFile.set(scannerCFile)
+}
+
+val copyGrammarFiles = tasks.register("copyGrammarFiles") {
     group = "tree-sitter"
     description = "Copy grammar files from DSL project"
-    dependsOn(dslProject.tasks.named("generateTreeSitter"), dslProject.tasks.named("generateScannerC"))
-
-    val dslGenerated = dslProject.layout.buildDirectory.dir("generated")
-    from(dslGenerated.map { it.file("grammar.js") })
-    from(dslGenerated.map { it.dir("src").file("scanner.c") }) {
-        into("src")
-    }
-    into(generatedDir)
+    dependsOn(copyGrammar, copyScanner)
 }
 
 /**
