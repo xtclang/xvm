@@ -25,7 +25,7 @@ export function selectedScenarioIds(selection: string | undefined): ScenarioId[]
     return sharedScenarioIds.filter(id => requested.includes(id));
 }
 
-const expectedIds = [...Array.from({ length: 95 }, (_, index) => `X${index + 1}`), 'CFG1', 'CFG2', 'CFG3', '7a.8', '7a.9'];
+const expectedIds = [...Array.from({ length: 96 }, (_, index) => `X${index + 1}`), 'CFG1', 'CFG2', 'CFG3', '7a.8', '7a.9'];
 assert.deepStrictEqual(sharedScenarioIds, expectedIds, 'The catalog must describe the complete playbook in order');
 for (const [id, scenario] of Object.entries(catalog.cases)) {
     assert.ok(scenario.title && scenario.values && Array.isArray(scenario.manual), `Invalid scenario ${id}`);

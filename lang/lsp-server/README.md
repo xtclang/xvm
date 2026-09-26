@@ -221,10 +221,12 @@ compiler, including unqualified empty parameter slots and flat qualified names s
 types and typedefs. Only the final written identifier is replaced. No partial signatures or
 parameter names are invented. Written leaf names inside parameterized/compound types and bounded
 missing angle/group closers also work. These are visible-type suggestions; normal compilation
-checks generic constraints. Empty type arguments/operands, parameterized qualifiers, generic
-base-name prefixes, function/sequence types, formal-type candidates, trailing dots, generic-method, multi-return and
-module/package headers remain follow-ups; see
-[shared X91–X95](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+checks generic constraints. Registered class/method formals, empty generic slots and complete
+parameterized qualifiers also work; aliases retain their substituted type. Mid-token queries
+replace the entire final identifier. Empty operands, generic base-name prefixes, qualifier-middle
+edits, function/sequence types, trailing dots, unregistered generic-method/type-header formals,
+multi-return and module/package headers remain follow-ups; see
+[shared X91–X96](../doc/manual-test-plan.md#xdkadapter-playbook) and the
 [C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
 Class/interface headers now retain their written name and body for structure when a bounded header
@@ -233,7 +235,8 @@ fails. Explicit queries complete visible types in `extends`, `implements`, `dele
 work. The retained type has no compiler component or inheritance facts; its body never registers
 against the enclosing type. Suggestions prove visibility, while normal compilation checks legal
 inheritance and constraints. Shared X95 exercises both editor consumers; native IntelliJ execution
-is still pending. See [C23/L39](../../docs/errs-integration-plan.md#class-and-interface-composition-headers).
+is still pending. Shared X96 adds eight generic/formal and whole-token acceptance variants.
+See [C24/L41](../../docs/errs-integration-plan.md#generic-type-completion-batch) and [C23/L39](../../docs/errs-integration-plan.md#class-and-interface-composition-headers).
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module
 members. It does not expand virtual dispatch, function values, constructors or dependency sources.
