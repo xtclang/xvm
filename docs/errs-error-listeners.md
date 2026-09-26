@@ -650,3 +650,17 @@ fall back to unrelated enclosing types. First-error/cancellation controls return
 Empty generic and mid-token recovery reuse the existing one-report cursor diagnostic and emission
 guard. Registered formal lookup changes neither listener ownership nor validation scope. See
 [C24/L41](errs-integration-plan.md#generic-type-completion-batch) for the API and test record.
+
+## Qualified argument probes and workspace consumers
+
+C25/L42 derives an inner value cursor's containing call from written AST ownership. Trial arguments
+preserve labels, parentheses and later values; rejected fits use the existing cancellable PROBE
+listeners. Normal diagnostics remain separate. No listener, Context or mutable semantic field is
+added to an AST node. C26/L46 selects generic base tokens using the same type-query/reporting path.
+
+L43–L46 discover source modules, join copied semantic identities, prove refactoring edits and add
+bounded Java-lexer editor features in Kotlin. Graph compilations use host cancellation and collecting
+listeners without publishing speculative diagnostics. Implementation extraction now performs the
+explicit reporting inspection already used for single-module lookup. The full bundled XDK remains
+read-only to workspace operations; library names cannot be replaced with source or host artifacts.
+See the [five-area verification and extraction record](errs-integration-plan.md#five-area-functionality-batch).
