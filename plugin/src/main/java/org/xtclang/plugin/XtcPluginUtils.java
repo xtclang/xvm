@@ -17,7 +17,6 @@ import java.nio.file.Files;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -88,7 +87,7 @@ public final class XtcPluginUtils {
 
     /**
      * Format a message template by replacing {} placeholders with provided parameters.
-     * This uses the same formatting logic as the Console in javatools.
+     * Other braces and argument contents are literal, so formatting cannot mask the original failure.
      *
      * @param template The message template with {} placeholders
      * @param params   Parameters to substitute into the template
@@ -98,27 +97,17 @@ public final class XtcPluginUtils {
         if (template == null || params == null || params.length == 0) {
             return template;
         }
-        // First escape single quotes for MessageFormat (double them), then convert {} to {n}
-        final var escaped = template.replace("'", "''");
-        final var numbered = new StringBuilder(escaped.length() + params.length * 3);
-        int paramIndex = 0;
+        final var formatted = new StringBuilder(template.length());
         int pos = 0;
-        while (pos < escaped.length()) {
-            int openBrace = escaped.indexOf('{', pos);
-            if (openBrace == -1) {
-                numbered.append(escaped.substring(pos));
+        for (final var param : params) {
+            final int placeholder = template.indexOf("{}", pos);
+            if (placeholder < 0) {
                 break;
             }
-            numbered.append(escaped, pos, openBrace);
-            if (openBrace + 1 < escaped.length() && escaped.charAt(openBrace + 1) == '}') {
-                numbered.append('{').append(paramIndex++).append('}');
-                pos = openBrace + 2;
-            } else {
-                numbered.append('{');
-                pos = openBrace + 1;
-            }
+            formatted.append(template, pos, placeholder).append(param);
+            pos = placeholder + 2;
         }
-        return MessageFormat.format(numbered.toString(), params);
+        return formatted.append(template, pos, template.length()).toString();
     }
 
     /**
