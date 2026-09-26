@@ -1,9 +1,14 @@
 # Ecstasy Language Tooling
 
+Compiler-mode header completion now covers empty type operands, trailing dots, selected qualifier
+names and generic/multiple-return declarations. Shared X107/X108 exercise accepted edits in both
+editors; IntelliJ adds selected native workspace/refactoring checks. See the
+[active validation and extraction plan](../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+
 C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
 arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
-implemented in both editors. IntelliJ also adds native X33/X35 and partial X101 assertions;
-these newly implemented native checks await a later execution checkpoint.
+implemented in both editors. IntelliJ now asserts X33/X35 navigation and the complete X101
+read-only checks; native execution receipts are tracked separately in the active validation plan.
 
 L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
 type moves and public-type auto-import repairs. See the

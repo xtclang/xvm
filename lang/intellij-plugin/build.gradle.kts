@@ -877,6 +877,14 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
                 .get(),
         )
         systemProperty("xtc.playbook.adapter", providers.gradleProperty("lsp.adapter").getOrElse("treesitter"))
+        systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
+        systemProperty(
+            "allure.results.directory",
+            layout.buildDirectory
+                .dir("reports/compiler-playbook/allure-results")
+                .get()
+                .asFile.absolutePath,
+        )
         val scenarios = rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
         inputs.file(scenarios)
         systemProperty("xtc.playbook.scenarios", scenarios.asFile.absolutePath)

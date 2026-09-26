@@ -49,6 +49,9 @@ final class CursorScope {
     static List<CursorBinding.NamedType> declarationTypes(IncompleteStatement site, ErrorListener errs) {
         AstNode scope = declarationScope(site);
         if (site.getTarget() instanceof NamedTypeExpression type) {
+            if (unregisteredFormals(site).contains(firstName(type))) {
+                return List.of();
+            }
             if (type.left != null) {
                 return parameterizedTypes(type, scope, site.getCompletionPrefix(), errs);
             }
@@ -67,7 +70,19 @@ final class CursorScope {
     /** A syntax-only type has no component; its parent retains the real enclosing/import scope. */
     static AstNode declarationScope(IncompleteStatement site) {
         return site.getParent() instanceof IncompleteTypeCompositionStatement declaration
-                ? declaration.getParent() : site;
+                ? declaration.isComponentNode() ? declaration : declaration.getParent() : site;
+    }
+
+    private static String firstName(NamedTypeExpression type) {
+        return type.left instanceof NamedTypeExpression left ? firstName(left) : type.getNames()[0];
+    }
+
+    private static Set<String> unregisteredFormals(IncompleteStatement site) {
+        return switch (site.getParent()) {
+            case IncompleteDeclarationStatement declaration -> declaration.formalNames();
+            case IncompleteTypeCompositionStatement declaration -> declaration.formalNames();
+            default -> Set.of();
+        };
     }
 
     /** Use contextual TypeInfo to enumerate children, then normal type-name resolution to bind them. */
@@ -212,6 +227,7 @@ final class CursorScope {
                 }
             }
         });
+        names.removeAll(unregisteredFormals(site));
         return names;
     }
 }

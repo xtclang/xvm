@@ -23,9 +23,17 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
 
 /** Fail on desktop interference instead of repeatedly activating the IDE or timing out on a dismissed popup. */
 fun Driver.requirePopupFocus() {
-    check(ideFrame().isFocused()) {
-        "Native popup check lost IDE focus; switching applications dismisses completion and parameter hints"
+    // Navigation choosers are heavyweight windows: they take focus from their owning IDE frame.
+    // AWT keeps that frame active. Allow the brief transition while the popup acquires focus.
+    val frame = cast(ideFrame().component, ActiveWindow::class)
+    waitFor("Native popup check lost IDE focus; switching applications dismisses popups", 2.seconds) {
+        withContext(OnDispatcher.EDT) { frame.isActive() }
     }
+}
+
+@Remote("java.awt.Window")
+interface ActiveWindow {
+    fun isActive(): Boolean
 }
 
 @Remote("com.intellij.ui.AppIcon")

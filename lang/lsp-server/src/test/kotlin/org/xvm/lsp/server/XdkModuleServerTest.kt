@@ -9,9 +9,11 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
+import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -27,6 +29,7 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.SECONDS
@@ -79,6 +82,43 @@ class XdkModuleServerTest {
             assertThat(added.delete()).isTrue()
             session.watched(added, FileChangeType.Deleted)
             session.expect(added, mark, null, false)
+        }
+    }
+
+    @Test
+    fun `file rename notifications refresh members and retire old diagnostic locations without watcher events`() {
+        val (root, member) = fixture()
+        Session().use { session ->
+            val capability =
+                session.server
+                    .initialize(InitializeParams())
+                    .get(10, SECONDS)
+                    .capabilities.workspace.fileOperations.didRename
+            assertThat(
+                capability.filters
+                    .single()
+                    .pattern.glob,
+            ).isEqualTo("**/*.x")
+            assertThat(capability.filters.single().scheme).isEqualTo("file")
+            session.open(root, root.readText(), 1)
+            session.expect(member, 0, null, false)
+            val renamed = member.resolveSibling("Renamed.x")
+            var mark = session.published.size
+            Files.move(member.toPath(), renamed.toPath())
+            renamed.writeText("class Renamed extends Base { MissingType absent; }")
+            session.server.workspaceService.didRenameFiles(
+                RenameFilesParams(listOf(FileRename(member.toURI().toString(), renamed.toURI().toString()))),
+            )
+            session.expect(renamed, mark, null, true)
+            session.expect(member, mark, null, false)
+            mark = session.published.size
+            Files.move(renamed.toPath(), member.toPath())
+            member.writeText("class Child extends Base {}")
+            session.server.workspaceService.didRenameFiles(
+                RenameFilesParams(listOf(FileRename(renamed.toURI().toString(), member.toURI().toString()))),
+            )
+            session.expect(renamed, mark, null, false)
+            session.expect(member, mark, null, false)
         }
     }
 
