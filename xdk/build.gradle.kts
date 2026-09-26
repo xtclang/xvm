@@ -9,16 +9,20 @@ import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFiles
-import org.gradle.api.tasks.OutputFiles
+import org.gradle.api.tasks.OutputDirectory
+import org.gradle.api.tasks.PathSensitive
+import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
 import org.xtclang.plugin.XtcPlugin
 import org.xtclang.plugin.XtcTestExtension
 import org.xtclang.plugin.tasks.XtcCompileTask
 import java.io.File
+import javax.inject.Inject
 
 /**
  * XDK root project, collecting the lib_* xdk builds as includes, not includedBuilds ATM,
@@ -171,15 +175,25 @@ abstract class ModifyScriptsTask : DefaultTask() {
     abstract val javaToolsFiles: ConfigurableFileCollection
 
     @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val scriptsDir: DirectoryProperty
 
-    @get:OutputFiles
-    abstract val modifiedScripts: ConfigurableFileCollection
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @get:Inject
+    abstract val fileSystem: FileSystemOperations
 
     @TaskAction
     fun modifyScripts() {
+        fileSystem.sync {
+            from(scriptsDir) {
+                include("xtc", "xtc.bat")
+            }
+            into(outputDir)
+        }
         XdkDistribution.modifyLauncherScripts(
-            outputDir = scriptsDir.get().asFile,
+            outputDir = outputDir.get().asFile,
             artifactVersion = artifactVersionProperty.get(),
             javaToolsFiles = javaToolsFiles.files
         )
@@ -187,23 +201,14 @@ abstract class ModifyScriptsTask : DefaultTask() {
 }
 
 val modifyScripts = tasks.register<ModifyScriptsTask>("modifyScripts") {
-    dependsOn(tasks.startScripts)
-
     artifactVersionProperty.set(artifactVersion)
     javaToolsFiles.from(configurations.getByName("xdkJavaTools"))
     scriptsDir.set(layout.dir(tasks.startScripts.map { it.outputDir!! }))
-    modifiedScripts.from(tasks.startScripts.map { task ->
-        listOf("xcc", "xec", "xtc").flatMap { script ->
-            listOf(File(task.outputDir!!, script), File(task.outputDir!!, "$script.bat"))
-        }
-    })
+    outputDir.set(layout.buildDirectory.dir("modified-scripts"))
 }
 
 val prepareDistributionScripts = tasks.register<Copy>("prepareDistributionScripts") {
-    dependsOn(modifyScripts)
-    from(tasks.startScripts.map { it.outputDir!! }) {
-        include("xtc*", "xcc*", "xec*")
-    }
+    from(modifyScripts.flatMap { it.outputDir })
     into(layout.buildDirectory.dir("distribution-scripts"))
 }
 
