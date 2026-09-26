@@ -169,10 +169,10 @@
                     "description": "Maximum line width (right margin)"
                 },
                 "xtc.compiler.sourceModules": {
-                    "type": "array",
-                    "default": [],
+                    "type": ["array", "null"],
+                    "default": null,
                     "scope": "window",
-                    "description": "Source modules for automatic compilation in the compiler backend. Changes apply without restarting. Relative URIs require a single workspace folder.",
+                    "description": "Compiler source graph: null discovers workspace modules; [] disables discovery; an array supplies explicit roots and edges. Changes apply without restarting. Relative URIs require a single workspace folder.",
                     "items": {
                         "type": "object",
                         "required": ["name", "uri"],

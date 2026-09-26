@@ -16,7 +16,7 @@ class XdkSourceModule(
 
     init {
         require(name.isNotBlank() && root.extension == "x") { "A source module requires a name and an .x root" }
-        require(name !in setOf("ecstasy.xtclang.org", "mack.xtclang.org", "_native.xtclang.org")) {
+        require(name !in XdkLibraries.moduleNames) {
             "Project sources cannot replace bundled compiler libraries"
         }
     }

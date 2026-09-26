@@ -118,6 +118,7 @@ import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import java.io.IOException
 import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
@@ -354,7 +355,11 @@ class XtcLanguageServer(
         synchronized(compilerSettings) {
             if (settings.closed || compilerSettings.get() !== settings) return
             try {
-                CompilerConfiguration.modules(raw, settings.folders)?.let(::replaceCompilerSourceModules)
+                if (CompilerConfiguration.automatic(raw)) {
+                    textDocumentService.refreshDependencies { (adapter as XdkAdapter).discoverSourceModules() }
+                } else {
+                    CompilerConfiguration.modules(raw, settings.folders)?.let(::replaceCompilerSourceModules)
+                }
             } catch (e: IllegalArgumentException) {
                 reportCompilerConfigError(e)
             }
@@ -781,6 +786,17 @@ class XtcLanguageServer(
     // =========================================================================
     // Helper Methods
     // =========================================================================
+
+    fun refreshCompilerDiscovery() {
+        val compiler = adapter as? XdkAdapter ?: return
+        try {
+            textDocumentService.refreshDependencies { compiler.refreshDiscoveredSources() }
+        } catch (failure: IllegalArgumentException) {
+            reportCompilerConfigError(failure)
+        } catch (failure: IOException) {
+            logger.warn("Source discovery failed; keeping previous graph: {}", failure.message)
+        }
+    }
 
     fun refreshForFile(uri: String) = textDocumentService.refreshForFile(uri)
 

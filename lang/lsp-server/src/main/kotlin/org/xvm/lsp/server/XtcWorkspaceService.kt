@@ -47,6 +47,7 @@ class XtcWorkspaceService(
      */
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
         logger.info("workspace/didChangeWatchedFiles: {} changes", params.changes.size)
+        server.refreshCompilerDiscovery()
         for (change in params.changes) {
             adapter.didChangeWatchedFile(change.uri, change.type.value)
             server.refreshForFile(change.uri)
