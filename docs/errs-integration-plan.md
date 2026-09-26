@@ -29,8 +29,8 @@ Requested after checkpoint `5c334f919`: implement the following sequentially, wi
 commit per area and a combined verification pass after all five implementations. The commits in
 this batch are development checkpoints until that final pass; no intermediate green result is implied.
 
-1. [ ] Argument contexts: qualified/grouped values and slots before later arguments (C25/L42).
-2. [ ] Workspace source discovery and indexing (L43).
+1. [x] Argument contexts implemented in `837fae19c`: qualified/grouped values and slots before later arguments (C25/L42); verification deferred.
+2. [x] Workspace source discovery, unopened-module symbols and the complete bundled XDK implemented (L43); verification deferred.
 3. [ ] Workspace navigation, implementations and hierarchy (L44).
 4. [ ] Broader proven refactoring and import actions (L45).
 5. [ ] Remaining type editing and editor features (C26/L46).
@@ -43,6 +43,34 @@ only the cursor in disposable argument copies and fit alongside all later argume
 property reads use normal compiler validation. No mutable AST field is added. L42 copies the
 containing call's facts while retaining the inner cursor's exact replacement token. Tests are
 written alongside each area and intentionally deferred until the complete batch.
+
+### L43 discovery and bundled libraries (development checkpoint)
+
+Workspace folders are scanned for Java-parser module declarations and source import edges. Generated
+folders and symlinks are excluded; bundled library names never enter the editable source graph.
+An incomplete header retains its previously known module name/dependencies. Duplicate names,
+overlapping roots and cycles are rejected before replacing the active graph. Watched-file changes
+refresh discovery and retire old requests. Explicit configurations remain authoritative; `[]` clears
+and disables discovery, `null` restores automatic discovery, and absent settings preserve the current
+mode. VS Code defaults to `null`; IntelliJ's absent configuration uses initial workspace discovery.
+
+Workspace symbol requests compile unopened graph members on the compiler worker and return copied
+source declarations. Independent healthy modules remain searchable when a neighboring module fails.
+This is on-demand indexing, not a persistent database. Discovery currently refreshes at startup and
+watched-file changes; unsaved changes to import edges and dynamic workspace-folder changes remain
+follow-ups. Ordinary unsaved edits still use the existing versioned overlays and dependency graph.
+
+The previous production dependency roots were ecstasy and the native bridge, with eleven resources
+in the generated bundle through transitive dependencies. That was not the full distribution. A
+shared `xdk-libraries` Gradle catalog bundle now supplies both the distribution and LSP through their
+existing module configurations. TypeInfo tests read fresh copies of those same production resources;
+there is no larger test-only repository. Every bundled module name is reserved against workspace
+source/artifact replacement. These binaries resolve types and signatures but have no invented source
+location or rename target. The three bootstrap-name checks in `XdkLibraries` are minimum health
+assertions, not a module-path whitelist. No installDist dependency or archive extraction is introduced.
+
+New discovery, library-resolution and binary-boundary tests are written; execution and configuration
+cache verification are intentionally deferred until the full five-area batch is implemented.
 
 ## Generic type completion batch
 
