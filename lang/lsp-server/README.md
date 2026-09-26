@@ -205,19 +205,21 @@ boundaries; a cursor at EOF also tolerates missing block braces. Normal compiler
 visible until the text is repaired. Tuple, typed-tuple, list/set/collection and map closers also
 recover around a cursor hole. Expression-bodied declarations/property initializers can lack their
 terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
-their real source-owned compiler context. Simple unqualified member/return and parameter type
-prefixes now use the enclosing compiler scope, without registering incomplete declarations.
-Missing operands, declaration/parameter names, qualified/compound/generic headers, missing map
+their real source-owned compiler context. Member/return and parameter type prefixes use the
+enclosing compiler scope, including flat qualified names, without registering incomplete declarations.
+Missing operands, declaration/parameter names, parameterized/compound/generic headers, missing map
 entries and unterminated literal contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
 Declaration-header recovery retains malformed method names and source extents for outline and
-folding. Explicit cursor queries complete simple unqualified member/return and parameter type
-prefixes through the enclosing compiler scope, including empty parameter slots. They do not
-register partial signatures or invent parameter names. Generic-method, multi-return,
-qualified/compound and type-composition headers remain follow-ups; see
-[shared X91–X92](../doc/manual-test-plan.md#xdkadapter-playbook) and the
-[C20/L35 extraction plan](../../docs/errs-integration-plan.md#unfinished-declaration-headers).
+folding. Explicit cursor queries complete member/return and parameter type prefixes through the
+compiler, including unqualified empty parameter slots and flat qualified names such as
+`ecstasy.text.Str`. Qualifiers respect visibility and aliases; candidates include inherited nested
+types and typedefs. Only the final written identifier is replaced. No partial signatures or
+parameter names are invented. Trailing dots, parameterized/compound types, generic-method,
+multi-return and type-composition headers remain follow-ups; see
+[shared X91–X93](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+[C21/L36 extraction plan](../../docs/errs-integration-plan.md#qualified-declaration-type-prefixes).
 
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module
