@@ -12,16 +12,16 @@ the two Markdown files above.
 
 ## Remaining functionality order
 
-Work continues on `lagergren/errs`; the pushed checkpoint before the current batch is `885293f82`.
+Work continues on `lagergren/errs`; the pushed checkpoint before the current batch is `5c334f919`.
 These are additive functional steps, separate from the occasional native IntelliJ verification.
 
 1. [x] Class/interface/type-composition header recovery and type completion — verified below.
 2. [x] Registered class/method formals, empty generic arguments, parameterized qualifiers and
    middle-of-final-identifier replacement — C24/L41 below. Unregistered header formals stay deferred.
-3. [ ] Qualified/grouped argument values and arguments followed by later arguments, preserving
-   compiler expected-type fitting and overload ambiguity.
-4. [ ] Automatic project discovery and workspace indexing beyond the explicit configured graph.
-5. [ ] Broader compiler-proven rename and import actions. Formatting and code lenses remain later work.
+3. [x] Qualified/grouped argument values and slots before later arguments — C25/L42 below.
+4. [x] Automatic workspace source discovery and on-demand indexing — L43 below. Unsaved import-edge
+   and dynamic workspace-folder refresh, plus persistent indexing, remain follow-ups.
+5. [x] Broader compiler-proven rename/import actions and bounded editor features — L45/L46 below.
 
 ## Five-area functionality batch
 
@@ -29,22 +29,89 @@ Requested after checkpoint `5c334f919`: implement the following sequentially, wi
 commit per area and a combined verification pass after all five implementations. The commits in
 this batch are development checkpoints until that final pass; no intermediate green result is implied.
 
-1. [x] Argument contexts implemented in `837fae19c`: qualified/grouped values and slots before later arguments (C25/L42); verification deferred.
-2. [x] Workspace source discovery, unopened-module symbols and the complete bundled XDK implemented (L43); verification deferred.
-3. [x] Workspace navigation, implementations and hierarchy implemented (L44); verification deferred.
-4. [x] Broader proven refactoring and import actions implemented (L45); verification deferred.
-5. [x] Generic base editing and compiler-only editor features implemented (C26/L46); verification deferred.
-6. [ ] Combined compiler/LSP/protocol verification, focused shared editor scenarios, formatting;
+1. [x] Argument contexts implemented in `837fae19c`: qualified/grouped values and slots before later arguments (C25/L42).
+2. [x] Workspace source discovery, unopened-module symbols and the complete bundled XDK implemented (L43).
+3. [x] Workspace navigation, implementations and hierarchy implemented (L44).
+4. [x] Broader proven refactoring and import actions implemented (L45).
+5. [x] Generic base editing and compiler-only editor features implemented (C26/L46).
+6. [x] Combined compiler/LSP/protocol verification, focused shared editor scenarios, formatting;
    update the final evidence and commit map. Native IntelliJ remains an occasional checkpoint.
 
-C25 derives a cursor's containing argument/call from existing child syntax, preserving labels and
-parentheses. Candidate enumeration uses ordinary unbound arguments, while proposed names replace
+C25 adds passive `IncompleteStatement.getArgumentCall()` and a package-local `PartialArgument`
+record to derive a cursor's containing argument/call from existing child syntax, preserving labels
+and parentheses. These belong beside syntax traversal: no context, resolver or validation cache is
+stored on a node. Candidate enumeration uses ordinary unbound arguments, while proposed names replace
 only the cursor in disposable argument copies and fit alongside all later arguments. Qualified
 property reads use normal compiler validation. No mutable AST field is added. L42 copies the
-containing call's facts while retaining the inner cursor's exact replacement token. Tests are
-written alongside each area and intentionally deferred until the complete batch.
+containing call's facts while retaining the inner cursor's exact replacement token. Tests were written alongside each area and first run after all five implementation commits, as requested.
 
-### C26/L46 editing features (development checkpoint)
+| Area / extraction slice | Development commit | Contents and future PR boundary |
+|---|---|---|
+| 1 / C25, L42 | `837fae19c` | Java syntax-derived argument probes (C25); Kotlin copied call contexts and adapter tests (L42) |
+| 2 / L43 | `1cfd3539d` | Workspace discovery/configuration and unopened symbol queries; shared complete XDK dependency bundle and read-only binary guard |
+| 3 / L44 | `705552d25` | Compiler-identity joins for cross-module implementations and type/call hierarchy, digest-bound handles |
+| 4 / L45 | `8752b6b23` | Proven inline-type/static-member rename and import cleanup; asynchronous versioned code-action transport |
+| 5 / C26, L46 | `987e01fa0` | Generic-base parser selection (C26); Java-lexer editor features, shared X97/X98 and both editor consumers (L46) |
+
+Extraction must include the final validation fixes and formatting commits recorded below; these
+five checkpoints deliberately preceded testing. L44 requires L43 and existing copied semantics;
+L45 uses L43's complete source graph and existing rename proofs. C26 is a small additive parser
+change; L46 editor helpers do not need a Tree-sitter parser. The current map adds seven slices to
+the previous 79 (86 in total); historical counts below describe their respective checkpoints.
+
+Validation follow-up: **`1139f8cf0`**. It belongs with the five development commits above;
+do not extract the checkpoints without their corresponding corrections:
+
+| Slice | Required parts of `1139f8cf0` |
+|---|---|
+| C25 | `PartialArgument` array exclusion and stack-local argument lists |
+| L42 | `SemanticModelBuilder` inner receiver/member preservation and argument-context expectations |
+| L43 | Canonical discovery/library fixtures and formatting of the discovery/index helpers |
+| L44 | `XdkWorkspaceNavigation` source-URI normalization and alias/call-range regressions |
+| L45 | Non-null declaration-source local, valid import/rename fixtures and versioned-action formatting |
+| C26 | Parser clone/source-ancestry regression |
+| L46 | Generic-base/header expectations, lexical-token invalidation control, stdio variants, both catalog guards and editor/helper formatting |
+
+Formatting-only hunks in shared files follow the feature that introduced those hunks. The documentation
+commit following this validation commit updates the capability matrix, both editor READMEs, playbook,
+error-listener/AST audit and this map. No new extraction group is needed for validation or documentation.
+
+### Combined verification and follow-up fixes
+
+The final combined backend run (2026-09-26) passes in **5m42s**:
+
+- Java: **535 cases, 495 executed, 40 existing skips**, zero failures/errors. All 23 parser
+  recovery tests execute; the skips remain in the existing source/lexer/ASM/project-creator suites.
+- LSP: **1,164 cases, 1,161 executed, three existing skips**, zero failures/errors. The skips are
+  the two non-XDK cross-file navigation cases and one future inlay-hint case.
+- Packaged stdio: **51 passed, zero skips**, including six generic-header UTF-16 edit variants.
+- Both editor drivers compile; Kotlin checks, TypeScript compilation, root Spotless and
+  `git diff --check` pass. No native IntelliJ run is performed.
+
+Validation fixed the inner cursor's receiver/member facts while copying its outer call context,
+kept multidimensional array syntax outside ordinary positional-argument fitting, and normalized
+workspace query URI aliases without losing the source view's original output URI. Parser clone
+coverage now establishes normal source ancestry before deriving token text. Fixture expectations
+follow the new argument/generic behavior, preserve the compiler's complete written callee range,
+and import an actual XTC `ecstasy.maps.HashMap` declaration. Formatting changes follow the owning
+slice. Both catalog guards now recognize X97/X98. VS Code X94–X98 pass in
+`lang/vscode-extension/build/reports/compiler-playbook/run-KoAP6K/results.json`: **five passed,
+98 not-selected, zero failures/not-run**, 27 seconds including Gradle and IntelliJ driver compilation.
+Catalog SHA-256: `05a7f2a4145d68d6968da4d515e84384eb369f52037a8f09d28d6988eb992c76`.
+This is a focused editor pass; the backend results above came from the preceding full run.
+
+Remaining functional work after these bounded implementations:
+
+- [ ] Refresh source dependency edges for unsaved import changes and dynamic workspace folders.
+- [ ] Reuse graph query results and support healthy partial graphs for navigation/hierarchy.
+- [ ] Add binary source attachment; bundled types currently resolve without navigable source ranges.
+- [ ] Prove instance-property/accessor-family rename, file-moving type rename, import-alias rename
+  and unresolved-name auto-import before advertising them.
+- [ ] Extend the remaining cursor/header forms and inferred displays only from concrete compiler facts.
+- [ ] Complete the separate native IntelliJ parity checkpoint; implemented shared scenarios do not
+  establish a native pass, and 53 catalog cases remain unimplemented in that driver.
+
+### C26/L46 editing features
 
 The parser now retains a selected generic base name even when its written type arguments follow
 the cursor, so `Li|st<String>` replaces `List` and preserves `<String>`. This is a selection change
@@ -67,10 +134,10 @@ so it is not a substitute for rename's compile-and-binding proof.
 Shared X97 (nine argument-context variants) and X98 (three generic-base variants) are consumed by
 both editors. The catalog contains 103 scenarios: X1–X98, CFG1–3 and 7a.8–9. IntelliJ implements
 47 full and three partial cases, with 53 not implemented, plus separate startup; native execution
-is deferred. New compiler/adapter/protocol tests are written. All five implementation areas now
-exist as local development commits; the combined validation pass is next.
+is deferred. Compiler/adapter/protocol coverage passes in the combined validation below. Native IntelliJ
+execution is distinct from compilation of its driver.
 
-### L45 broader refactoring (development checkpoint)
+### L45 broader refactoring
 
 Whole-graph rename now proposes inline source types, static functions and static properties in
 addition to ordinary override families. Source identity, rather than spelling, determines edits;
@@ -87,10 +154,9 @@ an asynchronous adapter seam and the same workspace-version checks and versioned
 rename; unsupported clients receive no unversioned compiler edit fallback.
 
 Compiler implementation facts are now included in graph extraction (needed by L44); the earlier
-rename-only builder deliberately omitted them. New adapter and protocol tests are written and await
-the combined verification pass.
+rename-only builder deliberately omitted them. The new adapter and protocol regressions pass in the combined verification below.
 
-### L44 whole-graph navigation (development checkpoint)
+### L44 whole-graph navigation
 
 Compiler constants establish cross-module symbol aliases on the serialized worker. A Kotlin-only
 join then merges detached semantic tables, direct type edges, implementation targets and selected
@@ -104,9 +170,9 @@ selection in the new detached view; edited closed files invalidate old handles e
 notifications. Compiler objects stay inside a query. Queries currently recompile on demand and
 require a complete successful graph; caching and partial-graph hierarchy are later optimizations.
 The new regression covers unrelated same-name declarations, overload separation, incoming/outgoing
-calls, unopened implementations and stale handles. It is written but intentionally not run yet.
+calls, unopened implementations, URI aliases and stale handles; it passes in the combined run.
 
-### L43 discovery and bundled libraries (development checkpoint)
+### L43 discovery and bundled libraries
 
 Workspace folders are scanned for Java-parser module declarations and source import edges. Generated
 folders and symlinks are excluded; bundled library names never enter the editable source graph.
@@ -125,14 +191,14 @@ follow-ups. Ordinary unsaved edits still use the existing versioned overlays and
 The previous production dependency roots were ecstasy and the native bridge, with eleven resources
 in the generated bundle through transitive dependencies. That was not the full distribution. A
 shared `xdk-libraries` Gradle catalog bundle now supplies both the distribution and LSP through their
-existing module configurations. TypeInfo tests read fresh copies of those same production resources;
+existing module configurations, producing 24 artifacts. TypeInfo tests read fresh copies of those same production resources;
 there is no larger test-only repository. Every bundled module name is reserved against workspace
 source/artifact replacement. These binaries resolve types and signatures but have no invented source
 location or rename target. The three bootstrap-name checks in `XdkLibraries` are minimum health
 assertions, not a module-path whitelist. No installDist dependency or archive extraction is introduced.
 
-New discovery, library-resolution and binary-boundary tests are written; execution and configuration
-cache verification are intentionally deferred until the full five-area batch is implemented.
+Discovery, complete-library resolution and binary-boundary regressions pass. Gradle stores and
+reuses configuration-cache entries with the shared bundle. All tests consume the production resources.
 
 ## Generic type completion batch
 

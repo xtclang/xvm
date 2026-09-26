@@ -805,3 +805,18 @@ Registered class/method formal identities are reused; unregistered declaration-h
 unsupported. No new mutable AST state is introduced. The substituted type is an explicit candidate
 fact rather than an LSP reconstruction from names. See the
 [C24/L41 scope and verification record](errs-integration-plan.md#generic-type-completion-batch).
+
+## Five-area integration audit (2026-09-26)
+
+The combined C25–C26/L42–L46 run exposed and corrected two argument-query regressions: outer-call
+facts must not replace the inner member's receiver, and multidimensional array brackets must not
+be fitted as ordinary positional constructor arguments. Workspace queries also normalize URI aliases
+for unopened sources while preserving the chosen source view's output URI. The new import fixture
+uses an actual XTC library declaration; compiler diagnostics were not relaxed.
+
+Both shared catalog guards now include X97/X98. Full validation passes 495 executed Java tests,
+1,161 executed LSP tests and all 51 packaged stdio cases; existing skips remain 40/3/0 respectively.
+VS Code X94–X98 pass, with 98 cases explicitly not selected. Both editor drivers compile; native
+IntelliJ remains deferred. All 24 distribution artifacts are in the production module index, and
+library-resolution/replacement/rename boundaries are tested against that same bundle. See the
+[commit map, AST placement and remaining limitations](errs-integration-plan.md#five-area-functionality-batch).

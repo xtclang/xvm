@@ -111,7 +111,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Syntax diagnostics | Basic patterns | Parser errors | Compiler errors |
 | Semantic diagnostics | None | None | Compiler errors and warnings |
 | Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
-| Definition / references | By spelling | Syntax and workspace index | Module identities; references span configured graphs; definitions also use host-supplied dependency source indices |
+| Definition / references | By spelling | Syntax and workspace index | Source identities across discovered/configured graphs; definitions also use host-supplied dependency source indices |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
@@ -143,7 +143,8 @@ Graph rename additionally covers inline source types and static members through 
 binding/dispatch comparison. Import actions remove proven-unused ordinary imports or sort contiguous
 imports while retaining comments; they use versioned edits. Member-file moves, general instance
 property families, import-alias rename and unresolved-name auto-import remain unavailable.
-This batch is implemented with tests pending the combined verification pass.
+The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
+[validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
 and its member tree together, including unsaved member files and packages. Non-file URIs remain
@@ -180,10 +181,10 @@ Ref/Var annotation accessors use the host's existing composed chains, respecting
 and explicit property overrides. Native annotation storage has no invented source body.
 A host-supplied dependency source index also permits
 definition, type-definition and inherited implementation-body links into that dependency. It does
-not supply synthetic redirect targets or a workspace-wide implementation search. Concrete
+not supply synthetic redirect targets. A discovered/configured source graph supplies workspace
+implementation queries across unopened source modules. Concrete
 delegation follows compiler-selected method/property signatures;
-interface-valued or cyclic delegates remain unresolved. No forwarding code is generated for lookup. Old hierarchy items cannot resolve into a new compilation. External type
-hierarchy remains unsupported. Exact references additionally compile all configured source modules,
+interface-valued or cyclic delegates remain unresolved. No forwarding code is generated for lookup. Old hierarchy items cannot resolve into a new compilation. Hierarchy spans the complete source graph; unindexed binary types have no source hierarchy target. Exact references additionally compile all configured source modules,
 including unopened consumers and source uses of bundled binary members. No persistent index or
 source target for an unindexed binary is invented.
 
@@ -194,8 +195,9 @@ argument slots, including direct final bare-name prefixes, offer compatible read
 and implicit properties/constants, fitted by the compiler with inference, conversions and
 receiver-specific types. Suggestions combine applicable overloads without selecting one; edits
 insert at empty slots or replace the original prefix token.
-Qualified/grouped/compound expressions and prefixes before later written arguments retain ordinary
-scope/member completion without argument-type filtering. Literal values are not synthesized.
+Qualified property prefixes, grouped values and slots before later written arguments now use
+compiler argument-type fitting, preserving the written labels, groups and later arguments.
+Compound operand expressions retain ordinary scope/member completion without argument-type filtering. Literal values are not synthesized.
 Property reads follow compiler narrowing rules; ordinary properties do not gain local-variable flow
 narrowing. Enclosing-instance and imported-constant enumeration remain follow-ups.
 Signature help uses exact selected signatures
@@ -240,10 +242,10 @@ parameter names are invented. Written leaf names inside parameterized/compound t
 missing angle/group closers also work. These are visible-type suggestions; normal compilation
 checks generic constraints. Registered class/method formals, empty generic slots and complete
 parameterized qualifiers also work; aliases retain their substituted type. Mid-token queries
-replace the entire final identifier. Empty operands, generic base-name prefixes, qualifier-middle
-edits, function/sequence types, trailing dots, unregistered generic-method/type-header formals,
+replace the entire final identifier, including a generic base before written type arguments.
+Empty operands, qualifier-middle edits, function/sequence types, trailing dots, unregistered generic-method/type-header formals,
 multi-return and module/package headers remain follow-ups; see
-[shared X91–X96](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+[shared X91–X98](../doc/manual-test-plan.md#xdkadapter-playbook) and the
 [C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
 Class/interface headers now retain their written name and body for structure when a bounded header
@@ -281,7 +283,9 @@ Completed function-valued calls expose signature types without invented runtime 
 names. Explicit cursor analysis also retains binary/conditional expressions and following call
 arguments, while incomplete values still cannot emit code. Structure-only diagnostics map to source
 declaration tokens where available; binary-only structures keep the document fallback.
-Formatting, code actions, document links, code lenses and linked editing remain unsupported.
+Compiler-only editor features use the Java lexer for bounded formatting and HTTP(S) links,
+compiler proof for ordinary import cleanup, and copied syntax/identities for module run lenses
+and local linked editing. See the bounds in the capability matrix above.
 A member parse failure clears the module's normal semantic answers until a later correction;
 explicit cursor inspection is a separate attempt and stale ranges are not reused. Java parser
 recovery retains available per-source syntax for outline, folding and selection, including valid
@@ -317,7 +321,8 @@ workspaces use absolute file URIs; URI-encode spaces. Names must match the modul
 Settings changes apply without restarting and reanalyse open consumers at their existing versions.
 Malformed, cyclic, overlapping or duplicate graphs are rejected as a whole, preserving the previous
 graph and showing an error. Identical graphs preserve current analyses; an empty list clears the
-configured graph. No Gradle process or automatic project scan is started.
+configured graph and disables discovery. Setting `sourceModules` to `null` restores discovery.
+No Gradle process is started by analysis or edits.
 
 Other LSP clients can send the same `{ "sourceModules": [...] }` object in
 `initializationOptions.xtcCompiler`, answer `workspace/configuration` for `xtc.compiler`, or send
@@ -359,8 +364,10 @@ Failed dependencies publish their original source diagnostics and block consumer
 Blocked consumers have no semantic or structural views until dependencies recover. Cyclic or
 overlapping source graphs are rejected. Closing sessions prunes unused cached artifacts.
 
-This requires an explicit host configuration; ordinary editor launch does not discover projects or
-their dependency edges. It runs no Gradle build on edits and adds no Java/AST API. See the
+This uses the discovered workspace graph or an explicit host configuration. Discovery reads module
+declarations and source import edges at startup and on watched-file changes; it does not infer Gradle
+settings. Unsaved import-edge changes and dynamic workspace-folder changes remain follow-ups.
+It runs no Gradle build on edits and adds no Java/AST API. See the
 [two-module host playbook](../doc/manual-test-plan.md#automatic-source-recompilation-host-checks).
 
 ## Context-Aware Completion
