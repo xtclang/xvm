@@ -9,6 +9,7 @@ import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.compiler.ast.TypedefStatement
+import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.model.Location
@@ -90,8 +91,14 @@ internal object XdkAst {
      * The regions worth collapsing: anything that spans more than one line and is a block or a
      * declaration. An editor offers a fold per region, so a region per expression would be noise.
      */
-    fun foldingRegions(root: AstNode?): List<Pair<Int, Int>> {
-        val found = LinkedHashSet<Pair<Int, Int>>()
+    fun foldingRegions(root: AstNode?): List<FoldingRange> {
+        val found = linkedMapOf<Pair<Int, Int>, FoldingRange>()
+        val lines =
+            root
+                ?.source
+                ?.toRawString()
+                ?.lines()
+                .orEmpty()
 
         fun walk(node: AstNode) {
             if (root != null && !node.belongsTo(root)) return
@@ -99,13 +106,17 @@ internal object XdkAst {
                 val start = lineOf(node.startPosition)
                 val end = lineOf(node.endPosition)
                 if (end > start) {
-                    found += start to end
+                    val column = columnOf(node.endPosition)
+                    // Keep the heading line and a real closing brace visible. An unfinished
+                    // region ends at its actual source boundary; never invent a delimiter.
+                    val endCharacter = if (lines.getOrNull(end)?.getOrNull(column - 1) == '}') column - 1 else column
+                    found.putIfAbsent(start to end, FoldingRange(start, end, endCharacter = endCharacter))
                 }
             }
             node.childList().forEach(::walk)
         }
         root?.let(::walk)
-        return found.toList()
+        return found.values.toList()
     }
 
     fun rangeOf(node: AstNode): Range = spanOf(node.startPosition, node.endPosition)
