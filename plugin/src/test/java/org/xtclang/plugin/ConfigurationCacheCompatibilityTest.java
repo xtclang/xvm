@@ -131,6 +131,73 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":compileXtc").getOutcome());
     }
 
+    @Test
+    void testSelectionInvalidatesCachedResults() throws IOException {
+        Files.writeString(testProjectDir.resolve("settings.gradle.kts"), "rootProject.name = \"test-inputs\"\n");
+        Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
+            import org.xtclang.plugin.tasks.XtcTestTask
+
+            plugins {
+                id("org.xtclang.xtc-plugin")
+            }
+            version = "1.0"
+            val selected = providers.gradleProperty("selected").orElse("First")
+            val method = providers.gradleProperty("entry").orElse("run")
+            val arguments = providers.gradleProperty("arguments").orElse("one")
+            xtcTest.module {
+                moduleName.set(selected)
+                methodName.set(method)
+                moduleArgs(arguments.map { listOf(it) })
+            }
+            tasks.named<XtcTestTask>("testXtc") {
+                // Exercise the real task's cache inputs without launching an XDK.
+                actions.clear()
+                val configured = modules.map { values ->
+                    values.joinToString { it.moduleName.get() + ":" +
+                        it.methodName.get() + ":" + it.moduleArgs.get().joinToString() }
+                }
+                val cliName = cliModuleName
+                val cliMethod = cliMethodName
+                val cliArgs = cliModuleArgs
+                val destination = outputDirectory
+                doLast {
+                    val output = destination.get().asFile
+                    output.mkdirs()
+                    output.resolve("selection.txt").writeText(configured.get() + "|" +
+                        cliName.orNull + "|" + cliMethod.orNull + "|" + cliArgs.get().joinToString())
+                }
+            }
+            """);
+        Files.createDirectories(testProjectDir.resolve("build/xtc/xdk/lib"));
+        final var output = testProjectDir.resolve("build/xunit/selection.txt");
+        final var selections = List.of(
+            List.of("testXtc"),
+            List.of("testXtc", "-Pselected=Second"),
+            List.of("testXtc", "-Pselected=Second", "-Pentry=verify"),
+            List.of("testXtc", "-Pselected=Second", "-Pentry=verify", "-Parguments=two"),
+            List.of("testXtc", "--module=Cli"),
+            List.of("testXtc", "--module=Cli", "--method=verify"),
+            List.of("testXtc", "--module=Cli", "--method=verify", "--args=three,four")
+        );
+        final var expected = List.of(
+            "First:run:one|null|null|",
+            "Second:run:one|null|null|",
+            "Second:verify:one|null|null|",
+            "Second:verify:two|null|null|",
+            "First:run:one|Cli|null|",
+            "First:run:one|Cli|verify|",
+            "First:run:one|Cli|verify|three, four"
+        );
+        for (int i = 0; i < selections.size(); i++) {
+            final var result = runBuild(selections.get(i).toArray(String[]::new));
+            assertEquals(TaskOutcome.SUCCESS, result.task(":testXtc").getOutcome(), selections.get(i).toString());
+            assertEquals(expected.get(i), Files.readString(output));
+        }
+        final var reused = runBuild(selections.getLast().toArray(String[]::new));
+        assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":testXtc").getOutcome());
+    }
+
     private BuildResult runBuild(final String... tasksAndOptions) {
         final var arguments = new ArrayList<>(List.of(tasksAndOptions));
         arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace"));

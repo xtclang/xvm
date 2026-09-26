@@ -35,6 +35,7 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -150,7 +151,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
-    @Internal
+    @Input
+    @Optional
     public Property<String> getCliModuleName() {
         return cliModuleName;
     }
@@ -165,7 +167,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
-    @Internal
+    @Input
+    @Optional
     public Property<String> getCliMethodName() {
         return cliMethodName;
     }
@@ -182,7 +185,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
-    @Internal
+    @Input
+    @Optional
     public ListProperty<String> getCliModuleArgs() {
         return cliModuleArgs;
     }
@@ -231,11 +235,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return result;
     }
 
-    // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
-    //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
-    // Note: @Input removed because this task is never up-to-date (see constructor where outputs are configured)
-    // and the XtcRunModule objects are not serializable for configuration cache.
-    @Internal
+    // Run tasks always execute, but the cacheable XtcTestTask must track module selection,
+    // methods and arguments independently of the compiled module files.
+    @Nested
     @Override
     public ListProperty<@NotNull XtcRunModule> getModules() {
         return taskLocalModules.get().getModules();
