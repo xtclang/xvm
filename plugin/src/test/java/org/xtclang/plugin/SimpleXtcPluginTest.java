@@ -13,7 +13,12 @@ import static org.xtclang.plugin.XtcPluginConstants.XDK_VERSION_TASK_NAME;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_TEST_TASK_NAME;
 
 import java.io.File;
+import java.io.IOException;
+
+import java.nio.file.Files;
+
 import java.util.List;
+import java.util.Set;
 
 import org.gradle.api.Project;
 import org.gradle.api.Task;
@@ -65,6 +70,24 @@ public class SimpleXtcPluginTest {
 
         assertTrue(tasksBefore < tasksAfter);
         assertNotNull(tasks.findByName(XDK_VERSION_TASK_NAME));
+    }
+
+    @Test
+    public void compileIncludesSourceRootsAddedAfterTaskCreation() throws IOException {
+        final var project = newProject("lateSourceRoot");
+        project.getPluginManager().apply(org.gradle.api.plugins.JavaBasePlugin.class);
+        project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
+        final var compile = (XtcCompileTask) project.getTasks().getByName("compileXtc");
+        final var sources = XtcProjectDelegate.getMainSourceSet(project).getExtensions()
+            .getByType(XtcSourceDirectorySet.class);
+        final var directory = project.getProjectDir().toPath().resolve("src/main/x/runtime");
+        Files.createDirectories(directory.resolve("parts"));
+        final var module = Files.writeString(directory.resolve("Regression.x"), "module Regression {}\n");
+        Files.writeString(directory.resolve("parts/Helper.x"), "class Helper {}\n");
+
+        sources.srcDir(directory);
+
+        assertEquals(Set.of(module.toFile()), compile.resolveXtcSourceFiles());
     }
 
     @Test
