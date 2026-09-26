@@ -410,7 +410,11 @@ public class ParserRecoveryTest {
                 "void damaged(Map<Str§, Int> value) {}", "void damaged(List<(Int | Str§)> value) {}",
                 "void damaged(List<ecstasy.text.Str§> value) {}", "List<Str§> property;",
                 "List<Str§> damaged() {}", "void damaged(List<Str§ value) {}",
-                "void damaged(Map<Int, List<Str§ value) {}", "void damaged(List<(Int | Str§ value) {}")
+                "void damaged(Map<Int, List<Str§ value) {}", "void damaged(List<(Int | Str§ value) {}",
+                "void damaged(function Str§(Int) value) {}", "void damaged(function void(Str§) value) {}",
+                "void damaged(function (Int, Str§)(Int) value) {}", "void damaged(Function<<Str§>, <Int>> value) {}",
+                "void damaged(function void(List<Str§>) value) {}", "void damaged(function void(Str§ value) {}",
+                "void damaged(Function<<Str§ value) {}")
                 .forEach(header -> {
                     String prefix = "module Recovery { " + header.substring(0, header.indexOf('§'));
                     String text = prefix + header.substring(header.indexOf('§') + 1) + " Int later=1; }";

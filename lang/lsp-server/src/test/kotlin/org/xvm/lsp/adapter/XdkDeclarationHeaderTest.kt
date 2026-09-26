@@ -94,7 +94,7 @@ class XdkDeclarationHeaderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["<T> void damaged(Str| value) {}", "void damaged(function Str|() value) {}", "void damaged(Int va|) {}"])
+    @ValueSource(strings = ["<T> void damaged(Str| value) {}", "void damaged(Int va|) {}"])
     fun `unsupported headers do not guess types parameters or signatures`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('|')
         XdkAdapter().use { adapter ->

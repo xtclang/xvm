@@ -1,5 +1,9 @@
 # Ecstasy Language Server - Manual Test Plan
 
+C27/L51 validation: X33/X35/X94/X98/X101/X106 pass in `run-9deeaR` (six passed,
+105 not selected). All 23 parser, 1,186 executed LSP and 51 stdio tests pass; the full LSP report
+has three existing skips. The new IntelliJ consumers compile but await native execution.
+
 L50 validation: X102–X105 all pass in `run-92TmWV` (four passed, 106 not selected),
 including a physical member-file move and applying bundled/source auto-imports. X103 uses the
 registered Rename provider because the generic execute-command round trip changes operation order.
@@ -1066,7 +1070,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X105 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X106 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1112,7 +1116,7 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It implements startup and 50 shared scenarios: 47 fully and three partially. Native
+disabled. It implements startup and 54 shared scenarios: 50 fully and four partially. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1124,7 +1128,7 @@ registered formals, empty generic arguments and whole-token replacement.
 The three partials remain explicit: X20 verifies selected-overload navigation and suppressed
 parameter metadata, but LSP4IJ 0.21.0 renders `<no parameters>` in the popup; X81/X82 check native
 candidates and accepted edits but do not inspect completion Property-kind metadata. The report
-lists all 56 unimplemented cases and their exact missing native checks. These are harness gaps,
+lists all 57 unimplemented cases and their exact missing native checks. These are harness gaps,
 not claims that IntelliJ lacks the corresponding LSP feature. Problems-row clicking and visual
 layout remain manual. Runtime validation remains incomplete. The latest report,
 `run-469432121529144568/results.json`, records **19 passed (including startup), one failed,
@@ -1179,14 +1183,14 @@ This selector currently applies to VS Code; IntelliJ native checks remain occasi
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 110 scenarios: X1–X105, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 111 scenarios: X1–X106, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 110 cases. IntelliJ implements 47 fully and three partially, plus a separate startup check;
+all 111 cases. IntelliJ implements 50 fully and four partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1887,6 +1891,7 @@ module Advanced {
 | X103 | Create `MoveType.x` using `Item` and `MoveType/Item.x` declaring it. Rename `Item` to `Renamed`. | Source edits and `Item.x` → `Renamed.x` are applied together. The resulting module compiles. Existing destination files, module roots and companion directories block the move. |
 | X104 | Import `ecstasy.text.StringBuffer as Buffer`; use `Buffer` in a type and construction. Rename the alias to `Builder`. | Three alias tokens change; `StringBuffer` and nested aliases remain unchanged. |
 | X105 | Use unresolved `Document` in a type header; apply the import quick fix for `xml.xtclang.org`. Then try unresolved `Widget` declared in a separate discovered source module. | Only imports whose complete graph compiles are offered; applying clears diagnostics. Source imports also add the discovered dependency edge. Explicit graphs do not silently gain dependencies. |
+| X106 | In Editing.x, complete `Str` inside `function Str(Int)`, `function void(Str)`, `function (Int, Str)(Int)` and `Function<<Str>, <Int>>` parameter types. Repeat with a missing function/sequence closer. | Only the written leaf token is replaced. Complete forms compile; missing delimiters remain diagnostics until repaired. No callable signature is invented for a declaration header. The same eight variants are implemented in both drivers. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -1929,7 +1934,7 @@ Candidates are visible types; the full generic constraints are checked by normal
 X96 adds registered formals, empty generic slots, parameterized qualifiers and whole-final-token edits.
 The focused X94–X96 run `run-MdzjLq` passes all three cases; 98 other cases are not selected.
 X98 adds generic base-name completion while preserving written type arguments.
-Trailing dots, empty operands, qualifier-middle edits, function/sequence types, unregistered header formals, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
+X106 adds function-parameter/return and sequence leaf types. Trailing dots, empty operands, qualifier-middle edits, unregistered header formals, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
 size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
 prefix query does not validate a following supplier. Types without an element default still require
 a supplier when compiled normally. Multidimensional construction, unfinished declaration names
