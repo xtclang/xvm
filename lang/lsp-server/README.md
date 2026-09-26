@@ -1,5 +1,9 @@
 # Ecstasy LSP Server
 
+L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
+type moves and public-type auto-import repairs. See the
+[scope and proof boundaries](../../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
+
 Language Server Protocol (LSP) implementation for the Ecstasy programming language.
 
 ## Overview
@@ -142,8 +146,13 @@ revisions. Detached query results are reused for unchanged inputs; healthy modul
 when independent neighbors fail. Exact references and refactoring require complete graph proof.
 Graph rename additionally covers inline source types and static members through recompilation and
 binding/dispatch comparison. Import actions remove proven-unused ordinary imports or sort contiguous
-imports while retaining comments; they use versioned edits. Member-file moves, general instance
-property families, import-alias rename and unresolved-name auto-import remain unavailable.
+imports while retaining comments; they use versioned edits. Source property/accessor families,
+explicit import aliases and simple member-file type moves also use compiler proof. File moves require
+client resource-operation support and exclude module roots, collisions and companion directories.
+Unresolved public type imports are offered only when the proposed import repairs the complete graph
+without changing known bindings. Automatic discovery can add source edges; explicit graphs must
+already declare them. Binary contracts, annotation/delegation dispatch and unresolved graphs remain
+outside rename scope.
 The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
 [validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
 
@@ -273,9 +282,9 @@ bindings, failed compilation, public/lambda/constructor parameters and method-va
 unsupported for parameter rename. An explicit source graph additionally enables ordinary instance-
 method override rename: it recompiles all configured modules and checks dispatch chains as well as
 written bindings. Generic interface contracts and closed/transitive consumers are covered. Binary
-contracts (including source overrides of bundled XDK methods), instance properties/accessors,
-constructors and mixin/delegating/capped chains fail closed. Inline source types and static members
-now use the same graph proof; member-file type renames requiring file moves remain unavailable. Ordinary `super(...)` calls
+contracts (including source overrides of bundled XDK methods), constructors and mixin/delegating/capped
+chains fail closed. Source property/accessor families, inline types and static members use the same
+graph proof. Simple member-file type renames include a capability-gated, nonoverwriting file move. Ordinary `super(...)` calls
 retain their selected written parent body for navigation/hierarchy and rename proof; the keyword
 itself is not renamed. The graph must
 include every source consumer. Workspace discovery supplies roots/import edges, but cannot prove

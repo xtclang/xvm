@@ -16,6 +16,24 @@ async function discovered<T>(workspace: Workspace, body: () => Promise<T>): Prom
     }
 }
 
+function namedRename(id: 'X102' | 'X104'): void {
+    playbook(id, async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await discovered(workspace, async () => {
+            const document = await workspace.open(data.file, data.source);
+            await noErrors(document.uri);
+            const edit = await vscode.commands.executeCommand<vscode.WorkspaceEdit>(
+                'vscode.executeDocumentRenameProvider', document.uri, position(document, data.anchor), data.replacement);
+            assert.ok(edit);
+            assert.strictEqual(edit.get(document.uri).length, data.edits);
+            assert.ok(await vscode.workspace.applyEdit(edit));
+            await noErrors(document.uri);
+            assert.strictEqual(document.getText().split(data.replacement).length - 1, data.edits);
+            if ('preserved' in data) assert.ok(document.getText().includes(data.preserved));
+        });
+    });
+}
+
 export function liveWorkspaceCases(): void {
     playbook('X99', async (workspace, data) => {
         await workspace.write(data.file, data.original);
@@ -71,4 +89,57 @@ export function liveWorkspaceCases(): void {
         const types = await targets(document, 'TypeDefinition', position(document, data.variable));
         assert.deepStrictEqual(await targetNames(types), [data.variableType]);
     });
+    namedRename('X102');
+    playbook('X103', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.write(data.member, data.memberSource);
+        await discovered(workspace, async () => {
+            const document = await workspace.open(data.file, data.source);
+            await noErrors(document.uri);
+            const provider = client().getFeature('textDocument/rename').getProvider(document);
+            assert.ok(provider);
+            // The generic execute-command round trip regroups resource operations before text edits.
+            // Call the registered provider used by Rename, preserving its ordered WorkspaceEdit.
+            const cancellation = new vscode.CancellationTokenSource();
+            try {
+                const edit = await provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token);
+                assert.ok(edit);
+                assert.ok(await vscode.workspace.applyEdit(edit));
+            } finally { cancellation.dispose(); }
+            await noErrors(document.uri);
+            const moved = await vscode.workspace.openTextDocument(workspace.uri(data.destination));
+            assert.strictEqual(moved.getText(), data.memberSource.replace(data.anchor, data.replacement));
+            assert.strictEqual(await fs.stat(workspace.uri(data.member).fsPath).catch(() => null), null);
+            assert.ok(document.getText().includes(data.replacement));
+        });
+    });
+
+    namedRename('X104');
+    playbook('X105', async (workspace, data) => {
+        await workspace.write(data.library, data.libraryText);
+        await workspace.write(data.file, data.variants[0].source);
+        await discovered(workspace, async () => {
+            const document = await workspace.open(data.file, data.variants[0].source);
+            for (const variant of data.variants) {
+                await workspace.replace(document, variant.source);
+                await diagnostics(document.uri, values => values.length > 0, 'Unresolved imported type');
+                const at = position(document, variant.anchor);
+                const action = await eventually(async () => {
+                    try {
+                        const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+                            'vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at), vscode.CodeActionKind.QuickFix.value);
+                        return actions?.find(item => item.title === variant.title);
+                    } catch (error) {
+                        if (error instanceof Error && error.name === 'Canceled') return undefined;
+                        throw error;
+                    }
+                }, item => !!item?.edit, variant.title);
+                assert.ok(action?.edit, variant.title);
+                assert.ok(await vscode.workspace.applyEdit(action.edit));
+                await noErrors(document.uri);
+                assert.ok(document.getText().includes(variant.importText));
+            }
+        });
+    });
+
 }

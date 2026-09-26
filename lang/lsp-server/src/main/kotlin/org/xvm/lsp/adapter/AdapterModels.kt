@@ -144,7 +144,13 @@ data class WorkspaceEdit(
     val changes: Map<String, List<TextEdit>>,
     /** Require protocol document versions; hosts must not fall back to unversioned changes. */
     val versioned: Boolean = false,
-)
+    /** Apply text edits before these file moves; destinations must not be overwritten. */
+    val renames: Map<String, String> = emptyMap(),
+) {
+    init {
+        require(renames.isEmpty() || versioned) { "File moves require versioned document changes" }
+    }
+}
 
 /**
  * Code action (quick fix or refactoring).

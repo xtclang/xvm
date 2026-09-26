@@ -51,7 +51,10 @@ import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.PrepareRenameResult
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.RenameFile
+import org.eclipse.lsp4j.RenameFileOptions
 import org.eclipse.lsp4j.RenameParams
+import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SemanticTokens
@@ -732,19 +735,22 @@ class XtcTextDocumentService(
 
     /** Called while the document lifecycle is locked, after the query's version checks. */
     private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
-        if (edit.versioned && !server.supportsVersionedEdits) return null
+        if ((edit.versioned && !server.supportsVersionedEdits) || (edit.renames.isNotEmpty() && !server.supportsFileRenames)) return null
         val changes = edit.changes.mapValues { (_, edits) -> edits.map { TextEdit(it.range.toLsp(), it.newText) } }
         return WorkspaceEdit().apply {
             if (edit.versioned) {
                 this.changes = null
                 documentChanges =
                     changes.map { (uri, edits) ->
-                        Either.forLeft(
+                        Either.forLeft<TextDocumentEdit, ResourceOperation>(
                             TextDocumentEdit(
                                 VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
                                 edits.map { Either.forLeft(it) },
                             ),
                         )
+                    } +
+                    edit.renames.map { (from, to) ->
+                        Either.forRight<TextDocumentEdit, ResourceOperation>(RenameFile(from, to, RenameFileOptions(false, false)))
                     }
             } else {
                 this.changes = changes

@@ -159,8 +159,14 @@ class XtcLanguageServer(
     @Suppress("unused")
     private var initialized = false
 
-    internal var supportsVersionedEdits = false
-        private set
+    private data class EditCapabilities(
+        val versioned: Boolean = false,
+        val renameFiles: Boolean = false,
+    )
+
+    private val editCapabilities = AtomicReference(EditCapabilities())
+    internal val supportsVersionedEdits: Boolean get() = editCapabilities.get().versioned
+    internal val supportsFileRenames: Boolean get() = editCapabilities.get().renameFiles
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
@@ -258,10 +264,13 @@ class XtcLanguageServer(
             }
         }
 
-        supportsVersionedEdits = params.capabilities
-            ?.workspace
-            ?.workspaceEdit
-            ?.documentChanges == true
+        val workspaceEdits = params.capabilities?.workspace?.workspaceEdit
+        editCapabilities.set(
+            EditCapabilities(
+                workspaceEdits?.documentChanges == true,
+                workspaceEdits?.resourceOperations?.contains("rename") == true,
+            ),
+        )
 
         val capabilities = buildServerCapabilities()
 
