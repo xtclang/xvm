@@ -24,6 +24,7 @@ import org.xvm.compiler.ast.VariableDeclarationStatement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -356,10 +357,10 @@ public class ParserRecoveryTest {
             assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, header);
             var declaration = nodes(tree).stream().filter(IncompleteDeclarationStatement.class::isInstance)
                     .map(IncompleteDeclarationStatement.class::cast).findFirst().orElseThrow();
-            var site = (IncompleteStatement) declaration.children().next();
+            var site = assertInstanceOf(IncompleteStatement.class, declaration.children().next());
             assertEquals(cursor, site.getEndPosition());
             var clone = (IncompleteDeclarationStatement) declaration.clone();
-            var clonedSite = (IncompleteStatement) clone.children().next();
+            var clonedSite = assertInstanceOf(IncompleteStatement.class, clone.children().next());
             assertNotSame(site, clonedSite);
             assertNotSame(site.getTarget(), clonedSite.getTarget());
             assertSame(clone, clonedSite.getParent());
@@ -392,11 +393,11 @@ public class ParserRecoveryTest {
                     assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, header);
                     var declaration = nodes(tree).stream().filter(IncompleteDeclarationStatement.class::isInstance)
                             .map(IncompleteDeclarationStatement.class::cast).findFirst().orElseThrow();
-                    var site = (IncompleteStatement) declaration.children().next();
+                    var site = assertInstanceOf(IncompleteStatement.class, declaration.children().next());
                     assertFalse(site.getTarget().children().hasNext());
                     assertEquals(cursor, site.getTarget().getEndPosition());
                     var clone = (IncompleteDeclarationStatement) declaration.clone();
-                    var clonedSite = (IncompleteStatement) clone.children().next();
+                    var clonedSite = assertInstanceOf(IncompleteStatement.class, clone.children().next());
                     assertTrue(clonedSite.isTypeCompletion(), header);
                     assertSame(clone, clonedSite.getParent());
                     assertNotSame(site.getTarget(), clonedSite.getTarget());
