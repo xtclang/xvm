@@ -1,6 +1,7 @@
 package org.xvm.compiler;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +15,8 @@ import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.Expression;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.LabeledExpression;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Immutable source provenance for a selected, instantiated method call. Created during real
@@ -32,13 +35,23 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         }
     }
 
-    /** The two kinds of call facts remain separate so a function never claims a method target. */
+    /**
+     * The two kinds of call facts remain separate so a function never claims a method target.
+     * Maps are immutable identity snapshots: keys and values compare by reference.
+     */
     public record Facts(Map<InvocationExpression, InvocationBinding> methods,
                         Map<InvocationExpression, FunctionCall> functions) {
         public Facts {
-            methods   = Map.copyOf(methods);
-            functions = Map.copyOf(functions);
+            methods   = identitySnapshot(methods);
+            functions = identitySnapshot(functions);
         }
+    }
+
+    /** Preserve node identity, reject null entries and detach from the collector. */
+    private static <K, V> Map<K, V> identitySnapshot(Map<K, V> source) {
+        Map<K, V> copy = new IdentityHashMap<>();
+        source.forEach((key, value) -> copy.put(requireNonNull(key), requireNonNull(value)));
+        return Collections.unmodifiableMap(copy);
     }
 
     /** A written label copied before argument rewriting, without retaining its mutable token. */

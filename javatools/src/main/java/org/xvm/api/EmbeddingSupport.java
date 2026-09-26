@@ -12,7 +12,9 @@ import java.time.Instant;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -353,7 +355,8 @@ public class EmbeddingSupport {
      * instance.
      *
      * Recovered source trees have not entered compiler passes. Traverse their children using
-     * each root's Source; child parent pointers may not yet be installed.
+     * each root's Source; child parent pointers may not yet be installed. Binding maps are
+     * immutable identity snapshots: keys and values compare by reference, not structural equality.
      *
      * @param module       the compiled module, or null if the compilation did not get that far
      * @param file         the file structure that was built, or null if it did not get that far
@@ -372,8 +375,8 @@ public class EmbeddingSupport {
                               Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
         public Compilation {
             sourceTrees      = List.copyOf(sourceTrees);
-            callBindings     = Map.copyOf(callBindings);
-            functionBindings = Map.copyOf(functionBindings);
+            callBindings     = identitySnapshot(callBindings);
+            functionBindings = identitySnapshot(functionBindings);
         }
 
         /** Retain hosts that supply only statically selected method calls. */
@@ -483,6 +486,7 @@ public class EmbeddingSupport {
      * signatures/mappings fitted to written arguments; they never select the incomplete operation
      * or invent a missing argument/result. Consumers must copy facts while exclusively
      * owning the attempt, as with Compilation; ASTs and pools are not concurrent query objects.
+     * Binding maps preserve reference identity for both keys and values and reject null entries.
      */
     public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
                                   Optional<ConstantPool> pool,
@@ -492,10 +496,10 @@ public class EmbeddingSupport {
         public PartialAnalysis {
             sourceTrees      = List.copyOf(sourceTrees);
             sites            = List.copyOf(sites);
-            cursorBindings   = Map.copyOf(cursorBindings);
+            cursorBindings   = identitySnapshot(cursorBindings);
             requireNonNull(pool, "pool");
-            callBindings     = Map.copyOf(callBindings);
-            functionBindings = Map.copyOf(functionBindings);
+            callBindings     = identitySnapshot(callBindings);
+            functionBindings = identitySnapshot(functionBindings);
         }
 
         /** Retain hosts that supply cursor and selected-method facts. */
@@ -674,6 +678,13 @@ public class EmbeddingSupport {
     }
 
     /** An assembled tree is available only when parsing/loading succeeded. */
+    /** Preserve node identity, reject null entries and detach from the collector. */
+    private static <K, V> Map<K, V> identitySnapshot(Map<K, V> source) {
+        Map<K, V> copy = new IdentityHashMap<>();
+        source.forEach((key, value) -> copy.put(requireNonNull(key), requireNonNull(value)));
+        return Collections.unmodifiableMap(copy);
+    }
+
     private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {}
 
     private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
