@@ -138,6 +138,10 @@ search compiles unopened modules on demand and retains healthy independent modul
 Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
 compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary
 revisions; these queries currently require a fully compiling graph and recompile it on demand.
+Graph rename additionally covers inline source types and static members through recompilation and
+binding/dispatch comparison. Import actions remove proven-unused ordinary imports or sort contiguous
+imports while retaining comments; they use versioned edits. Member-file moves, general instance
+property families, import-alias rename and unresolved-name auto-import remain unavailable.
 This batch is implemented with tests pending the combined verification pass.
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
