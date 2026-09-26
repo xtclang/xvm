@@ -183,7 +183,7 @@ class SharedScenarios(
                 json.getAsJsonObject("cases").entrySet().associate { (id, value) ->
                     id to gson.fromJson(value, Scenario::class.java)
                 }
-            val expected = (1..93).map { "X$it" } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
+            val expected = (1..94).map { "X$it" } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
             require(scenarios.keys.toList() == expected) { "The catalog must describe the complete playbook in order" }
             scenarios.forEach { (id, scenario) ->
                 require(scenario.intellij.coverage in setOf("full", "partial", "not-implemented")) { "Missing IntelliJ coverage for $id" }
