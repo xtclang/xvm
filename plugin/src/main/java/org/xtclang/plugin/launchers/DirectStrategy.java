@@ -70,7 +70,7 @@ public class DirectStrategy implements ExecutionStrategy {
         }
     }
 
-    private static DirectCompileRequest createCompileRequest(final XtcCompileTask task) {
+    static DirectCompileRequest createCompileRequest(final XtcCompileTask task) {
         final var rawVersion = task.getXtcVersion().getOrNull();
         final String semanticVersion = rawVersion == null || rawVersion.isBlank()
             ? null
