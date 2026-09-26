@@ -55,26 +55,75 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         this(variables, thisType, instance, List.of(), List.of(), false);
     }
 
+    /** Group call-specific facts while retaining the existing constructors and record components. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, CallFacts calls) {
+        this(variables, thisType, instance, types, calls.candidates(), calls.inspected(),
+                calls.functions(), calls.argumentValues(), calls.argumentProperties());
+    }
+
+    /** A grouped immutable view; no context, mutable operation or AST child is introduced. */
+    public CallFacts callFacts() {
+        return new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties);
+    }
+
+    private CursorBinding withCallFacts(CallFacts calls) {
+        return new CursorBinding(variables, thisType, instance, types, calls);
+    }
+
     public CursorBinding withCandidates(List<Candidate> candidates) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues, argumentProperties);
+        return withCallFacts(callFacts().withCandidates(candidates));
     }
 
     public CursorBinding withFunctions(List<FunctionCandidate> functions) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, true, functions, argumentValues, argumentProperties);
+        return withCallFacts(callFacts().withFunctions(functions));
     }
 
     public CursorBinding withTypes(List<NamedType> types) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues, argumentProperties);
+        return new CursorBinding(variables, thisType, instance, types, callFacts());
     }
 
     /** Readable source variables whose proposed insertion fits at least one incomplete-call candidate. */
     public CursorBinding withArgumentValues(List<Variable> values) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, values, argumentProperties);
+        return withCallFacts(callFacts().withArgumentValues(values));
     }
 
     /** Implicit property/constant reads whose insertion fits at least one incomplete-call candidate. */
     public CursorBinding withArgumentProperties(List<Property> properties) {
-        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues, properties);
+        return withCallFacts(callFacts().withArgumentProperties(properties));
+    }
+
+    /**
+     * Call inspection and insertion facts, separate from visible scope and syntax selection.
+     * An inspected empty candidate list means rejection, not absence of inspection. Updating
+     * argument values or properties preserves that distinction. The outer record retains its
+     * component list so existing record patterns, accessors and construction APIs keep working.
+     */
+    public record CallFacts(List<Candidate> candidates, boolean inspected,
+                            List<FunctionCandidate> functions, List<Variable> argumentValues,
+                            List<Property> argumentProperties) {
+        public CallFacts {
+            candidates = List.copyOf(candidates);
+            functions = List.copyOf(functions);
+            argumentValues = List.copyOf(argumentValues);
+            argumentProperties = List.copyOf(argumentProperties);
+        }
+
+        public CallFacts withCandidates(List<Candidate> candidates) {
+            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties);
+        }
+
+        public CallFacts withFunctions(List<FunctionCandidate> functions) {
+            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties);
+        }
+
+        public CallFacts withArgumentValues(List<Variable> values) {
+            return new CallFacts(candidates, inspected, functions, values, argumentProperties);
+        }
+
+        public CallFacts withArgumentProperties(List<Property> properties) {
+            return new CallFacts(candidates, inspected, functions, argumentValues, properties);
+        }
     }
 
     public record NamedType(String name, IdentityConstant identity) {}
