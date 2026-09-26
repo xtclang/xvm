@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
@@ -410,6 +411,40 @@ public class ParserRecoveryTest {
                     assertFalse(ordinary.getErrors().stream().anyMatch(error -> error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
                     assertEquals(header.contains("§ value"), ordinary.hasSeriousErrors(), header);
                 });
+    }
+
+    @Test
+    public void genericHeaderCursorsKeepWholeTokensAndIndependentQualifierChildren() {
+        List.of("List<§>", "Map<§, Int>", "Map<Int, §>", "Str§ing",
+                "Owner<String>.Ite§m", "Owner<List<String>>.Ite§m").forEach(type -> {
+            String marked = "module Recovery { void damaged(" + type + " value) {} Int later=1; }";
+            String text = marked.replace("§", "");
+            Source source = new Source(text);
+            marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            var reports = new ArrayList<String>();
+            var tree = Parser.forPartialAnalysis(source, cursor,
+                    ErrorListener.collecting(error -> reports.add(error.getCode()))).parseSource();
+            assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, type);
+            // Cloning adopts the raw parser children, providing their normal source ancestry.
+            tree = (StatementBlock) tree.clone();
+            var site = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+            var token = site.getMemberName().orElseThrow();
+            assertEquals(type.contains("Ite") ? "Ite" : type.contains("Str§") ? "Str" : "", site.getCompletionPrefix());
+            assertEquals(type.contains("Ite") ? "Item" : type.contains("Str§") ? "String" : "", token.getValueText());
+            var clone = (IncompleteStatement) site.clone();
+            assertEquals(site.getCompletionPrefix(), clone.getCompletionPrefix());
+            var originalNodes = nodes(site);
+            var clonedNodes = nodes(clone);
+            assertEquals(originalNodes.size(), clonedNodes.size());
+            IntStream.range(0, originalNodes.size())
+                    .forEach(i -> assertNotSame(originalNodes.get(i), clonedNodes.get(i)));
+            assertSame(clone, clone.getTarget().getParent());
+            assertEquals(List.of("Recovery", "later"), names(tree));
+            assertEquals(text, source.toRawString());
+        });
     }
 
     @Test
