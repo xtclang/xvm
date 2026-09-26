@@ -4134,26 +4134,12 @@ public class CommonBuilder
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
-
-        String moduleName = thisId.getModuleConstant().getName();
-        int    baseIndex  = bctx.className.lastIndexOf(TypeSystem.HASH);
-        String className  = baseIndex > 0
+        int    baseIndex = bctx.className.lastIndexOf(TypeSystem.HASH);
+        String className = baseIndex > 0
                 ? bctx.className.substring(0, baseIndex)
                 : bctx.className;
 
-        GenerateStub:
-        if (Arrays.stream(JIT_LIST).anyMatch(name -> {
-            if (name.endsWith("*")) {
-                name = name.substring(0, name.length() - 1);
-                return className.contains(name) || moduleName.contains(name);
-            } else {
-                return className.endsWith(name) || moduleName.endsWith(name);
-            }})) {
-
-            if (Arrays.stream(NO_JIT_LIST).anyMatch(className::endsWith)) {
-                break GenerateStub;
-            }
-
+        if (Arrays.stream(NO_JIT_LIST).noneMatch(className::endsWith)) {
             // use the enclosing Ecstasy method name to cover all overloads and nested lambdas
             MethodConstant methodId = bctx.methodStruct.getIdentityConstant();
             while (methodId.isLambda() &&
@@ -4163,22 +4149,13 @@ public class CommonBuilder
 
             // a signature entry exempts one overload without disabling the others
             Set<String> excluded = NO_JIT_METHODS.get(className);
-            if (excluded != null && (excluded.contains(methodId.getName()) ||
-                    excluded.contains(methodId.getSignature().getValueString()))) {
-                if (METHOD_SKIP_SET.add(className)) {
-                    System.err.println("*** Skipping some methods for " + className);
-                }
-                SKIP_SET.add(className); // stops the skipping class log message
-                break GenerateStub;
+            if (excluded == null || !(excluded.contains(methodId.getName()) ||
+                                      excluded.contains(methodId.getSignature().getValueString()))) {
+                bctx.assembleCode(code);
+                return;
             }
-
-            bctx.assembleCode(code);
-            return;
         }
 
-        if (SKIP_SET.add(className)) {
-            System.err.println("*** Skipping code gen for " + className);
-        }
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());
     }
@@ -4215,127 +4192,20 @@ public class CommonBuilder
      */
     private static final String InstanceInit = Instance + "$=";
 
-    private static final String[] JIT_LIST = new String[] {
-            "Test*", "test*",
-            "anon*",                        // covers simple tests and examples
-
-            // ecstasy
-            "org.xtclang.ecstasy.Appender",
-            "org.xtclang.ecstasy.AppenderᐸCharᐳ",
-            "org.xtclang.ecstasy.Assertion",
-            "org.xtclang.ecstasy.Boolean",
-            "org.xtclang.ecstasy.Closed",
-            "org.xtclang.ecstasy.Comparable",
-            "org.xtclang.ecstasy.ConcurrentModification",
-            "org.xtclang.ecstasy.Const",
-            "org.xtclang.ecstasy.Deadlock",
-            "org.xtclang.ecstasy.Duplicable",
-            "org.xtclang.ecstasy.Exception*",
-            "org.xtclang.ecstasy.Freezable",
-            "org.xtclang.ecstasy.IllegalArgument",
-            "org.xtclang.ecstasy.IllegalState",
-            "org.xtclang.ecstasy.Iterable*",
-            "org.xtclang.ecstasy.Iterator*",
-            "org.xtclang.ecstasy.NotAssigned",
-            "org.xtclang.ecstasy.NotImplemented",
-            "org.xtclang.ecstasy.NotShareable",
-            "org.xtclang.ecstasy.Nullable",
-            "org.xtclang.ecstasy.Orderable",
-            "org.xtclang.ecstasy.Ordered",
-            "org.xtclang.ecstasy.OutOfBounds",
-            "org.xtclang.ecstasy.OutOfMemory",
-            "org.xtclang.ecstasy.Range",
-            "org.xtclang.ecstasy.ReadOnly",
-            "org.xtclang.ecstasy.Sequential",
-            "org.xtclang.ecstasy.Service",
-            "org.xtclang.ecstasy.Service$Aware",
-            "org.xtclang.ecstasy.Sliceable*",
-            "org.xtclang.ecstasy.StackOverflow",
-            "org.xtclang.ecstasy.TimedOut",
-            "org.xtclang.ecstasy.Timeout",
-            "org.xtclang.ecstasy.TypeMismatch",
-            "org.xtclang.ecstasy.Unsupported",
-
-            // collections
-            "org.xtclang.ecstasy.collections.Array",
-            "org.xtclang.ecstasy.collections.Array$Mutability",
-            "org.xtclang.ecstasy.collections.Collection",
-            "org.xtclang.ecstasy.collections.List",
-            "org.xtclang.ecstasy.collections.NaturalHasher",
-            "org.xtclang.ecstasy.collections.Set",
-            "org.xtclang.ecstasy.collections.Tuple",
-            "org.xtclang.ecstasy.collections.UniformIndexed*",
-            "org.xtclang.ecstasy.collections.VirtualHasher",
-            "org.xtclang.ecstasy.collections.deferred.DeferredCollection",
-            "org.xtclang.ecstasy.collections.deferred.DistinctCollection",
-
-            // io
-            "org.xtclang.ecstasy.io.Reader",
-            "org.xtclang.ecstasy.io.TextPosition",
-            "org.xtclang.ecstasy.io.IOException",
-            "org.xtclang.ecstasy.io.IllegalUTF",
-
-            // maps
-            "org.xtclang.ecstasy.maps.CollectImmutableMap",
-            "org.xtclang.ecstasy.maps.CopyableMap",
-            "org.xtclang.ecstasy.maps.CursorEntry",
-            "org.xtclang.ecstasy.maps.DiscreteEntry*",
-            "org.xtclang.ecstasy.maps.HashMap",
-            "org.xtclang.ecstasy.maps.KeyEntry",
-            "org.xtclang.ecstasy.maps.ListMapCollector",
-            "org.xtclang.ecstasy.maps.Map",
-            "org.xtclang.ecstasy.maps.Map$Entry",
-            "org.xtclang.ecstasy.maps.MapAppender",
-            "org.xtclang.ecstasy.maps.MapCollector",
-            "org.xtclang.ecstasy.maps.StringableEntry",
-            "org.xtclang.ecstasy.maps.deferred.DeferredMap",
-
-            // numbers
-            "org.xtclang.ecstasy.numbers.BFloat16",
-            "org.xtclang.ecstasy.numbers.BinaryFPNumber",
-            "org.xtclang.ecstasy.numbers.Bit",
-            "org.xtclang.ecstasy.numbers.Dec*",
-            "org.xtclang.ecstasy.numbers.Float8e4",
-            "org.xtclang.ecstasy.numbers.Float8e5",
-            "org.xtclang.ecstasy.numbers.Float16",
-            "org.xtclang.ecstasy.numbers.Float32",
-            "org.xtclang.ecstasy.numbers.Float64",
-            "org.xtclang.ecstasy.numbers.Float128",
-            "org.xtclang.ecstasy.numbers.FPConvertible",
-            "org.xtclang.ecstasy.numbers.FPLiteral",
-            "org.xtclang.ecstasy.numbers.Int*",
-            "org.xtclang.ecstasy.numbers.Number",
-            "org.xtclang.ecstasy.numbers.FPNumber",
-            "org.xtclang.ecstasy.numbers.Nibble",
-            "org.xtclang.ecstasy.numbers.Number$compare$Family*",
-            "org.xtclang.ecstasy.numbers.Number$Signum*",
-            "org.xtclang.ecstasy.numbers.Random",
-            "org.xtclang.ecstasy.numbers.UInt*",
-
-            // reflect
-            "org.xtclang.ecstasy.reflect.Module",
-            "org.xtclang.ecstasy.reflect.Package",
-
-            // text
-            "org.xtclang.ecstasy.text.Char*",
-            "org.xtclang.ecstasy.text.String",
-            "org.xtclang.ecstasy.text.Stringable",
-            "org.xtclang.ecstasy.text.StringBuffer",
-
-            // temporal
-            "org.xtclang.ecstasy.temporal.Date*",
-            "org.xtclang.ecstasy.temporal.Duration",
-            "org.xtclang.ecstasy.temporal.Time*",
-
-            // _native.io
-            "_native.io.TerminalConsole",
-            "_native.temporal.LocalClock",
-    };
-
     private static final String[] NO_JIT_LIST = new String[] {
+        // six failures: construct/resize/clear (default arguments), remove/put (Ref moves),
+        // putAll (TypeMatrix assignment)
+        "org.xtclang.ecstasy.maps.HasherMap",
+        // six failures: freeze (immutable union), addKeyTo/removeIndexFrom (widened returns),
+        // addIndexTo (widened argument), buildIndex (default argument), remove (IS_NULL)
+        "org.xtclang.ecstasy.maps.ListMap",
+        "org.xtclang.ecstasy.reflect.Class",
+        "org.xtclang.ecstasy.reflect.Type",
     };
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
+        Map.entry("org.xtclang.ecstasy.reflect.Outer$Inner",
+            Set.of("get")), // TODO: MOV_THIS_A is not implemented
         Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
             Set.of("calc")), // TODO: applied @Lazy property state is not available on the host
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
@@ -4359,7 +4229,4 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.numbers.Number",
             Set.of("converterFor", "converterTo"))
     );
-
-    private static final HashSet<String> SKIP_SET = new HashSet<>();
-    private static final HashSet<String> METHOD_SKIP_SET = new HashSet<>();
 }
