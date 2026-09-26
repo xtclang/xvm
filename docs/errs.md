@@ -8,6 +8,16 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Generic type completion batch (2026-09-26, C24 `1f843896f` / L41 `45e3a0998`).**
+Registered class/method formals, empty generic slots, complete parameterized qualifiers and
+middle-of-final-token edits now have compiler/LSP consumers. Parameterized aliases preserve the
+compiler's substituted type. No mutable AST fields are added: prefix text is derived from existing
+syntax, and qualifier resolution uses disposable copies with cancellable collecting PROBE listeners.
+Shared X96 covers eight acceptance variants in both drivers; native IntelliJ remains deferred.
+Targeted parser/LSP/stdio checks and focused VS Code X94–X96 pass; the final formal-shadowing
+follow-up passes all 35 generic-header cases. See the
+[scope, API compatibility and verification record](errs-integration-plan.md#generic-type-completion-batch).
+
 **Class/interface composition headers (2026-09-26, `ef2b0b870` / `9ff95ec35`).**
 Bounded malformed headers retain the written name and body. Composition type queries resolve in
 the enclosing scope, including qualified and nested generic leaf prefixes. The new syntax-only
@@ -1498,6 +1508,8 @@ zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
 | `IncompleteStatement.isCall()` and delimiter display (C19) | Bracket sizes are arguments of array construction; the retained opening token distinguishes them from ordinary index expressions. | Existing target/argument children and final token only. No new field, public signature or clone/reset rule. `getLeadingArguments()` stays empty for size slots; initializer-parenthesis slots still include their preceding dimensions. |
 | `Parser` dimension lookahead (C19) | Type parsing must count dimensions before `NewExpression` owns their expressions. A cursor must survive that ambiguity and report once. | Existing listener branch is discarded on token restore and merged when consumed/failed. The owning parse retains original cursor tokens. A following supplier is consumed for recovery but is outside the retained prefix proof. |
 | `IncompleteDeclarationStatement` (C20) | Preserve written declaration kind/name/range when no valid method or property component can be registered; own the selected type cursor. | Final metadata and ordinary AST child list adoption/cloning. The skipped body contributes only its original range. No component, parameter register, retained Context or lazy cache. AST placement is required for source ownership, structural features and stage traversal. |
+| `IncompleteStatement.getCompletionPrefix()` (C24) | Derive the decoded text before the cursor while retaining the entire written token for replacement. | No field or cache; requires normal source adoption. Mid-token syntax and cloned qualifier children remain independently owned. |
+| `CursorScope` parameterized/formal queries and `CursorBinding.NamedType.type()` (C24) | Resolve registered formal names and preserve qualifier-substituted candidate types for the host. | Probe syntax, compiler staging, TypeInfo and listeners are call-local. Nothing is stored on ordinary AST nodes; the result lives only in the existing compilation-attempt binding collector. The old two-argument candidate constructor remains; two-component record patterns need migration. |
 | `IncompleteTypeCompositionStatement` (C23), plus a protected syntax constructor on `TypeCompositionStatement` | Retain the written category/name/body/range and selected header cursor, including a member-file type root. | Final immutable cursor list; explicit clone constructs fresh cursor/body children and preserves parent/stage. No component registration, inherited semantic state, Context or resolver cache. AST placement is needed for source ownership, module assembly and structural traversal; `isComponentNode()` is false. |
 | `IncompleteStatement.isTypeCompletion()` and `CursorScope.declarationTypes` (C20) | Distinguish a type-only header query and resolve enclosing type candidates without inventing a method scope. | Kind is derived from the real parent; existing NameResolver performs lookup. Existing CursorBinding.NamedType carries copied identities. No new cursor field or host-side type resolver. |
 | `Parser` header recovery (C20) | Parser owns missing-header boundaries and distinguishes unqualified type prefixes from values. | Retains an actual name only when written; stops at body/semicolon/enclosing brace/EOF and checks cancellation while skipping the body. Qualified names are extended by C21 below; generic/type-composition headers remain follow-ups. |
