@@ -117,7 +117,7 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
 | Rename | Basic | Implemented with syntax limits | Locals/private method parameters and configured-graph instance-method overrides; binding/dispatch validation and versioned edits required |
 | Code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
-| Folding / selection | Basic / none | Syntax AST | Compiler AST |
+| Folding / selection | Basic / none | Syntax AST | Compiler AST; folds retain the actual closing-brace column |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | Unavailable |
 | Workspace symbols | Limited | Workspace index | Completed module sessions, including closed members |
@@ -207,19 +207,25 @@ recover around a cursor hole. Expression-bodied declarations/property initialize
 terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
 their real source-owned compiler context. Member/return and parameter type prefixes use the
 enclosing compiler scope, including flat qualified names, without registering incomplete declarations.
-Missing operands, declaration/parameter names, parameterized/compound/generic headers, missing map
+Missing operands, declaration/parameter names, generic-method/type-composition headers, missing map
 entries and unterminated literal contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
 Declaration-header recovery retains malformed method names and source extents for outline and
-folding. Explicit cursor queries complete member/return and parameter type prefixes through the
+folding. Compiler folds keep the heading line and a real closing brace visible; precise end columns
+prevent a client from extending a method fold into following declarations. Unclosed bodies retain
+their actual EOF boundary without a fabricated delimiter. Explicit cursor queries complete
+member/return and parameter type prefixes through the
 compiler, including unqualified empty parameter slots and flat qualified names such as
 `ecstasy.text.Str`. Qualifiers respect visibility and aliases; candidates include inherited nested
 types and typedefs. Only the final written identifier is replaced. No partial signatures or
-parameter names are invented. Trailing dots, parameterized/compound types, generic-method,
-multi-return and type-composition headers remain follow-ups; see
-[shared X91–X93](../doc/manual-test-plan.md#xdkadapter-playbook) and the
-[C21/L36 extraction plan](../../docs/errs-integration-plan.md#qualified-declaration-type-prefixes).
+parameter names are invented. Written leaf names inside parameterized/compound types and bounded
+missing angle/group closers also work. These are visible-type suggestions; normal compilation
+checks generic constraints. Empty type arguments/operands, parameterized qualifiers, generic
+base-name prefixes, function/sequence types, formal-type candidates, trailing dots, generic-method, multi-return and
+type-composition headers remain follow-ups; see
+[shared X91–X94](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+[C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module
