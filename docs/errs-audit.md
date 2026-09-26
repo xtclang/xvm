@@ -676,6 +676,14 @@ original UTF-16 edit range and diagnostic repair. Final validation is recorded u
 
 ## Unfinished declaration-header audit (2026-09-25)
 
+Native follow-up on 2026-09-26 found a folding integration defect rather than a parser range defect:
+X92's method had the correct ending line, but line-only transport let LSP4IJ extend it to the
+module's closing brace. Commit `2e98860e1` preserves a precise end column before the real closing
+delimiter. Adapter and packaged transport regressions cover following same-line declarations,
+complete/recovered headers, emoji, LF/CRLF and actual EOF. No AST state or embedding API change is
+needed. See [fold boundaries](errs-integration-plan.md#precise-compiler-fold-boundaries) for native
+verification status and the remaining client EOF limitation.
+
 Commit `68a291c0f` (C20/L35) retains incomplete method headers structurally and completes simple member/parameter type
 prefixes. A syntax-only `IncompleteDeclarationStatement` is preferable to a partial
 `MethodDeclarationStatement`: registration of a fabricated signature could leak parameters,
@@ -701,7 +709,11 @@ redundant-return-list spelling to `<T> void damaged(...)`; this was a test-input
 Remaining bounds: multi-return/generic/type-composition headers, qualified/compound type names,
 method-formal candidates and name completion. No separator before a later declaration, or complex
 default/header syntax with its own braces, can still limit retention. X91–X92 keep shared editor
-inputs; native X92 checks diagnostics/Problems/repair but explicitly lacks outline and fold checks.
+inputs. Native X92 now verifies diagnostics/Problems/repair, Structure inclusions/exclusions and
+the exact fold boundary for both incomplete headers. Its strict folding assertion exposed the
+line-only transport defect fixed by `2e98860e1`; the post-fix run passes X92 before stopping later
+on explicit popup focus loss. See the [native checkpoint evidence](errs-integration-plan.md#intellij-native-assertion-parity)
+for separate run counts and the remaining unexecuted cases.
 Final evidence and extraction boundaries are in the [integration plan](errs-integration-plan.md#unfinished-declaration-headers).
 
 ## Qualified declaration-type audit (2026-09-26)
@@ -729,3 +741,24 @@ Empty trailing-dot slots, mid-token cursors, parameterized/compound names, forma
 type-composition headers remain outside this proof. A malformed header remains erroneous after a
 completion if its parameter name or delimiter is still missing. See the
 [verification and extraction record](errs-integration-plan.md#qualified-declaration-type-prefixes).
+
+## Parameterized/compound header audit (2026-09-26)
+
+C22/L37 extends syntax selection to a written leaf inside generic arguments and compound types.
+The existing enclosing compiler lookup remains unchanged. Parameterization/constraints belong to
+normal type validation; candidate visibility alone cannot certify the enclosing type. Recovery
+carries an explicit call-stack flag only through declaration type grammar. Ordinary parsing,
+speculative attempts and function/sequence-type interiors do not enable this mode.
+
+Missing angle/group closers are tolerated only when a selected written prefix exists, at bounded
+header/outer-delimiter/EOF positions. No empty operand, type argument, declaration or token is
+invented. The parser transfers only the original named leaf into the existing target child;
+retaining the whole generic type would give the cursor syntax children extending past its range.
+The declaration retains the real source extent. Adoption/cloning establish independent ownership,
+and the embedding regression checks original source, unvalidated bindings, stopping listeners
+and the absence of registered incomplete method/body declarations.
+
+Tests distinguish accepted complete types from accepted names whose missing closers still report
+errors. A non-deduplicating parser listener sees exactly one cursor diagnostic. The ordinary parser
+control still rejects missing closers. Shared X94, UTF-16/CRLF stdio variants and nested-generic
+retention queries extend the consumer proof. See the [verification record](errs-integration-plan.md#parameterized-and-compound-declaration-types).
