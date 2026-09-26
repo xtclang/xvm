@@ -2225,12 +2225,22 @@
         "original": "new String[2](text)",
         "prefix": "new String[te",
         "variants": [
-          { "suffix": "](text)", "repairedSuffix": "](text)", "validAfterAcceptance": true },
-          { "suffix": "", "repairedSuffix": "](text)", "validAfterAcceptance": false }
+          {
+            "suffix": "](text)",
+            "repairedSuffix": "](text)",
+            "validAfterAcceptance": true
+          },
+          {
+            "suffix": "",
+            "repairedSuffix": "](text)",
+            "validAfterAcceptance": false
+          }
         ],
         "signature": "new Array(Int size, String | function String(Int) supply)",
         "activeParameter": 0,
-        "labels": ["textNumber"],
+        "labels": [
+          "textNumber"
+        ],
         "replacementStartDelta": -2
       },
       "intellij": {
@@ -2655,6 +2665,191 @@
           }
         ],
         "prefixLength": 0,
+        "exclude": [
+          "value",
+          "damaged"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X97": {
+      "title": "argument fitting through qualifiers and groups before later arguments",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "marker": "\u00a7",
+        "source": "module Editing { class Pair(Int number, String text) {} class Box { Int number=1; String numberText=\"x\"; private Int numberHidden=2; } void pair(Int number, String text) {} void run(Int number, String numberText, Box box, function void(Int, String) fn) { ${0}; } }",
+        "variants": [
+          {
+            "declaration": "pair(nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(number, \"x\")"
+          },
+          {
+            "declaration": "pair((nu\u00a7), \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair((number), \"x\")"
+          },
+          {
+            "declaration": "pair(((nu\u00a7)), \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(((number)), \"x\")"
+          },
+          {
+            "declaration": "pair(\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(number, \"x\")"
+          },
+          {
+            "declaration": "pair(number=nu\u00a7, text=\"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(number=number, text=\"x\")"
+          },
+          {
+            "declaration": "pair(box.nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(box.number, \"x\")"
+          },
+          {
+            "declaration": "pair((box.nu\u00a7), \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair((box.number), \"x\")"
+          },
+          {
+            "declaration": "fn(nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "fn(number, \"x\")"
+          },
+          {
+            "declaration": "new Pair(nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "new Pair(number, \"x\")"
+          }
+        ],
+        "prefixLength": 2,
+        "exclude": [
+          "numberText",
+          "numberHidden"
+        ],
+        "callContext": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X98": {
+      "title": "generic base completion preserves written type arguments",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "marker": "\u00a7",
+        "source": "module Editing { ${0} }",
+        "variants": [
+          {
+            "declaration": "void damaged(Li\u00a7st<String> value) {}",
+            "selected": "List",
+            "include": [
+              "List"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 2,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<String> value) {}"
+          },
+          {
+            "declaration": "void damaged(Li\u00a7<String> value) {}",
+            "selected": "List",
+            "include": [
+              "List"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(List<String> value) {}"
+          },
+          {
+            "declaration": "void damaged(Map<Int, Li\u00a7st<String>> value) {}",
+            "selected": "List",
+            "include": [
+              "List"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 2,
+            "initiallyValid": true,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "void damaged(Map<Int, List<String>> value) {}"
+          }
+        ],
+        "prefixLength": 2,
         "exclude": [
           "value",
           "damaged"
