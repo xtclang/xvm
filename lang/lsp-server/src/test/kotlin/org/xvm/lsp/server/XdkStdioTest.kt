@@ -547,6 +547,7 @@ class XdkStdioTest {
             "void damaged(ecstasy.text.Str§ value) {}", "ecstasy.text.Str§ property;",
             "void damaged(Map<Int, List<Str§>> value) {}", "List<ecstasy.text.Str§> property;",
             "void damaged((Int | Str§) value) {}",
+            "interface Damaged extends List<Str§> {}",
         ],
     )
     fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
