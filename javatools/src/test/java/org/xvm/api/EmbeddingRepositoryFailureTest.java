@@ -42,8 +42,8 @@ class EmbeddingRepositoryFailureTest {
     void corruptRepositoryReachesTheEmbeddingListener() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        for (var repository : List.of(new FileRepository(file.toFile(), true),
-                new DirRepository(directory.toFile(), true))) {
+        List.of(new FileRepository(file.toFile(), true),
+                new DirRepository(directory.toFile(), true)).forEach(repository -> {
             var support = new EmbeddingSupport().configure(repository, null);
             var errors = new ErrorList();
 
@@ -52,6 +52,6 @@ class EmbeddingRepositoryFailureTest {
             assertFalse(result.succeeded());
             assertTrue(errors.getErrors().stream().anyMatch(error -> error.getCode().equals("EMB-5")));
             assertTrue(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
-        }
+        });
     }
 }

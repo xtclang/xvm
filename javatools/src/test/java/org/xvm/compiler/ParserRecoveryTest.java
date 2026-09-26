@@ -49,7 +49,7 @@ public class ParserRecoveryTest {
 
     @Test
     public void missingBracesAndTrailingDotRetainCompletedHeadersAtActualSourceEnd() {
-        for (String suffix : List.of("", "void run() {", "void run() { console.")) {
+        List.of("", "void run() {", "void run() { console.").forEach(suffix -> {
             String text = "module Recovery {\n    " + suffix;
             ErrorList errs = new ErrorList();
             StatementBlock tree = parse(text, errs);
@@ -62,7 +62,7 @@ public class ParserRecoveryTest {
             assertEquals(4 + suffix.length(), Source.calculateOffset(tree.getEndPosition()));
             assertEquals(1, errs.getErrors().stream()
                     .filter(err -> err.getCode().equals(Parser.UNEXPECTED_EOF)).count());
-        }
+        });
     }
 
     @Test
@@ -132,7 +132,7 @@ public class ParserRecoveryTest {
 
     @Test
     public void unterminatedStringsFinishAfterOneDiagnosticEvenWithoutAnAbortBudget() {
-        for (String text : List.of("\"", "\"café 😀", "$\"", "$\"unfinished")) {
+        List.of("\"", "\"café 😀", "$\"", "$\"unfinished").forEach(text -> {
             ErrorList errs = new ErrorList(ErrorList.UNLIMITED);
             AtomicInteger reports = new AtomicInteger();
             Lexer lexer = new Lexer(new Source(text), ErrorListener.collecting(error -> {
@@ -145,7 +145,7 @@ public class ParserRecoveryTest {
             assertEquals(text.length(), Source.calculateOffset(token.getEndPosition()));
             assertTrue(errs.hasError(Lexer.STRING_NO_TERM));
             assertEquals(1, reports.get());
-        }
+        });
     }
 
     @Test
@@ -183,8 +183,8 @@ public class ParserRecoveryTest {
 
     @Test
     public void missingCursorDelimitersRetainOriginalRangesAndFollowingDeclarations() {
-        for (String expression : List.of("((value.si", "work((value.si", "values[value.si", "(1, value.si",
-                "Tuple<Int,Int>:(1, value.si", "[value.si", "[1=value.si", "Map<Int,Int>:[1=value.si")) {
+        List.of("((value.si", "work((value.si", "values[value.si", "(1, value.si",
+                "Tuple<Int,Int>:(1, value.si", "[value.si", "[1=value.si", "Map<Int,Int>:[1=value.si").forEach(expression -> {
             String prefix = "module Recovery { Int run(String value) { return " + expression;
             String text   = prefix + "; } Int later = 42; }";
             Source source = new Source(text);
@@ -207,14 +207,14 @@ public class ParserRecoveryTest {
             ErrorList ordinary = new ErrorList();
             assertTrue(nodes(parse(text, ordinary)).stream().noneMatch(IncompleteStatement.class::isInstance));
             assertTrue(ordinary.hasSeriousErrors());
-        }
+        });
     }
 
     @Test
     public void argumentPrefixesRetainCallSyntaxAndCloneOwnership() {
-        for (String call : List.of("work(1, te", "work(first=1, second=te",
+        List.of("work(1, te", "work(first=1, second=te",
                 "new Box<String>(1, te", "new Box<String>(first=1, second=te",
-                "outer.new Child(1, te", "box.new(1, te", "new @Tagged Box(1, te")) {
+                "outer.new Child(1, te", "box.new(1, te", "new @Tagged Box(1, te").forEach(call -> {
             String prefix = "module Recovery { void run() { " + call;
             String text = prefix + "); } Int later = 42; }";
             Source source = new Source(text);
@@ -246,7 +246,7 @@ public class ParserRecoveryTest {
             ErrorList ordinary = new ErrorList();
             assertTrue(nodes(parse(text, ordinary)).stream().noneMatch(IncompleteStatement.class::isInstance));
             assertFalse(ordinary.hasSeriousErrors());
-        }
+        });
     }
 
     @Test
@@ -269,7 +269,7 @@ public class ParserRecoveryTest {
 
     @Test
     public void dimensionCursorRetainsItsOwnerWithoutDuplicatingLookaheadDiagnostics() {
-        for (String suffix : List.of("]", "", "](\"x\")")) {
+        List.of("]", "", "](\"x\")").forEach(suffix -> {
             String prefix = "module Recovery { void run(Int number) { new String[nu";
             String text = prefix + suffix + "; } Int later = 1; }";
             Source source = new Source(text);
@@ -295,7 +295,7 @@ public class ParserRecoveryTest {
             assertEquals(site.getArgumentPrefix(), clone.getArgumentPrefix());
             assertTrue(names(tree).contains("later"));
             assertEquals(text, source.toRawString());
-        }
+        });
     }
 
     @Test
@@ -327,7 +327,7 @@ public class ParserRecoveryTest {
 
     @Test
     public void malformedHeadersRetainWrittenNamesButDoNotExposeTheirBodiesAsMembers() {
-        for (String header : List.of("void damaged(Int)", "void damaged(Int value", "void damaged(")) {
+        List.of("void damaged(Int)", "void damaged(Int value", "void damaged(").forEach(header -> {
             var errs = new ErrorList();
             var tree = parse("module Recovery { " + header + " { Int hidden=1; } Int later=2; }", errs);
             assertTrue(errs.hasSeriousErrors());
@@ -337,14 +337,14 @@ public class ParserRecoveryTest {
             assertEquals(IncompleteDeclarationStatement.Kind.METHOD, declaration.getKind());
             assertEquals(List.of("Recovery", "later"), names(tree));
             assertFalse(declaration.children().hasNext());
-        }
+        });
     }
 
     @Test
     public void declarationTypeCursorIsOwnedSyntaxWithOneDiagnosticAndIndependentClones() {
-        for (String header : List.of("void damaged(Str| value) {}", "void damaged(|) {}",
+        List.of("void damaged(Str| value) {}", "void damaged(|) {}",
                 "void damaged(Int first, |) {}", "Str| property;", "Str| damaged() {}", "Str|;",
-                "void damaged(ecstasy.text.Str| value) {}", "ecstasy.text.Str| property;", "ecstasy.text.Str| damaged() {}")) {
+                "void damaged(ecstasy.text.Str| value) {}", "ecstasy.text.Str| property;", "ecstasy.text.Str| damaged() {}").forEach(header -> {
             String prefix = "module Recovery { " + header.substring(0, header.indexOf('|'));
             String text = prefix + header.substring(header.indexOf('|') + 1) + " Int later=1; }";
             Source source = new Source(text);
@@ -370,7 +370,7 @@ public class ParserRecoveryTest {
             assertEquals(header.equals("Str|;"), declaration.getNameToken().isEmpty());
             assertTrue(names(tree).contains("later"));
             assertEquals(text, source.toRawString());
-        }
+        });
     }
 
     @Test
