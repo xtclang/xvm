@@ -107,7 +107,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     @Override
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         // If modules are explicitly configured, use those
-        if (!isEmpty()) {
+        if (getCliModuleName().isPresent() || !isEmpty()) {
             logger.info("[plugin] Test modules explicitly configured, using those.");
             return super.resolveModulesToRunFromModulePath(resolvedModulePath);
         }
