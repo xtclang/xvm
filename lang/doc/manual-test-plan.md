@@ -1108,6 +1108,27 @@ While compiler feature coverage is growing, run the IntelliJ playbook at occasio
 it is not required for every compiler change. Keep shared scenarios and the native consumer code
 current, and state explicitly when a new IntelliJ case has not yet had a native run.
 
+### Focused VS Code reruns
+
+For a correction limited to one scenario, select exact case IDs. This builds the extension and
+runs only the selected editor cases; it does not schedule the LSP unit or packaged stdio suites.
+For example, rerun the class/interface header case:
+
+```bash
+./gradlew :lang:vscode-extension:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+    -PcompilerPlaybookCases=X95
+```
+
+Use `-PcompilerPlaybookCases=X94,X95` for a small group. Without that property the existing full
+playbook plus host checks run. With an assembled extension, the direct equivalent from
+`lang/vscode-extension` is `npm run test:playbook -- --cases=X95`.
+Unknown, duplicate or empty IDs fail before VS Code opens. Reports state `focused`, list selected
+IDs and mark every excluded case `not-selected`; every selected case must pass. Existing host XML
+is supporting evidence with timestamps, not a claim that focused runs executed it. Use full runs
+for broad changes and checkpoints, and focused runs for bounded fixes after a full regression pass.
+This selector currently applies to VS Code; IntelliJ native checks remain occasional checkpoints.
+
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
