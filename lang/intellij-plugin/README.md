@@ -126,25 +126,29 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 97 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 98 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It runs startup and thirty-three scenarios: eighteen fully and fifteen partially. This includes diagnostics,
+It runs startup and thirty-four scenarios: nineteen fully and fifteen partially. This includes diagnostics,
 definition navigation, dependencies/configuration, completion/scope/imports, and delimiter/declaration
 recovery, plus method and constructor signature help. X90 checks array size hints, accepted completion
 edits and missing-bracket diagnostics/repair. X91 checks header type candidates, exact edits and repair;
 X92 checks incomplete-header diagnostics and Problems rows, with outline/folding still explicitly
-partial. Parameter Info checks inspect the native
+partial. X93 checks qualified header types, visibility, aliases and exact final-name edits.
+Parameter Info checks inspect the native
 request result, visible parameter text and bold argument; invalid calls must clear an earlier hint.
 LSP4IJ 0.21.0 displays `<no parameters>` for ambiguous named slots that deliberately suppress
 parameter metadata (X20); this remains a documented display limitation.
 The error/warning cases open **Problems → Current File**, verify row locations/counts,
 and verify clearing after corrections. Layout and clicking a Problems row remain manual.
 
-Every report lists all 97 scenario IDs, including the 64 unimplemented entries with concrete
+Every report lists all 98 scenario IDs, including the 64 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
 The catalog is a declared Gradle task input and its SHA-256 identifies the data used by each run.
+Native playbook runs are reserved for occasional checkpoints during compiler feature development.
+X93's consumer is implemented; its first native run is deferred to the next such checkpoint.
+The last validated native catalog runs through X92.
 
 Reports are under `build/reports/compiler-playbook/run-*/results.json`; `ide-paths.txt` points to
 the isolated IDE's profile/log directory. Starter caches its IDE download below the same report

@@ -342,7 +342,8 @@ public class ParserRecoveryTest {
     @Test
     public void declarationTypeCursorIsOwnedSyntaxWithOneDiagnosticAndIndependentClones() {
         for (String header : List.of("void damaged(Str| value) {}", "void damaged(|) {}",
-                "void damaged(Int first, |) {}", "Str| property;", "Str| damaged() {}", "Str|;")) {
+                "void damaged(Int first, |) {}", "Str| property;", "Str| damaged() {}", "Str|;",
+                "void damaged(ecstasy.text.Str| value) {}", "ecstasy.text.Str| property;", "ecstasy.text.Str| damaged() {}")) {
             String prefix = "module Recovery { " + header.substring(0, header.indexOf('|'));
             String text = prefix + header.substring(header.indexOf('|') + 1) + " Int later=1; }";
             Source source = new Source(text);
@@ -360,7 +361,9 @@ public class ParserRecoveryTest {
             var clone = (IncompleteDeclarationStatement) declaration.clone();
             var clonedSite = (IncompleteStatement) clone.children().next();
             assertNotSame(site, clonedSite);
+            assertNotSame(site.getTarget(), clonedSite.getTarget());
             assertSame(clone, clonedSite.getParent());
+            assertSame(clonedSite, clonedSite.getTarget().getParent());
             assertTrue(clonedSite.isTypeCompletion());
             assertEquals(declaration.getNameToken(), clone.getNameToken());
             assertEquals(header.equals("Str|;"), declaration.getNameToken().isEmpty());
