@@ -147,7 +147,8 @@ public final class IncompleteStatement extends Statement {
 
     /** A type query in an unfinished declaration, with no value or parameter-name completion. */
     public boolean isTypeCompletion() {
-        return getParent() instanceof IncompleteDeclarationStatement;
+        return getParent() instanceof IncompleteDeclarationStatement
+                || getParent() instanceof IncompleteTypeCompositionStatement;
     }
 
     /** Explicit receiver only; an unqualified call does not invent an implicit receiver. */

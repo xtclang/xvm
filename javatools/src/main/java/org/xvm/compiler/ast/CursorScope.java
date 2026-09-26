@@ -40,23 +40,30 @@ final class CursorScope {
 
     /** Header lookup uses the real enclosing declaration; no method Context is invented. */
     static List<CursorBinding.NamedType> declarationTypes(IncompleteStatement site, ErrorListener errs) {
+        AstNode scope = declarationScope(site);
         if (site.getTarget() instanceof NamedTypeExpression type && type.getNames().length > 1) {
-            return qualifiedTypes(type, errs);
+            return qualifiedTypes(type, scope, errs);
         }
         String prefix = site.getMemberName().map(Token::getValueText).orElse("");
         var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
         return names(site).stream().filter(name -> name.startsWith(prefix)).sorted()
                 .takeWhile(name -> !errs.isAbortDesired())
-                .map(name -> namedType(name, new NameResolver(site, name).forceResolve(probe)))
+                .map(name -> namedType(name, new NameResolver(scope, name).forceResolve(probe)))
                 .filter(Objects::nonNull).toList();
     }
 
+    /** A syntax-only type has no component; its parent retains the real enclosing/import scope. */
+    static AstNode declarationScope(IncompleteStatement site) {
+        return site.getParent() instanceof IncompleteTypeCompositionStatement declaration
+                ? declaration.getParent() : site;
+    }
+
     /** Use contextual TypeInfo to enumerate children, then normal type-name resolution to bind them. */
-    private static List<CursorBinding.NamedType> qualifiedTypes(NamedTypeExpression type, ErrorListener errs) {
+    private static List<CursorBinding.NamedType> qualifiedTypes(NamedTypeExpression type, AstNode scope, ErrorListener errs) {
         var names = Arrays.asList(type.getNames());
         var qualifier = names.subList(0, names.size() - 1);
         String prefix = names.getLast();
-        var owner = type.getComponent().getIdentityConstant();
+        var owner = scope.getComponent().getIdentityConstant();
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         var resolver = new NameResolver(type, qualifier.iterator());
         var target = resolver.forceResolve(lookup);

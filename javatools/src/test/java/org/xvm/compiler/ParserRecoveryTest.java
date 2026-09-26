@@ -15,6 +15,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.IncompleteDeclarationStatement;
 import org.xvm.compiler.ast.IncompleteStatement;
+import org.xvm.compiler.ast.IncompleteTypeCompositionStatement;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
@@ -409,6 +410,64 @@ public class ParserRecoveryTest {
                     assertFalse(ordinary.getErrors().stream().anyMatch(error -> error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
                     assertEquals(header.contains("§ value"), ordinary.hasSeriousErrors(), header);
                 });
+    }
+
+    @Test
+    public void typeHeadersKeepTheirBodyAndCloneTheirCursorIndependently() {
+        List.of("class Damaged extends Ba§", "interface Damaged extends Ba§",
+                "class Damaged implements List<Str§>", "class Damaged implements List<Str§",
+                "mixin Damaged into Ba§", "class Damaged extends §").forEach(header -> {
+            String prefix = "module Recovery { " + header.substring(0, header.indexOf('§'));
+            String text = prefix + header.substring(header.indexOf('§') + 1)
+                    + " { Int inside=1; } Int later=2; }";
+            Source source = new Source(text);
+            prefix.chars().forEach(_ -> source.next());
+            long cursor = source.getPosition();
+            source.reset();
+            var reports = new ArrayList<String>();
+            var tree = Parser.forPartialAnalysis(source, cursor,
+                    ErrorListener.collecting(error -> reports.add(error.getCode()))).parseSource();
+            assertEquals(List.of(Parser.INCOMPLETE_EXPRESSION), reports, header);
+            var declaration = nodes(tree).stream().filter(IncompleteTypeCompositionStatement.class::isInstance)
+                    .map(IncompleteTypeCompositionStatement.class::cast).findFirst().orElseThrow();
+            var clone = (IncompleteTypeCompositionStatement) declaration.clone();
+            var site = nodes(declaration).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+            var clonedSite = nodes(clone).stream().filter(IncompleteStatement.class::isInstance)
+                    .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
+            assertNotSame(site, clonedSite);
+            assertSame(clone, clonedSite.getParent());
+            assertTrue(clonedSite.isTypeCompletion());
+            var cursorChildren = declaration.children();
+            var body = assertInstanceOf(StatementBlock.class, cursorChildren.next());
+            var clonedBody = assertInstanceOf(StatementBlock.class, clone.children().next());
+            assertNotSame(body, clonedBody);
+            assertNotSame(body.children().next(), clonedBody.children().next());
+            assertSame(clone, clonedBody.getParent());
+            assertSame(site, cursorChildren.next());
+            assertThrows(UnsupportedOperationException.class, cursorChildren::remove);
+            assertEquals(cursor, clonedSite.getEndPosition());
+            assertEquals(List.of("Recovery", "Damaged", "inside", "later"), names(tree));
+            assertEquals(List.of("Damaged", "inside"), names(clone));
+            assertEquals(text, source.toRawString());
+        });
+    }
+
+    @Test
+    public void malformedTypeHeadersRetainStructureAndHonorStopping() {
+        String text = "module Recovery { class Damaged extends { Int inside=1; } Int later=2; }";
+        var errors = new ErrorList();
+        assertEquals(List.of("Recovery", "Damaged", "inside", "later"), names(parse(text, errors)));
+        assertTrue(errors.hasSeriousErrors());
+        assertThrows(CompilerException.class, () -> parse(text, new ErrorList(ErrorList.FIRST_ERROR)));
+        assertThrows(CompilerException.class, () -> new Parser(new Source(text),
+                ErrorListener.cancellable(new ErrorList(), () -> true)).parseSource());
+        var strict = new Parser(new Source("class Damaged extends { Int inside=1; }"), new ErrorList());
+        assertThrows(CompilerException.class, () -> {
+            try (Parser.Attempt ignored = strict.attempt()) {
+                strict.parseTypeCompositionStatement();
+            }
+        });
     }
 
     @Test
