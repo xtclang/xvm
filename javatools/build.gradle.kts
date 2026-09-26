@@ -228,7 +228,11 @@ val versionOutputTest = tasks.register<Test>("versionOutputTest") {
     description = "Run tests that verify version output contains git and API information"
     group = VERIFICATION_GROUP
 
-    dependsOn(jar, tasks.test)
+    val testSourceSet = sourceSets.test.get()
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform()
+    dependsOn(jar)
 
     // Only run the version-related tests
     include("**/BuildInfoTest.class", "**/LauncherVersionTest.class")
