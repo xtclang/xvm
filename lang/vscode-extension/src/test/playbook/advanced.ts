@@ -437,4 +437,27 @@ export function advancedCases(): void {
             await noErrors(document.uri);
         }
     });
+
+    playbook('X94', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        for (const variant of data.variants) {
+            const marked = scenarioText(data.source, variant.declaration);
+            const cursor = marked.indexOf(data.marker);
+            await workspace.replace(document, marked.replace(data.marker, ''));
+            await diagnostics(document.uri, values => values.length > 0, 'Unresolved nested declaration type');
+            const at = document.positionAt(cursor);
+            const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.ok(variant.include.every(name => items.some(item => label(item) === name)));
+            assert.ok(data.exclude.every(name => items.every(item => label(item) !== name)));
+            assert.ok(!(await workspace.signature(document, at))?.signatures.length);
+            const selected = items.find(item => label(item) === variant.selected)!;
+            assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -data.prefixLength), at)));
+            await workspace.accept(document, selected);
+            assert.strictEqual(document.getText(), marked.slice(0, cursor - data.prefixLength) + variant.selected + marked.slice(cursor + data.marker.length));
+            if (variant.validAfterAcceptance) await noErrors(document.uri);
+            else await diagnostics(document.uri, values => values.length > 0, 'Missing type delimiters remain diagnostics');
+            await workspace.replace(document, scenarioText(data.source, variant.repairedDeclaration));
+            await noErrors(document.uri);
+        }
+    });
 }
