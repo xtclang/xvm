@@ -46,6 +46,21 @@ interface StartedLanguageServer {
     fun getOpenedDocuments(): Collection<ClientDocument>
 
     fun getLanguageServer(): RemoteLanguageServer
+
+    fun getServerCapabilitiesSync(): ClientValue
+
+    fun restart()
+
+    fun getCurrentProcessId(): Long?
+
+    fun getTraces(): List<ClientTraceEntry>
+
+    fun getServerTrace(): ClientTraceLevel
+}
+
+@Remote("com.redhat.devtools.lsp4ij.LanguageServerWrapper\$LSPTrace", plugin = "com.redhat.devtools.lsp4ij")
+interface ClientTraceEntry {
+    fun message(): ClientValue
 }
 
 @Remote("com.redhat.devtools.lsp4ij.OpenedDocument", plugin = "com.redhat.devtools.lsp4ij")
@@ -60,6 +75,10 @@ interface ClientDocument {
 @Remote("com.redhat.devtools.lsp4ij.DocumentContentSynchronizer", plugin = "com.redhat.devtools.lsp4ij")
 interface DocumentSynchronizer {
     fun getDidOpenFuture(): DocumentOpenFuture
+
+    fun flushPendingChanges(): ClientFuture
+
+    fun getDocument(): ParityDocument
 }
 
 @Remote("java.util.concurrent.CompletableFuture")

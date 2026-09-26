@@ -113,4 +113,11 @@ interface HighlightFuture {
 @Remote("org.eclipse.lsp4j.DocumentHighlight", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientHighlight {
     fun getRange(): SourceRange
+
+    fun getKind(): ClientHighlightKind?
+}
+
+@Remote("org.eclipse.lsp4j.DocumentHighlightKind", plugin = "com.redhat.devtools.lsp4ij")
+interface ClientHighlightKind {
+    fun name(): String
 }

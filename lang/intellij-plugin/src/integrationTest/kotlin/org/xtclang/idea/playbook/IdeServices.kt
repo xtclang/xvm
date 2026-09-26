@@ -14,12 +14,22 @@ interface LspSettings {
     )
 }
 
+@Remote("com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings", plugin = "com.redhat.devtools.lsp4ij")
+interface ProjectLspSettings {
+    fun updateSettings(
+        serverId: String,
+        settings: LspServerSettings,
+    )
+}
+
 @Remote(
     "com.redhat.devtools.lsp4ij.settings.LanguageServerSettings\$LanguageServerDefinitionSettings",
     plugin = "com.redhat.devtools.lsp4ij",
 )
 interface LspServerSettings {
     fun setConfigurationContent(content: String)
+
+    fun setServerTrace(trace: ClientTraceLevel): LspServerSettings
 }
 
 @Remote("com.intellij.codeInsight.lookup.LookupManager")
