@@ -109,6 +109,9 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         super(objects, project, extension);
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
+        // Own the property even while inheriting the extension's value. An explicitly empty
+        // task list is a real override, and mutating it must not mutate other tasks.
+        this.taskLocalModules.get().getModules().unset().convention(ext.getModules());
         this.cliModuleName = objects.property(String.class);
         this.cliMethodName = objects.property(String.class);
         this.cliModuleArgs = objects.listProperty(String.class);
@@ -235,9 +238,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Internal
     @Override
     public ListProperty<@NotNull XtcRunModule> getModules() {
-        if (taskLocalModules.get().isEmpty()) {
-            return getExtension().getModules();
-        }
         return taskLocalModules.get().getModules();
     }
 
@@ -285,14 +285,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Internal
     @Override
     public boolean isEmpty() {
-        return taskLocalModules.get().isEmpty() && getExtension().isEmpty();
+        return taskLocalModules.get().isEmpty();
     }
 
     @Override
     public int size() {
-        if (taskLocalModules.get().isEmpty()) {
-            return getExtension().size();
-        }
         return taskLocalModules.get().size();
     }
 
@@ -350,9 +347,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
 
         final var selectedModules = getModules().get();
-        if (!taskLocalModules.get().isEmpty()) {
-            logger.info("[plugin] Task local module configuration is present, overriding extension configuration.");
-        }
 
         // TODO: Add abstraction that actually implements a ModulePath instance, including keeping track of its status and perhaps a method for resolving it.
         // TODO: Here we should check that any module we resolve is actually in the source set output of the source set of this task.
