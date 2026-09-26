@@ -440,8 +440,9 @@ class XdkAdapter internal constructor(
         val sourceInputs: XdkSources.Inputs? = null,
         val sourceTexts: Map<String, String> = emptyMap(),
     ) {
-        val hierarchy = XdkHierarchy(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
-        val calls = XdkCalls(documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap())
+        private val semanticViews = documents.mapNotNull { (uri, analysis) -> analysis.semantics?.let { uri to it } }.toMap()
+        val hierarchy = XdkHierarchy(semanticViews)
+        val calls = XdkCalls(semanticViews)
 
         fun document(uri: String): Analysis? =
             documents[uri] ?: documents.entries
