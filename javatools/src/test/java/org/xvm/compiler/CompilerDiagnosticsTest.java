@@ -64,10 +64,8 @@ public class CompilerDiagnosticsTest {
 
         assertFalse(heard.isEmpty(), "broken source produces diagnostics");
         for (ErrorListener.ErrorInfo err : heard) {
-            Site site = err.site();
-            assertInstanceOf(Site.In.class, site, "a source diagnostic belongs in the source");
-
-            Site.In in = (Site.In) site;
+            Site.In in = assertInstanceOf(Site.In.class, err.site(),
+                    "a source diagnostic belongs in the source");
             assertTrue(in.lPosEnd() >= in.lPosStart(), "the span does not run backwards");
             assertTrue(err.getSeverity().isAtLeast(Severity.WARNING));
         }
