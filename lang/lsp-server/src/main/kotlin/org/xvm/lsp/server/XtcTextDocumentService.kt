@@ -729,11 +729,18 @@ class XtcTextDocumentService(
         return WorkspaceEdit().apply {
             if (edit.versioned) {
                 this.changes = null
-                documentChanges = changes.map { (uri, edits) ->
-                    Either.forLeft(TextDocumentEdit(VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
-                        edits.map { Either.forLeft(it) }))
-                }
-            } else this.changes = changes
+                documentChanges =
+                    changes.map { (uri, edits) ->
+                        Either.forLeft(
+                            TextDocumentEdit(
+                                VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
+                                edits.map { Either.forLeft(it) },
+                            ),
+                        )
+                    }
+            } else {
+                this.changes = changes
+            }
         }
     }
 
@@ -741,18 +748,27 @@ class XtcTextDocumentService(
         queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
-            { adapter.getCodeActionsAsync(params.textDocument.uri, toAdapterRange(params.range),
-                params.context.diagnostics.orEmpty().map { Diagnostic.fromLsp(params.textDocument.uri, it) }) },
+            {
+                adapter.getCodeActionsAsync(
+                    params.textDocument.uri,
+                    toAdapterRange(params.range),
+                    params.context.diagnostics
+                        .orEmpty()
+                        .map { Diagnostic.fromLsp(params.textDocument.uri, it) },
+                )
+            },
             workspace = true,
         ) { actions ->
             actions.mapNotNull { action ->
                 val proposed = action.edit?.let { protocolEdit(it) ?: return@mapNotNull null }
-                Either.forRight<Command, CodeAction>(CodeAction().apply {
-                    title = action.title
-                    kind = action.kind.toLsp()
-                    isPreferred = action.isPreferred
-                    edit = proposed
-                })
+                Either.forRight<Command, CodeAction>(
+                    CodeAction().apply {
+                        title = action.title
+                        kind = action.kind.toLsp()
+                        isPreferred = action.isPreferred
+                        edit = proposed
+                    },
+                )
             }
         }
 

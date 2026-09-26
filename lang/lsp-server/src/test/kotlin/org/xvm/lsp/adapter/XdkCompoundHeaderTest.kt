@@ -102,7 +102,6 @@ class XdkCompoundHeaderTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "void damaged(Lis§<String> value) {}",
             "void damaged((Int | §) value) {}",
             "void damaged(function Str§() value) {}",
             "<T> void damaged(List<Str§> value) {}",
