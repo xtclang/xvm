@@ -200,7 +200,7 @@ class XdkDistribution(
             listOf(false, true).forEach { isWindows ->
                 val xtcScript = File(outputDir, if (isWindows) "xtc.bat" else "xtc")
                 if (xtcScript.exists()) {
-                    var content = xtcScript.readText()
+                    var content = xtcScript.readText().replace("\r\n", "\n")
 
                     // Replace jar paths with version-stripped equivalents
                     javaToolsFiles.forEach { jar ->
@@ -221,14 +221,14 @@ class XdkDistribution(
                     val modulePaths = generateModulePaths(isWindows)
                     val userArgs = if (isWindows) "%*" else "\"\$@\""
 
-                    // Handle the multi-line format: Launcher \<newline>        "$@"
-                    // Use literal string replacement, not regex replacement
-                    content = content.replace(
-                        "org.xvm.tool.Launcher \\\n        \"\$@\"",
-                        "org.xvm.tool.Launcher $userArgs $modulePaths"
-                    )
+                    val originalInvocation = if (isWindows) {
+                        "org.xvm.tool.Launcher %*"
+                    } else {
+                        "org.xvm.tool.Launcher \\\n        \"\$@\""
+                    }
+                    content = content.replace(originalInvocation, "org.xvm.tool.Launcher $userArgs $modulePaths")
 
-                    xtcScript.writeText(content)
+                    xtcScript.writeText(if (isWindows) content.replace("\n", "\r\n") else content)
                 }
             }
 
@@ -237,19 +237,21 @@ class XdkDistribution(
                 listOf(false, true).forEach { isWindows ->
                     val xtcScript = File(outputDir, if (isWindows) "xtc.bat" else "xtc")
                     if (xtcScript.exists()) {
-                        var content = xtcScript.readText()
+                        var content = xtcScript.readText().replace("\r\n", "\n")
                         val modulePaths = generateModulePaths(isWindows)
                         val userArgs = if (isWindows) "%*" else "\"\$@\""
 
                         // Replace: Launcher "$@" -L ... -L ...
                         // With:    Launcher <command> -L ... -L ... \<newline>        "$@"
-                        content = content.replace(
-                            "org.xvm.tool.Launcher $userArgs $modulePaths",
+                        val commandInvocation = if (isWindows) {
+                            "org.xvm.tool.Launcher $command $modulePaths $userArgs"
+                        } else {
                             "org.xvm.tool.Launcher $command $modulePaths \\\n        $userArgs"
-                        )
+                        }
+                        content = content.replace("org.xvm.tool.Launcher $userArgs $modulePaths", commandInvocation)
 
                         val targetScript = File(outputDir, if (isWindows) "$toolName.bat" else toolName)
-                        targetScript.writeText(content)
+                        targetScript.writeText(if (isWindows) content.replace("\n", "\r\n") else content)
                         if (!isWindows) {
                             targetScript.setExecutable(true)
                         }
