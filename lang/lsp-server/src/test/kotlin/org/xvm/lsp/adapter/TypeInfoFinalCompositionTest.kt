@@ -275,7 +275,7 @@ class TypeInfoFinalCompositionTest {
         }
 
     private fun resource(name: String) =
-        checkNotNull(javaClass.getResourceAsStream("/typeinfo-test/$name")) {
+        checkNotNull(javaClass.getResourceAsStream("/org/xvm/lsp/xdk/$name")) {
             "Missing compiled test module: $name"
         }
 }

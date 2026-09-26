@@ -226,4 +226,11 @@ lang-jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref =
 tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
 
 [bundles]
+# One library set for the distribution and embedded compiler hosts.
+xdk-libraries = [
+    "xdk-aggregate", "xdk-cli", "xdk-collections", "xdk-convert", "xdk-crypto",
+    "xdk-ecstasy", "xdk-json", "xdk-jsondb", "xdk-metrics", "xdk-net", "xdk-oodb",
+    "xdk-runner", "xdk-sec", "xdk-web", "xdk-webauth", "xdk-webcli", "xdk-xenia",
+    "xdk-xml", "xdk-xunit", "xdk-xunit-db", "xdk-xunit-engine", "javatools-bridge",
+]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]

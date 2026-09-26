@@ -129,18 +129,6 @@ val compilerModules =
         }
     }
 
-// Final TypeInfo regressions read freshly serialized libraries, including XML and XODB.
-val typeInfoTestModules =
-    configurations.create("typeInfoTestModules") {
-        isCanBeConsumed = false
-        isCanBeResolved = true
-        extendsFrom(compilerModules)
-        attributes {
-            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc"))
-        }
-    }
-
 val treeSitterNativeLib =
     configurations.create("treeSitterNativeLib") {
         isCanBeConsumed = false
@@ -152,10 +140,7 @@ val treeSitterNativeLib =
     }
 
 dependencies {
-    compilerModules(libs.xdk.ecstasy)
-    compilerModules(libs.javatools.bridge)
-    typeInfoTestModules(libs.xdk.xml)
-    typeInfoTestModules(libs.xdk.jsondb)
+    compilerModules(libs.bundles.xdk.libraries)
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
 
@@ -211,19 +196,6 @@ val compilerModuleIndex =
         inputs.files(compilerModuleFiles).withPathSensitivity(PathSensitivity.NONE)
         property("modules", compilerModuleFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
     }
-
-val typeInfoTestFiles = typeInfoTestModules.asFileTree.matching { include("**/*.xtc") }
-val typeInfoTestIndex =
-    tasks.register<WriteProperties>("typeInfoTestIndex") {
-        destinationFile.set(layout.buildDirectory.file("generated/typeinfo-test/modules.properties"))
-        inputs.files(typeInfoTestFiles).withPathSensitivity(PathSensitivity.NONE)
-        property("modules", typeInfoTestFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
-    }
-
-tasks.named<ProcessResources>("processTestResources") {
-    from(typeInfoTestFiles) { into("typeinfo-test") }
-    from(typeInfoTestIndex) { into("typeinfo-test") }
-}
 
 // Add native library resources to source sets
 sourceSets.main {
