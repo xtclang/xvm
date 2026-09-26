@@ -1,7 +1,7 @@
 # Error listeners in the compiler and embedding API
 
 This document explains why the `lagergren/errs` branch changes reporting throughout the compiler,
-and which changes an LSP host actually needs. It describes the implementation as of 2026-09-25,
+and which changes an LSP host actually needs. It describes the implementation as of 2026-09-26,
 including module sessions, cross-file navigation, type hierarchy, Java parser recovery and
 compiler-fitted argument completion.
 The chronological investigation is in
@@ -639,3 +639,14 @@ The recovery node stores syntax only, with final immutable cursor storage and in
 Normal source diagnostics remain cached separately from the query; accepting a visible type leaves
 illegal inheritance or missing delimiters visible until repaired. No listener ownership or public
 result API changes. See [C23/L39](errs-integration-plan.md#class-and-interface-composition-headers).
+
+## Generic type completion probes
+
+C24/L41 resolves complete parameterized qualifiers on disposable syntax copies. Each qualifier and
+candidate gets a stack-local collecting listener with a silent PROBE sink, wrapped in host
+cancellation. Staging/TypeInfo errors suppress that candidate without contaminating ordinary source
+diagnostics; errors are still tracked even though the sink is silent. Failed qualifiers cannot
+fall back to unrelated enclosing types. First-error/cancellation controls return no cursor facts.
+Empty generic and mid-token recovery reuse the existing one-report cursor diagnostic and emission
+guard. Registered formal lookup changes neither listener ownership nor validation scope. See
+[C24/L41](errs-integration-plan.md#generic-type-completion-batch) for the API and test record.
