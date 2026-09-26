@@ -224,11 +224,17 @@ inherited nested types and typedef candidates. Hidden qualifier ancestors and va
 excluded; same-owner private types remain available. Unsaved module overlays are respected.
 Written leaf names inside nested generics and compound types also complete, including grouped,
 nullable, array and immutable wrappers, with bounded missing angle/group closers. This enumerates
-visible types; normal compilation validates constraints on the whole type. Shared X91–X94 verify
+visible types; normal compilation validates constraints on the whole type. Shared X91–X95 verify
 completion, structure and diagnostic repair. Trailing dots, mid-token cursors, empty type arguments
 or operands, parameterized qualifiers, generic base-name prefixes, function/sequence types,
-formal-type candidates, generic-method/multi-return and type-composition headers remain outside
+formal-type candidates, generic-method/multi-return and module/package headers remain outside
 this bounded slice.
+Class/interface composition headers retain the written name and body for structural queries.
+Type prefixes in `extends`, `implements`, `delegates`, ordinary `incorporates` and `into` use the
+real enclosing scope, including empty composition slots and qualified/generic leaf prefixes.
+No incomplete class component, superclass or body declarations register. Visibility suggestions do
+not prove valid inheritance or constraints; accepting a name leaves those normal diagnostics intact.
+Shared X95 covers nine edit/repair variants in both drivers; native IntelliJ execution is pending.
 No declaration names are fabricated.
 
 The separate embedding `analyzeIncomplete` probe can validate intact receivers and ordinary
@@ -297,7 +303,7 @@ syntax without capture analysis or emission. X90 adds empty/final-prefix single-
 size cursors with real constructor fitting, original-token replacement, active size hints and missing
 bracket recovery. A written supplier after the cursor is parsed but is not validated by that prefix
 query. Normal compilation still checks suppliers and element defaults. Compiler mode advertises `[` as
-a signature-help trigger. X91–X94 add the bounded declaration-header recovery described above.
+a signature-help trigger. X91–X95 add the bounded declaration-header recovery described above.
 Multidimensional construction, unfinished declaration names, missing operands/map entries and
 unterminated literal contents remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
