@@ -438,23 +438,26 @@ export function advancedCases(): void {
         }
     });
 
-    for (const id of ['X94', 'X95'] as const) {
+    for (const id of ['X94', 'X95', 'X96'] as const) {
         playbook(id, async (workspace, data) => {
             const document = await workspace.open(data.file);
             for (const variant of data.variants) {
                 const marked = scenarioText(data.source, variant.declaration);
                 const cursor = marked.indexOf(data.marker);
+                const before = 'prefixLength' in variant ? variant.prefixLength : data.prefixLength;
+                const after = 'suffixLength' in variant ? variant.suffixLength : 0;
                 await workspace.replace(document, marked.replace(data.marker, ''));
-                await diagnostics(document.uri, values => values.length > 0, 'Unresolved nested declaration type');
+                if ('initiallyValid' in variant && variant.initiallyValid) await noErrors(document.uri);
+                else await diagnostics(document.uri, values => values.length > 0, 'Unresolved nested declaration type');
                 const at = document.positionAt(cursor);
                 const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
                 assert.ok(variant.include.every(name => items.some(item => label(item) === name)));
                 assert.ok(data.exclude.every(name => items.every(item => label(item) !== name)));
                 assert.ok(!(await workspace.signature(document, at))?.signatures.length);
                 const selected = items.find(item => label(item) === variant.selected)!;
-                assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -data.prefixLength), at)));
+                assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -before), at.translate(0, after))));
                 await workspace.accept(document, selected);
-                assert.strictEqual(document.getText(), marked.slice(0, cursor - data.prefixLength) + variant.selected + marked.slice(cursor + data.marker.length));
+                assert.strictEqual(document.getText(), marked.slice(0, cursor - before) + variant.selected + marked.slice(cursor + data.marker.length + after));
                 if (variant.validAfterAcceptance) await noErrors(document.uri);
                 else await diagnostics(document.uri, values => values.length > 0, 'Missing type delimiters remain diagnostics');
                 await workspace.replace(document, scenarioText(data.source, variant.repairedDeclaration));
