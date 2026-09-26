@@ -61,7 +61,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     private final String sourceSetName;
     private final Directory resourceDir;
     private final Directory outputDir;
-    private final Set<File> sourceSetDirs;
+    private final FileCollection sourceSetDirs;
 
     // Source-set-specific module dependencies (avoids circular dependency with own output)
     private final ConfigurableFileCollection compileModuleDependencies;
@@ -93,7 +93,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.sourceSetName = sourceSet.getName();
         this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
         this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
-        this.sourceSetDirs = sourceSet.getAllSource().getSrcDirs();
+        // Retain the lazy file collection: build scripts can add source roots after task creation.
+        this.sourceSetDirs = sourceSet.getAllSource().getSourceDirectories();
 
         // Build source-set-specific module dependencies for compilation
         // Main compile: only xtcModule (external deps)
@@ -375,7 +376,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> getSourceDirectoriesInternal() {
-        return sourceSetDirs;
+        return sourceSetDirs.getFiles();
     }
 
     private String resolveOutputFilename(final String from) {
