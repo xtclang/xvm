@@ -54,6 +54,19 @@ class XtcRunConfigurationTest {
         assertEquals(List.of("one", "two"), selected.getModuleArgs().get());
     }
 
+    @Test
+    void taskParallelSettingDoesNotMutateOtherTasks() {
+        final var project = newProject();
+        final var tasks = project.getTasks();
+        final var run = tasks.named("runXtc", XtcRunTask.class).get();
+        final var other = tasks.register("otherRun", XtcRunTask.class, project).get();
+        run.getParallel().set(true);
+
+        assertTrue(run.getParallel().get());
+        assertFalse(other.getParallel().get());
+        assertFalse(XtcProjectDelegate.resolveXtcRuntimeExtension(project).getParallel().get());
+    }
+
     private static Project newProject() {
         final var project = ProjectBuilder.builder().build();
         project.setVersion("1.0");
