@@ -284,14 +284,18 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return disableWarnings;
     }
 
+    /**
+     * Processed resources from {@code processXtcResources}, which this task depends on.
+     * Use InputFiles so source sets without resources need not create an empty directory.
+     */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<@NotNull Directory> getResourceDirectory() {
+    public Provider<@NotNull Directory> getResourceDirectory() {
         return resourceDir;
     }
 
     @OutputDirectory
-    Provider<@NotNull Directory> getOutputDirectory() {
+    public Provider<@NotNull Directory> getOutputDirectory() {
         return outputDir;
     }
 

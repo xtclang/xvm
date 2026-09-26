@@ -803,15 +803,14 @@ public class XtcProjectDelegate {
             xtcSourceDirectorySet.srcDir(srcDir);
             // Add all sources from the xtc source directory to the sourceSet during resolution.
             sourceSet.getAllSource().source(xtcSourceDirectorySet);
-            // Add output directories for modules (compile<sourceSetName>Xtc output) and resources
-            // (sourceSet.output.resourcesDir) to the task, so that dependencies will work.
+            // Add XTC outputs without replacing Java's resource output directory: the two
+            // processing tasks may apply different filters and must not overwrite each other.
             final var outputModules = getXtcSourceSetOutputDirectory(project, sourceSet);
             final var outputResources = getXtcResourceOutputDirectory(project, sourceSet);
             logger.info("[plugin] Configured sourceSets.{}.outputModules  : {}", sourceSetName, outputModules);
             logger.info("[plugin] Configured sourceSets.{}.outputResources  : {}", sourceSetName, outputResources.get());
-            output.dir(outputResources); // TODO is this really correct? We have the resource dir as a special property in the sourceSetOutput already?
+            output.dir(outputResources);
             output.dir(outputModules);
-            output.setResourcesDir(outputResources);
         }
     }
 
