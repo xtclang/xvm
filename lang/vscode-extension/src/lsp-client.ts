@@ -24,8 +24,8 @@ export function getClient(): LanguageClient | undefined {
     return client;
 }
 
-function compilerConfiguration(): { sourceModules: unknown[] } {
-    return { sourceModules: vscode.workspace.getConfiguration('xtc.compiler').get<unknown[]>('sourceModules', []) };
+function compilerConfiguration(): { sourceModules: unknown[] | null } {
+    return { sourceModules: vscode.workspace.getConfiguration('xtc.compiler').get<unknown[] | null>('sourceModules', null) };
 }
 
 export async function updateCompilerConfiguration(): Promise<void> {

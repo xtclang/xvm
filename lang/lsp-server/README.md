@@ -63,7 +63,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 |---------|-------|-------------|
 | **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
 | **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **XDK** | `compiler` | Compiler diagnostics, semantic navigation and type hierarchy across a module. Core/bootstrap XDK modules are bundled. |
+| **XDK** | `compiler` | Compiler diagnostics, semantic navigation and type hierarchy across a module. The full matching XDK library set is bundled. |
 
 ### Build Commands
 
@@ -120,13 +120,22 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; folds retain the actual closing-brace column |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | Unavailable |
-| Workspace symbols | Limited | Workspace index | Completed module sessions, including closed members |
+| Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; on-demand compiler indexing |
 | Semantic tokens | None | Syntax-based | Resolved names and declaration/read-only/static/write modifiers |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
 | Call hierarchy | None | None | Static selected calls within the module |
 | Inlay hints | None | None | Inferred local types and selected positional parameter names |
 | Type hierarchy | None | None | Source types: declared extends/implements, with generic parents |
 | Native library | Not needed | Required | Not needed |
+
+The compiler backend bundles the same complete library set as the XDK distribution through a shared
+Gradle dependency bundle. All bundled modules are available as read-only binary dependencies, with
+no invented source locations or rename targets. Application sources are discovered from workspace
+folders unless an explicit source graph is configured. `sourceModules: []` disables discovery;
+`sourceModules: null` restores it. Discovery refreshes on startup and watched-file changes; unsaved
+import-graph edits and dynamic workspace-folder changes are not yet discovered. Workspace symbol
+search compiles unopened modules on demand and retains healthy independent modules when others fail.
+This batch is implemented with tests pending the combined verification pass.
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
 and its member tree together, including unsaved member files and packages. Non-file URIs remain
