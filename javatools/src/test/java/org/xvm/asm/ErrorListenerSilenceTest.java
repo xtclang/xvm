@@ -10,6 +10,7 @@ import org.xvm.util.Severity;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -86,10 +87,10 @@ public class ErrorListenerSilenceTest {
     public void testADerivedSilenceKeepsTheListenerItSilenced() {
         ErrorList errs = new ErrorList();
 
-        var derived = (ErrorListener.SilentErrorListener) errs.silence(CASCADE);
+        var derived = assertInstanceOf(ErrorListener.SilentErrorListener.class, errs.silence(CASCADE));
         assertSame(errs, derived.suppressed());
 
-        var shared = (ErrorListener.SilentErrorListener) silent(PROBE);
+        var shared = assertInstanceOf(ErrorListener.SilentErrorListener.class, silent(PROBE));
         assertNull(shared.suppressed(), "there was no listener to derive it from");
     }
 
