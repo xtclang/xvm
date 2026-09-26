@@ -1,6 +1,6 @@
 import XdkDistribution.Companion.XDK_ARTIFACT_NAME_JAVATOOLS_JAR
-import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import org.gradle.api.tasks.PathSensitivity
+import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import java.util.Properties
 
 /**
@@ -55,7 +55,7 @@ val ecstasyResourcesDir = layout.projectDirectory.dir(
 val copyEcstasyResources = tasks.register<Copy>("copyEcstasyResources") {
     description = "Copy ecstasy resources from lib_ecstasy using direct file reference"
     from(ecstasyResourcesDir)
-    into(layout.buildDirectory.dir("generated/resources/main"))
+    into(layout.buildDirectory.dir("generated/resources/ecstasy"))
 }
 
 /**
@@ -65,12 +65,14 @@ val copyEcstasyResources = tasks.register<Copy>("copyEcstasyResources") {
 val compositeRoot = XdkPropertiesService.compositeRootRelativeFile(projectDir, ".")
 val copyGradleWrapper = tasks.register<Copy>("copyGradleWrapper") {
     description = "Copy gradle wrapper files for embedding in generated projects"
-    from(File(compositeRoot, "gradlew"))
-    from(File(compositeRoot, "gradlew.bat"))
-    from(File(compositeRoot, "gradle/wrapper")) {
-        into("gradle/wrapper")
+    into("gradle-wrapper") {
+        from(File(compositeRoot, "gradlew"))
+        from(File(compositeRoot, "gradlew.bat"))
+        from(File(compositeRoot, "gradle/wrapper")) {
+            into("gradle/wrapper")
+        }
     }
-    into(layout.buildDirectory.dir("generated/resources/main/gradle-wrapper"))
+    into(layout.buildDirectory.dir("generated/resources/project-template"))
 }
 
 // Path to your static base properties
@@ -137,43 +139,20 @@ val generateBuildInfo = tasks.register<GenerateBuildInfo>("generateBuildInfo") {
     gitStatus.set(versionDetailsProvider.map { it.branchName ?: "detached-head" })
 
     // Put it under build/, so Gradle owns it
-    outputFile.set(layout.buildDirectory.file("generated/resources/main/build-info.properties"))
+    outputFile.set(layout.buildDirectory.file("generated/resources/build-info/build-info.properties"))
 }
 
 sourceSets {
     main {
         resources {
             // Use build-time copied resources instead of direct reference
-            srcDir(copyEcstasyResources.map { it.destinationDir })
+            srcDir(copyEcstasyResources)
             // Include generated build info so IntelliJ can find it
-            srcDir(generateBuildInfo.map { it.outputFile.get().asFile.parentFile })
+            srcDir(generateBuildInfo.flatMap { it.outputFile }.map { it.asFile.parentFile })
             // Include gradle wrapper for XtcProjectCreator
-            srcDir(copyGradleWrapper.map { it.destinationDir })
+            srcDir(copyGradleWrapper)
         }
     }
-}
-
-tasks.processResources {
-    dependsOn(copyEcstasyResources)
-}
-
-// Ensure resource generation tasks run before compilation and are tracked as inputs
-tasks.compileJava {
-    dependsOn(generateBuildInfo, copyEcstasyResources, copyGradleWrapper)
-}
-
-tasks.compileTestJava {
-    dependsOn(generateBuildInfo, copyEcstasyResources, copyGradleWrapper)
-}
-
-// Use the copied ecstasy resources as before
-tasks.processResources {
-    dependsOn(copyEcstasyResources, generateBuildInfo, copyGradleWrapper)
-    // Include the generated build-info.properties
-    from(generateBuildInfo.map { it.outputFile }) {
-        into("") // at root of resources in the jar
-    }
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
 
 // Make 'jar' clean: no I/O or repo reads inside actions
