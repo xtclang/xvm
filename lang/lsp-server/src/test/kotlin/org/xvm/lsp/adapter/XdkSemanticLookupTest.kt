@@ -13,10 +13,21 @@ import org.xvm.lsp.model.Location
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
+import java.net.URI as SourceUri
 
 class XdkSemanticLookupTest {
     @TempDir
     lateinit var directory: Path
+
+    private fun assertBundledType(
+        locations: List<Location>,
+        name: String,
+    ) {
+        assertThat(locations).hasSize(1)
+        val target = locations.single()
+        val text = Path.of(SourceUri(target.uri)).toFile().readLines()[target.startLine]
+        assertThat(text.substring(target.startColumn, target.endColumn)).isEqualTo(name)
+    }
 
     @Test
     fun `generic selected returns navigate to the inferred source type and not the formal`() {
@@ -134,15 +145,15 @@ class XdkSemanticLookupTest {
         val source = "module Lookups { interface Mapper</*formal*/T> { T map(T /*use*/value); String text(String /*library*/value); } }"
         withSource(source) { adapter ->
             assertThat(types(adapter, source, "use")).containsExactly(location(source, "formal", "T"))
-            assertThat(types(adapter, source, "library")).isEmpty()
+            assertBundledType(types(adapter, source, "library"), "String")
         }
     }
 
     @Test
-    fun `library types and unresolved names have no invented source target`() {
+    fun `library types navigate to matching sources and unresolved names have no invented target`() {
         val source = "module Lookups { void run(String value) { /*use*/value.toString(); } }"
         withSource(source) { adapter ->
-            assertThat(types(adapter, source, "use")).isEmpty()
+            assertBundledType(types(adapter, source, "use"), "String")
             val broken = source.replace("/*use*/value", "/*use*/missing")
             assertThat(adapter.compile(URI, broken).success).isFalse()
             assertThat(types(adapter, broken, "use")).isEmpty()

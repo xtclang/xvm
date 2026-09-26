@@ -138,6 +138,8 @@ class XdkAdapter internal constructor(
     private data class Discovery(
         val folders: List<File> = emptyList(),
         val explicit: Boolean = false,
+        val problem: String? = null,
+        val catalog: XdkWorkspaceDiscovery.Catalog = XdkWorkspaceDiscovery.Catalog(),
     )
 
     private val discovery = AtomicReference(Discovery())
@@ -154,15 +156,70 @@ class XdkAdapter internal constructor(
     /** Returns retired scopes so the server can rebuild current document versions. */
     fun refreshDiscoveredSources(): Set<String> {
         val settings = discovery.get()
-        if (settings.explicit || settings.folders.isEmpty()) return emptySet()
+        if (settings.explicit) return emptySet()
         val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
-        val modules =
-            XdkWorkspaceDiscovery.scan(settings.folders, buffers, previous.modules.values) {
-                closed || discovery.get() !== settings
+        val catalog = settings.catalog.rescan(settings.folders, buffers) { closed || discovery.get() !== settings }
+        return installDiscoveredCatalog(catalog, settings, previous) { overlays == buffers }
+    }
+
+    /** Incremental header update; callers refresh these scopes at their current document versions. */
+    fun updateDocument(
+        uri: String,
+        content: String,
+    ): Set<String> {
+        val snapshot =
+            synchronized(lifecycle) {
+                if (closed || XdkLibrarySources.owns(uri) || overlays[uri] == content) return emptySet()
+                overlays[uri] = content
+                discovery.get() to project
             }
-        return installSourceModules(modules, explicit = false) {
-            !closed && discovery.get() === settings && project === previous && overlays == buffers
+        return refreshDocumentHeader(uri, content, snapshot.first, snapshot.second)
+    }
+
+    private fun refreshDocumentHeader(
+        uri: String,
+        content: String?,
+        settings: Discovery,
+        previous: XdkProject,
+        closing: Boolean = false,
+    ): Set<String> {
+        val file = XdkSources.file(uri) ?: return emptySet()
+        if (settings.explicit || !XdkWorkspaceDiscovery.includes(settings.folders, file)) return emptySet()
+        val catalog = settings.catalog.withSource(file, content) { closed || discovery.get() !== settings }
+        return installDiscoveredCatalog(catalog, settings, previous) {
+            if (closing) uri !in overlays else overlays[uri] == content
         }
+    }
+
+    private fun installDiscoveredCatalog(
+        catalog: XdkWorkspaceDiscovery.Catalog,
+        settings: Discovery,
+        previous: XdkProject,
+        current: () -> Boolean,
+    ): Set<String> {
+        val candidate = runCatching { XdkProject(catalog.modules(previous.modules.values)) }
+        val failure = candidate.exceptionOrNull()
+        if (failure != null && failure !is IllegalArgumentException) throw failure
+        val problem = failure?.message
+        return installSourceModules(
+            (candidate.getOrNull() ?: previous).modules.values.toList(),
+            explicit = false,
+            force = settings.problem != problem,
+        ) {
+            !closed && project === previous && current() &&
+                discovery.compareAndSet(settings, settings.copy(catalog = catalog, problem = problem))
+        }
+    }
+
+    fun changeWorkspaceFolders(
+        added: List<String>,
+        removed: List<String>,
+    ): Set<String> {
+        val deleted = removed.mapNotNull(XdkSources::file).toSet()
+        discovery.updateAndGet { settings ->
+            settings.copy(folders = (settings.folders.filterNot { it in deleted } + added.mapNotNull(XdkSources::file)).distinct())
+        }
+        return refreshDiscoveredSources()
     }
 
     override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
@@ -189,6 +246,8 @@ class XdkAdapter internal constructor(
         uri: String,
         content: String,
     ): CompletableFuture<CompilationResult> {
+        if (XdkLibrarySources.owns(uri)) return CompletableFuture.completedFuture(CompilationResult.success(uri, emptyList()))
+        updateDocument(uri, content)
         val submission =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
@@ -197,7 +256,17 @@ class XdkAdapter internal constructor(
                 scopes[uri] = scope
                 val sourceScopes = project.buildOrder(scope).mapTo(mutableSetOf(scope)) { it.uri }
                 val request =
-                    Request(scope, uri, overlays.filterKeys { analysisScope(it) in sourceScopes }, dependencies, project, ::runCompilation)
+                    Request(
+                        scope,
+                        uri,
+                        overlays.filterKeys {
+                            analysisScope(it) in sourceScopes
+                        },
+                        dependencies,
+                        project,
+                        discovery.get().problem,
+                        ::runCompilation,
+                    )
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
                         val obsolete =
@@ -247,6 +316,7 @@ class XdkAdapter internal constructor(
         val (request, previous) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                if (discovery.get().problem != null) return CompletableFuture.completedFuture(null)
                 val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
                 if (uri !in compilation.overlays) return CompletableFuture.completedFuture(null)
                 val request = CursorRequest(compilation, key, position, ::runCursorAnalysis)
@@ -338,6 +408,7 @@ class XdkAdapter internal constructor(
     private fun retireProjectQueries(): List<QueryWork> =
         projectQueries.values.toList().also { retired ->
             projectQueries.clear()
+            navigationCache.set(emptyMap())
             retired.forEach { compiles.remove(it.task) }
         }
 
@@ -349,7 +420,7 @@ class XdkAdapter internal constructor(
         val (request, previous) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
-                if (project.scope(key.uri) == null) return CompletableFuture.completedFuture(unavailable)
+                if (discovery.get().problem != null || project.scope(key.uri) == null) return CompletableFuture.completedFuture(unavailable)
                 val request =
                     ProjectRequest(key, project, dependencies, overlays.toMap()) { work: ProjectRequest<T> ->
                         fun stale(): Boolean = projectQueries[key] !== work || work.result.isCancelled
@@ -357,7 +428,16 @@ class XdkAdapter internal constructor(
                             if (stale()) throw CancellationException()
                             val result =
                                 try {
-                                    query(XdkProjectQueries(work.project, work.overlays, work.dependencies, compileTree, ::stale))
+                                    query(
+                                        XdkProjectQueries(
+                                            work.project,
+                                            work.overlays,
+                                            work.dependencies,
+                                            compileTree,
+                                            ::stale,
+                                            navigationCache,
+                                        ),
+                                    )
                                 } catch (_: IOException) {
                                     unavailable
                                 }
@@ -466,6 +546,7 @@ class XdkAdapter internal constructor(
         val overlays: Map<String, String>,
         val dependencies: XdkDependencies,
         val project: XdkProject,
+        val problem: String?,
         work: (Request) -> Unit,
     ) {
         val result = CompletableFuture<CompilationResult>()
@@ -503,6 +584,7 @@ class XdkAdapter internal constructor(
 
         fun sourceUri(name: String?): String? =
             documents.entries.firstOrNull { it.value.semantics?.sourceName == name }?.key ?: dependencySources[name]
+                ?: XdkLibrarySources.sourceUri(name)
     }
 
     private data class Analysis(
@@ -527,6 +609,7 @@ class XdkAdapter internal constructor(
     private fun installSourceModules(
         modules: List<XdkSourceModule>,
         explicit: Boolean,
+        force: Boolean = false,
         current: () -> Boolean = { true },
     ): Set<String> {
         val replacement = XdkProject(modules)
@@ -534,15 +617,16 @@ class XdkAdapter internal constructor(
             synchronized(lifecycle) {
                 check(!closed) { "XDK adapter is closed" }
                 if (!current()) return emptySet()
-                if (explicit) discovery.updateAndGet { it.copy(explicit = true) }
-                if (project.sameConfiguration(replacement)) return emptySet()
+                val recovered = explicit && discovery.get().problem != null
+                if (explicit) discovery.updateAndGet { it.copy(explicit = true, problem = null) }
+                if (!force && !recovered && project.sameConfiguration(replacement)) return emptySet()
                 project = replacement
                 builds.clear()
                 retireRequests(requests.keys.toSet())
             }
         retired.forEach { it.result.cancel(false) }
         probes.forEach { it.result.cancel(false) }
-        return replacement.orderedScopes(retired.flatMapTo(linkedSetOf()) { replacement.affected(it.scope) })
+        return replacement.orderedScopes(retired.flatMapTo(linkedSetOf()) { replacement.affected(it.scope) + it.scope })
     }
 
     /** Called under lifecycle. Compiler-owned objects never enter the artifact cache. */
@@ -595,6 +679,12 @@ class XdkAdapter internal constructor(
     }
 
     override fun closeDocument(uri: String) {
+        closeDocumentAndRefresh(uri)
+    }
+
+    /** Closing restores disk headers and returns exactly the scopes retired by that change. */
+    fun closeDocumentAndRefresh(uri: String): Set<String> {
+        if (XdkLibrarySources.owns(uri)) return emptySet()
         val (retired, obsoleteQueries) =
             synchronized(lifecycle) {
                 val scope = scopes.remove(uri) ?: analysisScope(uri)
@@ -606,6 +696,15 @@ class XdkAdapter internal constructor(
             }
         retired.forEach { it.result.cancel(false) }
         obsoleteQueries.forEach { it.result.cancel(false) }
+        val (settings, previous) = synchronized(lifecycle) { discovery.get() to project }
+        val file = XdkSources.file(uri)
+        val disk =
+            try {
+                file?.takeIf { !settings.explicit && XdkWorkspaceDiscovery.includes(settings.folders, it) && it.isFile }?.readText()
+            } catch (_: IOException) {
+                null
+            }
+        return refreshDocumentHeader(uri, disk, settings, previous, closing = true) + retired.map { it.scope }
     }
 
     override fun close() {
@@ -619,6 +718,7 @@ class XdkAdapter internal constructor(
                 cursors.clear()
                 renames.clear()
                 projectQueries.clear()
+                navigationCache.set(emptyMap())
                 overlays.clear()
                 scopes.clear()
                 completed.clear()
@@ -659,6 +759,7 @@ class XdkAdapter internal constructor(
 
     /** Capture the complete dependency closure before compiling any of it. Only artifacts are cached. */
     private fun compileNow(request: Request): ModuleAnalysis {
+        request.problem?.let { return unavailableProjectModule(request.uri, request.dependencies, "SOURCE-GRAPH", it) }
         val order = request.project.buildOrder(request.scope)
         if (order.isEmpty()) {
             return compileOne(request, request.uri, captureSources(request) { isStale(request) }, request.dependencies)
@@ -988,14 +1089,24 @@ class XdkAdapter internal constructor(
         uri: String,
         content: String,
         options: FormattingOptions,
-    ): List<TextEdit> = XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options)
+    ): List<TextEdit> =
+        if (XdkLibrarySources.owns(uri)) {
+            emptyList()
+        } else {
+            XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options)
+        }
 
     override fun formatRange(
         uri: String,
         content: String,
         range: Range,
         options: FormattingOptions,
-    ): List<TextEdit> = XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options, range)
+    ): List<TextEdit> =
+        if (XdkLibrarySources.owns(uri)) {
+            emptyList()
+        } else {
+            XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options, range)
+        }
 
     override fun onTypeFormatting(
         uri: String,
@@ -1223,6 +1334,7 @@ class XdkAdapter internal constructor(
         val (request, previous) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                if (discovery.get().problem != null) return CompletableFuture.completedFuture(null)
                 val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
                 val module = completed[compilation.scope]?.takeIf { it.succeeded } ?: return CompletableFuture.completedFuture(null)
                 if (prepareRename(uri, line, column) == null) return CompletableFuture.completedFuture(null)
@@ -1481,6 +1593,7 @@ class XdkAdapter internal constructor(
     private val cursors = ConcurrentHashMap<CursorKey, CursorRequest>()
     private val renames = ConcurrentHashMap<String, RenameRequest>()
     private val projectQueries = ConcurrentHashMap<ProjectQueryKey, ProjectRequest<*>>()
+    private val navigationCache = AtomicReference<Map<String, XdkWorkspaceNavigation>>(emptyMap())
 
     /**
      * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
