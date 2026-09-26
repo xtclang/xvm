@@ -126,12 +126,12 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 99 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 100 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It implements startup and 46 scenarios: 43 fully and three partially. Coverage includes native
+It implements startup and 47 scenarios: 44 fully and three partially. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
 highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
-Parameter Info, argument-value fitting and declaration recovery through X94. The disposable IDE
+Parameter Info, argument-value fitting and declaration recovery through X95. The disposable IDE
 profile disables sole-candidate auto-insertion and automatic completion popups so tests can inspect
 every requested completion list first. Autosave is disabled to preserve unsaved-overlay checks;
 shipped plugin defaults are unchanged.
@@ -142,7 +142,7 @@ invalid calls must clear an earlier hint. X20 remains partial because LSP4IJ 0.2
 navigation is checked. X81/X82 remain partial because native completion Property-kind metadata
 is not inspected. Problems-row clicking and visual layout remain manual.
 
-Every report lists all 99 scenario IDs, including the 53 unimplemented entries with concrete
+Every report lists all 100 scenario IDs, including the 53 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
@@ -155,8 +155,8 @@ native Structure and the exact fold boundary after compiler fix `2e98860e1`. X18
 explicit loss of IDE focus during its popup check. The earlier
 `run-2648196190918026067/results.json` has **28 passed, one partial, one failed, 17 not-run and
 53 not-implemented**, including the strengthened constructor checks through X90; its X92 failure
-exposed the now-fixed fold defect. X93/X94 still await native execution. These separate reports
-do not establish a complete native pass. Both use shared catalog SHA-256
+exposed the now-fixed fold defect. X93/X94/X95 still await native execution. These separate reports
+do not establish a complete native pass. Both reports predate X95 and use shared catalog SHA-256
 `a58f0e0c42402e5233741c996a79cd48a22337817c665cd2b45b0c103c1a87b2`.
 
 Leave the isolated IDE focused during completion and Parameter Info checks: switching applications

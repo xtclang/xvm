@@ -569,33 +569,36 @@ class CompilerPlaybook(
             }
             restore(data.text("file"))
         }
-        scenario("X94") { data ->
-            val editor = open(data.text("file"))
-            data.rows("variants").forEach { variant ->
-                val marked = SharedScenarios.text(data.text("source"), variant["declaration"].asString)
-                val at = marked.indexOf(data.text("marker"))
-                editor.text = marked.replace(data.text("marker"), "")
-                editor.awaitError()
-                signature(editor, at) { it.isEmpty() }
-                lookup(editor, at) { items ->
-                    val names = items.map { it.getLookupString() }
-                    names.containsAll(variant["include"].asJsonArray.map { it.asString }) && data.strings("exclude").none { it in names }
-                }
-                invokeAction("EditorEscape", component = editor.component)
-                accept(editor, at, variant["selected"].asString)
-                check(
-                    editor.text == marked.take(at - data.values["prefixLength"].asInt) +
-                        variant["selected"].asString + marked.substring(at + data.text("marker").length),
-                )
-                if (variant["validAfterAcceptance"].asBoolean) {
-                    editor.awaitDiagnostics(emptyList())
-                } else {
+        listOf("X94", "X95").forEach { id ->
+            scenario(id) { data ->
+                val editor = open(data.text("file"))
+                data.rows("variants").forEach { variant ->
+                    val marked = SharedScenarios.text(data.text("source"), variant["declaration"].asString)
+                    val at = marked.indexOf(data.text("marker"))
+                    editor.text = marked.replace(data.text("marker"), "")
                     editor.awaitError()
+                    signature(editor, at) { it.isEmpty() }
+                    lookup(editor, at) { items ->
+                        val names = items.map { it.getLookupString() }
+                        names.containsAll(variant["include"].asJsonArray.map { it.asString }) &&
+                            data.strings("exclude").none { it in names }
+                    }
+                    invokeAction("EditorEscape", component = editor.component)
+                    accept(editor, at, variant["selected"].asString)
+                    check(
+                        editor.text == marked.take(at - data.values["prefixLength"].asInt) +
+                            variant["selected"].asString + marked.substring(at + data.text("marker").length),
+                    )
+                    if (variant["validAfterAcceptance"].asBoolean) {
+                        editor.awaitDiagnostics(emptyList())
+                    } else {
+                        editor.awaitError()
+                    }
+                    editor.text = SharedScenarios.text(data.text("source"), variant["repairedDeclaration"].asString)
+                    editor.awaitDiagnostics(emptyList())
                 }
-                editor.text = SharedScenarios.text(data.text("source"), variant["repairedDeclaration"].asString)
-                editor.awaitDiagnostics(emptyList())
+                restore(data.text("file"))
             }
-            restore(data.text("file"))
         }
     }
 
