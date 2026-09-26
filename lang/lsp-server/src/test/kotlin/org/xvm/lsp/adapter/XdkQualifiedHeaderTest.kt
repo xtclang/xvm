@@ -129,7 +129,7 @@ class XdkQualifiedHeaderTest {
         strings = [
             "void damaged(ecstasy.text.Str|ingBuffer value) {}", "void damaged(ecstasy.te|xt.StringBuffer value) {}",
             "void damaged(ecstasy.text.| value) {}", "<T> void damaged(ecstasy.text.Str| value) {}",
-            "void damaged(List<ecstasy.text.Str|> value) {}",
+            "void damaged(List<String>.Ite| value) {}",
         ],
     )
     fun `unsupported cursor positions and generic headers remain empty`(declaration: String) {
