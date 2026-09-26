@@ -2,7 +2,9 @@
 
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
-#For the new workspace queries, add an unopened Consumer subclass overriding Library's method.
+## Current development batch: workspace queries and editing
+
+For the new workspace queries, add an unopened Consumer subclass overriding Library's method.
 From Library, check implementations and subtype hierarchy, then incoming calls from Consumer.
 Edit Consumer on disk and verify a previously opened hierarchy does not silently reuse stale edges.
 Rename an inline Library class, static function or static property and inspect the versioned edits
@@ -20,7 +22,8 @@ as well as resolved names; inlays retain their existing compiler-derived scope.
 
 ## Current development batch: discovery and complete XDK
 
-These additions are implemented but await the combined five-area verification run. In a fresh
+Backend verification passes, and focused VS Code X94–X98 pass in `run-KoAP6K` (five passed,
+98 not-selected). Native IntelliJ execution is deferred; both drivers compile. In a fresh
 compiler-mode workspace, set `xtc.compiler.sourceModules` to `null` (or leave it unconfigured in
 IntelliJ). Create `Library.x` with `module Library { static Int answer()=42; }` and `Consumer.x` with
 `module Consumer { package lib import Library; Int run()=lib.answer(); }`. Opening only Consumer
@@ -57,13 +60,14 @@ and the other distribution libraries, is now shared by production and compiler t
 ./gradlew :lang:lsp-server:build -Plsp.adapter=mock
 ```
 
-**The compiler adapter uses the core/bootstrap libraries bundled with the server.** Gradle builds
+**The compiler adapter uses the full matching XDK library set bundled with the server.** Gradle builds
 them through the composite module dependencies and packages them as resources. No external XDK or
 `XDK_HOME` setting is required for compiler analysis. A Kotlin host API can now supply additional
 dependency artifacts/source indices and explicit source roots/edges for automatic recompilation.
-VS Code exposes source roots/edges through `xtc.compiler.sourceModules`; automatic project discovery
-remains separate work. The ordinary fixtures below need only the bundled libraries; the
-source-project checks use the explicit settings shown in the XdkAdapter playbook.
+Workspace folders automatically supply discovered source roots/import edges. VS Code exposes an
+explicit override through `xtc.compiler.sourceModules` (`null` restores discovery, `[]` disables it).
+The ordinary fixtures below need only bundled libraries; the source-project checks also exercise
+the explicit settings shown in the XdkAdapter playbook.
 
 It is also the slow one, deliberately: the first compilation in a session takes about a second
 (class loading, reading the XDK, a JIT still warming up) and then settles to about 60ms. If the
@@ -186,15 +190,15 @@ module TestModule {
 > there were two. The compiler adapter now answers diagnostics (§7), the outline (§6), hover
 > (§2), go-to-definition (§4), find-references (§5), document highlights (§8), selection ranges
 > (§9) and folding (§10), plus type hierarchy. Definition queries span the active module;
-> references also span configured source graphs, including unopened consumers. Workspace-symbol
-> search covers completed module sessions.
+> references also span discovered/configured source graphs, including unopened consumers. Workspace-symbol
+> search compiles unopened modules on demand.
 >
 > Compiler completion and signature help are available for the supported cursor contexts, along
 > with type-definition, type/method implementation lookup, static call hierarchy, resolved-name
 > semantic tokens, read/write highlights, bounded inlay hints and validated local/private-parameter
-> rename, plus ordinary instance-method override rename over explicit source graphs (versioned-edit
-> clients; see section I). Formatting, code actions,
-> code lenses, document links and linked editing are not advertised. Definition/type-definition
+> rename, plus graph-backed inline-type, static-member and ordinary instance-method rename
+> (versioned-edit clients; see section I). Bounded formatting, proven import cleanup, module run
+> lenses, HTTP(S) links and local linked editing are advertised with the limits listed above. Definition/type-definition
 > and inherited implementation bodies can also resolve into explicitly host-indexed dependencies;
 > ordinary editor launch does not configure those artifacts. Compiler mode stays Java-only.
 >
@@ -1541,7 +1545,8 @@ multi-root workspaces. Other clients can supply `initializationOptions.xtcCompil
 **Configuration** JSON with nested `xtc.compiler.sourceModules`, as shown in the
 [IntelliJ instructions](../intellij-plugin/README.md#compiler-source-module-configuration).
 These are IDE-wide server settings; there is no dedicated XTC project graph UI.
-Automatic discovery remains separate. An embedding host can still register the graph directly:
+The explicit setting overrides automatic workspace discovery. Use `null` to restore discovery
+or `[]` to disable it. An embedding host can also register the graph directly:
 
 ```kotlin
 server.replaceCompilerSourceModules(
@@ -1680,11 +1685,13 @@ method rename follows ordinary instance-method override families and checks all 
 selected calls and dispatch chains before returning edits. Binary ancestors,
 mixin/delegating/capped chains and unknown bindings fail closed. Ordinary `super(...)` calls retain
 their selected source body through the attempt's call-binding collector. Function-valued calls
-expose validated signature types separately, without a selected method target. Properties,
-accessors, constructors, static functions and public-parameter renames are outside this pass.
+expose validated signature types separately, without a selected method target. Instance-property
+families/accessors, constructors and public-parameter renames remain outside this proof. The current
+batch additionally proves inline-type and static-member renames over the same graph.
 Preparing a method rename identifies a candidate; the final graph proof can still reject it.
-Modules outside the configuration are not discovered, and this is not a persistent index or a proof
-about external clients of an exported API. Keep every source consumer in the configured graph.
+An explicit configuration limits the graph to its listed modules. Automatic discovery instead scans
+workspace folders; neither mode proves closure over external clients of an exported API. Keep every
+source consumer in the configured/discovered graph.
 
 Controlled regressions in `XdkProjectQueryLifecycleTest` and `XdkCursorServerTest` cover changes in
 another module, close/reopen, configuration/dependency replacement, canceled/superseded queries and
@@ -1861,8 +1868,8 @@ module Advanced {
 | X94 | In temporary `Editing.x`, complete `Str` in `List<Str>`, `Map<Int, List<Str>>`, `Map<Str, Int>`, `List<(Int \| Str)>`, `Object + Str` and `Object - Str` parameter headers. Also try `List<Str>` property/return types and `List<ecstasy.text.Str>`. Use the shared X94 variants. Finally remove both `>` from the nested `Map` header, accept `String`, then restore `>>`. | Only the selected leaf token changes; generic arguments, compound operators and qualifiers stay intact. Values such as `StringValue` are excluded and no call signature appears. Complete accepted headers clear Problems. Missing `>` still reports an error after acceptance; adding the closers clears it. Type suggestions establish visibility, not generic-constraint compatibility. Both drivers consume the same nine variants. |
 | X95 | In temporary `Editing.x`, use the shared X95 replacement program. Complete the marked type in class `extends`, interface `extends`, `implements`, `delegates`, `incorporates` and mixin `into` headers. Also try `Owner.Nes`, `List<Str>` and the missing-`>` variant. Accept the selected entry, then restore the repaired declaration. | Completion replaces only the final token and offers visible types rather than values. Complete accepted headers clear Problems; accepting `String` with a missing `>` leaves an error until the closer is restored. No signature appears in a type slot. Both drivers consume the same nine variants; IntelliJ native execution is pending. |
 | X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ execution is pending. |
-| X97 | In temporary `Editing.x`, run the nine shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values and construction. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. Both editor consumers are implemented; execution is pending. |
-| X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. Both editor consumers are implemented; execution is pending. |
+| X97 | In temporary `Editing.x`, run the nine shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values and construction. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
+| X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -1891,9 +1898,8 @@ in empty final positional slots, pending named values and direct final bare-name
 compiler inference, conversions and receiver-specific types. Locals retain flow narrowing; ordinary
 property reads do not gain that narrowing. Literal synthesis and enumeration of arbitrary enclosing
 instances or imported constants remain unsupported.
-Qualified/grouped/compound expressions and prefixes before later written arguments retain ordinary
-scope/member completion without argument-type filtering. Empty slots before later written arguments
-remain outside this proof. X83–X87 add specialized constructors and bounded declaration/literal recovery.
+Compound operand expressions retain ordinary scope/member completion without argument-type filtering. X97 adds compiler
+fitting for qualified/grouped values and empty/prefix slots before later written arguments. X83–X87 add specialized constructors and bounded declaration/literal recovery.
 X88–X89 add anonymous superclass forwarding and constructors declared inside retained bodies, including
 interface implementations and captured locals. Cursor analysis prepares declaration signatures but does
 not validate capture behavior or emit unfinished bodies. X91–X92 add simple unqualified member/return
@@ -1905,8 +1911,8 @@ X95 adds class/interface composition type slots, qualified/generic leaves and mi
 Candidates are visible types; the full generic constraints are checked by normal compilation.
 X96 adds registered formals, empty generic slots, parameterized qualifiers and whole-final-token edits.
 The focused X94–X96 run `run-MdzjLq` passes all three cases; 98 other cases are not selected.
-Trailing dots, empty operands, qualifier-middle edits, generic base-name prefixes, function/sequence
-types, unregistered header formals, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
+X98 adds generic base-name completion while preserving written type arguments.
+Trailing dots, empty operands, qualifier-middle edits, function/sequence types, unregistered header formals, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
 size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
 prefix query does not validate a following supplier. Types without an element default still require
 a supplier when compiled normally. Multidimensional construction, unfinished declaration names
@@ -2068,13 +2074,13 @@ must preserve the distinction between compiler facts and lexical coloring.
 
 Tree-sitter supplies cross-file go-to-definition, workspace symbols and import links through its
 workspace index. The compiler supplies definition and references across the current module by
-resolved identity, including closed member files; workspace symbols cover current module sessions.
+resolved identity, including closed member files; workspace symbols compile unopened graph members on demand.
 Explicit host-indexed dependency sources also supply definition/type-definition and inherited
 method-body targets. Reference queries now compile the complete configured source graph; they
 include unopened consumers and source uses of binary XDK members without inventing source targets.
 Still remaining:
 
-- Reference indexing/discovery for sources outside the configured graph
+- Persistent reference indexing and consumer discovery outside workspace roots
 - Broader member rename and external-consumer closure
 
 ### Full Compiler Integration (partly done)
@@ -2089,13 +2095,16 @@ Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-s
 - Type-definition and nominal type/method implementation lookup
 - Static call hierarchy, resolved-name tokens, read/write highlights and bounded inlay hints
 - Explicit dependency artifacts/source indices, consumer invalidation and server diagnostic refresh
-- Automatic dependency recompilation for explicitly configured roots/edges, including unsaved overlays
+- Workspace discovery and automatic dependency recompilation for discovered/configured roots/edges, including unsaved overlays
+- Cross-module implementations and type/call hierarchy over the complete source graph
+- Proven inline-type/static-member rename and ordinary-import cleanup
+- Java-lexer formatting, URL links and lexical tokens, module run lenses and local linked editing
 - Initialization/live source-graph settings, exposed in VS Code as `xtc.compiler.sourceModules`
 
 Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
-- Automatic editor project discovery and a persistent cross-module index
-- External/conditional-mixin hierarchy and broader implementation targets
-- Wider member/workspace rename: properties/accessors, static functions, constructors and
+- Unsaved import-edge/dynamic workspace-folder discovery and a persistent cross-module index
+- Binary source attachment, conditional-mixin hierarchy and broader implementation targets
+- Wider member/workspace rename: instance-property/accessor families, constructors and
   mixin/delegating/capped chains; public-parameter caller closure and consumers outside the graph
 - Diagnostic-driven quick fixes and refactorings

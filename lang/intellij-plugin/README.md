@@ -155,7 +155,7 @@ native Structure and the exact fold boundary after compiler fix `2e98860e1`. X18
 explicit loss of IDE focus during its popup check. The earlier
 `run-2648196190918026067/results.json` has **28 passed, one partial, one failed, 17 not-run and
 53 not-implemented**, including the strengthened constructor checks through X90; its X92 failure
-exposed the now-fixed fold defect. X93/X94/X95/X96 still await native execution. These separate reports
+exposed the now-fixed fold defect. X93–X98 still await native execution. These separate reports
 do not establish a complete native pass. Both reports predate X95 and use shared catalog SHA-256
 `a58f0e0c42402e5233741c996a79cd48a22337817c665cd2b45b0c103c1a87b2`.
 
@@ -172,6 +172,11 @@ selected IDE build; Kodein, patched coroutines and the standalone launcher's Kot
 library are integration-test dependencies and are not bundled in the plugin.
 
 ### Compiler source-module configuration
+
+Compiler mode bundles the full matching XDK library set as read-only dependencies and discovers
+source modules/import edges under workspace folders at startup and on watched-file changes.
+The configuration below overrides that discovered graph. Set `sourceModules` to `null` to
+restore discovery; `[]` disables it. Unsaved import-edge and dynamic folder changes remain follow-ups.
 
 With a compiler build, open **Settings → Languages & Frameworks → Language Servers**, select
 **XTC Language Server**, and edit its **Configuration** JSON:

@@ -1,6 +1,6 @@
 # Ecstasy Language Support Implementation
 
-> **Last Updated**: 2026-09-23 (semantic consumers and dependency host API)
+> **Last Updated**: 2026-09-26 (five-area compiler functionality batch; verification recorded in the integration plan)
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -85,17 +85,21 @@ The compiler backend supplies bounded member completion and signature help throu
 analysis and copied selected-call facts. Type-definition, type/method implementation lookup,
 static call hierarchy, resolved-name semantic tokens, read/write highlights and bounded inlay hints
 also use copied facts. Bounded local/private-parameter rename recompiles and checks bindings,
-including named labels, before returning versioned edits. Document links, formatting, code actions,
-code lenses and linked editing remain unsupported. A trailing `.` still produces a
+including named labels, before returning versioned edits. Whole-graph proofs extend rename to
+inline source types, static members and ordinary instance-method families. The Java lexer supplies
+bounded token-preserving formatting, URL links and lexical highlighting. Module run lenses,
+local linked editing and proven ordinary-import cleanup are implemented with the limits below. A trailing `.` still produces a
 normal syntax diagnostic; a separate cursor probe can inspect its intact receiver without
 accepting or emitting the damaged expression. Compiler mode stays Java-only.
-The bundled XDK is part of the server; no external installation is required.
+The full matching XDK library set is bundled with the server and treated as read-only; no external
+installation is required. The three bootstrap checks are minimum health assertions, not a whitelist.
 
 Navigation includes type-parameter declarations and anonymous-class captures. Module sessions
 combine disk sources with unsaved overlays, including new member files, and build per-source views
 in one identity domain. Definitions in bundled libraries still have no source target. Workspace
-symbols search current completed modules by case-insensitive substring, including closed members;
-edits invalidate those views and closing the last open member releases the session. An explicit
+symbols compile discovered/configured modules on demand and search by case-insensitive substring,
+including unopened sources. Healthy independent modules remain searchable when a neighbor fails.
+Edits invalidate live views and closing the last open member releases its editing session. An explicit
 host API can supply compiled dependency artifacts and detached source indices. Revisioned keys
 associate dependency declarations across consumer attempts; these are not stable identities across
 dependency rebuilds or a persistent workspace reference index.
@@ -120,37 +124,37 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
-| Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus compiler tokens for resolved names |
+| Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus Java lexical tokens and compiler-resolved names |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
-| Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
+| Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
 | Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE distinguished, compound targets shown as WRITE |
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations; exact closing-brace columns prevent swallowing following declarations |
-| Document links | Regex | AST nodes + best-effort import targets | Not implemented |
+| Document links | Regex | AST nodes + best-effort import targets | **Partial** - HTTP(S) URLs inside Java-lexer comments/literals; no guessed import targets |
 | Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets and single-dimensional bracket slots fit the size parameter |
-| Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; ordinary instance methods additionally require an explicit source graph; client versioned-edit support required |
-| Rename (cross-file) | - | - | **Partial** - ordinary instance-method override families across the configured graph; full recompilation plus binding/call/dispatch checks; no discovery of outside consumers |
-| Code actions | Organize imports | Organize imports + auto-import + doc-comments | Not implemented |
-| Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | Not implemented |
-| Range formatting | Trailing WS in range | Structural formatting in range | Not implemented |
-| On-type formatting | - | Structural formatting on trigger characters | Not implemented |
-| Workspace symbols | - | Fuzzy search (4-tier) | **Done** - substring search over completed module sessions, including closed members |
-| Semantic tokens | - | Lexer-based (18 contexts) | **Partial** - resolved names, declarations, readonly/static/abstract modifiers and writes; lexical coloring remains TextMate |
-| Code lenses | - | Run action on module declarations | Not implemented |
-| Linked editing | - | Same-file identifiers | Not implemented |
+| Rename (same file) | Text | AST | **Partial** - locals/private ordinary-method parameters, captures and named labels; graph-backed inline types, static members and instance-method families; client versioned-edit support required |
+| Rename (cross-file) | - | - | **Partial** - inline types, static functions/properties and ordinary instance-method override families across the discovered/configured graph; full recompilation plus binding/call/dispatch checks; consumers outside workspace roots remain unknown |
+| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven ordinary unused-import removal and contiguous import sorting; versioned edits, no unresolved-name auto-import |
+| Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | **Partial** - Java-lexer brace/parenthesis/bracket indentation and outer whitespace; all token spellings preserved; no expression wrapping |
+| Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
+| On-type formatting | - | Structural formatting on trigger characters | **Partial** - current-line indentation/whitespace on configured trigger characters |
+| Workspace symbols | - | Fuzzy search (4-tier) | **Done** - on-demand substring search across discovered/configured sources including unopened modules; independent healthy modules survive a broken neighbor |
+| Semantic tokens | - | Lexer-based (18 contexts) | **Partial** - Java lexical comments/literals/keywords plus resolved names, declarations, readonly/static/abstract modifiers and writes |
+| Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
+| Linked editing | - | Same-file identifiers | **Partial** - resolved rename-eligible local-variable occurrences in one successful source snapshot; no proposed-name proof |
 | Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | Not implemented; module-local go-to-definition is available |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
-| Find implementations | - | - | **Partial** - nominal source types, method bodies and property fields/accessors from compiler composition, including generic overrides, inherited/default bodies, composed mixins, Ref/Var annotation accessors and concrete delegation; inherited dependency bodies can resolve through a host source index, without a workspace-wide implementation search |
-| Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges for source types in a successful module compilation; generic parent arguments retained |
-| Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls (including ordinary `super`) with method/lambda ownership, incoming/outgoing grouping and module-file ranges; stale items rejected |
+| Find implementations | - | - | **Partial** - compiler composition targets across the complete source graph, including unopened source consumers; generic/inherited/mixin/delegated methods and property accessors; no invented binary source target |
+| Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges across the complete source graph; generic parents retained, digest-bound handles reject stale closed files |
+| Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls across the complete source graph, with method/lambda ownership and incoming/outgoing grouping; digest-bound handles reject stale sources |
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
 diagnostics untouched. References distinguish overloads and concrete overrides; they do not expand
@@ -159,10 +163,11 @@ contracts, then rejects changed bindings or dispatch relationships. Incomplete g
 results. Edits, close, settings/repository changes and cancellation retire outstanding queries;
 closed source text/membership is checked again before returning. Preparing rename checks only a
 candidate; the final proof can reject it. Binary contracts (including bundled XDK methods),
-properties/accessors, static functions, constructors and mixin/delegating/capped chains remain
-outside method rename. Ordinary `super(...)` calls retain the selected written body and participate
-in binding comparison, while the keyword itself is never renamed. This proves closure only over explicitly configured sources, with no
-persistent index or automatic discovery. See playbook X59–X63.
+instance-property/accessor families, constructors and mixin/delegating/capped chains remain
+outside method rename. Inline types and static functions/properties use direct-identity proofs. Ordinary `super(...)` calls retain the selected written body and participate
+in binding comparison, while the keyword itself is never renamed. This proves closure over discovered/configured sources only. Discovery scans workspace folders at
+startup and on watched-file changes; unsaved import-edge changes, dynamic workspace-folder changes
+and a persistent index remain follow-ups. See playbook X59–X63.
 
 Type-definition returns all available source targets for union/intersection operands, unwraps
 modifiers and follows aliases for value types without navigating into generic argument types.
@@ -174,8 +179,7 @@ structurally assignable types or generic instantiations. Ordinary properties exp
 getter/setter bodies or backing fields; accessor declarations retain separate chains. A property
 use has the declaration-level set, not a read/write-specific dispatch result. Ref/Var annotation
 accessors use the host's existing nested method chains, including annotation order and explicit
-property overrides. Native annotation storage, synthetic redirect targets and a search across all
-dependency implementations remain unavailable. Delegation follows compiler-selected signatures through concrete receiver types; interface-
+property overrides. Native annotation storage, synthetic redirect targets and binary implementation targets without source metadata remain unavailable. Delegation follows compiler-selected signatures through concrete receiver types; interface-
 valued or cyclic delegates have no proven target, and no forwarding code is generated for lookup. An inherited dependency body in a current source type's method chain can resolve when
 the host supplies its declaration source index.
 An explicit reporting inspection runs on the compiler worker; request threads use immutable
@@ -192,14 +196,14 @@ with nested `xtc.compiler.sourceModules`. Those settings are IDE-wide; a dedicat
 provides automatic source dependency builds for explicit roots/edges, including unsaved overlays,
 100 ms edit debouncing, transitive invalidation and per-document diagnostic versions. Failed
 dependencies block consumers without reusing old artifacts; corrections restore them automatically.
-Automatic editor project discovery, external hierarchy and workspace-wide reference indexing
+Unsaved import-edge discovery, binary source attachment and persistent workspace indexing
 remain open. Cyclic source graphs are rejected. See the
 [dependency verification record](../../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23).
 
 Call hierarchy includes written anonymous methods and recursive/overloaded calls. It requires a
-successful module snapshot and source locations at both ends. Runtime dispatch expansion,
-function-value calls, constructors, property initializer/accessor edges and dependency sources
-remain outside this slice. Inlay hints do not invent parameter names for unresolved candidates or
+successful source graph and source locations at both ends. Runtime dispatch expansion,
+function-value calls, constructors, property initializer/accessor edges and binary declarations
+without source metadata remain outside this slice. Inlay hints do not invent parameter names for unresolved candidates or
 infer lambda return annotations. These features load no native parser. Rename compares pre/post-edit
 bindings for every recorded occurrence and selected call, rejecting silent capture. Named labels
 resolve to the selected source parameter. Public/lambda/constructor parameters and method-value
@@ -226,9 +230,9 @@ Written leaf names inside nested generics and compound types also complete, incl
 nullable, array and immutable wrappers, with bounded missing angle/group closers. This enumerates
 visible types; normal compilation validates constraints on the whole type. Registered class/method
 formals, empty generic arguments and complete parameterized qualifiers now work, including
-substituted typedef types. Mid-token queries replace the whole final identifier. Shared X91–X96
-cover completion, structure and diagnostic repair. Trailing dots, empty operands, qualifier-middle
-edits, generic base-name prefixes, function/sequence types, unregistered declaration-header formals,
+substituted typedef types. Mid-token queries replace the whole final identifier, including generic
+base names before written type arguments. Shared X91–X98 cover completion, structure and diagnostic
+repair. Trailing dots, empty operands, qualifier-middle edits, function/sequence types, unregistered declaration-header formals,
 generic-method/multi-return and module/package headers remain outside this bounded slice.
 Class/interface composition headers retain the written name and body for structural queries.
 Type prefixes in `extends`, `implements`, `delegates`, ordinary `incorporates` and `into` use the
@@ -307,12 +311,12 @@ query. Normal compilation still checks suppliers and element defaults. Compiler 
 a signature-help trigger. X91–X96 add the bounded declaration-header recovery described above.
 Multidimensional construction, unfinished declaration names, missing operands/map entries and
 unterminated literal contents remain unsupported.
-Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
-enclosing-instance member enumeration, arbitrary type-valued receiver
-fallbacks and receiver-to-argument rewrites. Qualified/grouped/compound expressions and prefixes before later
-written arguments retain ordinary scope/member completion without argument-type filtering.
-Argument completion does not synthesize literals, enumerate arbitrary enclosing-instance members
-or imported constants, or fill empty slots before later written arguments.
+Remaining limits: non-type cursors inside identifiers, further member/call syntax after a typed
+prefix, enclosing-instance member enumeration, arbitrary type-valued receiver fallbacks and
+receiver-to-argument rewrites. Qualified property prefixes, grouped values and slots before later
+written arguments now use compiler fitting; compound operands retain ordinary lexical/member
+completion. Argument completion does not synthesize literals or enumerate arbitrary
+enclosing-instance members or imported constants.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The
@@ -324,14 +328,13 @@ file's own version. Closing an overlay reanalyses remaining members from disk; f
 refresh membership and clear removed-file diagnostics.
 
 Definitions and references share identities across one module compilation. Hierarchy items carry a
-compilation token; items from before an edit return no results. Hierarchy currently includes declared
-`extends` and `implements`, with source locations available in the module. It does not discover
-library sources, conditional mixin relationships or other modules in the workspace. Method
-implementation lookup and broader completion/signature inference still need additional semantic contracts.
+compilation token; items from before an edit return no results. Hierarchy includes declared `extends` and `implements` across the discovered/configured source
+graph, with digest-bound handles for unopened files. It does not discover binary library sources
+or infer conditional-mixin hierarchy edges. Implementation lookup uses compiler composition facts.
 
 Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
-single-source inputs. Opening a module does not establish a workspace-wide dependency build or
-persistent index. Tree-sitter remains the shipped default. See the
+single-source inputs. Workspace folders supply a discovered module/dependency graph; explicit
+source settings override it. Queries compile that graph on demand without a persistent index. Tree-sitter remains the shipped default. See the
 [module and recovery hardening results](../../../docs/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
@@ -449,7 +452,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Preserve regression coverage for type-parameter declarations and anonymous-class captures
    - Versioned dependency artifacts/source indices and consumer invalidation now have an explicit host API
    - Explicit source roots/edges now enable automatic dependency builds and consumer diagnostic refresh
-   - Add automatic editor project discovery and persistent indexing before workspace-wide references/rename
+   - Workspace discovery and on-demand graph queries now cover unopened sources; add unsaved import-edge/dynamic folder refresh and persistent indexing
    - Direct source type hierarchy, type-definition and actual method-chain implementation lookup are implemented
    - Static selected-call hierarchy, resolved-name tokens, read/write highlights and bounded hints are implemented
    - Scope, imported types, static lookup and bounded incomplete-call fitting now have compiler-backed consumers
