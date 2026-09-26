@@ -34,8 +34,21 @@ class ConfigurationCacheCompatibilityTest {
                 id("org.xtclang.xtc-plugin")
             }
             version = "1.0"
-            tasks.named<Copy>("processXtcResources").get()
-            tasks.named<XtcCompileTask>("compileXtc").get()
+            tasks.named<Copy>("processXtcResources") {
+                filter { it.uppercase() }
+            }.get()
+            tasks.named<XtcCompileTask>("compileXtc") {
+                // Keep the real producer dependency and inputs; record processed contents.
+                actions.clear()
+                val resources = resourceDirectory
+                val destination = outputDirectory
+                doLast {
+                    val output = destination.get().asFile
+                    output.mkdirs()
+                    output.resolve("resource.txt").writeText(
+                        resources.get().file("included.txt").asFile.readText())
+                }
+            }.get()
             layout.buildDirectory.set(layout.projectDirectory.dir("relocated-build"))
             sourceSets.main {
                 resources.setSrcDirs(listOf("extra-resources"))
@@ -45,23 +58,32 @@ class ConfigurationCacheCompatibilityTest {
         final var resources = Files.createDirectory(testProjectDir.resolve("extra-resources"));
         final var input = Files.writeString(resources.resolve("included.txt"), "first");
         Files.writeString(resources.resolve("excluded.txt"), "excluded");
+        final var sources = Files.createDirectories(testProjectDir.resolve("src/main/x"));
+        Files.writeString(sources.resolve("Example.x"), "module Example {}");
         final var destination = testProjectDir.resolve("relocated-build/xtc/main/resources");
+        final var compiled = testProjectDir.resolve("relocated-build/xtc/main/lib/resource.txt");
 
-        final var first = runResources();
+        final var first = runBuild("compileXtc");
         assertEquals(TaskOutcome.SUCCESS, first.task(":processXtcResources").getOutcome());
+        assertEquals(TaskOutcome.SUCCESS, first.task(":compileXtc").getOutcome());
         assertTrue(first.getOutput().contains("Configuration cache entry stored"));
-        assertEquals("first", Files.readString(destination.resolve("included.txt")));
+        assertEquals("FIRST", Files.readString(destination.resolve("included.txt")).strip());
+        assertEquals("FIRST", Files.readString(compiled).strip());
         assertFalse(Files.exists(destination.resolve("excluded.txt")));
 
         Files.writeString(input, "second");
-        final var changed = runResources();
+        final var changed = runBuild("compileXtc");
         assertTrue(changed.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.SUCCESS, changed.task(":processXtcResources").getOutcome());
-        assertEquals("second", Files.readString(destination.resolve("included.txt")));
+        assertEquals(TaskOutcome.SUCCESS, changed.task(":compileXtc").getOutcome());
+        assertEquals("SECOND", Files.readString(destination.resolve("included.txt")).strip());
+        assertEquals("SECOND", Files.readString(compiled).strip());
 
-        final var unchanged = runResources();
+        Files.writeString(resources.resolve("excluded.txt"), "changed but excluded");
+        final var unchanged = runBuild("compileXtc");
         assertTrue(unchanged.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.UP_TO_DATE, unchanged.task(":processXtcResources").getOutcome());
+        assertEquals(TaskOutcome.UP_TO_DATE, unchanged.task(":compileXtc").getOutcome());
     }
 
     @Test
@@ -107,10 +129,6 @@ class ConfigurationCacheCompatibilityTest {
         final var reused = runBuild("compileXtc", "-PnestedModule");
         assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":compileXtc").getOutcome());
-    }
-
-    private BuildResult runResources() {
-        return runBuild("processXtcResources");
     }
 
     private BuildResult runBuild(final String... tasksAndOptions) {
