@@ -212,29 +212,30 @@ val validateCredentials = tasks.register("validateCredentials") {
 }
 
 /**
- * Docker tasks - forwarded to docker subproject
- * TODO: Skip this and resolve the dist some other way.
+ * Docker aliases forwarded to the included build. Its distribution input carries the producer dependency.
  */
 
 private val dockerSubproject = gradle.includedBuild("docker")
-private val dockerTaskNames = listOf(
-    "dockerBuildAmd64", "dockerBuildArm64", "dockerBuild",
-    "dockerBuildMultiPlatform", "dockerPushMultiPlatform",
-    "dockerPushAmd64", "dockerPushArm64", "dockerPushAll",
-    "dockerBuildAndPush", "dockerBuildAndPushMultiPlatform",
-    "dockerCreateManifest", "dockerBuildPushAndManifest"
+private val dockerTaskAliases = mapOf(
+    "dockerBuildAmd64" to "buildAmd64",
+    "dockerBuildArm64" to "buildArm64",
+    "dockerBuild" to "buildAll",
+    "dockerBuildMultiPlatform" to "buildAll",
+    "dockerPushAmd64" to "pushAmd64",
+    "dockerPushArm64" to "pushArm64",
+    "dockerPushAll" to "pushAll",
+    "dockerPushMultiPlatform" to "pushAll",
+    "dockerBuildAndPush" to "pushAll",
+    "dockerBuildAndPushMultiPlatform" to "pushAll",
+    // buildx --push publishes the multi-platform manifest with the images.
+    "dockerBuildPushAndManifest" to "pushAll"
 )
 
-// Forward all docker tasks to the docker subproject
-dockerTaskNames.forEach { taskName ->
-    tasks.register(taskName) {
+// There is no standalone manifest-creation task in the included build.
+dockerTaskAliases.forEach { (alias, target) ->
+    tasks.register(alias) {
         group = "docker"
-        description = "Forward to docker subproject task: $taskName"
-        dependsOn(dockerSubproject.task(":$taskName"))
-
-        // Ensure XDK is built first for tasks that need it
-        if (taskName.contains("Build") || taskName.contains("Push")) {
-            dependsOn(installDist)
-        }
+        description = "Forward to docker task: $target"
+        dependsOn(dockerSubproject.task(":$target"))
     }
 }
