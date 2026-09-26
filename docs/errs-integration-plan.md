@@ -23,6 +23,27 @@ These are additive functional steps, separate from the occasional native Intelli
 4. [ ] Automatic project discovery and workspace indexing beyond the explicit configured graph.
 5. [ ] Broader compiler-proven rename and import actions. Formatting and code lenses remain later work.
 
+## Five-area functionality batch
+
+Requested after checkpoint `5c334f919`: implement the following sequentially, with a separate
+commit per area and a combined verification pass after all five implementations. The commits in
+this batch are development checkpoints until that final pass; no intermediate green result is implied.
+
+1. [ ] Argument contexts: qualified/grouped values and slots before later arguments (C25/L42).
+2. [ ] Workspace source discovery and indexing (L43).
+3. [ ] Workspace navigation, implementations and hierarchy (L44).
+4. [ ] Broader proven refactoring and import actions (L45).
+5. [ ] Remaining type editing and editor features (C26/L46).
+6. [ ] Combined compiler/LSP/protocol verification, focused shared editor scenarios, formatting;
+   update the final evidence and commit map. Native IntelliJ remains an occasional checkpoint.
+
+C25 derives a cursor's containing argument/call from existing child syntax, preserving labels and
+parentheses. Candidate enumeration uses ordinary unbound arguments, while proposed names replace
+only the cursor in disposable argument copies and fit alongside all later arguments. Qualified
+property reads use normal compiler validation. No mutable AST field is added. L42 copies the
+containing call's facts while retaining the inner cursor's exact replacement token. Tests are
+written alongside each area and intentionally deferred until the complete batch.
+
 ## Generic type completion batch
 
 C24 is committed as `1f843896f` and L41 as `45e3a0998`, after `885293f82`. All work stays on `lagergren/errs`. The extraction map has **79 groups**.
