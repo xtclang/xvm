@@ -1,5 +1,10 @@
 # Ecstasy Language Tooling
 
+C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
+arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
+implemented in both editors. IntelliJ also adds native X33/X35 and partial X101 assertions;
+these newly implemented native checks await a later execution checkpoint.
+
 L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
 type moves and public-type auto-import repairs. See the
 [scope and proof boundaries](../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
