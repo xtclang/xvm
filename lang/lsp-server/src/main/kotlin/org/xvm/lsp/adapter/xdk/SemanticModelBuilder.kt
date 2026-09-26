@@ -510,7 +510,7 @@ private class SemanticModelBuilder(
                         .firstOrNull()
                         ?.let(::identity)
                         ?.let { constants[it] }
-                val receiver = operation.receiver.orElse(null)
+                val receiver = site.receiver.orElse(null)
                 val receiverType = validatedType(receiver)
                 val cursor = analysis.cursorBindings()[site]
                 val callFacts = cursor?.callFacts()
@@ -552,7 +552,7 @@ private class SemanticModelBuilder(
                     } else if (site.isNameCompletion) {
                         locals.filter { local -> scopeTypes.none { it.symbol == local.symbol } } +
                             scopeMembers.filter { member -> scopeTypes.none { it.name == member.name } } + scopeTypes
-                    } else if (operation.isCall && receiver == null) {
+                    } else if (site.isCall && receiver == null) {
                         scopeMembers.filter { it.kind == SymbolKind.METHOD && it.name == callee }
                     } else if (receiverType != null && owner != null && !errors.isAbortDesired) {
                         receiverMembers(
@@ -561,7 +561,7 @@ private class SemanticModelBuilder(
                             errors,
                             lookupKind,
                         ).filter {
-                            !operation.isCall || (it.kind == SymbolKind.METHOD && it.name == callee)
+                            !site.isCall || (it.kind == SymbolKind.METHOD && it.name == callee)
                         }
                     } else {
                         emptyList()

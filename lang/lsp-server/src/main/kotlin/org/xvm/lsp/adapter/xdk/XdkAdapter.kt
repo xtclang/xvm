@@ -135,10 +135,17 @@ class XdkAdapter internal constructor(
             AdapterCapability.LINKED_EDITING,
         )
 
-    private data class Discovery(val folders: List<File> = emptyList(), val explicit: Boolean = false)
+    private data class Discovery(
+        val folders: List<File> = emptyList(),
+        val explicit: Boolean = false,
+    )
+
     private val discovery = AtomicReference(Discovery())
 
-    override fun initializeWorkspace(workspaceFolders: List<String>, progressReporter: ((String, Int) -> Unit)?) {
+    override fun initializeWorkspace(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)?,
+    ) {
         discovery.updateAndGet { it.copy(folders = workspaceFolders.map { path -> File(path).canonicalFile }.distinct()) }
         refreshDiscoveredSources()
         progressReporter?.invoke("Compiler source graph discovered", 100)
@@ -149,9 +156,10 @@ class XdkAdapter internal constructor(
         val settings = discovery.get()
         if (settings.explicit || settings.folders.isEmpty()) return emptySet()
         val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
-        val modules = XdkWorkspaceDiscovery.scan(settings.folders, buffers, previous.modules.values) {
-            closed || discovery.get() !== settings
-        }
+        val modules =
+            XdkWorkspaceDiscovery.scan(settings.folders, buffers, previous.modules.values) {
+                closed || discovery.get() !== settings
+            }
         return installSourceModules(modules, explicit = false) {
             !closed && discovery.get() === settings && project === previous && overlays == buffers
         }
@@ -969,37 +977,73 @@ class XdkAdapter internal constructor(
         }
     }
 
-    override fun getSemanticTokens(uri: String): SemanticTokens? = analysis(uri)?.semantics?.let {
-        XdkPresentation.tokens(it, XdkLexical.tokens(currentText(uri).orEmpty()))
-    }
+    override fun getSemanticTokens(uri: String): SemanticTokens? =
+        analysis(uri)?.semantics?.let {
+            XdkPresentation.tokens(it, XdkLexical.tokens(currentText(uri).orEmpty()))
+        }
 
     private fun currentText(uri: String): String? = analysis(uri)?.ast?.source?.toRawString() ?: synchronized(lifecycle) { overlays[uri] }
 
-    override fun formatDocument(uri: String, content: String, options: FormattingOptions): List<TextEdit> =
-        XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options)
+    override fun formatDocument(
+        uri: String,
+        content: String,
+        options: FormattingOptions,
+    ): List<TextEdit> = XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options)
 
-    override fun formatRange(uri: String, content: String, range: Range, options: FormattingOptions): List<TextEdit> =
-        XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options, range)
+    override fun formatRange(
+        uri: String,
+        content: String,
+        range: Range,
+        options: FormattingOptions,
+    ): List<TextEdit> = XdkLexical.format(content, FormattingConfig.resolve(uri, options, editorFormattingConfig), options, range)
 
-    override fun onTypeFormatting(uri: String, line: Int, column: Int, ch: String, options: FormattingOptions): List<TextEdit> =
-        currentText(uri)?.let { text ->
-            XdkLexical.format(text, FormattingConfig.resolve(uri, options, editorFormattingConfig), options,
-                Range(Position(line, 0), Position(line, text.lines().getOrNull(line)?.length ?: column)))
-        }.orEmpty()
+    override fun onTypeFormatting(
+        uri: String,
+        line: Int,
+        column: Int,
+        ch: String,
+        options: FormattingOptions,
+    ): List<TextEdit> =
+        currentText(uri)
+            ?.let { text ->
+                XdkLexical.format(
+                    text,
+                    FormattingConfig.resolve(uri, options, editorFormattingConfig),
+                    options,
+                    Range(Position(line, 0), Position(line, text.lines().getOrNull(line)?.length ?: column)),
+                )
+            }.orEmpty()
 
-    override fun getDocumentLinks(uri: String, content: String): List<DocumentLink> = XdkLexical.links(content)
+    override fun getDocumentLinks(
+        uri: String,
+        content: String,
+    ): List<DocumentLink> = XdkLexical.links(content)
 
-    override fun getCodeLenses(uri: String): List<CodeLens> = analysis(uri)?.symbols.orEmpty()
-        .filter { it.kind == SymbolInfo.SymbolKind.MODULE }.map { symbol ->
-            val at = symbol.location
-            CodeLens(Range(Position(at.startLine, at.startColumn), Position(at.endLine, at.endColumn)),
-                CodeLensCommand("▶ Run ${symbol.name}", "xtc.runModule", listOf(uri, symbol.name)))
-        }
+    override fun getCodeLenses(uri: String): List<CodeLens> =
+        analysis(uri)
+            ?.symbols
+            .orEmpty()
+            .filter { it.kind == SymbolInfo.SymbolKind.MODULE }
+            .map { symbol ->
+                val at = symbol.location
+                CodeLens(
+                    Range(Position(at.startLine, at.startColumn), Position(at.endLine, at.endColumn)),
+                    CodeLensCommand("▶ Run ${symbol.name}", "xtc.runModule", listOf(uri, symbol.name)),
+                )
+            }
 
-    override fun getLinkedEditingRanges(uri: String, line: Int, column: Int): LinkedEditingRanges? {
+    override fun getLinkedEditingRanges(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): LinkedEditingRanges? {
         val model = analysis(uri)?.semantics?.takeIf { it.status == SemanticModel.Status.COMPLETE } ?: return null
         val symbol = model.symbolAt(line, column)?.takeIf { it.renameable && it.kind == SemanticModel.SymbolKind.VARIABLE } ?: return null
-        val ranges = model.occurrences.filter { it.symbol == symbol.id && it.name == symbol.name }.map { it.range.toRange() }.distinct()
+        val ranges =
+            model.occurrences
+                .filter { it.symbol == symbol.id && it.name == symbol.name }
+                .map { it.range.toRange() }
+                .distinct()
         return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it) }
     }
 
@@ -1036,7 +1080,9 @@ class XdkAdapter internal constructor(
     override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
         val root = synchronized(lifecycle) { project.buildOrder().firstOrNull()?.uri }
         return if (root == null) {
-            completed.values.flatMap { it.documents.values }.flatMap { flatten(it.symbols) }
+            completed.values
+                .flatMap { it.documents.values }
+                .flatMap { flatten(it.symbols) }
                 .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
         } else {
             projectQuery(ProjectQueryKey(root, ProjectQueryKind.SYMBOLS), emptyList()) { it.symbols(query) }.join()
@@ -1119,20 +1165,35 @@ class XdkAdapter internal constructor(
     }
 
     /** Eligibility is provisional; the worker proves binding/dispatch preservation before editing. */
-    private fun isProjectTarget(uri: String, symbol: SemanticModel.Symbol): Boolean =
+    private fun isProjectTarget(
+        uri: String,
+        symbol: SemanticModel.Symbol,
+    ): Boolean =
         symbol.name != "construct" &&
-            (symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.TYPE) ||
-                (symbol.kind == SemanticModel.SymbolKind.PROPERTY && SemanticModel.Modifier.STATIC in symbol.modifiers)) &&
+            (
+                symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.TYPE) ||
+                    (symbol.kind == SemanticModel.SymbolKind.PROPERTY && SemanticModel.Modifier.STATIC in symbol.modifiers)
+            ) &&
             symbol.declarationSource?.let {
                 synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
             } == true
 
-    override fun getCodeActions(uri: String, range: Range, diagnostics: List<Diagnostic>): List<CodeAction> =
-        getCodeActionsAsync(uri, range, diagnostics).join()
+    override fun getCodeActions(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+    ): List<CodeAction> = getCodeActionsAsync(uri, range, diagnostics).join()
 
-    override fun getCodeActionsAsync(uri: String, range: Range, diagnostics: List<Diagnostic>): CompletableFuture<List<CodeAction>> =
-        if (hasProject(uri)) projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS), emptyList()) { it.importActions(uri) }
-        else CompletableFuture.completedFuture(emptyList())
+    override fun getCodeActionsAsync(
+        uri: String,
+        range: Range,
+        diagnostics: List<Diagnostic>,
+    ): CompletableFuture<List<CodeAction>> =
+        if (hasProject(uri)) {
+            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS), emptyList()) { it.importActions(uri) }
+        } else {
+            CompletableFuture.completedFuture(emptyList())
+        }
 
     override fun rename(
         uri: String,
@@ -1265,8 +1326,11 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
     ): List<TypeHierarchyItem> =
-        if (hasProject(uri)) workspaceNavigation(uri)?.prepareTypes(uri, line, column).orEmpty()
-        else module(uri)?.hierarchy?.prepare(uri, line, column).orEmpty()
+        if (hasProject(uri)) {
+            workspaceNavigation(uri)?.prepareTypes(uri, line, column).orEmpty()
+        } else {
+            module(uri)?.hierarchy?.prepare(uri, line, column).orEmpty()
+        }
 
     override fun findTypeDefinition(
         uri: String,
@@ -1313,28 +1377,43 @@ class XdkAdapter internal constructor(
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
 
     override fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> =
-        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.parents(item).orEmpty()
-        else module(item.uri)?.hierarchy?.supertypes(item).orEmpty()
+        if (hasProject(item.uri)) {
+            workspaceNavigation(item.uri)?.parents(item).orEmpty()
+        } else {
+            module(item.uri)?.hierarchy?.supertypes(item).orEmpty()
+        }
 
     override fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> =
-        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.children(item).orEmpty()
-        else module(item.uri)?.hierarchy?.subtypes(item).orEmpty()
+        if (hasProject(item.uri)) {
+            workspaceNavigation(item.uri)?.children(item).orEmpty()
+        } else {
+            module(item.uri)?.hierarchy?.subtypes(item).orEmpty()
+        }
 
     override fun prepareCallHierarchy(
         uri: String,
         line: Int,
         column: Int,
     ): List<CallHierarchyItem> =
-        if (hasProject(uri)) workspaceNavigation(uri)?.prepareCalls(uri, line, column).orEmpty()
-        else module(uri)?.calls?.prepare(uri, line, column).orEmpty()
+        if (hasProject(uri)) {
+            workspaceNavigation(uri)?.prepareCalls(uri, line, column).orEmpty()
+        } else {
+            module(uri)?.calls?.prepare(uri, line, column).orEmpty()
+        }
 
     override fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall> =
-        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.incoming(item).orEmpty()
-        else module(item.uri)?.calls?.incoming(item).orEmpty()
+        if (hasProject(item.uri)) {
+            workspaceNavigation(item.uri)?.incoming(item).orEmpty()
+        } else {
+            module(item.uri)?.calls?.incoming(item).orEmpty()
+        }
 
     override fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall> =
-        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.outgoing(item).orEmpty()
-        else module(item.uri)?.calls?.outgoing(item).orEmpty()
+        if (hasProject(item.uri)) {
+            workspaceNavigation(item.uri)?.outgoing(item).orEmpty()
+        } else {
+            module(item.uri)?.calls?.outgoing(item).orEmpty()
+        }
 
     private fun SemanticModel.Range.toRange(): Range = Range(Position(start.line, start.column), Position(end.line, end.column))
 

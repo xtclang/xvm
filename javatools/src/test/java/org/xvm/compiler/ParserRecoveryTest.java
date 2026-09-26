@@ -388,6 +388,7 @@ public class ParserRecoveryTest {
                     source.reset();
                     var errors = new ErrorList();
                     var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    tree = (StatementBlock) tree.clone();
                     var site = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
                             .map(IncompleteStatement.class::cast).findFirst().orElseThrow();
                     var type = assertInstanceOf(NamedTypeExpression.class, site.getTarget());
