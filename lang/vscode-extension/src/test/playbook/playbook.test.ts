@@ -5,6 +5,7 @@ import { advancedCases } from './advanced';
 import { completionCases } from './completion';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
+import { liveWorkspaceCases } from './liveWorkspace';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { propertyCases } from './properties';
@@ -35,6 +36,7 @@ suite('XdkAdapter playbook', function () {
     graphCases();
     propertyCases();
     advancedCases();
+    liveWorkspaceCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

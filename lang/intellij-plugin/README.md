@@ -1,5 +1,12 @@
 # Ecstasy IntelliJ Plugin
 
+Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
+compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
+broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
+and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
+See [scope, ownership and validation](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
+
+
 IntelliJ IDEA plugin for Ecstasy language support.
 
 ## Features
@@ -126,7 +133,7 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 103 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 106 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
 It implements startup and 50 scenarios: 47 fully and three partially. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
@@ -142,7 +149,7 @@ invalid calls must clear an earlier hint. X20 remains partial because LSP4IJ 0.2
 navigation is checked. X81/X82 remain partial because native completion Property-kind metadata
 is not inspected. Problems-row clicking and visual layout remain manual.
 
-Every report lists all 103 scenario IDs, including the 53 unimplemented entries with concrete
+Every report lists all 106 scenario IDs, including the 56 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
@@ -176,7 +183,7 @@ library are integration-test dependencies and are not bundled in the plugin.
 Compiler mode bundles the full matching XDK library set as read-only dependencies and discovers
 source modules/import edges under workspace folders at startup and on watched-file changes.
 The configuration below overrides that discovered graph. Set `sourceModules` to `null` to
-restore discovery; `[]` disables it. Unsaved import-edge and dynamic folder changes remain follow-ups.
+restore discovery; `[]` disables it. Unsaved import edges, close and dynamic folder changes now refresh discovered graphs.
 
 With a compiler build, open **Settings → Languages & Frameworks → Language Servers**, select
 **XTC Language Server**, and edit its **Configuration** JSON:

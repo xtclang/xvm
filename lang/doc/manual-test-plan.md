@@ -1,5 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
+L47–L49 validation: focused VS Code X5/X35/X99–X101 all pass in `run-psziUN` (five passed,
+101 not selected). The backend, protocol and Gradle checks are recorded in the
+[integration checkpoint](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
+No native IntelliJ run is claimed for these additions.
+
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
 ## Current development batch: workspace queries and editing
@@ -1056,7 +1061,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X98 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X101 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1114,7 +1119,7 @@ registered formals, empty generic arguments and whole-token replacement.
 The three partials remain explicit: X20 verifies selected-overload navigation and suppressed
 parameter metadata, but LSP4IJ 0.21.0 renders `<no parameters>` in the popup; X81/X82 check native
 candidates and accepted edits but do not inspect completion Property-kind metadata. The report
-lists all 53 unimplemented cases and their exact missing native checks. These are harness gaps,
+lists all 56 unimplemented cases and their exact missing native checks. These are harness gaps,
 not claims that IntelliJ lacks the corresponding LSP feature. Problems-row clicking and visual
 layout remain manual. Runtime validation remains incomplete. The latest report,
 `run-469432121529144568/results.json`, records **19 passed (including startup), one failed,
@@ -1169,14 +1174,14 @@ This selector currently applies to VS Code; IntelliJ native checks remain occasi
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 103 scenarios: X1–X98, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 106 scenarios: X1–X101, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 103 cases. IntelliJ implements 47 fully and three partially, plus a separate startup check;
+all 106 cases. IntelliJ implements 47 fully and three partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1253,7 +1258,7 @@ module Navigation {
 | X2 | In `read`, change `Int value = 2;` to `String value = 2;`, then undo. Separately change `input` to `missing` in the initializer in `text`. | Real compiler diagnostics identify the type mismatch and unresolved name at their source spans, with compiler codes. Each clears after correction without saving. `// ERROR: test` alone produces no diagnostic. |
 | X3 | Hover `value` in `text`'s `return value;`, then in `return value.toString();`. | The first use has narrowed type `String`; the second has `Object`. Go to Definition from either reaches the same local declaration. |
 | X4 | In `read`, use Go to Definition, Find References and occurrence highlighting on the bare `value` in `return value + this.value;`. Repeat on `this.value`. | The local and property lead to different declarations and separate reference sets despite identical spelling. Highlights stay within the document and distinguish reads from writes; X41 checks an assignment target. |
-| X5 | Run Go to Definition on `String`. Then remove the final closing brace and inspect Outline, folding and selection; restore it. | The bundled library has no source target, so navigation returns no result. Recoverable syntax retains surrounding structure with a parser diagnostic; stale semantic targets are not reused. A badly broken header may leave structural gaps or a cursor-only selection. |
+| X5 | Run Go to Definition on `String`. Then remove the final closing brace and inspect Outline, folding and selection; restore it. | The matching bundled library opens read-only at the String declaration. Recoverable syntax retains surrounding structure with a parser diagnostic; stale semantic targets are not reused. A badly broken header may leave structural gaps or a cursor-only selection. |
 
 For the error-listener regression, also run **7a.8** with `DupAnno.x`: the duplicate inherited
 annotation produces exactly one `VERIFY-75` warning. Rows **7a.1–7a.7** cover bundled-library startup,
@@ -1437,7 +1442,7 @@ module Lookups {
 |---|--------|-----------------|
 | X33 | Go to Type Definition on `mapper` in `mapper.map("text")`, then on `make` in its call and declaration. | The variable navigates to `Mapper`, not its `String` argument; the method navigates to its `TextMapper` return type. |
 | X34 | Go to Type Definition on `value` before the `if`, then inside the narrowed branch. | Before narrowing, two targets: `TextMapper` and `Unrelated`. Inside, only `TextMapper`. A chooser/peek list instead of a direct jump is normal for multiple targets. |
-| X35 | Go to Type Definition on `value` in `Mapper`'s method signature, then on the written `String` in TextMapper. | The formal value type leads to the declaration of `T`; the bundled `String` type has no source target. No same-spelled local substitute is returned. |
+| X35 | Go to Type Definition on `value` in `Mapper`'s method signature, then on the written `String` in TextMapper. | The formal value type leads to the declaration of `T`; the bundled `String` type opens its matching read-only declaration. No same-spelled local substitute is returned. |
 | X36 | Find Implementations on `Mapper`. | `TextMapper`, `Child` and `Inherited`, once each. `Unrelated` is excluded despite its matching method shape. These are nominal declaration-level results, not a search for every structurally compatible class. |
 | X37 | Find Implementations on the interface's `map`, then on the call `mapper.map("text")`. Repeat on Child's override. | Interface/call: the String bodies in TextMapper and Child. The Int overload and Unrelated's method are excluded; Inherited adds no duplicate body. Child's override resolves to its own body. |
 | X38 | Return to the two-file Project fixture in section D. Go to Type Definition on the return-type `Child` after adding `Child make() = new Child();` to the root. Find Implementations on Base's `echo`; repeat after adding two blank lines before Child without saving, then after a broken member edit and correction. | Type-definition reaches the closed/member source at its current position. The inherited method points to the actual Base body once. A parse failure clears semantic targets until correction; old offsets are never reused. |
@@ -1870,6 +1875,9 @@ module Advanced {
 | X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ execution is pending. |
 | X97 | In temporary `Editing.x`, run the nine shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values and construction. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
 | X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
+| X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value()=1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run()=lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
+| X100 | Create a healthy module with `class Base {}` and `class Child extends Base {}`, plus an independent module. Break the neighbor with `Missing broken;`, then request Base's subtypes. | Child remains navigable. Exact references return no complete answer while the graph is broken. Repairing the neighbor restores full graph queries. |
+| X101 | Open `module LibrarySource { package xml import xml.xtclang.org; void accept(xml.Document document, String text) {} }`. Go to Definition on `Document` and `String`, and Type Definition on `text`. | Matching XDK source opens at the declaration token, read-only. Library symbols cannot be renamed; formatting the source view returns no edits. Missing/ambiguous source metadata gives no guessed target. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
