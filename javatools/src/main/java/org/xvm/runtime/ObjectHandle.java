@@ -388,24 +388,6 @@ public abstract class ObjectHandle
                     : getField(frame, field);
         }
 
-        /**
-         * Read a stored ordinary field for display without invoking the missing-property or
-         * transient-field paths of {@link #getField(Frame, String)}. The composition's layout
-         * must already exist, as required by this handle's construction.
-         *
-         * @return the field's value, or null if it cannot be read without building anything
-         */
-        protected ObjectHandle peekField(String sProp) {
-            FieldInfo      field    = getComposition().getFieldInfo(sProp);
-            ObjectHandle[] ahFields = m_aFields;
-            if (field == null || field.isTransient() || ahFields == null) {
-                return null;
-            }
-
-            int iField = field.getIndex();
-            return iField < ahFields.length ? ahFields[iField] : null;
-        }
-
         private ObjectHandle missingPropertyException(Frame frame, String sProp) {
             return new DeferredCallHandle(
                     xException.makeHandle(frame, "Missing property: " + sProp));
@@ -682,7 +664,7 @@ public abstract class ObjectHandle
         public String toString() {
             // WrapperException.toString() delegates here too. Read the stored text without
             // populating its Java String cache during display or stack-trace printing.
-            ObjectHandle hText = peekField("text");
+            ObjectHandle hText = getField(null, "text");
             return super.toString() +
                 (hText instanceof StringHandle hString
                     ? Handy.quotedString(new String(hString.getValue()))
