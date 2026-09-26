@@ -1880,8 +1880,9 @@ public class BuildContext {
                 break;
 
             case "Specific->Widened",
-                 "Specific->Ref":
-                // nothing to do
+                 "Specific->Ref",
+                 "Widened->Ref":
+                // no additional transformations
                 break;
 
             case "Specific->NullablePrimitive":
@@ -2088,12 +2089,13 @@ public class BuildContext {
                     break;
                 }
 
-                case Widened: {
+                case Specific, Widened: {
                     // in general, this should not happen, but there is one place where the
                     // Ecstasy compiler generates a default argument for a non-default signature -
                     // for fix size Array constructor (see  NewExpression.java):
                     //      construct(Int size, Element | function Element (Int) supply)
-                    // we need to replace it with the default value for the Element type
+                    // we need to replace it with the default value for the Element type;
+                    // when Element resolves to Object, the union collapses to a Specific parameter
                     if (typeTarget != null && typeTarget.isArray() &&
                             typeTarget.getParamType(0).getDefaultValue() instanceof Constant dfltValue) {
                         RegisterInfo regValue = loadConstant(code, dfltValue);

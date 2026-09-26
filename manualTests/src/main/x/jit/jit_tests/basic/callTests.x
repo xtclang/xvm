@@ -39,6 +39,9 @@ package callTests {
         assert testWidened("hi") == 2;
         assert testWidened(7)    == 7;
 
+        testWidenedReturns();
+        testNullableWidenedReturns();
+
         assert testWidenedWithDefault("hi") == 2;
         assert testWidenedWithDefault(7)    == 7;
         assert testWidenedWithDefault()     == 42;
@@ -115,6 +118,88 @@ package callTests {
     Int testSpecificWithDefault(String s = "bye") = s.size;
 
     Int testWidened(String|Int si) = si.is(Int) ? si : si.size;
+
+    void testWidenedReturns() {
+        // both the primary return and the additional result must carry boxed union values
+        (Int|String first, Int|String second) = pair(5);
+        assert first == 5 && second == 6;
+
+        (first, second) = pairFinally(7);
+        assert first == 7 && second == 8;
+
+        // a nonzero upper half verifies that boxing preserves both primitive slots
+        Int128 n = 0x1_0000_0000_0000_0005;
+        (Int128|String first128, Int128|String second128) = pair128(n);
+        assert first128.as(Int128) == n && second128.as(Int128) == n + 1;
+
+        (first128, second128) = pair128Finally(n + 2);
+        assert first128.as(Int128) == n + 2 && second128.as(Int128) == n + 3;
+
+        (Int|String, Int|String) pair(Int n) = (n, n + 1);
+
+        (Int|String, Int|String) pairFinally(Int n) {
+            try {
+                return n, n + 1;
+            } finally {
+                assert n >= 0;
+            }
+        }
+
+        (Int128|String, Int128|String) pair128(Int128 n) = (n, n + 1);
+
+        (Int128|String, Int128|String) pair128Finally(Int128 n) {
+            try {
+                return n, n + 1;
+            } finally {
+                assert n >= 0;
+            }
+        }
+    }
+
+    void testNullableWidenedReturns() {
+        // each return position must preserve both Null and a boxed value
+        (Int?|String first, Int?|String second) = pair(5, Null);
+        assert first == 5 && second == Null;
+        (first, second) = pair(Null, 6);
+        assert first == Null && second == 6;
+
+        (first, second) = pairFinally(7, Null);
+        assert first == 7 && second == Null;
+        (first, second) = pairFinally(Null, 8);
+        assert first == Null && second == 8;
+
+        // the null flag follows both words of the Int128 payload
+        Int128 n = 0x1_0000_0000_0000_0005;
+        (Int128?|String first128, Int128?|String second128) = pair128(n, Null);
+        assert first128.as(Int128) == n && second128 == Null;
+        (first128, second128) = pair128(Null, n + 1);
+        assert first128 == Null && second128.as(Int128) == n + 1;
+
+        (first128, second128) = pair128Finally(n + 2, Null);
+        assert first128.as(Int128) == n + 2 && second128 == Null;
+        (first128, second128) = pair128Finally(Null, n + 3);
+        assert first128 == Null && second128.as(Int128) == n + 3;
+
+        (Int?|String, Int?|String) pair(Int? n1, Int? n2) = (n1, n2);
+
+        (Int?|String, Int?|String) pairFinally(Int? n1, Int? n2) {
+            try {
+                return n1, n2;
+            } finally {
+                assert n1 == Null || n2 == Null;
+            }
+        }
+
+        (Int128?|String, Int128?|String) pair128(Int128? n1, Int128? n2) = (n1, n2);
+
+        (Int128?|String, Int128?|String) pair128Finally(Int128? n1, Int128? n2) {
+            try {
+                return n1, n2;
+            } finally {
+                assert n1 == Null || n2 == Null;
+            }
+        }
+    }
 
     Int testWidenedWithDefault(String|Int si = 42) = si.is(Int) ? si : si.size;
 

@@ -7,6 +7,7 @@ package arrayTests {
 
         testStringAsArray();
         testStringArray();
+        testDefaultElements();
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
@@ -35,6 +36,18 @@ package arrayTests {
 
         strings = strings.delete(0);
         assert strings[0] == "world";
+    }
+
+    void testDefaultElements() {
+        // the omitted array supplier must use the element type's default value
+        String?[] values = new String?[2];
+        assert values.size == 2;
+        assert values[0] == Null;
+        assert values[1] == Null;
+
+        values[0] = "first";
+        assert values[0] == "first";
+        assert values[1] == Null;
     }
 
     void testConstStringArray() {
