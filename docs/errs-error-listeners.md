@@ -626,3 +626,16 @@ compilation remains strict and still publishes missing-closer and generic-constr
 First-error/cancellation listeners stop before a cursor binding is returned. Ordinary cached
 results are unchanged by the probe. The nested generic workload also exercises cancellation and
 release of attempt-owned compiler objects. See the [C22/L37 verification record](errs-integration-plan.md#parameterized-and-compound-declaration-types).
+
+## Type-composition header recovery
+
+C23/L39 uses the existing recovery diagnostic and cursor-binding collector for unfinished class and
+interface headers. The parser reports the selected boundary once; normal validation never visits
+the retained body's unregistered declarations. First-error budgets, cancellation and speculative
+attempts stop before returning partial type facts. Qualified lookup keeps its collecting/cancellable
+PROBE listener, so failure to build visible TypeInfo cannot be mistaken for successful resolution.
+
+The recovery node stores syntax only, with final immutable cursor storage and independent cloning.
+Normal source diagnostics remain cached separately from the query; accepting a visible type leaves
+illegal inheritance or missing delimiters visible until repaired. No listener ownership or public
+result API changes. See [C23/L39](errs-integration-plan.md#class-and-interface-composition-headers).
