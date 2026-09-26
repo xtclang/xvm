@@ -225,21 +225,24 @@ public final class XtcPluginUtils {
          * Reads the XDK version from a jar manifest.
          *
          * @param file Jar file from which to read
-         * @return the XDK version string, as stored in the jar, or null if file not found, or entry could not be parsed.
+         * @return the manifest version, or null when no file was supplied
+         * @throws GradleException if the artifact cannot be read or its version is missing
          */
         public static String readXdkVersionFromJar(final File file) {
             if (file == null) {
                 return null;
             }
             final var path = file.getAbsolutePath();
-            assert file.isFile();
             try (var jarFile = new JarFile(file)) {
-                final var m = jarFile.getManifest();
-                final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
+                final var manifest = jarFile.getManifest();
+                if (manifest == null) {
+                    throw failure("Missing manifest in launcher artifact '{}'", path);
+                }
+                final var implVersion = manifest.getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
                 if (implVersion == null) {
                     throw failure("Invalid manifest entries found in '{}'", path);
                 }
-                return implVersion.toString();
+                return implVersion;
             } catch (final IOException e) {
                 throw failure(e, "Not a valid '{}': '{}'", XDK_JAVATOOLS_NAME_JAR, path);
             }
