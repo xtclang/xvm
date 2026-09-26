@@ -31,7 +31,7 @@ this batch are development checkpoints until that final pass; no intermediate gr
 
 1. [x] Argument contexts implemented in `837fae19c`: qualified/grouped values and slots before later arguments (C25/L42); verification deferred.
 2. [x] Workspace source discovery, unopened-module symbols and the complete bundled XDK implemented (L43); verification deferred.
-3. [ ] Workspace navigation, implementations and hierarchy (L44).
+3. [x] Workspace navigation, implementations and hierarchy implemented (L44); verification deferred.
 4. [ ] Broader proven refactoring and import actions (L45).
 5. [ ] Remaining type editing and editor features (C26/L46).
 6. [ ] Combined compiler/LSP/protocol verification, focused shared editor scenarios, formatting;
@@ -43,6 +43,22 @@ only the cursor in disposable argument copies and fit alongside all later argume
 property reads use normal compiler validation. No mutable AST field is added. L42 copies the
 containing call's facts while retaining the inner cursor's exact replacement token. Tests are
 written alongside each area and intentionally deferred until the complete batch.
+
+### L44 whole-graph navigation (development checkpoint)
+
+Compiler constants establish cross-module symbol aliases on the serialized worker. A Kotlin-only
+join then merges detached semantic tables, direct type edges, implementation targets and selected
+call sites. It does not match display names or infer runtime dispatch. Definition/type lookup can
+compile an unopened source; implementation and type/call hierarchy queries include unopened source
+consumers. Bundled binary declarations remain non-navigable without source metadata.
+
+Hierarchy handles contain a digest of the exact graph configuration, source membership/text and
+binary revisions. A later request recompiles the graph, verifies the digest and resolves the original
+selection in the new detached view; edited closed files invalidate old handles even before watcher
+notifications. Compiler objects stay inside a query. Queries currently recompile on demand and
+require a complete successful graph; caching and partial-graph hierarchy are later optimizations.
+The new regression covers unrelated same-name declarations, overload separation, incoming/outgoing
+calls, unopened implementations and stale handles. It is written but intentionally not run yet.
 
 ### L43 discovery and bundled libraries (development checkpoint)
 

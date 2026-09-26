@@ -307,8 +307,41 @@ class SemanticModel internal constructor(
             .toList()
     }
 
-    private companion object {
-        val SOURCE_ORDER = compareBy(Range::start, Range::end)
-        val INNERMOST = compareByDescending(Range::start).thenBy(Range::end)
+    internal companion object {
+        /** Merge detached tables after the compiler worker has proven cross-module identity aliases. */
+        fun joined(models: List<SemanticModel>, aliases: Map<SymbolId, SymbolId>): List<SemanticModel> {
+            fun canonical(id: SymbolId): SymbolId = aliases[id] ?: id
+            val tables = models.distinctBy { it.id }.map { it.facts }
+            val symbols = tables.flatMap { it.symbols }.associateBy { it.id }
+            val facts = Facts(
+                symbols.values.groupBy { canonical(it.id) }.mapValues { (id, candidates) ->
+                    symbols[id] ?: candidates.first().copy(id = id)
+                },
+                tables.flatMap { it.types }.associateBy { it.id },
+                tables.flatMap { it.typeDeclarations.values }.associate { declaration ->
+                    val id = canonical(declaration.symbol)
+                    id to declaration.copy(symbol = id, parents = declaration.parents.map { it.copy(symbol = canonical(it.symbol)) })
+                },
+                tables.flatMap { it.typeDefinitions.entries }.associate { (type, ids) -> type to ids.map(::canonical).distinct() },
+                tables.flatMap { it.implementations.entries }.groupBy({ canonical(it.key) }, { it.value })
+                    .mapValues { (_, groups) -> groups.flatten().map(::canonical).distinct() },
+                tables.flatMap { it.callables.values }.associate { callable ->
+                    val id = canonical(callable.symbol)
+                    id to callable.copy(symbol = id)
+                },
+            )
+            return models.map { model ->
+                SemanticModel(
+                    model.id, model.status, model.sourceName, facts,
+                    model.occurrences.map { it.copy(symbol = it.symbol?.let(::canonical)) },
+                    model.expressions,
+                    model.calls.map { it.copy(method = canonical(it.method), caller = it.caller?.let(::canonical)) },
+                    model.functionCalls,
+                )
+            }
+        }
+
+        private val SOURCE_ORDER = compareBy(Range::start, Range::end)
+        private val INNERMOST = compareByDescending(Range::start).thenBy(Range::end)
     }
 }
