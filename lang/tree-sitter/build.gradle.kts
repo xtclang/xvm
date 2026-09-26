@@ -62,7 +62,7 @@ val nativePlatformDir: String = when {
 // =============================================================================
 
 val treeSitterCliVersion: String = libs.versions.lang.tree.sitter.cli.get()
-val treeSitterCliDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-cli")
+val treeSitterCliDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-cli/$treeSitterCliVersion/$treeSitterPlatform")
 val generatedDir: Provider<Directory> = layout.buildDirectory.dir("generated")
 val nativeOutputDir: Provider<Directory> = layout.buildDirectory.dir("native")
 
@@ -106,13 +106,13 @@ val downloadTreeSitterCliGz = tasks.register<Download>("downloadTreeSitterCliGz"
     val platform = treeSitterPlatform
     val url = "https://github.com/tree-sitter/tree-sitter/releases/download/v$version/tree-sitter-$platform.gz"
     val destPath = treeSitterCliDir.get().asFile.absolutePath
+    val destGzFile = treeSitterCliDir.map { it.file("tree-sitter-$platform.gz") }
     src(url)
-    dest(treeSitterCliDir)
+    dest(destGzFile)
     overwrite(false)
-    onlyIfModified(true)
     quiet(true)
-    val destGzFile = File(destPath, "tree-sitter-$platform.gz")
-    onlyIf { !destGzFile.exists() }
+    inputs.property("cliVersion", version)
+    outputs.file(destGzFile)
 
     logTimed("[tree-sitter] Downloading CLI v$version ($platform)...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath") { elapsed ->
         val size = File(destPath).walkTopDown().filter { it.isFile }.sumOf { it.length() }.humanSize()
@@ -178,7 +178,6 @@ val downloadTreeSitterSource = tasks.register<Download>("downloadTreeSitterSourc
     src(url)
     dest(destFile)
     overwrite(false)
-    onlyIfModified(true)
     quiet(true)
     // Declare the downloaded tar.gz as a Gradle output so the standard
     // up-to-date check re-runs the task when the file goes missing on
@@ -283,9 +282,8 @@ val downloadZig = tasks.register<Download>("downloadZig") {
     src(url)
     dest(destFile)
     overwrite(false)
-    onlyIfModified(true)
     quiet(true)
-    onlyIf { !destFile.exists() }
+    outputs.file(destFile)
 
     logTimed("[zig] Downloading Zig compiler v$version ($platform)...\n[zig]   URL:  $url\n[zig]   Dest: $destPath") { elapsed ->
         val size = File(destPath).length().humanSize()
@@ -483,6 +481,8 @@ val validateTreeSitterGrammar = tasks.register<Exec>("validateTreeSitterGrammar"
     inputs.file(generatedDir.map { it.file("tree-sitter.json") })
     // scanner.c is copied to src/ by copyGrammarFiles and read by tree-sitter generate
     inputs.file(scannerCFile)
+    inputs.property("cliVersion", treeSitterCliVersion)
+    inputs.file(treeSitterCliDir.map { it.file("tree-sitter") }).withPathSensitivity(PathSensitivity.NONE)
 
     // Declare outputs - tree-sitter generate produces these files
     outputs.file(generatedDir.map { it.file("src/parser.c") })

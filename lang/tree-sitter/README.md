@@ -13,10 +13,13 @@ for syntax highlighting, code navigation, and IDE features.
 
 # Parse a specific file manually (from project root)
 cd lang/tree-sitter/build/generated
-../tree-sitter-cli/tree-sitter parse /path/to/file.x
+# Replace <version> with lang-tree-sitter-cli from gradle/libs.versions.toml,
+# and <platform> with your host, such as linux-x64 or macos-arm64.
+cli="../tree-sitter-cli/<version>/<platform>/tree-sitter"
+"$cli" parse /path/to/file.x
 
 # Check for errors only
-../tree-sitter-cli/tree-sitter parse /path/to/file.x 2>&1 | grep -E "(ERROR|MISSING)"
+"$cli" parse /path/to/file.x 2>&1 | grep -E "(ERROR|MISSING)"
 ```
 
 ## Grammar Generation
@@ -42,7 +45,7 @@ lang/
 │       │   ├── src/parser.c     # Generated parser
 │       │   └── src/scanner.c    # Generated external scanner
 │       └── tree-sitter-cli/
-│           └── tree-sitter      # Auto-downloaded CLI binary
+│           └── <version>/<platform>/tree-sitter  # Auto-downloaded CLI binary
 └── dsl/
     └── src/main/
         ├── kotlin/org/xtclang/tooling/
