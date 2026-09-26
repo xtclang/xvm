@@ -94,7 +94,7 @@ public class LspRoundTripTest {
                         "the range does not run backwards");
                 assertNotNull(p.code(), "a problem view groups by code");
                 assertNotNull(p.message(), "and shows a message");
-                assertTrue(p.severity().compareTo(Severity.WARNING) >= 0);
+                assertTrue(p.severity().isAtLeast(Severity.WARNING));
             }
         }
 
