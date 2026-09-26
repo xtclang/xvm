@@ -25,11 +25,12 @@ import org.gradle.api.Task;
 import org.gradle.api.attributes.Category;
 import org.gradle.api.attributes.LibraryElements;
 import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.PluginManager;
 import org.gradle.api.tasks.Copy;
+import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.testfixtures.ProjectBuilder;
 
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ public class SimpleXtcPluginTest {
 
         // Apply Java base plugin first (required dependency)
         final var pluginManager = project.getPluginManager();
-        pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
+        pluginManager.apply(JavaBasePlugin.class);
 
         // Apply only the XtcProjectPlugin which doesn't depend on build-logic plugins
         pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
@@ -76,7 +77,7 @@ public class SimpleXtcPluginTest {
     @Test
     public void compileIncludesSourceRootsAddedAfterTaskCreation() throws IOException {
         final var project = newProject("lateSourceRoot");
-        project.getPluginManager().apply(org.gradle.api.plugins.JavaBasePlugin.class);
+        project.getPluginManager().apply(JavaBasePlugin.class);
         project.getPluginManager().apply(XtcPlugin.XtcProjectPlugin.class);
         final var compile = project.getTasks().named("compileXtc", XtcCompileTask.class).get();
         final var sources = XtcProjectDelegate.getMainSourceSet(project).getExtensions()
@@ -141,7 +142,7 @@ public class SimpleXtcPluginTest {
     public void verifyTestSourceSetCompilationDependsOnMainOutputAndTestsDependOnCompilation() {
         final Project project = newProject("verifyTestSourceSetCompilationDependsOnMainOutputAndTestsDependOnCompilation");
         final var pluginManager = project.getPluginManager();
-        pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
+        pluginManager.apply(JavaBasePlugin.class);
         pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
 
         final var tasks = project.getTasks();
@@ -173,7 +174,7 @@ public class SimpleXtcPluginTest {
     public void verifyRebuildFalseStopsTrackingLauncherRuntimeAsCompileInput() {
         final Project project = newProject("verifyRebuildFalseStopsTrackingLauncherRuntimeAsCompileInput");
         final PluginManager pluginManager = project.getPluginManager();
-        pluginManager.apply(org.gradle.api.plugins.JavaBasePlugin.class);
+        pluginManager.apply(JavaBasePlugin.class);
         pluginManager.apply(XtcPlugin.XtcProjectPlugin.class);
 
         final var tasks = project.getTasks();

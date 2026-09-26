@@ -30,6 +30,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.logging.Logger;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -181,7 +182,7 @@ public final class XtcPluginUtils {
          * @param logger Gradle logger for error reporting
          * @return true if the file seems to be a valid XTC module, false otherwise (including I/O errors)
          */
-        public static boolean isValidXtcModuleSafe(final File file, final org.gradle.api.logging.Logger logger) {
+        public static boolean isValidXtcModuleSafe(final File file, final Logger logger) {
             try {
                 return isValidXtcModule(file);
             } catch (final GradleException e) {

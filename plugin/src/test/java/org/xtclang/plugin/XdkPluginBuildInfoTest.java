@@ -133,7 +133,7 @@ public class XdkPluginBuildInfoTest {
             }
 
             // Capture the xtcVersion at configuration time
-            val xtcVersionProvider = (extensions.getByName("xtcCompile") as org.xtclang.plugin.XtcCompilerExtension).xtcVersion
+            val xtcVersionProvider = xtcCompile.xtcVersion
 
             // Print the xtcVersion that the plugin resolved
             tasks.register("printXtcVersion") {
@@ -201,7 +201,7 @@ public class XdkPluginBuildInfoTest {
             }
 
             // Capture the xtcVersion at configuration time
-            val versionProvider = (extensions.getByName("xtcCompile") as org.xtclang.plugin.XtcCompilerExtension).xtcVersion
+            val versionProvider = xtcCompile.xtcVersion
 
             tasks.register("checkOverride") {
                 val version = versionProvider

@@ -53,7 +53,7 @@ public class DefaultXtcRunModule implements XtcRunModule {
 
     @Override
     public void moduleArg(final Provider<? extends @NotNull String> arg) {
-        moduleArgs(objects.listProperty(String.class).value(arg.map(java.util.Collections::singletonList)));
+        moduleArgs(arg.map(List::of));
     }
 
     @Override
