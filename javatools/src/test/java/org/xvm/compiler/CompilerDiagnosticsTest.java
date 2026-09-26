@@ -41,7 +41,7 @@ public class CompilerDiagnosticsTest {
                 """, host);
 
         assertEquals(1, heard.size());
-        assertEquals(Parser.MISSING_SEMICOLON, heard.get(0).getCode());
+        assertEquals(Parser.MISSING_SEMICOLON, heard.getFirst().getCode());
         assertTrue(host.hasSeriousErrors(), "the listener answers for what it heard");
     }
 

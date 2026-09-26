@@ -42,7 +42,7 @@ public class ParserAttemptTest {
         }
 
         assertEquals(1, errs.getErrors().size(), "the attempt was kept, so its report counts");
-        assertEquals(Severity.WARNING, errs.getErrors().get(0).getSeverity());
+        assertEquals(Severity.WARNING, errs.getErrors().getFirst().getSeverity());
     }
 
     /**
