@@ -1045,27 +1045,12 @@ val populateNativeLibraryCache = tasks.register("populateNativeLibraryCache") {
             val hash = nativeInputs.fingerprint(platform, targets.getValue(platform), ext)
 
             val cacheDir = File(cacheDirValue, "$hash/$platform")
-            cacheDir.mkdirs()
-
-            // Copy XTC grammar library to cache
-            val srcGrammarLib = crossBuildDir.get().dir(platform).file("libtree-sitter-xtc.$ext").asFile
-            val destGrammarLib = File(cacheDir, "libtree-sitter-xtc.$ext")
-            if (srcGrammarLib.exists()) {
-                srcGrammarLib.copyTo(destGrammarLib, overwrite = true)
-                logger.info("Cached grammar lib: $platform (hash: ${hash.take(12)}...)")
-            } else {
-                logger.warn("Grammar lib not found: ${srcGrammarLib.absolutePath}")
+            val sourceDir = crossBuildDir.get().dir(platform).asFile
+            NativeLibraryCache.getOrBuild(cacheDir, ext) { grammar, runtime ->
+                File(sourceDir, "libtree-sitter-xtc.$ext").copyTo(grammar)
+                File(sourceDir, "libtree-sitter.$ext").copyTo(runtime)
             }
-
-            // Copy tree-sitter runtime library to cache
-            val srcRuntimeLib = crossBuildDir.get().dir(platform).file("libtree-sitter.$ext").asFile
-            val destRuntimeLib = File(cacheDir, "libtree-sitter.$ext")
-            if (srcRuntimeLib.exists()) {
-                srcRuntimeLib.copyTo(destRuntimeLib, overwrite = true)
-                logger.info("Cached runtime lib: $platform (hash: ${hash.take(12)}...)")
-            } else {
-                logger.warn("Runtime lib not found: ${srcRuntimeLib.absolutePath}")
-            }
+            logger.info("Cached native libraries: $platform (hash: ${hash.take(12)}...)")
         }
 
         logger.info("")
@@ -1158,7 +1143,6 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
             """.trimMargin()
         )
 
-        var cachedCount = 0
         var builtCount = 0
 
         val totalDuration = measureTime {
@@ -1174,33 +1158,21 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
                 val grammarOutput = File(platformOutDir, "libtree-sitter-xtc.$ext")
                 val runtimeOutput = File(platformOutDir, "libtree-sitter.$ext")
 
-                // Check cache
-                if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
-                    logger.info("[zig]   $platform: cache hit (hash: ${hash.take(8)}...)")
-                    cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-                    cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-                    cachedCount++
-                    return@forEach
-                }
-
-                logger.info("[zig]   $platform: BUILDING with Zig ($zigTarget)...")
-                cachedDir.mkdirs()
-
-                val duration = measureTime {
-                    // Build grammar library
-                    execOps.exec {
-                        executable(zigPath)
-                        args(NativeLibraryCommands.grammar(zigTarget, includeDir, parserC, scannerC, cachedGrammarLib))
+                NativeLibraryCache.getOrBuild(cachedDir, ext) { grammar, runtime ->
+                    logger.info("[zig]   $platform: BUILDING with Zig ($zigTarget)...")
+                    val duration = measureTime {
+                        execOps.exec {
+                            executable(zigPath)
+                            args(NativeLibraryCommands.grammar(zigTarget, includeDir, parserC, scannerC, grammar))
+                        }
+                        execOps.exec {
+                            executable(zigPath)
+                            args(NativeLibraryCommands.runtime(zigTarget, treeSitterLibSrc, runtime))
+                        }
                     }
-
-                    // Build runtime library
-                    execOps.exec {
-                        executable(zigPath)
-                        args(NativeLibraryCommands.runtime(zigTarget, treeSitterLibSrc, cachedRuntimeLib))
-                    }
+                    logger.info("[zig]   $platform: compiled in $duration")
+                    builtCount++
                 }
-                logger.info("[zig]   $platform: compiled in $duration")
-                builtCount++
 
                 // Copy to output
                 cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
@@ -1211,7 +1183,7 @@ abstract class BuildAllNativeLibrariesOnDemandTask @Inject constructor(
         logger.info(
             """
             |[zig] ==========================================================
-            |[zig] Result: $builtCount built, $cachedCount from cache, total: $totalDuration
+            |[zig] Result: $builtCount built, ${platformMap.size - builtCount} from cache, total: $totalDuration
             |[zig] ==========================================================
             """.trimMargin()
         )
