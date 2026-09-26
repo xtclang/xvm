@@ -72,6 +72,21 @@ public class ImportStatement
     }
 
     /**
+     * @return the written alias token, or null for a wildcard import
+     */
+    public Token getAliasToken() {
+        return alias;
+    }
+
+    /**
+     * @return the resolved import identity without initiating or resuming name resolution
+     */
+    public IdentityConstant getImportedIdentity() {
+        return m_resolver != null && m_resolver.getConstant() instanceof IdentityConstant identity
+                ? identity : null;
+    }
+
+    /**
      * @return true iff the import is of the ".*" form
      */
     public boolean isWildcard() {

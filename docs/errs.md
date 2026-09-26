@@ -1492,6 +1492,12 @@ persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
 
+L50 adds two passive `ImportStatement` accessors: `getAliasToken()` returns existing written syntax;
+`getImportedIdentity()` returns the existing resolver identity, or null before resolution. Neither
+performs resolution or creates state. Import syntax and identity belong on that node; lexical alias
+ownership, detached copying, property-family inspection and rename/import proofs stay in Kotlin.
+There is no added cloning/reset burden. See the [refactoring checkpoint](errs-integration-plan.md#broader-refactoring-checkpoint-l50).
+
 **Binding publication cleanup (2026-09-26):** invocation and cursor fact maps now explicitly
 preserve AST-key identity when copied for publication. Equal but distinct nodes remain distinct;
 the detached maps are unmodifiable and reject null keys/values. Identity-based map/value equality
