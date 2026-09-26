@@ -50,6 +50,10 @@ interface LspFileSupport {
     fun getSupport(file: PsiFile): LspFileSupport
 
     fun getSignatureHelpSupport(): SignatureSupport
+
+    fun getHighlightSupport(): HighlightSupport
+
+    fun getSelectionRangeSupport(): SelectionRangeSupport
 }
 
 @Remote("com.redhat.devtools.lsp4ij.features.signatureHelp.LSPSignatureHelpSupport", plugin = "com.redhat.devtools.lsp4ij")
@@ -104,4 +108,9 @@ interface ParameterRange {
 @Remote("com.intellij.ui.components.JBHtmlPane")
 interface ParameterHintText {
     fun getText(): String
+}
+
+@Remote("com.intellij.codeInsight.hint.HintManager")
+interface EditorHints {
+    fun hideAllHints()
 }
