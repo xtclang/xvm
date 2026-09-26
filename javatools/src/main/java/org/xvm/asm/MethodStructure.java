@@ -2197,22 +2197,19 @@ public class MethodStructure
         MethodConstant id   = getIdentityConstant();
         boolean        fSrc = m_source != null && m_source.isPresent();
 
-        return new StringBuilder()
-                .append("host=\"").append(id.getNamespace().getName())
-                .append("\", id=\"").append(id.getValueString())
-                .append(id.isLambda() ? "\", lambda=" + id.getLambdaIndex() : "")
-                .append("\", sig=").append(id.isNascent() ? "n/a" : id.getSignature())
-                .append(isNative()            ? ", native"      : "")
-                .append(hasCode()             ? ", hasCode"     : "")
-                .append(isConditionalReturn() ? ", conditional" : "")
-                .append(", type-param-count=").append(m_cTypeParams)
-                .append(", ").append(super.getDescription())
-                .append(", hasSource=").append(fSrc)
-                // guarded by fSrc: m_source may be null, and peekLineCount() is the display-safe
-                // counterpart of getLineCount(), which would intern the source to count it
-                .append(fSrc ? ", line-number=" + m_source.getLineNumber()
-                             + ", line-count=" + m_source.peekLineCount() : "")
-                .toString();
+        return "host=\"" + id.getNamespace().getName()
+             + "\", id=\"" + id.getValueString()
+             + (id.isLambda() ? "\", lambda=" + id.getLambdaIndex() : "")
+             + "\", sig=" + (id.isNascent() ? "n/a" : id.getSignature())
+             + (isNative()            ? ", native"      : "")
+             + (hasCode()             ? ", hasCode"     : "")
+             + (isConditionalReturn() ? ", conditional" : "")
+             + ", type-param-count=" + m_cTypeParams
+             + ", " + super.getDescription()
+             + ", hasSource=" + fSrc
+             // guarded by fSrc: m_source may be null
+             + (fSrc ? ", line-number=" + m_source.getLineNumber()
+                     + ", line-count=" + m_source.peekLineCount() : "");
     }
 
     @Override
