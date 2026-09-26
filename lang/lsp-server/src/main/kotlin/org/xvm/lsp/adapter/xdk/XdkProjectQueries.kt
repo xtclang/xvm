@@ -5,6 +5,7 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.MethodConstant
+import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -142,13 +143,41 @@ internal class XdkProjectQueries(
         val before = compile(texts) ?: return null
         val model = before.models.singleOrNull { it.sourceName == source } ?: return null
         val symbol = model.symbolAt(line, column) ?: return null
-        val target = before.constants[symbol.id] as? MethodConstant ?: return null
-        val family = methodFamily(before, target) ?: return null
-        val ids = before.constants.filterValues { it in family }.keys
+        val target = before.constants[symbol.id] ?: return null
+        if (symbol.declarationSource !in texts || symbol.declaration == null) return null
+        val targets = when {
+            symbol.kind == SemanticModel.SymbolKind.TYPE -> {
+                // Member-file names participate in module assembly; file-renaming is a separate operation.
+                val root = XdkSources.file(uris.getValue(symbol.declarationSource)) ?: return null
+                if (root.nameWithoutExtension == symbol.name && sources.keys.none { it.root == root }) return null
+                setOf(target)
+            }
+            symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY) &&
+                SemanticModel.Modifier.STATIC in symbol.modifiers && symbol.name != "construct" -> setOf(target)
+            target is MethodConstant -> methodFamily(before, target) ?: return null
+            else -> return null
+        }
+        val ids = before.constants.filterValues { it in targets }.keys
         val plan = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
         val after = compile(plan.proposed) ?: return null
         if (!XdkRename.preservesBindings(before, after, plan) || !isCurrent()) return null
         return WorkspaceEdit(plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) }, versioned = true)
+    }
+
+    /** Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. */
+    fun importActions(uri: String): List<CodeAction> {
+        val source = XdkSources.file(uri)?.path ?: return emptyList()
+        val text = texts[source] ?: return emptyList()
+        val before = compile(texts) ?: return emptyList()
+        val actions = XdkImports.candidates(text).mapNotNull { candidate ->
+            checkCurrent()
+            val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+            val after = compile(plan.proposed) ?: return@mapNotNull null
+            if (!XdkRename.preservesBindings(before, after, plan)) return@mapNotNull null
+            CodeAction(candidate.title, candidate.kind,
+                edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true))
+        }
+        return if (isCurrent()) actions else emptyList()
     }
 
     private fun methodFamily(

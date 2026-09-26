@@ -12,6 +12,7 @@ import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CallHierarchyIncomingCall
 import org.xvm.lsp.adapter.CallHierarchyItem
 import org.xvm.lsp.adapter.CallHierarchyOutgoingCall
+import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.FoldingRange
@@ -118,6 +119,7 @@ class XdkAdapter internal constructor(
             AdapterCapability.SEMANTIC_TOKENS,
             AdapterCapability.INLAY_HINT,
             AdapterCapability.RENAME,
+            AdapterCapability.CODE_ACTION,
         )
 
     private data class Discovery(val folders: List<File> = emptyList(), val explicit: Boolean = false)
@@ -260,7 +262,7 @@ class XdkAdapter internal constructor(
         val compilation: Request
     }
 
-    private enum class ProjectQueryKind { REFERENCES, RENAME, SYMBOLS, NAVIGATION }
+    private enum class ProjectQueryKind { REFERENCES, RENAME, SYMBOLS, NAVIGATION, IMPORTS }
 
     private data class ProjectQueryKey(
         val uri: String,
@@ -1062,7 +1064,7 @@ class XdkAdapter internal constructor(
         column: Int,
     ): PrepareRenameResult? {
         val model = module(uri)?.takeIf { it.succeeded }?.document(uri)?.semantics ?: return null
-        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectMethod(uri, it) } ?: return null
+        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectTarget(uri, it) } ?: return null
         val range =
             model.occurrences
                 .firstOrNull {
@@ -1071,16 +1073,21 @@ class XdkAdapter internal constructor(
         return PrepareRenameResult(range.toRange(), symbol.name)
     }
 
-    /** Full method-family eligibility is checked by the compiler-worker graph proof. */
-    private fun isProjectMethod(
-        uri: String,
-        symbol: SemanticModel.Symbol,
-    ): Boolean =
-        symbol.kind == SemanticModel.SymbolKind.METHOD && symbol.name != "construct" &&
-            SemanticModel.Modifier.STATIC !in symbol.modifiers &&
+    /** Eligibility is provisional; the worker proves binding/dispatch preservation before editing. */
+    private fun isProjectTarget(uri: String, symbol: SemanticModel.Symbol): Boolean =
+        symbol.name != "construct" &&
+            (symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.TYPE) ||
+                (symbol.kind == SemanticModel.SymbolKind.PROPERTY && SemanticModel.Modifier.STATIC in symbol.modifiers)) &&
             symbol.declarationSource?.let {
                 synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
             } == true
+
+    override fun getCodeActions(uri: String, range: Range, diagnostics: List<Diagnostic>): List<CodeAction> =
+        getCodeActionsAsync(uri, range, diagnostics).join()
+
+    override fun getCodeActionsAsync(uri: String, range: Range, diagnostics: List<Diagnostic>): CompletableFuture<List<CodeAction>> =
+        if (hasProject(uri)) projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS), emptyList()) { it.importActions(uri) }
+        else CompletableFuture.completedFuture(emptyList())
 
     override fun rename(
         uri: String,
@@ -1100,7 +1107,7 @@ class XdkAdapter internal constructor(
                     ?.document(uri)
                     ?.semantics
                     ?.symbolAt(line, column)
-                    ?.let { isProjectMethod(uri, it) } == true
+                    ?.let { isProjectTarget(uri, it) } == true
             }
         ) {
             return projectQuery<WorkspaceEdit?>(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null) {
