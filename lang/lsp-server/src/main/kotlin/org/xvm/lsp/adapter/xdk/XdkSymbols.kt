@@ -75,7 +75,7 @@ internal object XdkSymbols {
         source: Source?,
     ): List<SymbolInfo> =
         buildList {
-            node.children().forEach { child ->
+            node.childNodes().forEach { child ->
                 // Recovered syntax has no compilation parentage yet; an absent source inherits the
                 // enclosing syntax tree's source. An explicitly different source is a module member.
                 if (child.source != null && child.source !== source) return@forEach
