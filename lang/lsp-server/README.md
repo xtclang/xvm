@@ -207,7 +207,7 @@ recover around a cursor hole. Expression-bodied declarations/property initialize
 terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
 their real source-owned compiler context. Member/return and parameter type prefixes use the
 enclosing compiler scope, including flat qualified names, without registering incomplete declarations.
-Missing operands, declaration/parameter names, generic-method/type-composition headers, missing map
+Missing operands, declaration/parameter names, generic-method/module/package headers, missing map
 entries and unterminated literal contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
@@ -223,10 +223,17 @@ parameter names are invented. Written leaf names inside parameterized/compound t
 missing angle/group closers also work. These are visible-type suggestions; normal compilation
 checks generic constraints. Empty type arguments/operands, parameterized qualifiers, generic
 base-name prefixes, function/sequence types, formal-type candidates, trailing dots, generic-method, multi-return and
-type-composition headers remain follow-ups; see
-[shared X91–X94](../doc/manual-test-plan.md#xdkadapter-playbook) and the
+module/package headers remain follow-ups; see
+[shared X91–X95](../doc/manual-test-plan.md#xdkadapter-playbook) and the
 [C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
+Class/interface headers now retain their written name and body for structure when a bounded header
+fails. Explicit queries complete visible types in `extends`, `implements`, `delegates`, ordinary
+`incorporates` and `into`, including qualified/generic leaf names. Empty composition slots also
+work. The retained type has no compiler component or inheritance facts; its body never registers
+against the enclosing type. Suggestions prove visibility, while normal compilation checks legal
+inheritance and constraints. Shared X95 exercises both editor consumers; native IntelliJ execution
+is still pending. See [C23/L39](../../docs/errs-integration-plan.md#class-and-interface-composition-headers).
 
 Static call hierarchy groups selected source call sites by method/lambda, including closed module
 members. It does not expand virtual dispatch, function values, constructors or dependency sources.
