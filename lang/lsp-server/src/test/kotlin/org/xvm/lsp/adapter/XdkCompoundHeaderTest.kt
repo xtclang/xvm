@@ -31,6 +31,12 @@ class XdkCompoundHeaderTest {
             "void damaged(List<Str§?> value) {}",
             "void damaged(List<Str§[]> value) {}",
             "void damaged(immutable List<Str§> value) {}",
+            "void damaged(function Str§(Int) value) {}",
+            "void damaged(function void(Str§) value) {}",
+            "void damaged(function (Int, Str§)(Int) value) {}",
+            "void damaged(function void(List<Str§>) value) {}",
+            "void damaged(Function<<Str§>, <Int>> value) {}",
+            "void damaged(Function<<Int>, <Str§>> value) {}",
         ],
     )
     fun `written leaf type prefixes complete inside parameterized and compound headers`(declaration: String) {
@@ -74,6 +80,8 @@ class XdkCompoundHeaderTest {
             "List<Str§ property;",
             "List<Str§ damaged() = [\"x\"];",
             "void damaged(List<Str§ {}",
+            "void damaged(function void(Str§ value) {}",
+            "void damaged(Function<<Str§ value) {}",
         ],
     )
     fun `bounded missing type closers allow completion without hiding ordinary errors`(declaration: String) {
@@ -103,7 +111,6 @@ class XdkCompoundHeaderTest {
     @ValueSource(
         strings = [
             "void damaged((Int | §) value) {}",
-            "void damaged(function Str§() value) {}",
             "<T> void damaged(List<Str§> value) {}",
         ],
     )
