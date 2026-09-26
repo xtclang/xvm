@@ -8,7 +8,7 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
-**Qualified declaration types (2026-09-26, working tree after `7e9511eda`).**
+**Qualified declaration types (2026-09-26, `2478bf7fb`).**
 Header type queries now retain flat qualified syntax such as `ecstasy.text.Str`, resolve the
 qualifier through the compiler, and offer visible nested/inherited types and typedefs. Imported
 qualifiers and unsaved module overlays work; only the final token is replaced. Hidden ancestors,
