@@ -16,7 +16,6 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
-import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.options.Option;
 import org.gradle.api.tasks.options.OptionValues;
 import org.gradle.jvm.toolchain.JavaToolchainService;
@@ -25,7 +24,6 @@ import org.xtclang.plugin.XtcJavaToolsRuntime;
 import org.xtclang.plugin.XtcLauncherRuntime;
 import org.xtclang.plugin.XtcLauncherTaskExtension;
 import org.xtclang.plugin.XtcProjectDelegate;
-import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.launchers.ExecutionMode;
 import org.xtclang.plugin.launchers.ModulePathResolver;
 import org.xtclang.plugin.runtime.DirectRuntimeBuildService;
@@ -44,7 +42,6 @@ import static org.xtclang.plugin.XtcPluginConstants.PROPERTY_VERBOSE_LOGGING_OVE
 import static org.xtclang.plugin.XtcPluginConstants.XDK_CONFIG_NAME_JAVATOOLS_INCOMING;
 import static org.xtclang.plugin.XtcPluginConstants.XTC_MODULE_FILE_EXTENSION;
 import static org.xtclang.plugin.XtcPluginUtils.argumentArrayToList;
-import static org.xtclang.plugin.internal.GradlePhaseAssertions.validateConfigurationTimeCapture;
 
 /**
  * Abstract class that represents and XTC Launcher execution (i.e. Compiler, Runner, Disassembler etc.),
@@ -89,8 +86,6 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
     protected XtcLauncherTask(final ObjectFactory objects, final Project project, final E ext) {
         super(objects);
 
-        // Assert that we're in configuration phase during task construction
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcLauncherTask construction");
         this.ext = ext;
         this.overrideVerboseLogging = Boolean.parseBoolean(String.valueOf(project.findProperty(PROPERTY_VERBOSE_LOGGING_OVERRIDE)));
 
@@ -160,20 +155,9 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
             .registerIfAbsent(DIRECT_RUNTIME_SERVICE_NAME, DirectRuntimeBuildService.class, spec -> {
             });
 
-        // Validate configuration-time captures for configuration cache compatibility
-        validateConfigurationTimeCapture(this.xdkContentsDir, "XDK contents directory");
-        validateConfigurationTimeCapture(this.sourceSetNames, "source set names");
-        validateConfigurationTimeCapture(this.sourceSetOutputDirs, "source set output directories");
     }
 
-    /**
-     * Hook called at start of launcher task execution.
-     * Ensures phase assertions and javatools loading before task execution.
-     */
-    protected void executeTask() {
-        // Assert that we're in execution phase during task execution
-        GradlePhaseAssertions.assertExecutionPhase(this, "XtcLauncherTask execution");
-    }
+    protected abstract void executeTask();
 
     /**
      * Check if verbose logging is enabled for launcher tasks.
@@ -426,10 +410,4 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
         return modulePath;
     }
 
-    @Internal
-    protected List<SourceSet> getDependentSourceSets() {
-        // This method still returns SourceSet objects for compatibility, but they are reconstructed from names
-        // TODO: Eventually replace this with a method that returns source set names only
-        throw new UnsupportedOperationException("getDependentSourceSets() should not be called at execution time for configuration cache compatibility. Use sourceSetNames instead.");
-    }
 }
