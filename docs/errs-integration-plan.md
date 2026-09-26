@@ -12,7 +12,7 @@ the two Markdown files above.
 
 ## Qualified declaration type prefixes
 
-Implemented in the working tree on `lagergren/errs`, after pushed checkpoint `7e9511eda`.
+Implemented on `lagergren/errs` in `2478bf7fb`, after pushed checkpoint `7e9511eda`.
 
 - [x] Retain flat dotted type syntax in property/return and method-parameter headers.
 - [x] Resolve module/package/class qualifiers and imported aliases through compiler NameResolver.
@@ -45,8 +45,8 @@ method scope or AST-level semantic cache is introduced.
 | C21 | Parser qualified-prefix recognition, syntax factory/ownership, compiler qualifier and visible-child lookup, parser tests and embedding contract | C20 and its cursor/listener foundations |
 | L36 | Adapter/API visibility and overlay regressions, stdio/retention controls, shared X93, both native consumers and capability/playbook documentation | C21, L35; catalog L32 and native signature checks L33 |
 
-These add two groups, bringing the extraction map to **71**. Assign the implementation commit here
-when the next checkpoint is committed; the source currently remains uncommitted after `7e9511eda`.
+These add two groups, bringing the extraction map to **71**. Commit `2478bf7fb` contains both
+groups; separate compiler and host changes by the responsibilities above during extraction.
 Keep C21 and L36 independently buildable on their listed prerequisites when extracting future PRs.
 
 Validation on 2026-09-26:
@@ -2596,8 +2596,8 @@ above identify old candidate patches, not additional changes to merge into the i
 | L34 | Array-dimension adapter/protocol/editor proof, shared X90 | `0b800c392` host portion | C19, L32/L33 |
 | C20 | Syntax-only unfinished headers and enclosing type lookup | `68a291c0f` compiler portion | C12/C14, C17 |
 | L35 | Header completion/structure consumers and shared X91–X92 | `68a291c0f` host portion | C20, L32/L33 |
-| C21 | Qualified header syntax and compiler-visible nested type lookup | Working tree after `7e9511eda`; qualified-header section above | C20 |
-| L36 | Qualified-header API/adapter/editor proof, shared X93 | Working tree after `7e9511eda`; qualified-header section above | C21, L35 |
+| C21 | Qualified header syntax and compiler-visible nested type lookup | `2478bf7fb` compiler portion; qualified-header section above | C20 |
+| L36 | Qualified-header API/adapter/editor proof, shared X93 | `2478bf7fb` host portion; qualified-header section above | C21, L35 |
 | I8 | Target the released IntelliJ free feature set and update LSP4IJ | `4e46becb6` IDE/LSP4IJ catalog and compatibility documentation | Existing IntelliJ plugin; independent of Java embedding changes |
 | L27 | IntelliJ compiler configuration and automated playbook | `4e46becb6` client, integration test source set/task and playbook | I8, L16 and the existing compiler features exercised by each case |
 
