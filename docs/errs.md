@@ -8,6 +8,20 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Parameterized/compound declaration types (2026-09-26, `3571d265d` / `3c68c2dfe`).**
+Header queries now select written leaf types inside nested generics, unions/intersections/differences
+and grouped/nullable/array/immutable syntax. They reuse the existing owned cursor target and compiler
+lookup; there are no new AST fields, clone rules or semantic caches. Bounded missing type closers
+permit a query but remain normal diagnostics. Candidates are visible types, not generic-constraint
+proof. Shared X94 exercises nine edit/repair variants in both clients. See
+[C22/L37 and the separate IntelliJ parity work](errs-integration-plan.md#parameterized-and-compound-declaration-types)
+for scope, verification and extraction boundaries. Initial feature validation passes 478 compiler, 1,074 LSP,
+48 stdio and 99 VS Code cases; existing skips are listed separately in the plan. All 2,445 tracked
+compiler objects are released. The expanded IntelliJ driver compiles; its native checkpoint is
+recorded separately from implemented assertion counts. The later modernization/folding checkpoint
+passes 491 Java, 1,077 LSP, 49 packaged stdio and all 99 VS Code cases; the integration plan records
+the existing skips and incomplete native run explicitly.
+
 **Qualified declaration types (2026-09-26, `2478bf7fb`).**
 Header type queries now retain flat qualified syntax such as `ecstasy.text.Str`, resolve the
 qualifier through the compiler, and offer visible nested/inherited types and typedefs. Imported
@@ -175,7 +189,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X93 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X94 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1437,6 +1451,19 @@ persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
 
+**Binding publication cleanup (2026-09-26):** invocation and cursor fact maps now explicitly
+preserve AST-key identity when copied for publication. Equal but distinct nodes remain distinct;
+the detached maps are unmodifiable and reject null keys/values. Identity-based map/value equality
+is intentional here, because these facts describe particular compiler objects, not structural
+lookalikes. Three regression cases cover invocation, function and cursor publication boundaries.
+
+`CursorBinding.CallFacts` groups the immutable candidate, inspection and accepted-argument facts
+used together by the compiler and Kotlin copier. The existing nine record components, constructors,
+accessors and record-pattern shape remain intact. Updates preserve the distinction between an
+uninspected call and an inspected call with no accepted candidates. This is a result-value helper;
+it adds no AST field, context retention, cache or clone/reset obligation. Four tests cover grouped
+construction, independent updates, inspection state and defensive list copies.
+
 **Child traversal compatibility cleanup (2026-09-26):** `AstNode.childNodes()` adds a plain
 `Iterable<AstNode>` view that starts an independent traversal for each iterator. It belongs on
 the AST because the existing reflective child-field model defines child order and membership.
@@ -1464,6 +1491,7 @@ zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
 | `Parser` header recovery (C20) | Parser owns missing-header boundaries and distinguishes unqualified type prefixes from values. | Retains an actual name only when written; stops at body/semicolon/enclosing brace/EOF and checks cancellation while skipping the body. Qualified names are extended by C21 below; generic/type-composition headers remain follow-ups. |
 | `IncompleteStatement.forDeclarationType` (C21) | Preserve the complete written qualified type, and identify the final identifier for replacement. | Existing target child owns the original unvalidated NamedTypeExpression. Its final token is reused as cursor metadata; ordinary adoption/cloning handles independent ownership. No new fields or cached resolver. |
 | `Parser` qualified header selection and `CursorScope` lookup (C21) | Parser recognizes flat qualified syntax; the compiler helper resolves the qualifier and visible child identities using NameResolver/TypeInfo. | Stack-local resolvers and cancellation-aware PROBE listeners; no retained Context, NameResolver or host type rules. Existing CursorBinding.NamedType supplies the result. Parameterized/compound/type-composition headers remain separate. |
+| `Parser` nested/compound header selection (C22) | Recognize the written leaf inside type grammar and bounded missing angle/group closers. | Moves only the original leaf into the existing cursor target; no AST node changes, stored mode, resolver cache, component or clone rule. The discarded outer type is not claimed valid; normal compilation checks constraints and missing syntax. |
 | `PartialConstructionResolver` array filter (C19) | Select the fixed-size constructor by its compiler declaration identity, then reuse normal argument fitting. Specialized TypeInfo method IDs alone do not equal the declaration ID. | Stack-local lookup through existing `ArrayTypeExpression.getSupplyConstructor()` and MethodInfo. No ArrayTypeExpression/NewExpression change or host-side type-rule copy. |
 | `NewExpression.prepareConstruction` and its nested `Construction` record | Share normal receiver/type preparation, annotation checks, inner/formal rules and array setup with explicit cursor probes; avoid duplicating language rules in Kotlin. | Package-local helper and stack-owned record. Normal validation uses the same prefix. Ordinary probes mutate trial syntax; anonymous probes prepare the retained source-owned declaration in the partial-analysis attempt. No new AST field. |
 | `PartialConstructionResolver` | Constructor fitting and class inference need the live compiler Context and existing argument fitter. | Separate compiler helper, discarded child contexts and cloned arguments. Anonymous class components stay under their source-owned `anon` child; superclass candidates need no generated forwarding constructor. Immutable existing `CursorBinding.Candidate` results; no node caches or callbacks retained. |
