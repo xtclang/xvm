@@ -602,3 +602,17 @@ from cursor results, so accepting a type does not hide a still-missing parameter
 No new listener field, ambient state or compiler Context is stored on the new syntax node. See the
 [header audit](errs-audit.md#unfinished-declaration-header-audit-2026-09-25) and
 [verification/extraction map](errs-integration-plan.md#unfinished-declaration-headers).
+
+## Qualified header type probes and listeners
+
+C21/L36 resolves the written qualifier and builds contextual TypeInfo using a stack-local collecting
+listener whose sink is explicitly silent `PROBE`. The collector still tracks serious errors, so a
+failed TypeInfo lookup cannot expose candidates merely because its reports were silenced. The
+cancellable wrapper follows the host's abort request. Candidate enumeration also checks cancellation;
+individual failed candidate resolutions return no identity rather than adding published diagnostics.
+
+Neither the listener nor a NameResolver is stored on the retained type syntax. Ordinary compilation
+continues to own the source diagnostics, and accepting a type does not suppress a missing parameter
+name or delimiter. Parser/embedding tests retain the one-report, first-error and cancellation
+controls, and queries leave the adapter's cached normal result unchanged. See
+[C21/L36](errs-integration-plan.md#qualified-declaration-type-prefixes) for the verification record.

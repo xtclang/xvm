@@ -512,10 +512,16 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["void damaged(Str| value) {}", "Str| property;"])
+    @ValueSource(
+        strings = [
+            "void damaged(Str| value) {}", "Str| property;",
+            "void damaged(ecstasy.text.Str| value) {}", "ecstasy.text.Str| property;",
+        ],
+    )
     fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
         val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('|')
         val suffix = declaration.substringAfter('|') + "\r\n Int later=1; }"
+        val selected = if (declaration.contains("ecstasy.text.")) "StringBuffer" else "String"
         val column = prefix.substringAfterLast('\n').length
         Session(packagedJar(), directory).use { session ->
             session.initialize()
@@ -525,9 +531,9 @@ class XdkStdioTest {
             val document = TextDocumentIdentifier(URI)
             val cursor = Position(1, column)
             val items = session.await(service.completion(CompletionParams(document, cursor))).left
-            val edit = items.single { it.label == "String" }.textEdit.left
+            val edit = items.single { it.label == selected }.textEdit.left
             assertThat(edit.range).isEqualTo(Range(Position(1, column - 3), cursor))
-            assertThat(edit.newText).isEqualTo("String")
+            assertThat(edit.newText).isEqualTo(selected)
             assertThat(session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))?.signatures.orEmpty()).isEmpty()
             session.change(prefix.dropLast(3) + edit.newText + suffix, 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()

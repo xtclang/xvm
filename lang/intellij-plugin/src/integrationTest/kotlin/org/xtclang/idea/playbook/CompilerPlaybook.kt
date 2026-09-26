@@ -460,6 +460,28 @@ class CompilerPlaybook(
             }
             restore(data.text("file"))
         }
+        scenario("X93") { data ->
+            val editor = open(data.text("file"))
+            data.rows("variants").forEach { variant ->
+                val marked = SharedScenarios.text(data.text("source"), variant["declaration"].asString)
+                val at = marked.indexOf('|')
+                editor.text = marked.replace("|", "")
+                editor.awaitError()
+                signature(editor, at) { it.isEmpty() }
+                lookup(editor, at) { items ->
+                    val names = items.map { it.getLookupString() }
+                    names.containsAll(variant["include"].asJsonArray.map { it.asString }) && data.strings("exclude").none { it in names }
+                }
+                invokeAction("EditorEscape", component = editor.component)
+                accept(editor, at, variant["selected"].asString)
+                check(
+                    editor.text == marked.take(at - data.values["prefixLength"].asInt) +
+                        variant["selected"].asString + marked.substring(at + 1),
+                )
+                editor.awaitDiagnostics(emptyList())
+            }
+            restore(data.text("file"))
+        }
     }
 
     private fun Driver.problems(editor: JEditorUiComponent) {
