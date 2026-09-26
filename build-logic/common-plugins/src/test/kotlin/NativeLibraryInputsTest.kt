@@ -27,10 +27,11 @@ class NativeLibraryInputsTest {
         }
     }
 
+    // Synthetic versions exercise cache identity independently of the catalog's current pins.
     private fun inputs(
         directory: File = root,
-        cli: String = "0.26.9",
-        zig: String = "0.15.2",
+        cli: String = "cli-version-a",
+        zig: String = "zig-version-a",
         flags: List<String> = NativeLibraryCommands.compilerFlags,
     ) = NativeLibraryInputs(
         cli, zig, File(directory, "zig/zig"), File(directory, "zig/lib"),
@@ -59,8 +60,8 @@ class NativeLibraryInputsTest {
     fun toolVersionsTargetsExtensionsAndFlagsInvalidateCache() {
         fixture(root)
         val before = key()
-        assertNotEquals(before, key(inputs(cli = "0.26.8")))
-        assertNotEquals(before, key(inputs(zig = "0.15.1")))
+        assertNotEquals(before, key(inputs(cli = "cli-version-b")))
+        assertNotEquals(before, key(inputs(zig = "zig-version-b")))
         assertNotEquals(before, key(inputs(flags = NativeLibraryCommands.compilerFlags + "-O2")))
         assertNotEquals(before, inputs().fingerprint("other-platform", "x86_64-linux-gnu", "so"))
         assertNotEquals(before, inputs().fingerprint("linux-x64", "x86_64-linux-musl", "so"))
