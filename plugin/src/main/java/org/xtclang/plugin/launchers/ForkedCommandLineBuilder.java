@@ -8,6 +8,7 @@ import java.util.List;
 import static java.nio.file.Files.isDirectory;
 import static org.xtclang.plugin.internal.DefaultXtcRunModule.DEFAULT_METHOD_NAME;
 
+import org.xtclang.plugin.XtcRunModule;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
 import org.xtclang.plugin.tasks.XtcTestTask;
@@ -53,12 +54,20 @@ public final class ForkedCommandLineBuilder {
     }
 
     public String[] buildRunnerArgs(final XtcRunTask task, final String moduleName, final List<String> moduleArgs) {
+        return buildRunnerArgs(task, moduleName, task.getMethodName().getOrElse(DEFAULT_METHOD_NAME), moduleArgs);
+    }
+
+    public String[] buildRunnerArgs(final XtcRunTask task, final XtcRunModule module) {
+        return buildRunnerArgs(task, module.getModuleName().get(),
+            module.getMethodName().getOrElse(DEFAULT_METHOD_NAME), module.getModuleArgs().get());
+    }
+
+    private String[] buildRunnerArgs(final XtcRunTask task, final String moduleName, final String methodName, final List<String> moduleArgs) {
         final List<String> args = new ArrayList<>();
         addBooleanFlag(args, task.getShowVersion().get(), "--version");
         addBooleanFlag(args, task.getVerbose().get(), "-v");
         addBooleanFlag(args, task.getJit().get(), "-J");
 
-        final var methodName = task.getMethodName().getOrElse(DEFAULT_METHOD_NAME);
         if (!DEFAULT_METHOD_NAME.equals(methodName)) {
             args.addAll(List.of("-M", methodName));
         }
