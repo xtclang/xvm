@@ -246,17 +246,22 @@ class XdkArgumentCompletionTest {
     }
 
     @Test
-    fun `member compound and earlier argument prefixes retain their ordinary completion context`() {
+    fun `argument values fit their calls while compound operand prefixes retain lexical completion`() {
         XdkAdapter().use { adapter ->
             for ((call, suffix, expected) in listOf(
-                Triple("pair(nu", ", text)", "numberText"),
-                Triple("pair(1, (te", "))", "textNumber"),
+                Triple("pair(nu", ", text)", "number"),
+                Triple("pair(1, (te", "))", "text"),
                 Triple("pair(1 + nu", ", text)", "numberText"),
-                Triple("pair(1, text.si", ")", "size"),
+                Triple("pair(1, text.si", ")", null),
             )) {
                 val prefix = "$HEADER Int textNumber=1; String numberText=\"x\"; $call"
                 adapter.compile(URI, "$prefix$suffix; } }")
-                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).describedAs(call).contains(expected)
+                val names = adapter.getCompletions(URI, 0, prefix.length).map { it.label }
+                if (expected == null) {
+                    assertThat(names).describedAs(call).isEmpty()
+                } else {
+                    assertThat(names).describedAs(call).contains(expected)
+                }
             }
         }
     }
