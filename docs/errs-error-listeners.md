@@ -616,3 +616,13 @@ continues to own the source diagnostics, and accepting a type does not suppress 
 name or delimiter. Parser/embedding tests retain the one-report, first-error and cancellation
 controls, and queries leave the adapter's cached normal result unchanged. See
 [C21/L36](errs-integration-plan.md#qualified-declaration-type-prefixes) for the verification record.
+
+## Parameterized and compound header probes
+
+C22/L37 extends parser syntax selection without changing listener ownership or the compiler lookup
+path. A missing type closer in an explicit query produces no extra diagnostic of its own; the
+selected leaf produces the single `INCOMPLETE_EXPRESSION` report and prevents emission. Normal
+compilation remains strict and still publishes missing-closer and generic-constraint errors.
+First-error/cancellation listeners stop before a cursor binding is returned. Ordinary cached
+results are unchanged by the probe. The nested generic workload also exercises cancellation and
+release of attempt-owned compiler objects. See the [C22/L37 verification record](errs-integration-plan.md#parameterized-and-compound-declaration-types).
