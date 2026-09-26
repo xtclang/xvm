@@ -42,13 +42,7 @@ fun Driver.referencesAndHighlights(
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
             if (view == null || view == previous || view.isSearchInProgress()) return@withContext false
-            val ranges =
-                view
-                    .getUsages()
-                    .flatMap { it.getMergedInfos().toList() }
-                    .filter { it.getVirtualFile()?.getPath() == path }
-                    .mapNotNull { it.getNavigationRange() }
-                    .map { it.getStartOffset() until it.getEndOffset() }
+            val ranges = view.rangesIn(path)
             ranges.any { at in it } && ranges.none { excluded in it }
         }
     }
@@ -62,6 +56,14 @@ fun Driver.referencesAndHighlights(
     }
     invokeAction("EditorEscape", component = editor.component)
 }
+
+/** Read inside an IDE read action, after the native usage search has completed. */
+fun NativeUsageView.rangesIn(path: String): List<IntRange> =
+    getUsages()
+        .flatMap { it.getMergedInfos().toList() }
+        .filter { it.getVirtualFile()?.getPath() == path }
+        .mapNotNull { it.getNavigationRange() }
+        .map { it.getStartOffset() until it.getEndOffset() }
 
 @Remote("com.intellij.usages.UsageViewManager")
 interface NativeUsageViews {

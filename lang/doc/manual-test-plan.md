@@ -1,18 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
-C27/L51 validation: X33/X35/X94/X98/X101/X106 pass in `run-9deeaR` (six passed,
-105 not selected). All 23 parser, 1,186 executed LSP and 51 stdio tests pass; the full LSP report
-has three existing skips. The new IntelliJ consumers compile but await native execution.
-
-L50 validation: X102–X105 all pass in `run-92TmWV` (four passed, 106 not selected),
-including a physical member-file move and applying bundled/source auto-imports. X103 uses the
-registered Rename provider because the generic execute-command round trip changes operation order.
-Native IntelliJ execution for these cases remains pending.
-
-L47–L49 validation: focused VS Code X5/X35/X99–X101 all pass in `run-psziUN` (five passed,
-101 not selected). The backend, protocol and Gradle checks are recorded in the
-[integration checkpoint](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
-No native IntelliJ run is claimed for these additions.
+C28/L53/L54 adds empty/qualified type slots, generic/multiple-return headers and native IntelliJ
+workspace/refactoring assertions. The [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54)
+distinguishes full backend results, selected VS Code checks and selected native IntelliJ receipts.
+Earlier VS Code checkpoints remain valid historical evidence: C27/L51 `run-9deeaR`, L50
+`run-92TmWV`, and L47–L49 `run-psziUN`. They are not IntelliJ execution receipts.
 
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
@@ -1116,7 +1108,7 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It implements startup and 54 shared scenarios: 50 fully and four partially. Native
+disabled. It implements startup and 63 shared scenarios: 60 fully and three partially. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1124,20 +1116,20 @@ cases verify received compiler metadata, Problems rows, Next Problem navigation 
 X45/X46 check unopened dependencies, unchanged consumer text versions and unsaved library bytes.
 X91–X96 cover simple, qualified, parameterized/compound and class/interface composition headers,
 registered formals, empty generic arguments and whole-token replacement.
+X106–X108 cover function/sequence leaves, trailing dots, empty type operands and declaration
+headers. Discovery/refactoring cases use the same per-scenario workspace scope as VS Code.
+X103 additionally reverses its file rename with the member open and verifies diagnostics clear.
 
 The three partials remain explicit: X20 verifies selected-overload navigation and suppressed
 parameter metadata, but LSP4IJ 0.21.0 renders `<no parameters>` in the popup; X81/X82 check native
 candidates and accepted edits but do not inspect completion Property-kind metadata. The report
-lists all 57 unimplemented cases and their exact missing native checks. These are harness gaps,
+lists all 50 unimplemented cases and their exact missing native checks. These are harness gaps,
 not claims that IntelliJ lacks the corresponding LSP feature. Problems-row clicking and visual
-layout remain manual. Runtime validation remains incomplete. The latest report,
-`run-469432121529144568/results.json`, records **19 passed (including startup), one failed,
-27 not-run and 53 not-implemented**, with no IDE internal failures. Both X92 variants pass native
-Structure and exact folding checks after `2e98860e1`; X18 then fails explicitly on lost IDE focus
-during a popup check. Earlier `run-2648196190918026067/results.json` records **28 passed, one
-partial, one failed, 17 not-run and 53 not-implemented**, including strengthened constructor
-assertions through X90; its X92 fold failure exposed the now-fixed production defect. These runs
-are separate evidence, not a complete pass. X93/X94/X95/X96 still await native execution.
+layout remain manual. X33–X35 and X99–X108 have passing native receipts across the checkpoint and
+focused X105 rerun. Execution details and the fixes found during validation are in the
+[active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+They do not establish a complete native pass. Earlier runs verified both X92 Structure/folding
+variants after `2e98860e1` and constructor assertions through X90; X93–X98 remain unverified natively.
 
 Results are under `lang/intellij-plugin/build/reports/compiler-playbook/run-*/results.json`.
 `ide-paths.txt` identifies the separate IDE profile/log directory. A graphical desktop is
@@ -1148,8 +1140,9 @@ invokes active-editor commands and closes buffers; concurrent manual navigation 
 targets or cancel requests even without typing. Keep the isolated IDE focused during completion
 and Parameter Info checks: switching to another application or editor instance can dismiss those
 native popups. This is a constraint of scripted UI testing, not a restriction on ordinary editing.
-The harness now uses conditional programmatic focus for popup checks instead of Driver's title-bar
-mouse click, and fails clearly on focus loss without a repeated foreground loop. Ordinary file
+The harness uses conditional programmatic focus for active-editor actions and popup checks instead
+of Driver's title-bar mouse click. Owned navigation popups count as IDE focus; switching applications
+fails clearly without a repeated foreground loop. Ordinary file
 opening and caret movement request no focus. Other native controls may still use the mouse.
 The disposable profile disables autosave and automatic completion/sole-candidate insertion;
 personal settings and shipped plugin defaults are unchanged. Cleanup closes the IDE after a
@@ -1178,27 +1171,27 @@ Unknown, duplicate or empty IDs fail before VS Code opens. Reports state `focuse
 IDs and mark every excluded case `not-selected`; every selected case must pass. Existing host XML
 is supporting evidence with timestamps, not a claim that focused runs executed it. Use full runs
 for broad changes and checkpoints, and focused runs for bounded fixes after a full regression pass.
-This selector currently applies to VS Code; IntelliJ native checks remain occasional checkpoints.
+IntelliJ has the equivalent `-PintellijPlaybookCases=X34,X99,X100,X101,X102,X103,X104,X105,X107,X108`.
+It always runs startup, reports unselected implementations as `not-run`, and requires every selected
+case to execute. Native runs remain occasional checkpoints.
 
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 111 scenarios: X1–X106, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 113 scenarios: X1–X108, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 111 cases. IntelliJ implements 50 fully and four partially, plus a separate startup check;
+all 113 cases. IntelliJ implements 60 fully and three partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
-case was prevented from running, such as after an earlier failure. Partial coverage never appears
+case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
 as a full pass. A failed implemented check fails the Gradle task.
-These counts describe implemented assertions. Native evidence is recorded above: strict X92 now
-passes both variants, but the latest run stopped at X18 on focus loss with 27 implemented cases
-not-run. X93/X94/X95/X96 remain unverified natively. Both recorded IntelliJ reports predate X95 and use catalog SHA-256
-`a58f0e0c42402e5233741c996a79cd48a22337817c665cd2b45b0c103c1a87b2`.
+These counts describe implemented assertions. Selected native execution receipts are recorded
+separately above; unselected cases remain `not-run`, and X93–X98 still await native verification.
 
 Both reports include the shared file, SHA-256 and complete ID list. Both drivers compare catalog
 IDs with the manual table; VS Code also checks exact registration order, and IntelliJ checks that
@@ -1886,12 +1879,14 @@ module Advanced {
 | X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
 | X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value()=1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run()=lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
 | X100 | Create a healthy module with `class Base {}` and `class Child extends Base {}`, plus an independent module. Break the neighbor with `Missing broken;`, then request Base's subtypes. | Child remains navigable. Exact references return no complete answer while the graph is broken. Repairing the neighbor restores full graph queries. |
-| X101 | Open `module LibrarySource { package xml import xml.xtclang.org; void accept(xml.Document document, String text) {} }`. Go to Definition on `Document` and `String`, and Type Definition on `text`. | Matching XDK source opens at the declaration token, read-only. Library symbols cannot be renamed; formatting the source view returns no edits. Missing/ambiguous source metadata gives no guessed target. |
+| X101 | Open `module LibrarySource { package xml import xml.xtclang.org; void accept(xml.Document document, String text) {} }`. Go to Definition on `Document` and `String`, and Type Definition on `text`. | Matching XDK source opens at the declaration token, read-only. Library symbols cannot be renamed; the VS Code formatting provider returns no edits. IntelliJ Reformat opens **Clear Read-Only Status**: cancel it, then verify the buffer/disk bytes and read-only status are unchanged. The native Rename action displays the server’s rejection. Missing/ambiguous source metadata gives no guessed target. |
 | X102 | In a source graph, declare Base's `Int value` getter and Child's `@Override Int value` getter; use both properties. Rename `value` to `amount`. | Both declarations and uses change. `get`, `set` and setter parameters keep their names. Binary contracts and annotation/delegation families remain unavailable. |
 | X103 | Create `MoveType.x` using `Item` and `MoveType/Item.x` declaring it. Rename `Item` to `Renamed`. | Source edits and `Item.x` → `Renamed.x` are applied together. The resulting module compiles. Existing destination files, module roots and companion directories block the move. |
 | X104 | Import `ecstasy.text.StringBuffer as Buffer`; use `Buffer` in a type and construction. Rename the alias to `Builder`. | Three alias tokens change; `StringBuffer` and nested aliases remain unchanged. |
 | X105 | Use unresolved `Document` in a type header; apply the import quick fix for `xml.xtclang.org`. Then try unresolved `Widget` declared in a separate discovered source module. | Only imports whose complete graph compiles are offered; applying clears diagnostics. Source imports also add the discovered dependency edge. Explicit graphs do not silently gain dependencies. |
 | X106 | In Editing.x, complete `Str` inside `function Str(Int)`, `function void(Str)`, `function (Int, Str)(Int)` and `Function<<Str>, <Int>>` parameter types. Repeat with a missing function/sequence closer. | Only the written leaf token is replaced. Complete forms compile; missing delimiters remain diagnostics until repaired. No callable signature is invented for a declaration header. The same eight variants are implemented in both drivers. |
+| X107 | Complete a trailing `ecstasy.text.` type, edit `te` inside `ecstasy.text.StringBuffer`, and fill empty union/intersection/difference operands. | Insert only into an empty slot or replace only the selected qualifier token; preserve the remaining suffix and compile the accepted source. |
+| X108 | Complete `Str` in multiple-return lists, generic method parameters/returns/constraints, class constraints, and package compositions. | Use enclosing type scope, keep header formals unregistered, and preserve exact replacement ranges. Completing the shared examples restores compilation. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -1934,11 +1929,14 @@ Candidates are visible types; the full generic constraints are checked by normal
 X96 adds registered formals, empty generic slots, parameterized qualifiers and whole-final-token edits.
 The focused X94–X96 run `run-MdzjLq` passes all three cases; 98 other cases are not selected.
 X98 adds generic base-name completion while preserving written type arguments.
-X106 adds function-parameter/return and sequence leaf types. Trailing dots, empty operands, qualifier-middle edits, unregistered header formals, generic-method and module/package headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
+X106 adds function-parameter/return and sequence leaf types. X107/X108 add trailing dots, empty type
+operands, qualifier-middle edits, and generic/multiple-return headers. Unregistered header formals
+shadow outer names without fabricated type identities; module/package compositions have bounded
+compiler recovery. X90 adds empty/final-prefix single-dimensional
 size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
 prefix query does not validate a following supplier. Types without an element default still require
 a supplier when compiled normally. Multidimensional construction, unfinished declaration names
-and missing operands remain unsupported; no literal value or declaration token is invented.
+and missing value operands remain unsupported; no literal value or declaration token is invented.
 
 ## VS Code Extension Playbook
 

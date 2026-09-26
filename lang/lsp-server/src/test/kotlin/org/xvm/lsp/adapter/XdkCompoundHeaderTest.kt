@@ -110,8 +110,7 @@ class XdkCompoundHeaderTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "void damaged((Int | §) value) {}",
-            "<T> void damaged(List<Str§> value) {}",
+            "void damaged(List<Missing>.§ value) {}",
         ],
     )
     fun `unsupported shapes do not invent a generic owner operand or formal scope`(declaration: String) {
