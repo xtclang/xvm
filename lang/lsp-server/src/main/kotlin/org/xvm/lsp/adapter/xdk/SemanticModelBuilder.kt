@@ -543,13 +543,14 @@ private class SemanticModelBuilder(
                 val scopeTypes =
                     cursor?.types().orEmpty().mapNotNull { named ->
                         val id = symbol(named.identity(), named.name(), kind(named.identity())) ?: return@mapNotNull null
-                        PartialSemanticModel.Member(id, named.name(), symbols[id]!!.kind, type(named.identity().type), null)
+                        PartialSemanticModel.Member(id, named.name(), symbols[id]!!.kind, type(named.type()), null)
                     }
                 val members =
                     if (site.isTypeCompletion) {
                         scopeTypes
                     } else if (site.isNameCompletion) {
-                        locals + scopeMembers.filter { member -> scopeTypes.none { it.name == member.name } } + scopeTypes
+                        locals.filter { local -> scopeTypes.none { it.symbol == local.symbol } } +
+                            scopeMembers.filter { member -> scopeTypes.none { it.name == member.name } } + scopeTypes
                     } else if (site.isCall && receiver == null) {
                         scopeMembers.filter { it.kind == SymbolKind.METHOD && it.name == callee }
                     } else if (receiverType != null && owner != null && !errors.isAbortDesired) {
@@ -600,7 +601,7 @@ private class SemanticModelBuilder(
                     memberPrefix =
                         (site.argumentPrefix.orElse(null) ?: site.memberName.orElse(null))?.let { name ->
                             PartialSemanticModel.MemberPrefix(
-                                name.valueText,
+                                site.completionPrefix,
                                 location(site.source, name.startPosition, name.endPosition).range,
                             )
                         } ?: PartialSemanticModel.MemberPrefix("", location(site.source, site.endPosition, site.endPosition).range),
