@@ -486,7 +486,8 @@ val validateTreeSitterGrammar = tasks.register<Exec>("validateTreeSitterGrammar"
 
     // Declare outputs - tree-sitter generate produces these files
     outputs.file(generatedDir.map { it.file("src/parser.c") })
-    outputs.file(generatedDir.map { it.file("src/tree_sitter/parser.h") })
+    outputs.dir(generatedDir.map { it.dir("src/tree_sitter") })
+    outputs.file(generatedDir.map { it.file("src/grammar.json") })
     outputs.file(generatedDir.map { it.file("src/node-types.json") })
 
     workingDir(generatedDir)
