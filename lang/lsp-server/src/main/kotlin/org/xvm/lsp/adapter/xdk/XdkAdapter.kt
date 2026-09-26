@@ -260,7 +260,7 @@ class XdkAdapter internal constructor(
         val compilation: Request
     }
 
-    private enum class ProjectQueryKind { REFERENCES, RENAME, SYMBOLS }
+    private enum class ProjectQueryKind { REFERENCES, RENAME, SYMBOLS, NAVIGATION }
 
     private data class ProjectQueryKey(
         val uri: String,
@@ -1009,6 +1009,7 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
     ): Location? {
+        if (module(uri) == null && hasProject(uri)) return workspaceNavigation(uri)?.definition(uri, line, column)
         val module = module(uri) ?: return null
         val declaration = module.document(uri)?.semantics?.definitionLocationAt(line, column) ?: return null
         return module.sourceUri(declaration.sourceName)?.let { locationOf(it, declaration.range.toRange()) }
@@ -1202,11 +1203,18 @@ class XdkAdapter internal constructor(
         )
     }
 
+    private fun hasProject(uri: String): Boolean = synchronized(lifecycle) { project.scope(uri) != null }
+
+    private fun workspaceNavigation(uri: String): XdkWorkspaceNavigation? =
+        projectQuery<XdkWorkspaceNavigation?>(ProjectQueryKey(uri, ProjectQueryKind.NAVIGATION), null) { it.navigation() }.join()
+
     override fun prepareTypeHierarchy(
         uri: String,
         line: Int,
         column: Int,
-    ): List<TypeHierarchyItem> = module(uri)?.hierarchy?.prepare(uri, line, column).orEmpty()
+    ): List<TypeHierarchyItem> =
+        if (hasProject(uri)) workspaceNavigation(uri)?.prepareTypes(uri, line, column).orEmpty()
+        else module(uri)?.hierarchy?.prepare(uri, line, column).orEmpty()
 
     override fun findTypeDefinition(
         uri: String,
@@ -1219,6 +1227,7 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
     ): List<Location> {
+        if (module(uri) == null && hasProject(uri)) return workspaceNavigation(uri)?.typeDefinitions(uri, line, column).orEmpty()
         val module = module(uri) ?: return emptyList()
         return module.locations(
             module
@@ -1234,6 +1243,7 @@ class XdkAdapter internal constructor(
         line: Int,
         column: Int,
     ): List<Location> {
+        if (hasProject(uri)) return workspaceNavigation(uri)?.implementations(uri, line, column).orEmpty()
         val module = module(uri) ?: return emptyList()
         return module.locations(
             module
@@ -1250,21 +1260,29 @@ class XdkAdapter internal constructor(
             .distinct()
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
 
-    override fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> = module(item.uri)?.hierarchy?.supertypes(item).orEmpty()
+    override fun getSupertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> =
+        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.parents(item).orEmpty()
+        else module(item.uri)?.hierarchy?.supertypes(item).orEmpty()
 
-    override fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> = module(item.uri)?.hierarchy?.subtypes(item).orEmpty()
+    override fun getSubtypes(item: TypeHierarchyItem): List<TypeHierarchyItem> =
+        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.children(item).orEmpty()
+        else module(item.uri)?.hierarchy?.subtypes(item).orEmpty()
 
     override fun prepareCallHierarchy(
         uri: String,
         line: Int,
         column: Int,
-    ): List<CallHierarchyItem> = module(uri)?.calls?.prepare(uri, line, column).orEmpty()
+    ): List<CallHierarchyItem> =
+        if (hasProject(uri)) workspaceNavigation(uri)?.prepareCalls(uri, line, column).orEmpty()
+        else module(uri)?.calls?.prepare(uri, line, column).orEmpty()
 
     override fun getIncomingCalls(item: CallHierarchyItem): List<CallHierarchyIncomingCall> =
-        module(item.uri)?.calls?.incoming(item).orEmpty()
+        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.incoming(item).orEmpty()
+        else module(item.uri)?.calls?.incoming(item).orEmpty()
 
     override fun getOutgoingCalls(item: CallHierarchyItem): List<CallHierarchyOutgoingCall> =
-        module(item.uri)?.calls?.outgoing(item).orEmpty()
+        if (hasProject(item.uri)) workspaceNavigation(item.uri)?.outgoing(item).orEmpty()
+        else module(item.uri)?.calls?.outgoing(item).orEmpty()
 
     private fun SemanticModel.Range.toRange(): Range = Range(Position(start.line, start.column), Position(end.line, end.column))
 

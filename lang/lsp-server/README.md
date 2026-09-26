@@ -135,6 +135,9 @@ folders unless an explicit source graph is configured. `sourceModules: []` disab
 `sourceModules: null` restores it. Discovery refreshes on startup and watched-file changes; unsaved
 import-graph edits and dynamic workspace-folder changes are not yet discovered. Workspace symbol
 search compiles unopened modules on demand and retains healthy independent modules when others fail.
+Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
+compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary
+revisions; these queries currently require a fully compiling graph and recompile it on demand.
 This batch is implemented with tests pending the combined verification pass.
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
