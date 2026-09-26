@@ -47,10 +47,8 @@ public class Lexer
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
-        requireNonNull(errs, "errs");
-
-        m_source        = source;
-        f_errs = errs;
+        m_source = source;
+        f_errs   = requireNonNull(errs, "errs");
 
         eatWhitespace();
     }
