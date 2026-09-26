@@ -6210,7 +6210,7 @@ public class Parser {
 
             // an attempt that has gone wrong has answered; abandoning it here is what stops the
             // parser from trying to recover inside a guess
-            if (err.getSeverity().compareTo(Severity.ERROR) >= 0) {
+            if (err.getSeverity().isAtLeast(Severity.ERROR)) {
                 m_fKeep = false;
                 throw new CompilerException("err=" + err);
             }
