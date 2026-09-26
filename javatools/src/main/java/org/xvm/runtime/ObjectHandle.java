@@ -389,19 +389,14 @@ public abstract class ObjectHandle
         }
 
         /**
-         * Read a field for display only. Unlike {@link #getField(Frame, String)} this builds
-         * nothing: that one allocates a DeferredCallHandle when the property is absent, routes
-         * transient fields through the frame, and reads a field layout that may not exist yet.
+         * Read a stored ordinary field for display without invoking the missing-property or
+         * transient-field paths of {@link #getField(Frame, String)}. The composition's layout
+         * must already exist, as required by this handle's construction.
          *
          * @return the field's value, or null if it cannot be read without building anything
          */
         protected ObjectHandle peekField(String sProp) {
-            TypeComposition clz = getComposition();
-            if (clz == null || !clz.isFieldLayoutComputed()) {
-                return null;
-            }
-
-            FieldInfo      field    = clz.getFieldInfo(sProp);
+            FieldInfo      field    = getComposition().getFieldInfo(sProp);
             ObjectHandle[] ahFields = m_aFields;
             if (field == null || field.isTransient() || ahFields == null) {
                 return null;
@@ -685,9 +680,8 @@ public abstract class ObjectHandle
 
         @Override
         public String toString() {
-            // WrapperException.toString() delegates here, so this runs on every stack-trace
-            // print: peekField() rather than getField(), which allocates, and getValue() rather
-            // than getStringValue(), which memoizes
+            // WrapperException.toString() delegates here too. Read the stored text without
+            // populating its Java String cache during display or stack-trace printing.
             ObjectHandle hText = peekField("text");
             return super.toString() +
                 (hText instanceof StringHandle hString
