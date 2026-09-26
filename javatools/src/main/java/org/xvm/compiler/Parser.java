@@ -5397,6 +5397,12 @@ public class Parser {
             }
         }
 
+        if (partial && canRetainIncomplete() && peek(Id.COMMA)) {
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            Expression hole = new IncompleteExpression(new IncompleteStatement(
+                    new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
+            return label == null ? hole : new LabeledExpression(label, hole);
+        }
         if (partial && label != null && canRetainIncomplete()) {
             throw new IncompleteArgument(label);
         }
@@ -5458,7 +5464,7 @@ public class Parser {
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
         boolean          incomplete = false;
-        if (canRetainIncomplete()) {
+        if (canRetainIncomplete() && !peek(Id.COMMA)) {
             match(close);
             throw incomplete(callee, open, args, separators);
         }
