@@ -32,7 +32,7 @@ this batch are development checkpoints until that final pass; no intermediate gr
 1. [x] Argument contexts implemented in `837fae19c`: qualified/grouped values and slots before later arguments (C25/L42); verification deferred.
 2. [x] Workspace source discovery, unopened-module symbols and the complete bundled XDK implemented (L43); verification deferred.
 3. [x] Workspace navigation, implementations and hierarchy implemented (L44); verification deferred.
-4. [ ] Broader proven refactoring and import actions (L45).
+4. [x] Broader proven refactoring and import actions implemented (L45); verification deferred.
 5. [ ] Remaining type editing and editor features (C26/L46).
 6. [ ] Combined compiler/LSP/protocol verification, focused shared editor scenarios, formatting;
    update the final evidence and commit map. Native IntelliJ remains an occasional checkpoint.
@@ -43,6 +43,26 @@ only the cursor in disposable argument copies and fit alongside all later argume
 property reads use normal compiler validation. No mutable AST field is added. L42 copies the
 containing call's facts while retaining the inner cursor's exact replacement token. Tests are
 written alongside each area and intentionally deferred until the complete batch.
+
+### L45 broader refactoring (development checkpoint)
+
+Whole-graph rename now proposes inline source types, static functions and static properties in
+addition to ordinary override families. Source identity, rather than spelling, determines edits;
+all source modules are recompiled and every written binding/selected call/ordinary dispatch chain
+is compared before returning a versioned edit. Binary targets, constructors and member-file type
+renames requiring file moves remain excluded. General instance-property families and import-alias
+renames still need additional proof coverage.
+
+Java-parser import ranges propose unused-import removal and contiguous import sorting. Conditional
+and wildcard imports are excluded, comments are not moved or discarded, and only edits that compile
+and preserve the graph's written bindings and method chains are offered. At most 32 removal probes
+run per request. Auto-import of unresolved names remains a separate follow-up. Code actions now have
+an asynchronous adapter seam and the same workspace-version checks and versioned protocol edits as
+rename; unsupported clients receive no unversioned compiler edit fallback.
+
+Compiler implementation facts are now included in graph extraction (needed by L44); the earlier
+rename-only builder deliberately omitted them. New adapter and protocol tests are written and await
+the combined verification pass.
 
 ### L44 whole-graph navigation (development checkpoint)
 

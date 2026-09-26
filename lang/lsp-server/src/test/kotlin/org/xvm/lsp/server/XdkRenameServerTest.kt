@@ -2,10 +2,13 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
@@ -147,6 +150,29 @@ class XdkRenameServerTest {
                         RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("local")), "value"),
                     ).get(30, SECONDS),
             ).isNull()
+        } finally {
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
+    fun `compiler import actions preserve the document version on the wire`() {
+        val text = "module Imports { import ecstasy.text.StringBuffer; }"
+        val file = directory.resolve("Imports.x").toFile().apply { writeText(text) }
+        val uri = file.toURI().toString()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).get(20, SECONDS)
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("Imports", uri)))
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
+            val actions = documents.codeAction(CodeActionParams(TextDocumentIdentifier(uri),
+                Range(Position(0, 0), Position(0, text.length)), CodeActionContext(emptyList()))).get(30, SECONDS)
+            val edit = actions.single().right.edit
+            assertThat(edit.changes).isNull()
+            assertThat(edit.documentChanges.single().left.textDocument.version).isEqualTo(7)
+            assertThat(edit.documentChanges.single().left.edits.single().left.newText).isEmpty()
         } finally {
             server.shutdown().get(20, SECONDS)
         }

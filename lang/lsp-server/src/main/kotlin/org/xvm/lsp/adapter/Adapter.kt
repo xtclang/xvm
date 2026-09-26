@@ -609,6 +609,10 @@ interface Adapter : Closeable {
         diagnostics: List<Diagnostic>,
     ): List<CodeAction>
 
+    fun getCodeActionsAsync(uri: String, range: Range, diagnostics: List<Diagnostic>): CompletableFuture<List<CodeAction>> =
+        CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics))
+
+
     /**
      * Get semantic tokens for enhanced syntax highlighting.
      *
