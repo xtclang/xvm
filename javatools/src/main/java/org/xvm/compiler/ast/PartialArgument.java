@@ -4,11 +4,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
+import org.xvm.compiler.Token.Id;
+
 /** A written argument cursor and its slot, derived from syntax rather than cached on an AST node. */
 record PartialArgument(IncompleteStatement cursor, int index) {
     static Optional<PartialArgument> of(IncompleteStatement call) {
-        return IntStream.range(0, call.getArguments().size()).mapToObj(index ->
-                cursor(call.getArguments().get(index)).map(site -> new PartialArgument(site, index)))
+        // Multiple array dimensions are not positional arguments to an ordinary constructor.
+        if (call.getOperator().getId() == Id.L_SQUARE) {
+            return Optional.empty();
+        }
+        var arguments = call.getArguments();
+        return IntStream.range(0, arguments.size()).mapToObj(index ->
+                cursor(arguments.get(index)).map(site -> new PartialArgument(site, index)))
                 .flatMap(Optional::stream).findFirst();
     }
 
@@ -38,8 +45,9 @@ record PartialArgument(IncompleteStatement cursor, int index) {
     private List<Expression> replace(IncompleteStatement call, Expression value) {
         value.setParent(call);
         value.introduceParentage();
-        return IntStream.range(0, call.getArguments().size())
-                .mapToObj(i -> i == index ? value : call.getArguments().get(i)).toList();
+        var arguments = call.getArguments();
+        return IntStream.range(0, arguments.size())
+                .mapToObj(i -> i == index ? value : arguments.get(i)).toList();
     }
 
     private static Expression substitute(Expression written, Expression value) {

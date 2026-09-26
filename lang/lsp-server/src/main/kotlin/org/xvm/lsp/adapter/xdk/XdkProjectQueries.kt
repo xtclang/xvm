@@ -37,56 +37,85 @@ internal class XdkProjectQueries(
         val facts = compile(texts) ?: return null
         val models = facts.models
         val declared = models.associate { it.sourceName to it.id }
-        val aliases = models.flatMap { it.symbols }.distinctBy { it.id }
-            .groupBy { symbol -> facts.constants[symbol.id] ?: symbol.location() ?: symbol.id }
-            .values.flatMap { group ->
-                val canonical = group.firstOrNull { declared[it.declarationSource] == it.id.snapshot } ?: group.first()
-                group.map { it.id to canonical.id }
-            }.toMap()
+        val aliases =
+            models
+                .flatMap { it.symbols }
+                .distinctBy { it.id }
+                .groupBy { symbol -> facts.constants[symbol.id] ?: symbol.location() ?: symbol.id }
+                .values
+                .flatMap { group ->
+                    val canonical = group.firstOrNull { declared[it.declarationSource] == it.id.snapshot } ?: group.first()
+                    group.map { it.id to canonical.id }
+                }.toMap()
         val views = SemanticModel.joined(models, aliases).associateBy { uris.getValue(requireNotNull(it.sourceName)) }
         return if (isCurrent()) XdkWorkspaceNavigation(views, revision()) else null
     }
 
     private fun revision(): String {
-        val bytes = ByteArrayOutputStream().also { bytes ->
-            DataOutputStream(bytes).use { output ->
-                fun value(text: String) {
-                    val utf8 = text.toByteArray(Charsets.UTF_8)
-                    output.writeInt(utf8.size)
-                    output.write(utf8)
-                }
-                project.buildOrder().forEach { module ->
-                    value(module.name)
-                    value(module.uri)
-                    value(module.dependencies.sorted().joinToString("\u0000"))
-                }
-                texts.toSortedMap().forEach { (path, text) -> value(path); value(text) }
-                dependencies.modules.toSortedMap().forEach { (name, artifact) -> value(name); value(artifact.revision) }
-            }
-        }.toByteArray()
+        val bytes =
+            ByteArrayOutputStream()
+                .also { bytes ->
+                    DataOutputStream(bytes).use { output ->
+                        fun value(text: String) {
+                            val utf8 = text.toByteArray(Charsets.UTF_8)
+                            output.writeInt(utf8.size)
+                            output.write(utf8)
+                        }
+                        project.buildOrder().forEach { module ->
+                            value(module.name)
+                            value(module.uri)
+                            value(module.dependencies.sorted().joinToString("\u0000"))
+                        }
+                        texts.toSortedMap().forEach { (path, text) ->
+                            value(path)
+                            value(text)
+                        }
+                        dependencies.modules.toSortedMap().forEach { (name, artifact) ->
+                            value(name)
+                            value(artifact.revision)
+                        }
+                    }
+                }.toByteArray()
         return "graph:" + HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
     }
 
     fun symbols(query: String): List<SymbolInfo> {
         val facts = compile(texts, allowIncomplete = true) ?: return emptyList()
-        val symbols = facts.models.flatMap { model ->
-            model.symbols.filter { symbol ->
-                symbol.declarationSource == model.sourceName && symbol.declaration != null &&
-                    symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.METHOD,
-                        SemanticModel.SymbolKind.PROPERTY, SemanticModel.SymbolKind.MODULE, SemanticModel.SymbolKind.PACKAGE) &&
-                    (query.isBlank() || symbol.name.contains(query, ignoreCase = true))
-            }.map { symbol ->
-                val range = requireNotNull(symbol.declaration)
-                SymbolInfo.of(symbol.name, when (symbol.kind) {
-                    SemanticModel.SymbolKind.METHOD -> SymbolInfo.SymbolKind.METHOD
-                    SemanticModel.SymbolKind.PROPERTY -> SymbolInfo.SymbolKind.PROPERTY
-                    SemanticModel.SymbolKind.MODULE -> SymbolInfo.SymbolKind.MODULE
-                    SemanticModel.SymbolKind.PACKAGE -> SymbolInfo.SymbolKind.PACKAGE
-                    else -> SymbolInfo.SymbolKind.CLASS
-                }, Location(uris.getValue(requireNotNull(model.sourceName)), range.start.line, range.start.column,
-                    range.end.line, range.end.column))
+        val symbols =
+            facts.models.flatMap { model ->
+                model.symbols
+                    .filter { symbol ->
+                        symbol.declarationSource == model.sourceName && symbol.declaration != null &&
+                            symbol.kind in
+                            setOf(
+                                SemanticModel.SymbolKind.TYPE,
+                                SemanticModel.SymbolKind.METHOD,
+                                SemanticModel.SymbolKind.PROPERTY,
+                                SemanticModel.SymbolKind.MODULE,
+                                SemanticModel.SymbolKind.PACKAGE,
+                            ) &&
+                            (query.isBlank() || symbol.name.contains(query, ignoreCase = true))
+                    }.map { symbol ->
+                        val range = requireNotNull(symbol.declaration)
+                        SymbolInfo.of(
+                            symbol.name,
+                            when (symbol.kind) {
+                                SemanticModel.SymbolKind.METHOD -> SymbolInfo.SymbolKind.METHOD
+                                SemanticModel.SymbolKind.PROPERTY -> SymbolInfo.SymbolKind.PROPERTY
+                                SemanticModel.SymbolKind.MODULE -> SymbolInfo.SymbolKind.MODULE
+                                SemanticModel.SymbolKind.PACKAGE -> SymbolInfo.SymbolKind.PACKAGE
+                                else -> SymbolInfo.SymbolKind.CLASS
+                            },
+                            Location(
+                                uris.getValue(requireNotNull(model.sourceName)),
+                                range.start.line,
+                                range.start.column,
+                                range.end.line,
+                                range.end.column,
+                            ),
+                        )
+                    }
             }
-        }
         return if (isCurrent()) symbols.distinctBy { it.location }.sortedBy { it.name } else emptyList()
     }
 
@@ -144,19 +173,30 @@ internal class XdkProjectQueries(
         val model = before.models.singleOrNull { it.sourceName == source } ?: return null
         val symbol = model.symbolAt(line, column) ?: return null
         val target = before.constants[symbol.id] ?: return null
-        if (symbol.declarationSource !in texts || symbol.declaration == null) return null
-        val targets = when {
-            symbol.kind == SemanticModel.SymbolKind.TYPE -> {
-                // Member-file names participate in module assembly; file-renaming is a separate operation.
-                val root = XdkSources.file(uris.getValue(symbol.declarationSource)) ?: return null
-                if (root.nameWithoutExtension == symbol.name && sources.keys.none { it.root == root }) return null
-                setOf(target)
+        val declarationSource = symbol.declarationSource ?: return null
+        if (declarationSource !in texts || symbol.declaration == null) return null
+        val targets =
+            when {
+                symbol.kind == SemanticModel.SymbolKind.TYPE -> {
+                    // Member-file names participate in module assembly; file-renaming is a separate operation.
+                    val root = XdkSources.file(uris.getValue(declarationSource)) ?: return null
+                    if (root.nameWithoutExtension == symbol.name && sources.keys.none { it.root == root }) return null
+                    setOf(target)
+                }
+
+                symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY) &&
+                    SemanticModel.Modifier.STATIC in symbol.modifiers && symbol.name != "construct" -> {
+                    setOf(target)
+                }
+
+                target is MethodConstant -> {
+                    methodFamily(before, target) ?: return null
+                }
+
+                else -> {
+                    return null
+                }
             }
-            symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY) &&
-                SemanticModel.Modifier.STATIC in symbol.modifiers && symbol.name != "construct" -> setOf(target)
-            target is MethodConstant -> methodFamily(before, target) ?: return null
-            else -> return null
-        }
         val ids = before.constants.filterValues { it in targets }.keys
         val plan = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
         val after = compile(plan.proposed) ?: return null
@@ -169,14 +209,18 @@ internal class XdkProjectQueries(
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
         val before = compile(texts) ?: return emptyList()
-        val actions = XdkImports.candidates(text).mapNotNull { candidate ->
-            checkCurrent()
-            val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
-            val after = compile(plan.proposed) ?: return@mapNotNull null
-            if (!XdkRename.preservesBindings(before, after, plan)) return@mapNotNull null
-            CodeAction(candidate.title, candidate.kind,
-                edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true))
-        }
+        val actions =
+            XdkImports.candidates(text).mapNotNull { candidate ->
+                checkCurrent()
+                val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+                val after = compile(plan.proposed) ?: return@mapNotNull null
+                if (!XdkRename.preservesBindings(before, after, plan)) return@mapNotNull null
+                CodeAction(
+                    candidate.title,
+                    candidate.kind,
+                    edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                )
+            }
         return if (isCurrent()) actions else emptyList()
     }
 
@@ -197,7 +241,10 @@ internal class XdkProjectQueries(
         return family
     }
 
-    private fun compile(text: Map<String, String>, allowIncomplete: Boolean = false): CompilerRenameFacts? {
+    private fun compile(
+        text: Map<String, String>,
+        allowIncomplete: Boolean = false,
+    ): CompilerRenameFacts? {
         checkCurrent()
         val artifacts = dependencies.modules.filterKeys { name -> sources.keys.none { it.name == name } }.toMutableMap()
         val attempts =
