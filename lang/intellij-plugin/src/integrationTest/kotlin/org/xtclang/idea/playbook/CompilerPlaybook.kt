@@ -569,14 +569,16 @@ class CompilerPlaybook(
             }
             restore(data.text("file"))
         }
-        listOf("X94", "X95").forEach { id ->
+        listOf("X94", "X95", "X96").forEach { id ->
             scenario(id) { data ->
                 val editor = open(data.text("file"))
                 data.rows("variants").forEach { variant ->
                     val marked = SharedScenarios.text(data.text("source"), variant["declaration"].asString)
                     val at = marked.indexOf(data.text("marker"))
+                    val before = variant["prefixLength"]?.asInt ?: data.values["prefixLength"].asInt
+                    val after = variant["suffixLength"]?.asInt ?: 0
                     editor.text = marked.replace(data.text("marker"), "")
-                    editor.awaitError()
+                    if (variant["initiallyValid"]?.asBoolean == true) editor.awaitDiagnostics(emptyList()) else editor.awaitError()
                     signature(editor, at) { it.isEmpty() }
                     lookup(editor, at) { items ->
                         val names = items.map { it.getLookupString() }
@@ -586,8 +588,8 @@ class CompilerPlaybook(
                     invokeAction("EditorEscape", component = editor.component)
                     accept(editor, at, variant["selected"].asString)
                     check(
-                        editor.text == marked.take(at - data.values["prefixLength"].asInt) +
-                            variant["selected"].asString + marked.substring(at + data.text("marker").length),
+                        editor.text == marked.take(at - before) +
+                            variant["selected"].asString + marked.substring(at + data.text("marker").length + after),
                     )
                     if (variant["validAfterAcceptance"].asBoolean) {
                         editor.awaitDiagnostics(emptyList())

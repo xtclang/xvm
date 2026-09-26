@@ -126,7 +126,7 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - by resolved identity within the module and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes; member/return and parameter-header type prefixes use the enclosing compiler scope; flat qualified names use visible nested types and final-token edits |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including direct final bare-name prefixes; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -224,11 +224,12 @@ inherited nested types and typedef candidates. Hidden qualifier ancestors and va
 excluded; same-owner private types remain available. Unsaved module overlays are respected.
 Written leaf names inside nested generics and compound types also complete, including grouped,
 nullable, array and immutable wrappers, with bounded missing angle/group closers. This enumerates
-visible types; normal compilation validates constraints on the whole type. Shared X91–X95 verify
-completion, structure and diagnostic repair. Trailing dots, mid-token cursors, empty type arguments
-or operands, parameterized qualifiers, generic base-name prefixes, function/sequence types,
-formal-type candidates, generic-method/multi-return and module/package headers remain outside
-this bounded slice.
+visible types; normal compilation validates constraints on the whole type. Registered class/method
+formals, empty generic arguments and complete parameterized qualifiers now work, including
+substituted typedef types. Mid-token queries replace the whole final identifier. Shared X91–X96
+cover completion, structure and diagnostic repair. Trailing dots, empty operands, qualifier-middle
+edits, generic base-name prefixes, function/sequence types, unregistered declaration-header formals,
+generic-method/multi-return and module/package headers remain outside this bounded slice.
 Class/interface composition headers retain the written name and body for structural queries.
 Type prefixes in `extends`, `implements`, `delegates`, ordinary `incorporates` and `into` use the
 real enclosing scope, including empty composition slots and qualified/generic leaf prefixes.
@@ -303,7 +304,7 @@ syntax without capture analysis or emission. X90 adds empty/final-prefix single-
 size cursors with real constructor fitting, original-token replacement, active size hints and missing
 bracket recovery. A written supplier after the cursor is parsed but is not validated by that prefix
 query. Normal compilation still checks suppliers and element defaults. Compiler mode advertises `[` as
-a signature-help trigger. X91–X95 add the bounded declaration-header recovery described above.
+a signature-help trigger. X91–X96 add the bounded declaration-header recovery described above.
 Multidimensional construction, unfinished declaration names, missing operands/map entries and
 unterminated literal contents remain unsupported.
 Remaining limits: cursors inside identifiers, further member/call syntax after a typed prefix,
