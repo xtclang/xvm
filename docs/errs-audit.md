@@ -1,5 +1,11 @@
 # Failures with nowhere to go
 
+Current follow-up tasks are centralized in the
+[full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist).
+L55/L56 track the large-graph proof and startup issues below; L57–L60 track semantic breadth and
+native parity. L61–L82 cover feature/protocol omissions and the completion gate. An absent
+optional LSP handler is separate from an error-listener defect or a missing native assertion.
+
 Native open-member rename (L54): advertising and handling `workspace/didRenameFiles` enables
 LSP4IJ's file-rename lifecycle. Without that capability, its VFS listener skipped old-URI close
 and new-URI open; reversing a rename with the member open retained a duplicate source overlay.

@@ -47,6 +47,21 @@ and the other distribution libraries, is now shared by production and compiler t
 
 > See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
+The [active compiler completion checklist (L55–L82)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+tracks the remaining implementation and validation work. All 24 project-defined adapter
+capabilities have compiler implementations, many with explicit bounds; this is not full LSP
+coverage. Separate declaration lookup, pull diagnostics, token range/delta, lazy resolve,
+broader refactorings, monikers, inline completion/values, colors and notebooks are among the
+absent features. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
+to distinguish an unsupported feature from a failed playbook case.
+
+Current IntelliJ driver coverage is 60 full, 3 partial and 50 unimplemented cases out of 113
+shared scenarios, plus startup. Coverage labels describe assertions implemented, not passing
+runs; X93–X98 have implementations but no native pass receipt yet. The latest checkpoint has
+13 selected passing cases across two runs. Large-workspace rename and editing during startup
+still need the controlled reproductions and fixes in L55/L56; waiting for readiness in the
+playbook does not prove that ordinary typing during startup works.
+
 ---
 
 ## Pre-Test Setup
@@ -195,18 +210,19 @@ module TestModule {
 > **"Both adapters" means mock and tree-sitter**, which is how this document was written when
 > there were two. The compiler adapter now answers diagnostics (§7), the outline (§6), hover
 > (§2), go-to-definition (§4), find-references (§5), document highlights (§8), selection ranges
-> (§9) and folding (§10), plus type hierarchy. Definition queries span the active module;
+> (§9) and folding (§10), plus type hierarchy. Definition queries span the discovered/configured source graph;
 > references also span discovered/configured source graphs, including unopened consumers. Workspace-symbol
 > search compiles unopened modules on demand.
 >
 > Compiler completion and signature help are available for the supported cursor contexts, along
 > with type-definition, type/method implementation lookup, static call hierarchy, resolved-name
 > semantic tokens, read/write highlights, bounded inlay hints and validated local/private-parameter
-> rename, plus graph-backed inline-type, static-member and ordinary instance-method rename
+> rename, plus graph-backed type, static-member, ordinary method/property-family and alias rename
 > (versioned-edit clients; see section I). Bounded formatting, proven import cleanup, module run
 > lenses, HTTP(S) links and local linked editing are advertised with the limits listed above. Definition/type-definition
 > and inherited implementation bodies can also resolve into explicitly host-indexed dependencies;
-> ordinary editor launch does not configure those artifacts. Compiler mode stays Java-only.
+> the bundled XDK supplies matching read-only source targets automatically, while additional
+> host dependency artifacts require explicit configuration. Compiler mode stays Java-only.
 >
 > Use the [XdkAdapter playbook](#xdkadapter-playbook) for a complete compiler run, including fixtures
 > that compile and precise expectations for compiler-only features. §7a adds diagnostic stress checks.
