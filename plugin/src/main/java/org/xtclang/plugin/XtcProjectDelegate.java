@@ -57,10 +57,8 @@ import org.gradle.api.attributes.LibraryElements;
 import org.gradle.api.component.AdhocComponentWithVariants;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.ProjectLayout;
-import org.gradle.api.internal.tasks.DefaultSourceSet;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.language.base.plugins.LifecycleBasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.provider.Provider;
@@ -72,6 +70,7 @@ import org.gradle.api.tasks.TaskCollection;
 import org.gradle.api.tasks.TaskContainer;
 import org.gradle.api.tasks.TaskProvider;
 import org.gradle.jvm.toolchain.JavaLanguageVersion;
+import org.gradle.language.base.plugins.LifecycleBasePlugin;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -80,7 +79,6 @@ import org.xtclang.plugin.internal.DefaultXtcExtension;
 import org.xtclang.plugin.internal.DefaultXtcRuntimeExtension;
 import org.xtclang.plugin.internal.DefaultXtcSourceDirectorySet;
 import org.xtclang.plugin.internal.DefaultXtcTestExtension;
-import org.xtclang.plugin.internal.GradlePhaseAssertions;
 import org.xtclang.plugin.tasks.XtcCompileTask;
 import org.xtclang.plugin.tasks.XtcExtractXdkTask;
 import org.xtclang.plugin.tasks.XtcRunTask;
@@ -117,9 +115,6 @@ public class XtcProjectDelegate {
     }
 
     public XtcProjectDelegate(final Project project, final AdhocComponentWithVariants component) {
-        // Assert that we're in configuration phase - XtcProjectDelegate should never be used during execution
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcProjectDelegate construction");
-
         this.projectName = project.getName();
         this.objects = project.getObjects();
         this.layout = project.getLayout();
@@ -230,9 +225,6 @@ public class XtcProjectDelegate {
     }
 
     protected static <E> E ensureExtension(final Project project, final String name, final Class<E> clazz) {
-        // Assert that we're in configuration phase - extensions can only be created during configuration
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "ensureExtension for " + name);
-
         final var exts = project.getExtensions();
         if (exts.findByType(clazz) == null) {
             return exts.create(name, clazz);
@@ -311,9 +303,6 @@ public class XtcProjectDelegate {
      * This method, "apply", is a delegate target call for an XTC project delegating plugin
      */
     public void apply(final Project project) {
-        // Assert that we're in configuration phase - all XTC plugin setup happens during configuration
-        GradlePhaseAssertions.assertProjectAccessDuringConfiguration(project, "XtcProjectDelegate.apply()");
-
         applyJavaPlugin(tasks, project);
         createXtcComponents(project);
 
@@ -451,16 +440,15 @@ public class XtcProjectDelegate {
         // set as a dependency to the compile task instead of to the classes task, which is the "assemble" for Java compilation.
         // Capture values at configuration time for configuration cache compatibility
         final var sourceSetName = sourceSet.getName();
-        final var resourceDirs = sourceSet.getResources().getSrcDirs();
+        final var resources = sourceSet.getResources();
         // Resolve output directory without capturing SourceSet reference
         final var outputDir = project.getLayout().getBuildDirectory().dir(XTC_LANGUAGE_NAME + '/' + sourceSetName + "/resources");
 
         processResourcesTask.configure(task -> {
             task.setDescription("Processes XTC resources for the " + sourceSetName + " source set.");
-            task.from(resourceDirs);
+            // Keep source roots and include/exclude filters live until execution.
+            task.from(resources);
             task.into(outputDir);
-            task.doLast(_ -> task.getLogger().info("[plugin] Processed XTC resources for source set: {} (srcDirs: {}, destination: {})",
-                sourceSetName, resourceDirs, outputDir.get()));
         });
 
         // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
@@ -471,7 +459,7 @@ public class XtcProjectDelegate {
             task.setDescription("Compile an XTC source set, similar to the JavaCompile task for Java.");
             task.dependsOn(XDK_EXTRACT_TASK_NAME);
             task.dependsOn(configs.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
-            task.setSource(sourceSet.getExtensions().getByName(XTC_LANGUAGE_NAME)); // Register this task as an XTC language compiler. Not a Java compiler.
+            task.setSource(sourceSet.getExtensions().getByType(XtcSourceDirectorySet.class));
 
             // Test source set should depend on main source set compilation
             // This mirrors Java's behavior where testCompileJava depends on compileJava
@@ -604,11 +592,9 @@ public class XtcProjectDelegate {
     }
 
     private void createXtcDependencyConfigs(final Project project) {
-        for (final SourceSet sourceSet : getSourceSets(project)) {
-            createXtcDependencyConfigs(sourceSet, project);
-        }
         createXdkDependencyConfigs(project);
         createJavaToolsConfig(); // Ensure javatools config exists before tasks are created
+        getSourceSets(project).all(sourceSet -> createXtcDependencyConfigs(sourceSet, project));
     }
 
     // Attributes for anything that consumes xtc files from external projects
@@ -789,12 +775,12 @@ public class XtcProjectDelegate {
     }
 
     private void createDefaultSourceSets(final Project project) {
-        for (final SourceSet sourceSet : getSourceSets(project)) {
+        getSourceSets(project).all(sourceSet -> {
             logger.info("[plugin] Creating and adding XTC source directory to inherited Java source set: {}", sourceSet.getName());
             // Create a source directory set named "xtc" for this existing source set.
             final var sourceSetName = sourceSet.getName();
             // Create the xtcSourceDirectorySet
-            final var xtcSourceDirectorySet = createXtcSourceDirectorySet(sourceSet.getName(), ((DefaultSourceSet)sourceSet).getDisplayName(), project);
+            final var xtcSourceDirectorySet = createXtcSourceDirectorySet(sourceSetName, sourceSetName, project);
             // Create the source set output, so that we can add processed resources and build source code (.xtc module) locations to it.
             final SourceSetOutput output = sourceSet.getOutput();
             // Add the "xtc" source set.
@@ -804,16 +790,15 @@ public class XtcProjectDelegate {
             xtcSourceDirectorySet.srcDir(srcDir);
             // Add all sources from the xtc source directory to the sourceSet during resolution.
             sourceSet.getAllSource().source(xtcSourceDirectorySet);
-            // Add output directories for modules (compile<sourceSetName>Xtc output) and resources
-            // (sourceSet.output.resourcesDir) to the task, so that dependencies will work.
+            // Add XTC outputs without replacing Java's resource output directory: the two
+            // processing tasks may apply different filters and must not overwrite each other.
             final var outputModules = getXtcSourceSetOutputDirectory(project, sourceSet);
             final var outputResources = getXtcResourceOutputDirectory(project, sourceSet);
             logger.info("[plugin] Configured sourceSets.{}.outputModules  : {}", sourceSetName, outputModules);
             logger.info("[plugin] Configured sourceSets.{}.outputResources  : {}", sourceSetName, outputResources.get());
-            output.dir(outputResources); // TODO is this really correct? We have the resource dir as a special property in the sourceSetOutput already?
+            output.dir(outputResources);
             output.dir(outputModules);
-            output.setResourcesDir(outputResources);
-        }
+        });
     }
 
     private void createResolutionStrategy() {

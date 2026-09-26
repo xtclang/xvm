@@ -59,9 +59,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // Configuration-time captured data to avoid Project references during execution
     //private final Provider<@NotNull Directory> projectDir;
     private final String sourceSetName;
-    private final Directory resourceDir;
-    private final Directory outputDir;
-    private final Set<File> sourceSetDirs;
+    private final Provider<@NotNull Directory> resourceDir;
+    private final Provider<@NotNull Directory> outputDir;
+    private final FileCollection sourceSetDirs;
 
     // Source-set-specific module dependencies (avoids circular dependency with own output)
     private final ConfigurableFileCollection compileModuleDependencies;
@@ -91,13 +91,15 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
         // Capture source set data at configuration time to avoid Project references during execution
         this.sourceSetName = sourceSet.getName();
-        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
-        this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
-        this.sourceSetDirs = sourceSet.getAllSource().getSrcDirs();
+        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet);
+        this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet);
+        // Retain the lazy file collection: build scripts can add source roots after task creation.
+        this.sourceSetDirs = sourceSet.getAllSource().getSourceDirectories();
 
         // Build source-set-specific module dependencies for compilation
         // Main compile: only xtcModule (external deps)
-        // Test compile: xtcModule + xtcModuleTest (external deps + main output)
+        // Other source sets: xtcModule + their own incoming module configuration.
+        // The test configuration also includes main output.
         // This avoids the circular dependency where a task's output is also its input
         this.compileModuleDependencies = objects.fileCollection();
         final var configurations = project.getConfigurations();
@@ -105,10 +107,10 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         if (mainConfig != null) {
             compileModuleDependencies.from(mainConfig);
         }
-        if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) {
-            final var testConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(SourceSet.TEST_SOURCE_SET_NAME));
-            if (testConfig != null) {
-                compileModuleDependencies.from(testConfig);
+        if (!SourceSet.MAIN_SOURCE_SET_NAME.equals(sourceSet.getName())) {
+            final var sourceConfig = configurations.findByName(XtcProjectDelegate.incomingXtcModuleDependencies(sourceSet));
+            if (sourceConfig != null) {
+                compileModuleDependencies.from(sourceConfig);
             }
         }
 
@@ -124,10 +126,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @Internal
     public String getCompileSourceSetName() {
         return sourceSetName;
-    }
-
-    private boolean isMainSourceSetCompileTask() {
-        return SourceSet.MAIN_SOURCE_SET_NAME.equals(getCompileSourceSetName());
     }
 
     /**
@@ -149,12 +147,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // TODO Why do we even have these internals?
     @Internal
     public Directory getOutputDirectoryInternal() {
-        return outputDir;
+        return outputDir.get();
     }
 
     @Internal
     public Directory getResourceDirectoryInternal() {
-        return resourceDir;
+        return resourceDir.get();
     }
 
     public String resolveXtcVersion() {
@@ -169,9 +167,19 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     public Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
+        final var resolvedSources = getModuleSources().getFiles();
         logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
         return resolvedSources;
+    }
+
+    /**
+     * Module boundaries are inputs too: adding a nested source root can turn an existing
+     * source file into a module without changing the files in the complete source tree.
+     */
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public FileCollection getModuleSources() {
+        return getSource().filter(this::isTopLevelXtcSourceFile);
     }
 
     // There is one source set to compile, but there other may be needed for the module path.
@@ -273,18 +281,19 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return disableWarnings;
     }
 
+    /**
+     * Processed resources from {@code processXtcResources}, which this task depends on.
+     * Use InputFiles so source sets without resources need not create an empty directory.
+     */
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<@NotNull Directory> getResourceDirectory() {
-        // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
-        //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return objects.directoryProperty().value(getResourceDirectoryInternal());
+    public Provider<@NotNull Directory> getResourceDirectory() {
+        return resourceDir;
     }
 
     @OutputDirectory
-    Provider<@NotNull Directory> getOutputDirectory() {
-        // TODO We can make this configurable later.
-        return objects.directoryProperty().value(getOutputDirectoryInternal());
+    public Provider<@NotNull Directory> getOutputDirectory() {
+        return outputDir;
     }
 
     /**
@@ -304,7 +313,6 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @TaskAction
     @Override
     public void executeTask() {
-        super.executeTask();
 
         // Create and execute the compile strategy (builds CompilerOptions internally after javatools is loaded)
         final var strategy = createCompileStrategy();
@@ -375,7 +383,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> getSourceDirectoriesInternal() {
-        return sourceSetDirs;
+        return sourceSetDirs.getFiles();
     }
 
     private String resolveOutputFilename(final String from) {
@@ -390,18 +398,4 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         return from;
     }
 
-    @Override
-    protected List<SourceSet> getDependentSourceSets() {
-        // Note: The parent implementation now captures source set output directories at configuration time
-        // to avoid Project references during execution, so we can safely use it
-        return super.getDependentSourceSets().stream()
-            .filter(sourceSet -> {
-                // For main source set compile tasks, only include the main source set
-                if (isMainSourceSetCompileTask()) {
-                    return sourceSet.getName().equals(getCompileSourceSetName());
-                }
-                return true;
-            })
-            .toList();
-    }
 }

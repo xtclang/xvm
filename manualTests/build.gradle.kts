@@ -1,4 +1,5 @@
 import org.xtclang.plugin.launchers.ExecutionMode
+import org.xtclang.plugin.tasks.XtcCompileTask
 import org.xtclang.plugin.tasks.XtcRunTask
 import org.xtclang.plugin.tasks.XtcTestTask
 
@@ -496,7 +497,7 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
         moduleName = "Runner"
         // TODO: If the runner took the file names instead of module names, we could just pass in
         //   exactly the outgoing source sets, and we wouldn't have to know their names, and could
-        //   have them compiled by xcc (for example calling moduleArgs(testModuleProvider))
+        //   have them compiled by xcc using the compile task's output file collection
         //   Now instead we have to explicitly specify the module names. IMPLEMENT THIS!
         //
         // TODO: CI integration test  for third party xdk dependency
@@ -589,41 +590,17 @@ fun resolveTestArgumentsProperty(defaultTestArguments: String = ""): List<String
 }
 
 /**
- * Lazy way of getting the filenames of all the modules we want to send in as arguments to the parallel Runner
- * module, demonstrating how to resolve these things lazy-only, i.e. when the Runner is about to start.
- * Since these modules depend on compiling the entire project, and resolving actual file locations (that don't
- * exist at configuration time), not implementing this as a provider, would trigger a full compile immediately
- * when someone wants to access source set output that doesn't exist yet. It would also likely not work, because
- * the configuration don't know everything about the world yet.
- *
- * This shows the power of Gradle/Maven; anyone asking for the contents of this provider, i.e. anyone who
- * asks what's in the source set, will trigger the source set being built to return its outputs, and it will
- * happen iff those data are really required (such as during the execution phase of the testParallel task).
- * At configuration time, the testParallel task will validate the DSL, but all it sees is a provider in the
- * module's definition. It's first when that task is executed (if every) that we trigger a build. You can
- * see this if you exclude manual tests from the composite build lifecycle (see root/gradle.properties) and
- * just execute ./gradlew manualTests:runParallel. Only when we are ready to launch the runner, is the
- * cascade of operations leading the source set output occur. We also know exactly which source sets
- * we have, so we don't have to maintain a list of module names, which we don't know if they exist or not.
- * This is also brittle, because the runner may in turn trigger the compiler, after searching through
- * the directory space for something corresponding to the module name.
+ * Listing task with the real compile outputs as inputs. A provider alone does not
+ * schedule a producer; the task-backed file collection supplies that dependency.
  */
-val testModuleProvider: Provider<List<String>> = provider {
-    // TODO: If we put JavaTools on the compile classpath for this project, as a one-line dependency, we could directly
-    //   call the XTC FileRepresentation logic that determines both if an XTC binary is a valid such file, and the
-    //   actual module name of this binary. This is potentially very powerful, the build use parts of its target.
-    //   Try that out yourself, if you want!
-    fun isValidXtcModule(file: File): Boolean {
-        return file.extension == "xtc"
-    }
-    sourceSets.main.get().output.asFileTree.filter { isValidXtcModule(it) }.map { it.absolutePath }.toList()
-}
-
 val printTestModules = tasks.register("printTestModules") {
     group = "help"
-    description = "Print the output of provideTestModules."
-    doLastTask {
-        val resolved = testModuleProvider.get()
+    description = "Compile and print the main XTC test modules."
+    val compile = tasks.named<XtcCompileTask>("compileXtc")
+    val modules = files(compile).asFileTree.matching { include("**/*.xtc") }
+    inputs.files(modules).withPathSensitivity(PathSensitivity.RELATIVE)
+    doLast {
+        val resolved = modules.files.map { it.absolutePath }.sorted()
         if (resolved.isEmpty()) {
             logger.lifecycle("No test modules found.")
         } else {

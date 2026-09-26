@@ -28,7 +28,7 @@ class DirectRuntimeFingerprintTest {
             List.of(helperJar.toFile(), launcherJar.toFile())
         );
 
-        final var pluginUrl = Path.of("/plugin.jar").toUri().toURL();
+        final var pluginUrl = createJar(tempDir.resolve("plugin.jar")).toUri().toURL();
 
         assertEquals(
             DirectRuntimeFingerprint.from(runtime, pluginUrl),
@@ -46,14 +46,43 @@ class DirectRuntimeFingerprintTest {
             List.of(helperJar.toFile(), launcherJar.toFile())
         );
 
-        final var pluginUrl = Path.of("/plugin.jar").toUri().toURL();
+        final var pluginUrl = createJar(tempDir.resolve("plugin.jar")).toUri().toURL();
         final var before = DirectRuntimeFingerprint.from(runtime, pluginUrl);
 
-        Thread.sleep(5L);
         Files.writeString(helperJar, "changed");
 
         final var after = DirectRuntimeFingerprint.from(runtime, pluginUrl);
         assertNotEquals(before, after);
+    }
+
+    @Test
+    void changedPluginJarProducesDifferentFingerprint() throws IOException {
+        final var launcher = createJar(tempDir.resolve("javatools.jar"));
+        final var runtime = new XtcLauncherRuntime("test", launcher.toFile(), List.of(launcher.toFile()));
+        final var plugin = Files.writeString(tempDir.resolve("plugin.jar"), "before");
+        final var modified = Files.getLastModifiedTime(plugin);
+        final var before = DirectRuntimeFingerprint.from(runtime, plugin.toUri().toURL());
+
+        Files.writeString(plugin, "after!");
+        Files.setLastModifiedTime(plugin, modified);
+
+        assertNotEquals(before, DirectRuntimeFingerprint.from(runtime, plugin.toUri().toURL()));
+    }
+
+    @Test
+    void changedPluginDirectoryProducesDifferentFingerprint() throws IOException {
+        final var launcher = createJar(tempDir.resolve("javatools.jar"));
+        final var runtime = new XtcLauncherRuntime("test", launcher.toFile(), List.of(launcher.toFile()));
+        final var plugin = Files.createDirectories(tempDir.resolve("classes/org/example"));
+        final var implementation = Files.writeString(plugin.resolve("Executor.class"), "before");
+        final var modified = Files.getLastModifiedTime(implementation);
+        final var location = tempDir.resolve("classes").toUri().toURL();
+        final var before = DirectRuntimeFingerprint.from(runtime, location);
+
+        Files.writeString(implementation, "after!");
+        Files.setLastModifiedTime(implementation, modified);
+
+        assertNotEquals(before, DirectRuntimeFingerprint.from(runtime, location));
     }
 
     private static Path createJar(final Path path) throws IOException {

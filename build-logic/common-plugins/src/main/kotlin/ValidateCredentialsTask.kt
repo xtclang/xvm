@@ -123,7 +123,7 @@ abstract class ValidateCredentialsTask : DefaultTask() {
     fun validate() {
         val project = projectName.get()
         val version = projectVersion.get()
-        val isSnapshot = version.contains("SNAPSHOT", ignoreCase = true)
+        val isSnapshot = version.endsWith("-SNAPSHOT")
         val releaseAllowed = allowRelease.get()
 
         logger.lifecycle("🔐 Publishing Credentials Validation Report [$project]")
