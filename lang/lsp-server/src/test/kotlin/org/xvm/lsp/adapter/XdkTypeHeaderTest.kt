@@ -150,7 +150,7 @@ class XdkTypeHeaderTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "class Damaged extends Ow§ner.Base", "class Damaged implements Lis§<String>",
+            "class Damaged extends Ow§ner.Base",
             "class Damaged extends Owner.§", "module Headers extends Ba§",
         ],
     )

@@ -9,11 +9,15 @@ import org.xvm.lsp.adapter.xdk.XdkRename
 class XdkEditingTest {
     @Test
     fun `formatting preserves CRLF literal contents and comments and is stable after application`() {
-        val text = "module Editing {\r\nInt run() {\r\nString text=\"two  spaces\";   \r\n// 😀 https://example.com/docs.  \r\nreturn 1;   \r\n}\r\n}"
+        val text =
+            "module Editing {\r\nInt run() {\r\nString text=\"two  spaces\";   \r\n" +
+                "// 😀 https://example.com/docs.  \r\nreturn 1;   \r\n}\r\n}"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             val formatted = apply(text, adapter.formatDocument(URI, text, OPTIONS))
-            assertThat(formatted).contains("\r\n    Int run()", "\r\n        return 1;\r\n", "\"two  spaces\"", "https://example.com/docs.  \r\n")
+            assertThat(
+                formatted,
+            ).contains("\r\n    Int run()", "\r\n        return 1;\r\n", "\"two  spaces\"", "https://example.com/docs.  \r\n")
             assertThat(formatted).endsWith("}\r\n")
             assertThat(adapter.compile(URI, formatted).diagnostics).isEmpty()
             assertThat(adapter.formatDocument(URI, formatted, OPTIONS)).isEmpty()
@@ -58,12 +62,20 @@ class XdkEditingTest {
         }
     }
 
-    private fun apply(text: String, edits: List<TextEdit>): String =
-        edits.sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
-            .fold(text) { current, edit -> current.replaceRange(offset(text, edit.range.start), offset(text, edit.range.end), edit.newText) }
+    private fun apply(
+        text: String,
+        edits: List<TextEdit>,
+    ): String =
+        edits
+            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
+            .fold(
+                text,
+            ) { current, edit -> current.replaceRange(offset(text, edit.range.start), offset(text, edit.range.end), edit.newText) }
 
-    private fun offset(text: String, at: Position): Int =
-        requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
+    private fun offset(
+        text: String,
+        at: Position,
+    ): Int = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
 
     private companion object {
         const val URI = "untitled:Editing.x"

@@ -167,12 +167,29 @@ class XdkRenameServerTest {
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("Imports", uri)))
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
-            val actions = documents.codeAction(CodeActionParams(TextDocumentIdentifier(uri),
-                Range(Position(0, 0), Position(0, text.length)), CodeActionContext(emptyList()))).get(30, SECONDS)
+            val actions =
+                documents
+                    .codeAction(
+                        CodeActionParams(
+                            TextDocumentIdentifier(uri),
+                            Range(Position(0, 0), Position(0, text.length)),
+                            CodeActionContext(emptyList()),
+                        ),
+                    ).get(30, SECONDS)
             val edit = actions.single().right.edit
             assertThat(edit.changes).isNull()
-            assertThat(edit.documentChanges.single().left.textDocument.version).isEqualTo(7)
-            assertThat(edit.documentChanges.single().left.edits.single().left.newText).isEmpty()
+            assertThat(
+                edit.documentChanges
+                    .single()
+                    .left.textDocument.version,
+            ).isEqualTo(7)
+            assertThat(
+                edit.documentChanges
+                    .single()
+                    .left.edits
+                    .single()
+                    .left.newText,
+            ).isEmpty()
         } finally {
             server.shutdown().get(20, SECONDS)
         }
