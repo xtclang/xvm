@@ -260,8 +260,7 @@ private class SemanticModelBuilder(
                         symbols[id]?.takeIf { it.kind == SymbolKind.VARIABLE }?.let { symbols[id] = it.copy(renameable = true) }
                     }
                     if (node
-                            .children()
-                            .iterator()
+                            .childNodes()
                             .asSequence()
                             .any { it is VariableTypeExpression }
                     ) {
@@ -618,7 +617,7 @@ private class SemanticModelBuilder(
                                             }
 
                                             method.containingClass.isAnonInnerClass -> {
-                                                "new ${site.target.children().filterIsInstance<TypeExpression>().single()}"
+                                                "new ${site.target.childNodes().filterIsInstance<TypeExpression>().single()}"
                                             }
 
                                             else -> {
@@ -1022,7 +1021,7 @@ private class SemanticModelBuilder(
         val nodes = roots.filter { seen.add(it) }.toMutableList()
         var index = 0
         while (index < nodes.size) {
-            nodes[index++].children().forEachRemaining { if (seen.add(it)) nodes.add(it) }
+            nodes[index++].childNodes().forEach { if (seen.add(it)) nodes.add(it) }
         }
         return nodes
     }
