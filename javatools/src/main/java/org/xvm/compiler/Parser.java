@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.xvm.asm.ErrorList;
@@ -4491,7 +4492,7 @@ public class Parser {
             break;
 
         case FUNCTION:
-            type = parseFunctionTypeExpression();
+            type = parseFunctionTypeExpression(fHeader);
             break;
 
         case IMMUTABLE: {
@@ -4653,19 +4654,23 @@ public class Parser {
      * @return a FunctionTypeExpression
      */
     FunctionTypeExpression parseFunctionTypeExpression() {
+        return parseFunctionTypeExpression(false);
+    }
+
+    private FunctionTypeExpression parseFunctionTypeExpression(boolean header) {
         Token function = expect(Id.FUNCTION);
 
         // return values
         Token           conditional = match(Id.CONDITIONAL);
-        List<Parameter> listReturn  = parseReturnList();
+        List<Parameter> listReturn  = parseReturnList(header);
 
         // see if the parameters precede the name
-        List<TypeExpression> listParam = parseParameterTypeList(false);
+        List<TypeExpression> listParam = parseParameterTypeList(false, header);
 
         if (listParam == null) {
             // name optionally comes before or after the parameters
             Token name = expect(Id.IDENTIFIER);
-            listParam = parseParameterTypeList(true);
+            listParam = parseParameterTypeList(true, header);
 
             // pretend the name is the next token (as if we didn't eat it already)
             putBack(name);
@@ -5031,7 +5036,7 @@ public class Parser {
 
             if (fAllowTypeSequence && peek(Id.COMP_LT)) {
                 Token tokStart = peek();
-                List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
+                List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false, fHeader);
                 Token tokEnd   = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
             } else {
@@ -5181,12 +5186,12 @@ public class Parser {
                 && f_cursor <= named.getNameToken().getEndPosition()) {
             return Optional.of(named);
         }
-        if (type instanceof FunctionTypeExpression || type instanceof TupleTypeExpression) {
-            return Optional.empty();
-        }
-        return StreamSupport.stream(type.children().spliterator(), false)
-                .filter(TypeExpression.class::isInstance).map(TypeExpression.class::cast)
-                .flatMap(child -> declarationTypePrefix(child).stream()).findFirst();
+        var types = type instanceof FunctionTypeExpression function
+                ? Stream.concat(function.getReturnValues().stream().map(Parameter::getType),
+                        function.getParamTypes().stream())
+                : StreamSupport.stream(type.children().spliterator(), false)
+                        .filter(TypeExpression.class::isInstance).map(TypeExpression.class::cast);
+        return types.flatMap(child -> declarationTypePrefix(child).stream()).findFirst();
     }
 
     /** Missing type closers are tolerated only around a selected header prefix, never in normal parsing. */
@@ -5293,12 +5298,16 @@ public class Parser {
      * @return
      */
     List<TypeExpression> parseParameterTypeList(boolean required) {
+        return parseParameterTypeList(required, false);
+    }
+
+    private List<TypeExpression> parseParameterTypeList(boolean required, boolean header) {
         List<TypeExpression> types = null;
         if (match(Id.L_PAREN, required) != null) {
             types = peek(Id.R_PAREN)
                     ? Collections.emptyList()
-                    : parseTypeExpressionList(false);
-            expect(Id.R_PAREN);
+                    : parseTypeExpressionList(false, header);
+            expectHeaderTypeClose(Id.R_PAREN, types, header);
         }
         return types;
     }
@@ -5649,15 +5658,19 @@ public class Parser {
      * </pre></code>
      */
     List<Parameter> parseReturnList() {
+        return parseReturnList(false);
+    }
+
+    private List<Parameter> parseReturnList(boolean header) {
         List<Parameter> listReturn;
         if (match(Id.VOID) != null) {
             listReturn = Collections.emptyList();
         } else if (match(Id.L_PAREN) == null) {
-            listReturn = Collections.singletonList(new Parameter(parseTypeExpression()));
+            listReturn = List.of(new Parameter(parseIntersectingTypeExpression(false, header)));
         } else {
             listReturn = new ArrayList<>();
             do {
-                listReturn.add(new Parameter(parseTypeExpression(), matchNameOrAny()));
+                listReturn.add(new Parameter(parseIntersectingTypeExpression(false, header), matchNameOrAny()));
             } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
         }
         return listReturn;

@@ -137,12 +137,14 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 110 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 111 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It implements startup and 50 scenarios: 47 fully and three partially. Coverage includes native
+It implements startup and 54 scenarios: 50 fully and four partially. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
 highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
-Parameter Info, argument-value fitting and declaration recovery through X98. The disposable IDE
+Parameter Info, argument-value fitting and declaration recovery through X106. Native type-definition assertions cover X33/X35; X101 checks
+read-only library navigation but still lacks formatting/rename rejection assertions. These additions
+compile and await native execution. The disposable IDE
 profile disables sole-candidate auto-insertion and automatic completion popups so tests can inspect
 every requested completion list first. Autosave is disabled to preserve unsaved-overlay checks;
 shipped plugin defaults are unchanged.
@@ -153,7 +155,7 @@ invalid calls must clear an earlier hint. X20 remains partial because LSP4IJ 0.2
 navigation is checked. X81/X82 remain partial because native completion Property-kind metadata
 is not inspected. Problems-row clicking and visual layout remain manual.
 
-Every report lists all 110 scenario IDs, including the 60 unimplemented entries with concrete
+Every report lists all 111 scenario IDs, including the 57 unimplemented entries with concrete
 missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
 missing from this driver is not labeled an unsupported IntelliJ feature. See
 [shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.

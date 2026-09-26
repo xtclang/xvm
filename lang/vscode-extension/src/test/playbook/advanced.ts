@@ -438,7 +438,11 @@ export function advancedCases(): void {
         }
     });
 
-    for (const id of ['X94', 'X95', 'X96', 'X97', 'X98'] as const) {
+    typeHeaderCases(['X94', 'X95', 'X96', 'X97', 'X98']);
+}
+
+export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | 'X98' | 'X106')[]): void {
+    for (const id of ids) {
         playbook(id, async (workspace, data) => {
             const document = await workspace.open(data.file);
             for (const variant of data.variants) {

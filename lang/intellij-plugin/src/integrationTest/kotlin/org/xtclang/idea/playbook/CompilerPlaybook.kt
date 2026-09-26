@@ -569,7 +569,7 @@ class CompilerPlaybook(
             }
             restore(data.text("file"))
         }
-        listOf("X94", "X95", "X96", "X97", "X98").forEach { id ->
+        listOf("X94", "X95", "X96", "X97", "X98", "X106").forEach { id ->
             scenario(id) { data ->
                 val editor = open(data.text("file"))
                 data.rows("variants").forEach { variant ->
@@ -627,6 +627,38 @@ class CompilerPlaybook(
     }
 
     private fun Driver.additionalScenarios() {
+        scenario("X33") { data ->
+            data.rows("variants").forEach { variant ->
+                val editor = open(data.text("file"))
+                editor.awaitDiagnostics(emptyList())
+                val target = definition(editor, editor.text.indexOf(variant["anchor"].asString), "LSP.GotoTypeDefinition")
+                check(target.first.endsWith("/${data.text("file")}"))
+                declaration(target, variant["expected"].asString)
+            }
+        }
+        scenario("X35") { data ->
+            val editor = open(data.text("file"))
+            editor.awaitDiagnostics(emptyList())
+            val formal =
+                definition(editor, editor.text.indexOf(data.text("formalUse")) + data.values["offset"].asInt, "LSP.GotoTypeDefinition")
+            check(formal.first.endsWith("/${data.text("file")}"))
+            declaration(formal, data.strings("formalTargets").single())
+            val reopened = open(data.text("file"))
+            val library = definition(reopened, reopened.text.indexOf(data.text("binaryUse")), "LSP.GotoTypeDefinition")
+            libraryDeclaration(library, data.strings("binaryTargets").single())
+        }
+        scenario("X101") { data ->
+            data.strings("types").forEach { name ->
+                val editor = open(data.text("file"))
+                editor.awaitDiagnostics(emptyList())
+                libraryDeclaration(definition(editor, editor.text.indexOf(name)), name)
+            }
+            val editor = open(data.text("file"))
+            libraryDeclaration(
+                definition(editor, editor.text.indexOf(data.text("variable")), "LSP.GotoTypeDefinition"),
+                data.text("variableType"),
+            )
+        }
         scenario("X1") { data ->
             val editor = open(data.text("file"))
             editor.awaitDiagnostics(emptyList())
@@ -1003,6 +1035,26 @@ class CompilerPlaybook(
             }
         waitFor("$action navigates to a single declaration", 45.seconds) { selected()?.let { it != origin } == true }
         return requireNotNull(selected())
+    }
+
+    private fun declaration(
+        target: Pair<String, Int>,
+        name: String,
+    ) {
+        val text = Files.readString(Path.of(target.first))
+        check(Regex("${Regex.escape(name)}\\b").matchesAt(text, target.second)) {
+            "Expected declaration '$name' at $target"
+        }
+    }
+
+    private fun libraryDeclaration(
+        target: Pair<String, Int>,
+        name: String,
+    ) {
+        declaration(target, name)
+        check(!Files.isWritable(Path.of(target.first))) {
+            "Bundled declaration must open read-only: ${target.first}"
+        }
     }
 
     private data class Diagnostic(
