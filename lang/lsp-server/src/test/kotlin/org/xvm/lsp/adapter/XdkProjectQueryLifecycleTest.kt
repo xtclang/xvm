@@ -117,6 +117,20 @@ class XdkProjectQueryLifecycleTest {
         }
     }
 
+    @Test
+    fun `background code actions do not cancel a quick fix requested at another range`() {
+        Session().use { session ->
+            session.hold.set(true)
+            val quickFix = session.adapter.getCodeActionsAsync(session.libraryUri, Range(Position(0, 25), Position(0, 29)), emptyList())
+            assertThat(session.entered.await(20, SECONDS)).isTrue()
+            val background = session.adapter.getCodeActionsAsync(session.libraryUri, Range(Position(0, 0), Position(0, 0)), emptyList())
+            assertThat(quickFix.isCancelled).isFalse()
+            session.release.countDown()
+            assertThat(quickFix.get(30, SECONDS)).isEmpty()
+            assertThat(background.get(30, SECONDS)).isEmpty()
+        }
+    }
+
     private inner class Session : AutoCloseable {
         val library =
             directory
