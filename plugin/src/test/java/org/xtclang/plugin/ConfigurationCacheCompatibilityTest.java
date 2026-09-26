@@ -7,6 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
@@ -24,17 +26,21 @@ class ConfigurationCacheCompatibilityTest {
 
     @Test
     void resourcesFollowLateConfigurationAndChangesOnCacheReuse() throws IOException {
-        Files.writeString(testProjectDir.resolve("settings.gradle"), "rootProject.name = 'cache-test'\n");
-        Files.writeString(testProjectDir.resolve("build.gradle"), """
+        Files.writeString(testProjectDir.resolve("settings.gradle.kts"), "rootProject.name = \"cache-test\"\n");
+        Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
+            import org.xtclang.plugin.tasks.XtcCompileTask
+
             plugins {
-                id 'org.xtclang.xtc-plugin'
+                id("org.xtclang.xtc-plugin")
             }
-            version = '1.0'
-            tasks.named('processXtcResources').get()
-            tasks.named('compileXtc').get()
-            layout.buildDirectory = layout.projectDirectory.dir('relocated-build')
-            sourceSets.main.resources.setSrcDirs(['extra-resources'])
-            sourceSets.main.resources.exclude('excluded.txt')
+            version = "1.0"
+            tasks.named<Copy>("processXtcResources").get()
+            tasks.named<XtcCompileTask>("compileXtc").get()
+            layout.buildDirectory.set(layout.projectDirectory.dir("relocated-build"))
+            sourceSets.main {
+                resources.setSrcDirs(listOf("extra-resources"))
+                resources.exclude("excluded.txt")
+            }
             """);
         final var resources = Files.createDirectory(testProjectDir.resolve("extra-resources"));
         final var input = Files.writeString(resources.resolve("included.txt"), "first");
@@ -58,11 +64,62 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals(TaskOutcome.UP_TO_DATE, unchanged.task(":processXtcResources").getOutcome());
     }
 
+    @Test
+    void changingOnlyModuleRootsInvalidatesCompileInputs() throws IOException {
+        Files.writeString(testProjectDir.resolve("settings.gradle.kts"), "rootProject.name = \"module-roots\"\n");
+        Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
+            import org.xtclang.plugin.tasks.XtcCompileTask
+
+            plugins {
+                id("org.xtclang.xtc-plugin")
+            }
+            version = "1.0"
+            tasks.named<XtcCompileTask>("compileXtc") {
+                // Exercise the real task inputs and discovery without bootstrapping a compiler.
+                // The action records what would be passed to the compiler.
+                actions.clear()
+                val modules = moduleSources
+                val destination = outputDirectoryInternal
+                doLast {
+                    val output = destination.asFile
+                    output.mkdirs()
+                    output.resolve("modules.txt").writeText(
+                        modules.files.map { it.name }.sorted().joinToString(","))
+                }
+            }.get()
+            if (providers.gradleProperty("nestedModule").isPresent) {
+                sourceSets.main {
+                    xtc.srcDir("src/main/x/nested")
+                }
+            }
+            """);
+        final var nested = Files.createDirectories(testProjectDir.resolve("src/main/x/nested"));
+        Files.writeString(nested.getParent().resolve("Root.x"), "module Root {}");
+        Files.writeString(nested.resolve("Nested.x"), "module Nested {}");
+        final var output = testProjectDir.resolve("build/xtc/main/lib/modules.txt");
+
+        final var first = runBuild("compileXtc");
+        assertEquals(TaskOutcome.SUCCESS, first.task(":compileXtc").getOutcome());
+        assertEquals("Root.x", Files.readString(output));
+        final var added = runBuild("compileXtc", "-PnestedModule");
+        assertEquals(TaskOutcome.SUCCESS, added.task(":compileXtc").getOutcome());
+        assertEquals("Nested.x,Root.x", Files.readString(output));
+        final var reused = runBuild("compileXtc", "-PnestedModule");
+        assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":compileXtc").getOutcome());
+    }
+
     private BuildResult runResources() {
+        return runBuild("processXtcResources");
+    }
+
+    private BuildResult runBuild(final String... tasksAndOptions) {
+        final var arguments = new ArrayList<>(List.of(tasksAndOptions));
+        arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace"));
         return GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
             .withPluginClasspath()
-            .withArguments("processXtcResources", "--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace")
+            .withArguments(arguments)
             .build();
     }
 }

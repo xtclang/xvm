@@ -170,9 +170,19 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     public Set<File> resolveXtcSourceFiles() {
-        final var resolvedSources = getSource().filter(this::isTopLevelXtcSourceFile).getFiles();
+        final var resolvedSources = getModuleSources().getFiles();
         logger.info("[plugin] Resolved top level sources (should be module definitions, or XTC will fail later): {}", resolvedSources);
         return resolvedSources;
+    }
+
+    /**
+     * Module boundaries are inputs too: adding a nested source root can turn an existing
+     * source file into a module without changing the files in the complete source tree.
+     */
+    @InputFiles
+    @PathSensitive(PathSensitivity.RELATIVE)
+    public FileCollection getModuleSources() {
+        return getSource().filter(this::isTopLevelXtcSourceFile);
     }
 
     // There is one source set to compile, but there other may be needed for the module path.
