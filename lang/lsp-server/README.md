@@ -115,17 +115,18 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
-| Rename | Basic | Implemented with syntax limits | Locals/private method parameters and configured-graph instance-method overrides; binding/dispatch validation and versioned edits required |
-| Code actions / formatting | Basic | Implemented with syntax limits | Unavailable |
+| Rename | Basic | Implemented with syntax limits | Locals/private parameters; graph instance-method families, inline types and static members; compiler proof and versioned edits |
+| Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup; Java-lexer indentation and whitespace edits with token-preservation checks |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; folds retain the actual closing-brace column |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
-| Document links | Imports | Workspace index | Unavailable |
+| Document links | Imports | Workspace index | HTTP(S) URLs inside Java-lexer comments/literals |
 | Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; on-demand compiler indexing |
-| Semantic tokens | None | Syntax-based | Resolved names and declaration/read-only/static/write modifiers |
+| Semantic tokens | None | Syntax-based | Java lexical tokens plus resolved names and declaration/read-only/static/write modifiers |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
-| Call hierarchy | None | None | Static selected calls within the module |
+| Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
 | Inlay hints | None | None | Inferred local types and selected positional parameter names |
-| Type hierarchy | None | None | Source types: declared extends/implements, with generic parents |
+| Type hierarchy | None | None | Declared extends/implements across the source graph, with generic parents |
+| Code lenses / linked editing | Basic | Implemented | Module run command / identity-based local-variable ranges |
 | Native library | Not needed | Required | Not needed |
 
 The compiler backend bundles the same complete library set as the XDK distribution through a shared
@@ -254,8 +255,8 @@ inheritance and constraints. Shared X95 exercises both editor consumers; native 
 is still pending. Shared X96 adds eight generic/formal and whole-token acceptance variants.
 See [C24/L41](../../docs/errs-integration-plan.md#generic-type-completion-batch) and [C23/L39](../../docs/errs-integration-plan.md#class-and-interface-composition-headers).
 
-Static call hierarchy groups selected source call sites by method/lambda, including closed module
-members. It does not expand virtual dispatch, function values, constructors or dependency sources.
+Static call hierarchy groups selected source call sites by method/lambda, including unopened source
+modules. It does not expand virtual dispatch, function values, constructors or binary-only sources.
 Semantic tokens classify resolved names and modifiers; highlights distinguish reads and writes.
 Inlay hints show inferred local types after successful compilation and selected positional
 parameter names, omitting named arguments and synthetic defaults. These queries use copied facts
@@ -269,11 +270,13 @@ bindings, failed compilation, public/lambda/constructor parameters and method-va
 unsupported for parameter rename. An explicit source graph additionally enables ordinary instance-
 method override rename: it recompiles all configured modules and checks dispatch chains as well as
 written bindings. Generic interface contracts and closed/transitive consumers are covered. Binary
-contracts (including source overrides of bundled XDK methods), properties/accessors, static
-functions, constructors and mixin/delegating/capped chains fail closed. Ordinary `super(...)` calls
+contracts (including source overrides of bundled XDK methods), instance properties/accessors,
+constructors and mixin/delegating/capped chains fail closed. Inline source types and static members
+now use the same graph proof; member-file type renames requiring file moves remain unavailable. Ordinary `super(...)` calls
 retain their selected written parent body for navigation/hierarchy and rename proof; the keyword
 itself is not renamed. The graph must
-include every source consumer; there is no automatic discovery or proof about external clients.
+include every source consumer. Workspace discovery supplies roots/import edges, but cannot prove
+anything about external clients outside those folders.
 Completed function-valued calls expose signature types without invented runtime targets or parameter
 names. Explicit cursor analysis also retains binary/conditional expressions and following call
 arguments, while incomplete values still cannot emit code. Structure-only diagnostics map to source
@@ -335,7 +338,7 @@ Each compiler attempt deserializes fresh structures. Symbol keys identify a cons
 the exact artifact/source-index revision; they are not permanent identities across library rebuilds.
 
 This is a Kotlin host API, with no editor setting or JSON-RPC configuration endpoint yet. Project
-discovery and a persistent workspace reference index remain open. Bundled XDK binaries have no
+discovery of unsaved import changes and a persistent workspace reference index remain open. Bundled XDK binaries have no
 source index. See the
 [dependency API verification](../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23)
 for ownership, cancellation and replacement guarantees.
