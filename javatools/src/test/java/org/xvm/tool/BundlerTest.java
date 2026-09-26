@@ -264,7 +264,7 @@ class BundlerTest {
         for (var input : inputs) {
             args.add(input.getPath());
         }
-        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]), new CaptureConsole(), silent(DISCARD));
+        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(String[]::new), new CaptureConsole(), silent(DISCARD));
     }
 
     private static final class CaptureConsole implements Console {

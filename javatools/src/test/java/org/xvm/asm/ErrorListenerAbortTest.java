@@ -1,5 +1,7 @@
 package org.xvm.asm;
 
+import java.util.stream.IntStream;
+
 import org.junit.jupiter.api.Test;
 
 import org.xvm.compiler.Source;
@@ -38,9 +40,7 @@ public class ErrorListenerAbortTest {
         Source    source = new Source(SOURCE);
         ErrorList errs   = new ErrorList(ErrorList.UNLIMITED);
 
-        for (int i = 0; i < 50; ++i) {
-            errs.error(CODE, in(source, i, i + 1), "a");
-        }
+        IntStream.range(0, 50).forEach(i -> errs.error(CODE, in(source, i, i + 1), "a"));
 
         assertFalse(errs.isAbortDesired());
         assertTrue(errs.hasSeriousErrors());
