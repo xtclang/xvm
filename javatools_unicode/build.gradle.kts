@@ -11,10 +11,13 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Nested
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
+import org.gradle.jvm.toolchain.JavaLauncher
 import org.gradle.language.base.plugins.LifecycleBasePlugin.BUILD_GROUP
 import org.gradle.process.ExecOperations
 import javax.inject.Inject
@@ -32,12 +35,6 @@ dependencies {
 }
 
 val unicodeUcdUrl = "https://unicode.org/Public/UCD/latest/ucdxml/ucd.all.flat.zip"
-val processedResourcesDir = tasks.processResources.get().outputs.files.singleFile!!
-
-/**
- * Type safe "jar" task accessor.
- */
-val jar = tasks.named<Jar>("jar")
 
 /**
  * Download the ucd zip file from the unicode site, if it does not exist.
@@ -57,8 +54,8 @@ val downloadUcdFlatZip = tasks.register<Download>("downloadUcdFlatZip") {
  * Abstract task for building unicode tables with proper configuration cache support.
  */
 abstract class RebuildUnicodeTablesTask : DefaultTask() {
-    @get:InputFile
-    abstract val unicodeJar: RegularFileProperty
+    @get:Nested
+    abstract val javaLauncher: Property<JavaLauncher>
 
     @get:InputFile
     abstract val ucdZipFile: RegularFileProperty
@@ -78,6 +75,7 @@ abstract class RebuildUnicodeTablesTask : DefaultTask() {
         logger.lifecycle("[javatools_unicode] Downloaded unicode file: ${ucdZipFile.get().asFile.absolutePath}")
 
         execOperations.javaexec {
+            executable = javaLauncher.get().executablePath.asFile.absolutePath
             mainClass.set("org.xvm.tool.BuildUnicodeTables")
             classpath = taskClasspath
             args = listOf(
@@ -95,7 +93,7 @@ abstract class RebuildUnicodeTablesTask : DefaultTask() {
 
             [javatools_unicode] Next steps:
             [javatools_unicode] 1. Review the generated .dat and .txt files
-            [javatools_unicode] 2. Copy them to: src/main/resources/ecstasy/text/
+            [javatools_unicode] 2. Copy them to: lib_ecstasy/src/main/resources/ecstasy/text/
             [javatools_unicode] 3. Update Char.x to match the new .dat file data
             [javatools_unicode] 4. Commit the updated files to the repository
             ================================================================================
@@ -105,37 +103,20 @@ abstract class RebuildUnicodeTablesTask : DefaultTask() {
 }
 
 /**
- * Build unicode tables, and put them under the build directory.
- *
- * For a normal run, the unicode resources are already copied to the build directory
- * by the processResources task, which as part of any default Java Plugin build lifecycle,
- * will copy the src/<sourceSet>/resources directory to build/resources/<sourceSet>
- * In that case, when resolveUnicodeTables is set to false, the only thing this task does
- * is add the processResources outputs as its own outputs. If it's true, we will overwrite
- * those resources to the build folder, and optionally, copy them to replace the source
- * folder resources.
- *
- * We never execute this task explicitly, but we do declare a consumable coniguration that
- * contains the output of this task, forcing it to run (and maybe rebuild unicode files) if
- * anyone wants to resolve the config. The lib_ecstasy project adds this configuration to
- * its incoming resources, which means that lib_ecstasy will include them in the ecstasy.xtc
- * module. All we need to do is add the configuration as a resource for lib_ecstasy.
+ * Explicit maintenance task. Generated tables have their own output directory and
+ * are reviewed before being copied into lib_ecstasy's checked-in resources.
+ * Normal builds continue to use those checked-in tables.
  */
 val rebuildUnicodeTables = tasks.register<RebuildUnicodeTablesTask>("rebuildUnicodeTables") {
     group = BUILD_GROUP
-    description = "If the unicode files should be regenerated, generate them from the build tool, and place them under the build resources."
+    description = "Regenerate Unicode tables for review without overwriting processed resources."
 
     val rebuildUnicode = xdkProperties.booleanValue("org.xtclang.unicode.rebuild", false)
-
-    dependsOn(jar)
-    outputDir.set(layout.dir(provider { processedResourcesDir }))
-
     onlyIf { rebuildUnicode }
 
-    if (rebuildUnicode) {
-        dependsOn(downloadUcdFlatZip)
-        unicodeJar.set(jar.flatMap { it.archiveFile })
-        ucdZipFile.set(layout.buildDirectory.file("ucd/ucd.all.flat.zip"))
-        taskClasspath.from(configurations.runtimeClasspath, jar)
-    }
+    dependsOn(downloadUcdFlatZip)
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    outputDir.set(layout.buildDirectory.dir("generated/unicode"))
+    ucdZipFile.set(layout.buildDirectory.file("ucd/ucd.all.flat.zip"))
+    taskClasspath.from(sourceSets.main.map { it.runtimeClasspath })
 }
