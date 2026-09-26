@@ -5111,9 +5111,10 @@ public class Parser {
         TypeExpression type = parseTypeExpression();
         if (f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
                 && !f_errs.get().isAbortDesired() && type instanceof NamedTypeExpression named
-                && named.getNames().length == 1 && named.getModule() == null
+                && !named.children().hasNext() && named.getModule() == null
                 && named.getNameToken().getEndPosition() == f_cursor && type.getEndPosition() == f_cursor) {
-            throw incompleteHeader(named.getNameToken());
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            throw new IncompleteHeader(IncompleteStatement.forDeclarationType(named, f_cursor));
         }
         return type;
     }

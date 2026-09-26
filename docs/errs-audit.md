@@ -703,3 +703,29 @@ method-formal candidates and name completion. No separator before a later declar
 default/header syntax with its own braces, can still limit retention. X91–X92 keep shared editor
 inputs; native X92 checks diagnostics/Problems/repair but explicitly lacks outline and fold checks.
 Final evidence and extraction boundaries are in the [integration plan](errs-integration-plan.md#unfinished-declaration-headers).
+
+## Qualified declaration-type audit (2026-09-26)
+
+C21/L36 extends the preceding header slice with flat dotted type names. The parser transfers the
+original NamedTypeExpression into the existing cursor target child; only the final token defines
+the edit. No expression validation, semantic field, node-local resolver cache or clone rule is added.
+Parser tests check independent cloned targets and one diagnostic with a non-deduplicating collector.
+The embedding test checks original source/parent ownership and unresolved passive name bindings.
+
+NameResolver is needed for module/package/class names and aliases, but dotted resolution internally
+allows PRIVATE access. Therefore successful resolution alone is not the visibility proof. The query
+uses contextual TypeInfo child access and compiler nestmate checks, then checks the resolved identity's
+containing components, including ancestors hidden by an alias. This prevents enumerating a private
+nested namespace while retaining private types inside the permitted owner. Candidate names are
+resolved again through the same written qualifier. Inherited child and typedef candidates are covered.
+
+Tests include bundled XDK/package aliases, public/private/protected/value children, inherited classes,
+accepted compilations, unknown/value/private qualifiers with positive controls in the same enclosing
+source, unsaved root/member overlays, cached diagnostic isolation, budgets and cancellation. Qualified
+queries join the existing retention workload and UTF-16/CRLF packaged transport tests. Shared X93
+checks qualifiers, access, final-name edits, absent signature help and repair in both editors.
+
+Empty trailing-dot slots, mid-token cursors, parameterized/compound names, formal/generic-method and
+type-composition headers remain outside this proof. A malformed header remains erroneous after a
+completion if its parameter name or delimiter is still missing. See the
+[verification and extraction record](errs-integration-plan.md#qualified-declaration-type-prefixes).

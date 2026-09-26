@@ -2331,6 +2331,66 @@
         ]
       }
     },
+    "X93": {
+      "title": "qualified declaration types honor visibility and replace only the final name",
+      "manual": [],
+      "values": {
+        "file": "Editing.x",
+        "source": "module Editing { import Owner as Alias; class Base { class ItemBase {} } class Owner extends Base { class ItemPublic {} private class ItemPrivate {} protected class ItemProtected {} static Int ItemValue=1; typedef String as ItemAlias; } String StringValue=\"x\"; ${0} Int later=1; }",
+        "variants": [
+          {
+            "declaration": "void damaged(ecstasy.text.Str| value) {}",
+            "include": [
+              "StringBuffer"
+            ],
+            "selected": "StringBuffer"
+          },
+          {
+            "declaration": "ecstasy.text.Str| property;",
+            "include": [
+              "StringBuffer"
+            ],
+            "selected": "StringBuffer"
+          },
+          {
+            "declaration": "ecstasy.text.Str| damaged() = new StringBuffer();",
+            "include": [
+              "StringBuffer"
+            ],
+            "selected": "StringBuffer"
+          },
+          {
+            "declaration": "void damaged(Owner.Ite| value) {}",
+            "include": [
+              "ItemBase",
+              "ItemPublic",
+              "ItemAlias"
+            ],
+            "selected": "ItemPublic"
+          },
+          {
+            "declaration": "void damaged(Alias.Ite| value) {}",
+            "include": [
+              "ItemBase",
+              "ItemPublic",
+              "ItemAlias"
+            ],
+            "selected": "ItemAlias"
+          }
+        ],
+        "exclude": [
+          "ItemPrivate",
+          "ItemProtected",
+          "ItemValue",
+          "StringValue"
+        ],
+        "prefixLength": 3
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

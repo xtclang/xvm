@@ -97,7 +97,12 @@ class XdkRetentionTest {
                 val renamed = adapter.renameAsync(uri, 0, CONSUMER.indexOf("local"), "renamed").get(30, SECONDS)
                 assertThat(renamed?.changes?.get(uri)).hasSize(2)
                 val headerQuery = cycle % (cursorCases.size + 1) == cursorCases.size
-                val (marked, expected) = if (headerQuery) "void probe(Str| value) {}" to "String" else cursorCases[cycle % cursorCases.size]
+                val (marked, expected) =
+                    when {
+                        !headerQuery -> cursorCases[cycle % cursorCases.size]
+                        cycle % 2 == 0 -> "void probe(Str| value) {}" to "String"
+                        else -> "void probe(ecstasy.text.Str| value) {}" to "StringBuffer"
+                    }
                 val prefix = marked.substringBefore('|')
                 val incomplete =
                     if (headerQuery) {

@@ -1020,7 +1020,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X92 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X93 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
@@ -1066,8 +1066,8 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It runs startup and thirty shared scenarios: X2, X4, X6–X13, X15–X20, X45–X46,
-X71, X74–X75, X83–X89, CFG1 and 7a.8. Seventeen have full scenario assertions and thirteen
+disabled. It runs startup and thirty-four shared scenarios: X2, X4, X6–X13, X15–X20, X45–X46,
+X71, X74–X75, X83–X93, CFG1 and 7a.8. Nineteen have full scenario assertions and fifteen
 have explicitly partial coverage. Parameter Info checks inspect the actual native request,
 rendered parameters and bold argument for method and constructor variants. Invalid calls must
 clear an earlier valid hint. Constructor completion acceptance and X16/X20 declaration navigation
@@ -1083,21 +1083,32 @@ Results are under `lang/intellij-plugin/build/reports/compiler-playbook/run-*/re
 `ide-paths.txt` identifies the separate IDE profile/log directory. A graphical desktop is
 required. See the [IntelliJ test and configuration instructions](../intellij-plugin/README.md#compiler-playbook-in-intellij).
 
+During an automated run, leave its isolated editor window to the harness. The driver selects tabs,
+invokes active-editor commands and closes buffers; concurrent manual navigation can change those
+targets or cancel requests even without typing. This is a constraint of scripted UI testing, not a
+restriction on ordinary editing. Use a separate editor instance for other work during the run.
+
+While compiler feature coverage is growing, run the IntelliJ playbook at occasional checkpoints;
+it is not required for every compiler change. Keep shared scenarios and the native consumer code
+current, and state explicitly when a new IntelliJ case has not yet had a native run.
+
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 97 scenarios: X1–X92, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 98 scenarios: X1–X93, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 97 cases. IntelliJ executes eighteen fully and fifteen partially, plus a separate startup check;
+all 98 cases. IntelliJ executes nineteen fully and fifteen partially, plus a separate startup check;
 its catalog entries explain every partial or unimplemented case. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was prevented from running, such as after an earlier failure. Partial coverage never appears
 as a full pass. A failed implemented check fails the Gradle task.
+These counts describe implemented assertions. X93's IntelliJ consumer has been compiled but its
+native run is deferred; the last native validation covers the catalog through X92.
 
 Both reports include the shared file, SHA-256 and complete ID list. Both drivers compare catalog
 IDs with the manual table; VS Code also checks exact registration order, and IntelliJ checks that
@@ -1774,8 +1785,29 @@ module Advanced {
 | X90 | In `constructions`, replace `new String[2](text)` with `new String[te](text)`. Request completion and signature help inside the brackets, then accept `textNumber`. Repeat with `new String[te` before the semicolon, then restore `](text)` and the fixture. | Only the Int value `textNumber` fits the size prefix; the String value `text` is excluded. Help shows the fixed-size Array constructor with `Int size` active at index 0. Acceptance replaces only `te`. A missing bracket remains a diagnostic until repaired. The native IntelliJ run checks the visible size highlight and exact accepted edit; its sole-candidate auto-insertion can prevent inspecting the entire candidate list. |
 | X91 | In `Editing.x`, temporarily use `module Editing { String StringValue="x"; void damaged(Str value) {} Int later=1; }`. Request completion just after `Str`, then accept `String`. Repeat with `void damaged(Int first, Str second) {}`, `Str property;`, and `Str damaged() = "x";` in the same module, then restore the fixture. | Compiler type candidates include `String`, exclude the value `StringValue`, and replace only the three prefix characters. No call signature is shown in the declaration header. Each repaired source clears diagnostics. Both native drivers use these same inputs and assertions. |
 | X92 | In `Editing.x`, use a multiline `module Editing` with `void damaged(Int) {` on line 2, `Int hidden=1;` on line 3, its closing brace on line 4, and `Int later=1;` afterward. Repeat with the header `void damaged(Int value, Str)`. Repair either header to `void damaged(Int value)` and restore the fixture. | Diagnostics remain while the parameter header is incomplete. Outline includes `Editing`, `damaged` and `later`; `hidden` does not leak from the skipped body. The method folds through its actual closing brace. Repair clears diagnostics. IntelliJ checks native diagnostics, Problems rows and repair; native outline/folding assertions remain explicitly partial. |
+| X93 | In the same temporary `Editing.x` module, complete `ecstasy.text.Str` as a parameter type, property type and return type (return `new StringBuffer()`). Accept `StringBuffer`. Then use the X93 source below (also in the shared catalog): `Owner` extends `Base` and declares public/private/protected nested types, a typedef and a value; `Alias` imports `Owner`. Complete `Owner.Ite` and `Alias.Ite`, accepting `ItemPublic` and `ItemAlias`. Restore the fixture. | The bundled XDK qualifier resolves; only `Str` or `Ite` is replaced. Owner/alias candidates include inherited `ItemBase`, public `ItemPublic` and typedef `ItemAlias`, and exclude `ItemPrivate`, `ItemProtected`, `ItemValue` and enclosing `StringValue`. No call signature appears. Every accepted edit compiles and clears diagnostics. Both native drivers use the shared variants and assertions. |
 
 
+For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
+Complete immediately after `Owner.Ite`, accept `ItemPublic`, then replace that type with
+`Alias.Ite` and accept `ItemAlias`. Restore the original fixture afterward.
+
+```text
+module Editing {
+    import Owner as Alias;
+    class Base { class ItemBase {} }
+    class Owner extends Base {
+        class ItemPublic {}
+        private class ItemPrivate {}
+        protected class ItemProtected {}
+        static Int ItemValue = 1;
+        typedef String as ItemAlias;
+    }
+    String StringValue = "x";
+    void damaged(Owner.Ite value) {}
+    Int later = 1;
+}
+```
 
 Argument-value suggestions cover visible readable locals/parameters and implicit properties/constants
 in empty final positional slots, pending named values and direct final bare-name prefixes. They use
@@ -1789,13 +1821,13 @@ X88–X89 add anonymous superclass forwarding and constructors declared inside r
 interface implementations and captured locals. Cursor analysis prepares declaration signatures but does
 not validate capture behavior or emit unfinished bodies. X91–X92 add simple unqualified member/return
 and method-parameter type prefixes, including empty parameter type slots in API tests. Incomplete
-names/signatures are never invented; generic-method, qualified/compound and type-composition
-headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
+names/signatures are never invented. X93 adds flat qualified type prefixes, imported qualifiers,
+visibility, inherited types and final-token edits. Trailing dots, parameterized/compound types,
+generic-method and type-composition headers remain follow-ups. X90 adds empty/final-prefix single-dimensional
 size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
 prefix query does not validate a following supplier. Types without an element default still require
-a supplier when compiled normally. Multidimensional construction, unfinished declaration names/types
-and missing operands remain unsupported; no literal
-value or declaration token is invented.
+a supplier when compiled normally. Multidimensional construction, unfinished declaration names
+and missing operands remain unsupported; no literal value or declaration token is invented.
 
 ## VS Code Extension Playbook
 
