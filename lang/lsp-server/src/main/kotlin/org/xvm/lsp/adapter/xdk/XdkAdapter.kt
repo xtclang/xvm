@@ -645,14 +645,14 @@ class XdkAdapter internal constructor(
 
                         cached != null -> {
                             ModuleAnalysis(
-                                emptyMap(),
-                                cached.diagnostics,
-                                emptySet(),
-                                cached.artifact != null,
-                                emptyMap(),
-                                inputs,
-                                cached.artifact,
-                                cached.documentUris,
+                                documents = emptyMap(),
+                                diagnostics = cached.diagnostics,
+                                dependencies = emptySet(),
+                                succeeded = cached.artifact != null,
+                                dependencySources = emptyMap(),
+                                inputs = inputs,
+                                artifact = cached.artifact,
+                                documentUris = cached.documentUris,
                             )
                         }
 
@@ -671,16 +671,16 @@ class XdkAdapter internal constructor(
             }
         val target = analyses.last()
         return ModuleAnalysis(
-            target.documents,
-            diagnostics,
-            target.dependencies + order.map { it.name },
-            target.succeeded,
-            target.dependencySources,
-            target.inputs,
-            target.artifact,
-            documents,
-            target.sourceInputs,
-            target.sourceTexts,
+            documents = target.documents,
+            diagnostics = diagnostics,
+            dependencies = target.dependencies + order.map { it.name },
+            succeeded = target.succeeded,
+            dependencySources = target.dependencySources,
+            inputs = target.inputs,
+            artifact = target.artifact,
+            documentUris = documents,
+            sourceInputs = target.sourceInputs,
+            sourceTexts = target.sourceTexts,
         )
     }
 
@@ -691,12 +691,12 @@ class XdkAdapter internal constructor(
         message: String,
         documents: Set<String> = setOf(uri),
     ) = ModuleAnalysis(
-        emptyMap(),
-        listOf(Diagnostic(wholeDocument(uri), Diagnostic.Severity.ERROR, message, code, SOURCE)),
-        emptySet(),
-        false,
-        emptyMap(),
-        inputs,
+        documents = emptyMap(),
+        diagnostics = listOf(Diagnostic(wholeDocument(uri), Diagnostic.Severity.ERROR, message, code, SOURCE)),
+        dependencies = emptySet(),
+        succeeded = false,
+        dependencySources = emptyMap(),
+        inputs = inputs,
         documentUris = documents,
     )
 
@@ -762,17 +762,18 @@ class XdkAdapter internal constructor(
             )
         }
         return ModuleAnalysis(
-            documents,
-            diagnostics,
-            compilation
-                .file()
-                ?.moduleIds()
-                ?.mapTo(linkedSetOf()) { it.name }
-                .orEmpty(),
-            compilation.succeeded(),
-            dependencySources,
-            inputs,
-            artifact,
+            documents = documents,
+            diagnostics = diagnostics,
+            dependencies =
+                compilation
+                    .file()
+                    ?.moduleIds()
+                    ?.mapTo(linkedSetOf()) { it.name }
+                    .orEmpty(),
+            succeeded = compilation.succeeded(),
+            dependencySources = dependencySources,
+            inputs = inputs,
+            artifact = artifact,
             sourceInputs = sources?.inputs,
             sourceTexts =
                 sources
