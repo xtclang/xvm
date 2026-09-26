@@ -4193,12 +4193,6 @@ public class CommonBuilder
     private static final String InstanceInit = Instance + "$=";
 
     private static final String[] NO_JIT_LIST = new String[] {
-        // six failures: construct/resize/clear (default arguments), remove/put (Ref moves),
-        // putAll (TypeMatrix assignment)
-        "org.xtclang.ecstasy.maps.HasherMap",
-        // six failures: freeze (immutable union), addKeyTo/removeIndexFrom (widened returns),
-        // addIndexTo (widened argument), buildIndex (default argument), remove (IS_NULL)
-        "org.xtclang.ecstasy.maps.ListMap",
         "org.xtclang.ecstasy.reflect.Class",
         "org.xtclang.ecstasy.reflect.Type",
     };
@@ -4210,7 +4204,7 @@ public class CommonBuilder
             Set.of("calc")), // TODO: applied @Lazy property state is not available on the host
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
             Set.of("calc",        // TODO: applied @Lazy property state is not available on the host
-                   "evaluateInto")), // TODO: requires HashSet compilation
+                   "evaluateInto")), // TODO: MapSet.addAll super return and SkiplistSet copy-constructor cap
         Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
             Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
@@ -4218,6 +4212,17 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.maps.HashMap",
             Set.of("clear",       // TODO: virtual construction result is incompatible with ReplicableCopier
                    "duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
+        Map.entry("org.xtclang.ecstasy.maps.HasherMap",
+            Set.of("duplicate", // TODO: virtual constructor lookup returns no MethodInfo
+                   "putAll")),   // TODO: incompatible assignment types in TypeMatrix
+        Map.entry("org.xtclang.ecstasy.maps.ListMap",
+            Set.of("freeze", // TODO: immutable union specialization
+                   "addIndexTo", // TODO: widened-to-primitive array argument
+                   "duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
+                   "ensurePersistent", // TODO: private access requested on a nullable array union
+                   "indexOf",    // TODO: property lookup fails during P_GET type analysis
+                   "process",    // TODO: local-variable-table slots exceed max_locals
+                   "remove")),   // TODO: IS_NULL on specialized values
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "map",              // TODO: incompatible formal result types in TypeMatrix
