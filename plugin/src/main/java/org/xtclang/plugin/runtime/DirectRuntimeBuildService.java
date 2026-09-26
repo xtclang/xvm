@@ -7,11 +7,14 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import org.gradle.api.GradleException;
 import org.gradle.api.logging.Logger;
 import org.gradle.api.logging.Logging;
 import org.gradle.api.services.BuildService;
@@ -98,17 +101,31 @@ public abstract class DirectRuntimeBuildService
 
         try {
             final var loader = new PluginRuntimeClassLoader(runtimeUrls, getClass().getClassLoader());
+            final var entry = loadRuntimeEntry(loader);
+            logger.debug("[plugin] [DIRECT] Cached isolated runtimes after creation: {}", runtimes.size() + 1);
+            return entry;
+        } catch (final Exception | LinkageError e) {
+            throw failure(e, "Failed to create isolated direct runtime for '{}'", runtime.source());
+        }
+    }
+
+    static RuntimeEntry loadRuntimeEntry(final URLClassLoader loader) throws ReflectiveOperationException {
+        try {
             final var executorType = loader.loadClass(EXECUTOR_CLASS);
-            final var entry = new RuntimeEntry(
+            return new RuntimeEntry(
                 loader,
                 executorType.getMethod("executeCompile", DirectCompileRequest.class, Logger.class),
                 executorType.getMethod("executeRun", DirectRunRequest.class, Logger.class),
                 executorType.getMethod("executeTest", DirectTestRequest.class, Logger.class)
             );
-            logger.debug("[plugin] [DIRECT] Cached isolated runtimes after creation: {}", runtimes.size() + 1);
-            return entry;
-        } catch (final Exception e) {
-            throw failure(e, "Failed to create isolated direct runtime for '{}'", runtime.source());
+        } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+            // Ownership transfers to the entry only after every executor method is available.
+            try {
+                loader.close();
+            } catch (final IOException closeFailure) {
+                e.addSuppressed(closeFailure);
+            }
+            throw e;
         }
     }
 
@@ -146,12 +163,33 @@ public abstract class DirectRuntimeBuildService
             runtimes.keySet().forEach(fingerprint ->
                 LOG.debug("[plugin] [DIRECT] Releasing runtime fingerprint: {}", fingerprint.describeForLogging()));
         }
-        runtimes.values().forEach(RuntimeEntry::close);
-        runtimes.clear();
+        try {
+            closeEntries(runtimes.values());
+        } finally {
+            runtimes.clear();
+        }
     }
 
-    private record RuntimeEntry(
-            PluginRuntimeClassLoader classLoader,
+    static void closeEntries(final Collection<RuntimeEntry> entries) {
+        GradleException firstFailure = null;
+        for (final var entry : entries) {
+            try {
+                entry.close();
+            } catch (final GradleException e) {
+                if (firstFailure == null) {
+                    firstFailure = e;
+                } else {
+                    firstFailure.addSuppressed(e);
+                }
+            }
+        }
+        if (firstFailure != null) {
+            throw firstFailure;
+        }
+    }
+
+    record RuntimeEntry(
+            URLClassLoader classLoader,
             Method compileMethod,
             Method runMethod,
             Method testMethod) implements Closeable {
