@@ -1,5 +1,9 @@
 # Ecstasy Language Tooling
 
+L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
+type moves and public-type auto-import repairs. See the
+[scope and proof boundaries](../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
+
 Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
 compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
 broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
