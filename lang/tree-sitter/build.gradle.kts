@@ -218,17 +218,7 @@ val extractTreeSitterSource = tasks.register("extractTreeSitterSource") {
 
         GZIPInputStream(input.inputStream().buffered()).use { gzIn ->
             TarArchiveInputStream(gzIn).use { tarIn ->
-                var entry = tarIn.nextEntry
-                while (entry != null) {
-                    val outFile = File(outDir, entry.name)
-                    if (entry.isDirectory) {
-                        outFile.mkdirs()
-                    } else {
-                        outFile.parentFile.mkdirs()
-                        outFile.outputStream().buffered().use { out -> tarIn.copyTo(out) }
-                    }
-                    entry = tarIn.nextEntry
-                }
+                SafeTarExtractor.extract(tarIn, outDir)
             }
         }
         logger.info("[tree-sitter] Source extracted to: ${outDir.absolutePath}")
@@ -340,24 +330,7 @@ abstract class ExtractZigTask @Inject constructor(
         archive.inputStream().buffered().use { fileIn ->
             XZCompressorInputStream(fileIn).use { xzIn ->
                 TarArchiveInputStream(xzIn).use { tarIn ->
-                    var entry = tarIn.nextEntry
-                    while (entry != null) {
-                        val outFile = File(outDir, entry.name)
-
-                        if (entry.isDirectory) {
-                            outFile.mkdirs()
-                        } else {
-                            outFile.parentFile.mkdirs()
-                            outFile.outputStream().buffered().use { out ->
-                                tarIn.copyTo(out)
-                            }
-                            // Preserve executable permission
-                            if (entry.mode and 0b001_000_000 != 0) {
-                                outFile.setExecutable(true)
-                            }
-                        }
-                        entry = tarIn.nextEntry
-                    }
+                    SafeTarExtractor.extract(tarIn, outDir)
                 }
             }
         }
