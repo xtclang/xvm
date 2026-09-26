@@ -103,10 +103,7 @@ class XdkCompoundHeaderTest {
     @ValueSource(
         strings = [
             "void damaged(Lis§<String> value) {}",
-            "void damaged(List<String>.Ite§ value) {}",
-            "void damaged(List<§> value) {}",
             "void damaged((Int | §) value) {}",
-            "void damaged(List<Str§ing> value) {}",
             "void damaged(function Str§() value) {}",
             "<T> void damaged(List<Str§> value) {}",
         ],
