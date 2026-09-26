@@ -143,15 +143,14 @@ class XdkAdapter internal constructor(
         uri: String,
         content: String,
     ): CompletableFuture<CompilationResult> {
-        lateinit var request: Request
-        val (retired, obsoleteQueries) =
+        val submission =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 overlays[uri] = content
                 val scope = analysisScope(uri)
                 scopes[uri] = scope
                 val sourceScopes = project.buildOrder(scope).mapTo(mutableSetOf(scope)) { it.uri }
-                request =
+                val request =
                     Request(scope, uri, overlays.filterKeys { analysisScope(it) in sourceScopes }, dependencies, project, ::runCompilation)
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
@@ -168,7 +167,7 @@ class XdkAdapter internal constructor(
                         obsolete.forEach { it.result.cancel(false) }
                     }
                 }
-                val retired = retireRequests(project.affected(scope))
+                val (retired, obsoleteQueries) = retireRequests(project.affected(scope))
                 requests[scope] = request
                 scheduled[request] =
                     debouncer.schedule({
@@ -176,11 +175,11 @@ class XdkAdapter internal constructor(
                             if (scheduled.remove(request) != null && !isStale(request)) compiles.execute(request.task)
                         }
                     }, DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS)
-                retired
+                Submission(request = request, retired = retired, obsoleteQueries = obsoleteQueries)
             }
-        retired.forEach { it.result.cancel(false) }
-        obsoleteQueries.forEach { it.result.cancel(false) }
-        return request.result
+        submission.retired.forEach { it.result.cancel(false) }
+        submission.obsoleteQueries.forEach { it.result.cancel(false) }
+        return submission.request.result
     }
 
     /**
@@ -426,6 +425,12 @@ class XdkAdapter internal constructor(
         val result = CompletableFuture<CompilationResult>()
         val task = Runnable { work(this) }
     }
+
+    private data class Submission(
+        val request: Request,
+        val retired: List<Request>,
+        val obsoleteQueries: List<QueryWork>,
+    )
 
     /** Installed atomically, so all member views always belong to the same compilation. */
     private class ModuleAnalysis(
