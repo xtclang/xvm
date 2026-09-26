@@ -26,6 +26,7 @@ fun Driver.signature(
     keepOpen: Boolean = false,
     matches: (List<Signature>) -> Boolean,
 ) {
+    focusEditor(editor)
     val popup = ui.x("//div[@class='ParameterInfoComponent']")
     val support =
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
@@ -37,6 +38,7 @@ fun Driver.signature(
     val previous = support.getValidLSPFuture()
     invokeAction("ParameterInfo", component = editor.component)
     waitFor("native parameter information for offset $at", 45.seconds) {
+        requirePopupFocus()
         val future = support.getValidLSPFuture()
         if (future == null || future == previous || !future.isDone() || future.isCompletedExceptionally()) return@waitFor false
         val help = future.get()
