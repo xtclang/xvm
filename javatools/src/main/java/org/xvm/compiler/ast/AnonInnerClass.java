@@ -35,10 +35,9 @@ public class AnonInnerClass {
      */
     public AnonInnerClass(TypeExpression expr, ErrorListener errs) {
         assert expr != null;
-        requireNonNull(errs, "errs");
 
         m_exprType = expr;
-        f_errs     = errs;
+        f_errs     = requireNonNull(errs, "errs");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
