@@ -7,6 +7,7 @@ import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.SymbolInfo
 import org.xvm.tool.ModuleInfo
 import java.io.IOException
 import java.util.concurrent.CancellationException
@@ -26,6 +27,29 @@ internal class XdkProjectQueries(
     private val sources = project.buildOrder().associateWith { XdkSources.capture(it.root, overlays, cancelled) }
     private val texts = sources.values.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value }
     private val uris = sources.values.flatMap { it.sourceUris.entries }.associate { it.toPair() }
+
+    fun symbols(query: String): List<SymbolInfo> {
+        val facts = compile(texts, allowIncomplete = true) ?: return emptyList()
+        val symbols = facts.models.flatMap { model ->
+            model.symbols.filter { symbol ->
+                symbol.declarationSource == model.sourceName && symbol.declaration != null &&
+                    symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.METHOD,
+                        SemanticModel.SymbolKind.PROPERTY, SemanticModel.SymbolKind.MODULE, SemanticModel.SymbolKind.PACKAGE) &&
+                    (query.isBlank() || symbol.name.contains(query, ignoreCase = true))
+            }.map { symbol ->
+                val range = requireNotNull(symbol.declaration)
+                SymbolInfo.of(symbol.name, when (symbol.kind) {
+                    SemanticModel.SymbolKind.METHOD -> SymbolInfo.SymbolKind.METHOD
+                    SemanticModel.SymbolKind.PROPERTY -> SymbolInfo.SymbolKind.PROPERTY
+                    SemanticModel.SymbolKind.MODULE -> SymbolInfo.SymbolKind.MODULE
+                    SemanticModel.SymbolKind.PACKAGE -> SymbolInfo.SymbolKind.PACKAGE
+                    else -> SymbolInfo.SymbolKind.CLASS
+                }, Location(uris.getValue(requireNotNull(model.sourceName)), range.start.line, range.start.column,
+                    range.end.line, range.end.column))
+            }
+        }
+        return if (isCurrent()) symbols.distinctBy { it.location }.sortedBy { it.name } else emptyList()
+    }
 
     fun references(
         uri: String,
@@ -106,13 +130,16 @@ internal class XdkProjectQueries(
         return family
     }
 
-    private fun compile(text: Map<String, String>): CompilerRenameFacts? {
+    private fun compile(text: Map<String, String>, allowIncomplete: Boolean = false): CompilerRenameFacts? {
         checkCurrent()
         val artifacts = dependencies.modules.filterKeys { name -> sources.keys.none { it.name == name } }.toMutableMap()
         val attempts =
-            sources.map { (module, source) ->
+            sources.mapNotNull { (module, source) ->
                 checkCurrent()
-                if (module.dependencies.any { it !in artifacts }) return null
+                if (module.dependencies.any { it !in artifacts && it !in XdkLibraries.moduleNames }) {
+                    if (allowIncomplete) return@mapNotNull null
+                    return null
+                }
                 val open = XdkDependencies(artifacts.values.toList()).open()
                 val heard = ErrorList()
                 val errors = ErrorListener.cancellable(heard, cancelled)
@@ -121,6 +148,7 @@ internal class XdkProjectQueries(
                 if (!compilation.succeeded() || heard.hasSeriousErrors() ||
                     compilation.file().module.name != module.name
                 ) {
+                    if (allowIncomplete) return@mapNotNull null
                     return null
                 }
                 val facts = compilation.projectRenameFacts(open, errors)

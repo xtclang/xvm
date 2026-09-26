@@ -44,6 +44,7 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.util.Severity as XtcSeverity
 
@@ -58,7 +59,7 @@ import org.xvm.util.Severity as XtcSeverity
  * Copied semantic facts support cross-file navigation and declared type hierarchy within a module.
  * Per-source AST roots supply outlines, folding and selection. The server supplies document
  * versions and publishes diagnostics after checking that the whole module request is still current.
- * Matching core/bootstrap XDK libraries are bundled; compilation does not start an interpreter.
+ * The complete matching XDK library set is bundled; compilation does not start an interpreter.
  */
 class XdkAdapter internal constructor(
     private val compileSource: (Source, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
@@ -118,6 +119,28 @@ class XdkAdapter internal constructor(
             AdapterCapability.INLAY_HINT,
             AdapterCapability.RENAME,
         )
+
+    private data class Discovery(val folders: List<File> = emptyList(), val explicit: Boolean = false)
+    private val discovery = AtomicReference(Discovery())
+
+    override fun initializeWorkspace(workspaceFolders: List<String>, progressReporter: ((String, Int) -> Unit)?) {
+        discovery.updateAndGet { it.copy(folders = workspaceFolders.map { path -> File(path).canonicalFile }.distinct()) }
+        refreshDiscoveredSources()
+        progressReporter?.invoke("Compiler source graph discovered", 100)
+    }
+
+    /** Returns retired scopes so the server can rebuild current document versions. */
+    fun refreshDiscoveredSources(): Set<String> {
+        val settings = discovery.get()
+        if (settings.explicit || settings.folders.isEmpty()) return emptySet()
+        val (buffers, previous) = synchronized(lifecycle) { overlays.toMap() to project }
+        val modules = XdkWorkspaceDiscovery.scan(settings.folders, buffers, previous.modules.values) {
+            closed || discovery.get() !== settings
+        }
+        return installSourceModules(modules, explicit = false) {
+            !closed && discovery.get() === settings && project === previous && overlays == buffers
+        }
+    }
 
     override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
 
@@ -237,7 +260,7 @@ class XdkAdapter internal constructor(
         val compilation: Request
     }
 
-    private enum class ProjectQueryKind { REFERENCES, RENAME }
+    private enum class ProjectQueryKind { REFERENCES, RENAME, SYMBOLS }
 
     private data class ProjectQueryKey(
         val uri: String,
@@ -471,11 +494,24 @@ class XdkAdapter internal constructor(
     private fun analysis(uri: String): Analysis? = module(uri)?.document(uri)
 
     /** Explicit source graph; installing a new configuration retires all current attempts. */
-    fun replaceSourceModules(modules: List<XdkSourceModule>): Set<String> {
+    fun replaceSourceModules(modules: List<XdkSourceModule>): Set<String> = installSourceModules(modules, explicit = true)
+
+    fun discoverSourceModules(): Set<String> {
+        discovery.updateAndGet { it.copy(explicit = false) }
+        return refreshDiscoveredSources()
+    }
+
+    private fun installSourceModules(
+        modules: List<XdkSourceModule>,
+        explicit: Boolean,
+        current: () -> Boolean = { true },
+    ): Set<String> {
         val replacement = XdkProject(modules)
         val (retired, probes) =
             synchronized(lifecycle) {
                 check(!closed) { "XDK adapter is closed" }
+                if (!current()) return emptySet()
+                if (explicit) discovery.updateAndGet { it.copy(explicit = true) }
                 if (project.sameConfiguration(replacement)) return emptySet()
                 project = replacement
                 builds.clear()
@@ -625,7 +661,7 @@ class XdkAdapter internal constructor(
                 val inputs = XdkDependencies(artifacts.values.toList())
                 val sources = captured.getValue(module).getOrNull()
                 val uri = sources?.uri(module.root) ?: module.uri
-                val missing = module.dependencies.filter { it !in artifacts }
+                val missing = module.dependencies.filter { it !in artifacts && it !in XdkLibraries.moduleNames }
                 val key = sources?.let { BuildKey(it.inputs, artifacts.mapValues { (_, artifact) -> artifact.revision }) }
                 val cached = builds[module.name]?.takeIf { key != null && it.key == key && module.uri != request.scope }
                 val analysis =
@@ -949,15 +985,16 @@ class XdkAdapter internal constructor(
         }
     }
 
-    /**
-     * Search completed active module sessions, including their closed member files.
-     * This does not discover or compile other workspace modules.
-     */
-    override fun findWorkspaceSymbols(query: String): List<SymbolInfo> =
-        completed.values
-            .flatMap { it.documents.values }
-            .flatMap { flatten(it.symbols) }
-            .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+    /** Compile the discovered/configured graph on the worker, including unopened modules. */
+    override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
+        val root = synchronized(lifecycle) { project.buildOrder().firstOrNull()?.uri }
+        return if (root == null) {
+            completed.values.flatMap { it.documents.values }.flatMap { flatten(it.symbols) }
+                .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+        } else {
+            projectQuery(ProjectQueryKey(root, ProjectQueryKind.SYMBOLS), emptyList()) { it.symbols(query) }.join()
+        }
+    }
 
     private fun flatten(symbols: List<SymbolInfo>): List<SymbolInfo> = symbols.flatMap { listOf(it) + flatten(it.children) }
 

@@ -97,7 +97,7 @@ internal class XdkDependencies(
 
     init {
         require(modules.size == dependencies.size) { "Duplicate dependency module" }
-        require(modules.keys.none { it in setOf("ecstasy.xtclang.org", "mack.xtclang.org", "_native.xtclang.org") }) {
+        require(modules.keys.none { it in XdkLibraries.moduleNames }) {
             "Project dependencies cannot replace the bundled compiler libraries"
         }
     }

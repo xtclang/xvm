@@ -2,6 +2,22 @@
 
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
+### Current development batch: discovery and complete XDK
+
+These additions are implemented but await the combined five-area verification run. In a fresh
+compiler-mode workspace, set `xtc.compiler.sourceModules` to `null` (or leave it unconfigured in
+IntelliJ). Create `Library.x` with `module Library { static Int answer()=42; }` and `Consumer.x` with
+`module Consumer { package lib import Library; Int run()=lib.answer(); }`. Opening only Consumer
+should resolve `answer`; workspace symbol search should find Library's declaration. Add a separate
+broken module and verify Library remains searchable. Create/remove another module and wait for its
+file watcher notification; its workspace symbols should appear/disappear. Set `sourceModules` to
+`[]` to disable discovery, then `null` to restore it. Explicit graph scenarios below still apply.
+
+Also compile `module UsesXml { package xml import xml.xtclang.org; void accept(xml.Document doc) {} }`
+without external XDK paths. XML must resolve from the production bundle, while rename on `Document`
+remains unavailable because it is a binary library declaration. The full XDK, including XML/JSONDB
+and the other distribution libraries, is now shared by production and compiler tests.
+
 ## Feature Implementation Status
 
 > See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
