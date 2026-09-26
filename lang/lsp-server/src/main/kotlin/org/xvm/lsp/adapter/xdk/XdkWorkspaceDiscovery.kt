@@ -21,38 +21,72 @@ internal object XdkWorkspaceDiscovery {
         previous: Collection<XdkSourceModule>,
         cancelled: () -> Boolean,
     ): List<XdkSourceModule> {
-        fun checkCurrent() { if (cancelled()) throw CancellationException() }
+        fun checkCurrent() {
+            if (cancelled()) throw CancellationException()
+        }
         val buffers = overlays.mapNotNull { (uri, text) -> XdkSources.file(uri)?.let { it to text } }.toMap()
-        val files = folders.flatMap { folder ->
-            checkCurrent()
-            if (!folder.isDirectory) emptyList() else folder.walkTopDown()
-                .onEnter { directory ->
+        val files =
+            folders
+                .flatMap { folder ->
                     checkCurrent()
-                    directory.name !in excluded && !Files.isSymbolicLink(directory.toPath())
-                }.filter { it.isFile && it.extension == "x" && !Files.isSymbolicLink(it.toPath()) }
-                .map(File::getCanonicalFile).toList()
-        }.toSet() + buffers.keys.filter { file -> folders.any { file.toPath().startsWith(it.toPath()) } }
-        val text = files.associateWith { file -> checkCurrent(); buffers[file] ?: file.readText() }
-        val roots = text.mapNotNull { (file, content) ->
-            checkCurrent()
-            val name = Parser(Source(content, file.path), ErrorList()).parseModuleNameIgnoreEverythingElse()
-                ?: previous.firstOrNull { it.root == file }?.name
-            name?.takeUnless(XdkLibraries.moduleNames::contains)?.let { file to it }
-        }.toMap()
+                    if (!folder.isDirectory) {
+                        emptyList()
+                    } else {
+                        folder
+                            .walkTopDown()
+                            .onEnter { directory ->
+                                checkCurrent()
+                                directory.name !in excluded && !Files.isSymbolicLink(directory.toPath())
+                            }.filter { it.isFile && it.extension == "x" && !Files.isSymbolicLink(it.toPath()) }
+                            .map(File::getCanonicalFile)
+                            .toList()
+                    }
+                }.toSet() + buffers.keys.filter { file -> folders.any { file.toPath().startsWith(it.toPath()) } }
+        val text =
+            files.associateWith { file ->
+                checkCurrent()
+                buffers[file] ?: file.readText()
+            }
+        val roots =
+            text
+                .mapNotNull { (file, content) ->
+                    checkCurrent()
+                    val name =
+                        Parser(Source(content, file.path), ErrorList()).parseModuleNameIgnoreEverythingElse()
+                            ?: previous.firstOrNull { it.root == file }?.name
+                    name?.takeUnless(XdkLibraries.moduleNames::contains)?.let { file to it }
+                }.toMap()
         val names = roots.values.toSet()
         return roots.entries.sortedBy { it.key.path }.map { (root, name) ->
             val members = File(root.parentFile, root.nameWithoutExtension).toPath()
-            val imported = text.filterKeys { it == root || it.toPath().startsWith(members) }.flatMap { (file, content) ->
-                checkCurrent()
-                val heard = ErrorList()
-                val tree = try {
-                    Parser.forPartialAnalysis(Source(content, file.path), heard).parseSource()
-                } catch (_: CompilerException) { null }
-                val imports = tree?.let(::nodes).orEmpty().filterIsInstance<CompositionNode.Import>()
-                    .mapNotNull { (it.type as? NamedTypeExpression)?.name }
-                // An incomplete edit must not silently discard the dependency ordering we knew.
-                imports + if (tree == null || heard.hasSeriousErrors()) previous.firstOrNull { it.root == root }?.dependencies.orEmpty() else emptySet()
-            }.filterTo(linkedSetOf()) { it in names && it != name }
+            val imported =
+                text
+                    .filterKeys { it == root || it.toPath().startsWith(members) }
+                    .flatMap { (file, content) ->
+                        checkCurrent()
+                        val heard = ErrorList()
+                        val tree =
+                            try {
+                                Parser.forPartialAnalysis(Source(content, file.path), heard).parseSource()
+                            } catch (_: CompilerException) {
+                                null
+                            }
+                        val imports =
+                            tree
+                                ?.let(::nodes)
+                                .orEmpty()
+                                .filterIsInstance<CompositionNode.Import>()
+                                .mapNotNull { (it.type as? NamedTypeExpression)?.name }
+                        // An incomplete edit must not silently discard the dependency ordering we knew.
+                        imports +
+                            if (tree == null ||
+                                heard.hasSeriousErrors()
+                            ) {
+                                previous.firstOrNull { it.root == root }?.dependencies.orEmpty()
+                            } else {
+                                emptySet()
+                            }
+                    }.filterTo(linkedSetOf()) { it in names && it != name }
             XdkSourceModule(name, root.toURI().toString(), imported)
         }
     }
