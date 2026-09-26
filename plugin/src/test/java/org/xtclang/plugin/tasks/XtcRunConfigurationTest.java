@@ -135,6 +135,48 @@ class XtcRunConfigurationTest {
         assertEquals(2, run.size());
     }
 
+    @Test
+    void cliMethodAndArgumentsOverrideConfiguredModules() {
+        final var project = newProject();
+        final var run = project.getTasks().named("runXtc", XtcRunTask.class).get();
+        final var configured = run.module(module -> {
+            module.getModuleName().set("Example");
+            module.moduleArgs("original");
+        });
+        run.setCliMethodName("verify");
+        run.setCliModuleArgs("one,two");
+
+        final var selected = run.resolveModulesToRunFromModulePath(List.of()).getFirst();
+        assertEquals("verify", selected.getMethodName().get());
+        assertEquals(List.of("one", "two"), selected.getModuleArgs().get());
+        assertEquals("run", configured.getMethodName().get());
+        assertEquals(List.of("original"), configured.getModuleArgs().get());
+    }
+
+    @Test
+    void explicitEmptyCliArgumentsClearConfiguredArguments() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        run.module(module -> {
+            module.getModuleName().set("Example");
+            module.moduleArgs("original");
+        });
+        run.setCliModuleArgs("");
+
+        assertEquals(List.of(), run.resolveModulesToRunFromModulePath(List.of()).getFirst().getModuleArgs().get());
+    }
+
+    @Test
+    void configuredArgumentsSurviveAbsentCliOverride() {
+        final var run = newProject().getTasks().named("runXtc", XtcRunTask.class).get();
+        run.module(module -> {
+            module.getModuleName().set("Example");
+            module.moduleArgs("original");
+        });
+
+        assertFalse(run.getCliModuleArgs().isPresent());
+        assertEquals(List.of("original"), run.resolveModulesToRunFromModulePath(List.of()).getFirst().getModuleArgs().get());
+    }
+
     private static Project newProject() {
         final var project = ProjectBuilder.builder().build();
         project.setVersion("1.0");

@@ -164,7 +164,7 @@ class ConfigurationCacheCompatibilityTest {
                     val output = destination.get().asFile
                     output.mkdirs()
                     output.resolve("selection.txt").writeText(configured.get() + "|" +
-                        cliName.orNull + "|" + cliMethod.orNull + "|" + cliArgs.get().joinToString())
+                        cliName.orNull + "|" + cliMethod.orNull + "|" + cliArgs.getOrElse(emptyList()).joinToString())
                 }
             }
             """);
