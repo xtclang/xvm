@@ -581,6 +581,8 @@ class XdkStdioTest {
                 "List<Ele§>" to "Element",
                 "Owner<String>.Ali§" to "Alias",
                 "List<Str§ing>" to "String",
+                "Li§st<String>" to "List",
+                "Li§<String>" to "List",
             )
         Session(packagedJar(), directory).use { session ->
             session.initialize()

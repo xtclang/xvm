@@ -11,7 +11,10 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 
 /** Presentation of copied compiler facts; the shared protocol legend does not load a parser. */
 internal object XdkPresentation {
-    fun tokens(model: SemanticModel, lexical: List<List<Int>> = emptyList()): SemanticTokens {
+    fun tokens(
+        model: SemanticModel,
+        lexical: List<List<Int>> = emptyList(),
+    ): SemanticTokens {
         val tokens =
             model.occurrences
                 .mapNotNull { occurrence ->
@@ -68,9 +71,12 @@ internal object XdkPresentation {
                         SemanticTokenLegend.modifierBitmask(*modifiers.toTypedArray()),
                     )
                 }.let { semantic ->
-                    semantic + lexical.filter { token -> semantic.none { name ->
-                        name[0] == token[0] && name[1] < token[1] + token[2] && token[1] < name[1] + name[2]
-                    } }
+                    semantic +
+                        lexical.filter { token ->
+                            semantic.none { name ->
+                                name[0] == token[0] && name[1] < token[1] + token[2] && token[1] < name[1] + name[2]
+                            }
+                        }
                 }.sortedWith(compareBy({ it[0] }, { it[1] }))
         return SemanticTokens(
             tokens.flatMapIndexed { index, token ->
