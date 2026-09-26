@@ -8,6 +8,18 @@ For a focused explanation of the final contract and why the pipeline changes wer
 [Error listeners in the compiler and embedding API](errs-error-listeners.md). That document also
 separates the pre-existing ambient-pool defects from this branch's ownership changes.
 
+**Qualified declaration types (2026-09-26, working tree after `7e9511eda`).**
+Header type queries now retain flat qualified syntax such as `ecstasy.text.Str`, resolve the
+qualifier through the compiler, and offer visible nested/inherited types and typedefs. Imported
+qualifiers and unsaved module overlays work; only the final token is replaced. Hidden ancestors,
+private/protected children outside their permitted scope, and values are excluded. No node field,
+compiler component, result shape or clone rule is added. Shared X93 covers both native clients;
+trailing dots, parameterized/compound and type-composition headers remain follow-ups. See
+[C21/L36](errs-integration-plan.md#qualified-declaration-type-prefixes) for full evidence.
+Validation passes 477 compiler, 1,041 LSP, 45 stdio and 98 VS Code cases; existing skips are
+listed separately in the plan. All 2,450 observed compiler objects are released. The IntelliJ driver
+compiles; native X93 execution is explicitly deferred to the next occasional checkpoint.
+
 **Unfinished declaration headers (2026-09-25, `68a291c0f`).**
 Malformed method parameter headers now retain a written outline name and source extent. Explicit
 cursor queries complete simple unqualified member/return and parameter types through the actual
@@ -163,7 +175,7 @@ Earlier dated checkpoints below preserve what was supported at those commits.
 
 **Automated playbook follow-up (2026-09-24).**
 [`testCompilerPlaybook`](../lang/doc/manual-test-plan.md#automated-vs-code-run) now exercises the
-X1–X92 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
+X1–X93 compiler scenarios in an isolated VS Code extension host and runs the host/protocol checks.
 Its first complete pass (X1–X58) found two Kotlin consumer gaps: redundant file notifications canceled
 queries for unchanged open overlays, and abstract parameter declarations lacked a copied type
 because they have no body register. The server now preserves the authoritative overlay, and the
@@ -1433,7 +1445,9 @@ persistent workspace index remain separate from the host contract.
 | `Parser` dimension lookahead (C19) | Type parsing must count dimensions before `NewExpression` owns their expressions. A cursor must survive that ambiguity and report once. | Existing listener branch is discarded on token restore and merged when consumed/failed. The owning parse retains original cursor tokens. A following supplier is consumed for recovery but is outside the retained prefix proof. |
 | `IncompleteDeclarationStatement` (C20) | Preserve written declaration kind/name/range when no valid method or property component can be registered; own the selected type cursor. | Final metadata and ordinary AST child list adoption/cloning. The skipped body contributes only its original range. No component, parameter register, retained Context or lazy cache. AST placement is required for source ownership, structural features and stage traversal. |
 | `IncompleteStatement.isTypeCompletion()` and `CursorScope.declarationTypes` (C20) | Distinguish a type-only header query and resolve enclosing type candidates without inventing a method scope. | Kind is derived from the real parent; existing NameResolver performs lookup. Existing CursorBinding.NamedType carries copied identities. No new cursor field or host-side type resolver. |
-| `Parser` header recovery (C20) | Parser owns missing-header boundaries and distinguishes unqualified type prefixes from values. | Retains an actual name only when written; stops at body/semicolon/enclosing brace/EOF and checks cancellation while skipping the body. Generic/qualified/type-composition headers remain bounded follow-ups. |
+| `Parser` header recovery (C20) | Parser owns missing-header boundaries and distinguishes unqualified type prefixes from values. | Retains an actual name only when written; stops at body/semicolon/enclosing brace/EOF and checks cancellation while skipping the body. Qualified names are extended by C21 below; generic/type-composition headers remain follow-ups. |
+| `IncompleteStatement.forDeclarationType` (C21) | Preserve the complete written qualified type, and identify the final identifier for replacement. | Existing target child owns the original unvalidated NamedTypeExpression. Its final token is reused as cursor metadata; ordinary adoption/cloning handles independent ownership. No new fields or cached resolver. |
+| `Parser` qualified header selection and `CursorScope` lookup (C21) | Parser recognizes flat qualified syntax; the compiler helper resolves the qualifier and visible child identities using NameResolver/TypeInfo. | Stack-local resolvers and cancellation-aware PROBE listeners; no retained Context, NameResolver or host type rules. Existing CursorBinding.NamedType supplies the result. Parameterized/compound/type-composition headers remain separate. |
 | `PartialConstructionResolver` array filter (C19) | Select the fixed-size constructor by its compiler declaration identity, then reuse normal argument fitting. Specialized TypeInfo method IDs alone do not equal the declaration ID. | Stack-local lookup through existing `ArrayTypeExpression.getSupplyConstructor()` and MethodInfo. No ArrayTypeExpression/NewExpression change or host-side type-rule copy. |
 | `NewExpression.prepareConstruction` and its nested `Construction` record | Share normal receiver/type preparation, annotation checks, inner/formal rules and array setup with explicit cursor probes; avoid duplicating language rules in Kotlin. | Package-local helper and stack-owned record. Normal validation uses the same prefix. Ordinary probes mutate trial syntax; anonymous probes prepare the retained source-owned declaration in the partial-analysis attempt. No new AST field. |
 | `PartialConstructionResolver` | Constructor fitting and class inference need the live compiler Context and existing argument fitter. | Separate compiler helper, discarded child contexts and cloned arguments. Anonymous class components stay under their source-owned `anon` child; superclass candidates need no generated forwarding constructor. Immutable existing `CursorBinding.Candidate` results; no node caches or callbacks retained. |
