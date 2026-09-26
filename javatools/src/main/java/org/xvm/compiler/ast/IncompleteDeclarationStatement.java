@@ -67,7 +67,7 @@ public final class IncompleteDeclarationStatement extends Statement {
     public void validateContent(StageMgr mgr, ErrorListener errs) {
         mgr.deferChildren();
         var bindings = mgr.getCursorBindings();
-        for (var site : cursors) {
+        cursors.forEach(site -> {
             bindings.begin(site);
             if (bindings.isEnabled() && !errs.isAbortDesired()
                     && getComponent() instanceof ClassStructure owner) {
@@ -75,7 +75,7 @@ public final class IncompleteDeclarationStatement extends Statement {
                         .withTypes(CursorScope.declarationTypes(site, errs)));
             }
             errs.error(Parser.INCOMPLETE_EXPRESSION, in(getSource(), site.getEndPosition(), site.getEndPosition()));
-        }
+        });
         if (cursors.isEmpty()) {
             errs.error(Parser.INCOMPLETE_EXPRESSION, in(getSource(), end, end));
         }
