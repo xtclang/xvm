@@ -23,11 +23,10 @@ class ValidationScopeTest {
     @Test
     void loopScopesReleaseTheirListenersAfterExceptionalExit() throws Exception {
         var condition = new AssignmentStatement(null, token(Id.COLON), null);
-        var statements = List.of(
+        List.of(
                 new ForStatement(token(Id.FOR), List.of(), List.of(), List.of(), block()),
                 new ForEachStatement(token(Id.FOR), condition, block()),
-                new WhileStatement(token(Id.WHILE), List.of(), block()));
-        for (var statement : statements) {
+                new WhileStatement(token(Id.WHILE), List.of(), block())).forEach(statement -> {
             var field = scopeField(statement, "m_labelVars");
             var failure = new IllegalStateException("nested validation failed");
             var context = new Context(null, false) {
@@ -47,7 +46,7 @@ class ValidationScopeTest {
                     () -> statement.validate(context, new ErrorList())));
             assertNull(readScope(field, statement), statement.getClass().getSimpleName());
             assertThrows(IllegalStateException.class, statement::ensureValidationContext);
-        }
+        });
     }
 
     @Test

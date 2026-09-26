@@ -77,12 +77,9 @@ public class LspRoundTripTest {
         byDocument.put(URI_A, compile(URI_A, BROKEN_A, errs));
         byDocument.put(URI_B, compile(URI_B, BROKEN_B, errs));
 
-        for (Map.Entry<String, List<Published>> entry : byDocument.entrySet()) {
-            String          uri   = entry.getKey();
-            List<Published> found = entry.getValue();
-
+        byDocument.forEach((uri, found) -> {
             assertFalse(found.isEmpty(), uri + " does not compile, so it must produce problems");
-            for (Published p : found) {
+            found.forEach(p -> {
                 assertEquals(uri, p.uri(), "a problem belongs to the document it came from");
                 assertTrue(p.startLine() >= 0 && p.startCol() >= 0, "the range is placeable");
                 assertTrue(p.endLine() > p.startLine()
@@ -91,8 +88,8 @@ public class LspRoundTripTest {
                 assertNotNull(p.code(), "a problem view groups by code");
                 assertNotNull(p.message(), "and shows a message");
                 assertTrue(p.severity().isAtLeast(Severity.WARNING));
-            }
-        }
+            });
+        });
 
         assertTrue(errs.hasSeriousErrors(), "the shared listener answers for the whole session");
     }
