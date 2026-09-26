@@ -786,3 +786,22 @@ fixture now makes that base static; the compiler correctly kept the illegal-inhe
 Candidates prove visibility, not inheritance-kind compatibility or generic constraints. Formal type
 parameters and the other unproven grammar shapes remain follow-ups. See
 [C23/L39](errs-integration-plan.md#class-and-interface-composition-headers) for final verification.
+
+## Generic type completion audit (2026-09-26)
+
+C24/L41 retains the original final token even when the cursor is inside it. Prefix filtering and
+whole-token replacement use separate values, avoiding duplicated suffixes after acceptance.
+Empty generic slots recognize the lexer's combined closing-angle tokens without changing ordinary
+parsing. The initial batch exposed nested `>>` recognition and duplicate method-formal candidates;
+the parser recognizes all peelable closing-angle forms, and Kotlin deduplicates the same formal
+symbol's local/type representations while preserving real value shadowing. A Type-valued local
+or parameter is not promoted to a formal type merely because its value is a Type; the register
+identity must match the compiler's method formal.
+
+Parameterized qualifiers are resolved only on disposable compiler-owned copies, with collecting
+PROBE listeners for each lookup. Ordinary source diagnostics remain separate. Visibility includes
+the written qualifier's ancestors and nested children; failure never falls back to local types.
+Registered class/method formal identities are reused; unregistered declaration-header formals stay
+unsupported. No new mutable AST state is introduced. The substituted type is an explicit candidate
+fact rather than an LSP reconstruction from names. See the
+[C24/L41 scope and verification record](errs-integration-plan.md#generic-type-completion-batch).
