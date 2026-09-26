@@ -59,8 +59,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // Configuration-time captured data to avoid Project references during execution
     //private final Provider<@NotNull Directory> projectDir;
     private final String sourceSetName;
-    private final Directory resourceDir;
-    private final Directory outputDir;
+    private final Provider<@NotNull Directory> resourceDir;
+    private final Provider<@NotNull Directory> outputDir;
     private final FileCollection sourceSetDirs;
 
     // Source-set-specific module dependencies (avoids circular dependency with own output)
@@ -91,8 +91,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
         // Capture source set data at configuration time to avoid Project references during execution
         this.sourceSetName = sourceSet.getName();
-        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
-        this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
+        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet);
+        this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet);
         // Retain the lazy file collection: build scripts can add source roots after task creation.
         this.sourceSetDirs = sourceSet.getAllSource().getSourceDirectories();
 
@@ -150,12 +150,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // TODO Why do we even have these internals?
     @Internal
     public Directory getOutputDirectoryInternal() {
-        return outputDir;
+        return outputDir.get();
     }
 
     @Internal
     public Directory getResourceDirectoryInternal() {
-        return resourceDir;
+        return resourceDir.get();
     }
 
     public String resolveXtcVersion() {
@@ -277,15 +277,12 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
     Provider<@NotNull Directory> getResourceDirectory() {
-        // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
-        //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return objects.directoryProperty().value(getResourceDirectoryInternal());
+        return resourceDir;
     }
 
     @OutputDirectory
     Provider<@NotNull Directory> getOutputDirectory() {
-        // TODO We can make this configurable later.
-        return objects.directoryProperty().value(getOutputDirectoryInternal());
+        return outputDir;
     }
 
     /**

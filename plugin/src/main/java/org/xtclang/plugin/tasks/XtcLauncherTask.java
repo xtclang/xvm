@@ -106,14 +106,8 @@ public abstract class XtcLauncherTask<E extends XtcLauncherTaskExtension> extend
                 sourceSet -> XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet)
             ));
 
-        this.stdoutPath = objects.property(String.class);
-        this.stderrPath = objects.property(String.class);
-        if (ext.getStdoutPath().isPresent()) {
-            stdoutPath.set(ext.getStdoutPath());
-        }
-        if (ext.getStderrPath().isPresent()) {
-            stderrPath.set(ext.getStderrPath());
-        }
+        this.stdoutPath = objects.property(String.class).convention(ext.getStdoutPath());
+        this.stderrPath = objects.property(String.class).convention(ext.getStderrPath());
 
         this.modulePath = objects.fileCollection().from(ext.getModulePath());
 

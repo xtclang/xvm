@@ -451,16 +451,15 @@ public class XtcProjectDelegate {
         // set as a dependency to the compile task instead of to the classes task, which is the "assemble" for Java compilation.
         // Capture values at configuration time for configuration cache compatibility
         final var sourceSetName = sourceSet.getName();
-        final var resourceDirs = sourceSet.getResources().getSrcDirs();
+        final var resources = sourceSet.getResources();
         // Resolve output directory without capturing SourceSet reference
         final var outputDir = project.getLayout().getBuildDirectory().dir(XTC_LANGUAGE_NAME + '/' + sourceSetName + "/resources");
 
         processResourcesTask.configure(task -> {
             task.setDescription("Processes XTC resources for the " + sourceSetName + " source set.");
-            task.from(resourceDirs);
+            // Keep source roots and include/exclude filters live until execution.
+            task.from(resources);
             task.into(outputDir);
-            task.doLast(_ -> task.getLogger().info("[plugin] Processed XTC resources for source set: {} (srcDirs: {}, destination: {})",
-                sourceSetName, resourceDirs, outputDir.get()));
         });
 
         // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
