@@ -192,7 +192,7 @@ internal object XdkRename {
 
     private val newlines = Regex("\\r\\n|\\r|\\n")
 
-    private fun offset(
+    internal fun offset(
         text: String,
         position: SemanticModel.Position,
     ): Int? {
