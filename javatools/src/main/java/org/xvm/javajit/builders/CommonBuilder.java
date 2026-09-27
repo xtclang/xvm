@@ -4219,8 +4219,7 @@ public class CommonBuilder
                    "duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
                    "ensurePersistent", // TODO: private access requested on a nullable array union
                    "indexOf",    // TODO: property lookup fails during P_GET type analysis
-                   "process",    // TODO: local-variable-table slots exceed max_locals
-                   "remove")),   // TODO: IS_NULL on specialized values
+                   "process")),  // TODO: local-variable-table slots exceed max_locals
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "map",              // TODO: incompatible formal result types in TypeMatrix
