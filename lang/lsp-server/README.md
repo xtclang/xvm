@@ -177,6 +177,9 @@ IntelliJ startup remain open acceptance/investigation work. The active checklist
 current native inventory: assertions for all 113 shared cases. The new parity batch is under
 validation; 50/50 newly implemented cases have individual passing receipts. X57 now verifies
 IntelliJ's guarded symbol-rename application. X29 and X93–X98 pass individually; the full 113-case native checkpoint remains pending.
+All 113 scenario assertions have passing receipts across resumed runs. A test-driver read-action
+defect found by the IDE-error gate is fixed and passes focused validation; a later full run lost
+desktop focus. These results do not claim a clean combined native pass.
 
 The standalone server closes resources and exits when its stdio client disconnects, including
 without a shutdown/exit handshake. Lifecycle regressions cover Tree-sitter, compiler and mock;
