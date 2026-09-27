@@ -210,9 +210,11 @@ Capability negotiation and refresh still need the L80/L81 audit, including movin
 registration until after `initialized`. No production fix for the startup race is claimed yet.
 
 **Implementation and validation are separate.** The shared playbook has 113 cases. IntelliJ has
-60 full and 3 partial driver implementations, with 50 not implemented; these are harness coverage
-counts, not 50 missing compiler features. Only 13 selected native cases have passing receipts in
-the latest checkpoint, across two runs. X93–X98 are implemented but still awaiting native execution.
+assertions for all 113, including the 50 newly implemented parity cases and completed X20/X81/X82
+assertion sets. Their native validation is in progress; a full pass is not claimed. There are
+49/50 individual passes in the newly implemented subset. X57 now verifies guarded native symbol
+rename after reproducing LSP4IJ's stale-edit bug; other edit entry points remain an audit item.
+X29 remains open, and X93–X98 still await passing native receipts.
 See L60/L82 and the [validation record](../../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
