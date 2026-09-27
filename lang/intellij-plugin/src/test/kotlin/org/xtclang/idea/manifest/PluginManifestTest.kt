@@ -85,6 +85,7 @@ class PluginManifestTest {
                 "iconProvider", // file icons via XtcIconProvider
                 "defaultLiveTemplates", // /liveTemplates/XTC snippets
                 "lang.commenter", // Ctrl+/ via XtcCommenter
+                "renameHandler", // guarded compiler rename via XtcRenameHandler
                 "langCodeStyleSettingsProvider", // Settings -> Code Style -> Ecstasy
                 "enterHandlerDelegate", // auto-indent on Enter
                 "postStartupActivity", // XtcEditorStartupActivity
