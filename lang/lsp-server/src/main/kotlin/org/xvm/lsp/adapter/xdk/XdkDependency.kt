@@ -117,11 +117,12 @@ internal class XdkDependencies(
                     }
                 }
             }
-        return Open(repository, declarations)
+        return Open(repository, declarations, modules.mapValues { it.value.revision })
     }
 
     class Open(
         val repository: ModuleRepository,
         val declarations: Map<IdentityConstant, DependencyDeclaration>,
+        val revisions: Map<String, String>,
     )
 }

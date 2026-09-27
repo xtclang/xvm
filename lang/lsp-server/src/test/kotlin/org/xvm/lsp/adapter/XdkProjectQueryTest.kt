@@ -21,6 +21,34 @@ class XdkProjectQueryTest {
     lateinit var directory: Path
 
     @Test
+    fun `graph proofs cannot resolve an undeclared import from an unrelated earlier root`() {
+        CompilerTestSupport.configure()
+        val library = source("Library", "module Library { class Box { Int pick(Int value)=value; } }")
+        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }")
+
+        fun graph(dependencies: Set<String>) =
+            XdkProjectQueries(
+                XdkProject(
+                    listOf(
+                        XdkSourceModule("Library", library.toURI().toString()),
+                        XdkSourceModule("Consumer", consumer.toURI().toString(), dependencies),
+                    ),
+                ),
+                emptyMap(),
+                XdkDependencies(emptyList()),
+                { sources, repository, errors -> EmbeddingSupport.instance().compileModule(sources, repository, errors) },
+                { false },
+            )
+
+        val incomplete = graph(emptySet())
+        assertThat(incomplete.rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose")).isNull()
+        assertThat(incomplete.symbols("run")).isEmpty()
+        val configured = graph(setOf("Library"))
+        val edit = requireNotNull(configured.rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose"))
+        assertThat(edit.changes.keys).containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())
+    }
+
+    @Test
     fun `references join serialized identities across unopened consumers and separate overloads`() {
         val library = source("Library", "module Library { class Box { Int pick(Int value)=value; String pick(String value)=value; } }")
         val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }")
