@@ -33,7 +33,7 @@ class ClientTrace(
                             if (!entry.contains(prefix)) return@mapNotNull null
                             val json = entry.substringAfter(prefix).substringBefore("\n\n\n").trim()
                             try {
-                            JsonParser.parseString(json).takeIf { it.isJsonObject }?.asJsonObject
+                                JsonParser.parseString(json).takeIf { it.isJsonObject }?.asJsonObject
                             } catch (_: JsonSyntaxException) {
                                 // Console output can be sampled before the final chunk is flushed.
                                 null
