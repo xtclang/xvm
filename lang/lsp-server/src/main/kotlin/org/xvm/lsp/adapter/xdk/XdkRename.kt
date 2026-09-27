@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.asm.Constant
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
@@ -129,7 +128,7 @@ internal object XdkRename {
                 .mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
                 .toMap()
 
-        fun target(constant: Constant): Target? {
+        fun target(constant: ProofIdentity): Target? {
             val symbol = declarations[constant] ?: return Target.External(constant)
             val source = symbol.declarationSource ?: return Target.External(constant)
             val text = texts[source] ?: return Target.External(constant)
@@ -139,10 +138,10 @@ internal object XdkRename {
             return Target.Declaration(Site(moved(source), start, end), symbol.kind)
         }
         return facts.methods.chains.mapTo(linkedSetOf()) { chain ->
-            Dispatch(target(chain.owner) ?: return null, chain.methods.map { target(it) ?: return null }, chain.supported)
+            Dispatch(target(chain.owner) ?: return null, chain.members.map { target(it) ?: return null }, chain.supported)
         } +
             facts.properties.chains.map { chain ->
-                Dispatch(target(chain.owner) ?: return null, chain.properties.map { target(it) ?: return null }, chain.supported)
+                Dispatch(target(chain.owner) ?: return null, chain.members.map { target(it) ?: return null }, chain.supported)
             }
     }
 
@@ -160,7 +159,7 @@ internal object XdkRename {
         ) : Target
 
         data class External(
-            val constant: Constant,
+            val constant: ProofIdentity,
         ) : Target
     }
 
