@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.client.Driver
+import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
@@ -14,11 +15,24 @@ fun Driver.lookup(
     at: Int,
     matches: (List<CompletionItem>) -> Boolean,
 ) {
+    dismissPopups()
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+    editor.scrollToCaret()
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
-    waitFor("shared completion scope", 45.seconds) {
+    waitFor(
+        message = "shared completion scope",
+        timeout = 45.seconds,
+        errorMessage = {
+            "Current native items: " +
+                manager.getActiveLookup()?.getItems()?.map { item ->
+                    val presentation = new(LookupElementPresentation::class)
+                    item.renderElement(presentation)
+                    "${item.getLookupString()}: ${presentation.getTypeText()} ${presentation.getTailText()}"
+                }
+        },
+    ) {
         requirePopupFocus()
         manager.getActiveLookup()?.let { !it.isCalculating() && matches(it.getItems()) } == true
     }
@@ -44,27 +58,35 @@ fun Driver.acceptCandidates(
 ) {
     lookup(editor, at) { items ->
         items.map { it.getLookupString() }.sorted() == expected.sorted() &&
-            (kind == null || hasCompletionKinds(editor, expected, kind))
+            (kind == null || hasCompletionKinds(items, expected, kind))
     }
     invokeAction("EditorEscape", component = editor.component)
     accept(editor, at, selected)
 }
 
-/** Read metadata from the native completion request, including fields that lookup text omits. */
+/** Inspect the actual native proposals, including metadata omitted from their rendered text. */
 fun Driver.hasCompletionKinds(
-    editor: JEditorUiComponent,
+    items: List<CompletionItem>,
     labels: List<String>,
     kind: Int,
 ): Boolean {
-    val future = semanticSupport(editor).getCompletionSupport().getValidLSPFuture() ?: return false
-    if (!future.isDone() || future.isCompletedExceptionally()) return false
     val protocol = ClientProtocol(this)
-    val items =
-        future.get().flatMap {
-            val result = protocol.copy(it.completion())
-            if (result.isJsonObject) result.asJsonObject["items"].rows() else result.rows()
-        }
-    return labels.all { label -> items.singleOrNull { it.string("label") == label }?.get("kind")?.asInt == kind }
+    return labels.all { label ->
+        items.singleOrNull { it.getLookupString() == label }?.let {
+            val proposal = cast(it, NativeCompletionElement::class).getObject()
+            protocol.copy(proposal.getItem()).asJsonObject["kind"]?.asInt == kind
+        } == true
+    }
+}
+
+@Remote("com.intellij.codeInsight.lookup.LookupElement")
+interface NativeCompletionElement {
+    fun getObject(): NativeCompletionProposal
+}
+
+@Remote("com.redhat.devtools.lsp4ij.client.features.LSPCompletionProposal", plugin = "com.redhat.devtools.lsp4ij")
+interface NativeCompletionProposal {
+    fun getItem(): ClientValue
 }
 
 fun Driver.accept(
@@ -79,6 +101,7 @@ fun Driver.accept(
     val expected = expectedText ?: before.replaceRange(at - prefix.length, at, label)
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+    editor.scrollToCaret()
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
     waitFor("$label completion or single-item insertion", 45.seconds) {
