@@ -219,7 +219,10 @@ protocol delivery, not a Problems row for a nonexistent file.
 
 Current validation: **50/50 previously missing cases pass individually**, and X20/X81/X82
 also pass. X29 now passes after refreshing popup metadata. X93–X98 also pass; the complete
-113-case native checkpoint is the remaining gate. Each run writes live `progress.jsonl` and final `results.json`.
+113-case native checkpoint is the remaining gate. The resumed runs now cover all 113 scenario
+assertions, but one batch failed the IDE-error gate and the subsequent full run lost desktop
+focus. X41's read-action correction passes a focused run with no IDE errors. Each run writes
+live `progress.jsonl` and final `results.json`.
 
 | Native receipt | Selection | Result |
 |---|---|---|
@@ -242,6 +245,11 @@ also pass. X29 now passes after refreshing popup metadata. X93–X98 also pass; 
 | `run-1810526138998768503` | All 113 | 41 scenarios plus startup passed; X101's assertion expected the old rename-hint wording; 71 scenarios not reached |
 | `run-13752339197998578922` | Remaining 72, including X101 | X101 and six more scenarios plus startup passed; X78 lost desktop focus; 64 scenarios not reached |
 | `run-14394639979205435362` | Remaining 65 | Startup passed; X78 again lost desktop focus; 64 scenarios not reached |
+| `run-8616039572581576888` | Remaining 65 | Startup passed; X78 exposed an incorrect bold-argument expectation for inactive overloads; 64 scenarios not reached |
+| `run-1735653890304371063` | Remaining 65 | X78/X80/X81/X82 and startup passed; 7a.9 exposed its missing file fixture; 60 scenarios not reached |
+| `run-10987416205556113042` | Remaining 61 | All 61 scenario assertions and startup passed, but the Gradle task failed on an IDE read-access violation in X41's harness inspection |
+| `run-9044375786228422295` | All 113 after the X41 correction | 37 scenarios and startup passed; X108 lost desktop focus; 75 scenarios not reached |
+| `run-14909426972982808602` | X41/X108 | Both and startup passed; zero IDE errors, zero JUnit failures/errors/skips; Gradle succeeded |
 
 X97's diagnostic-read failure was a harness transport problem. Driver 262's `RefProducer`
 calls `toString()` when exporting highlighters; their descriptions evaluate lazy quick fixes.
@@ -258,10 +266,24 @@ server reason with `Rename failed:`. The native assertion now checks that comple
 message; the shared protocol reason and the no-dialog/no-edit requirements are unchanged.
 X101 passes with the corrected assertion. The next two runs stopped at X78 with both the
 active and focused IDE windows null; screenshots show another application in the foreground.
-The combined checkpoint attempts have 48 passing scenario receipts, with 65 still outstanding
-in this checkpoint. Earlier individual receipts remain valid, but they do not establish a
-complete 113-case pass. Native popup testing is paused pending an uninterrupted focus window;
-the harness does not repeatedly bring IntelliJ to the front to conceal desktop interference.
+The resumed runs completed those outstanding scenario assertions. They do not establish a
+clean 113-case pass: the 61-case batch's IDE-error gate correctly rejected an unguarded PSI
+read, and the subsequent full run lost desktop focus at X108. X41 and X108 then passed together
+with no IDE errors. The harness does not repeatedly bring IntelliJ to the front to conceal
+desktop interference; the complete uninterrupted checkpoint remains open.
+
+The resumed run found three more harness defects, fixed in `6d7e5b7e5`:
+
+- Signature assertions now use `activeSignature`. LSP4IJ intentionally dims inactive overloads;
+  the harness checks every row's text and the exact bold argument only for enabled rows. When
+  no overload is selected, all rows remain enabled. Per-signature parameter overrides still apply.
+- 7a.9 now creates `Broken.x` from its shared empty-module baseline and restores that baseline
+  after checking bounded diagnostics and native Problems rows. It is not a manual-plan fixture.
+- X41 reads PSI and obtains highlight support inside an IDE read action. Its scenario assertions
+  previously passed, but IntelliJ correctly logged a threading violation and failed the run.
+
+These changes affect only the integration driver. Root Spotless, Kotlin checks and the final
+focused Gradle run pass. The feature assertions and IDE-error gate remain enforced separately.
 
 Harness corrections cover URI comparison without changing round-tripped items, Gson numeric
 hash differences, popup cleanup, independent viewport positioning, required write/undo contexts,
@@ -306,7 +328,7 @@ Extraction groups for this work (commit IDs will be added at validated checkpoin
 5. `eded39f0a` — guarded native symbol rename after LSP4IJ stale application was reproduced; X53/X54/X57/X60 pass. Plugin unit tests: 26 tests, zero failures/errors/skips; root `spotlessCheck` passes. The shared native regression bodies are in the parity-case group.
 6. `912abf3b8` — L55 dependency-closure and detached proof-fact retention fix, with all four 24-root outcomes. The actual teaching-workspace acceptance remains open.
 7. `8e976f868` and `eefc1b8e6` — independent process-lifecycle fixes; see the [master extraction boundary](errs-lsp-process-lifecycle.md).
-8. `73290ac14` — diagnostic-value probe, popup cleanup and guarded rename-hint assertion; native harness-only follow-up. Keep with the parity driver, separate from production lifecycle fixes. X97/X98/X101 pass; root Spotless, plugin/server Kotlin checks and `git diff --check` pass.
+8. `73290ac14` and `6d7e5b7e5` — diagnostic-value probe, popup cleanup, guarded rename-hint assertion, active-overload rendering checks, bounded-error fixture and guarded PSI reads. Native harness-only follow-ups; keep with the parity driver, separate from production lifecycle fixes. The receipts above distinguish scenario assertions, IDE-error checks and interrupted full runs.
 
 - [x] X3 — narrowed hover and declaration identity.
 - [x] X5 — library navigation exclusions and parser-recovery outline.

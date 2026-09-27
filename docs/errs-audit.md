@@ -24,6 +24,10 @@ Dependency diagnostic publications now invalidate completed semantic caches, whi
 otherwise keys only to the requesting file's PSI stamp. The shared X31/X32 negative expectations
 were stale after formatting/refactoring/argument-completion development and are updated in both
 IDE drivers. No full native pass is claimed; follow the active L60 checklist.
+The resumed batch passed all 61 selected scenario assertions but correctly failed the IDE-error
+gate on X41's PSI read outside a read action. That test-driver defect is fixed in `6d7e5b7e5`,
+together with inactive-overload highlighting expectations and 7a.9's missing fixture. X41/X108
+pass with zero IDE errors; the subsequent full checkpoint remains interrupted by desktop focus.
 
 Native open-member rename (L54): advertising and handling `workspace/didRenameFiles` enables
 LSP4IJ's file-rename lifecycle. Without that capability, its VFS listener skipped old-URI close
