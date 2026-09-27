@@ -4,8 +4,6 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
-import org.xvm.asm.constants.MethodConstant
-import org.xvm.asm.constants.PropertyConstant
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
@@ -153,11 +151,11 @@ internal class XdkProjectQueries(
                     setOf(target)
                 }
 
-                target is PropertyConstant -> {
+                symbol.kind == SemanticModel.SymbolKind.PROPERTY -> {
                     propertyFamily(before, target) ?: return null
                 }
 
-                target is MethodConstant -> {
+                symbol.kind == SemanticModel.SymbolKind.METHOD -> {
                     methodFamily(before, target) ?: return null
                 }
 
@@ -271,14 +269,14 @@ internal class XdkProjectQueries(
 
     private fun propertyFamily(
         facts: CompilerRenameFacts,
-        target: PropertyConstant,
-    ): Set<PropertyConstant>? {
+        target: ProofIdentity,
+    ): Set<ProofIdentity>? {
         val family = linkedSetOf(target)
         do {
             val previous = family.size
-            facts.properties.chains.filter { chain -> chain.properties.any(family::contains) }.forEach { chain ->
+            facts.properties.chains.filter { chain -> chain.members.any(family::contains) }.forEach { chain ->
                 if (!chain.supported) return null
-                family += chain.properties
+                family += chain.members
             }
         } while (family.size != previous)
         if (!facts.properties.declarations.containsAll(family)) return null
@@ -287,14 +285,14 @@ internal class XdkProjectQueries(
 
     private fun methodFamily(
         facts: CompilerRenameFacts,
-        target: MethodConstant,
-    ): Set<MethodConstant>? {
+        target: ProofIdentity,
+    ): Set<ProofIdentity>? {
         val family = linkedSetOf(target)
         do {
             val previousSize = family.size
-            facts.methods.chains.filter { chain -> chain.methods.any(family::contains) }.forEach { chain ->
+            facts.methods.chains.filter { chain -> chain.members.any(family::contains) }.forEach { chain ->
                 if (!chain.supported) return null
-                family += chain.methods
+                family += chain.members
             }
         } while (family.size != previousSize)
         // A binary/library contract or synthetic method cannot be edited from configured sources.
@@ -321,7 +319,12 @@ internal class XdkProjectQueries(
                     if (proof != Proof.COMPLETE) return@mapNotNull null
                     return null
                 }
-                val open = XdkDependencies(artifacts.values.toList()).open()
+                // An earlier independent root is not a dependency. Reopening all prior artifacts
+                // both admits undeclared source imports and retains quadratic compiler state.
+                // Host binaries remain available, including their transitive binary dependencies.
+                val sourceDependencies = graph.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+                val inputs = artifacts.filterKeys { it !in graph.modules || it in sourceDependencies }
+                val open = XdkDependencies(inputs.values.toList()).open()
                 val heard = ErrorList()
                 val errors = ErrorListener.cancellable(heard, cancelled)
                 val compilation = compileTree(XdkSources.replay(module.root, source.inputs, text, moves), open.repository, errors)
@@ -329,7 +332,7 @@ internal class XdkProjectQueries(
                 if (!compilation.succeeded() || heard.hasSeriousErrors() ||
                     compilation.file()?.module?.name != module.name
                 ) {
-                    if (proof == Proof.REPAIR) return@mapNotNull compilation.repairFacts(open)
+                    if (proof == Proof.REPAIR) return@mapNotNull compilation.renameFacts(open)
                     if (proof == Proof.NAVIGATION) return@mapNotNull null
                     return null
                 }
@@ -346,14 +349,15 @@ internal class XdkProjectQueries(
         return CompilerRenameFacts(
             attempts.flatMap { it.models },
             attempts.flatMap { it.constants.entries }.associate { it.toPair() },
-            CompilerMethodRelations(
+            ProofRelations(
                 attempts.flatMapTo(linkedSetOf()) { it.methods.declarations },
                 attempts.flatMap { it.methods.chains },
             ),
-            CompilerPropertyRelations(
+            ProofRelations(
                 attempts.flatMapTo(linkedSetOf()) { it.properties.declarations },
                 attempts.flatMap { it.properties.chains },
             ),
+            attempts.flatMap { it.imports }.distinct(),
         )
     }
 
