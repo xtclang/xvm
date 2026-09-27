@@ -169,8 +169,8 @@ fun Driver.rejectRename(
         editor.editor.getCaretModel().moveToOffset(at)
     }
     invokeAction("RenameElement", now = false, component = editor.component)
-    // LSP4IJ consumes the exceptional future after rendering the server's rejection as a hint.
-    waitFor("library rename displays its rejection", 45.seconds) { ui.x { byVisibleText(reason) }.present() }
+    // The guarded XTC handler preserves the server reason and adds its native action prefix.
+    waitFor("library rename displays its rejection", 45.seconds) { ui.x { byVisibleText("Rename failed: $reason") }.present() }
     check(ui.dialog(title = "Rename").notPresent())
     check(editor.text == original)
     withContext(OnDispatcher.EDT) { service<EditorHints>().hideAllHints() }

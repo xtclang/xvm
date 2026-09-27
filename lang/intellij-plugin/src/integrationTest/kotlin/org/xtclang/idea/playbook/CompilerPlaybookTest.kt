@@ -120,6 +120,7 @@ class CompilerPlaybookTest {
             PluginConfigurator(context).apply {
                 installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion)
                 installPluginFromPath(Path.of(System.getProperty("path.to.build.plugin")))
+                installPluginFromDir(DiagnosticProbePlugin.create(run))
                 disablePlugins("com.intellij.kubernetes", "com.intellij.clouds.kubernetes")
             }
             // Keep even a sole candidate visible until the driver inspects and accepts it.
