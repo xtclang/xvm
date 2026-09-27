@@ -8,6 +8,24 @@ Earlier VS Code checkpoints remain valid historical evidence: C27/L51 `run-9deea
 
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
 
+## Server process lifecycle acceptance
+
+Run this with the shipped Tree-sitter backend as well as compiler mode. Start from a recorded
+process baseline so existing old servers and another IDE's workspace are not counted as leaks.
+
+1. Open an Ecstasy project and several `.x` files. In IntelliJ's Language Servers panel, record
+   the XTC server PID. Check `ps -axo pid,ppid,command | grep '[x]tc-lsp-server.jar'` on macOS/Linux.
+2. Restart that server several times through the panel. Each previous PID must disappear;
+   the final active server must still provide completion and diagnostics.
+3. Close the project during a fresh server startup, then reopen it. Cancelled startup must
+   not leave an extra server behind. Repeat once after the workspace finishes indexing.
+4. Quit the test IDE. Its recorded server PIDs must disappear within ten seconds. Reopening
+   the IDE must not be needed to reap them. Do not terminate another workspace's server.
+
+The focused JVM/provider regressions pass; this installed-IDE acceptance is still pending.
+See [the lifecycle diagnosis](../../docs/errs-lsp-process-lifecycle.md) for the failure mechanisms
+and the distinction between fixed code and previously orphaned processes.
+
 ## Current development batch: workspace queries and editing
 
 For the new workspace queries, add an unopened Consumer subclass overriding Library's method.
@@ -58,9 +76,10 @@ to distinguish an unsupported feature from a failed playbook case.
 IntelliJ now has implementations for all 113 shared scenarios, plus startup. The 50 newly added
 cases and X20/X81/X82 assertion additions are under validation; no full native pass is claimed.
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
-records outstanding receipts and actual client gaps. X93–X98 also await native pass receipts.
-Large-workspace rename and editing during startup
-still need the controlled reproductions and fixes in L55/L56; waiting for readiness in the
+records outstanding receipts and actual client gaps. X93–X98 pass individually; the complete
+113-case native checkpoint remains pending. L55's proof-memory fix passes its 24-root regression,
+but still needs the real teaching-workspace/open-buffer acceptance. Editing during startup
+still needs the controlled reproduction and fix in L56; waiting for readiness in the
 playbook does not prove that ordinary typing during startup works.
 
 ---
@@ -1143,8 +1162,8 @@ candidates and edits. All 50 formerly missing cases now have test bodies. Protoc
 are checked through the installed client, while visible actions still use the native UI.
 Nonexistent/deleted-file diagnostics are observed in its verbose trace because LSP4IJ drops these
 from its VFS diagnostic store. X57 reproduced LSP4IJ's stale-edit application and now passes
-through the guarded Ecstasy Rename handler. The new subset has 49/50 individual passing receipts;
-X29 remains open. Problems-row clicking and visual layout remain manual.
+through the guarded Ecstasy Rename handler. The new subset has 50/50 individual passing receipts;
+X29 now passes with current signature metadata. Problems-row clicking and visual layout remain manual.
 X31/X32 also pass in VS Code (`run-KfBbW1`). At empty invalid argument slots, VS Code may offer
 the extension's static snippets; X32 checks the compiler response separately and rejects any
 non-snippet editor proposals.
@@ -1152,7 +1171,7 @@ X33–X35 and X99–X108 have passing native receipts across the checkpoint and
 focused X105 rerun. Execution details and the fixes found during validation are in the
 [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 They do not establish a complete native pass. Earlier runs verified both X92 Structure/folding
-variants after `2e98860e1` and constructor assertions through X90; X93–X98 remain unverified natively.
+variants after `2e98860e1` and constructor assertions through X90; X93–X98 now pass individually.
 
 Results are under `lang/intellij-plugin/build/reports/compiler-playbook/run-*/results.json`.
 `ide-paths.txt` identifies the separate IDE profile/log directory. A graphical desktop is
@@ -1214,7 +1233,7 @@ must be called `not-implemented`, not an unsupported IDE feature. `not-run` mean
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
 as a full pass. A failed implemented check fails the Gradle task.
 These counts describe implemented assertions. Selected native execution receipts are recorded
-separately above; unselected cases remain `not-run`, and X93–X98 still await native verification.
+separately above; unselected cases remain `not-run`, and the complete native checkpoint is pending.
 
 Both reports include the shared file, SHA-256 and complete ID list. Both drivers compare catalog
 IDs with the manual table; VS Code also checks exact registration order, and IntelliJ checks that
