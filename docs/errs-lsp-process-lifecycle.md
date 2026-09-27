@@ -63,6 +63,16 @@ The old provider comment claimed duplicate processes were harmless and linked to
 [LSP4IJ #888](https://github.com/redhat-developer/lsp4ij/issues/888). That issue concerns an
 IDE freeze, not this lifecycle race. The misleading comment has been removed.
 
+## Why VS Code can appear unaffected
+
+The locally installed `vscode-languageclient` 10.1.1 has an additional fallback in
+`LanguageClient.shutdown()` / `checkProcessDied()`: after shutdown it waits two seconds,
+checks whether its non-detached child still exists and terminates it. XTC's extension delegates
+deactivation to that client's stop method. This can conceal the shared server's failure to
+exit by itself, and is consistent with the reported difference between the editors. It does
+not establish that every VS Code crash/disconnection path is immune; EOF cleanup belongs in
+the server regardless of which client happens to reap it.
+
 ## Existing master defect and extraction boundary
 
 The inspected local `origin/master` is **4a1eae6f7**. Its `XtcLanguageServer.exit()` only logs;
@@ -83,8 +93,8 @@ For the later standalone master fix:
 
 No embedding API, AST, semantic-model, rename-proof, native playbook or dependency upgrade
 belongs in this extraction. No master branch or PR has been created during this investigation.
-The provider workaround and regressions are isolated in **8e976f868** (see the integration
-plan for the final verified commit map).
+The provider workaround and regressions are isolated in **8e976f868**; server cleanup, process
+exit and regressions are in **eefc1b8e6**. See the integration plan for the verified commit map.
 
 ## Validation
 

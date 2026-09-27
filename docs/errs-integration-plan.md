@@ -12,6 +12,12 @@ the two Markdown files above.
 
 ## Full compiler LSP completion checklist
 
+**Process-lifecycle fix (2026-09-27):** `8e976f868` guards IntelliJ startup/cancellation;
+`eefc1b8e6` closes server resources and exits on transport loss. The independent master
+extraction boundary, upstream reproduction and 15/15 child-process regressions are recorded in
+[the lifecycle diagnosis](errs-lsp-process-lifecycle.md). Installed IDE restart/project-close
+acceptance remains to be recorded. This fix adds no compiler or AST requirement.
+
 Current inventory: 2026-09-27, code checkpoint `511195564`. This is the active task list;
 the dated implementation records below retain their historical scope and results. L55 onward
 are planned work, not completed commits or new capabilities. Compiler API changes get separate
@@ -66,11 +72,11 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   inferred locals and selected positional parameter names, starting with destructuring and
   lambda parameters/returns where the compiler supplies an actual type. Preserve uncertainty
   in partial source; add shared scenarios and current-version invalidation checks.
-- [ ] **L60 — Native parity checkpoint.** Run the implemented but unverified IntelliJ X93–X98
-  scenarios and validate the 50 newly added cases plus the three completed assertion sets.
+- [ ] **L60 — Native parity checkpoint.** All 50 newly added cases, X20/X81/X82 and X93–X98
+  now have individual passing receipts. Run the complete 113-case checkpoint together.
   Every missing IntelliJ case already has a VS Code implementation. Track each case in
-  `scenarios.json`; resolve X20's signature display discrepancy
-  and X81/X82's missing Property-kind assertions. Use native editor actions for user-visible
+  `scenarios.json`; X20's signature display discrepancy
+  and X81/X82's Property-kind assertions are resolved. Use native editor actions for user-visible
   behavior and the installed client transport for protocol-only assertions such as stale handles,
   cancellation and edit versions. Label those layers explicitly. Record assertions implemented,
   cases selected and cases passed separately. Full parity is required work; a selected passing
@@ -197,7 +203,7 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 Current native automation inventory: **113 shared cases with driver assertions**, plus startup.
 The previously missing 50 case bodies and X20/X81/X82 assertions are now written; the combined
 integration-test compilation passes. This is implementation inventory, **not a full native pass**.
-Validation is in progress. X93–X98 still need their first native receipt. Completion requires
+Validation is in progress. X93–X98 have individual passing receipts. Completion requires
 explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
 is a percentage of total LSP completeness.
 
@@ -211,9 +217,9 @@ negative answers and cancellation. Diagnostics for nonexistent/deleted files are
 client's verbose trace because LSP4IJ drops publications without a virtual file. That proves
 protocol delivery, not a Problems row for a nonexistent file.
 
-Current validation: **49/50 previously missing cases pass individually**, and X20/X81/X82
-also pass. X29 remains open. X93–X98 still need passing execution receipts, followed by a
-complete 113-case native checkpoint. Each run writes live `progress.jsonl` and final `results.json`.
+Current validation: **50/50 previously missing cases pass individually**, and X20/X81/X82
+also pass. X29 now passes after refreshing popup metadata. X93–X98 also pass; the complete
+113-case native checkpoint is the remaining gate. Each run writes live `progress.jsonl` and final `results.json`.
 
 | Native receipt | Selection | Result |
 |---|---|---|
@@ -226,10 +232,43 @@ complete 113-case native checkpoint. Each run writes live `progress.jsonl` and f
 | `run-4543155797199587357` | X29/X53/X54/X57/X60 | Four rename cases passed with the guarded native handler; X29 lost popup focus; cumulative 49/50 |
 | `run-11234394973446044506` | X29/X57 | Stronger X57 passed, including retained-result rejection after close/reopen; X29 lost popup focus |
 | `run-8500347901939309793` | X29 | Focus diagnostics confirmed no active/focused IntelliJ window; assertion remains open |
+| `run-18411873168955014239` | X29/X93–X98 | X93 passed; X94 exposed the nested five-second diagnostic wait |
+| `run-8792341337801244441` | X29/X94–X98 | X94/X95/X96 passed; X97 stopped on a diagnostic-read timeout |
+| `run-1044769987103417109` | X29/X98 | X98 reached completion but its cleanup Escape action was disabled |
+| `run-12954008312871336066` | X29/X97/X98 | X97 lost native popup focus; no new pass |
+| `run-16615690562699412632` | X29 | Passed, including current metadata in the native popup; cumulative 50/50 |
+| `run-11352896574808044817` | X97/X98 | X97 isolated persistent diagnostic-read cancellation in the test driver; X98 not run |
+| `run-14036438527565625821` | X97/X98 | Both passed, including exact accepted edits and diagnostic recovery |
+| `run-1810526138998768503` | All 113 | 41 scenarios plus startup passed; X101's assertion expected the old rename-hint wording; 71 scenarios not reached |
+| `run-13752339197998578922` | Remaining 72, including X101 | X101 and six more scenarios plus startup passed; X78 lost desktop focus; 64 scenarios not reached |
+| `run-14394639979205435362` | Remaining 65 | Startup passed; X78 again lost desktop focus; 64 scenarios not reached |
+
+X97's diagnostic-read failure was a harness transport problem. Driver 262's `RefProducer`
+calls `toString()` when exporting highlighters; their descriptions evaluate lazy quick fixes.
+LSP4IJ's cancelled quick-fix future kept throwing even though the editor displayed diagnostics.
+Retrying the same object export could never repair it. The harness now installs a tiny test-only
+reader that copies severity/message/offset under an IDE read action and returns JSON values.
+It reads the actual installed annotations, without requesting diagnostics separately or forcing
+quick-fix evaluation. The reader and its generated helper classes are packaged from integration
+test output into the disposable test IDE only; the shipping plugin is unchanged. Popup cleanup
+also dismisses whatever is present without requiring an enabled Escape action.
+The first full checkpoint reached X101 with the correct visible rejection, but its assertion
+still expected LSP4IJ's old unprefixed text. The guarded XTC rename handler prefixes the same
+server reason with `Rename failed:`. The native assertion now checks that complete displayed
+message; the shared protocol reason and the no-dialog/no-edit requirements are unchanged.
+X101 passes with the corrected assertion. The next two runs stopped at X78 with both the
+active and focused IDE windows null; screenshots show another application in the foreground.
+The combined checkpoint attempts have 48 passing scenario receipts, with 65 still outstanding
+in this checkpoint. Earlier individual receipts remain valid, but they do not establish a
+complete 113-case pass. Native popup testing is paused pending an uninterrupted focus window;
+the harness does not repeatedly bring IntelliJ to the front to conceal desktop interference.
 
 Harness corrections cover URI comparison without changing round-tripped items, Gson numeric
 hash differences, popup cleanup, independent viewport positioning, required write/undo contexts,
-and transport of non-serializable protocol errors through Driver JMX. Native navigation checks
+and transport of non-serializable protocol errors through Driver JMX. Diagnostic waits now
+share their full timeout, and annotation reads inspect installed document/editor highlighters
+without the daemon's cancellable collection pass. Completion cleanup closes transient popups
+without requiring Escape to remain enabled after the lookup changes. Native navigation checks
 actual editor destinations for every chooser entry: opening a closed target can legitimately
 invalidate the previously completed request cache. X38 passes with that check.
 
@@ -238,8 +277,8 @@ the requesting file's PSI stamp, so X24 retained an old completion type and X38/
 member locations after another source changed. The client now invalidates completed semantic
 results on fresh compiler diagnostic publications; X24, X38, X47 and X67 pass with the fix. This adds
 no mutable state or compiler/AST hooks. The Ecstasy Parameter Info renderer preserves ambiguous
-candidate labels (X20 passes) and honors per-signature active-parameter overrides (X29 is still
-under validation).
+candidate labels (X20 passes) and honors per-signature active-parameter overrides. X29 now passes: the renderer reads the retriggered response
+instead of the original popup object when its parameter metadata changes.
 
 X57 reproduced stale application through LSP4IJ 0.21.0's workspace-edit applicator in a valid
 write/undo context: the server's versioned response was correct, but the client ignored that
@@ -262,10 +301,12 @@ Extraction groups for this work (commit IDs will be added at validated checkpoin
 
 1. `262a7defe` — installed-client protocol/trace inspection, per-case workspaces and reusable native actions. Subsequent harness fixes will be recorded separately.
 2. `dfb7c4ab1` — fifty parity cases, shared X31/X32 corrections, X81/X82 completion-kind checks and native harness corrections. Its X57 regression depends on the guarded rename in `eded39f0a`; the cache and Parameter Info fixes below are also needed for passing native assertions. Keep these together when extracting the IntelliJ parity PR, or split individual regressions with their production fix.
-3. `5119c682f` — Ecstasy Parameter Info rendering for missing metadata (X20) and per-signature active slots (X29).
+3. `5119c682f` and `594c49328` — Ecstasy Parameter Info rendering for missing metadata (X20), per-signature active slots, and current metadata after retrigger (X29). X29 passes in `run-16615690562699412632`; extract both fixes with the parity assertions.
 4. `93a82ea8b` — client semantic-cache invalidation after dependency analysis (X24/X38/X47/X67).
 5. `eded39f0a` — guarded native symbol rename after LSP4IJ stale application was reproduced; X53/X54/X57/X60 pass. Plugin unit tests: 26 tests, zero failures/errors/skips; root `spotlessCheck` passes. The shared native regression bodies are in the parity-case group.
-6. Startup/large-graph production fixes remain separate follow-up groups.
+6. `912abf3b8` — L55 dependency-closure and detached proof-fact retention fix, with all four 24-root outcomes. The actual teaching-workspace acceptance remains open.
+7. `8e976f868` and `eefc1b8e6` — independent process-lifecycle fixes; see the [master extraction boundary](errs-lsp-process-lifecycle.md).
+8. `73290ac14` — diagnostic-value probe, popup cleanup and guarded rename-hint assertion; native harness-only follow-up. Keep with the parity driver, separate from production lifecycle fixes. X97/X98/X101 pass; root Spotless, plugin/server Kotlin checks and `git diff --check` pass.
 
 - [x] X3 — narrowed hover and declaration identity.
 - [x] X5 — library navigation exclusions and parser-recovery outline.
@@ -278,7 +319,7 @@ Extraction groups for this work (commit IDs will be added at validated checkpoin
 - [x] X26 — discard/reopen restores disk semantics.
 - [x] X27 — file watcher creation/deletion and diagnostic ownership.
 - [x] X28 — rejection of obsolete type-hierarchy handles.
-- [ ] X29 — rapid edits and concurrent cursor requests.
+- [x] X29 — rapid edits and concurrent cursor requests.
 - [x] X30 — cancellation, close/reopen and server restart.
 - [x] X31 — initialized capabilities and formatting provider.
 - [x] X32 — absent compiler completions distinguished from IDE suggestions.
@@ -325,10 +366,45 @@ The three previously partial assertion sets pass in `run-4120946877197382622`:
 - [x] X81 — inspect Property completion-kind metadata in addition to candidates/type/edit.
 - [x] X82 — inspect Property completion-kind metadata in addition to candidates/edit.
 
-X93–X98 need execution receipts, not missing driver implementations. Complete L60 only when
+X97/X98 now have passing execution receipts. Complete L60 only when
 all the above assertions are implemented, each case has a passing receipt on the integrated
 branch and the complete implemented native suite passes together. A client limitation must be
 reported explicitly; it cannot silently remove an expected shared assertion.
+
+## Large-graph proof memory checkpoint (L55)
+
+Implementation commit: **912abf3b8**.
+
+The independent 24-root regression reproduced `OutOfMemoryError` in the existing 512 MiB
+Gradle test heap. Two separate retention paths were confirmed:
+
+- Graph queries reopened every previously compiled root as a dependency. This deserialized
+  unrelated modules repeatedly and also allowed undeclared imports to resolve according to
+  traversal order. Proof repositories now include only the configured source dependency closure,
+  while retaining host binary inputs and their transitive dependencies. The regression proves
+  both rejection of an undeclared import and successful rename after declaring that dependency.
+- Before/after proof facts stored raw compiler constants and dispatch chains, retaining every
+  root's pool. Extraction now copies declaration locations and artifact identity keys while the
+  worker owns the compiler objects. Binary keys are established by compiler constant equality
+  against an artifact revision/table index; they are not display strings. Generated non-lambda
+  method identities additionally preserve their compiler parent and artifact signature.
+  Unknown identities remain incomparable across attempts, conservatively refusing the proof.
+
+Public auto-import candidates are copied during extraction, before releasing compiler state.
+Local rename proofs receive the matching dependency declarations and revisions as well. The
+binding and dispatch comparisons still cover untouched names, overload selection and override
+chains. This is Kotlin adapter work: no new embedding API, Java AST state or error-listener
+change is needed. Keep the query, fact extraction, comparison and retention tests together when
+extracting the L55 PR, after the graph query/rename slices.
+
+The four 24-root outcomes pass under **536,870,912 bytes**: successful rename, rejected rename,
+cancellation after the first edited-root attempt, and an injected compiler failure. Weak-reference
+checks release respectively 144, 74, 75 and 75 compilation/pool/AST objects. Combined validation
+passed: 1,219 server tests (three existing skips), 26 IntelliJ unit tests and root Spotless.
+The local-rename dependency association regression found by the first full run is fixed.
+L55 remains open until the actual teaching workspace is also verified with only the target and
+with multiple unsaved buffers open, including unchanged live diagnostics. The small independent
+roots establish a repeatable memory regression, not that broader acceptance gate.
 
 ## Header slots and native editor parity (C28/L53/L54)
 
