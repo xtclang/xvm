@@ -26,6 +26,7 @@ fun Driver.signature(
     keepOpen: Boolean = false,
     matches: (List<Signature>) -> Boolean,
 ) {
+    dismissPopups()
     focusEditor(editor)
     val popup = ui.x("//div[@class='ParameterInfoComponent']")
     val support =

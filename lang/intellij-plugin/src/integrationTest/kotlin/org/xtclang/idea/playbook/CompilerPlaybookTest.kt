@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.intellij.ide.starter.ci.CIServer
 import com.intellij.ide.starter.ci.NoCIServer
@@ -18,6 +19,8 @@ import org.kodein.di.DI
 import org.kodein.di.bindSingleton
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardOpenOption.APPEND
+import java.nio.file.StandardOpenOption.CREATE
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** Opt-in acceptance tests against the packaged plugin, a real IDE and the bundled compiler. */
@@ -83,7 +86,10 @@ class CompilerPlaybookTest {
                 .filter(String::isNotEmpty)
                 .toSet()
         require(selection.all { it in shared.implementedIds }) { "Unknown or unimplemented native case: $selection" }
-        val cases = CompilerPlaybook(fixtures, shared, lsp4ijVersion, selection.ifEmpty { shared.implementedIds })
+        val cases =
+            CompilerPlaybook(fixtures, shared, lsp4ijVersion, selection.ifEmpty { shared.implementedIds }) { result ->
+                Files.writeString(run.resolve("progress.jsonl"), Gson().toJson(result) + "\n", CREATE, APPEND)
+            }
         val previousDi = di
         di =
             DI {
