@@ -862,9 +862,6 @@ public class xFuture
             return "(" + m_clazz + ") " + describe(getFuture());
         }
 
-        /**
-         * Describe a future's state without blocking, allocating or throwing.
-         */
         private static String describe(CompletableFuture<ObjectHandle> future) {
             if (future == null) {
                 return "<no future>";
