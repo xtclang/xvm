@@ -54,7 +54,8 @@ fun Driver.signature(
                     "${item.getLabel()} active=${item.getActiveParameter()} parameters=" +
                         item.getParameters().map { it.getLabel().getLeft() }
                 }
-            "Native future: $future; signatures=$labels global=${help?.getActiveParameter()}; rendered hints: ${renderedHints()}"
+            "Native future: $future; signatures=$labels activeSignature=${help?.getActiveSignature()} " +
+                "global=${help?.getActiveParameter()}; rendered hints: ${renderedHints()}"
         },
     ) {
         requirePopupFocus()
@@ -76,10 +77,16 @@ fun Driver.signature(
         if (!matches(signatures)) return@waitFor false
         val rendered = renderedHints()
         if (signatures.isEmpty()) return@waitFor rendered.isEmpty()
+        val activeSignature = help?.getActiveSignature()
         rendered.size == signatures.size &&
-            signatures.zip(rendered).all { (signature, html) ->
+            signatures.indices.all { index ->
+                val signature = signatures[index]
+                val html = rendered[index]
                 val bold = Regex("<b(?:\\s[^>]*)?>[\\s\\S]*?</b>").findAll(html).map { plainText(it.value) }.toList()
-                val active = signature.activeParameter?.let { signature.parameters.getOrNull(it) }
+                // LSP4IJ dims inactive overloads and only highlights enabled rows. With no
+                // selected overload it enables every row; parameter overrides still apply.
+                val enabled = activeSignature == null || activeSignature < 0 || activeSignature == index
+                val active = signature.activeParameter?.takeIf { enabled }?.let { signature.parameters.getOrNull(it) }
                 plainText(
                     html,
                 ).contains(if (signature.parameters.isEmpty()) signature.label else signature.parameters.joinToString(", ")) &&
