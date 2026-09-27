@@ -123,7 +123,7 @@ public class ImmutableTypeConstant
         return type.isImmutabilitySpecified() ||
                     !type.containsUnresolved() && type.isImmutable()
                 ? type
-                : pool.ensureImmutableTypeConstant(type);
+                : type.freeze();
     }
 
     @Override
