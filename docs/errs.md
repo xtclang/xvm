@@ -5,8 +5,16 @@ now distinguishes remaining semantic coverage, reliability investigations, unimp
 operations and native validation. All 24 adapter capability categories have implementations;
 that is not full protocol or language coverage. See the
 [current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
-The immediate order remains large-graph proof memory, startup editing, semantic header/value
-completion and inferred displays, followed by a combined validation/native parity checkpoint.
+The immediate order is to finish native parity, then large-graph proof memory, startup editing,
+semantic header/value completion and inferred displays, followed by combined validation.
+
+L60 now has IntelliJ implementations for all 113 shared playbook cases, including the 50
+previously missing cases. The new batch compiles; native validation is ongoing and is not a full
+pass. The missing-case subset has 49/50 individual passing receipts. X20 has an Ecstasy Parameter
+Info rendering fix, X81/X82 inspect completion kinds, and X57 verifies a native rename guard
+against obsolete edits. Dependency diagnostic publications also retire completed IntelliJ
+semantic caches. See the [case-by-case validation checklist](errs-integration-plan.md#intellij-parity-backlog-l60).
+These changes do not add compiler/AST state or modify the error-listener API.
 
 L54 native validation also exposed compiler-worker and JSON-RPC cancellation lock cycles, now
 covered by server regressions. File-rename notifications preserve the client close/open lifecycle

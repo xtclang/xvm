@@ -67,7 +67,7 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   lambda parameters/returns where the compiler supplies an actual type. Preserve uncertainty
   in partial source; add shared scenarios and current-version invalidation checks.
 - [ ] **L60 — Native parity checkpoint.** Run the implemented but unverified IntelliJ X93–X98
-  scenarios, then implement all 50 missing scenarios and close all three partial cases.
+  scenarios and validate the 50 newly added cases plus the three completed assertion sets.
   Every missing IntelliJ case already has a VS Code implementation. Track each case in
   `scenarios.json`; resolve X20's signature display discrepancy
   and X81/X82's missing Property-kind assertions. Use native editor actions for user-visible
@@ -175,7 +175,9 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   and lifecycle cleanup. Audit workspace-folder fallback, UTF-16/default versus negotiated
   encodings, markup/location-link support, diagnostic versions/tags/related information,
   symbol kinds/tags, code-action kinds/`context.only`, snippets/edit formats and workspace-edit
-  resource/failure capabilities. Unsupported optional features must remain unadvertised.
+  resource/failure capabilities. Audit stale application in IntelliJ code actions, file-operation
+  edits and server-initiated `workspace/applyEdit`: the L60 native symbol-rename guard does not
+  cover those LSP4IJ entry points. Unsupported optional features must remain unadvertised.
 - [ ] **L81 — Progress, refresh, tracing and transport lifecycle.** Add negotiated work-done
   progress/create/cancel and partial results for long graph operations; propagate cancellation
   without transport/compiler lock cycles. Implement `$/setTrace`/`$/logTrace` behavior and
@@ -192,80 +194,136 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   submission. Update this checklist, the capability matrix, playbook, AST/API ownership record
   and commit extraction map together. Validate each later extracted PR independently.
 
-Current native automation inventory: **113 shared cases; 60 full implementations, 3 partial,
-50 unimplemented**, plus startup. These describe driver assertions, not pass receipts or missing
-server features. Latest passing receipts cover 13 selected cases across two native runs; X93–X98
-still need their first native receipt. See the C28/L53/L54 validation record immediately below.
-Completion requires explicit evidence per feature; neither 24 capability flags nor a passing
-selected playbook is a percentage of total LSP completeness.
+Current native automation inventory: **113 shared cases with driver assertions**, plus startup.
+The previously missing 50 case bodies and X20/X81/X82 assertions are now written; the combined
+integration-test compilation passes. This is implementation inventory, **not a full native pass**.
+Validation is in progress. X93–X98 still need their first native receipt. Completion requires
+explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
+is a percentage of total LSP completeness.
 
 ### IntelliJ parity backlog (L60)
 
-All 50 scenarios below have concrete VS Code implementations; this is uncompleted IntelliJ
-driver work. Source comparison checks every ID against `lang/vscode-extension/src/test/playbook/`.
-The VS Code fixture loader also requires a registration for every shared catalog ID. Native
-popup/lifecycle fixes and the added completion scenarios did not finish this migration. Full
-parity was requested and remains required. Implement in coherent groups before the combined test
-run, with separate checkpoints; do not replace missing UI assertions with protocol calls and
-then label the native behavior verified.
+All 50 scenarios below now have IntelliJ test bodies consuming the same shared values as VS Code.
+The checkboxes track **validated completion** and stay open until each case has a passing receipt.
+The new driver uses native actions for navigation, hover, hierarchy, completion and accepted
+renames; raw protocol assertions use the installed LSP4IJ connection for metadata, stale handles,
+negative answers and cancellation. Diagnostics for nonexistent/deleted files are verified in the
+client's verbose trace because LSP4IJ drops publications without a virtual file. That proves
+protocol delivery, not a Problems row for a nonexistent file.
 
-- [ ] X3 — narrowed hover and declaration identity.
-- [ ] X5 — library navigation exclusions and parser-recovery outline.
-- [ ] X14 — UTF-16 completion edits and CRLF bytes.
-- [ ] X21 — closed-member references and workspace symbols.
-- [ ] X22 — cross-file generic type hierarchy.
-- [ ] X23 — unsaved root changes and sibling diagnostics.
-- [ ] X24 — completion against repeated unsaved root types.
-- [ ] X25 — unsaved nonexistent member open/close lifecycle.
-- [ ] X26 — discard/reopen restores disk semantics.
-- [ ] X27 — file watcher creation/deletion and diagnostic ownership.
-- [ ] X28 — rejection of obsolete type-hierarchy handles.
+Current validation: **49/50 previously missing cases pass individually**, and X20/X81/X82
+also pass. X29 remains open. X93–X98 still need passing execution receipts, followed by a
+complete 113-case native checkpoint. Each run writes live `progress.jsonl` and final `results.json`.
+
+| Native receipt | Selection | Result |
+|---|---|---|
+| `run-7413518377273090944` | X23/X31/X32 calibration | All three plus startup passed |
+| `run-10871344394554883413` | All 50 missing cases | 24 passed, 26 failed; startup passed |
+| `run-4538794847979158115` | 26 failures after shared harness fixes | 13 passed, 13 failed; cumulative 37/50 |
+| `run-4120946877197382622` | Remaining 13 plus X20/X81/X82 | 13 passed, 3 failed; cumulative 47/50 plus the three partials |
+| `run-16001945336035417449` | X29/X38/X57 | X38 passed; X29 failed; X57 confirmed stale edit application; cumulative 48/50 |
+| `run-9071736322591460056` | X29/X93–X98 | X93 stopped at a native focus timeout; no new passing evidence |
+| `run-4543155797199587357` | X29/X53/X54/X57/X60 | Four rename cases passed with the guarded native handler; X29 lost popup focus; cumulative 49/50 |
+| `run-11234394973446044506` | X29/X57 | Stronger X57 passed, including retained-result rejection after close/reopen; X29 lost popup focus |
+| `run-8500347901939309793` | X29 | Focus diagnostics confirmed no active/focused IntelliJ window; assertion remains open |
+
+Harness corrections cover URI comparison without changing round-tripped items, Gson numeric
+hash differences, popup cleanup, independent viewport positioning, required write/undo contexts,
+and transport of non-serializable protocol errors through Driver JMX. Native navigation checks
+actual editor destinations for every chooser entry: opening a closed target can legitimately
+invalidate the previously completed request cache. X38 passes with that check.
+
+Native runs also reproduced real client defects. LSP4IJ validates semantic caches only against
+the requesting file's PSI stamp, so X24 retained an old completion type and X38/X67 retained old
+member locations after another source changed. The client now invalidates completed semantic
+results on fresh compiler diagnostic publications; X24, X38, X47 and X67 pass with the fix. This adds
+no mutable state or compiler/AST hooks. The Ecstasy Parameter Info renderer preserves ambiguous
+candidate labels (X20 passes) and honors per-signature active-parameter overrides (X29 is still
+under validation).
+
+X57 reproduced stale application through LSP4IJ 0.21.0's workspace-edit applicator in a valid
+write/undo context: the server's versioned response was correct, but the client ignored that
+version. A native Ecstasy rename handler and immutable request snapshot now pass X53/X54/X57/X60.
+The snapshot checks buffer stamps, open/close identities, paths and server identity inside the
+write command before applying any returned edit. It uses the installed client connection and
+Community platform UI; no second mutable version counter or compiler/AST hook is added.
+This check is deliberately conservative: changing any open Ecstasy buffer can retire the
+request. X57's additional retained-result close/reopen assertion passes as well.
+Closed-file edits with null versions retain the protocol's existing limitations;
+this is not a filesystem transaction or a guard for every LSP4IJ workspace-edit entry point.
+The shared X31/X32 expectations were also stale: formatting, code actions and code lenses now
+exist, and several former negative completion contexts are supported. Both drivers now test the
+current capability boundary and invalid argument slots. VS Code `run-KfBbW1` passes X31/X32.
+The preceding VS Code run exposed 37 static extension snippets at empty argument slots; X32
+now separately asserts the compiler's empty response and the absence of non-snippet editor
+proposals. This preserves the distinction between semantic candidates and IDE suggestions.
+
+Extraction groups for this work (commit IDs will be added at validated checkpoints):
+
+1. `262a7defe` — installed-client protocol/trace inspection, per-case workspaces and reusable native actions. Subsequent harness fixes will be recorded separately.
+2. `dfb7c4ab1` — fifty parity cases, shared X31/X32 corrections, X81/X82 completion-kind checks and native harness corrections. Its X57 regression depends on the guarded rename in `eded39f0a`; the cache and Parameter Info fixes below are also needed for passing native assertions. Keep these together when extracting the IntelliJ parity PR, or split individual regressions with their production fix.
+3. `5119c682f` — Ecstasy Parameter Info rendering for missing metadata (X20) and per-signature active slots (X29).
+4. `93a82ea8b` — client semantic-cache invalidation after dependency analysis (X24/X38/X47/X67).
+5. `eded39f0a` — guarded native symbol rename after LSP4IJ stale application was reproduced; X53/X54/X57/X60 pass. Plugin unit tests: 26 tests, zero failures/errors/skips; root `spotlessCheck` passes. The shared native regression bodies are in the parity-case group.
+6. Startup/large-graph production fixes remain separate follow-up groups.
+
+- [x] X3 — narrowed hover and declaration identity.
+- [x] X5 — library navigation exclusions and parser-recovery outline.
+- [x] X14 — UTF-16 completion edits and CRLF bytes.
+- [x] X21 — closed-member references and workspace symbols.
+- [x] X22 — cross-file generic type hierarchy.
+- [x] X23 — unsaved root changes and sibling diagnostics.
+- [x] X24 — completion against repeated unsaved root types.
+- [x] X25 — unsaved nonexistent member open/close lifecycle.
+- [x] X26 — discard/reopen restores disk semantics.
+- [x] X27 — file watcher creation/deletion and diagnostic ownership.
+- [x] X28 — rejection of obsolete type-hierarchy handles.
 - [ ] X29 — rapid edits and concurrent cursor requests.
-- [ ] X30 — cancellation, close/reopen and server restart.
-- [ ] X31 — initialized capabilities and formatting provider.
-- [ ] X32 — absent compiler completions distinguished from IDE suggestions.
-- [ ] X36 — exact nominal implementation targets.
-- [ ] X37 — overloaded method implementation identities/ranges.
-- [ ] X38 — cross-file semantic targets through moving/broken overlays.
-- [ ] X39 — incoming/outgoing call hierarchy and grouped sites.
-- [ ] X40 — lambda ownership and absent dynamic-call edges.
-- [ ] X41 — semantic-token kinds/modifiers and read/write highlights.
-- [ ] X42 — inferred-type/parameter inlay labels, kinds and positions.
-- [ ] X43 — obsolete call-hierarchy handles and recovery.
-- [ ] X44 — incoming calls from closed members/current overlays.
-- [ ] X47 — dependency diagnostic ownership and stale-target removal.
-- [ ] X48 — discarded dependency overlay restores the disk artifact.
-- [ ] X49 — dependency deletion/restoration notifications.
-- [ ] X50 — unsaved/saved dependency members and consumer invalidation.
-- [ ] X51 — rapid dependency changes preserve unrelated sessions.
-- [ ] X52 — transitive source changes and diagnostic ownership.
-- [ ] X53 — local rename includes captured uses and exact edits.
-- [ ] X54 — private-parameter rename includes named labels.
-- [ ] X55 — rename rejects capture of an untouched property.
-- [ ] X56 — unsupported rename targets produce no edits.
-- [ ] X57 — edit versions, stale client rejection and close/reopen.
-- [ ] X58 — broken-source recovery and invalid/conflicting rename rejection.
-- [ ] X59 — exact references in unopened configured consumers.
-- [ ] X60 — generic override rename across unsaved/versioned documents.
-- [ ] X61 — graph rename rejects changed overload binding.
-- [ ] X62 — bundled member signatures/hover and binary rename rejection.
-- [ ] X63 — current consumer overlays and incomplete-graph rejection.
-- [ ] X64 — generic property/accessor implementation identity.
-- [ ] X65 — distinct getter/setter/default-field implementation sets.
-- [ ] X66 — no invented abstract/delegated/annotated/binary targets.
-- [ ] X67 — closed accessor positions and parse-recovery navigation.
-- [ ] X68 — chained delegation to written method/getter bodies.
-- [ ] X69 — super definition, outgoing calls and rename rejection.
-- [ ] X72 — annotation accessors and explicit override composition.
-- [ ] CFG2 — rejected cyclic configuration preserves the valid graph.
-- [ ] CFG3 — unchanged settings preserve semantics/document versions.
+- [x] X30 — cancellation, close/reopen and server restart.
+- [x] X31 — initialized capabilities and formatting provider.
+- [x] X32 — absent compiler completions distinguished from IDE suggestions.
+- [x] X36 — exact nominal implementation targets.
+- [x] X37 — overloaded method implementation identities/ranges.
+- [x] X38 — cross-file semantic targets through moving/broken overlays.
+- [x] X39 — incoming/outgoing call hierarchy and grouped sites.
+- [x] X40 — lambda ownership and absent dynamic-call edges.
+- [x] X41 — semantic-token kinds/modifiers and read/write highlights.
+- [x] X42 — inferred-type/parameter inlay labels, kinds and positions.
+- [x] X43 — obsolete call-hierarchy handles and recovery.
+- [x] X44 — incoming calls from closed members/current overlays.
+- [x] X47 — dependency diagnostic ownership and stale-target removal.
+- [x] X48 — discarded dependency overlay restores the disk artifact.
+- [x] X49 — dependency deletion/restoration notifications.
+- [x] X50 — unsaved/saved dependency members and consumer invalidation.
+- [x] X51 — rapid dependency changes preserve unrelated sessions.
+- [x] X52 — transitive source changes and diagnostic ownership.
+- [x] X53 — local rename includes captured uses and exact edits.
+- [x] X54 — private-parameter rename includes named labels.
+- [x] X55 — rename rejects capture of an untouched property.
+- [x] X56 — unsupported rename targets produce no edits.
+- [x] X57 — edit versions, stale client rejection and close/reopen.
+- [x] X58 — broken-source recovery and invalid/conflicting rename rejection.
+- [x] X59 — exact references in unopened configured consumers.
+- [x] X60 — generic override rename across unsaved/versioned documents.
+- [x] X61 — graph rename rejects changed overload binding.
+- [x] X62 — bundled member signatures/hover and binary rename rejection.
+- [x] X63 — current consumer overlays and incomplete-graph rejection.
+- [x] X64 — generic property/accessor implementation identity.
+- [x] X65 — distinct getter/setter/default-field implementation sets.
+- [x] X66 — no invented abstract/delegated/annotated/binary targets.
+- [x] X67 — closed accessor positions and parse-recovery navigation.
+- [x] X68 — chained delegation to written method/getter bodies.
+- [x] X69 — super definition, outgoing calls and rename rejection.
+- [x] X72 — annotation accessors and explicit override composition.
+- [x] CFG2 — rejected cyclic configuration preserves the valid graph.
+- [x] CFG3 — unchanged settings preserve semantics/document versions.
 
-Partial cases also remain open:
+The three previously partial assertion sets pass in `run-4120946877197382622`:
 
-- [ ] X20 — preserve the ambiguous signature label in the native Parameter Info display,
+- [x] X20 — preserve the ambiguous signature label in the native Parameter Info display,
   while suppressing unsupported parameter/active-argument metadata. Record any upstream fix.
-- [ ] X81 — inspect Property completion-kind metadata in addition to candidates/type/edit.
-- [ ] X82 — inspect Property completion-kind metadata in addition to candidates/edit.
+- [x] X81 — inspect Property completion-kind metadata in addition to candidates/type/edit.
+- [x] X82 — inspect Property completion-kind metadata in addition to candidates/edit.
 
 X93–X98 need execution receipts, not missing driver implementations. Complete L60 only when
 all the above assertions are implemented, each case has a passing receipt on the integrated
@@ -390,7 +448,7 @@ The focused X105 rerun `run-6447227996108229738` passes startup and both bundled
 variants, with no IDE internal failures. Together these receipts cover all 13 selected cases;
 the earlier combined invocation itself failed. Both use catalog SHA-256
 `89e43ccb0b349e9d9ed4713b9b3eb6b1da5861a2a5f28c373a7aafa01044362f`.
-IntelliJ assertion coverage remains 60 full, three partial and 50 unimplemented scenarios.
+At that historical checkpoint, IntelliJ assertion coverage was 60 full, three partial and 50 unimplemented scenarios; the active L60 inventory above supersedes it.
 
 ## Current integrated commit map
 

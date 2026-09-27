@@ -174,8 +174,9 @@ The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
 The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. Large-workspace
 rename refusal/peak memory and editing during IntelliJ startup remain open investigations, even
 though isolated native refactoring cases pass. The active checklist records those limits and the
-current native inventory: 60 full, 3 partial and 50 unimplemented driver cases out of 113 shared
-cases; X93–X98 still await a native pass receipt.
+current native inventory: assertions for all 113 shared cases. The new parity batch is under
+validation; 49/50 newly implemented cases have individual passing receipts. X57 now verifies
+IntelliJ's guarded symbol-rename application. X29 remains open, and X93–X98 still await native pass receipts.
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
 and its member tree together, including unsaved member files and packages. Non-file URIs remain
