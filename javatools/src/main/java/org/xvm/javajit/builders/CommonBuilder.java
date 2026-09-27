@@ -4217,7 +4217,6 @@ public class CommonBuilder
                    "putAll")),   // TODO: incompatible assignment types in TypeMatrix
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
             Set.of("freeze", // TODO: immutable union specialization
-                   "addIndexTo", // TODO: widened-to-primitive array argument
                    "duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
                    "ensurePersistent", // TODO: private access requested on a nullable array union
                    "indexOf",    // TODO: property lookup fails during P_GET type analysis

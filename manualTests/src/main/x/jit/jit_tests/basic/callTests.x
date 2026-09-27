@@ -78,6 +78,8 @@ package callTests {
         testSuperCall();
         testCovariantSuperCall();
         testWidenedArgumentNarrowing();
+        testWidenedPrimitiveArguments();
+        testWidenedNullableArguments();
         testSpecializedCapRouting();
     }
 
@@ -271,6 +273,45 @@ package callTests {
 
         assert size("hello") == 5;
         assert size(42) == 0;
+    }
+
+    void testWidenedPrimitiveArguments() {
+        assert nextNumber(42) == 43;
+        assert nextNumber("none") == 0;
+
+        Int128 n = 0x1_0000_0000_0000_0005;
+        assert nextNumber128(n) == n + 1;
+        assert nextNumber128("none") == 0;
+
+        Int nextNumber(Int|String value) = value.is(String) ? 0 : increment(value);
+
+        Int increment(Int value) = value + 1;
+
+        Int128 nextNumber128(Int128|String value) = value.is(String) ? 0 : increment128(value);
+
+        Int128 increment128(Int128 value) = value + 1;
+    }
+
+    void testWidenedNullableArguments() {
+        assert callNullable(42) == 42;
+        assert callNullable(0) == 0;
+        assert callNullable(Null) == -1;
+        assert callNullable("none") == -2;
+
+        Int128 n = 0x1_0000_0000_0000_0005;
+        assert callNullable128(n) == n;
+        assert callNullable128(0) == 0;
+        assert callNullable128(Null) == -1;
+        assert callNullable128("none") == -2;
+
+        Int callNullable(Int?|String value) = value.is(String) ? -2 : acceptNullable(value);
+
+        Int acceptNullable(Int? value) = value ?: -1;
+
+        Int128 callNullable128(Int128?|String value) =
+                value.is(String) ? -2 : acceptNullable128(value);
+
+        Int128 acceptNullable128(Int128? value) = value ?: -1;
     }
 
     void testSpecializedCapRouting() {

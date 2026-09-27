@@ -614,7 +614,7 @@ public abstract class OpCondJump
             }
 
             if (typeTarget.isNullable() && !typeTest.isOnlyNullable()) {
-                if (!typeTarget.removeNullable().isA(typeTest)) {
+                if (typeTarget.isIncompatibleCombo(typeTest)) {
                     // the result is always negative, which most probably means that a formal
                     // type was narrowed for a particular class flavor and the corresponding code
                     // can be safely eliminated

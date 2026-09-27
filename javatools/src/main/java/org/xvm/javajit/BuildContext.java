@@ -2132,6 +2132,8 @@ public class BuildContext {
             //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
             //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
             //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
+            //  - Widened -> Primitive            (Int|String n narrowed to Int; f(n) with f(Int))
+            //  - Widened -> NullablePrimitive    (Int?|String n narrowed to Int?; f(n) with f(Int?))
             switch (srcFlavor.name() + "->" + dstFlavor.name()) {
             case "Specific->SpecificWithDefault":
             case "Widened->Specific",
@@ -2142,6 +2144,20 @@ public class BuildContext {
                 continue;
 
             case "Widened->WidenedWithDefault":
+                continue;
+
+            case "Widened->Primitive",
+                 "Widened->XvmPrimitive":
+                if (!srcReg.cd().equals(builder.ensureClassDesc(pd.type))) {
+                    generateCheckCast(code, pd.type);
+                }
+                Builder.unbox(code, pd.type);
+                continue;
+
+            case "Widened->NullablePrimitive",
+                 "Widened->NullableXvmPrimitive":
+                Builder.unboxNullable(code, pd.type,
+                        builder.ensureClassDesc(pd.type.removeNullable()));
                 continue;
 
             case "Specific->Widened",
