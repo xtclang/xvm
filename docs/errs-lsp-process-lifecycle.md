@@ -80,7 +80,7 @@ it does not terminate the JVM. The `errs` branch had already fixed explicit prot
 **ddc0b063d**, but transport EOF still leaked resources. Do not cherry-pick that large earlier
 commit wholesale just to obtain its exit behavior.
 
-For the later standalone master fix:
+The standalone master extraction follows these boundaries:
 
 1. Carry the provider lifetime guard and its tests, without the unrelated LSP4IJ/IDE upgrade.
 2. Carry launcher executor ownership, EOF cleanup and production process exit.
@@ -88,13 +88,30 @@ For the later standalone master fix:
    adapter cleanup. Master's server lacks the compiler-settings holder and document-service
    lifecycle added on `errs`; adapt those few lines to master's resource ownership.
 4. Carry the transport and child-JVM regressions. Master has no `compilerStdioTest` task;
-   wire a generic packaged-server test task to `fatJar` and run the shipped Tree-sitter and
-   mock backends there. Compiler coverage remains appropriate on `errs`.
+   wire its normal `test` task to `fatJar` and run the shipped Tree-sitter and mock backends.
+   Compiler coverage remains appropriate on `errs`.
 
 No embedding API, AST, semantic-model, rename-proof, native playbook or dependency upgrade
-belongs in this extraction. No master branch or PR has been created during this investigation.
+belongs in this extraction. The local branch below is prepared; no PR has been created.
 The provider workaround and regressions are isolated in **8e976f868**; server cleanup, process
 exit and regressions are in **eefc1b8e6**. See the integration plan for the verified commit map.
+
+### Prepared master branch
+
+`lagergren/fix-lsp-process-lifecycle` contains one commit, **cf54e2a19**, based on freshly fetched
+`origin/master` **ce3ab1d81**. Its separate worktree is `build/lsp-process-lifecycle`; the main
+checkout remains on `lagergren/errs`. The branch is local only.
+
+The diff is **nine files, +476/−24 lines**: four production files (+91/−24), four regression
+files (+377), and eight lines of normal Gradle test wiring. It keeps master's IntelliJ 2026.1
+and LSP4IJ 0.19.4. Master uses final atomic holders for close/shutdown state because it lacks
+the compiler-settings lifecycle holder from `errs`; it needs no document-service cleanup hook.
+
+Independent validation passed **426 LSP tests** with three existing skips and **29 IntelliJ
+tests** with zero skips, including all **20 new lifecycle regressions**. The ten child-JVM
+cases cover Tree-sitter and mock; the other ten cover transport cleanup and provider races.
+Root Spotless and Kotlin checks pass. A forced 14-test server lifecycle rerun also passes
+with configuration-cache reuse. No native IDE acceptance run is claimed for this extraction.
 
 ## Validation
 
