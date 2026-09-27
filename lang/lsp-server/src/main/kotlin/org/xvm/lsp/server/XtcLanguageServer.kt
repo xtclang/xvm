@@ -176,7 +176,6 @@ class XtcLanguageServer(
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
-    private val closed = AtomicBoolean()
     private val shutdownRequested = AtomicBoolean()
 
     /** One immutable context per configuration request; late replies cannot replace newer settings. */
@@ -706,12 +705,17 @@ class XtcLanguageServer(
         return CompletableFuture.completedFuture(null)
     }
 
-    /** Release resources once, whether shutdown is explicit or the transport disconnects. */
+    /** Release resources on both a protocol shutdown and an abrupt transport disconnect. */
     override fun close() {
-        if (closed.compareAndSet(false, true)) {
-            initialized = false
-            synchronized(compilerSettings) { compilerSettings.updateAndGet { it.copy(closed = true) } }
+        val alreadyClosed =
+            synchronized(compilerSettings) {
+                compilerSettings.getAndUpdate { it.copy(closed = true) }.closed
+            }
+        if (alreadyClosed) return
+        initialized = false
+        try {
             textDocumentService.close()
+        } finally {
             adapter.close()
         }
     }
