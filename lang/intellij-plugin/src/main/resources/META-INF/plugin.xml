@@ -66,6 +66,16 @@
         <lang.commenter language="Ecstasy"
                         implementationClass="org.xtclang.idea.XtcCommenter"/>
 
+        <!-- Preserve candidate signatures when the compiler cannot select an active argument. -->
+        <codeInsight.parameterInfo language="Ecstasy"
+                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+        <codeInsight.parameterInfo language="TEXT"
+                                   order="before LSPParameterInfoHandlerForTEXT"
+                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+        <codeInsight.parameterInfo language="textmate"
+                                   order="before LSPParameterInfoHandlerForTextMate"
+                                   implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
+
         <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
         <langCodeStyleSettingsProvider
             implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>

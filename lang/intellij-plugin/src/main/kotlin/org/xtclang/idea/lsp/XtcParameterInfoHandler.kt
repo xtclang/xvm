@@ -1,0 +1,40 @@
+package org.xtclang.idea.lsp
+
+import com.intellij.lang.parameterInfo.CreateParameterInfoContext
+import com.intellij.lang.parameterInfo.ParameterInfoUIContext
+import com.redhat.devtools.lsp4ij.features.signatureHelp.LSPParameterInfoHandler
+import com.redhat.devtools.lsp4ij.features.signatureHelp.LSPSignatureHelperPsiElement
+import org.eclipse.lsp4j.SignatureInformation
+
+/** Missing parameter metadata means no safe active slot, not an empty signature. */
+class XtcParameterInfoHandler : LSPParameterInfoHandler() {
+    // Ecstasy's lexer can use plain-text or TextMate PSI. Leave other languages to LSP4IJ.
+    override fun findElementForParameterInfo(context: CreateParameterInfoContext): LSPSignatureHelperPsiElement? =
+        if (context.file.virtualFile?.extension == "x") super.findElementForParameterInfo(context) else null
+
+    override fun updateUI(
+        signature: SignatureInformation,
+        context: ParameterInfoUIContext,
+    ) {
+        if (signature.parameters.isNullOrEmpty()) {
+            context.setupUIComponentPresentation(
+                signature.label,
+                -1,
+                -1,
+                !context.isUIComponentEnabled,
+                false,
+                false,
+                context.defaultParameterColor,
+            )
+        } else {
+            // LSP permits each overload to override the top-level active parameter. LSP4IJ's
+            // renderer otherwise reads only the shared context, which defaults to slot zero.
+            super.updateUI(
+                signature,
+                object : ParameterInfoUIContext by context {
+                    override fun getCurrentParameterIndex(): Int = signature.activeParameter ?: context.currentParameterIndex
+                },
+            )
+        }
+    }
+}
