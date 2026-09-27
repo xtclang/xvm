@@ -155,8 +155,10 @@ the driver's object descriptions evaluating cancelled lazy quick fixes when read
 The probe reads installed severity/message/offset values; it does not issue substitute LSP queries.
 It is built from integration-test classes and is absent from the shipping plugin.
 
-Parameter Info checks inspect the native request result, visible parameter text and bold argument;
-invalid calls must clear an earlier hint. X20 now requires the full signature label without an
+Parameter Info checks inspect the native request result, every visible parameter row and the
+exact bold argument in enabled overloads. Inactive overloads are intentionally dimmed according
+to `activeSignature`; with no selected overload, every row remains enabled.
+Invalid calls must clear an earlier hint. X20 now requires the full signature label without an
 invented bold argument; an Ecstasy-specific Parameter Info handler preserves this label when
 LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata from the native
 completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
@@ -172,6 +174,11 @@ guarded native Rename handler. Its immutable request snapshot is checked inside 
 before applying edits; typing, file lifecycle changes and server restart retire the response.
 This does not guard other LSP4IJ workspace-edit entry points or null-version closed-file races.
 The missing-case subset has 50/50 passing receipts; X29 now passes with current signature metadata.
+The resumed 61-case batch passed every scenario assertion but failed the IDE-error gate on
+X41's unguarded PSI read. That harness call now uses a read action; X41/X108 pass together with
+no IDE errors. A subsequent full checkpoint was interrupted by desktop focus loss at X108.
+All 113 scenario assertions have passing receipts across runs; a clean single-session pass
+is still required. See the [L60 execution record](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
 
 X33–X35 and X99–X108 have passing native receipts
 across the checkpoint and focused X105 rerun. The receipts and the failures fixed during validation
