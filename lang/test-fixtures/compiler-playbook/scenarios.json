@@ -202,10 +202,8 @@
         "declaration": "Object value = input"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native hover contents and declaration-identity assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X4": {
@@ -246,10 +244,8 @@
         "libraryTarget": "String"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Parser-recovery outline and absent library-target assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X6": {
@@ -436,10 +432,8 @@
         "accepted": "getValue().size;"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "The native driver does not yet verify CRLF file bytes alongside UTF-16 completion edits; IntelliJ normalizes document line separators."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X15": {
@@ -561,10 +555,8 @@
         "targetCount": 1
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native suppressed metadata, no bold active argument, and selected-overload navigation implemented. LSP4IJ renders no parameters instead of retaining the signature label."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X21": {
@@ -581,10 +573,8 @@
         "targetCount": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Closed-member references and workspace-symbol assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X22": {
@@ -605,10 +595,8 @@
         "baseName": "Base"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native type-hierarchy view and generic edge assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X23": {
@@ -622,10 +610,8 @@
         "diagnosticCode": "EMB-5"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Sibling document version and unsaved root diagnostic assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X24": {
@@ -649,10 +635,8 @@
         "label": "item"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Completion presentation across repeated root overlays and unchanged disk bytes are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X25": {
@@ -668,10 +652,8 @@
         "name": "Added"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Synthetic didOpen/didClose for a named nonexistent member is not exposed by the native driver."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X26": {
@@ -684,10 +666,8 @@
         "expected": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Discard/reopen actions and restored member semantics are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X27": {
@@ -698,10 +678,8 @@
         "text": "class Bad extends Missing {}"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Filesystem watcher creation/deletion and closed-file diagnostic assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X28": {
@@ -714,10 +692,8 @@
         "contains": "Base"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "The native driver does not retain raw hierarchy items to request obsolete snapshots."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X29": {
@@ -742,10 +718,8 @@
         "expected": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Concurrent signature requests and rapid unsaved root edits are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X30": {
@@ -763,52 +737,53 @@
         "label": "item"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Explicit LSP cancellation, discard/reopen and server restart assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X31": {
-      "title": "unsupported compiler capabilities are not advertised",
+      "title": "compiler capabilities advertise supported features and omit unavailable providers",
       "manual": [
-        "Editor-native formatting/snippets are outside compiler capability assertions"
+        "Native formatting behavior is additionally exercised by X102 and X107"
       ],
       "values": {
         "file": "Navigation.x",
         "unsupportedCapabilities": [
+          "declarationProvider",
+          "colorProvider",
+          "monikerProvider",
+          "inlineValueProvider"
+        ],
+        "tabSize": 4,
+        "supportedCapabilities": [
           "documentFormattingProvider",
           "documentRangeFormattingProvider",
           "codeActionProvider",
           "codeLensProvider"
         ],
-        "tabSize": 4,
-        "editCount": 0
+        "unformatted": "module Navigation {\nInt value=1;\n}\n"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Initialize-result capability inspection and formatting provider assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X32": {
-      "title": "unsupported cursor contexts do not invent completions",
+      "title": "invalid argument slots do not invent completions",
       "manual": [],
       "values": {
         "bodies": [
-          "box.pa\u00a7ir(\"x\", \"y\");",
-          "new Box<String>(\u00a7);",
-          "function String() fn = () -> \"x\"; fn(\u00a7);",
-          "box.pair(\u00a7, \"x\");"
+          "box.pair(unknown=\u00a7);",
+          "box.pair(first=\"x\", first=\u00a7);",
+          "box.pair(True, \u00a7);",
+          "box.pair(\"x\", \"y\", \u00a7);",
+          "missing(\u00a7);"
         ],
         "completionCount": 0
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Empty compiler completions must be distinguished from IntelliJ native suggestions; that assertion is not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X33": {
@@ -893,10 +868,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X37": {
@@ -917,10 +890,8 @@
         "targetCount": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native implementation chooser target ranges and overload identity are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X38": {
@@ -938,10 +909,8 @@
         "replaceWith": "class Child extends"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Cross-file type/implementation navigation with moving and broken overlays is not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X39": {
@@ -964,10 +933,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native incoming/outgoing call hierarchy and source-site assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X40": {
@@ -983,10 +950,8 @@
         "dynamicCall": "fn();"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native incoming/outgoing call hierarchy and source-site assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X41": {
@@ -1020,10 +985,8 @@
         "offset": 7
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Semantic token kinds/modifiers and read/write highlight inspection are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X42": {
@@ -1044,10 +1007,8 @@
         "excludedHint": "extra:"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native inlay hint label, kind and source-position assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X43": {
@@ -1064,10 +1025,8 @@
         "replaceWith": "Int broken(\n Int run"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Raw call-hierarchy snapshot expiry and parse-failure recovery are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X44": {
@@ -1085,10 +1044,8 @@
         "lineShift": 2
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Incoming call sites from closed members and current overlays are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X45": {
@@ -1134,10 +1091,8 @@
         "offset": 4
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Dependency-owned diagnostic codes and absent stale navigation are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X48": {
@@ -1147,10 +1102,8 @@
         "file": "Library.x"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Discarding an unsaved library and verifying its restored artifact is not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X49": {
@@ -1161,10 +1114,8 @@
         "diagnosticCode": "SOURCE-UNAVAILABLE"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Watched library deletion/restoration and diagnostic ownership are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X50": {
@@ -1178,10 +1129,8 @@
         "version": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Synthetic unsaved member notifications and the filesystem watcher equivalent are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X51": {
@@ -1194,10 +1143,8 @@
         "offset": 4
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Concurrent dependency navigation during rapid edits and unrelated-session checks are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X52": {
@@ -1236,10 +1183,8 @@
         "offset": 4
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Transitive graph configuration and dependency-failure ownership are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X53": {
@@ -1257,10 +1202,8 @@
         }
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X54": {
@@ -1283,10 +1226,8 @@
         "namedArgument": "number=1"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X55": {
@@ -1298,10 +1239,8 @@
         "newName": "value"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X56": {
@@ -1321,10 +1260,8 @@
         "offset": 4
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X57": {
@@ -1342,10 +1279,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X58": {
@@ -1363,10 +1298,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native rename execution/rejection, exact changed text and workspace-edit metadata assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X59": {
@@ -1385,10 +1318,8 @@
         "closedConsumer": "Dormant.x"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Exact references across unopened configured consumers are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X60": {
@@ -1412,10 +1343,8 @@
         }
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Graph rename preview, document versions and unsaved multi-file workspace edits are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X61": {
@@ -1429,10 +1358,8 @@
         "file": "Contracts.x"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Rejected graph rename with unchanged overload resolution is not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X62": {
@@ -1458,10 +1385,8 @@
         "descriptionRename": "describe"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Binary signature/hover checks and rejected binary rename are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X63": {
@@ -1480,10 +1405,8 @@
         "referenceCount": 3
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Graph references and versioned rename after unsaved or broken consumer edits are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X64": {
@@ -1511,10 +1434,8 @@
         "offset": 6
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X65": {
@@ -1590,10 +1511,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X66": {
@@ -1617,10 +1536,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X67": {
@@ -1638,10 +1555,8 @@
         "replaceWith": "class Member {"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Closed property accessor positions and parse-recovery navigation are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X68": {
@@ -1668,10 +1583,8 @@
         "targetCount": 1
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X69": {
@@ -1689,10 +1602,8 @@
         "renameRejection": "Rename not allowed at this position"
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Super definition, outgoing calls and prepareRename rejection are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X70": {
@@ -1759,10 +1670,8 @@
         "targetLength": 3
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Native multi-target type/implementation navigation and exact declaration-set assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X73": {
@@ -2008,10 +1917,8 @@
         "replacementStartDelta": -2
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native candidates, type detail, exact accepted edit and clean diagnostics implemented; completion Property-kind metadata not inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X82": {
@@ -2027,10 +1934,8 @@
         ]
       },
       "intellij": {
-        "coverage": "partial",
-        "limitations": [
-          "Native exact candidates, exact accepted edit and clean diagnostics implemented; completion Property-kind metadata not inspected."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "X83": {
@@ -3334,10 +3239,8 @@
         ]
       },
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Observation of rejected configuration notifications with last-valid-graph semantics is not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "CFG3": {
@@ -3345,10 +3248,8 @@
       "manual": [],
       "values": {},
       "intellij": {
-        "coverage": "not-implemented",
-        "limitations": [
-          "Unchanged configuration notification and consumer document-version assertions are not implemented."
-        ]
+        "coverage": "full",
+        "limitations": []
       }
     },
     "7a.8": {

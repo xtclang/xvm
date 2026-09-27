@@ -27,66 +27,83 @@ internal fun Driver.semanticSupport(editor: JEditorUiComponent): NativeSemanticS
         cast(utility(LspFileSupport::class).getSupport(file), NativeSemanticSupport::class)
     }
 
-/** Check the result consumed by the native action, its chooser and the actual selected declaration. */
+/** Follow every native chooser entry and verify its file/caret, even if navigation retires its cache. */
 internal fun Driver.nativeLocations(
     document: ParityWorkspace.Document,
     at: Int,
     kind: String,
     expected: List<JsonObject>,
 ) {
-    val editor = document.editor
-    focusEditor(editor)
-    withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-    val support = semanticSupport(editor)
-    val feature =
-        when (kind) {
-            "definition" -> support.getDefinitionSupport()
-            "typeDefinition" -> support.getTypeDefinitionSupport()
-            "implementation" -> support.getImplementationSupport()
-            else -> error("Unsupported native location feature $kind")
-        }
     val action =
         when (kind) {
             "definition" -> "GotoDeclaration"
             "typeDefinition" -> "LSP.GotoTypeDefinition"
-            else -> "LSP.GotoImplementation"
+            "implementation" -> "LSP.GotoImplementation"
+            else -> error("Unsupported native location feature $kind")
         }
-    invokeAction(action, component = editor.component)
-    val protocol = ClientProtocol(this)
-    waitFor("native $kind receives exact compiler targets", 45.seconds) {
-        val future = feature.getValidLSPFuture()
-        future != null && future.isDone() && !future.isCompletedExceptionally() &&
-            future.get().map { protocol.copy(it.location()) }.toSet() == expected.toSet()
+
+    fun invoke() {
+        dismissPopups()
+        val editor = document.editor
+        focusEditor(editor)
+        withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+        editor.scrollToCaret()
+        invokeAction(action, component = editor.component)
     }
     if (expected.isEmpty()) {
-        withContext(OnDispatcher.EDT) { service<EditorHints>().hideAllHints() }
+        val support = semanticSupport(document.editor)
+        val feature =
+            when (kind) {
+                "definition" -> support.getDefinitionSupport()
+                "typeDefinition" -> support.getTypeDefinitionSupport()
+                else -> support.getImplementationSupport()
+            }
+        invoke()
+        waitFor("native $kind receives no targets", 45.seconds) {
+            val future = feature.getValidLSPFuture()
+            future != null && future.isDone() && !future.isCompletedExceptionally() && future.get().isEmpty()
+        }
+        dismissPopups()
         return
     }
-    if (expected.size > 1) {
-        val popup = ui.popup()
-        val table = popup.accessibleTable()
-        waitFor("native $kind chooser has ${expected.size} targets", 45.seconds) {
-            requirePopupFocus()
-            table.present() && table.content().size == expected.size
+    val expectedPoints =
+        expected.map { target ->
+            Triple(
+                Path.of(URI(target.string("uri"))).toString(),
+                target.getAsJsonObject("range").getAsJsonObject("start").int("line"),
+                target.getAsJsonObject("range").getAsJsonObject("start").int("character"),
+            )
         }
-        withContext(OnDispatcher.EDT) { cast(table.component, NativeTableSelection::class).setRowSelectionInterval(0, 0) }
-        popup.keyboard { enter() }
-    }
-    waitFor("$kind opens one of the exact source targets", 30.seconds) {
-        withContext(OnDispatcher.EDT) {
-            service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
-                val path = selected.getVirtualFile().getPath()
-                expected.any { target ->
-                    Path.of(URI(target.string("uri"))).toString() == path &&
-                        selected.getCaretModel().getOffset() ==
-                        ParityWorkspace.offset(
-                            selected.getDocument().getText(),
-                            target.getAsJsonObject("range").getAsJsonObject("start"),
-                        )
+    val opened =
+        expected.indices.map { index ->
+            invoke()
+            if (expected.size > 1) {
+                val popup = ui.popup()
+                val table = popup.accessibleTable()
+                waitFor("native $kind chooser has ${expected.size} targets", 45.seconds) {
+                    requirePopupFocus()
+                    table.present() && table.content().size == expected.size
                 }
-            } == true
+                withContext(OnDispatcher.EDT) {
+                    cast(table.component, NativeTableSelection::class).setRowSelectionInterval(index, index)
+                }
+                popup.keyboard { enter() }
+            }
+            waitFor(
+                message = "$kind opens an exact source target",
+                timeout = 30.seconds,
+                getter = {
+                    withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                        service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
+                            val position = ParityWorkspace.position(selected.getDocument().getText(), selected.getCaretModel().getOffset())
+                            Triple(selected.getVirtualFile().getPath(), position.getValue("line"), position.getValue("character"))
+                        }
+                    }
+                },
+                checker = { it in expectedPoints },
+            )
         }
-    }
+    check(opened.toSet() == expectedPoints.toSet()) { "Expected $expectedPoints; native destinations: $opened" }
 }
 
 /** Exercise Quick Documentation; read the native request's hover instead of issuing another hover. */
@@ -95,6 +112,7 @@ internal fun Driver.nativeHover(
     at: Int,
     pattern: Regex,
 ) {
+    dismissPopups()
     focusEditor(document.editor)
     withContext(OnDispatcher.EDT) {
         document.editor.editor
@@ -102,15 +120,16 @@ internal fun Driver.nativeHover(
             .moveToOffset(at)
     }
     val support = semanticSupport(document.editor).getHoverSupport()
+    document.editor.scrollToCaret()
     invokeAction("QuickJavaDoc", component = document.editor.component)
     val protocol = ClientProtocol(this)
     waitFor("native documentation contains $pattern", 45.seconds) {
         val future = support.getValidLSPFuture()
         future != null && future.isDone() && !future.isCompletedExceptionally() &&
             future.get().any { pattern.containsMatchIn(protocol.copy(it.hover()).toString()) } &&
-            ui.x("//div[contains(@class,'Documentation')]").present()
+            ui.x("//div[@class='DocumentationPopupPane']").present()
     }
-    invokeAction("EditorEscape", component = document.editor.component)
+    dismissPopups()
 }
 
 internal fun Driver.nativeHierarchy(
@@ -125,6 +144,7 @@ internal fun Driver.nativeHierarchy(
             .getCaretModel()
             .moveToOffset(at)
     }
+    document.editor.scrollToCaret()
     invokeAction(if (kind == "type") "TypeHierarchy" else "CallHierarchy", component = document.editor.component)
     val className = if (kind == "type") "LSPTypeHierarchyBrowser" else "LSPCallHierarchyBrowser"
     val browser = ui.x("//div[@class='$className']")
@@ -150,8 +170,6 @@ internal fun targetNames(
 
 @Remote("com.redhat.devtools.lsp4ij.LSPFileSupport", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeSemanticSupport {
-    fun getCompletionSupport(): NativeCompletionsSupport
-
     fun getDefinitionSupport(): NativeLocationsSupport
 
     fun getTypeDefinitionSupport(): NativeLocationsSupport
@@ -163,21 +181,6 @@ interface NativeSemanticSupport {
     fun getSemanticTokensSupport(): NativeTokensSupport
 
     fun getInlayHintsSupport(): NativeInlaysSupport
-}
-
-@Remote("com.redhat.devtools.lsp4ij.features.completion.LSPCompletionSupport", plugin = "com.redhat.devtools.lsp4ij")
-interface NativeCompletionsSupport {
-    fun getValidLSPFuture(): NativeCompletionsFuture?
-}
-
-@Remote("java.util.concurrent.CompletableFuture")
-interface NativeCompletionsFuture : ClientFuture {
-    fun get(): List<NativeCompletionData>
-}
-
-@Remote("com.redhat.devtools.lsp4ij.features.completion.CompletionData", plugin = "com.redhat.devtools.lsp4ij")
-interface NativeCompletionData {
-    fun completion(): ClientValue
 }
 
 @Remote("com.redhat.devtools.lsp4ij.features.AbstractLSPDocumentFeatureSupport", plugin = "com.redhat.devtools.lsp4ij")

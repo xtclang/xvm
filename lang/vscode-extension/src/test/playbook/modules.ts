@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { TypeHierarchyItem } from 'vscode-languageclient/node';
+import { CompletionItem, CompletionList, TypeHierarchyItem } from 'vscode-languageclient/node';
 import { getClient } from '../../lsp-client';
 import { scenarioRegex, scenarioText } from './shared';
 import { client, diagnostics, diagnosticCode, eventually, fixture, label, noErrors, playbook, position, symbols, targets } from './support';
@@ -180,14 +180,26 @@ export function moduleCases(): void {
         for (const capability of data.unsupportedCapabilities) {
             assert.ok(!capabilities[capability as keyof typeof capabilities], capability);
         }
-        assert.strictEqual((await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri,
-            { tabSize: data.tabSize, insertSpaces: true }))?.length ?? data.editCount, data.editCount);
+        for (const capability of data.supportedCapabilities) {
+            assert.ok(capabilities[capability as keyof typeof capabilities], capability);
+        }
+        await workspace.replace(document, data.unformatted);
+        assert.ok((await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri,
+            { tabSize: data.tabSize, insertSpaces: true }))?.length, 'Compiler formatting supplies edits');
     });
 
     playbook('X32', async (workspace, data) => {
         for (const body of data.bodies) {
             const { document, at } = await workspace.editing(body);
-            assert.strictEqual((await workspace.completion(document, at)).length, data.completionCount, body);
+            const response = await client().sendRequest<CompletionItem[] | CompletionList | null>('textDocument/completion', {
+                textDocument: { uri: document.uri.toString() }, position: at
+            });
+            const compilerItems = Array.isArray(response) ? response : response?.items ?? [];
+            assert.strictEqual(compilerItems.length, data.completionCount, body);
+            // VS Code adds the extension's static snippets at an empty slot even when the
+            // compiler correctly withholds semantic candidates. Inspect both boundaries.
+            const semanticItems = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
+            assert.strictEqual(semanticItems.length, data.completionCount, `${body}: ${semanticItems.map(label).join(', ')}`);
         }
     });
 }

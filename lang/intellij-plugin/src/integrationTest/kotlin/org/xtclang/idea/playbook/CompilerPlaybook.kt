@@ -36,6 +36,7 @@ class CompilerPlaybook(
     private val shared: SharedScenarios,
     private val lsp4ijVersion: String,
     private val selectedIds: Set<String> = shared.implementedIds,
+    private val onResult: (Result) -> Unit = {},
 ) {
     data class Result(
         val id: String,
@@ -331,8 +332,14 @@ class CompilerPlaybook(
                 }
                 restore(data.text("file"))
             }
+            ParityScenarios(driver, fixtures, shared) { id, action ->
+                case(id, shared.scenarios.getValue(id).title, continueAfterFailure = true, action = action)
+            }.run()
             check(completed.filter { it.id != "START" }.map { it.id }.toSet() == selectedIds) {
                 "Every selected implemented case must execute; omitted cases remain not-run"
+            }
+            check(completed.none { it.status == "failed" }) {
+                "Failed IntelliJ cases: ${completed.filter { it.status == "failed" }.map { it.id }}; see results.json"
             }
         }
 
@@ -813,7 +820,8 @@ class CompilerPlaybook(
                 val at = editor.text.indexOf(prefix) + prefix.length
                 lookup(editor, at) { items ->
                     items.map { it.getLookupString() }.sorted() == data.strings("labels").sorted() &&
-                        hasType(items, data.text("label"), data.values["type"].asJsonObject["source"].asString)
+                        hasType(items, data.text("label"), data.values["type"].asJsonObject["source"].asString) &&
+                        hasCompletionKinds(items, data.strings("labels"), 10)
                 }
                 invokeAction("EditorEscape", component = editor.component)
                 accept(editor, at, data.text("label"))
@@ -826,7 +834,7 @@ class CompilerPlaybook(
             editor.text = fixtures.getValue(data.text("file")).replace(data.text("replaceFrom"), data.text("anchor"))
             editor.awaitError()
             val at = editor.text.indexOf(data.text("anchor")) + data.values["offset"].asInt
-            acceptCandidates(editor, at, data.strings("labels"), data.strings("labels").single())
+            acceptCandidates(editor, at, data.strings("labels"), data.strings("labels").single(), kind = 10)
             check(editor.text == fixtures.getValue(data.text("file")))
             editor.awaitDiagnostics(emptyList())
         }
@@ -922,79 +930,10 @@ class CompilerPlaybook(
         return editor to at
     }
 
-    private fun Driver.lookup(
-        editor: JEditorUiComponent,
-        at: Int,
-        matches: (List<CompletionItem>) -> Boolean,
-    ) {
-        focusEditor(editor)
-        caret(editor, at)
-        invokeAction("CodeCompletion", component = editor.component)
-        val manager = utility(EditorLookupManager::class).getInstance(singleProject())
-        waitFor("shared completion scope", 45.seconds) {
-            requirePopupFocus()
-            manager.getActiveLookup()?.let { !it.isCalculating() && matches(it.getItems()) } == true
-        }
-    }
-
-    private fun Driver.hasType(
-        items: List<CompletionItem>,
-        label: String,
-        pattern: String,
-    ): Boolean =
-        items.firstOrNull { it.getLookupString() == label }?.let { item ->
-            val presentation = new(LookupElementPresentation::class)
-            item.renderElement(presentation)
-            Regex(pattern).containsMatchIn(presentation.getTypeText().orEmpty() + " " + presentation.getTailText().orEmpty())
-        } == true
-
-    private fun Driver.acceptCandidates(
-        editor: JEditorUiComponent,
-        at: Int,
-        expected: List<String>,
-        selected: String,
-    ) {
-        lookup(editor, at) { items -> items.map { it.getLookupString() }.sorted() == expected.sorted() }
-        invokeAction("EditorEscape", component = editor.component)
-        accept(editor, at, selected)
-    }
-
-    private fun Driver.accept(
-        editor: JEditorUiComponent,
-        at: Int,
-        label: String,
-        expectedText: String? = null,
-    ) {
-        val before = editor.text
-        check(at in 0..before.length)
-        val prefix = before.take(at).takeLastWhile { it.isLetterOrDigit() || it == '_' }
-        val expected = expectedText ?: before.replaceRange(at - prefix.length, at, label)
-        focusEditor(editor)
-        caret(editor, at)
-        invokeAction("CodeCompletion", component = editor.component)
-        val manager = utility(EditorLookupManager::class).getInstance(singleProject())
-        waitFor("$label completion or single-item insertion", 45.seconds) {
-            requirePopupFocus()
-            editor.text == expected ||
-                manager.getActiveLookup()?.let { !it.isCalculating() && it.getItems().any { item -> item.getLookupString() == label } } ==
-                true
-        }
-        if (editor.text != expected) {
-            withContext(OnDispatcher.EDT) {
-                val lookup =
-                    requireNotNull(manager.getActiveLookup()) {
-                        "Native completion closed before acceptance; switching applications or editors cancels the popup"
-                    }
-                lookup.setCurrentItem(lookup.getItems().first { it.getLookupString() == label })
-            }
-            invokeAction("EditorChooseLookupItem", component = editor.component)
-        }
-        waitFor("exact replacement of the typed prefix", 15.seconds) { editor.text == expected }
-    }
-
     private fun Driver.case(
         id: String,
         description: String,
+        continueAfterFailure: Boolean = false,
         action: () -> Unit,
     ) {
         if (id != "START" && id !in selectedIds) return
@@ -1006,10 +945,15 @@ class CompilerPlaybook(
             check(!isPluginLoaded("com.intellij.modules.ultimate")) {
                 "Ultimate became active during $id; this cannot establish Community support"
             }
-            completed += Result(id, description, "passed", start.elapsedNow().inWholeMilliseconds)
+            completed += Result(id, description, "passed", start.elapsedNow().inWholeMilliseconds).also(onResult)
         } catch (failure: Throwable) {
-            completed += Result(id, description, "failed", start.elapsedNow().inWholeMilliseconds, failure.stackTraceToString())
-            throw failure
+            completed +=
+                Result(id, description, "failed", start.elapsedNow().inWholeMilliseconds, failure.stackTraceToString()).also(onResult)
+            if (!continueAfterFailure || failure is InterruptedException ||
+                (failure !is Exception && failure !is AssertionError)
+            ) {
+                throw failure
+            }
         }
     }
 
