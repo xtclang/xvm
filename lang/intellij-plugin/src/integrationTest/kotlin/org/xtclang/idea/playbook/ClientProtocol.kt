@@ -1,14 +1,17 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
+import com.intellij.driver.client.impl.RefWrapper
 import com.intellij.driver.client.service
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.waitFor
+import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
 /** Protocol assertions use the installed client's existing connection, never a second server. */
@@ -53,9 +56,22 @@ class ClientProtocol(
     ): JsonElement =
         with(driver) {
             waitFor("installed client response: $method", 60.seconds) { future.isDone() }
+            if (future.isCancelled()) throw CancellationException("$method was cancelled")
+            if (future.isCompletedExceptionally()) {
+                // Throw locally: ResponseError is not Java-serializable, so throwing it through
+                // Driver's JMX transport would hide the actual protocol failure.
+                val failure = generateSequence(future.exceptionNow()) { it.getCause() }.last()
+                val code =
+                    if ((failure as RefWrapper).getRef().className == "org.eclipse.lsp4j.jsonrpc.ResponseErrorException") {
+                        cast(failure, ClientResponseFailure::class).getResponseError().getCode()
+                    } else {
+                        null
+                    }
+                throw ClientRequestFailure(method, code, failure.getMessage())
+            }
             if (method in listResults) {
                 cast(future, ClientListFuture::class).get()?.let { values ->
-                    JsonParser.parseString("[${values.joinToString(",") { copy(it).toString() }}]")
+                    JsonArray().apply { values.forEach { add(copy(it)) } }
                 } ?: JsonNull.INSTANCE
             } else {
                 copy(cast(future, ClientObjectFuture::class).get())
@@ -118,6 +134,31 @@ interface ClientFuture {
     fun isCompletedExceptionally(): Boolean
 
     fun cancel(interrupt: Boolean): Boolean
+
+    fun exceptionNow(): ClientFailure
+}
+
+class ClientRequestFailure(
+    method: String,
+    val code: Int?,
+    message: String?,
+) : RuntimeException("$method failed ($code): $message")
+
+@Remote("java.lang.Throwable")
+interface ClientFailure {
+    fun getMessage(): String?
+
+    fun getCause(): ClientFailure?
+}
+
+@Remote("org.eclipse.lsp4j.jsonrpc.ResponseErrorException", plugin = "com.redhat.devtools.lsp4ij")
+interface ClientResponseFailure {
+    fun getResponseError(): ClientResponseError
+}
+
+@Remote("org.eclipse.lsp4j.jsonrpc.messages.ResponseError", plugin = "com.redhat.devtools.lsp4ij")
+interface ClientResponseError {
+    fun getCode(): Int
 }
 
 @Remote("java.util.concurrent.CompletableFuture")
