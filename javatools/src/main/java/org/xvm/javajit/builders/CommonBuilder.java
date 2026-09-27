@@ -4215,11 +4215,10 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.maps.HasherMap",
             Set.of("duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
-            Set.of("freeze", // TODO: immutable union specialization
-                   "duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
+            Set.of("duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
                    "ensurePersistent", // TODO: private access requested on a nullable array union
                    "indexOf",    // TODO: property lookup fails during P_GET type analysis
-                   "process")),  // TODO: local-variable-table slots exceed max_locals
+                   "process")),  // TODO: NEWC_1 virtual-child construction
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "map",              // TODO: incompatible formal result types in TypeMatrix
