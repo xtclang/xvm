@@ -16,9 +16,16 @@ class XtcParameterInfoHandler : LSPParameterInfoHandler() {
         signature: SignatureInformation,
         context: ParameterInfoUIContext,
     ) {
-        if (signature.parameters.isNullOrEmpty()) {
+        // LSP4IJ refreshes the owner's response on retrigger, but the popup keeps the original
+        // SignatureInformation objects. Read current metadata for this overload when rendering.
+        val current =
+            (context.parameterOwner as? LSPSignatureHelperPsiElement)
+                ?.activeSignatureHelp
+                ?.signatures
+                ?.singleOrNull { it.label == signature.label } ?: signature
+        if (current.parameters.isNullOrEmpty()) {
             context.setupUIComponentPresentation(
-                signature.label,
+                current.label,
                 -1,
                 -1,
                 !context.isUIComponentEnabled,
@@ -30,9 +37,9 @@ class XtcParameterInfoHandler : LSPParameterInfoHandler() {
             // LSP permits each overload to override the top-level active parameter. LSP4IJ's
             // renderer otherwise reads only the shared context, which defaults to slot zero.
             super.updateUI(
-                signature,
+                current,
                 object : ParameterInfoUIContext by context {
-                    override fun getCurrentParameterIndex(): Int = signature.activeParameter ?: context.currentParameterIndex
+                    override fun getCurrentParameterIndex(): Int = current.activeParameter ?: context.currentParameterIndex
                 },
             )
         }
