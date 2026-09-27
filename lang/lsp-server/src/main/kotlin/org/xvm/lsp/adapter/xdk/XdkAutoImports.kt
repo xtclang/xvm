@@ -40,13 +40,12 @@ internal object XdkAutoImports {
         facts: CompilerRenameFacts,
     ): List<Target> =
         (
-            facts.constants.values
-                .mapNotNull(::target)
+            facts.imports
                 .filter { it.name == name } + bundled[name].orEmpty()
         ).distinct()
             .sortedWith(compareBy(Target::module, Target::path))
 
-    private fun target(constant: Constant): Target? {
+    internal fun target(constant: Constant): Target? {
         if (constant !is ClassConstant && constant !is TypedefConstant) return null
         val identity = constant as IdentityConstant
         if (identity.path.any {

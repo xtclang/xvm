@@ -1393,7 +1393,8 @@ class XdkAdapter internal constructor(
             if (isStale(request)) throw CancellationException()
             val heard = ErrorList()
             val errors = ErrorListener.cancellable(heard) { isStale(request) }
-            val repository = module.inputs.open().repository
+            val dependencies = module.inputs.open()
+            val repository = dependencies.repository
             val sources =
                 module.sourceInputs?.let {
                     XdkSources.replay(
@@ -1409,7 +1410,7 @@ class XdkAdapter internal constructor(
                     compileTree(sources, repository, errors)
                 }
             if (isStale(request)) throw CancellationException()
-            return if (compilation.succeeded() && !heard.hasSeriousErrors()) compilation.renameFacts() else null
+            return if (compilation.succeeded() && !heard.hasSeriousErrors()) compilation.renameFacts(dependencies) else null
         }
         val source = module.document(request.uri)?.semantics?.sourceName ?: return null
         val before = compile(module.sourceTexts) ?: return null
