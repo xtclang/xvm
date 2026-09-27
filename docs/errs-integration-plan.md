@@ -17,6 +17,10 @@ the two Markdown files above.
 extraction boundary, upstream reproduction and 15/15 child-process regressions are recorded in
 [the lifecycle diagnosis](errs-lsp-process-lifecycle.md). Installed IDE restart/project-close
 acceptance remains to be recorded. This fix adds no compiler or AST requirement.
+The isolated master branch is now prepared locally as `lagergren/fix-lsp-process-lifecycle`,
+commit `cf54e2a19` on `ce3ab1d81`, in `build/lsp-process-lifecycle`. Its nine-file diff keeps
+master's dependencies and passes 455 tests (three existing skips), including all 20 new lifecycle
+regressions. The branch is not pushed and has no PR; see the diagnosis for the exact size and checks.
 
 Current inventory: 2026-09-27, code checkpoint `511195564`. This is the active task list;
 the dated implementation records below retain their historical scope and results. L55 onward
@@ -327,7 +331,7 @@ Extraction groups for this work (commit IDs will be added at validated checkpoin
 4. `93a82ea8b` — client semantic-cache invalidation after dependency analysis (X24/X38/X47/X67).
 5. `eded39f0a` — guarded native symbol rename after LSP4IJ stale application was reproduced; X53/X54/X57/X60 pass. Plugin unit tests: 26 tests, zero failures/errors/skips; root `spotlessCheck` passes. The shared native regression bodies are in the parity-case group.
 6. `912abf3b8` — L55 dependency-closure and detached proof-fact retention fix, with all four 24-root outcomes. The actual teaching-workspace acceptance remains open.
-7. `8e976f868` and `eefc1b8e6` — independent process-lifecycle fixes; see the [master extraction boundary](errs-lsp-process-lifecycle.md).
+7. `8e976f868` and `eefc1b8e6` — independent process-lifecycle fixes. Extracted and independently tested as `cf54e2a19` on local branch `lagergren/fix-lsp-process-lifecycle`, based on master `ce3ab1d81`; see the [master extraction boundary](errs-lsp-process-lifecycle.md).
 8. `73290ac14` and `6d7e5b7e5` — diagnostic-value probe, popup cleanup, guarded rename-hint assertion, active-overload rendering checks, bounded-error fixture and guarded PSI reads. Native harness-only follow-ups; keep with the parity driver, separate from production lifecycle fixes. The receipts above distinguish scenario assertions, IDE-error checks and interrupted full runs.
 
 - [x] X3 — narrowed hover and declaration identity.
