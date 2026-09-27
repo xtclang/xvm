@@ -157,7 +157,8 @@ class XtcLanguageServer(
     private val adapter: Adapter,
     private val onExit: (Int) -> Unit = {},
 ) : LanguageServer,
-    LanguageClientAware {
+    LanguageClientAware,
+    AutoCloseable {
     private var client: LanguageClient? = null
 
     @Suppress("unused")
@@ -698,16 +699,32 @@ class XtcLanguageServer(
     override fun shutdown(): CompletableFuture<Any> {
         logger.info("shutdown: shutting down Ecstasy Language Server")
         shutdownRequested = true
-        initialized = false
-        synchronized(compilerSettings) { compilerSettings.updateAndGet { it.copy(closed = true) } }
-        textDocumentService.close()
-        adapter.close()
+        close()
         return CompletableFuture.completedFuture(null)
+    }
+
+    /** Release resources on both a protocol shutdown and an abrupt transport disconnect. */
+    override fun close() {
+        val alreadyClosed =
+            synchronized(compilerSettings) {
+                compilerSettings.getAndUpdate { it.copy(closed = true) }.closed
+            }
+        if (alreadyClosed) return
+        initialized = false
+        try {
+            textDocumentService.close()
+        } finally {
+            adapter.close()
+        }
     }
 
     override fun exit() {
         logger.info("exit: exiting Ecstasy Language Server")
-        onExit(if (shutdownRequested) 0 else 1)
+        try {
+            close()
+        } finally {
+            onExit(if (shutdownRequested) 0 else 1)
+        }
     }
 
     @Volatile
