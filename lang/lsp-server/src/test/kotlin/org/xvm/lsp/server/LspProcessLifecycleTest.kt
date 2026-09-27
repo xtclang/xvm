@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.jar.JarFile
 
 /** Runs the production launcher in child JVMs; fallback cleanup must not hide a failure to exit. */
+@Tag("compiler-stdio")
 class LspProcessLifecycleTest {
     @TempDir
     lateinit var directory: Path
@@ -47,7 +49,7 @@ class LspProcessLifecycleTest {
         backend: String,
         termination: Termination,
     ) {
-        val jar = Path.of(requireNotNull(System.getProperty("xtc.lsp.jar")) { "Run the Gradle test task" })
+        val jar = Path.of(requireNotNull(System.getProperty("xtc.lsp.jar")) { "Run compilerStdioTest" })
         // Override only build selection, exercising every shipped backend from the packaged classes.
         // The resource directory precedes the JAR, avoiding an extra distribution build per backend.
         val resources = Files.createDirectory(directory.resolve("resources"))
@@ -136,7 +138,7 @@ class LspProcessLifecycleTest {
     companion object {
         @JvmStatic
         fun terminations(): List<Arguments> =
-            listOf("treesitter", "mock").flatMap { backend ->
+            listOf("treesitter", "compiler", "mock").flatMap { backend ->
                 Termination.entries.map { Arguments.of(backend, it) }
             }
     }
