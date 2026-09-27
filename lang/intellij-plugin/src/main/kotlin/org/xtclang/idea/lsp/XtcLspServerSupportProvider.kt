@@ -5,9 +5,11 @@ import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiFile
 import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
+import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.jsonrpc.Launcher
@@ -56,6 +58,16 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
     override fun createClientFeatures() =
         object : LSPClientFeatures() {
+            init {
+                // XtcRenameHandler supplies native symbol rename with stale-document checks.
+                // Keep LSP4IJ's independent file-operation support enabled.
+                setRenameFeature(
+                    object : LSPRenameFeature() {
+                        override fun isRenameSupported(file: PsiFile): Boolean = false
+                    },
+                )
+            }
+
             override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
                 super.createLauncherBuilder<S>().configureGson {
                     // configureGson replaces the base callback; retain LSP4IJ's compatibility adapters.

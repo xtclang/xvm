@@ -66,6 +66,9 @@
         <lang.commenter language="Ecstasy"
                         implementationClass="org.xtclang.idea.XtcCommenter"/>
 
+        <!-- Check the request's document snapshot before applying a compiler rename. -->
+        <renameHandler implementation="org.xtclang.idea.lsp.XtcRenameHandler"/>
+
         <!-- Preserve candidate signatures when the compiler cannot select an active argument. -->
         <codeInsight.parameterInfo language="Ecstasy"
                                    implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
