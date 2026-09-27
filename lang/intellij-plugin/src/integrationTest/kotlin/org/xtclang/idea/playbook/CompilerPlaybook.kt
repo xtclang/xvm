@@ -852,7 +852,8 @@ class CompilerPlaybook(
                 }
             }
             problems(editor)
-            restore(data.text("file"))
+            editor.text = data.text("moduleStart") + data.text("moduleEnd")
+            editor.awaitDiagnostics(emptyList())
         }
     }
 

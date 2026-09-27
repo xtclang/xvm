@@ -84,6 +84,8 @@ interface SignatureFuture {
 interface SignatureHelp {
     fun getSignatures(): List<SignatureInformation>
 
+    fun getActiveSignature(): Int?
+
     fun getActiveParameter(): Int?
 }
 
