@@ -150,6 +150,11 @@ profile disables sole-candidate auto-insertion and automatic completion popups s
 every requested completion list first. Autosave is disabled to preserve unsaved-overlay checks;
 shipped plugin defaults are unchanged.
 
+Editor diagnostics are copied inside the disposable IDE by a small test-only probe. This avoids
+the driver's object descriptions evaluating cancelled lazy quick fixes when reading annotations.
+The probe reads installed severity/message/offset values; it does not issue substitute LSP queries.
+It is built from integration-test classes and is absent from the shipping plugin.
+
 Parameter Info checks inspect the native request result, visible parameter text and bold argument;
 invalid calls must clear an earlier hint. X20 now requires the full signature label without an
 invented bold argument; an Ecstasy-specific Parameter Info handler preserves this label when
@@ -166,13 +171,13 @@ file. X57 reproduced stale edit application in LSP4IJ 0.21.0 and now passes thro
 guarded native Rename handler. Its immutable request snapshot is checked inside the write command
 before applying edits; typing, file lifecycle changes and server restart retire the response.
 This does not guard other LSP4IJ workspace-edit entry points or null-version closed-file races.
-The missing-case subset has 49/50 passing receipts; X29 remains open.
+The missing-case subset has 50/50 passing receipts; X29 now passes with current signature metadata.
 
 X33–X35 and X99–X108 have passing native receipts
 across the checkpoint and focused X105 rerun. The receipts and the failures fixed during validation
 are recorded in the [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
-They do not establish a complete 63-case native pass. Earlier runs verified X92 Structure/folding
-and constructor checks through X90; X93–X98 still await native execution. Coverage metadata records
+They do not establish a complete 113-case native pass. Earlier runs verified X92 Structure/folding
+and constructor checks through X90; X93–X98 now pass individually. Coverage metadata records
 implemented assertions independently of these runtime receipts.
 
 Leave the isolated IDE focused during completion and Parameter Info checks: switching applications

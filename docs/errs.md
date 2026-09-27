@@ -1,5 +1,10 @@
 # Threading `errs` through the compiler
 
+**Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
+startup/cancellation race. Both have isolated fixes and process regressions; see
+[the diagnosis and master extraction notes](errs-lsp-process-lifecycle.md). These defects are
+independent of the compiler error-listener/AST changes.
+
 The active [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
 operations and native validation. All 24 adapter capability categories have implementations;
@@ -10,11 +15,18 @@ semantic header/value completion and inferred displays, followed by combined val
 
 L60 now has IntelliJ implementations for all 113 shared playbook cases, including the 50
 previously missing cases. The new batch compiles; native validation is ongoing and is not a full
-pass. The missing-case subset has 49/50 individual passing receipts. X20 has an Ecstasy Parameter
+pass. The missing-case subset has 50/50 individual passing receipts. X20 has an Ecstasy Parameter
 Info rendering fix, X81/X82 inspect completion kinds, and X57 verifies a native rename guard
 against obsolete edits. Dependency diagnostic publications also retire completed IntelliJ
 semantic caches. See the [case-by-case validation checklist](errs-integration-plan.md#intellij-parity-backlog-l60).
 These changes do not add compiler/AST state or modify the error-listener API.
+
+L55 now has a 24-root regression for graph-proof heap retention. Dependency-closure filtering
+prevents undeclared imports and unnecessary deserialization; copied compiler-proven comparison
+keys let completed roots release their pools before the next root compiles. Success, rejection,
+cancellation and failure release all observed compiler objects under the existing 512 MiB heap.
+The teaching-workspace/open-buffer acceptance gate remains open. See the
+[memory checkpoint](errs-integration-plan.md#large-graph-proof-memory-checkpoint-l55).
 
 L54 native validation also exposed compiler-worker and JSON-RPC cancellation lock cycles, now
 covered by server regressions. File-rename notifications preserve the client close/open lifecycle
