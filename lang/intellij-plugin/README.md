@@ -139,7 +139,8 @@ See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help
 
 The suite reads all 113 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It implements startup and 63 scenarios: 60 fully and three partially. Coverage includes native
+It now has startup and all 113 scenario implementations. The new parity batch is under validation;
+this inventory does not establish a full native pass. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
 highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
 Parameter Info, argument-value fitting and declaration recovery through X108. Native checks include the X34 multi-target chooser, X99/X100
@@ -150,29 +151,24 @@ every requested completion list first. Autosave is disabled to preserve unsaved-
 shipped plugin defaults are unchanged.
 
 Parameter Info checks inspect the native request result, visible parameter text and bold argument;
-invalid calls must clear an earlier hint. X20 remains partial because LSP4IJ 0.21.0 displays
-`<no parameters>` when ambiguous named slots suppress parameter metadata; selected-overload
-navigation is checked. X81/X82 remain partial because native completion Property-kind metadata
-is not inspected. Problems-row clicking and visual layout remain manual.
+invalid calls must clear an earlier hint. X20 now requires the full signature label without an
+invented bold argument; an Ecstasy-specific Parameter Info handler preserves this label when
+LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata from the native
+completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
+layout remain manual.
 
-Every report lists all 113 scenario IDs, including the 50 unimplemented entries with concrete
-missing-assertion reasons. Partial cases are labeled `partial`, not `passed`; an implementation
-missing from this driver is not labeled an unsupported IntelliJ feature. See
-[shared editor scenarios](../doc/manual-test-plan.md#shared-editor-scenarios) for the contract.
-**Parity is unfinished:** all 50 missing IntelliJ scenarios already have VS Code implementations.
-The [required L60 backlog](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
-covers every missing case and all three partial cases. Selected completion/signature and native
-lifecycle checkpoints do not close that work. Native actions must verify editor behavior;
-installed-client protocol assertions must verify details such as versions, cancellation and stale
-handles that have no visible UI. Those assertion layers must be identified in the coverage record.
-The catalog is a declared Gradle task input and its SHA-256 identifies the data used by each run.
-Native playbook runs are reserved for occasional checkpoints during compiler feature development.
-Select cases with `-PintellijPlaybookCases=X34,X99,X100,X101,X102,X103,X104,X105,X107,X108`;
-unselected implementations remain `not-run` in the full catalog report.
-Discovery/refactoring cases switch the installed client's workspace folder to their own fixture
-directory, matching VS Code's scope, then restore it. X103 also reverses the native file rename
-with its member buffer open, checking both source restoration and cleared diagnostics.
-The expanded driver compiles and passes lint. X33–X35 and X99–X108 have passing native receipts
+Every report lists all 113 scenario IDs and distinguishes failed/unselected cases from passing
+ones. The [L60 checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60) keeps each
+new case open until it has a pass receipt and records client limitations found during validation.
+The new protocol checks use the installed language-client connection. Synthetic nonexistent-file
+and deleted-file diagnostics use its verbose trace: LSP4IJ cannot display these without a virtual
+file. X57 reproduced stale edit application in LSP4IJ 0.21.0 and now passes through Ecstasy's
+guarded native Rename handler. Its immutable request snapshot is checked inside the write command
+before applying edits; typing, file lifecycle changes and server restart retire the response.
+This does not guard other LSP4IJ workspace-edit entry points or null-version closed-file races.
+The missing-case subset has 49/50 passing receipts; X29 remains open.
+
+X33–X35 and X99–X108 have passing native receipts
 across the checkpoint and focused X105 rerun. The receipts and the failures fixed during validation
 are recorded in the [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 They do not establish a complete 63-case native pass. Earlier runs verified X92 Structure/folding
@@ -185,7 +181,8 @@ and fails explicitly if the application loses focus. Owned navigation popups cou
 and its title-bar mouse click; ordinary file opening and caret movement request no focus. Native
 UI controls may still use the mouse. A failed check closes the disposable IDE during cleanup.
 
-Reports are under `build/reports/compiler-playbook/run-*/results.json`; `ide-paths.txt` points to
+Live case results are appended to `build/reports/compiler-playbook/run-*/progress.jsonl`.
+The final report is `results.json` in the same directory; `ide-paths.txt` points to
 the isolated IDE's profile/log directory. Starter caches its IDE download below the same report
 root's `out/ide-tests/cache`. Ordinary unit tests do not launch an IDE. Starter/Driver follows the
 selected IDE build; Kodein, patched coroutines and the standalone launcher's Kotlin standard
