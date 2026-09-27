@@ -2,6 +2,7 @@ package org.xtclang.idea.playbook
 
 import com.google.gson.JsonObject
 import com.intellij.driver.client.service
+import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.PsiManager
 import com.intellij.driver.sdk.invokeAction
@@ -166,8 +167,11 @@ internal fun ParityScenarios.semanticCases() {
                     .moveToOffset(write)
             }
             invokeAction("HighlightUsagesInFile", component = doc.editor.component)
-            val psi = requireNotNull(service<PsiManager>(singleProject()).findFile(doc.editor.editor.getVirtualFile()))
-            val highlights = utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
+            val highlights =
+                withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                    val psi = requireNotNull(service<PsiManager>(singleProject()).findFile(doc.editor.editor.getVirtualFile()))
+                    utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
+                }
             waitFor("native read/write occurrence highlights", 45.seconds) {
                 val future = highlights.getValidLSPFuture()
                 future != null && future.isDone() && !future.isCompletedExceptionally() &&

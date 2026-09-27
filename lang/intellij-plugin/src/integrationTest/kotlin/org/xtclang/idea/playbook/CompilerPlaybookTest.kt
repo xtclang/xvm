@@ -73,6 +73,9 @@ class CompilerPlaybookTest {
             fixture("X105/${it.text("file")}", "module AutoImports {}")
             fixture("X105/${it.text("library")}", it.text("libraryText"))
         }
+        shared.scenarios.getValue("7a.9").let {
+            fixture(it.text("file"), it.text("moduleStart") + it.text("moduleEnd"))
+        }
         require(shared.ids.filter { it.startsWith("X") } == manualIds) { "Shared catalog and manual playbook rows differ" }
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
