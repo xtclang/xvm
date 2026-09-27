@@ -114,6 +114,7 @@ import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.measureTimedValue
 
 /**
@@ -138,8 +139,10 @@ import kotlin.time.measureTimedValue
 @Suppress("LoggingSimilarMessage")
 class XtcLanguageServer(
     private val adapter: Adapter,
+    private val onExit: (Int) -> Unit = {},
 ) : LanguageServer,
-    LanguageClientAware {
+    LanguageClientAware,
+    AutoCloseable {
     private var client: LanguageClient? = null
 
     @Suppress("unused")
@@ -147,6 +150,8 @@ class XtcLanguageServer(
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
+    private val closed = AtomicBoolean()
+    private val shutdownRequested = AtomicBoolean()
 
     companion object {
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
@@ -538,13 +543,26 @@ class XtcLanguageServer(
 
     override fun shutdown(): CompletableFuture<Any> {
         logger.info("shutdown: shutting down Ecstasy Language Server")
-        initialized = false
-        adapter.close()
+        shutdownRequested.set(true)
+        close()
         return CompletableFuture.completedFuture(null)
+    }
+
+    /** Release resources once, whether shutdown is explicit or the transport disconnects. */
+    override fun close() {
+        if (closed.compareAndSet(false, true)) {
+            initialized = false
+            adapter.close()
+        }
     }
 
     override fun exit() {
         logger.info("exit: exiting Ecstasy Language Server")
+        try {
+            close()
+        } finally {
+            onExit(if (shutdownRequested.get()) 0 else 1)
+        }
     }
 
     override fun getTextDocumentService(): TextDocumentService = textDocumentService
