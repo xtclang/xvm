@@ -604,6 +604,7 @@ public abstract class OpCallable extends Op {
 
             TypeConstant typeThis = bctx.typeMatrix.getType(A_THIS, getAddress());
             atypeResult = bodySuper.getSignature().
+                            resolveAutoNarrowing(bctx.pool(), typeThis, null).
                             resolveGenericTypes(bctx.pool(), typeThis).getRawReturns();
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);

@@ -4213,8 +4213,7 @@ public class CommonBuilder
             Set.of("clear",       // TODO: virtual construction result is incompatible with ReplicableCopier
                    "duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
         Map.entry("org.xtclang.ecstasy.maps.HasherMap",
-            Set.of("duplicate", // TODO: virtual constructor lookup returns no MethodInfo
-                   "putAll")),   // TODO: incompatible assignment types in TypeMatrix
+            Set.of("duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
             Set.of("freeze", // TODO: immutable union specialization
                    "duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
