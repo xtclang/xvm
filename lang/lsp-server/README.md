@@ -171,12 +171,16 @@ already declare them. Binary contracts, annotation/delegation dispatch and unres
 outside rename scope.
 The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
 [validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
-The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. Large-workspace
-rename refusal/peak memory and editing during IntelliJ startup remain open investigations, even
-though isolated native refactoring cases pass. The active checklist records those limits and the
+The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. L55 now fixes
+proof retention in a 24-root/512 MiB regression; the actual teaching workspace and editing during
+IntelliJ startup remain open acceptance/investigation work. The active checklist records those limits and the
 current native inventory: assertions for all 113 shared cases. The new parity batch is under
-validation; 49/50 newly implemented cases have individual passing receipts. X57 now verifies
-IntelliJ's guarded symbol-rename application. X29 remains open, and X93–X98 still await native pass receipts.
+validation; 50/50 newly implemented cases have individual passing receipts. X57 now verifies
+IntelliJ's guarded symbol-rename application. X29 and X93–X98 pass individually; the full 113-case native checkpoint remains pending.
+
+The standalone server closes resources and exits when its stdio client disconnects, including
+without a shutdown/exit handshake. Lifecycle regressions cover Tree-sitter, compiler and mock;
+see the [orphan-process diagnosis](../../docs/errs-lsp-process-lifecycle.md).
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
 and its member tree together, including unsaved member files and packages. Non-file URIs remain
