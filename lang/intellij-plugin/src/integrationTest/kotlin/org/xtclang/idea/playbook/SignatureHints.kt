@@ -35,12 +35,30 @@ fun Driver.signature(
             utility(LspFileSupport::class).getSupport(file).getSignatureHelpSupport()
         }
     editor.scrollToCaret()
-    val previous = support.getValidLSPFuture()
     invokeAction("ParameterInfo", component = editor.component)
-    waitFor("native parameter information for offset $at", 45.seconds) {
+
+    fun renderedHints() =
+        ui
+            .xx("//div[@class='ParameterInfoComponent']//div[@class='JBHtmlPane']")
+            .list()
+            .map { cast(it.component, ParameterHintText::class).getText() }
+    waitFor(
+        message = "native parameter information for offset $at",
+        timeout = 45.seconds,
+        errorMessage = {
+            val future = support.getValidLSPFuture()
+            val help = future?.takeIf { it.isDone() && !it.isCompletedExceptionally() }?.get()
+            val labels =
+                help?.getSignatures()?.map { item ->
+                    "${item.getLabel()} active=${item.getActiveParameter()} parameters=" +
+                        item.getParameters().map { it.getLabel().getLeft() }
+                }
+            "Native future: $future; signatures=$labels global=${help?.getActiveParameter()}; rendered hints: ${renderedHints()}"
+        },
+    ) {
         requirePopupFocus()
         val future = support.getValidLSPFuture()
-        if (future == null || future == previous || !future.isDone() || future.isCompletedExceptionally()) return@waitFor false
+        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@waitFor false
         val help = future.get()
         val signatures =
             help?.getSignatures().orEmpty().map { item ->
@@ -55,18 +73,15 @@ fun Driver.signature(
                 )
             }
         if (!matches(signatures)) return@waitFor false
-        val rendered =
-            ui
-                .xx("//div[@class='ParameterInfoComponent']//div[@class='JBHtmlPane']")
-                .list()
-                .map { cast(it.component, ParameterHintText::class).getText() }
+        val rendered = renderedHints()
         if (signatures.isEmpty()) return@waitFor rendered.isEmpty()
         rendered.size == signatures.size &&
             signatures.zip(rendered).all { (signature, html) ->
                 val bold = Regex("<b(?:\\s[^>]*)?>[\\s\\S]*?</b>").findAll(html).map { plainText(it.value) }.toList()
                 val active = signature.activeParameter?.let { signature.parameters.getOrNull(it) }
-                // LSP4IJ currently displays 'no parameters' when metadata is suppressed for an ambiguous slot.
-                (signature.parameters.isEmpty() || plainText(html).contains(signature.parameters.joinToString(", "))) &&
+                plainText(
+                    html,
+                ).contains(if (signature.parameters.isEmpty()) signature.label else signature.parameters.joinToString(", ")) &&
                     bold == listOfNotNull(active)
             }
     }
