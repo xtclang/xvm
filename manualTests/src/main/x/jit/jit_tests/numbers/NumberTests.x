@@ -17,6 +17,7 @@ class NumberTests {
         testMagnitude();
         testAbs();
         testAbsMinValue();
+        testNarrowed(7, UInt64.MaxValue, 1.5);
 // TODO: JIT calls $hasOptMethod() with a null nFunction context
 //        testConverterFor();
     }
@@ -1421,6 +1422,25 @@ class NumberTests {
             assert as "Expected OutOfBounds";
         } catch (OutOfBounds e) {
             // expected
+        }
+    }
+
+    void testNarrowed(Int128? value, UInt64? unsigned, Dec128? decimal) {
+        if (value != Null, unsigned != Null, decimal != Null) {
+            // use the narrowed operands directly, outside assert's diagnostic-copy generation
+            Int128 sum        = value + value;
+            UInt64 quotient   = unsigned / 2;
+            UInt64 remainder  = unsigned % 3;
+            UInt64 shifted    = unsigned >> 1;
+            Dec128 decimalSum = decimal + decimal;
+
+            assert sum        == 14;
+            assert quotient   == 0x7FFF_FFFF_FFFF_FFFF;
+            assert remainder  == 0;
+            assert shifted    == 0x7FFF_FFFF_FFFF_FFFF;
+            assert decimalSum == 3.0;
+        } else {
+            assert;
         }
     }
 }

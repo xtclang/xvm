@@ -164,6 +164,15 @@ public interface RegisterInfo {
     default void markChanged() {}
 
     /**
+     * @return the name of the single underlying class of the register type
+     */
+    default String getSingleUnderlyingName() {
+        TypeConstant type = type();
+        assert type.isSingleUnderlyingClass(true);
+        return type.getSingleUnderlyingClass(true).getName();
+    }
+
+    /**
      * Used for the value of the {@link #slot()} to indicates that the value is on the Java stack.
      */
     int JAVA_STACK = -1;
