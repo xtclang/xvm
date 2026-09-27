@@ -137,10 +137,7 @@ public class Annotation
 
     /**
      * The display-safe counterpart of {@link #getAnnotationClass()}. It performs the same
-     * resolution and the same typedef unwrapping and returns the same constant, but does not write
-     * the result back into {@code m_constClass}. That write-back is the only difference between the
-     * two, and it is what makes rendering an annotation - which happens implicitly, from a log line
-     * or a debugger's Variables view - advance name-resolution state mid-compilation.
+     * resolution and returns the same constant, but does not cache resolved {@code m_constClass}.
      *
      * @return the constant {@link #getAnnotationClass()} would return, without caching it
      */

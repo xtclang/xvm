@@ -2203,7 +2203,6 @@ public class MethodStructure
              + ", type-param-count=" + m_cTypeParams
              + ", " + super.getDescription()
              + ", hasSource=" + fSrc
-             // guarded by fSrc: m_source may be null
              + (fSrc ? ", line-number=" + m_source.getLineNumber()
                      + ", line-count=" + m_source.peekLineCount() : "");
     }

@@ -388,11 +388,15 @@ public class xString
 
         @Override
         public String toString() {
-            // not getStringValue(): it memoizes. Single read of m_sValue, as getStringValue() does,
-            // so the null check and the use cannot disagree.
+            return super.toString() + peekString();
+        }
+
+        /**
+         * Display safe support: return the String value without caching m_sValue.
+         */
+        public String peekString() {
             String sValue = m_sValue;
-            return super.toString()
-                 + quotedString(sValue == null ? new String(m_achValue) : sValue);
+            return quotedString(sValue == null ? new String(m_achValue) : sValue);
         }
     }
 
