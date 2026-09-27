@@ -82,6 +82,7 @@ class ParityWorkspace(
         // Existing cases use the common workspace. Close its tabs before same-named per-case files
         // are opened; otherwise editor lookup by tab name can bind to a different source buffer.
         with(driver) {
+            dismissPopups()
             withContext(OnDispatcher.EDT) {
                 val manager = service<FileEditorManager>(singleProject())
                 manager
@@ -302,7 +303,9 @@ class ParityWorkspace(
 
     fun save(document: Document) =
         with(driver) {
-            withContext(OnDispatcher.EDT) { service<ParityDocuments>().saveDocument(cast(document.editor.document, ParityDocument::class)) }
+            withContext(OnDispatcher.EDT, semantics = LockSemantics.WRITE_ACTION) {
+                service<ParityDocuments>().saveDocument(cast(document.editor.document, ParityDocument::class))
+            }
         }
 
     fun discard(document: Document) =
@@ -317,6 +320,7 @@ class ParityWorkspace(
 
     override fun close() {
         with(driver) {
+            dismissPopups()
             val manager = service<FileEditorManager>(singleProject())
             val files =
                 manager
@@ -347,7 +351,15 @@ class ParityWorkspace(
     }
 }
 
-internal fun JsonObject.string(name: String): String = get(name).asString
+/** Compare local URI spelling without changing objects that must round-trip to the server. */
+internal fun JsonObject.string(name: String): String =
+    get(name).asString.let { value ->
+        if (name in setOf("uri", "targetUri", "oldUri", "newUri") && value.startsWith("file:")) {
+            Path.of(URI(value)).toUri().toString()
+        } else {
+            value
+        }
+    }
 
 internal fun JsonObject.int(name: String): Int = get(name).asInt
 
