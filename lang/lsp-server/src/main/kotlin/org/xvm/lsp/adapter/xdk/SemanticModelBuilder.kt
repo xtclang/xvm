@@ -89,25 +89,11 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<
     return ConstantPool.withPool(pool).use { builder.build(this, errors) }
 }
 
-/** Worker-only comparison facts; never publish this compiler-owned identity map to a request. */
-internal class CompilerRenameFacts(
-    val models: List<SemanticModel>,
-    val constants: Map<SymbolId, Constant>,
-    val methods: CompilerMethodRelations = CompilerMethodRelations(emptySet(), emptyList()),
-    val properties: CompilerPropertyRelations = CompilerPropertyRelations(),
-)
-
-internal fun EmbeddingSupport.Compilation.renameFacts(): CompilerRenameFacts =
-    ConstantPool.withPool(pool()).use {
-        val builder = SemanticModelBuilder()
-        CompilerRenameFacts(builder.build(this), builder.constantBindings())
-    }
-
-/** Partial facts for a repair proof; never resume failed validation or inspect its TypeInfo. */
-internal fun EmbeddingSupport.Compilation.repairFacts(dependencies: XdkDependencies.Open): CompilerRenameFacts =
+/** Bindings for local renames or partial repairs; never resume failed validation or inspect TypeInfo. */
+internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependencies.Open): CompilerRenameFacts =
     ConstantPool.withPool(pool()).use {
         val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
-        CompilerRenameFacts(builder.build(this), builder.constantBindings())
+        captureRenameFacts(builder.build(this), builder.constantBindings(), dependencies)
     }
 
 /** Graph proof facts retain dependency declaration associations and actual dispatch chains. */
@@ -118,9 +104,10 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
     ConstantPool.withPool(pool()).use {
         val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
         val models = builder.build(this, errors)
-        CompilerRenameFacts(
+        captureRenameFacts(
             models,
             builder.constantBindings(),
+            dependencies,
             builder.methodRelations(this, errors),
             builder.propertyRelations(this, errors),
         )
