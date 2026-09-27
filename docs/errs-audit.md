@@ -1,5 +1,10 @@
 # Failures with nowhere to go
 
+**Orphan server JVMs:** [the process-lifecycle audit](errs-lsp-process-lifecycle.md) documents
+the reproduced Tree-sitter worker leak after EOF, LSP4IJ stop-before-start race and master's
+logging-only exit handler. Fixes are isolated in `8e976f868` and `eefc1b8e6`; child-process tests
+pass across all three backends. Installed IDE close/restart acceptance remains separate.
+
 Current follow-up tasks are centralized in the
 [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 L55/L56 track the large-graph proof and startup issues below; L57–L60 track semantic breadth and
@@ -7,7 +12,8 @@ native parity. L61–L82 cover feature/protocol omissions and the completion gat
 optional LSP handler is separate from an error-listener defect or a missing native assertion.
 
 Native parity audit (L60): the 50 missing case bodies and X20/X81/X82 assertions are now written,
-with native validation in progress. Inspection found two client boundaries that the tests must
+with all 50 cases and all three strengthened assertion sets passing individually. The full
+113-case checkpoint remains pending. Inspection found two client boundaries that the tests must
 not hide: LSP4IJ drops diagnostics for URIs without a virtual file, and its workspace-edit routine
 does not inspect document versions. The former needs protocol-trace assertions distinct from
 Problems-view claims. X57 reproduced the latter and now passes through a native Ecstasy rename
@@ -25,11 +31,13 @@ and new-URI open; reversing a rename with the member open retained a duplicate s
 The notification now refreshes both paths, with server diagnostic relocation and native round-trip
 regressions. This changes server protocol handling, not compiler/AST ownership.
 
-Large-graph refactoring follow-up (L54): the 24-module IntelliJ teaching workspace produced no
-property rename edit despite individually compiling roots; isolated direct probes exhausted the
-normal test heap during the combined proof. Investigate peak compiler-pool/fact retention and the
-refusal reason before claiming large-workspace rename support. Native scenarios now match VS
-Code's per-case discovery folders; that corrects test scope and does not resolve the larger audit.
+Large-graph refactoring follow-up (L55): the 24-root regression reproduced heap exhaustion.
+Proof repositories included unrelated earlier roots, and raw comparison constants retained all
+compiler pools across the before/after graph. The adapter now filters source inputs to their
+configured dependency closure and copies comparison keys/dispatch chains before releasing each
+attempt. Success, rejection, cancellation and failure workloads release their compiler objects
+within the existing 512 MiB heap. The actual teaching workspace with one/multiple open buffers
+and unchanged diagnostics remains an acceptance item; isolated roots do not close that audit.
 
 Native cancellation deadlock (L54): X103 also reproduced an inversion between LSP4J's request-map
 lock and the server's document lock. Result cleanup and backend cancellation must run outside the
