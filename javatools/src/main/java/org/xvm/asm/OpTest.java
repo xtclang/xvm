@@ -385,11 +385,19 @@ public abstract class OpTest
     }
 
     private void buildNullCheck(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regArg = bctx.loadArgument(code, m_nValue1);
+        RegisterInfo regArg = bctx.ensureRegister(code, m_nValue1);
+        TypeConstant type   = regArg.type().resolveConstraints();
+        boolean      fNot   = getOpCode() == OP_IS_NNULL;
 
-        Label   labelTrue = code.newLabel();
-        Label   labelEnd  = code.newLabel();
-        boolean fNot      = getOpCode() == OP_IS_NNULL;
+        if (!bctx.pool().typeNull().isA(type)) {
+            // specialization can leave a null test on a type that cannot be Null, which allows us
+            // statically compute the result
+            Builder.loadBoolean(code, fNot);
+            return;
+        }
+
+        Label labelTrue = code.newLabel();
+        Label labelEnd  = code.newLabel();
         if (regArg instanceof ExtendedSlot slotExt) {
             assert slotExt.flavor() == JitFlavor.NullablePrimitive;
 
@@ -409,9 +417,7 @@ public abstract class OpTest
                 code.ifne(labelTrue);
             }
         } else {
-            TypeConstant type = regArg.type().resolveConstraints();
-            assert type.isNullable() || type.isOnlyNullable();
-
+            regArg.load(code);
             Builder.loadNull(code);
             if (fNot) {
                 code.if_acmpne(labelTrue);
