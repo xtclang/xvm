@@ -14,6 +14,8 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
 import java.util.Properties
+import java.util.concurrent.Executors
+import kotlin.system.exitProcess
 
 /**
  * Launcher for the Ecstasy Language Server.
@@ -142,10 +144,15 @@ fun main(
     }
 
     // Create the server
-    val server = XtcLanguageServer(adapter)
+    val server = XtcLanguageServer(adapter, ::exitProcess)
 
     // Launch with stdio
-    launchStdio(server, System.`in`, System.out)
+    try {
+        launchStdio(server, System.`in`, System.out)
+    } finally {
+        // EOF can replace the exit notification when the IDE closes or crashes.
+        server.exit()
+    }
 }
 
 /**
@@ -157,19 +164,15 @@ fun launchStdio(
     input: InputStream,
     output: OutputStream,
 ) {
-    val launcher: Launcher<LanguageClient> =
-        LSPLauncher.createServerLauncher(
-            server,
-            input,
-            output,
-        )
-
-    val client: LanguageClient = launcher.remoteProxy
-    server.connect(client)
-
-    runCatching {
+    // Own the dispatcher as well as the server: LSP4J's default cached platform-thread
+    // executor survives EOF, and adapter workers can keep the JVM alive indefinitely.
+    val executor = Executors.newVirtualThreadPerTaskExecutor()
+    try {
+        val launcher: Launcher<LanguageClient> =
+            LSPLauncher.createServerLauncher(server, input, output, executor) { it }
+        server.connect(launcher.remoteProxy)
         launcher.startListening().get()
-    }.onFailure { e ->
+    } catch (e: Exception) {
         when (e) {
             is InterruptedException -> {
                 Thread.currentThread().interrupt()
@@ -180,5 +183,8 @@ fun launchStdio(
                 logger.error("server error", e)
             }
         }
+    } finally {
+        executor.shutdownNow()
+        server.close()
     }
 }

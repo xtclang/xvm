@@ -263,6 +263,14 @@ val fatJar =
         }
     }
 
+// Process lifecycle regressions launch the same packaged server that IDEs consume.
+tasks.test {
+    val serverJar = fatJar.flatMap { it.archiveFile }
+    inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
+    dependsOn(fatJar)
+    systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
+}
+
 // =============================================================================
 // Consumable configuration for IDE plugins
 // =============================================================================

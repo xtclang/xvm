@@ -70,6 +70,7 @@ class XtcLspConnectionProvider(
     private val project: Project,
 ) : OSProcessStreamConnectionProvider() {
     private val logger = logger<XtcLspConnectionProvider>()
+    private val lifetime = ConnectionLifetime({ super.start() }, { super.stop() })
 
     companion object {
         private const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
@@ -134,14 +135,12 @@ class XtcLspConnectionProvider(
         )
     }
 
-    // TODO: Remove AtomicBoolean notification guard once LSP4IJ fixes duplicate server spawning.
-    //  LSP4IJ may call start() concurrently for multiple .x files, spawning extra processes
-    //  that are killed within milliseconds. Harmless, but we guard notifications with a static
-    //  AtomicBoolean to avoid duplicates. See: https://github.com/redhat-developer/lsp4ij/issues/888
-
     override fun start() {
         logger.info("Starting XTC LSP Server (out-of-process via JBR)")
-        super.start()
+        // LSP4IJ starts on a pooled thread: project disposal or cancellation can stop the
+        // provider first. Its OS provider otherwise starts even after its stop flag is set.
+        if (project.isDisposed) lifetime.stop()
+        lifetime.start()
 
         logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
 
@@ -156,7 +155,7 @@ class XtcLspConnectionProvider(
 
     override fun stop() {
         logger.info("Stopping XTC LSP Server")
-        super.stop()
+        lifetime.stop()
         logger.info("XTC LSP Server stopped")
     }
 
