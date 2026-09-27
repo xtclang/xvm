@@ -212,13 +212,16 @@ registration until after `initialized`. No production fix for the startup race i
 **Implementation and validation are separate.** The shared playbook has 113 cases. IntelliJ has
 assertions for all 113, including the 50 newly implemented parity cases and completed X20/X81/X82
 assertion sets. Their native validation is in progress; a full pass is not claimed. There are
-49/50 individual passes in the newly implemented subset. X57 now verifies guarded native symbol
+50/50 individual passes in the newly implemented subset. X57 now verifies guarded native symbol
 rename after reproducing LSP4IJ's stale-edit bug; other edit entry points remain an audit item.
-X29 remains open, and X93–X98 still await passing native receipts.
+X29 and X93–X98 pass individually; the full 113-case native checkpoint remains pending.
 See L60/L82 and the [validation record](../../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
-diagnostics untouched. References distinguish overloads and concrete overrides; they do not expand
+diagnostics untouched. Graph proofs now discard each root's compiler objects after copying
+declaration/artifact comparison keys and dispatch facts. A 24-root memory regression covers
+success, rejection, cancellation and failure at 512 MiB; L55 still requires the real teaching
+workspace/open-buffer checkpoint. References distinguish overloads and concrete overrides; they do not expand
 to an entire override family. Method rename does expand that family, including generic interface
 contracts, then rejects changed bindings or dispatch relationships. Exact references and refactoring
 require a complete graph; navigation can retain healthy independent modules beside a broken one.
