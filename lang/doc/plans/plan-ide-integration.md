@@ -215,6 +215,9 @@ assertion sets. Their native validation is in progress; a full pass is not claim
 50/50 individual passes in the newly implemented subset. X57 now verifies guarded native symbol
 rename after reproducing LSP4IJ's stale-edit bug; other edit entry points remain an audit item.
 X29 and X93–X98 pass individually; the full 113-case native checkpoint remains pending.
+All 113 scenario assertions now have passing receipts across runs. The resumed 61-case batch
+failed its separate IDE-error gate on a test-driver PSI read, now corrected; X41/X108 pass with
+no IDE errors. The later full checkpoint lost desktop focus, so it does not close L60.
 See L60/L82 and the [validation record](../../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
@@ -310,7 +313,7 @@ Type prefixes in `extends`, `implements`, `delegates`, ordinary `incorporates` a
 real enclosing scope, including empty composition slots and qualified/generic leaf prefixes.
 No incomplete class component, superclass or body declarations register. Visibility suggestions do
 not prove valid inheritance or constraints; accepting a name leaves those normal diagnostics intact.
-Shared X95 covers nine edit/repair variants in both drivers; native IntelliJ execution is pending.
+Shared X95 covers nine edit/repair variants in both drivers and now has passing native IntelliJ receipts.
 No declaration names are fabricated.
 
 The separate embedding `analyzeIncomplete` probe can validate intact receivers and ordinary
