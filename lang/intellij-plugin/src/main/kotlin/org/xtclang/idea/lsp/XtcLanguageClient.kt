@@ -1,13 +1,17 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.application.options.CodeStyle
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
+import com.intellij.psi.PsiManager
+import com.redhat.devtools.lsp4ij.LSPFileSupport
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
+import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.xtclang.idea.XtcIntelliJLanguage
 
 /**
- * Bridges Ecstasy Code Style settings while preserving LSP4IJ's server configuration support.
+ * Refreshes compiler semantic caches and bridges Ecstasy Code Style settings.
  * Compiler source modules use LSP4IJ's server Configuration settings under `xtc.compiler`;
  * the base client owns section lookup, change notifications and listener disposal.
  *
@@ -26,6 +30,49 @@ import org.xtclang.idea.XtcIntelliJLanguage
 class XtcLanguageClient(
     project: Project,
 ) : LanguageClientImpl(project) {
+    override fun publishDiagnostics(params: PublishDiagnosticsParams) {
+        if (isDisposed || project.isDisposed) return
+        val file = clientFeatures.findFileByUri(params.uri)
+        if (file != null) {
+            ReadAction.runBlocking<RuntimeException> {
+                if (project.isDisposed) return@runBlocking
+                val psi = PsiManager.getInstance(project).findFile(file) ?: return@runBlocking
+                if (!LSPFileSupport.hasSupport(psi)) return@runBlocking
+                val support = LSPFileSupport.getSupport(psi)
+                // A dependency can change this file's semantics without changing its PSI stamp.
+                // LSP4IJ keys these caches to that stamp, so retire completed results when the
+                // compiler publishes a new analysis. Pending requests already target the current
+                // compiler queue and retain their normal cancellation/version checks.
+                with(support) {
+                    listOf(
+                        completionSupport,
+                        definitionSupport,
+                        typeDefinitionSupport,
+                        implementationSupport,
+                        referenceSupport,
+                        hoverSupport,
+                        signatureHelpSupport,
+                        highlightSupport,
+                        prepareRenameSupport,
+                        renameSupport,
+                        intentionCodeActionSupport,
+                        codeLensSupport,
+                        documentSymbolSupport,
+                        semanticTokensSupport,
+                        inlayHintsSupport,
+                        prepareTypeHierarchySupport,
+                        typeHierarchySupertypesSupport,
+                        typeHierarchySubtypesSupport,
+                        prepareCallHierarchySupport,
+                        callHierarchyIncomingCallsSupport,
+                        callHierarchyOutgoingCallsSupport,
+                    ).forEach { feature -> if (feature.future?.isDone == true) feature.cancel() }
+                }
+            }
+        }
+        super.publishDiagnostics(params)
+    }
+
     /**
      * Specialize only formatting. Delegating other sections preserves configured compiler graphs,
      * null entries for unknown sections and the base client's asynchronous response ordering.
