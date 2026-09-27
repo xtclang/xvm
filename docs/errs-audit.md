@@ -6,6 +6,19 @@ L55/L56 track the large-graph proof and startup issues below; L57–L60 track se
 native parity. L61–L82 cover feature/protocol omissions and the completion gate. An absent
 optional LSP handler is separate from an error-listener defect or a missing native assertion.
 
+Native parity audit (L60): the 50 missing case bodies and X20/X81/X82 assertions are now written,
+with native validation in progress. Inspection found two client boundaries that the tests must
+not hide: LSP4IJ drops diagnostics for URIs without a virtual file, and its workspace-edit routine
+does not inspect document versions. The former needs protocol-trace assertions distinct from
+Problems-view claims. X57 reproduced the latter and now passes through a native Ecstasy rename
+handler that checks an immutable request snapshot inside the edit's write command. X53/X54/X60
+also pass, retaining normal rename behavior. This guards symbol rename; other LSP4IJ edit entry
+points and null-version closed-file races are not covered by that fix.
+Dependency diagnostic publications now invalidate completed semantic caches, which LSP4IJ
+otherwise keys only to the requesting file's PSI stamp. The shared X31/X32 negative expectations
+were stale after formatting/refactoring/argument-completion development and are updated in both
+IDE drivers. No full native pass is claimed; follow the active L60 checklist.
+
 Native open-member rename (L54): advertising and handling `workspace/didRenameFiles` enables
 LSP4IJ's file-rename lifecycle. Without that capability, its VFS listener skipped old-URI close
 and new-URI open; reversing a rename with the member open retained a duplicate source overlay.
