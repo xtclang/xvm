@@ -598,7 +598,7 @@ class CompilerPlaybook(
                         names.containsAll(variant["include"].asJsonArray.map { it.asString }) &&
                             data.strings("exclude").none { it in names }
                     }
-                    invokeAction("EditorEscape", component = editor.component)
+                    dismissPopups()
                     accept(
                         editor,
                         at,
@@ -1180,40 +1180,32 @@ class CompilerPlaybook(
         }
     }
 
-    private data class Diagnostic(
-        val severity: String,
-        val description: String,
-        val start: Int,
-    )
-
     private fun JEditorUiComponent.diagnostics(): List<Diagnostic> =
-        waitNotNull("read editor diagnostics", 5.seconds) {
-            try {
-                getAllHighlights().mapNotNull { highlight ->
-                    val severity = highlight.getSeverity().getName()
-                    if (severity in setOf("ERROR", "WARNING")) {
-                        Diagnostic(severity, highlight.getDescription().orEmpty(), highlight.getHighlighter()?.getStartOffset() ?: -1)
-                    } else {
-                        null
-                    }
-                }
-            } catch (e: DriverCallException) {
-                // Editing can cancel the daemon's lazy quick-fix pass while the driver reads it.
-                // Retry that transient read; never turn cancellation into an empty problem list.
-                if (generateSequence<Throwable>(e) { it.cause }.none { it is ProcessCanceledException }) throw e
-                null
-            }
+        waitNotNull("read editor diagnostics", 45.seconds) { readDiagnostics() }
+
+    private fun JEditorUiComponent.readDiagnostics(): List<Diagnostic>? =
+        try {
+            installedDiagnostics()
+        } catch (e: DriverCallException) {
+            // A concurrent edit can cancel an IDE read.
+            // Retry that transient read; never turn cancellation into an empty problem list.
+            if (generateSequence<Throwable>(e) { it.cause }.none { it is ProcessCanceledException }) throw e
+            null
         }
 
     private fun JEditorUiComponent.awaitError() {
-        waitFor("compiler error in editor", 45.seconds) { diagnostics().any { it.severity == "ERROR" } }
+        waitFor(
+            message = "compiler error in editor",
+            timeout = 45.seconds,
+            errorMessage = { "Source: $text; editor diagnostics: ${readDiagnostics()}" },
+        ) { readDiagnostics()?.any { it.severity == "ERROR" } == true }
     }
 
     private fun JEditorUiComponent.awaitDiagnostics(expected: List<Diagnostic>) {
         waitFor(
             message = "diagnostics $expected",
-            errorMessage = { "Expected $expected; editor diagnostics: ${diagnostics()}" },
+            errorMessage = { "Expected $expected; editor diagnostics: ${readDiagnostics()}" },
             timeout = 45.seconds,
-        ) { diagnostics() == expected }
+        ) { readDiagnostics() == expected }
     }
 }
