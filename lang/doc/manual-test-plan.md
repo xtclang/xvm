@@ -55,10 +55,11 @@ broader refactorings, monikers, inline completion/values, colors and notebooks a
 absent features. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
 to distinguish an unsupported feature from a failed playbook case.
 
-Current IntelliJ driver coverage is 60 full, 3 partial and 50 unimplemented cases out of 113
-shared scenarios, plus startup. Coverage labels describe assertions implemented, not passing
-runs; X93–X98 have implementations but no native pass receipt yet. The latest checkpoint has
-13 selected passing cases across two runs. Large-workspace rename and editing during startup
+IntelliJ now has implementations for all 113 shared scenarios, plus startup. The 50 newly added
+cases and X20/X81/X82 assertion additions are under validation; no full native pass is claimed.
+The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
+records outstanding receipts and actual client gaps. X93–X98 also await native pass receipts.
+Large-workspace rename and editing during startup
 still need the controlled reproductions and fixes in L55/L56; waiting for readiness in the
 playbook does not prove that ordinary typing during startup works.
 
@@ -1124,7 +1125,7 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It implements startup and 63 shared scenarios: 60 fully and three partially. Native
+disabled. It now implements startup and all 113 shared scenarios; the added parity batch is under validation. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1136,12 +1137,18 @@ X106–X108 cover function/sequence leaves, trailing dots, empty type operands a
 headers. Discovery/refactoring cases use the same per-scenario workspace scope as VS Code.
 X103 additionally reverses its file rename with the member open and verifies diagnostics clear.
 
-The three partials remain explicit: X20 verifies selected-overload navigation and suppressed
-parameter metadata, but LSP4IJ 0.21.0 renders `<no parameters>` in the popup; X81/X82 check native
-candidates and accepted edits but do not inspect completion Property-kind metadata. The report
-lists all 50 unimplemented cases and their exact missing native checks. These are harness gaps,
-not claims that IntelliJ lacks the corresponding LSP feature. Problems-row clicking and visual
-layout remain manual. X33–X35 and X99–X108 have passing native receipts across the checkpoint and
+X20 now checks that the native popup retains the full candidate label without an invented active
+argument. X81/X82 inspect Property-kind metadata from the native completion request as well as
+candidates and edits. All 50 formerly missing cases now have test bodies. Protocol-only invariants
+are checked through the installed client, while visible actions still use the native UI.
+Nonexistent/deleted-file diagnostics are observed in its verbose trace because LSP4IJ drops these
+from its VFS diagnostic store. X57 reproduced LSP4IJ's stale-edit application and now passes
+through the guarded Ecstasy Rename handler. The new subset has 49/50 individual passing receipts;
+X29 remains open. Problems-row clicking and visual layout remain manual.
+X31/X32 also pass in VS Code (`run-KfBbW1`). At empty invalid argument slots, VS Code may offer
+the extension's static snippets; X32 checks the compiler response separately and rejects any
+non-snippet editor proposals.
+X33–X35 and X99–X108 have passing native receipts across the checkpoint and
 focused X105 rerun. Execution details and the fixes found during validation are in the
 [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 They do not establish a complete native pass. Earlier runs verified both X92 Structure/folding
@@ -1201,8 +1208,8 @@ programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 113 cases. IntelliJ implements 60 fully and three partially, plus a separate startup check;
-its catalog entries explain every partial or unimplemented case. A missing driver implementation
+all 113 cases. IntelliJ now has assertions for the same 113, plus a separate startup check.
+The newly added cases still need native pass receipts; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
 as a full pass. A failed implemented check fails the Gradle task.
@@ -1426,8 +1433,8 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Try Format Document/Selection, quick fixes and code lenses with compiler mode active. | No compiler-backed support is advertised for them. Editor-native snippets or indentation may still work and do not count as compiler feature passes. |
-| X32 | Try completion inside an identifier or `box.pa|ir(...)`, inside a zero-argument constructor/function call, and in an empty slot before a later written argument. | No invented completion or incorrect replacement edit. Supported missing-argument signatures are tested in X73–X74 and argument-value insertion in X77–X78. |
+| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Separate declaration, document colors, monikers and inline values are not advertised. Native formatting is exercised further in X102/X107. |
+| X32 | Try completion in `box.pair(unknown=\|);`, `box.pair(first="x", first=\|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
 
 ### F. Type-definition and implementation lookup
 
