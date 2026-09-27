@@ -20,6 +20,10 @@ Info rendering fix, X81/X82 inspect completion kinds, and X57 verifies a native 
 against obsolete edits. Dependency diagnostic publications also retire completed IntelliJ
 semantic caches. See the [case-by-case validation checklist](errs-integration-plan.md#intellij-parity-backlog-l60).
 These changes do not add compiler/AST state or modify the error-listener API.
+The resumed runs now cover all 113 scenario assertions. A 61-case batch still failed its IDE-error
+gate on X41's unguarded test-driver PSI read; `6d7e5b7e5` fixes that and two other harness issues.
+The focused X41/X108 run passes with zero IDE errors. The full single-session checkpoint remains
+open after another desktop-focus interruption; individual assertions are not a clean full run.
 
 L55 now has a 24-root regression for graph-proof heap retention. Dependency-closure filtering
 prevents undeclared imports and unnecessary deserialization; copied compiler-proven comparison
