@@ -35,7 +35,7 @@ internal object XdkCursorQueries {
                 AdapterPosition(prefix.range.end.line, prefix.range.end.column),
             )
         val members = if (site.kind == PartialSemanticModel.Kind.CALL) site.argumentValues else site.members
-        return members
+        val ordinary = members
             .filter { it.name.startsWith(prefix.text) }
             .map { member ->
                 CompletionItem(
@@ -54,7 +54,14 @@ internal object XdkCursorQueries {
                     textEdit = TextEdit(range, member.name),
                 )
             }.distinctBy { it.label to it.detail }
+        val formals = site.formals.filter { it.name.startsWith(prefix.text) }.map { formal ->
+            CompletionItem(formal.name, CompletionKind.CLASS, formalDetail(model, formal), formal.name, TextEdit(range, formal.name))
+        }
+        return ordinary + formals
     }
+
+    fun formalDetail(model: PartialSemanticModel, formal: PartialSemanticModel.Formal): String =
+        "type parameter ${formal.name} extends ${model.semantics.type(formal.constraint)?.displayName ?: "?"}"
 
     fun signatureHelp(
         model: PartialSemanticModel,
