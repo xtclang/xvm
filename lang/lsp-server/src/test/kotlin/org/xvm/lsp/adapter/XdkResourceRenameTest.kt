@@ -120,19 +120,25 @@ class XdkResourceRenameTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "interface Api { Int read(); } class Forward(Api target) delegates Api(target) {}",
-            "class Base { Int read = 1; } mixin Loud into Base { @Override Int read.get() = 2; } class Host extends Base incorporates Loud {}",
-            "class Holder { @Lazy Int read.calc() = 1; }",
+            "interface Api { Int read(); } class Forward(Api target) delegates Api(target) {} Int use(Forward value) = value.read();",
+            "class Base { Int read = 1; } mixin Loud into Base { @Override Int read.get() = 2; } " +
+                "class Host extends Base incorporates Loud {} Int use(Host value) = value.read;",
+            "class Holder { @Lazy Int read.calc() = 1; } Int use(Holder value) = value.read;",
+            "class Base { Int read() = 1; } mixin Loud into Base { @Override Int read() = super() + 1; } " +
+                "class Host extends Base incorporates Loud {} Int use(Host value) = value.read();",
         ],
     )
-    fun `unsupported delegation mixin and annotated property families remain refused`(body: String) {
+    fun `delegation mixin and annotated property rename preserves written contracts`(body: String) {
         val text = "module App { $body }"
         source("App.x", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri("App.x"), text).diagnostics).isEmpty()
-            assertThat(adapter.rename(uri("App.x"), 0, text.indexOf("read"), "changed")).isNull()
+            val edit = requireNotNull(adapter.rename(uri("App.x"), 0, text.indexOf("read"), "changed"))
+            assertThat(edit.changes.getValue(uri("App.x"))).hasSize(Regex("\\bread\\b").findAll(text).count())
             assertThat(directory.resolve("App.x").toFile().readText()).isEqualTo(text)
+            apply(edit)
+            assertThat(adapter.compile(uri("App.x"), directory.resolve("App.x").toFile().readText()).diagnostics).isEmpty()
         }
     }
 

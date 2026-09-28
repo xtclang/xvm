@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.asm.Constant
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
@@ -143,6 +144,7 @@ internal object XdkRename {
                 .toMap()
 
         fun target(constant: ProofIdentity): Target? {
+            if (constant is ProofIdentity.Composed) return composedTarget(constant, texts, moved, translate)
             val symbol = declarations[constant] ?: return Target.External(constant)
             val source = symbol.declarationSource ?: return Target.External(constant)
             val text = texts[source] ?: return Target.External(constant)
@@ -175,6 +177,45 @@ internal object XdkRename {
         data class External(
             val constant: ProofIdentity,
         ) : Target
+
+        data class SourceProof(
+            val site: Site,
+            val format: Constant.Format,
+        ) : Target
+
+        data class Composed(
+            val owner: Target,
+            val members: List<Target>,
+            val delegates: List<Target>,
+        ) : Target
+    }
+
+    private fun composedTarget(
+        identity: ProofIdentity,
+        texts: Map<String, String>,
+        moved: (String) -> String,
+        translate: (String, Int) -> Int?,
+    ): Target? {
+        return when (identity) {
+            is ProofIdentity.Composed -> {
+                val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
+                val members = identity.members.map { composedTarget(it, texts, moved, translate) ?: return null }
+                val delegates = identity.delegates.map { composedTarget(it, texts, moved, translate) ?: return null }
+                Target.Composed(owner, members, delegates)
+            }
+
+            is ProofIdentity.Source -> {
+                val source = identity.location.sourceName ?: return null
+                val text = texts[source] ?: return Target.External(identity)
+                val start = offset(text, identity.location.range.start)?.let { translate(source, it) } ?: return null
+                val end = offset(text, identity.location.range.end)?.let { translate(source, it) } ?: return null
+                Target.SourceProof(Site(moved(source), start, end), identity.format)
+            }
+
+            else -> {
+                Target.External(identity)
+            }
+        }
     }
 
     private fun edges(
@@ -207,6 +248,8 @@ internal object XdkRename {
             id: SemanticModel.SymbolId?,
         ): Target? {
             val original = id?.let(model::symbol) ?: return null
+            val identity = facts.constants[id]
+            if (identity is ProofIdentity.Composed) return composedTarget(identity, texts, moved, translate)
             val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
             val source = symbol.declarationSource
             val range = symbol.declaration
