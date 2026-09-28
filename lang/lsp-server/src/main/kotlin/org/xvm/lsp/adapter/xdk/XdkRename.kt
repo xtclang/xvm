@@ -116,8 +116,11 @@ internal object XdkRename {
         plan: Plan,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected = edges(before, plan.original, allowUnresolved = true) { source, offset -> plan.map(source, offset) } ?: return false
-        val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
+        val expected =
+            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { source, offset ->
+                plan.map(source, offset)
+            } ?: return false
+        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
         if (expected.any { (site, target) -> actual[site] != target }) return false
         val knownDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
@@ -295,6 +298,7 @@ internal object XdkRename {
         texts: Map<String, String>,
         moved: (String) -> String = { it },
         allowUnresolved: Boolean = false,
+        sourceParameters: Boolean = false,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
         val declarations =
@@ -321,13 +325,21 @@ internal object XdkRename {
         ): Target? {
             val original = id?.let(model::symbol) ?: return null
             val identity = facts.constants[id]
+            val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
+            // Before repairing an unresolved signature, the compiler can identify its written
+            // parameter but cannot assign a method slot yet. Compare the same source identity
+            // after repair; generated/composed slots still require their normal dispatch proof.
+            if (sourceParameters && symbol.kind == SemanticModel.SymbolKind.PARAMETER &&
+                symbol.declarationSource in texts && symbol.declaration != null
+            ) {
+                return site(requireNotNull(symbol.declarationSource), symbol.declaration)?.let { Target.Declaration(it, symbol.kind) }
+            }
             if (identity is ProofIdentity.Directory) return Target.Directory(moved(identity.path))
             if (identity is ProofIdentity.Composed ||
                 identity is ProofIdentity.Super || identity is ProofIdentity.PrimaryConstructor || identity is ProofIdentity.Parameter
             ) {
                 return composedTarget(identity, texts, moved, translate)
             }
-            val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
             val source = symbol.declarationSource
             val range = symbol.declaration
             return if (source != null && range != null && source in texts) {
