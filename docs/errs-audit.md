@@ -35,6 +35,15 @@ L55/L56 track the large-graph proof and startup issues below; L57–L60 track se
 native parity. L61–L82 cover feature/protocol omissions and the completion gate. An absent
 optional LSP handler is separate from an error-listener defect or a missing native assertion.
 
+L55 acceptance now uses the real generated teaching workspace (currently 25 roots), with one
+and five unsaved buffers. It exposed a missing simple delegate-name binding and overly broad
+comparison of unsupported bindings in independent modules. The fix uses existing composition
+facts and limits equivalence comparison to the edited/consumer closure, while still compiling the
+whole graph. L61 adds explicit declaration support; L62 adds proven companion-directory and
+simple discovered-module moves. Combined backend validation passes: 1,273 executed server tests
+and 67 stdio tests, with three existing server skips. The integration plan records native
+acceptance separately and lists the remaining conservative refusals.
+
 Native parity audit (L60): the 50 missing case bodies and X20/X81/X82 assertions are now written,
 with all 50 cases and all three strengthened assertion sets passing individually. The full
 113-case checkpoint passes in `run-6034631232732848040` with zero IDE errors. Inspection found
@@ -73,8 +82,8 @@ Proof repositories included unrelated earlier roots, and raw comparison constant
 compiler pools across the before/after graph. The adapter now filters source inputs to their
 configured dependency closure and copies comparison keys/dispatch chains before releasing each
 attempt. Success, rejection, cancellation and failure workloads release their compiler objects
-within the existing 512 MiB heap. The actual teaching workspace with one/multiple open buffers
-and unchanged diagnostics remains an acceptance item; isolated roots do not close that audit.
+within the existing 512 MiB heap. The real 25-root teaching workspace now also passes with one
+and five unsaved buffers, unchanged diagnostics and collection of query-owned compiler objects.
 
 Native cancellation deadlock (L54): X103 also reproduced an inversion between LSP4J's request-map
 lock and the server's document lock. Result cleanup and backend cancellation must run outside the
