@@ -87,6 +87,24 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   cases selected and cases passed separately. Full parity is required work; a selected passing
   subset does not close L60. Run the broader checkpoint occasionally, not after each change.
 
+### L56 startup synchronization implementation (2026-09-28)
+
+LSP4IJ 0.21 sends `didOpen` on the common executor, while change/close notifications use its
+ordered dispatcher. Its initial text can also predate listener attachment. The IntelliJ
+transport now holds early full-text changes behind opening, uses the latest queued client
+version, and refreshes an otherwise stale opening snapshot from the actual buffer. Existing
+opened-document identities distinguish reopen from a delayed close. Folding replies carry a
+request-time editor identity/stamp check before reaching LSP4IJ's line-to-offset conversion.
+No second document version counter, compiler context or AST state is introduced.
+
+The server also waits for `initialized` before requesting dynamic file watchers, honors the
+client's registration capability and logs rejected registration futures. This closes that
+bounded initialization ordering item from L80, not the whole capability audit.
+
+Deterministic regressions cover typing/replacement before open, pre-listener edits, close/reopen,
+stale shortened-document folds and watcher negotiation. Validation is pending the combined
+L56–L59 checkpoint; native startup acceptance remains required before closing L56 in full.
+
 ### Finish the existing editor features
 
 - [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
