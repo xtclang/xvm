@@ -1672,7 +1672,7 @@ are copied from existing signature slots and source tokens in `SemanticModelBuil
 or retained field is fabricated. Register-backed `super` call provenance remains an explicit gap,
 not an accessor added speculatively to the AST.
 
-**Resource rename checkpoint (2026-09-28; validation pending):** implicit package identities are
+**Resource rename checkpoint (2026-09-28; backend validated):** implicit package identities are
 derived from compiler parent identities and the captured source-directory layout, without invented
 AST source spans. Proposed directory moves replay the whole captured membership. Qualified module
 renames replace the simple name and preserve the domain. An immutable host-facing rename proposal
@@ -1680,16 +1680,22 @@ also carries the replacement explicit module graph; the host must persist and in
 accepting the edit. Ordinary LSP rename keeps refusing explicit graph changes until the clients
 support that transaction. This checkpoint adds no Java API, AST field or clone rule.
 
-**Composition rename checkpoint (2026-09-28; validation pending):** Kotlin worker inspection follows
+**Composition rename checkpoint (2026-09-28; backend validated):** Kotlin worker inspection follows
 existing `MethodInfo`/`MethodBody` into, narrowing and delegation links. Detached generated-method
 identities include their host, written contracts and receiver properties, so before/after proof
 can compare a forwarding route without pretending it is a written declaration. Source mixin and
 Ref/Var-annotated property families use existing compiler composition metadata. No AST field,
-Java API, optimized-chain generation or forwarding-method generation is added. Unsupported routes
+AST API, optimized-chain generation or forwarding-method generation is added. The existing
+`MethodBody.getIntoMethodInfo()` accessor is now public so the Kotlin copier can inspect a mixin
+constraint chain on the compiler worker; it adds no state and does not promise a completed chain.
+Unsupported routes
 and binary contracts remain non-editable; regression fixtures cover mixins, Lazy properties and
 delegation through interface and concrete receiver types.
+For a mixin `super` register, the copier records the enclosing written method instead of inventing
+a fixed runtime callee; the graph proof also compares adopting-host chains. This fact lives only
+in worker-owned rename inspection and detached comparison data, with no AST or call-hierarchy edge.
 
-**Public-parameter rename checkpoint (2026-09-28; validation pending):** successful
+**Public-parameter rename checkpoint (2026-09-28; backend validated):** successful
 `NewExpression.validate` records the selected constructor and written argument labels in the
 existing attempt-owned `InvocationBinding.Collector`, before argument validation rewrites the
 expressions. `Compilation.constructorBindings` publishes immutable identity snapshots for surviving
@@ -1700,6 +1706,8 @@ retained; record deconstruction patterns must add the constructor-binding compon
 Kotlin parameter-slot facts join public declarations, override slots and named
 callers across source modules. Escaped method values and binary contracts still refuse edits.
 Primary-constructor property parameters and lambda parameters remain outside this checkpoint.
+The combined run passed 76 LSP tests and 10 Java API tests with no failures or skips. New editor
+acceptance is still pending; see the integration commit map and additional manual playbook checks.
 
 **Rename follow-up (2026-09-23):** no AST field, accessor or clone rule was added. The existing
 attempt-owned `InvocationBinding.Argument` now carries a nullable immutable `Label(name, start, end)`
