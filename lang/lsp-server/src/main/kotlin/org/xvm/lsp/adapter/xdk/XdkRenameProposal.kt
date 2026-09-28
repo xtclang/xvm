@@ -12,6 +12,8 @@ import java.util.List.copyOf as immutableList
 class XdkRenameProposal internal constructor(
     val edit: WorkspaceEdit,
     sourceModules: List<XdkSourceModule>? = null,
+    previousSourceModules: List<XdkSourceModule>? = null,
 ) {
     val sourceModules: List<XdkSourceModule>? = sourceModules?.let(::immutableList)
+    val previousSourceModules: List<XdkSourceModule>? = previousSourceModules?.let(::immutableList)
 }

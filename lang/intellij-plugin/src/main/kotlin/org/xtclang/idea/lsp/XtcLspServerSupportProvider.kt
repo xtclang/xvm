@@ -98,7 +98,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
                 }
         }
 
-    override fun getServerInterface(): Class<out LanguageServer> = LanguageServer::class.java
+    override fun getServerInterface(): Class<out LanguageServer> = XtcLanguageServer::class.java
 }
 
 /**
