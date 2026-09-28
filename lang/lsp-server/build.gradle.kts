@@ -286,6 +286,10 @@ tasks.test {
         .dir(File(dir, "lib_ecstasy/src/main/x"))
         .withPropertyName("ecstasySources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(
+        rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"),
+        rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"),
+    )
 }
 
 tasks.jar {
