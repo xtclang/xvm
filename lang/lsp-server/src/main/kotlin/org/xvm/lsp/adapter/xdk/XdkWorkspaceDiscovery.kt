@@ -8,6 +8,7 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.CompositionNode
 import org.xvm.compiler.ast.NamedTypeExpression
+import org.xvm.lsp.util.ExecutionTrace
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
@@ -109,10 +110,15 @@ internal object XdkWorkspaceDiscovery {
         if (previous?.text == text) return previous
         val heard = ErrorList()
         val errors = ErrorListener.cancellable(heard, cancelled)
-        val name = Parser(Source(text, file.path), errors).parseModuleNameIgnoreEverythingElse()
+        val name =
+            ExecutionTrace.api("Parser.parseModuleName", file.toURI().toString()) {
+                Parser(Source(text, file.path), errors).parseModuleNameIgnoreEverythingElse()
+            }
         val tree =
             try {
-                Parser.forPartialAnalysis(Source(text, file.path), errors).parseSource()
+                ExecutionTrace.api("Parser.parseSource(partial-discovery)", file.toURI().toString()) {
+                    Parser.forPartialAnalysis(Source(text, file.path), errors).parseSource()
+                }
             } catch (_: CompilerException) {
                 null
             }

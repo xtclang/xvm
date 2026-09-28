@@ -88,6 +88,7 @@ import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
+import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
@@ -138,17 +139,20 @@ class XtcTextDocumentService(
         uri: String? = null,
         block: () -> R,
     ): CompletableFuture<R> {
+        val trace = ExecutionTrace.current()
         val document = uri?.let { openDocuments[it] }
         val ready = document?.analysis ?: CompletableFuture.completedFuture(null)
         return ready.handle { _, _ -> null }.thenCompose {
-            server.supplyAsync(method, logParams, logResult) {
-                synchronized(lifecycle) {
-                    if (closed || (uri != null && openDocuments[uri] !== document)) {
-                        throw ResponseErrorException(
-                            ResponseError(ResponseErrorCode.ContentModified, "Document changed during analysis", null),
-                        )
+            ExecutionTrace.within(trace) {
+                server.supplyAsync(method, logParams, logResult) {
+                    synchronized(lifecycle) {
+                        if (closed || (uri != null && openDocuments[uri] !== document)) {
+                            throw ResponseErrorException(
+                                ResponseError(ResponseErrorCode.ContentModified, "Document changed during analysis", null),
+                            )
+                        }
+                        block()
                     }
-                    block()
                 }
             }
         }
@@ -163,6 +167,7 @@ class XtcTextDocumentService(
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
+        val trace = ExecutionTrace.current()
         val (document, documents) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(contentModified())
@@ -193,7 +198,7 @@ class XtcTextDocumentService(
                     synchronized(lifecycle) {
                         if (result.isDone) return@thenRunAsync
                         if (stale()) throw contentModified()
-                        request()
+                        ExecutionTrace.within(trace, request)
                     }
                 // Register after starting work: prior cancellation still schedules backend cleanup.
                 result.whenCompleteAsync { _, failure -> if (failure != null) work.cancel(false) }

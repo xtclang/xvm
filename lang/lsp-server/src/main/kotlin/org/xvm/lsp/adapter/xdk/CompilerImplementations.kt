@@ -14,6 +14,7 @@ import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.util.ExecutionTrace
 
 /**
  * Worker-only inspection of successful source types. TypeInfo supplies actual member chains,
@@ -31,7 +32,10 @@ internal fun compilerImplementationTargets(
         val structure = node.component as? ClassStructure ?: continue
         // A mixin's into type is a constraint, not an adopting host. Inspect its composed hosts.
         if (structure.format == Format.MIXIN) continue
-        val info = structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(inspection)
+        val info =
+            ExecutionTrace.api("TypeConstant.ensureTypeInfo(implementation)") {
+                structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(inspection)
+            }
         if (inspection.hasSeriousErrors() || inspection.isAbortDesired) return emptyMap()
         if (info.isClass && !info.isAbstract && !info.isSynthetic) {
             (info.classChain.keys + info.defaultChain.keys).forEach { ancestor ->
@@ -95,7 +99,7 @@ private fun TypeInfo.delegateType(
     if (errors.isAbortDesired) return null
     val target = findProperty(property)?.type ?: return null
     if (!target.isSingleUnderlyingClass(false)) return null
-    val info = target.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+    val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(target)") { target.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors) }
     return info.takeIf { it.isClass && !it.isAbstract && !errors.hasSeriousErrors() && !errors.isAbortDesired }
 }
 
