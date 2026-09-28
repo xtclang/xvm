@@ -7,17 +7,21 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.attributes.Category.CATEGORY_ATTRIBUTE
 import org.gradle.api.attributes.Category.LIBRARY
 import org.gradle.api.attributes.LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE
+import org.gradle.api.file.ArchiveOperations
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.FileSystemOperations
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.InputFiles
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.language.base.plugins.LifecycleBasePlugin.VERIFICATION_GROUP
 import org.xtclang.plugin.XtcPlugin
 import org.xtclang.plugin.XtcTestExtension
 import org.xtclang.plugin.tasks.XtcCompileTask
@@ -345,6 +349,11 @@ distributions {
             // Handle potential script duplicates
             duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
+            // The application plugin copies the raw startScripts output into bin/ ahead of our specs, and EXCLUDE
+            // keeps the first copy, so drop it: bin/ must only contain the rewritten launchers from modifyScripts.
+            val rawStartScriptsDir = tasks.startScripts.map { it.outputDir!! }
+            exclude { it.file.parentFile == rawStartScriptsDir.get() }
+
             // Core XDK content
             val xdkTemplate = tasks.processResources.map {
                 File(it.outputs.files.singleFile, "xdk")
@@ -387,6 +396,7 @@ distributions {
                 include("xtc")
                 include("xtc.bat")
                 into("bin")
+                filePermissions { unix("rwxr-xr-x") }
             }
 
             // Exclude unwanted files and prevent auto-inclusion of script task outputs
@@ -410,6 +420,57 @@ tasks.distTar {
 tasks.distZip {
     dependsOn(prepareDistributionScripts)
     dependsOn(configurations.xdkJavaTools)
+}
+
+/**
+ * Verifies the launchers actually shipped in the XDK archive: every one must be present, executable, and the version
+ * rewritten by modifyScripts (javatools/javatools.jar on the classpath plus the javatools module paths), never the raw
+ * application plugin script, whose lib/javatools-<version>.jar classpath does not exist in the distribution.
+ */
+abstract class VerifyDistributionLaunchersTask : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val distributionArchive: RegularFileProperty
+
+    @get:Inject
+    abstract val archives: ArchiveOperations
+
+    @TaskAction
+    fun verify() {
+        val expected = listOf("xtc", "xcc", "xec").flatMap { listOf(it, "$it.bat") }.toSet()
+        val shipped = buildMap {
+            archives.zipTree(distributionArchive).matching { include("*/bin/*") }.visit {
+                if (!isDirectory) {
+                    put(name, file.readText() to permissions.user.execute)
+                }
+            }
+        }
+        val problems = buildList {
+            (expected - shipped.keys).forEach { add("$it: missing from bin/") }
+            shipped.filterKeys { it in expected }.forEach { (name, launcher) ->
+                val (content, executable) = launcher
+                if (!content.contains("javatools.jar") || !content.contains("javatools_turtle.xtc")) {
+                    add("$name: not the launcher rewritten by modifyScripts")
+                }
+                if (!executable) {
+                    add("$name: not executable")
+                }
+            }
+        }
+        check(problems.isEmpty()) {
+            "Broken launchers in ${distributionArchive.get().asFile.name}:\n  ${problems.joinToString("\n  ")}"
+        }
+    }
+}
+
+val verifyDistributionLaunchers = tasks.register<VerifyDistributionLaunchersTask>("verifyDistributionLaunchers") {
+    description = "Verify the XDK archive ships the rewritten, executable launcher scripts."
+    group = VERIFICATION_GROUP
+    distributionArchive.set(tasks.distZip.flatMap { it.archiveFile })
+}
+
+tasks.check {
+    dependsOn(verifyDistributionLaunchers)
 }
 
 // Let the Distribution plugin handle dependencies properly through the standard lifecycle
