@@ -24,18 +24,18 @@ class CompilerRenameRequirementsTest {
     @Test
     fun `identity edits rename captures without touching a shadowing lambda parameter`() {
         val source =
-            "module Rename { Int run() { Int local=1; function Int() f=()->local; " +
-                "function Int(Int) g=(Int local)->local; return f()+g(2); } }"
+            "module Rename { Int run() { Int local = 1; function Int() f = () -> local; " +
+                "function Int(Int) g = (Int local) -> local; return f() + g(2); } }"
         val before = compile(source)
         val renamed = rename(source, before, source.indexOf("local"), "renamed")
         val after = compile(renamed)
-        assertThat(renamed).contains("Int renamed=1", "f=()->renamed", "(Int local)->local")
+        assertThat(renamed).contains("Int renamed = 1", "f = () -> renamed", "(Int local) -> local")
         assertThat(sourceBindings(after)).isEqualTo(sourceBindings(before))
     }
 
     @Test
     fun `a compiling rename can silently capture an unrelated property reference`() {
-        val source = "module Rename { Int value=10; Int run() { Int local=1; return local+value; } }"
+        val source = "module Rename { Int value = 10; Int run() { Int local = 1; return local + value; } }"
         val before = compile(source)
         val renamed = rename(source, before, source.indexOf("local"), "value")
         val after = compile(renamed)
@@ -46,7 +46,7 @@ class CompilerRenameRequirementsTest {
 
     @Test
     fun `named argument labels bind to their selected method parameter before argument rewriting`() {
-        val source = "module Rename { Int pick(Int input)=input; Int run()=pick(input=1); }"
+        val source = "module Rename { Int pick(Int input) = input; Int run() = pick(input = 1); }"
         val before = compile(source)
         val declaration = source.indexOf("input")
         assertThat(before.referencesAt(0, declaration, true)).hasSize(3)

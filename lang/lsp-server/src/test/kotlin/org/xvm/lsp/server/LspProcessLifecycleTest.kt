@@ -60,7 +60,7 @@ class LspProcessLifecycleTest {
         properties.setProperty("lsp.adapter", backend)
         Files.newOutputStream(resources.resolve("lsp-version.properties")).use { properties.store(it, null) }
         val workspace = Files.createDirectory(directory.resolve("workspace"))
-        val source = "module Lifecycle { Int value=1; }"
+        val source = "module Lifecycle { Int value = 1; }"
         val file = Files.writeString(workspace.resolve("Lifecycle.x"), source)
         val stderr = directory.resolve("stderr.log")
         val process =

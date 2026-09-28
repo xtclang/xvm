@@ -88,7 +88,7 @@
     },
     "dependency": {
       "consumer": "Consumer.x",
-      "stringLibrary": "module Library { static String value()=\"text\"; }",
+      "stringLibrary": "module Library { static String value() = \"text\"; }",
       "brokenLibrary": "module Library { MissingType broken; }",
       "blockedCode": "DEPENDENCY-FAILED"
     },
@@ -464,19 +464,19 @@
       "title": "named arguments map to the declared parameter",
       "manual": [],
       "values": {
-        "body": "box.pair(second=\"x\", first=\u00a7);",
+        "body": "box.pair(second = \"x\", first = \u00a7);",
         "expected": 1,
         "type": {
           "source": "String",
           "flags": ""
         },
         "activeParameter": 0,
-        "replaceFrom": "first=)",
-        "replaceWith": "first=\"y\")",
+        "replaceFrom": "first = )",
+        "replaceWith": "first = \"y\")",
         "call": "box.pair",
         "callOffset": 4,
-        "completedArgument": "first=\"y\"",
-        "argumentOffset": 7
+        "completedArgument": "first = \"y\"",
+        "argumentOffset": 9
       },
       "intellij": {
         "coverage": "full",
@@ -510,8 +510,8 @@
       "values": {
         "bodies": [
           "box.choose(True, \u00a7);",
-          "box.pair(unknown=\u00a7);",
-          "box.pair(first=\"x\", first=\u00a7);"
+          "box.pair(unknown = \u00a7);",
+          "box.pair(first = \"x\", first = \u00a7);"
         ],
         "signatureCount": 0
       },
@@ -545,7 +545,7 @@
       "title": "named-slot ambiguity and selected overload navigation",
       "manual": [],
       "values": {
-        "body": "box.pair(second=\"x\", \u00a7);",
+        "body": "box.pair(second = \"x\", \u00a7);",
         "bodies": [
           "box.choose(\"x\", \"y\"); \u00a7",
           "box.choose(1, 2); \u00a7"
@@ -773,8 +773,8 @@
       "manual": [],
       "values": {
         "bodies": [
-          "box.pair(unknown=\u00a7);",
-          "box.pair(first=\"x\", first=\u00a7);",
+          "box.pair(unknown = \u00a7);",
+          "box.pair(first = \"x\", first = \u00a7);",
           "box.pair(True, \u00a7);",
           "box.pair(\"x\", \"y\", \u00a7);",
           "missing(\u00a7);"
@@ -1045,10 +1045,10 @@
       "values": {
         "memberFile": "Project/Child.x",
         "memberDeclaration": "class Child extends Base<String> {",
-        "memberWithCall": "class Child extends Base<String> {\n    Int callTarget()=target(1);",
+        "memberWithCall": "class Child extends Base<String> {\n    Int callTarget() = target(1);",
         "rootFile": "Project.x",
         "replaceFrom": "module Project {",
-        "replaceWith": "module Project {\n    static Int target(Int n)=n;",
+        "replaceWith": "module Project {\n    static Int target(Int n) = n;",
         "anchor": "Int target",
         "offset": 4,
         "lineShift": 2
@@ -1066,7 +1066,7 @@
         "location": {
           "cursor": "lib.\u00a7value",
           "targetFile": "Library.x",
-          "target": "Int \u00a7value()=1;"
+          "target": "Int \u00a7value() = 1;"
         }
       },
       "intellij": {
@@ -1082,8 +1082,8 @@
         "file": "Library.x",
         "consumer": "Consumer.x",
         "edit": {
-          "from": "Int value()=1",
-          "to": "String value()=\"text\""
+          "from": "Int value() = 1",
+          "to": "String value() = \"text\""
         }
       },
       "intellij": {
@@ -1161,7 +1161,7 @@
       "title": "transitive source changes propagate through the dependency graph",
       "manual": [],
       "values": {
-        "bridgeText": "module Bridge { package lib import Library; static Int value()=lib.value(); }",
+        "bridgeText": "module Bridge { package lib import Library; static Int value() = lib.value(); }",
         "libraryFile": "Library.x",
         "bridgeFile": "Bridge.x",
         "consumerFile": "Consumer.x",
@@ -1223,7 +1223,7 @@
         "file": "Rename.x",
         "anchors": [
           "Int input",
-          "input=1"
+          "input = 1"
         ],
         "declaration": "Int input",
         "callOffset": 4,
@@ -1233,7 +1233,7 @@
           "source": "\\binput\\b",
           "flags": "g"
         },
-        "namedArgument": "number=1"
+        "namedArgument": "number = 1"
       },
       "intellij": {
         "coverage": "full",
@@ -1407,7 +1407,7 @@
       "values": {
         "file": "Dormant.x",
         "replaceFrom": "mapper.map(\"c\")",
-        "addedReference": "mapper.map(\"c\")+mapper.map(\"d\")",
+        "addedReference": "mapper.map(\"c\") + mapper.map(\"d\")",
         "consumerReferenceCount": 2,
         "anchor": "map(",
         "newName": "convert",
@@ -1728,7 +1728,7 @@
             "active": 1
           },
           {
-            "call": "new Packet<String>(second=\"b\", first=",
+            "call": "new Packet<String>(second = \"b\", first =",
             "active": 0
           }
         ],
@@ -1790,7 +1790,7 @@
           },
           {
             "original": "take(1, text)",
-            "prefix": "take(first=1, second="
+            "prefix": "take(first = 1, second ="
           },
           {
             "original": "fn(1, text)",
@@ -1802,7 +1802,7 @@
           },
           {
             "original": "new Packet<String>(\"a\", text)",
-            "prefix": "new Packet<String>(second=\"b\", first="
+            "prefix": "new Packet<String>(second = \"b\", first ="
           }
         ],
         "replaceWith": "${0})",
@@ -1855,7 +1855,7 @@
           },
           {
             "original": "take(1, text)",
-            "prefix": "take(first=1, second=te"
+            "prefix": "take(first = 1, second = te"
           },
           {
             "original": "fn(1, text)",
@@ -1867,7 +1867,7 @@
           },
           {
             "original": "new Packet<String>(\"a\", text)",
-            "prefix": "new Packet<String>(second=\"b\", first=te"
+            "prefix": "new Packet<String>(second = \"b\", first = te"
           }
         ],
         "replaceFrom": "${0})",
@@ -1911,7 +1911,7 @@
         "file": "Advanced.x",
         "variants": [
           "takeValue(va",
-          "takeValue(value=va"
+          "takeValue(value = va"
         ],
         "replaceFrom": "takeValue(valueText)",
         "replaceWith": "${0})",
@@ -2013,7 +2013,7 @@
         "file": "Advanced.x",
         "variants": [
           "new String[2](te",
-          "new String[2](supply=te"
+          "new String[2](supply = te"
         ],
         "replaceFrom": "new String[2](text)",
         "replaceWith": "${0})",
@@ -2040,7 +2040,7 @@
           "(1, word.si",
           "Tuple<Int, Int>:(1, word.si",
           "[word.si",
-          "[\"key\"=word.si"
+          "[\"key\" = word.si"
         ],
         "replaceFrom": "[word.size]",
         "label": "size",
@@ -2166,7 +2166,7 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "source": "module Editing { String StringValue=\"x\"; ${0} Int later=1; }",
+        "source": "module Editing { String StringValue = \"x\"; ${0} Int later = 1; }",
         "variants": [
           "void damaged(Str| value) {}",
           "void damaged(Int first, Str| second) {}",
@@ -2192,7 +2192,7 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "source": "module Editing {\n void damaged(${0}) {\n Int hidden=1;\n }\n Int later=1; }",
+        "source": "module Editing {\n void damaged(${0}) {\n Int hidden = 1;\n }\n Int later = 1; }",
         "parameters": [
           "Int",
           "Int value, Str"
@@ -2217,7 +2217,7 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "source": "module Editing { import Owner as Alias; class Base { class ItemBase {} } class Owner extends Base { class ItemPublic {} private class ItemPrivate {} protected class ItemProtected {} static Int ItemValue=1; typedef String as ItemAlias; } String StringValue=\"x\"; ${0} Int later=1; }",
+        "source": "module Editing { import Owner as Alias; class Base { class ItemBase {} } class Owner extends Base { class ItemPublic {} private class ItemPrivate {} protected class ItemProtected {} static Int ItemValue = 1; typedef String as ItemAlias; } String StringValue = \"x\"; ${0} Int later = 1; }",
         "variants": [
           {
             "declaration": "void damaged(ecstasy.text.Str| value) {}",
@@ -2277,7 +2277,7 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "source": "module Editing { String StringValue=\"x\"; ${0} Int later=1; }",
+        "source": "module Editing { String StringValue = \"x\"; ${0} Int later = 1; }",
         "marker": "\u00a7",
         "variants": [
           {
@@ -2377,17 +2377,17 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "source": "module Editing { class Base {} interface Face {} mixin Feature {} class Owner { static class Nested {} } String StringValue=\"x\"; ${0} Int later=1; }",
+        "source": "module Editing { class Base {} interface Face {} mixin Feature {} class Owner { static class Nested {} } String StringValue = \"x\"; ${0} Int later = 1; }",
         "marker": "\u00a7",
         "variants": [
           {
-            "declaration": "class Damaged extends Bas\u00a7 { Int inside=1; }",
+            "declaration": "class Damaged extends Bas\u00a7 { Int inside = 1; }",
             "selected": "Base",
             "include": [
               "Base"
             ],
             "validAfterAcceptance": true,
-            "repairedDeclaration": "class Damaged extends Base { Int inside=1; }"
+            "repairedDeclaration": "class Damaged extends Base { Int inside = 1; }"
           },
           {
             "declaration": "interface Damaged extends Fac\u00a7 {}",
@@ -2594,7 +2594,7 @@
       "values": {
         "file": "Editing.x",
         "marker": "\u00a7",
-        "source": "module Editing { class Pair(Int number, String text) {} class Box { Int number=1; String numberText=\"x\"; private Int numberHidden=2; } void pair(Int number, String text) {} void run(Int number, String numberText, Box box, function void(Int, String) fn) { ${0}; } }",
+        "source": "module Editing { class Pair(Int number, String text) {} class Box { Int number = 1; String numberText = \"x\"; private Int numberHidden = 2; } void pair(Int number, String text) {} void run(Int number, String numberText, Box box, function void(Int, String) fn) { ${0}; } }",
         "variants": [
           {
             "declaration": "pair(nu\u00a7, \"x\")",
@@ -2645,7 +2645,7 @@
             "repairedDeclaration": "pair(number, \"x\")"
           },
           {
-            "declaration": "pair(number=nu\u00a7, text=\"x\")",
+            "declaration": "pair(number = nu\u00a7, text = \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2654,7 +2654,7 @@
             "suffixLength": 0,
             "initiallyValid": false,
             "validAfterAcceptance": true,
-            "repairedDeclaration": "pair(number=number, text=\"x\")"
+            "repairedDeclaration": "pair(number = number, text = \"x\")"
           },
           {
             "declaration": "pair(box.nu\u00a7, \"x\")",
@@ -2863,10 +2863,10 @@
       "values": {
         "file": "LiveConsumer.x",
         "original": "module LiveConsumer {}",
-        "changed": "module LiveConsumer { package lib import LiveLibrary; Int run()=lib.value(); }",
+        "changed": "module LiveConsumer { package lib import LiveLibrary; Int run() = lib.value(); }",
         "library": "LiveLibrary.x",
-        "libraryText": "module LiveLibrary { static Int value()=1; }",
-        "brokenLibrary": "module LiveLibrary { static String value()=\"text\"; }",
+        "libraryText": "module LiveLibrary { static Int value() = 1; }",
+        "brokenLibrary": "module LiveLibrary { static String value() = \"text\"; }",
         "anchor": "value()",
         "target": "value"
       },
@@ -2920,7 +2920,7 @@
       ],
       "values": {
         "file": "PropertyRename.x",
-        "source": "module PropertyRename { class Base { Int value { Int get()=1; } } class Child extends Base { @Override Int value { Int get()=2; } } Int run(Base base, Child child)=base.value+child.value; }",
+        "source": "module PropertyRename { class Base { Int value { Int get() = 1; } } class Child extends Base { @Override Int value { Int get() = 2; } } Int run(Base base, Child child) = base.value + child.value; }",
         "anchor": "value",
         "replacement": "amount",
         "edits": 4
@@ -2937,7 +2937,7 @@
       ],
       "values": {
         "file": "MoveType.x",
-        "source": "module MoveType { Item make()=new Item(); }",
+        "source": "module MoveType { Item make() = new Item(); }",
         "member": "MoveType/Item.x",
         "memberSource": "class Item {}",
         "destination": "MoveType/Renamed.x",
@@ -2956,7 +2956,7 @@
       ],
       "values": {
         "file": "AliasRename.x",
-        "source": "module AliasRename { import ecstasy.text.StringBuffer as Buffer; Buffer make()=new Buffer(); }",
+        "source": "module AliasRename { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); }",
         "anchor": "Buffer;",
         "replacement": "Builder",
         "edits": 3,
@@ -2976,13 +2976,13 @@
         "file": "AutoImports.x",
         "variants": [
           {
-            "source": "module AutoImports { Document echo(Document doc)=doc; }",
+            "source": "module AutoImports { Document echo(Document doc) = doc; }",
             "anchor": "Document",
             "title": "Import 'Document' from xml.xtclang.org",
             "importText": "import xml.Document;"
           },
           {
-            "source": "module AutoImports { Widget make()=new Widget(); }",
+            "source": "module AutoImports { Widget make() = new Widget(); }",
             "anchor": "Widget",
             "title": "Import 'Widget' from ImportLibrary",
             "importText": "import importLibrary.Widget;"
