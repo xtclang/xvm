@@ -11,6 +11,7 @@ import org.xvm.asm.constants.MethodConstant
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Worker-only dispatch facts. These compiler identities must never enter a published snapshot. */
 internal class CompilerMethodRelations(
@@ -39,7 +40,10 @@ internal fun compilerMethodRelations(
         nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
             if (errors.isAbortDesired) return@flatMap emptyList()
             val structure = node.component as? ClassStructure ?: return@flatMap emptyList()
-            val info = structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+            val info =
+                ExecutionTrace.api("TypeConstant.ensureTypeInfo(method-relations)") {
+                    structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                }
             info.methods.values
                 .filter { it.identity.isTopLevel && !it.isFunction && !it.isCtorOrValidator }
                 .map { method ->
