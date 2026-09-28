@@ -69,11 +69,52 @@ class XdkParameterRenameTest {
     }
 
     @Test
-    fun `escaped method values prevent public parameter rename`() {
+    fun `escaped method values retain their bindings during public parameter rename`() {
         val text = "module App { Int pick(Int input) = input; Int run() { function Int(Int) f = &pick; return f(1); } }"
         workspace(mapOf("App" to text)) { adapter ->
             assertThat(adapter.compile(uri("App"), text).diagnostics).isEmpty()
+            val edit = requireNotNull(adapter.rename(uri("App"), 0, text.indexOf("input"), "value"))
+            assertThat(apply(text, edit, "App")).isEqualTo(text.replace("input", "value"))
+        }
+    }
+
+    @Test
+    fun `function values reject named arguments independently of the rename implementation`() {
+        val text = "module App { Int pick(Int input) = input; Int run() { function Int(Int) f = &pick; return f(input = 1); } }"
+        XdkAdapter().use { adapter ->
+            val result = adapter.compile(uri("App"), text)
+            assertThat(result.diagnostics.map { it.code }).contains("COMPILER-141")
             assertThat(adapter.rename(uri("App"), 0, text.indexOf("input"), "value")).isNull()
+        }
+    }
+
+    @Test
+    fun `closed consumers mix selected method values with direct named calls`() {
+        val library = "module Library { class Box { Int pick(Int input) = input; String pick(String input) = input; } }"
+        val consumer = "module Consumer { package lib import Library; Int run(lib.Box box) { " +
+            "function Int(Int) f = &box.pick; return f(1) + box.pick(input = 2); } " +
+            "String text(lib.Box box) = box.pick(input = \"text\"); }"
+        workspace(mapOf("Library" to library, "Consumer" to consumer)) { adapter ->
+            assertThat(adapter.compile(uri("Consumer"), consumer).diagnostics).isEmpty()
+            val edit = requireNotNull(adapter.rename(uri("Library"), 0, library.indexOf("input"), "value"))
+            assertThat(apply(library, edit, "Library"))
+                .isEqualTo(library.replace("Int input) = input", "Int value) = value"))
+            assertThat(apply(consumer, edit, "Consumer")).isEqualTo(consumer.replace("input = 2", "value = 2"))
+        }
+    }
+
+    @Test
+    fun `delegated parameter slots include differently named receiver declarations`() {
+        val library = "module Library { interface Api { Int read(Int input); } }"
+        val consumer = "module Consumer { package lib import Library; " +
+            "class Actual implements lib.Api { @Override Int read(Int argument) = argument; } " +
+            "class Forward(Actual target) delegates lib.Api(target) {} " +
+            "Int use(Forward value, Actual actual) = value.read(input = 1) + actual.read(argument = 2); }"
+        workspace(mapOf("Library" to library, "Consumer" to consumer)) { adapter ->
+            assertThat(adapter.compile(uri("Consumer"), consumer).diagnostics).isEmpty()
+            val edit = requireNotNull(adapter.rename(uri("Library"), 0, library.indexOf("input"), "number"))
+            assertThat(apply(library, edit, "Library")).isEqualTo(library.replace("input", "number"))
+            assertThat(apply(consumer, edit, "Consumer")).isEqualTo(consumer.replace("input", "number").replace("argument", "number"))
         }
     }
 
