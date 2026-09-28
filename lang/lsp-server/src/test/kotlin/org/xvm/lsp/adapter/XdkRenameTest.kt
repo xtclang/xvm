@@ -65,12 +65,12 @@ class XdkRenameTest {
     }
 
     @Test
-    fun `public parameters constructor properties lambda parameters and members are unavailable`() {
+    fun `public contracts require a configured project`() {
         val text =
             "module Rename { class Item(Int value) {} " +
                 "Int run(Int input) { function Int(Int) f = (Int argument) -> argument; return f(input); } }"
         withSource(text) { adapter ->
-            for (name in listOf("Item", "value", "run", "input", "argument")) {
+            for (name in listOf("Item", "value", "run", "input")) {
                 assertThat(adapter.prepareRename(URI, 0, text.indexOf(name))).describedAs(name).isNull()
                 assertThat(adapter.rename(URI, 0, text.indexOf(name), "other")).describedAs(name).isNull()
             }

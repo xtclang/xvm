@@ -1343,6 +1343,7 @@ class XdkAdapter internal constructor(
         ) ||
             (
                 symbol.name != "construct" &&
+                    (symbol.kind != SemanticModel.SymbolKind.PARAMETER || symbol.id in model.parameters) &&
                     symbol.kind in
                     setOf(
                         SemanticModel.SymbolKind.METHOD,

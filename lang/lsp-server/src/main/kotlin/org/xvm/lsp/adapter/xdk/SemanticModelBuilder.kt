@@ -255,9 +255,14 @@ private class SemanticModelBuilder(
         lambdas.forEach { lambda ->
             lambda.sourceBindings?.parameters?.forEach { binding ->
                 declare(binding.name(), binding.register(), SymbolKind.PARAMETER, lambda.source)
-                if (lambda.hasOnlyParamNames() && validatedType(lambda) != null) {
-                    (normalized(binding.register()) as? Register)?.let(registers::get)?.let { id ->
-                        symbols[id]?.let { symbols[id] = it.copy(inferred = true) }
+                (normalized(binding.register()) as? Register)?.let(registers::get)?.let { id ->
+                    symbols[id]?.let {
+                        // Function types expose positional arguments, not the lambda's written names.
+                        // The original register/source binding remains stable through nested captures.
+                        symbols[id] = it.copy(
+                            inferred = lambda.hasOnlyParamNames() && validatedType(lambda) != null,
+                            renameable = complete,
+                        )
                     }
                 }
             }
