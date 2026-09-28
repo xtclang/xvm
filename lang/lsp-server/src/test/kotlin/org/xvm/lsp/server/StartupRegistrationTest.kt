@@ -26,13 +26,16 @@ class StartupRegistrationTest {
             `when`(client.registerCapability(any())).thenReturn(CompletableFuture.completedFuture(null))
             XtcLanguageServer(MockAdapter()).use { server ->
                 server.connect(client)
-                val params = InitializeParams().apply {
-                    capabilities = ClientCapabilities().apply {
-                        workspace = WorkspaceClientCapabilities().apply {
-                            didChangeWatchedFiles = DidChangeWatchedFilesCapabilities(supported)
-                        }
+                val params =
+                    InitializeParams().apply {
+                        capabilities =
+                            ClientCapabilities().apply {
+                                workspace =
+                                    WorkspaceClientCapabilities().apply {
+                                        didChangeWatchedFiles = DidChangeWatchedFilesCapabilities(supported)
+                                    }
+                            }
                     }
-                }
                 assertThat(server.initialize(params).join().capabilities).isNotNull()
                 verify(client, never()).registerCapability(any(RegistrationParams::class.java))
                 server.initialized(InitializedParams())
