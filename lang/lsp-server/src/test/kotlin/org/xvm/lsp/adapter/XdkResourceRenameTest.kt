@@ -142,6 +142,79 @@ class XdkResourceRenameTest {
         }
     }
 
+    @Test
+    fun `qualified discovered module rename preserves the domain and local import alias`() {
+        val library = "module Library.example.org { class Box {} }"
+        val consumer = "module Consumer { package lib import Library.example.org; lib.Box make() = new lib.Box(); }"
+        source("Library.x", library)
+        source("Consumer.x", consumer)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
+            val edit = requireNotNull(adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed"))
+            apply(edit)
+        }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val changed = directory.resolve("Consumer.x").toFile().readText()
+            assertThat(changed).contains("package lib import Renamed.example.org", "new lib.Box()")
+            assertThat(adapter.compile(uri("Consumer.x"), changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `implicit package rename moves only its directory and supports reverse rename`() {
+        val text = "module App { void accept(tools.deep.Box value) {} }"
+        source("App.x", text)
+        source("App/tools/deep/Box.x", "class Box {}")
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri("App.x"), text).diagnostics).isEmpty()
+            val edit = requireNotNull(adapter.rename(uri("App.x"), 0, text.indexOf("tools"), "helpers"))
+            assertThat(edit.renames).containsExactlyEntriesOf(
+                mapOf(uri("App/tools").removeSuffix("/") to uri("App/helpers").removeSuffix("/")),
+            )
+            apply(edit)
+        }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val changed = directory.resolve("App.x").toFile().readText()
+            assertThat(adapter.compile(uri("App.x"), changed).diagnostics).isEmpty()
+            assertThat(adapter.findDefinition(uri("App.x"), 0, changed.indexOf("Box"))?.uri).isEqualTo(uri("App/helpers/deep/Box.x"))
+            apply(requireNotNull(adapter.rename(uri("App.x"), 0, changed.indexOf("helpers"), "tools")))
+        }
+        assertThat(directory.resolve("App.x").toFile().readText()).isEqualTo(text)
+        assertThat(directory.resolve("App/tools/deep/Box.x")).exists()
+    }
+
+    @Test
+    fun `host proposal includes explicit graph replacement without installing it prematurely`() {
+        val library = "module Library.example.org { class Box {} }"
+        val consumer = "module Consumer { package lib import Library.example.org; lib.Box make() = new lib.Box(); }"
+        source("Library.x", library)
+        source("Consumer.x", consumer)
+        XdkAdapter().use { adapter ->
+            adapter.replaceSourceModules(
+                listOf(
+                    XdkSourceModule("Library.example.org", uri("Library.x")),
+                    XdkSourceModule("Consumer", uri("Consumer.x"), setOf("Library.example.org")),
+                ),
+            )
+            assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
+            assertThat(adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed")).isNull()
+            val proposal = requireNotNull(adapter.renameProposalAsync(uri("Library.x"), 0, library.indexOf("Library"), "Renamed").join())
+            val modules = requireNotNull(proposal.sourceModules)
+            assertThat(modules.map { it.name }).containsExactlyInAnyOrder("Renamed.example.org", "Consumer")
+            assertThat(modules.single { it.name == "Consumer" }.dependencies).containsExactly("Renamed.example.org")
+            assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
+            assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(library)
+            apply(proposal.edit)
+            adapter.replaceSourceModules(modules)
+            val changed = directory.resolve("Consumer.x").toFile().readText()
+            assertThat(adapter.compile(uri("Consumer.x"), changed).diagnostics).isEmpty()
+        }
+    }
+
     private fun apply(edit: WorkspaceEdit) {
         edit.changes.forEach { (uri, edits) ->
             val file = Path.of(URI(uri)).toFile()
