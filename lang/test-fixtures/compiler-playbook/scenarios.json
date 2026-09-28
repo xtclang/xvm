@@ -3347,6 +3347,243 @@
         "limitations": []
       }
     },
+    "X109": {
+      "title": "public parameter rename updates a closed caller and preserves another overload",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "input",
+        "replacement": "value",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { class Box { Int pick(Int input, Int count = 1) = input + count; String pick(String input) = input; } }",
+            "destination": "Library.x",
+            "expected": "module Library { class Box { Int pick(Int value, Int count = 1) = value + count; String pick(String input) = input; } }"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(count = 2, input = 1); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(count = 2, value = 1); }"
+          },
+          {
+            "file": "Other.x",
+            "source": "module Other { package lib import Library; String run(lib.Box box) = box.pick(input = \"text\"); }",
+            "destination": "Other.x",
+            "expected": "module Other { package lib import Library; String run(lib.Box box) = box.pick(input = \"text\"); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X110": {
+      "title": "override parameter slots join differently named declarations and callers",
+      "manual": [],
+      "values": {
+        "file": "Consumer.x",
+        "anchor": "argument",
+        "replacement": "value",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { interface Mapper<T> { T map(T input); } }",
+            "destination": "Library.x",
+            "expected": "module Library { interface Mapper<T> { T map(T value); } }"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library; class Mapper implements lib.Mapper<String> { @Override String map(String argument) = argument; } String run(lib.Mapper<String> api, Mapper impl) = api.map(input = \"a\") + impl.map(argument = \"b\"); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Library; class Mapper implements lib.Mapper<String> { @Override String map(String value) = value; } String run(lib.Mapper<String> api, Mapper impl) = api.map(value = \"a\") + impl.map(value = \"b\"); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X111": {
+      "title": "constructor parameter rename starts at a named argument",
+      "manual": [],
+      "values": {
+        "file": "Consumer.x",
+        "anchor": "input",
+        "replacement": "value",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { class Box { construct(Int input, Int count = 1) { total = input + count; } Int total; } }",
+            "destination": "Library.x",
+            "expected": "module Library { class Box { construct(Int value, Int count = 1) { total = value + count; } Int total; } }"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library; lib.Box make() = new lib.Box(count = 2, input = 1); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Library; lib.Box make() = new lib.Box(count = 2, value = 1); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X112": {
+      "title": "delegation rename joins the contract and concrete receiver",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "read",
+        "replacement": "fetch",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { interface Api { Int read(); } }",
+            "destination": "Library.x",
+            "expected": "module Library { interface Api { Int fetch(); } }"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library; class Actual implements lib.Api { @Override Int read() = 1; } class Forward(Actual target) delegates lib.Api(target) {} Int use(Forward value) = value.read(); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Library; class Actual implements lib.Api { @Override Int fetch() = 1; } class Forward(Actual target) delegates lib.Api(target) {} Int use(Forward value) = value.fetch(); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X113": {
+      "title": "mixin method rename preserves contextual super",
+      "manual": [],
+      "values": {
+        "file": "App.x",
+        "anchor": "read",
+        "replacement": "changed",
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App { class Base { Int read() = 1; } mixin Loud into Base { @Override Int read() = super() + 1; } class Host extends Base incorporates Loud {} Int use(Host value) = value.read(); }",
+            "destination": "App.x",
+            "expected": "module App { class Base { Int changed() = 1; } mixin Loud into Base { @Override Int changed() = super() + 1; } class Host extends Base incorporates Loud {} Int use(Host value) = value.changed(); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X114": {
+      "title": "mixin property rename updates declarations and access",
+      "manual": [],
+      "values": {
+        "file": "App.x",
+        "anchor": "read",
+        "replacement": "changed",
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App { class Base { Int read = 1; } mixin Loud into Base { @Override Int read.get() = 2; } class Host extends Base incorporates Loud {} Int use(Host value) = value.read; }",
+            "destination": "App.x",
+            "expected": "module App { class Base { Int changed = 1; } mixin Loud into Base { @Override Int changed.get() = 2; } class Host extends Base incorporates Loud {} Int use(Host value) = value.changed; }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X115": {
+      "title": "annotated property rename preserves its Lazy implementation",
+      "manual": [],
+      "values": {
+        "file": "App.x",
+        "anchor": "read",
+        "replacement": "changed",
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App { class Holder { @Lazy Int read.calc() = 1; } Int use(Holder value) = value.read; }",
+            "destination": "App.x",
+            "expected": "module App { class Holder { @Lazy Int changed.calc() = 1; } Int use(Holder value) = value.changed; }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X116": {
+      "title": "qualified module rename preserves its domain and alias and moves its companion",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "Library",
+        "replacement": "Renamed",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library.example.org {}",
+            "destination": "Renamed.x",
+            "expected": "module Renamed.example.org {}"
+          },
+          {
+            "file": "Library/Box.x",
+            "source": "class Box {}",
+            "destination": "Renamed/Box.x",
+            "expected": "class Box {}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library.example.org; lib.Box make() = new lib.Box(); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Renamed.example.org; lib.Box make() = new lib.Box(); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X117": {
+      "title": "implicit package rename moves the nested directory",
+      "manual": [],
+      "values": {
+        "file": "App.x",
+        "anchor": "tools",
+        "replacement": "helpers",
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App { void accept(tools.deep.Box value) {} }",
+            "destination": "App.x",
+            "expected": "module App { void accept(helpers.deep.Box value) {} }"
+          },
+          {
+            "file": "App/tools/deep/Box.x",
+            "source": "class Box {}",
+            "destination": "App/helpers/deep/Box.x",
+            "expected": "class Box {}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
