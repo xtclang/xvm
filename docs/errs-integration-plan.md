@@ -394,9 +394,12 @@ VS Code receipts above.
   3. Qualified modules and implicit package-directory moves: backend validated.
      Domain suffixes and local import aliases are preserved. Explicit module
      roots have a host API proposal containing edits and the replacement source graph. Neither
-     proposal creation nor a rejected standard rename mutates configuration. **Client follow-up:**
-     persist the replacement graph together with accepting edits in both IDEs; standard LSP rename
-     still refuses explicit graph changes because client settings have no portable editable URI.
+     proposal creation nor a rejected standard rename mutates configuration. Both native clients now
+     use `xtc/rename` with before/after graph checks. VS Code edits the workspace settings document
+     in the WorkspaceEdit (including unsaved configuration and Save All); IntelliJ persists its
+     existing LSP4IJ configuration with native Undo/Redo. Standard LSP rename still refuses graph
+     replacement for other clients. Shared X118 and settings/protocol regression tests are written;
+     this batch's execution is pending.
   L62 remains open for these client transactions, remaining conservative exclusions, unknown
   external consumers and shared editor acceptance. The `construct` keyword is never renamed.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
@@ -826,9 +829,13 @@ Remaining acceptance and scope:
   compare every file, start with closed consumers and perform one Undo.
 - [ ] Run selected X109–X117 cases in both editors; implementation is not native acceptance.
   Existing X103 is not evidence for every new variant.
-- [ ] Define/persist explicit source-graph replacement in each IDE before offering those module
-  renames through standard LSP. The host proposal API is implemented and tested, but a proposal
-  does not itself save settings or apply an edit.
+- [x] Implement explicit graph persistence in both native Rename paths through `xtc/rename`.
+  The protocol includes expected/replacement graphs and versioned source/resource edits. Clients
+  validate settings, preserve unrelated options and restore the graph on Undo/Redo. VS Code
+  supports workspace settings and unsaved configuration; Save All persists it. IntelliJ updates
+  LSP4IJ's existing global configuration store and guards both history directions. Generic
+  standard LSP clients continue to refuse graph changes. X118 and settings/server tests await
+  this batch's combined run.
 - [ ] Audit primary-constructor property parameters, lambda parameters, escaped method values,
   unsupported composition routes and consumers outside the configured graph. Current refusals
   are deliberate; they are not counted as completed rename support.

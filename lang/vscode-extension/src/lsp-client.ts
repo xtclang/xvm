@@ -13,6 +13,7 @@ import {
 } from 'vscode-languageclient/node';
 
 import { buildJvmArgs, findJavaExecutable } from './java';
+import { compilerSourceModules, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
 
 let client: LanguageClient | undefined;
@@ -25,7 +26,7 @@ export function getClient(): LanguageClient | undefined {
 }
 
 function compilerConfiguration(): { sourceModules: unknown[] | null } {
-    return { sourceModules: vscode.workspace.getConfiguration('xtc.compiler').get<unknown[] | null>('sourceModules', null) };
+    return { sourceModules: compilerSourceModules() };
 }
 
 export async function updateCompilerConfiguration(): Promise<void> {
@@ -85,6 +86,12 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
             xtcCompiler: compilerConfiguration()
         },
         middleware: {
+            provideRenameEdits: (document, position, name, token, next) => {
+                const current = client;
+                return current?.initializeResult?.capabilities.experimental?.xtcRenameProposal === 1
+                    ? renameWithConfiguration(current, document, position, name, token)
+                    : next(document, position, name, token);
+            },
             workspace: {
                 configuration: (params: ConfigurationParams) => {
                     return params.items.map(item => {
