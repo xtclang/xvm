@@ -380,7 +380,11 @@ internal class XdkProjectQueries(
     }
 
     private fun members(identity: ProofIdentity): Set<ProofIdentity> =
-        if (identity is ProofIdentity.Composed) identity.members.flatMapTo(linkedSetOf(), ::members) else setOf(identity)
+        when (identity) {
+            is ProofIdentity.Composed -> identity.members.flatMapTo(linkedSetOf(), ::members)
+            is ProofIdentity.Parameter -> members(identity.method).mapTo(linkedSetOf()) { ProofIdentity.Parameter(it, identity.index) }
+            else -> setOf(identity)
+        }
 
     /** Parameter names belong to callable slots, including differently named overrides. */
     private fun parameterFamily(
@@ -394,9 +398,9 @@ internal class XdkProjectQueries(
                     it.declaration != null && it.declarationSource in texts
                 }.mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
                 .toMap()
-        val method = declarations[target.method] ?: return null
+        val method = declarations[target.method]
         val methods =
-            if (method.name == "construct" || SemanticModel.Modifier.STATIC in method.modifiers) {
+            if (method != null && (method.name == "construct" || SemanticModel.Modifier.STATIC in method.modifiers)) {
                 setOf(target.method)
             } else {
                 methodFamily(facts, target.method) ?: return null
