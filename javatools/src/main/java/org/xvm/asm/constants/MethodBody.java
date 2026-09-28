@@ -292,9 +292,13 @@ public class MethodBody {
     }
 
     /**
+     * Inspect the existing mixin constraint chain without generating a forwarding body.
+     * The returned compiler metadata belongs to the current compilation; hosts must copy facts
+     * before publishing them to another thread. Only call this for a FromInto implementation.
+     *
      * @return the (potentially incomplete) MethodInfo from which the "into" MethodBody was created
      */
-    MethodInfo getIntoMethodInfo() {
+    public MethodInfo getIntoMethodInfo() {
         assert isInto();
         return (MethodInfo) m_target;
     }

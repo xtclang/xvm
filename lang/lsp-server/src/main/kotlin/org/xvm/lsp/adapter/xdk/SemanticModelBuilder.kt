@@ -98,7 +98,7 @@ internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependenc
     ExecutionTrace.api("Compilation.renameFacts") {
         ConstantPool.withPool(pool()).use {
             val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
-            captureRenameFacts(builder.build(this), builder.constantBindings(), dependencies)
+            captureRenameFacts(builder.build(this), builder.constantBindings(), dependencies, supers = builder.superBindings())
         }
     }
 
@@ -118,6 +118,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.methodRelations(this, errors),
                 builder.propertyRelations(this, errors),
                 errors,
+                builder.superBindings(),
             )
         }
     }
@@ -177,8 +178,11 @@ private class SemanticModelBuilder(
     private val callables = linkedMapOf<SymbolId, SemanticModel.Callable>()
     private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
     private val parameters = mutableMapOf<Pair<MethodConstant, Int>, SymbolId>()
+    private val supers = mutableMapOf<SymbolId, MethodConstant>()
 
     fun constantBindings(): Map<SymbolId, Constant> = constants.entries.associate { (constant, id) -> id to constant }
+
+    fun superBindings(): Map<SymbolId, MethodConstant> = supers.toMap()
 
     fun methodRelations(
         compilation: EmbeddingSupport.Compilation,
@@ -365,7 +369,17 @@ private class SemanticModelBuilder(
                         } else {
                             null
                         }
-                    refer(node.nameToken, callees[node] ?: node.resolvedTarget ?: delegate, expressionType, node.source, writes[at])
+                    val target = callees[node] ?: node.resolvedTarget ?: delegate
+                    refer(node.nameToken, target, expressionType, node.source, writes[at])
+                    if (complete && target is Register && target.isSuper) {
+                        val method =
+                            generateSequence(node.parent) { it.parent }
+                                .filterIsInstance<MethodDeclarationStatement>()
+                                .firstOrNull()
+                                ?.component as? MethodStructure
+                        val symbol = occurrences[at]?.symbol
+                        if (method != null && symbol != null) supers[symbol] = method.identityConstant
+                    }
                 }
 
                 is NamedTypeExpression -> {
@@ -402,10 +416,15 @@ private class SemanticModelBuilder(
     ): List<SemanticModel> {
         val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
         val parameterSlots =
-            parameters.entries.filter { it.key.second >= 0 }.associate { (binding, id) ->
-                val owner = requireNotNull(symbol(binding.first, binding.first.name, SymbolKind.METHOD))
-                id to SemanticModel.ParameterSlot(owner, binding.second)
-            }
+            parameters.entries
+                .filter { it.key.second >= 0 }
+                .mapNotNull { (binding, id) ->
+                    // Partial signatures can have unresolved types: preserve their written symbols
+                    // without claiming a validated callable slot for rename.
+                    symbol(binding.first, binding.first.name, SymbolKind.METHOD)?.let { owner ->
+                        id to SemanticModel.ParameterSlot(owner, binding.second)
+                    }
+                }.toMap()
         val facts =
             SemanticModel.Facts(
                 symbols = symbols,
@@ -526,6 +545,10 @@ private class SemanticModelBuilder(
                         it.named(),
                     )
                 },
+                caller =
+                    generateSequence(node.parent) { it.parent }
+                        .firstOrNull { it in callableNodes || it is PropertyDeclarationStatement || it is TypeCompositionStatement }
+                        ?.let(callableNodes::get),
             )
     }
 
