@@ -990,7 +990,7 @@
       }
     },
     "X42": {
-      "title": "inlay hints show inferred types and positional argument names",
+      "title": "inlay hints show inferred locals, lambda signatures and positional argument names",
       "manual": [
         "Inline hint layout and visual distinction from source text"
       ],
@@ -1003,8 +1003,18 @@
           "text:"
         ],
         "anchor": "number +=",
-        "typeHintCount": 2,
-        "excludedHint": "extra:"
+        "typeHintCount": 3,
+        "excludedHint": "extra:",
+        "inferred": {
+          "source": "module Consumers {\n    (Int, String) pair() = (1, \"x\");\n    void run() {\n        (var number, var text) = pair();\n        function Int(Int) fn = (value) -> value;\n        number += 1;\n    }\n}",
+          "hints": [
+            "Int",
+            "String"
+          ],
+          "anchor": "number +=",
+          "typeHintCount": 4,
+          "excludedHint": "extra:"
+        }
       },
       "intellij": {
         "coverage": "full",
@@ -2693,6 +2703,90 @@
             "initiallyValid": false,
             "validAfterAcceptance": true,
             "repairedDeclaration": "new Pair(number, \"x\")"
+          },
+          {
+            "declaration": "pair(1 + nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(1 + number, \"x\")"
+          },
+          {
+            "declaration": "pair(1 + \u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(1 + number, \"x\")"
+          },
+          {
+            "declaration": "pair(-nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(-number, \"x\")"
+          },
+          {
+            "declaration": "pair(2 * (1 + nu\u00a7), \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(2 * (1 + number), \"x\")"
+          },
+          {
+            "declaration": "pair(1 + box.nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(1 + box.number, \"x\")"
+          },
+          {
+            "declaration": "fn(1 + nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "fn(1 + number, \"x\")"
+          },
+          {
+            "declaration": "new Pair(1 + nu\u00a7, \"x\")",
+            "selected": "number",
+            "include": [
+              "number"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "new Pair(1 + number, \"x\")"
           }
         ],
         "prefixLength": 2,
@@ -3194,6 +3288,54 @@
             "initiallyValid": false,
             "validAfterAcceptance": true,
             "repairedDeclaration": "package damaged incorporates SharedMixin {} mixin SharedMixin into Package {}"
+          },
+          {
+            "declaration": "<Element extends String> void damaged(Ele\u00a7 value) {}",
+            "selected": "Element",
+            "include": [
+              "Element"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "<Element extends String> void damaged(Element value) {}"
+          },
+          {
+            "declaration": "class Damaged<Element extends String>(Ele\u00a7 value) {}",
+            "selected": "Element",
+            "include": [
+              "Element"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "class Damaged<Element extends String>(Element value) {}"
+          },
+          {
+            "declaration": "<Element extends String, Other extends Element> void damaged(Oth\u00a7 value) {}",
+            "selected": "Other",
+            "include": [
+              "Other"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "<Element extends String, Other extends Element> void damaged(Other value) {}"
+          },
+          {
+            "declaration": "<String> void damaged(Str\u00a7 value) {}",
+            "selected": "String",
+            "include": [
+              "String"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "<String> void damaged(String value) {}"
           }
         ]
       },

@@ -146,7 +146,10 @@ class SemanticModel internal constructor(
     )
 
     /** Validated source lambda signature; capture parameters are absent from its function type. */
-    data class LambdaSite(val arrow: Range, val signature: Signature)
+    data class LambdaSite(
+        val arrow: Range,
+        val signature: Signature,
+    )
 
     data class CallArgument(
         val range: Range,
