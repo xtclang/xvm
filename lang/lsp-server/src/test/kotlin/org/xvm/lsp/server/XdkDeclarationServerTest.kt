@@ -25,14 +25,24 @@ class XdkDeclarationServerTest {
                 if (adapter is XdkAdapter) {
                     assertThat(capabilities.declarationProvider.left).isTrue()
                     val uri = "file:///Declarations.x"
-                    val text = "module Declarations { interface A { Int read(); } interface B { Int read(); } " +
-                        "class Both implements A, B { @Override Int read() = 1; } Int use(Both value) = value.read(); }"
+                    val text =
+                        "module Declarations { interface A { Int read(); } interface B { Int read(); } " +
+                            "class Both implements A, B { @Override Int read() = 1; } Int use(Both value) = value.read(); }"
                     val documents = server.textDocumentService
                     documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
-                    val targets = documents.declaration(DeclarationParams(TextDocumentIdentifier(uri), Position(0, text.lastIndexOf("read"))))
-                        .get(30, SECONDS).left
+                    val targets =
+                        documents
+                            .declaration(DeclarationParams(TextDocumentIdentifier(uri), Position(0, text.lastIndexOf("read"))))
+                            .get(30, SECONDS)
+                            .left
                     assertThat(targets).hasSize(2)
-                    assertThat(targets.map { it.range.start.character }).containsExactly(text.indexOf("read"), text.indexOf("read", text.indexOf("read") + 1))
+                    assertThat(targets.map { it.range.start.character }).containsExactly(
+                        text.indexOf("read"),
+                        text.indexOf(
+                            "read",
+                            text.indexOf("read") + 1,
+                        ),
+                    )
                 } else {
                     assertThat(capabilities.declarationProvider).isNull()
                 }
