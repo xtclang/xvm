@@ -938,8 +938,14 @@ not claim a test receipt until the batch runs.
   generated method slots. Seven regressions cover typed/inferred parameters, both entry sites,
   nested capture, sibling shadowing, return/pass escapes, name capture and standalone compilation.
   No AST state/API change; execution is pending.
-- [ ] **4 — Escaped method values/composition:** audit actual callable-label semantics and routes,
-  enabling only cases justified by compiler bindings and full before/after proof.
+- [x] **4 — Escaped method values/composition:** remove the overly conservative escape guard:
+  `InvocationExpression.testFunction` rejects named function-value arguments (`COMPILER-141`).
+  Keep full binding/dispatch replay for selected methods and direct labels. Add stored/returned/
+  passed/overloaded cross-module cases, an independent compiler diagnostic regression, and
+  delegated parameter families with differently named receiver parameters. Enumerate unsupported
+  implicit/union/generated/native bodies explicitly; these are not source-owned contracts and
+  remain refused. A runtime callable-origin propagation API is unnecessary for parameter spelling.
+  Execution is pending; exhaustive compiler fixtures for every generated route remain separate.
 - [ ] **5 — External consumers:** make the host's graph boundary explicit and exercise external roots.
 
 Validation is deferred until all five checkpoints are written.
