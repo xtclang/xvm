@@ -16,6 +16,13 @@ See [scope, ownership and validation](../../../docs/errs-integration-plan.md#liv
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
+The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
+compile/build and execution contracts for both clients, a persistent execution worker and fresh
+application containers per run. R1–R8 track that separate implementation. Current Run commands
+still launch Gradle/CLI processes; the DAP server remains a transport stub. Compiler/LSP completion
+does not imply completion of either execution or debugging. Current compiler changes must retain
+artifact/source revisions and cancellation boundaries suitable for those future consumers.
+
 ## What's Implemented
 
 ### 1. Language Model DSL (`lang/dsl/`)
