@@ -1388,7 +1388,7 @@ class XdkAdapter internal constructor(
         diagnostics: List<Diagnostic>,
     ): CompletableFuture<List<CodeAction>> =
         if (hasProject(uri)) {
-            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS, range), emptyList()) { it.importActions(uri, range) }
+            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS, range), emptyList()) { it.codeActions(uri, range) }
         } else {
             CompletableFuture.completedFuture(emptyList())
         }
