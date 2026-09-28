@@ -2298,9 +2298,9 @@ editor drivers, including closed consumers and Undo/Redo. Native Rename uses `xt
 an expected graph, replacement graph and versioned edit; each host persists its settings with
 the source transaction. No AST state, accessor or Java compiler pipeline change was needed.
 
-The [rename boundary audit](errs-integration-plan.md#rename-boundary-audit) records why primary
-constructor property parameters, lambda parameters, escaped method values and unknown dispatch
-routes remain refused. Explicit graph scope is different: unknown consumers are omitted, not
+At that checkpoint, primary-constructor properties, lambda parameters and escaped method
+values were refused. The subsequent batch below enables them using existing compiler facts;
+the [rename boundary audit](errs-integration-plan.md#rename-boundary-audit) records current limits. Explicit graph scope is different: unknown consumers are omitted, not
 automatically rejected. The host must include every intended consumer. New regression and editor
 fixtures pass: all ten new editor scenarios have selected receipts in both clients, 54 LSP tests
 and four IntelliJ settings tests pass. The catalog now has 123 cases; its preceding 113-case full
@@ -2318,4 +2318,29 @@ property. These flags survive dependency serialization. Named constructor labels
 identity, and written header properties join dispatch proof. A detached primary-constructor key
 records its owner for before/after call selection checks without inventing a source declaration.
 No Java API, AST field, compiler hook or clone rule is added. Explicit constructors keep their
-own written parameter slots. Tests are written; batch validation follows all five checkpoints.
+own written parameter slots. The combined backend run and shared X119 pass in both editors.
+
+### Lambda, method-value and external-consumer rename facts
+
+Lambda parameter renames use their original source/register identity and existing capture
+normalization. They remain local source contracts even when the lambda is returned or passed.
+The former method-value refusal was too conservative: `InvocationExpression.testFunction`
+rejects named arguments on function values with `COMPILER-141`. Parameter renames still prove
+all direct labels, method references, bindings and dispatch before returning an edit. No new
+callable-flow AST state is necessary for this operation. Unsupported generated/union/native
+composition routes retain their refusals.
+
+The existing sourceModules graph is also the external-consumer manifest: absolute roots outside
+workspace folders participate in the same proof. Project proposals now publish an immutable
+scope receipt (configured/discovered boundary, modules, source URIs and revision). Missing
+registered sources or changed input snapshots refuse a proposal; unregistered consumers remain
+unknown. No Java API/AST modification or clone-ownership change is introduced by these five
+checkpoints. Shared editor cases X119–X121 and the batch regressions are recorded in the
+[integration plan](errs-integration-plan.md#remaining-rename-implementation-batch-2026-09-28).
+
+The rename batch passes 94 LSP tests, six IntelliJ settings tests and five pure VS Code settings
+tests, all without failures or skips. Selected native X57/X118–X121 and CFG1–CFG3 now pass in both
+editors; IntelliJ also passes START and its IDE-error gate. The integration plan records the
+initial failures, corrections, exact receipts and commit map. Native multi-root/settings-race
+acceptance and exhaustive unsupported-dispatch fixtures remain follow-ups. The next structural
+checkpoint evaluates `ast.partial` without broadening classic AST visibility unnecessarily.
