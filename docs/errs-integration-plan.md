@@ -927,7 +927,12 @@ not claim a test receipt until the batch runs.
   captures workspace topology and rechecks settings after asynchronous edit conversion. Tests
   exercise history against intervening graph changes and preservation of unrelated preferences.
   IntelliJ adds matching cross-project root and dependency-edge history regressions.
-- [ ] **2 — Primary constructor properties:** join the written property and generated constructor slot.
+- [x] **2 — Primary constructor properties:** join named arguments of compiler-marked synthetic
+  shorthand constructors to their resolved properties; include written class-header properties in
+  dispatch proof. A detached primary-constructor identity preserves selected calls across replay
+  without inventing a declaration or adding AST state. Six regressions cover all three entry
+  sites, closed consumers, generics/defaults and collisions/capture. Explicit constructor
+  parameters retain their separate written contracts. Execution is pending.
 - [ ] **3 — Lambda parameters:** retain stable written bindings and prove shadow/capture behavior.
 - [ ] **4 — Escaped method values/composition:** audit actual callable-label semantics and routes,
   enabling only cases justified by compiler bindings and full before/after proof.
