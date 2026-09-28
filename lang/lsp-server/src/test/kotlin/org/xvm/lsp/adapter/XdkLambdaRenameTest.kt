@@ -27,20 +27,25 @@ class XdkLambdaRenameTest {
 
     @Test
     fun `nested captures retain the parameter while sibling bindings stay unchanged`() {
-        val text = "module App { Int run() { function Int(Int) f = (Int input) -> { " +
-            "function Int() nested = () -> input; return nested(); }; " +
-            "function Int(Int) g = (Int input) -> input; return f(1) + g(2); } }"
+        val text =
+            "module App { Int run() { function Int(Int) f = (Int input) -> { " +
+                "function Int() nested = () -> input; return nested(); }; " +
+                "function Int(Int) g = (Int input) -> input; return f(1) + g(2); } }"
         workspace(text) { adapter, uri ->
             val edit = requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value"))
-            assertThat(apply(text, edit, uri)).isEqualTo(text.replace("f = (Int input)", "f = (Int value)").replace("() -> input", "() -> value"))
+            assertThat(
+                apply(text, edit, uri),
+            ).isEqualTo(text.replace("f = (Int input)", "f = (Int value)").replace("() -> input", "() -> value"))
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [
-        "function Int(Int) saved() = (Int input) -> input;",
-        "Int consume(function Int(Int) f) = f(1); Int run() = consume((Int input) -> input);",
-    ])
+    @ValueSource(
+        strings = [
+            "function Int(Int) saved() = (Int input) -> input;",
+            "Int consume(function Int(Int) f) = f(1); Int run() = consume((Int input) -> input);",
+        ],
+    )
     fun `returned and passed lambdas keep local parameter names`(body: String) {
         val text = "module App { $body }"
         workspace(text) { adapter, uri ->
@@ -64,14 +69,22 @@ class XdkLambdaRenameTest {
     fun `standalone compilation needs no generated callable identity for a lambda`() {
         val text = "module App { function Int(Int) saved() = input -> input; }"
         XdkAdapter().use { adapter ->
-            val uri = directory.resolve("App.x").toFile().toURI().toString()
+            val uri =
+                directory
+                    .resolve("App.x")
+                    .toFile()
+                    .toURI()
+                    .toString()
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             assertThat(apply(text, requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value")), uri))
                 .isEqualTo(text.replace("input", "value"))
         }
     }
 
-    private fun workspace(text: String, check: (XdkAdapter, String) -> Unit) {
+    private fun workspace(
+        text: String,
+        check: (XdkAdapter, String) -> Unit,
+    ) {
         directory = directory.toRealPath()
         val file = directory.resolve("App.x").toFile().apply { writeText(text) }
         XdkAdapter().use { adapter ->
@@ -83,7 +96,11 @@ class XdkLambdaRenameTest {
         }
     }
 
-    private fun apply(text: String, edit: WorkspaceEdit, uri: String): String =
+    private fun apply(
+        text: String,
+        edit: WorkspaceEdit,
+        uri: String,
+    ): String =
         edit.changes.getValue(uri).sortedByDescending { it.range.start.column }.fold(text) { value, change ->
             value.replaceRange(change.range.start.column, change.range.end.column, change.newText)
         }

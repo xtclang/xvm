@@ -184,7 +184,14 @@ internal object XdkRename {
             val path: String,
         ) : Target
 
-        data class PrimaryConstructor(val owner: Target) : Target
+        data class Parameter(
+            val method: Target,
+            val index: Int,
+        ) : Target
+
+        data class PrimaryConstructor(
+            val owner: Target,
+        ) : Target
 
         data class Super(
             val method: Target,
@@ -209,6 +216,10 @@ internal object XdkRename {
         translate: (String, Int) -> Int?,
     ): Target? {
         return when (identity) {
+            is ProofIdentity.Parameter -> {
+                composedTarget(identity.method, texts, moved, translate)?.let { Target.Parameter(it, identity.index) }
+            }
+
             is ProofIdentity.PrimaryConstructor -> {
                 composedTarget(identity.owner, texts, moved, translate)?.let(Target::PrimaryConstructor)
             }
@@ -271,7 +282,7 @@ internal object XdkRename {
             val identity = facts.constants[id]
             if (identity is ProofIdentity.Directory) return Target.Directory(moved(identity.path))
             if (identity is ProofIdentity.Composed ||
-                identity is ProofIdentity.Super || identity is ProofIdentity.PrimaryConstructor
+                identity is ProofIdentity.Super || identity is ProofIdentity.PrimaryConstructor || identity is ProofIdentity.Parameter
             ) {
                 return composedTarget(identity, texts, moved, translate)
             }

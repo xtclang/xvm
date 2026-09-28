@@ -3680,7 +3680,7 @@
       }
     },
     "X121": {
-      "title": "escaped method parameter rename preserves positional calls and unrelated overloads",
+      "title": "escaped method parameter rename preserves positional calls and unrelated members",
       "manual": [],
       "values": {
         "file": "Library.x",
@@ -3689,15 +3689,15 @@
         "files": [
           {
             "file": "Library.x",
-            "source": "module Library { class Box { Int pick(Int input) = input; String pick(String input) = input; } }",
+            "source": "module Library { class Box { Int pick(Int input) = input; } class Other { String pick(String input) = input; } }",
             "destination": "Library.x",
-            "expected": "module Library { class Box { Int pick(Int value) = value; String pick(String input) = input; } }"
+            "expected": "module Library { class Box { Int pick(Int value) = value; } class Other { String pick(String input) = input; } }"
           },
           {
             "file": "Consumer.x",
-            "source": "module Consumer { package lib import Library; Int run(lib.Box box) { function Int(Int) f = &box.pick; return f(1) + box.pick(input = 2); } String text(lib.Box box) = box.pick(input = \"text\"); }",
+            "source": "module Consumer { package lib import Library; Int run(lib.Box box) { function Int(Int) f = box.pick; return f(1) + box.pick(input = 2); } String text(lib.Other box) = box.pick(input = \"text\"); }",
             "destination": "Consumer.x",
-            "expected": "module Consumer { package lib import Library; Int run(lib.Box box) { function Int(Int) f = &box.pick; return f(1) + box.pick(value = 2); } String text(lib.Box box) = box.pick(input = \"text\"); }"
+            "expected": "module Consumer { package lib import Library; Int run(lib.Box box) { function Int(Int) f = box.pick; return f(1) + box.pick(value = 2); } String text(lib.Other box) = box.pick(input = \"text\"); }"
           }
         ]
       },
