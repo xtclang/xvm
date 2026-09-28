@@ -23,17 +23,18 @@ master's dependencies and passes 455 tests (three existing skips), including all
 regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
 requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
-Current inventory: 2026-09-28, committed checkpoint `c2b321f4a` plus the uncommitted native,
-tracing and fixture-spacing batch recorded below. This is the active task list; dated records
-retain their historical scope and results. Checkboxes distinguish completed acceptance from
+Current inventory: 2026-09-28, following the native/tracing checkpoint `86fc15348` and the
+L55/L61/L62 implementation and validation batch recorded below. This is the active task list;
+dated records retain their historical scope and results. Checkboxes distinguish completed acceptance from
 implemented-but-unverified work and planned features. Compiler API changes get separate C-series
 extraction boundaries when their implementations establish what is required.
 
-**We have broad editor support, not full LSP coverage.** XdkAdapter implements all 24 entries
+**We have broad editor support, not full LSP coverage.** XdkAdapter implements all 25 entries
 in our `AdapterCapability` enum, plus compiler diagnostics and document/workspace synchronization.
 That enum is a project abstraction, not a list of every LSP feature. Completion, signatures,
 rename, actions, formatting, semantic tokens, hints and hierarchies still have explicit limits.
-Separate go-to-declaration is implemented with combined validation pending. Several other protocol features have no handler.
+Separate go-to-declaration now passes backend, protocol and selected editor validation. Several
+other protocol features still have no handler.
 The [adapter matrix and absent-feature inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 separate those states. Tree-sitter remains the shipped default; compiler mode remains opt-in.
 
@@ -52,7 +53,7 @@ Complete these changes in sequence, keep useful local commit boundaries, then ru
 backend/protocol validation and one announced, selected native checkpoint. Focused reproductions
 needed to identify a failure can run earlier; a complete playbook after every edit is unnecessary.
 
-- [ ] **L55 — Large-workspace proof memory and rename refusal.** Reproduce the 24-module
+- [x] **L55 — Large-workspace proof memory and rename refusal.** Reproduce the 24-module
   teaching workspace with only the target open and with multiple buffers open. Identify why
   the native property rename returned no edit and what retains compiler pools/facts across
   before/after proof. Bound peak memory without weakening binding/dispatch checks. Acceptance:
@@ -353,15 +354,16 @@ VS Code receipts above.
 
 ### Finish the existing editor features
 
-- [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
+- [x] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
   capability and advertise it only when implemented. Define declaration versus selected-body
   behavior for interfaces/overrides, aliases, locals and indexed libraries; preserve multiple
-  source targets where required. The compiler adapter now has a plural declaration query and explicit advertised capability.
+  source targets where required. The compiler adapter now has a plural declaration query and
+  explicit advertised capability.
   Local and imported aliases keep their own declarations; overriding methods/properties return
   all inherited written contracts copied from TypeInfo. Definition and implementation retain
   their existing behavior. Indexed sources remain read-only. Backend/protocol regressions and
-  shared X4 assertions are written; validation follows the L62 checkpoint. No AST API changes
-  or retained compiler objects are needed: declaration relations live in detached Kotlin facts.
+  shared X4 assertions pass in both clients. No AST API changes or retained compiler objects
+  are needed: declaration relations live in detached Kotlin facts.
 - [ ] **L62 — Rename scope and resource edits.** Extend beyond the current proven source
   types/static members/ordinary method and property families/aliases/locals. Audit constructor
   names, module/package/directory moves, companion directories, annotation/mixin/delegation
@@ -375,7 +377,9 @@ VS Code receipts above.
   Existing binding/dispatch proof rules continue to reject unsupported composition families.
   X103 now exercises a nested companion file in both clients and VS Code undo; backend tests
   exercise reverse renames, constructor type uses and resource capability negotiation.
-  Combined validation is pending; these conservative exclusions remain explicit follow-ups.
+  Combined backend and selected editor validation pass. L62 remains open for public-parameter
+  caller closure, composition-family proof, qualified/explicit module moves and implicit package
+  directories; these exclusions are not counted as completed functionality.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
@@ -619,7 +623,7 @@ Extraction groups for this work (commit IDs will be added at validated checkpoin
 3. `5119c682f` and `594c49328` — Ecstasy Parameter Info rendering for missing metadata (X20), per-signature active slots, and current metadata after retrigger (X29). X29 passes in `run-16615690562699412632`; extract both fixes with the parity assertions.
 4. `93a82ea8b` — client semantic-cache invalidation after dependency analysis (X24/X38/X47/X67).
 5. `eded39f0a` — guarded native symbol rename after LSP4IJ stale application was reproduced; X53/X54/X57/X60 pass. Plugin unit tests: 26 tests, zero failures/errors/skips; root `spotlessCheck` passes. The shared native regression bodies are in the parity-case group.
-6. `912abf3b8` — L55 dependency-closure and detached proof-fact retention fix, with all four 24-root outcomes. The actual teaching-workspace acceptance remains open.
+6. `912abf3b8` — L55 dependency-closure and detached proof-fact retention fix, with all four 24-root outcomes. Teaching-workspace acceptance is completed by the later L55 batch below.
 7. `8e976f868` and `eefc1b8e6` — independent process-lifecycle fixes. Extracted and independently tested as `cf54e2a19` on local branch `lagergren/fix-lsp-process-lifecycle`, based on master `ce3ab1d81`; see the [master extraction boundary](errs-lsp-process-lifecycle.md).
 8. `73290ac14` and `6d7e5b7e5` — diagnostic-value probe, popup cleanup, guarded rename-hint assertion, active-overload rendering checks, bounded-error fixture and guarded PSI reads. Native harness-only follow-ups; keep with the parity driver, separate from production lifecycle fixes. The receipts above distinguish scenario assertions, IDE-error checks and interrupted full runs.
 
@@ -716,17 +720,77 @@ cancellation after the first edited-root attempt, and an injected compiler failu
 checks release respectively 144, 74, 75 and 75 compilation/pool/AST objects. Combined validation
 passed: 1,219 server tests (three existing skips), 26 IntelliJ unit tests and root Spotless.
 The local-rename dependency association regression found by the first full run is fixed.
-L55 remains open until the actual teaching workspace is also verified with only the target and
-with multiple unsaved buffers open, including unchanged live diagnostics. The small independent
-roots establish a repeatable memory regression, not that broader acceptance gate.
+The original small independent roots establish a repeatable memory regression. The later
+teaching-workspace acceptance below also passes with only the target and with multiple unsaved
+buffers open, including unchanged live diagnostics.
 
 `XdkTeachingWorkspaceTest` now builds the actual native teaching workspace from the
 manual and shared catalog. It exercises successful and colliding property renames with only
 the unsaved target open and with four additional unsaved buffers, checks that proof queries do
 not replace live diagnostics or write files, and checks collection of query-owned compiler
 objects while the adapter stays alive. The current catalog has 25 roots: the original 24 plus
-7a.9's initially empty `Broken` module. Execution is pending the combined L55/L61/L62 validation;
-playbook runs are deliberately deferred until all three implementation checkpoints are written.
+7a.9's initially empty `Broken` module. All four teaching-workspace regressions pass in the
+combined run, including both buffer counts under **536,870,912 bytes**. Playbook runs were
+deferred until all three implementation checkpoints were committed.
+
+The real workspace additionally exposed two conservative refusal causes. A simple
+`delegates Api(target)` name was never validated as an ordinary `NameExpression`; the compiler
+stores its selected property in the existing composition contribution. Kotlin extraction now
+copies that identity for successful compilations. Separately, dynamic `super()` bindings in an
+unchanged independent module could veto a rename elsewhere. Proof facts now retain their source
+module grouping: both attempts still compile every root, while binding/dispatch comparison covers
+all edited modules and their transitive consumers. Dependency-closure repositories and unchanged
+captured inputs prove the independence of excluded roots. A regression requires refusal when
+such an unproven binding occurs in an affected consumer; no binding/dispatch check is dropped
+inside that closure. These are adapter fixes, with no new AST fields or embedding methods.
+
+## Teaching workspace, declarations and resource moves (L55/L61/L62)
+
+All three implementation checkpoints were committed before running playbooks. Validation then
+produced separate corrections for each scope; keep the following pairs together when extracting PRs:
+
+| Scope | Implementation | Validation corrections |
+|---|---|---|
+| L55 teaching-workspace rename/memory acceptance | `d3c5d194b` | `3de9ef126` — delegate binding, affected-consumer proof boundary and live-buffer/retention acceptance |
+| L61 declaration lookup | `1b72571d2` | `89e2bb461` — opt-in capabilities, compiler fixtures and installed-client request check |
+| L62 companion/module resource moves | `bd760df33` | `eda441174` — preserve package aliases, reject alias-triggered module rename, reverse moves and editor undo |
+
+L55 builds on `912abf3b8` and the graph-query/rename slices. L61 uses existing TypeInfo and detached
+semantic facts. L62 depends on the proven graph rename, source replay and resource-operation
+transport slices, including L55's proof-boundary correction. No new Java AST, embedding or
+error-listener API is added by this batch. Extracted PRs still require independent validation.
+The teaching fixture reads L62's new X103 companion data: move those shared catalog/workspace
+setup hunks into L55's fixture preparation when extracting, keeping the new resource-rename
+assertions with L62. These are review boundaries, not independent whole-commit cherry-picks.
+
+Validation on 2026-09-28:
+
+- Full server suite: **1,276 cases, 1,273 executed, three existing skips**, zero failures/errors.
+  The four teaching-workspace cases pass, including the one/five-buffer workloads at 512 MiB.
+- Full stdio suite: **67 executed**, zero failures/errors/skips. IntelliJ harness and VS Code
+  TypeScript compilation also pass. Gradle configuration cache was stored and reused.
+- The final module-alias guard and expanded constructor/companion fixture pass all **eight**
+  focused `XdkResourceRenameTest` cases after the combined suite; no cases skipped.
+- VS Code **X4/X102/X103/X104** pass in `run-x622U4`. X4 calls the declaration provider; X103
+  applies ordered text/file/directory edits and uses the real Undo command to restore them.
+- IntelliJ **START plus X4/X102/X103/X104** pass in `run-5042254046644785897`, with **zero IDE
+  errors** and JUnit failures/errors/skips. Total Gradle time was 46 seconds. Declaration is
+  asserted through the installed client's transport beside native navigation; X103 performs
+  native forward/reverse rename with the member open and checks the nested companion file.
+- Root Spotless and both changed Kotlin modules' ktlint checks pass. These are selected editor
+  receipts, not a new full 113-case playbook run.
+
+The first selected VS Code run (`run-ysmVRJ`) passed three cases but X103's query was cancelled
+by a late `workspace/didChangeWatchedFiles` notification from fixture creation. Queue/reply tracing
+identified that cancellation. The harness now retries only the unapplied query, then applies its
+result exactly once. It never retries an accepted edit or rename. The same source combination
+also passes the backend regression; no compiler cancellation guard was weakened.
+
+L55 and L61 acceptance are complete. L62's implemented extension and constructor/composition
+negative audit are validated, but its broader scope remains open: public-parameter caller closure,
+annotation/mixin/delegation families, qualified or explicit-host module renames and implicit
+package directory moves. Binary targets remain read-only; external consumers outside the captured
+workspace graph are not proven. L63 is the next new feature family after the remaining L62 decisions.
 
 ## Header slots and native editor parity (C28/L53/L54)
 
