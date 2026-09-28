@@ -329,6 +329,8 @@ val lspVersionProperties =
 val integrationTestSourceSet =
     sourceSets.create("integrationTest") {
         compileClasspath += sourceSets.main.get().output
+        // IDE-side probes compile against the same platform/plugin APIs as production.
+        compileClasspath += sourceSets.main.get().compileClasspath
         runtimeClasspath += sourceSets.main.get().output
     }
 

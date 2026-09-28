@@ -124,6 +124,7 @@ import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import org.xvm.lsp.util.ExecutionTrace
 import java.io.IOException
 import java.net.URI
 import java.nio.file.Path
@@ -236,8 +237,9 @@ class XtcLanguageServer(
         block: () -> R,
     ): CompletableFuture<R> {
         logger.info("{}: {}", method, logParams)
+        val trace = ExecutionTrace.current()
         return CompletableFuture.supplyAsync {
-            val (result, elapsed) = measureTimedValue { block() }
+            val (result, elapsed) = measureTimedValue { ExecutionTrace.within(trace, block) }
             logger.info("{}: {} in {}", method, logResult(result), elapsed)
             result
         }
