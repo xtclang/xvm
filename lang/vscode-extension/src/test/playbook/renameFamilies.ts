@@ -28,11 +28,27 @@ export function renameFamilyCases(): void {
                 assert.ok(provider);
                 const cancellation = new vscode.CancellationTokenSource();
                 try {
+                    if (data.files.some(file => file.file !== file.destination && file.source !== file.expected)) {
+                        const configuration = vscode.workspace.getConfiguration('files.refactoring');
+                        const previous = configuration.inspect<boolean>('autoSave')?.workspaceValue;
+                        try {
+                            await configuration.update('autoSave', false, vscode.ConfigurationTarget.Workspace);
+                            const refusal = await eventually(async () => {
+                                try {
+                                    const edit = await provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token);
+                                    assert.ok(!edit, 'An unsafe resource history must not be offered');
+                                    return undefined;
+                                } catch (error) { return error; }
+                            }, Boolean, 'Resource rename refuses disabled refactoring auto-save');
+                            assert.match(String(refusal), /requires files\.refactoring\.autoSave/);
+                            for (const file of data.files) assert.strictEqual(await contents(workspace, file.file), file.source);
+                        } finally { await configuration.update('autoSave', previous, vscode.ConfigurationTarget.Workspace); }
+                    }
                     const edit = await eventually(
                         async () => provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token),
                         Boolean, `${id} rename proof after fixture discovery`);
                     assert.ok(edit);
-                    assert.ok(await vscode.workspace.applyEdit(edit));
+                    assert.ok(await vscode.workspace.applyEdit(edit, { isRefactoring: true }));
                 } finally { cancellation.dispose(); }
                 for (const file of data.files) {
                     assert.strictEqual(await contents(workspace, file.destination), file.expected);
@@ -47,6 +63,7 @@ export function renameFamilyCases(): void {
                     assert.ok(!JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
                     assert.ok(await vscode.workspace.saveAll());
                 }
+                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand('undo');
                 await eventually(() => contents(workspace, data.file).catch(() => ''),
                     text => text === data.files.find(file => file.file === data.file)!.source, `${id} undo restores the request document`);
@@ -60,11 +77,14 @@ export function renameFamilyCases(): void {
                 if ('sourceModules' in data) {
                     assert.ok(JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
                     assert.ok(!JSON.stringify(compilerSourceModules()).includes('Renamed.example.org'));
+                    await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand('redo');
                     await eventually(async () => compilerSourceModules(),
                         graph => JSON.stringify(graph).includes('Renamed.example.org'), 'Redo restores the replacement graph');
-                    for (const file of data.files) assert.strictEqual(await contents(workspace, file.destination), file.expected);
+                    await eventually(async () => Promise.all(data.files.map(file => contents(workspace, file.destination).catch(() => ''))),
+                        texts => texts.every((text, index) => text === data.files[index].expected), 'Redo restores every source and resource');
                     await workspace.open(destination);
+                    await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand('undo');
                     await eventually(async () => compilerSourceModules(),
                         graph => JSON.stringify(graph).includes('Library.example.org'), 'Second undo restores the original graph');

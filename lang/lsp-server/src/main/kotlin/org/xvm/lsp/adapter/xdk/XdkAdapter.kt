@@ -1435,16 +1435,20 @@ class XdkAdapter internal constructor(
         return request.result
     }
 
-    private fun isProjectRename(uri: String, line: Int, column: Int): Boolean =
+    private fun isProjectRename(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Boolean =
         synchronized(lifecycle) {
-                module(uri)
-                    ?.document(uri)
-                    ?.semantics
-                    ?.let { model ->
-                        model.importAt(line, column) != null ||
-                            model.symbolAt(line, column)?.let { isProjectTarget(uri, model, it) } == true
-                    } == true && project.scope(uri) != null
-            }
+            module(uri)
+                ?.document(uri)
+                ?.semantics
+                ?.let { model ->
+                    model.importAt(line, column) != null ||
+                        model.symbolAt(line, column)?.let { isProjectTarget(uri, model, it) } == true
+                } == true && project.scope(uri) != null
+        }
 
     private fun isStale(request: RenameRequest): Boolean =
         renames[request.uri] !== request || request.result.isCancelled || isStale(request.compilation)
