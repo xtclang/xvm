@@ -706,6 +706,14 @@ L55 remains open until the actual teaching workspace is also verified with only 
 with multiple unsaved buffers open, including unchanged live diagnostics. The small independent
 roots establish a repeatable memory regression, not that broader acceptance gate.
 
+`XdkTeachingWorkspaceTest` now builds the actual native teaching workspace from the
+manual and shared catalog. It exercises successful and colliding property renames with only
+the unsaved target open and with four additional unsaved buffers, checks that proof queries do
+not replace live diagnostics or write files, and checks collection of query-owned compiler
+objects while the adapter stays alive. The current catalog has 25 roots: the original 24 plus
+7a.9's initially empty `Broken` module. Execution is pending the combined L55/L61/L62 validation;
+playbook runs are deliberately deferred until all three implementation checkpoints are written.
+
 ## Header slots and native editor parity (C28/L53/L54)
 
 The integrated batch is implemented on `lagergren/errs`; backend and VS Code validation pass.
