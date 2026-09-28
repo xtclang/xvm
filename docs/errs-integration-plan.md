@@ -33,7 +33,7 @@ extraction boundaries when their implementations establish what is required.
 in our `AdapterCapability` enum, plus compiler diagnostics and document/workspace synchronization.
 That enum is a project abstraction, not a list of every LSP feature. Completion, signatures,
 rename, actions, formatting, semantic tokens, hints and hierarchies still have explicit limits.
-Separate go-to-declaration is an inherited stub. Several other protocol features have no handler.
+Separate go-to-declaration is implemented with combined validation pending. Several other protocol features have no handler.
 The [adapter matrix and absent-feature inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 separate those states. Tree-sitter remains the shipped default; compiler mode remains opt-in.
 
@@ -356,7 +356,12 @@ VS Code receipts above.
 - [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
   capability and advertise it only when implemented. Define declaration versus selected-body
   behavior for interfaces/overrides, aliases, locals and indexed libraries; preserve multiple
-  source targets where required. The existing empty inherited implementation is not support.
+  source targets where required. The compiler adapter now has a plural declaration query and explicit advertised capability.
+  Local and imported aliases keep their own declarations; overriding methods/properties return
+  all inherited written contracts copied from TypeInfo. Definition and implementation retain
+  their existing behavior. Indexed sources remain read-only. Backend/protocol regressions and
+  shared X4 assertions are written; validation follows the L62 checkpoint. No AST API changes
+  or retained compiler objects are needed: declaration relations live in detached Kotlin facts.
 - [ ] **L62 — Rename scope and resource edits.** Extend beyond the current proven source
   types/static members/ordinary method and property families/aliases/locals. Audit constructor
   names, module/package/directory moves, companion directories, annotation/mixin/delegation

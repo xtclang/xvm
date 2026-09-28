@@ -895,9 +895,9 @@ class XtcTextDocumentService(
             { result -> if (result.left.isEmpty()) "no result" else "found" },
             uri = params.textDocument.uri,
         ) {
-            adapter.findDeclaration(params.textDocument.uri, params.position.line, params.position.character)?.let {
-                Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
-            } ?: Either.forLeft(emptyList())
+            Either.forLeft(
+                adapter.findDeclarations(params.textDocument.uri, params.position.line, params.position.character).map { it.toLsp() },
+            )
         }
 
     /**
