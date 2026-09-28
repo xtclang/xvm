@@ -4,6 +4,7 @@ import org.xvm.asm.ClassStructure
 import org.xvm.asm.Constant
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
+import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
@@ -33,6 +34,9 @@ internal sealed interface ProofIdentity {
         val method: ProofIdentity,
         val index: Int,
     ) : ProofIdentity
+
+    /** The single compiler-generated shorthand constructor, with no invented declaration span. */
+    data class PrimaryConstructor(val owner: ProofIdentity) : ProofIdentity
 
     /** A mixin super register is relative to its written method and each adopting host's chain. */
     data class Super(
@@ -151,6 +155,11 @@ internal fun captureRenameFacts(
                             }
                         }
                     directory?.let { ProofIdentity.Directory(File(it, constant.name).path) } ?: ProofIdentity.Unproven()
+                }
+
+                constant is MethodConstant && sourceHost &&
+                    (constant.component as? MethodStructure)?.let { it.isSynthetic && it.isShorthandConstructor } == true -> {
+                    ProofIdentity.PrimaryConstructor(identity(requireNotNull(host)))
                 }
 
                 constant is MethodConstant && module !in XdkLibraries.moduleNames && sourceHost && errors != null -> {
