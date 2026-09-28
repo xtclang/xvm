@@ -56,10 +56,16 @@ class CompilerDispatchRoutesTest {
         }
     }
 
-    private fun type(module: ClassStructure, name: String, errors: ErrorList): TypeInfo =
-        (module.getChild(name) as ClassStructure).formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+    private fun type(
+        module: ClassStructure,
+        name: String,
+        errors: ErrorList,
+    ): TypeInfo = (module.getChild(name) as ClassStructure).formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
 
-    private fun inspect(body: String, check: (ClassStructure, ErrorList) -> Unit) {
+    private fun inspect(
+        body: String,
+        check: (ClassStructure, ErrorList) -> Unit,
+    ) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation = EmbeddingSupport.instance().compileModule(Source("module Routes { $body }", "Routes.x"), null, errors)
