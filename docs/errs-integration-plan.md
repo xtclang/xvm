@@ -403,7 +403,14 @@ VS Code receipts above.
      disabling that policy refuses the proposal before changing sources or settings.
   L62 remains open for the conservative exclusions, additional composition routes, unknown
   external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
-- [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
+- [ ] **L63 — Semantic quick fixes and refactorings.** First implementation checkpoint adds
+  per-method implement/override actions at a class name for ordinary inherited source contracts,
+  including concrete substitutions of generic class parameters. Candidates come from TypeInfo;
+  every edit recompiles the graph, preserves existing bindings and permits exactly one selected
+  dispatch-chain addition. Generated bodies use `TODO()`. Conditional/multiple returns, method
+  type parameters, default parameters, complex type spelling, binary contracts, changed existing
+  call bindings and descendant-chain changes remain withheld. No failed-compilation TypeInfo is
+  inspected. Focused tests are written; validation is pending. Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
   code generation/doc comments and reference/test lenses are separate subfeatures. Use the
