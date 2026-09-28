@@ -60,6 +60,7 @@ internal object XdkRename {
         if (!identifier(name) || facts.models.any { it.status != SemanticModel.Status.COMPLETE }) return null
         val model = facts.models.singleOrNull { it.sourceName == source } ?: return null
         val target = model.symbolAt(line, column)?.takeIf { it.renameable || it.id in targets.orEmpty() } ?: return null
+        if (target.kind == SemanticModel.SymbolKind.MODULE && model.occurrenceAt(line, column)?.name != target.name) return null
         val selected = targets ?: setOf(target.id)
         if (name == target.name) return Plan(texts, emptyMap())
         val edits =
@@ -68,12 +69,18 @@ internal object XdkRename {
                     val sourceName = view.sourceName ?: return null
                     val text = texts[sourceName] ?: return null
                     sourceName to
-                        view.occurrences.filter { it.symbol in selected && it.name != "super" }.map { occurrence ->
-                            val start = offset(text, occurrence.range.start) ?: return null
-                            val end = offset(text, occurrence.range.end) ?: return null
-                            if (text.substring(start, end) != target.name) return null
-                            Edit(start, end, name)
-                        }
+                        view.occurrences
+                            .filter {
+                                it.symbol in selected && it.name != "super" &&
+                                    // Package aliases resolve to the imported module identity too;
+                                    // renaming that module must leave the caller's local alias intact.
+                                    (target.kind != SemanticModel.SymbolKind.MODULE || it.name == target.name)
+                            }.map { occurrence ->
+                                val start = offset(text, occurrence.range.start) ?: return null
+                                val end = offset(text, occurrence.range.end) ?: return null
+                                if (text.substring(start, end) != target.name) return null
+                                Edit(start, end, name)
+                            }
                 }.filterValues { it.isNotEmpty() }
         return Plan(texts, edits)
     }
