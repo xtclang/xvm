@@ -18,10 +18,12 @@ async function main(): Promise<void> {
     // root and the fixtures directory are two levels up.
     const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
     const args = process.argv.slice(2);
-    if (args.some(argument => argument !== '--playbook' && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook and optional --cases=ID[,ID]');
+    if (args.some(argument => argument !== '--playbook' && argument !== '--multi-root' && !argument.startsWith('--cases='))) {
+        throw new Error('Expected --playbook and optional --cases=ID[,ID] and --multi-root');
     }
     const playbook = args.includes('--playbook');
+    const multiRoot = args.includes('--multi-root');
+    if (multiRoot && !playbook) throw new Error('Use --multi-root with --playbook');
     const selections = args.filter(argument => argument.startsWith('--cases='));
     if (selections.length > 1 || (selections.length > 0 && !playbook)) {
         throw new Error('Use --cases=ID[,ID] once, with --playbook');
@@ -46,6 +48,13 @@ async function main(): Promise<void> {
         }, null, 2));
         console.log(`[compiler-playbook] Reports and isolated workspace: ${runDirectory}`);
         await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
+    }
+    const workspaceFile = runDirectory && multiRoot ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
+    if (workspaceFile) {
+        await fs.mkdir(path.join(runDirectory!, 'external'), { recursive: true });
+        await fs.writeFile(workspaceFile, JSON.stringify({
+            folders: [{ path: 'workspace' }, { path: 'external' }], settings: {}
+        }, null, 2) + '\n');
     }
 
     const manifest = JSON.parse(readFileSync(path.join(extensionDevelopmentPath, 'package.json'), 'utf8')) as {
@@ -85,7 +94,7 @@ async function main(): Promise<void> {
             // preempting our language registration; that way the test asserts
             // OUR behaviour, not the intersection of the user's installed
             // extensions and ours.
-            launchArgs: [fixturesPath, '--disable-extensions', ...(runDirectory ? [
+            launchArgs: [workspaceFile ?? fixturesPath, '--disable-extensions', ...(runDirectory ? [
                 `--user-data-dir=${profile}`, '--skip-welcome', '--skip-release-notes'
             ] : [])],
             extensionTestsEnv: runDirectory ? {
