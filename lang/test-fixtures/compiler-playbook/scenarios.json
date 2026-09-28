@@ -3631,6 +3631,81 @@
         "limitations": []
       }
     },
+    "X119": {
+      "title": "primary constructor property rename joins its header, label and closed consumer access",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "input",
+        "replacement": "value",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { class Box(Int input, Int count = 1) {} class Other(Int input) {} }",
+            "destination": "Library.x",
+            "expected": "module Library { class Box(Int value, Int count = 1) {} class Other(Int input) {} }"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library; lib.Box make() = new lib.Box(count = 2, input = 1); Int read(lib.Box box) = box.input; lib.Other other() = new lib.Other(input = 3); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Library; lib.Box make() = new lib.Box(count = 2, value = 1); Int read(lib.Box box) = box.value; lib.Other other() = new lib.Other(input = 3); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X120": {
+      "title": "lambda parameter rename follows nested captures and preserves sibling bindings",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "input",
+        "replacement": "value",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { Int run() { function Int(Int) f = (Int input) -> { function Int() nested = () -> input; return nested(); }; function Int(Int) g = (Int input) -> input; return f(1) + g(2); } }",
+            "destination": "Library.x",
+            "expected": "module Library { Int run() { function Int(Int) f = (Int value) -> { function Int() nested = () -> value; return nested(); }; function Int(Int) g = (Int input) -> input; return f(1) + g(2); } }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X121": {
+      "title": "escaped method parameter rename preserves positional calls and unrelated overloads",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "input",
+        "replacement": "value",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library { class Box { Int pick(Int input) = input; String pick(String input) = input; } }",
+            "destination": "Library.x",
+            "expected": "module Library { class Box { Int pick(Int value) = value; String pick(String input) = input; } }"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library; Int run(lib.Box box) { function Int(Int) f = &box.pick; return f(1) + box.pick(input = 2); } String text(lib.Box box) = box.pick(input = \"text\"); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Library; Int run(lib.Box box) { function Int(Int) f = &box.pick; return f(1) + box.pick(value = 2); } String text(lib.Box box) = box.pick(input = \"text\"); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

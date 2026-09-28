@@ -7,6 +7,7 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 data class RenameProposal(
     val edit: WorkspaceEdit,
     val graph: SourceGraphReplacement? = null,
+    val scope: RenameScope? = null,
 )
 
 data class SourceGraphReplacement(
@@ -22,3 +23,11 @@ data class SourceModuleConfiguration(
 ) {
     internal constructor(module: XdkSourceModule) : this(module.name, module.uri, module.dependencies.sorted())
 }
+
+/** Input graph receipt; does not claim knowledge of consumers outside these source roots. */
+data class RenameScope(
+    val boundary: String,
+    val modules: List<SourceModuleConfiguration>,
+    val sourceUris: List<String>,
+    val revision: String,
+)
