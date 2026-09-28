@@ -17,7 +17,7 @@ class XdkDeclarationTest {
         val text =
             "module Declarations { interface A { Int /*a*/read(); } interface B { Int /*b*/read(); } " +
                 "class Both implements A, B { @Override Int /*body*/read() = 1; } " +
-                "Int use(Both value) = value./*use*/read(); }"
+                "Int use(Both value) = value. /*use*/read(); }"
         withSource(text) { adapter, uri ->
             val at = text.indexOf("/*use*/") + "/*use*/".length
             assertThat(adapter.findDeclarations(uri, 0, at).map { it.startColumn })
@@ -32,7 +32,7 @@ class XdkDeclarationTest {
         val text =
             "module Declarations { interface Named { @RO String /*contract*/name; } " +
                 "class Stored implements Named { @Override String name = \"x\"; } " +
-                "String run(Stored stored) = stored./*use*/name; }"
+                "String run(Stored stored) = stored. /*use*/name; }"
         withSource(text) { adapter, uri ->
             assertThat(adapter.findDeclarations(uri, 0, offset(text, "use")).map { it.startColumn })
                 .containsExactly(offset(text, "contract"))
@@ -82,16 +82,32 @@ class XdkDeclarationTest {
         }
     }
 
-    private fun withSource(text: String, action: (XdkAdapter, String) -> Unit) {
-        val uri = directory.resolve("Declarations.x").toFile().canonicalFile.toURI().toString()
+    private fun withSource(
+        text: String,
+        action: (XdkAdapter, String) -> Unit,
+    ) {
+        val uri =
+            directory
+                .resolve("Declarations.x")
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             action(adapter, uri)
         }
     }
 
-    private fun offset(text: String, marker: String): Int = text.indexOf("/*$marker*/") + marker.length + 4
+    private fun offset(
+        text: String,
+        marker: String,
+    ): Int = text.indexOf("/*$marker*/") + marker.length + 4
 
     private fun written(location: Location): String =
-        Path.of(URI(location.uri)).toFile().readLines()[location.startLine].substring(location.startColumn, location.endColumn)
+        Path
+            .of(URI(location.uri))
+            .toFile()
+            .readLines()[location.startLine]
+            .substring(location.startColumn, location.endColumn)
 }
