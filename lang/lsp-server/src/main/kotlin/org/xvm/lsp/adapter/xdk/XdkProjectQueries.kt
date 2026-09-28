@@ -116,7 +116,14 @@ internal class XdkProjectQueries(
         line: Int,
         column: Int,
         name: String,
-    ): WorkspaceEdit? {
+    ): WorkspaceEdit? = renameProposal(uri, line, column, name)?.takeIf { it.sourceModules == null }?.edit
+
+    fun renameProposal(
+        uri: String,
+        line: Int,
+        column: Int,
+        name: String,
+    ): XdkRenameProposal? {
         val source = XdkSources.file(uri)?.path ?: return null
         val before = compile(texts) ?: return null
         val model = before.models.singleOrNull { it.sourceName == source } ?: return null
@@ -134,16 +141,16 @@ internal class XdkProjectQueries(
             val plan = XdkRename.Plan(texts, mapOf(source to replacements))
             val after = compile(plan.proposed) ?: return null
             if (!preservesBindings(before, after, plan) || !isCurrent()) return null
-            return WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true)
+            return XdkRenameProposal(WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true))
         }
         val selected = model.symbolAt(line, column) ?: return null
         val target = before.constants[selected.id] ?: return null
         val symbol =
             before.models.asSequence().flatMap { it.symbols.asSequence() }.firstOrNull {
                 before.constants[it.id] in members(target) && it.declaration != null && it.declarationSource in texts
-            } ?: return null
-        val declarationSource = symbol.declarationSource ?: return null
-        if (declarationSource !in texts || symbol.declaration == null) return null
+            } ?: selected.takeIf { target is ProofIdentity.Directory } ?: return null
+        val declarationSource = (target as? ProofIdentity.Directory)?.path ?: symbol.declarationSource ?: return null
+        if (target !is ProofIdentity.Directory && (declarationSource !in texts || symbol.declaration == null)) return null
         val targets =
             when {
                 target is ProofIdentity.Parameter -> {
@@ -175,17 +182,22 @@ internal class XdkProjectQueries(
         val base = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
         val file = File(declarationSource)
         val renamedModule = project.modules.values.singleOrNull { it.root == file && symbol.kind == SemanticModel.SymbolKind.MODULE }
-        // Explicit host configurations are not source documents and cannot be rewritten by this
-        // edit. Only discovery-owned, simple module identities can follow a root rename today.
+        val moduleName =
+            renamedModule?.let {
+                if (it.name.substringBefore('.') != symbol.name) return null
+                name + it.name.removePrefix(symbol.name)
+            }
         if (renamedModule != null && (
-                !discoverImports || renamedModule.name != symbol.name || name in project.modules ||
-                    name in XdkLibraries.moduleNames
+                (moduleName != renamedModule.name && moduleName in project.modules) || moduleName in XdkLibraries.moduleNames
             )
         ) {
             return null
         }
         val moves =
-            if (symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE) &&
+            if (target is ProofIdentity.Directory && name != symbol.name) {
+                XdkSourceMoves.directory(file, name, texts, sources.values.flatMap { it.inputs.directories }.toSet()) ?: return null
+            } else if (symbol.kind in
+                setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE) &&
                 name != symbol.name && file.nameWithoutExtension == symbol.name
             ) {
                 XdkSourceMoves.plan(file, name, texts, sources.values.flatMap { it.inputs.directories }.toSet()) ?: return null
@@ -199,9 +211,9 @@ internal class XdkProjectQueries(
                 XdkProject(
                     project.modules.values.map { module ->
                         XdkSourceModule(
-                            if (module === renamedModule) name else module.name,
+                            if (module === renamedModule) requireNotNull(moduleName) else module.name,
                             File(moves.paths[module.root.path] ?: module.root.path).toURI().toString(),
-                            module.dependencies.mapTo(linkedSetOf()) { if (it == renamedModule.name) name else it },
+                            module.dependencies.mapTo(linkedSetOf()) { if (it == renamedModule.name) requireNotNull(moduleName) else it },
                         )
                     },
                 )
@@ -209,14 +221,19 @@ internal class XdkProjectQueries(
         val plan = XdkRename.Plan(texts, base.edits, moves.paths)
         val after = compile(plan.proposed, moves = moves.paths, graph = graph) ?: return null
         if (!preservesBindings(before, after, plan) || !isCurrent()) return null
-        return WorkspaceEdit(
-            plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
-            versioned = true,
-            renames =
-                moves.resources.entries.associate { (from, to) ->
-                    // Directory URIs must have the same shape even before the destination exists.
-                    (uris[from] ?: File(from).toURI().toString().removeSuffix("/")) to File(to).toURI().toString().removeSuffix("/")
-                },
+        return XdkRenameProposal(
+            WorkspaceEdit(
+                plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
+                versioned = true,
+                renames =
+                    moves.resources.entries.associate { (from, to) ->
+                        // Directory URIs must have the same shape even before the destination exists.
+                        (uris[from] ?: File(from).toURI().toString().removeSuffix("/")) to File(to).toURI().toString().removeSuffix("/")
+                    },
+            ),
+            graph.modules.values
+                .toList()
+                .takeIf { renamedModule != null && !discoverImports && !project.sameConfiguration(graph) },
         )
     }
 

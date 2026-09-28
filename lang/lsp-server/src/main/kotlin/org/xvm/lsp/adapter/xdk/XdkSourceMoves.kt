@@ -9,6 +9,25 @@ internal class XdkSourceMoves(
     val resources: Map<String, String> = emptyMap(),
 ) {
     companion object {
+        fun directory(
+            source: File,
+            name: String,
+            texts: Map<String, String>,
+            directories: Set<File>,
+        ): XdkSourceMoves? {
+            if (source !in directories || !source.isDirectory) return null
+            val destination = File(source.parentFile, name)
+            if (destination.exists() || destination in directories || File(source.parentFile, "$name.x").exists()) return null
+            if (source.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }) return null
+            val prefix = source.toPath()
+            val entries = texts.keys.map(::File) + directories
+            val paths =
+                entries.filter { it.toPath().startsWith(prefix) }.associate {
+                    it.path to destination.toPath().resolve(prefix.relativize(it.toPath())).toString()
+                }
+            return XdkSourceMoves(paths, mapOf(source.path to destination.path))
+        }
+
         fun plan(
             source: File,
             name: String,
