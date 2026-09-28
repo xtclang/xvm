@@ -29,9 +29,11 @@ internal fun compilerPropertyRelations(
     nodes: List<AstNode>,
     errors: ErrorListener,
 ): CompilerPropertyRelations {
-    val primaryProperties = nodes.filterIsInstance<Parameter>()
-        .filter { it.parent is TypeCompositionStatement }
-        .mapNotNull { it.resolvedTarget as? PropertyConstant }
+    val primaryProperties =
+        nodes
+            .filterIsInstance<Parameter>()
+            .filter { it.parent is TypeCompositionStatement }
+            .mapNotNull { it.resolvedTarget as? PropertyConstant }
     val declarations =
         nodes
             .filterIsInstance<PropertyDeclarationStatement>()
