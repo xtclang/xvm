@@ -1747,6 +1747,50 @@ accepted edits before continuing. These are bounded semantic edits, not general 
 | X57 | Start a rename and edit another file in the same module, close/reopen the target, or change its version before applying. | Pending work is canceled or rejected as changed; an edit for an old open-buffer version is not applied. Fast machines may need the controlled server regression below to exercise this race. |
 | X58 | Introduce a syntax error, try rename, fix it and retry. Try an invalid identifier or an existing local name. | Broken/unsupported/conflicting requests give no edits or temporary diagnostics. A valid rename works again after correction. |
 
+#### Additional L62 rename checks
+
+These new cases are backend regressions and manual checks, not new numbered cases in either
+automated editor harness yet. Use a scratch workspace with automatic source discovery. Save
+`Library.x` and `Consumer.x`, then wait for clean diagnostics:
+
+```xtc
+module Library {
+    class Box {
+        construct(Int input, Int count = 1) { total = input + count; }
+        Int total;
+        Int pick(Int input, Int count = 1) = input + count;
+    }
+}
+```
+
+```xtc
+module Consumer {
+    package lib import Library;
+    lib.Box make() = new lib.Box(count = 2, input = 1);
+    Int use(lib.Box box) = box.pick(count = 2, input = 1);
+}
+```
+
+- Rename the `pick` parameter `input` to `value`. Its declaration, body and named caller change;
+  the constructor parameter stays unchanged. Undo, close Consumer.x, and repeat to cover closed callers.
+- Rename `input` at the constructor's named call. Its constructor declaration/body change, while
+  the `pick` parameter stays unchanged. Undo. Rename to the already-used `count`: no edit is offered.
+- Change the module declaration/import to `Library.example.org`. Rename the module's `Library`
+  token to `Renamed`: the domain and local alias `lib` stay unchanged, and the root file moves.
+- In a separate `App.x`, use `module App { void accept(tools.deep.Box value) {} }` and create
+  `App/tools/deep/Box.x` containing `class Box {}`. Rename `tools` to `helpers`: only the package
+  directory moves, uses change, and definition reaches the moved Box.x. Undo restores the tree.
+- For composition variants, use the small fixtures in `XdkResourceRenameTest`: rename `read`
+  through an interface delegate, a mixin override (including `super()`), and an `@Lazy` property.
+  All written contract names/uses change and the resulting module compiles. Binary contracts and
+  method-value escapes remain refused.
+
+Explicit source settings need an additional host operation. `XdkAdapter.renameProposalAsync`
+returns source edits and a replacement source graph without installing either. A host that owns
+those settings must persist the graph with accepting the edit, then call `replaceSourceModules`.
+Standard editor rename still refuses these graph changes; automatic persistence is not yet
+implemented in either IDE.
+
 ### I. Configured-graph references and method rename
 
 Save these three files in one scratch folder. Register `Contracts` at `Contracts.x`, `Uses` at
@@ -2235,9 +2279,12 @@ Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
 - Persistent indexing and measured incremental work across larger module graphs
 - Binary source attachment, conditional-mixin hierarchy and broader implementation targets
-- Wider member/workspace rename: constructor/public-parameter contracts, composition families,
-  qualified or explicitly configured module moves and implicit package directories; consumers
-  outside the graph remain unknown
+- Wider member/workspace rename: primary-constructor property parameters, lambda parameters,
+  method-value escapes, unsupported composition routes and client persistence for explicitly
+  configured module moves. The L62 backend extension covers public/explicit-constructor parameters,
+  supported composition families, qualified modules and implicit package directories; its manual
+  checks above have not yet been added to both automated editor harnesses. Consumers outside the
+  graph remain unknown
 - Diagnostic-driven quick fixes and refactorings
 
 L61 declaration acceptance: X4 now also requests Go to Declaration for the shadowed local and
