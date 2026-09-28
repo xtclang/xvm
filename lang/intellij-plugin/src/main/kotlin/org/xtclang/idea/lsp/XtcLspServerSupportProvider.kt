@@ -11,16 +11,16 @@ import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
-import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
+import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
-import java.nio.file.Path
 import java.net.URI
+import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -75,14 +75,15 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
             override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
                 object : DefaultLauncherBuilder<S>(this) {
-                    private val documents = DocumentStartupMessages { uri ->
-                        ReadAction.computeBlocking<DocumentStartupMessages.Snapshot?, RuntimeException> {
-                            if (project.isDisposed || serverWrapper.isDisposed) return@computeBlocking null
-                            val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return@computeBlocking null
-                            val document = opened.synchronizer?.document ?: return@computeBlocking null
-                            DocumentStartupMessages.Snapshot(opened, document.modificationStamp, document.text)
+                    private val documents =
+                        DocumentStartupMessages { uri ->
+                            ReadAction.computeBlocking<DocumentStartupMessages.Snapshot?, RuntimeException> {
+                                if (project.isDisposed || serverWrapper.isDisposed) return@computeBlocking null
+                                val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return@computeBlocking null
+                                val document = opened.synchronizer?.document ?: return@computeBlocking null
+                                DocumentStartupMessages.Snapshot(opened, document.modificationStamp, document.text)
+                            }
                         }
-                    }
 
                     override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
                         val wrapped = super.wrapMessageConsumer(consumer)
