@@ -111,9 +111,18 @@ internal object XdkPresentation {
                     InlayHint(argument.range.start.toPosition(), "$name:", InlayHint.InlayHintKind.PARAMETER, paddingRight = true)
                 }
             }
+        val returns = model.lambdas.map { lambda ->
+            val types = lambda.signature.returns.mapNotNull { model.type(it)?.displayName }
+            val label = when (types.size) {
+                0 -> "void"
+                1 -> types.single()
+                else -> types.joinToString(", ", "(", ")")
+            }
+            InlayHint(lambda.arrow.start.toPosition(), ": $label", InlayHint.InlayHintKind.TYPE, paddingRight = true)
+        }
         val start = SemanticModel.Position(range.start.line, range.start.column)
         val end = SemanticModel.Position(range.end.line, range.end.column)
-        return (types + parameters)
+        return (types + parameters + returns)
             .filter { SemanticModel.Position(it.position.line, it.position.column).let { at -> at >= start && at < end } }
             .distinct()
             .sortedWith(compareBy({ it.position.line }, { it.position.column }))
