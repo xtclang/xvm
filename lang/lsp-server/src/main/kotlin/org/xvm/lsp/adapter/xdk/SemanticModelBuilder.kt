@@ -507,6 +507,9 @@ private class SemanticModelBuilder(
         method: MethodStructure,
         index: Int,
     ): SymbolId? {
+        method.primaryProperty(index)?.let { property ->
+            return symbol(property, property.name, SymbolKind.PROPERTY)
+        }
         val value = method.params.getOrNull(index + method.typeParamCount) ?: return null
         return parameters.getOrPut(method.identityConstant to index) {
             val id = SymbolId(this.id, symbols.size)
@@ -527,9 +530,9 @@ private class SemanticModelBuilder(
             val at = location(node.source, label.startPosition(), label.endPosition())
             occurrences[at] = Occurrence(at.range, label.name(), Role.REFERENCE, parameter, symbols[parameter]?.type)
         }
-        // Written constructors have source identities that can be compared across proof attempts.
-        // Implicit constructors remain absent from source call hierarchy, as before.
-        if (symbols[target]?.declaration == null) return
+        // A synthetic shorthand constructor has a compiler-proven owner identity for rename
+        // proof, but no fabricated written declaration or source call-hierarchy target.
+        if (symbols[target]?.declaration == null && !(method.isSynthetic && method.isShorthandConstructor)) return
         val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
         val at = location(node.source, node.startPosition, node.endPosition)
         calls[at] =
