@@ -5,6 +5,22 @@ the reproduced Tree-sitter worker leak after EOF, LSP4IJ stop-before-start race 
 logging-only exit handler. Fixes are isolated in `8e976f868` and `eefc1b8e6`; child-process tests
 pass across all three backends. Installed IDE close/restart acceptance remains separate.
 
+L56–L59 combined validation exposed three additional boundaries. Operator `testFit` can return
+an optimistic type before validating the missing operand, so argument proposals also validate
+each completed expression. Constructor proposals must still follow normal validation order:
+class result inference happens afterward and cannot retroactively constrain earlier arguments.
+A synthetic `NamedTypeExpression` uses its type's display string for
+printing; feeding that string back through name lookup loses lexical qualification. Written-bound
+queries now keep real constraint syntax on disposable clones and preserve the compiler restriction
+that a formal qualifier cannot expose an ordinary typedef/static nested class. Finally, a resolved
+formal identity can still have a cyclic constraint: snapshot nullability recursively followed
+`T extends T` and overflowed. The Kotlin copier rejects cycles along constraint edges before
+querying nullability, while allowing recursion through concrete generic arguments (`T extends Chain<T>`).
+This is a snapshot guard, not evidence that the normal compiler's cyclic-bound handling is complete.
+Final combined validation passes: 1,463 executed JVM tests and selected VS Code X42/X97/X108.
+Seven existing tests are disabled. Native startup typing and the complete IntelliJ checkpoint
+remain separate acceptance work; exact counts and commits are in the integration plan.
+
 Current follow-up tasks are centralized in the
 [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 L55/L56 track the large-graph proof and startup issues below; L57–L60 track semantic breadth and
