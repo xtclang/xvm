@@ -69,6 +69,20 @@ class DocumentStartupMessagesTest {
     }
 
     @Test
+    fun `late close preserves changes queued for the reopened incarnation`() {
+        open("initial text")
+        buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 2, "module Reopened { Int value=1; }")
+        change(2, buffers.getValue(uri).text)
+        outgoing.consume(notification("textDocument/didClose", DidCloseTextDocumentParams(TextDocumentIdentifier(uri))))
+        open("reopened snapshot before edit")
+        val params = (sent.last() as NotificationMessage).params as DidOpenTextDocumentParams
+        assertThat(params.textDocument.version).isEqualTo(2)
+        assertThat(params.textDocument.text).isEqualTo(buffers.getValue(uri).text)
+        assertThat(sent.map { (it as NotificationMessage).method })
+            .containsExactly("textDocument/didOpen", "textDocument/didClose", "textDocument/didOpen")
+    }
+
+    @Test
     fun `fold response for a shortened document is rejected before the editor sees old lines`() {
         requestFolds()
         buffers[uri] = buffers.getValue(uri).copy(stamp = 2, text = "")
@@ -95,24 +109,42 @@ class DocumentStartupMessagesTest {
         assertThat(sent.last()).isSameAs(trace)
     }
 
-    private fun requestFolds() = outgoing.consume(RequestMessage().apply {
-        id = "fold"
-        method = "textDocument/foldingRange"
-        params = FoldingRangeRequestParams(TextDocumentIdentifier(uri))
-    })
+    private fun requestFolds() =
+        outgoing.consume(
+            RequestMessage().apply {
+                id = "fold"
+                method = "textDocument/foldingRange"
+                params = FoldingRangeRequestParams(TextDocumentIdentifier(uri))
+            },
+        )
 
-    private fun respondFolds(): ResponseMessage = ResponseMessage().apply {
-        id = "fold"
-        result = listOf(FoldingRange(0, 10))
-    }.also(incoming::consume)
+    private fun respondFolds(): ResponseMessage =
+        ResponseMessage()
+            .apply {
+                id = "fold"
+                result = listOf(FoldingRange(0, 10))
+            }.also(incoming::consume)
 
-    private fun open(text: String) = outgoing.consume(notification("textDocument/didOpen", DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text))))
+    private fun open(text: String) =
+        outgoing.consume(notification("textDocument/didOpen", DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text))))
 
-    private fun change(version: Int, text: String) = outgoing.consume(notification("textDocument/didChange", DidChangeTextDocumentParams(
-        VersionedTextDocumentIdentifier(uri, version), listOf(TextDocumentContentChangeEvent(text)),
-    )))
+    private fun change(
+        version: Int,
+        text: String,
+    ) = outgoing.consume(
+        notification(
+            "textDocument/didChange",
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(uri, version),
+                listOf(TextDocumentContentChangeEvent(text)),
+            ),
+        ),
+    )
 
-    private fun notification(method: String, params: Any) = NotificationMessage().apply {
+    private fun notification(
+        method: String,
+        params: Any,
+    ) = NotificationMessage().apply {
         this.method = method
         this.params = params
     }
