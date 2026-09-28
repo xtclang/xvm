@@ -234,7 +234,9 @@ internal class XdkProjectQueries(
             graph.modules.values
                 .toList()
                 .takeIf { renamedModule != null && !discoverImports && !project.sameConfiguration(graph) },
-            project.modules.values.toList().takeIf { renamedModule != null && !discoverImports && !project.sameConfiguration(graph) },
+            project.modules.values
+                .toList()
+                .takeIf { renamedModule != null && !discoverImports && !project.sameConfiguration(graph) },
         )
     }
 
