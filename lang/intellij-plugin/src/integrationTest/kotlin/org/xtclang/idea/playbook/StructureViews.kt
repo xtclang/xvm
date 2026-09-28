@@ -12,7 +12,6 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWindow
 import com.intellij.driver.sdk.ui.ui
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 /** Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent declarations. */
@@ -24,7 +23,7 @@ fun Driver.structure(
     val visible = withContext(OnDispatcher.EDT) { getToolWindow("Structure").isVisible() }
     if (!visible) invokeAction("ActivateStructureToolWindow", component = editor.component)
     val tree = ui.structureToolWindow().waitAndGetStructureTree()
-    waitFor("Structure contains $include and excludes $exclude", 45.seconds) {
+    awaitUi("Structure contains $include and excludes $exclude", 45.seconds) {
         tree.expandAll()
         val rows = tree.collectExpandedPaths().map { it.path.last() }
 
@@ -63,9 +62,9 @@ fun Driver.selectionParents(
             cast(editor.editor.getSelectionModel(), SelectionOffsets::class).let { it.getSelectionStart()..it.getSelectionEnd() }
         }
     invokeAction("EditorSelectWord", component = editor.component)
-    waitFor("native selection action receives compiler selection parents", 45.seconds) {
+    awaitUi("native selection action receives compiler selection parents", 45.seconds) {
         val future = support.getValidLSPFuture()
-        if (future == null || future == previous || !future.isDone() || future.isCompletedExceptionally()) return@waitFor false
+        if (future == null || future == previous || !future.isDone() || future.isCompletedExceptionally()) return@awaitUi false
 
         fun offsets(range: SourceRange): IntRange =
             withContext(OnDispatcher.EDT) {
@@ -81,10 +80,10 @@ fun Driver.selectionParents(
             } == true
         }
     }
-    waitFor("first structural selection contains the cursor", 15.seconds) { selection().let { at in it && it.first < it.last } }
+    awaitUi("first structural selection contains the cursor", 15.seconds) { selection().let { at in it && it.first < it.last } }
     val first = selection()
     invokeAction("EditorSelectWord", component = editor.component)
-    waitFor("parent structural selection contains the first selection", 15.seconds) {
+    awaitUi("parent structural selection contains the first selection", 15.seconds) {
         selection().let { it.first <= first.first && it.last >= first.last && it != first }
     }
     check(editor.text == original)

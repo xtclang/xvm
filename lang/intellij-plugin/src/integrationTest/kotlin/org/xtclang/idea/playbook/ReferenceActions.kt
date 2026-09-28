@@ -10,7 +10,6 @@ import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 /** Native Find Usages and Highlight Usages must preserve the identity selected in the editor. */
@@ -38,7 +37,7 @@ fun Driver.referencesAndHighlights(
     val views = service<NativeUsageViews>(singleProject())
     val previous = withContext(OnDispatcher.EDT) { views.getSelectedUsageView() }
     invokeAction("FindUsages", component = editor.component)
-    waitFor("native references contain this use and exclude its shadowed namesake", 45.seconds) {
+    awaitUi("native references contain this use and exclude its shadowed namesake", 45.seconds) {
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
             if (view == null || view == previous || view.isSearchInProgress()) return@withContext false
@@ -48,9 +47,9 @@ fun Driver.referencesAndHighlights(
     }
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("HighlightUsagesInFile", component = editor.component)
-    waitFor("native highlights contain this use and exclude its shadowed namesake", 45.seconds) {
+    awaitUi("native highlights contain this use and exclude its shadowed namesake", 45.seconds) {
         val future = support.getHighlightSupport().getValidLSPFuture()
-        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@waitFor false
+        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@awaitUi false
         val highlights = future.get()
         highlights.any { contains(it.getRange(), at) } && highlights.none { contains(it.getRange(), excluded) }
     }

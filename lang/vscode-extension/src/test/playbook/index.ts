@@ -30,15 +30,36 @@ export async function run(): Promise<void> {
     mocha.grep(new RegExp(`(?:^| )(?:${ids}):`));
     mocha.addFile(path.join(__dirname, 'playbook.test.js'));
     const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
+    const progress = vscode.window.createStatusBarItem('xtc.playbook.progress', vscode.StatusBarAlignment.Left, 10_000);
+    progress.name = 'XTC playbook progress';
+    const showProgress = (current: string, title: string) => {
+        const completed = new Set(results.filter(result => selected.some(id => id === result.id)).map(result => result.id)).size;
+        const failed = results.filter(result => result.status === 'failed').length;
+        const summary = `XTC playbook: ${completed}/${selected.length} completed, ${selected.length - completed} left | ${current}` +
+            (failed ? ` | ${failed} failed` : '');
+        progress.text = `$(beaker) ${summary}`;
+        progress.tooltip = title;
+        progress.accessibilityInformation = { label: `${summary}. ${title}` };
+        progress.show();
+    };
+    showProgress('starting', 'Starting the compiler playbook');
     const failures = await new Promise<number>(resolve => {
         const runner = mocha.run(resolve);
-        runner.on('pass', test => results.push({ id: test.title.split(':')[0], title: test.title, status: 'passed', durationMs: test.duration }));
+        runner.on('test', test => showProgress(`${test.title.split(':')[0]} running`, test.title));
+        runner.on('pass', test => {
+            results.push({ id: test.title.split(':')[0], title: test.title, status: 'passed', durationMs: test.duration });
+            showProgress(`${test.title.split(':')[0]} passed`, test.title);
+        });
         runner.on('fail', (test, error) => {
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'failed', error: error.stack });
+            showProgress(`${test.title.split(':')[0]} failed`, test.title);
             console.error(`${test.title}\n${error.stack}`);
         });
-        runner.on('pending', test => results.push({ id: test.title.split(':')[0], title: test.title, status: 'not-run' }));
-    });
+        runner.on('pending', test => {
+            results.push({ id: test.title.split(':')[0], title: test.title, status: 'not-run' });
+            showProgress(`${test.title.split(':')[0]} skipped`, test.title);
+        });
+    }).finally(() => progress.dispose());
     const report = {
         commit: process.env.XTC_PLAYBOOK_COMMIT, dirtyPaths: process.env.XTC_PLAYBOOK_DIRTY,
         vscode: vscode.version, finished: new Date().toISOString(), failures,
