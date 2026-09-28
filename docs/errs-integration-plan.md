@@ -933,7 +933,11 @@ not claim a test receipt until the batch runs.
   without inventing a declaration or adding AST state. Six regressions cover all three entry
   sites, closed consumers, generics/defaults and collisions/capture. Explicit constructor
   parameters retain their separate written contracts. Execution is pending.
-- [ ] **3 — Lambda parameters:** retain stable written bindings and prove shadow/capture behavior.
+- [x] **3 — Lambda parameters:** reuse original written register/source bindings, including nested
+  capture normalization. Route lambda parameters through local source replay rather than inventing
+  generated method slots. Seven regressions cover typed/inferred parameters, both entry sites,
+  nested capture, sibling shadowing, return/pass escapes, name capture and standalone compilation.
+  No AST state/API change; execution is pending.
 - [ ] **4 — Escaped method values/composition:** audit actual callable-label semantics and routes,
   enabling only cases justified by compiler bindings and full before/after proof.
 - [ ] **5 — External consumers:** make the host's graph boundary explicit and exercise external roots.
