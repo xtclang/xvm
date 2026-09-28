@@ -375,31 +375,30 @@ VS Code receipts above.
   names, module/package/directory moves, companion directories, annotation/mixin/delegation
   dispatch and public-parameter contracts. Keep binary declarations read-only and reject
   unknown external consumers. Add collision, changed binding, changed dispatch and undo tests.
-  The implementation checkpoint adds declared package/type companion-directory moves and
-  simple discovery-owned module renames, with closed import updates and a proposed graph proof.
+  The first checkpoint added declared package/type companion-directory moves and simple
+  discovery-owned module renames, with closed import updates and a proposed graph proof.
   Text edits precede minimal file/directory operations; destinations are never overwritten.
-  Explicit host module configuration, implicit package directories without written declarations,
-  qualified module names, constructor keywords and public parameter contracts remain refused.
-  Existing binding/dispatch proof rules continue to reject unsupported composition families.
   X103 now exercises a nested companion file in both clients and VS Code undo; backend tests
   exercise reverse renames, constructor type uses and resource capability negotiation.
-  Combined backend and selected editor validation pass. L62 remains open for public-parameter
-  caller closure, composition-family proof, qualified/explicit module moves and implicit package
-  directories; these exclusions are not counted as completed functionality.
-  Implementation batch in progress (tests deliberately deferred until all three checkpoints):
-  1. Public parameter slots, override callers and explicit constructor labels: code and regression
-     fixtures added; validation pending. Escaped method values, binary contracts, primary-constructor
+  That initial backend/editor validation passed. The following extension was implemented in three
+  separate commits before a combined backend run (76 LSP tests and 10 Java API tests passed, none
+  skipped). New native/shared-playbook coverage remains pending:
+  1. Public parameter slots, override callers and explicit constructor labels: backend validated.
+     Escaped method values, binary contracts, primary-constructor
      property parameters and lambda parameters retain conservative refusal.
-  2. Annotation/mixin/delegation families: code and regression fixtures added; validation pending.
+  2. Supported annotation/mixin/delegation families: backend validated.
      Compiler dispatch provenance follows existing into/capped/delegate metadata, including the
      declared receiver property, without generating forwarding methods. Unknown routes and binary
-     contracts still refuse edits. No new AST or Java API changes are required for this checkpoint.
-  3. Qualified modules and implicit package-directory moves: code and regression fixtures added;
-     validation pending. Domain suffixes and local import aliases are preserved. Explicit module
+     contracts still refuse edits. The existing `MethodBody.getIntoMethodInfo()` accessor is now
+     public for worker inspection; no AST state or API is added.
+  3. Qualified modules and implicit package-directory moves: backend validated.
+     Domain suffixes and local import aliases are preserved. Explicit module
      roots have a host API proposal containing edits and the replacement source graph. Neither
      proposal creation nor a rejected standard rename mutates configuration. **Client follow-up:**
      persist the replacement graph together with accepting edits in both IDEs; standard LSP rename
      still refuses explicit graph changes because client settings have no portable editable URI.
+  L62 remains open for these client transactions, remaining conservative exclusions, unknown
+  external consumers and shared editor acceptance. The `construct` keyword is never renamed.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
@@ -791,6 +790,46 @@ captured inputs prove the independence of excluded roots. A regression requires 
 such an unproven binding occurs in an affected consumer; no binding/dispatch check is dropped
 inside that closure. These are adapter fixes, with no new AST fields or embedding methods.
 
+## L62 parameter, composition and resource extension (2026-09-28)
+
+All implementation stays on `lagergren/errs`. The three implementation checkpoints were committed
+before running tests; validation corrections are recorded separately. This is an integrated-branch
+receipt, not evidence that any extracted PR passes independently.
+
+| Review unit | Implementation checkpoint | Required validation corrections from `98bfc2f71` |
+|---|---|---|
+| Public/override parameter slots and explicit constructor labels | `ddccde961` | Partial signatures omit unproven owner slots; constructor calls preserve caller ownership; call hierarchy accepts absent callers |
+| Source composition families and generated-method provenance | `aaadbc134` | Public passive `MethodBody.getIntoMethodInfo`; contextual mixin-super provenance; preserve bundled binary identities; Kotlin API/inspection corrections |
+| Qualified module names, implicit package directories and explicit graph proposals | `4aee81873` | Only source-owned packages acquire directory identities; binary-only packages retain artifact identities |
+| Unified compilation, persistent execution and future DAP plan | `714a219e5` | Documentation only; R1–R8 stay separate from compiler delivery |
+
+Extraction must group by these review units: `98bfc2f71` contains shared-file corrections and is
+not a separate user feature. Constructor collector/publication changes belong with the embedding
+provenance API, including compatibility and identity-snapshot tests. The Kotlin consumers/tests
+depend on that final API. Composition uses the existing compiler TypeInfo objects only on the worker;
+the getter visibility change belongs with its consumer and documented ownership. Resource proposals
+depend on the complete graph replay and versioned edit checks. No separate semantic library or
+runtime initialization is introduced.
+
+Validation: `BindingIdentitySnapshotTest` and `EmbeddingApiCompatibilityTest` passed **10 tests**;
+the nine selected LSP classes passed **76 tests**, with zero failures/errors/skips. Those classes
+cover parameter/resource/project/local rename, server resource capability checks, rename requirements,
+semantic snapshots (including partial source), call hierarchy, and completion/signatures. Test tasks
+were forced to execute with `--rerun` and build caching disabled; the final run reused Gradle's
+configuration cache. `spotlessCheck` and LSP ktlint checks passed. No new native editor run was made.
+
+Remaining acceptance and scope:
+
+- [ ] Move the added manual rename cases into shared scenario data and both editor drivers, then
+  run selected cases with undo, closed consumers and resource edits. Existing X103 is not evidence
+  for every new variant.
+- [ ] Define/persist explicit source-graph replacement in each IDE before offering those module
+  renames through standard LSP. The host proposal API is implemented and tested, but a proposal
+  does not itself save settings or apply an edit.
+- [ ] Audit primary-constructor property parameters, lambda parameters, escaped method values,
+  unsupported composition routes and consumers outside the configured graph. Current refusals
+  are deliberate; they are not counted as completed rename support.
+
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 
 All three implementation checkpoints were committed before running playbooks. Validation then
@@ -833,11 +872,12 @@ identified that cancellation. The harness now retries only the unapplied query, 
 result exactly once. It never retries an accepted edit or rename. The same source combination
 also passes the backend regression; no compiler cancellation guard was weakened.
 
-L55 and L61 acceptance are complete. L62's implemented extension and constructor/composition
-negative audit are validated, but its broader scope remains open: public-parameter caller closure,
+L55 and L61 acceptance are complete. At this earlier checkpoint, L62's resource extension and
+constructor/composition negative audit were validated, but the remaining scope included public-parameter caller closure,
 annotation/mixin/delegation families, qualified or explicit-host module renames and implicit
 package directory moves. Binary targets remain read-only; external consumers outside the captured
-workspace graph are not proven. L63 is the next new feature family after the remaining L62 decisions.
+workspace graph were not proven. The subsequent L62 extension above records the implementation,
+validation and remaining client/scope work. L63 remains the next new feature family.
 
 ## Header slots and native editor parity (C28/L53/L54)
 
@@ -2765,9 +2805,11 @@ checkpoint `570a7e870`; no extracted PR is claimed independently green.
    through statically concrete receiver types. Cycles and paths beyond 64 links return no target.
    Interface-typed receivers remain unresolved. Queries never call forwarding-method generation.
 2. **Call provenance:** `InvocationBinding` collects separate immutable function-call facts;
-   Compilation/PartialAnalysis expose them while retaining old constructors. Both records now have
-   six components: Java record patterns must add `functionBindings`, as demonstrated by
+   Compilation/PartialAnalysis expose them while retaining old constructors. At that checkpoint
+   both records had six components: Java record patterns added `functionBindings`, as demonstrated by
    `EmbeddingApiCompatibilityTest`; preserving constructors does not preserve pattern arity.
+   L62 subsequently adds `constructorBindings` as Compilation's seventh component; PartialAnalysis
+   retains its existing shape.
    `MethodInfo` exposes
    the written super body using the existing compiler algorithm. Kotlin copies selected super
    calls for navigation/hierarchy/rename comparison and function signatures for help. The `super`
@@ -3509,7 +3551,7 @@ against each extracted slice's own prerequisites; the integrated result cannot e
 | `boolean log(ErrorInfo)` to `void log(ErrorInfo)` | Deliberate source/binary break. Recompile listener implementations and clients; report first, then ask `isAbortDesired()`. No return-type-only Java compatibility overload is possible |
 | Null/ambient listeners | Supply an explicit non-null listener at reporting boundaries. Use `ErrorListener.collecting(...)` or `ErrorList` for stateful host reporting; derived `silence(PROBE)` for intentional speculation. Removed ambient setters/lookups have no compatibility shim |
 | Runtime pool name | Deprecated `getConstantPool()` still delegates to `ensureRuntimePool()` and retains its runtime-initialization behavior. Compiler clients use `Compilation.pool()` |
-| `Compilation` record | Three-, four- and five-argument constructors remain. Current six-component pattern includes module, file, ast, sourceTrees, callBindings and functionBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
+| `Compilation` record | Three-, four-, five- and six-argument constructors remain. Current seven-component pattern includes module, file, ast, sourceTrees, callBindings, functionBindings and constructorBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
 | `PartialAnalysis` record | Three-, four- and five-argument constructors remain; current six-component pattern adds callBindings, cursorBindings and functionBindings to sourceTrees, sites, pool |
 | `CursorBinding` record | Three-, six-, seven- and eight-argument constructors remain; the nine-component pattern adds argumentProperties after argumentValues. Function candidates expose types/positional mappings; argumentValues contains accepted locals/parameters and argumentProperties contains accepted property/constant identities and validated types. |
 | `InvocationBinding.Argument` record | Three- and four-argument constructors remain. Current five-component pattern includes `label`; positional and legacy construction has a null label. A legacy `named=true` is not proof that a label span was supplied |
