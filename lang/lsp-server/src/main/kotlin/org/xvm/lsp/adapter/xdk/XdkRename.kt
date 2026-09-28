@@ -139,7 +139,11 @@ internal object XdkRename {
         val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
         val removed = (oldDispatch - newDispatch).singleOrNull() ?: return false
         val added = (newDispatch - oldDispatch).singleOrNull() ?: return false
-        fun matches(target: Target, location: SemanticModel.SourceLocation): Boolean {
+
+        fun matches(
+            target: Target,
+            location: SemanticModel.SourceLocation,
+        ): Boolean {
             val declaration = target as? Target.Declaration ?: return false
             val source = location.sourceName ?: return false
             val text = plan.original[source] ?: return false
@@ -149,7 +153,9 @@ internal object XdkRename {
         }
         if (!removed.supported || !added.supported || removed.owner != added.owner ||
             !matches(removed.owner, candidate.owner) || removed.members.none { matches(it, candidate.contract) }
-        ) return false
+        ) {
+            return false
+        }
         val member = (added.members - removed.members.toSet()).singleOrNull() as? Target.Declaration ?: return false
         val source = candidate.owner.sourceName ?: return false
         val insertion = plan.edits[source]?.singleOrNull() ?: return false
