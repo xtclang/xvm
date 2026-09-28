@@ -21,11 +21,21 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 internal class DocumentStartupMessages(
     private val snapshot: (String) -> Snapshot?,
 ) {
-    data class Snapshot(val owner: Any, val stamp: Long, val text: String)
+    data class Snapshot(
+        val owner: Any,
+        val stamp: Long,
+        val text: String,
+    )
 
-    private data class Opening(val owner: Any, val change: NotificationMessage)
+    private data class Opening(
+        val owner: Any,
+        val change: NotificationMessage,
+    )
 
-    private data class Fold(val uri: String, val snapshot: Snapshot?)
+    private data class Fold(
+        val uri: String,
+        val snapshot: Snapshot?,
+    )
 
     private val lock = Any()
     private val opening = mutableMapOf<String, Opening>()
@@ -35,20 +45,30 @@ internal class DocumentStartupMessages(
     fun outgoing(next: MessageConsumer): MessageConsumer =
         MessageConsumer { message ->
             val params = (message as? NotificationMessage)?.params
-            val uri = when (params) {
-                is DidOpenTextDocumentParams -> params.textDocument.uri
-                is DidChangeTextDocumentParams -> params.textDocument.uri
-                is DidCloseTextDocumentParams -> params.textDocument.uri
-                else -> ((message as? RequestMessage)?.params as? FoldingRangeRequestParams)?.textDocument?.uri
-            }
+            val uri =
+                when (params) {
+                    is DidOpenTextDocumentParams -> params.textDocument.uri
+                    is DidChangeTextDocumentParams -> params.textDocument.uri
+                    is DidCloseTextDocumentParams -> params.textDocument.uri
+                    else -> ((message as? RequestMessage)?.params as? FoldingRangeRequestParams)?.textDocument?.uri
+                }
             // Read actions precede the transport lock: EDT edits must never wait behind a
             // response thread holding this lock while waiting for a write action to finish.
             val current = uri?.let(snapshot)
             synchronized(lock) {
                 when (params) {
-                    is DidOpenTextDocumentParams -> open(message as NotificationMessage, params, current, next)
-                    is DidChangeTextDocumentParams -> change(message as NotificationMessage, params, current, next)
-                    is DidCloseTextDocumentParams -> close(params.textDocument.uri, current, next)
+                    is DidOpenTextDocumentParams -> {
+                        open(message, params, current, next)
+                    }
+
+                    is DidChangeTextDocumentParams -> {
+                        change(message, params, current, next)
+                    }
+
+                    is DidCloseTextDocumentParams -> {
+                        close(params.textDocument.uri, current, next)
+                    }
+
                     else -> {
                         if (message is RequestMessage && message.params is FoldingRangeRequestParams) {
                             val uri = (message.params as FoldingRangeRequestParams).textDocument.uri
@@ -64,19 +84,24 @@ internal class DocumentStartupMessages(
         MessageConsumer { message ->
             val fold = synchronized(lock) { (message as? ResponseMessage)?.let { folds.remove(it.id) } }
             val accepted =
-                    if (fold != null && snapshot(fold.uri) != fold.snapshot) {
-                        ResponseMessage().apply {
-                            id = (message as ResponseMessage).id
-                            error = ResponseError(ResponseErrorCode.ContentModified, "Document changed during folding", null)
-                        }
-                    } else {
-                        message
+                if (fold != null && snapshot(fold.uri) != fold.snapshot) {
+                    ResponseMessage().apply {
+                        id = (message as ResponseMessage).id
+                        error = ResponseError(ResponseErrorCode.ContentModified, "Document changed during folding", null)
                     }
+                } else {
+                    message
+                }
             // Completing a client request can re-enter the transport. Never do so under lock.
             next.consume(accepted)
         }
 
-    private fun open(message: NotificationMessage, params: DidOpenTextDocumentParams, current: Snapshot?, next: MessageConsumer) {
+    private fun open(
+        message: NotificationMessage,
+        params: DidOpenTextDocumentParams,
+        current: Snapshot?,
+        next: MessageConsumer,
+    ) {
         val uri = params.textDocument.uri
         if (current == null) {
             close(uri, current, next)
@@ -95,7 +120,12 @@ internal class DocumentStartupMessages(
         opened[uri] = current.owner
     }
 
-    private fun change(message: NotificationMessage, params: DidChangeTextDocumentParams, current: Snapshot?, next: MessageConsumer) {
+    private fun change(
+        message: NotificationMessage,
+        params: DidChangeTextDocumentParams,
+        current: Snapshot?,
+        next: MessageConsumer,
+    ) {
         val uri = params.textDocument.uri
         if (current == null) return
         if (opened[uri] === current.owner) {
@@ -109,20 +139,30 @@ internal class DocumentStartupMessages(
         }
     }
 
-    private fun close(uri: String, current: Snapshot?, next: MessageConsumer) {
-        // A delayed close from the previous incarnation cannot close an already reopened file.
-        if (current != null && opened[uri] === current.owner) return
+    private fun close(
+        uri: String,
+        current: Snapshot?,
+        next: MessageConsumer,
+    ) {
+        // A delayed close cannot discard the reopened incarnation, even before its open arrives.
+        if (current != null && (opened[uri] === current.owner || opening[uri]?.owner === current.owner)) return
         retire(uri, next)
         opening.remove(uri)
     }
 
-    private fun retire(uri: String, next: MessageConsumer) {
+    private fun retire(
+        uri: String,
+        next: MessageConsumer,
+    ) {
         if (opened.remove(uri) != null) {
             next.consume(notification("textDocument/didClose", DidCloseTextDocumentParams(TextDocumentIdentifier(uri))))
         }
     }
 
-    private fun notification(method: String, params: Any): NotificationMessage =
+    private fun notification(
+        method: String,
+        params: Any,
+    ): NotificationMessage =
         NotificationMessage().apply {
             this.method = method
             this.params = params
