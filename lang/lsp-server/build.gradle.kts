@@ -279,6 +279,10 @@ tasks.test {
         dir = dir.parentFile
     }
     systemProperty("xtc.composite.root", dir.absolutePath)
+    inputs.files(
+        rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"),
+        rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"),
+    )
 }
 
 tasks.jar {
