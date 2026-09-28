@@ -58,6 +58,7 @@ class XdkRenameBoundaryTest {
 
     @Test
     fun `an explicit graph does not claim or edit omitted consumers`() {
+        directory = directory.toRealPath()
         val text = "module App { class Box { Int pick(Int input) = input; } }"
         val consumer = "module Consumer { package lib import App; Int run(lib.Box box) = box.pick(input = 1); }"
         val outside = directory.resolve("Consumer.x").toFile().apply { writeText(consumer) }

@@ -24,6 +24,7 @@ fun Driver.renameFamily(
 ) {
     val root = Path.of(singleProject().getBasePath()).resolve(id)
     val files = data.rows("files")
+
     fun graphContains(name: String): Boolean =
         service<LspSettings>().getLanguageServerSettings("xtcLanguageServer")?.getConfigurationContent()?.contains(name) == true
 
@@ -58,7 +59,7 @@ fun Driver.renameFamily(
         check(graphContains("Renamed.example.org") && !graphContains("Library.example.org"))
     }
     focusEditor(renamed)
-    invokeAction("Undo", now = false, component = renamed.component)
+    invokeAction("\$Undo", now = false, component = renamed.component)
     awaitUi("$id one Undo restores every source and path", 45.seconds) {
         val confirmation = ui.dialog(title = "Undo")
         if (confirmation.present()) {
@@ -75,24 +76,27 @@ fun Driver.renameFamily(
         check(graphContains("Library.example.org") && !graphContains("Renamed.example.org"))
         val restored = open(data.text("file"))
         focusEditor(restored)
-        invokeAction("Redo", now = false, component = restored.component)
+        invokeAction("\$Redo", now = false, component = restored.component)
         awaitUi("$id Redo restores graph, sources and paths", 45.seconds) {
-            graphContains("Renamed.example.org") && !graphContains("Library.example.org") && files.all { file ->
-                Files.exists(root.resolve(file["destination"].asString)) && contents(file["destination"].asString) == file["expected"].asString
-            }
+            graphContains("Renamed.example.org") && !graphContains("Library.example.org") &&
+                files.all { file ->
+                    Files.exists(root.resolve(file["destination"].asString)) &&
+                        contents(file["destination"].asString) == file["expected"].asString
+                }
         }
         val redone = open("$id/${request["destination"].asString}")
         clean(redone)
         focusEditor(redone)
-        invokeAction("Undo", now = false, component = redone.component)
+        invokeAction("\$Undo", now = false, component = redone.component)
         awaitUi("$id second Undo restores the original graph and sources", 45.seconds) {
             val confirmation = ui.dialog(title = "Undo")
             if (confirmation.present()) {
                 withContext(OnDispatcher.EDT) { cast(confirmation.button("Undo").component, NativeButton::class).doClick() }
             }
-            graphContains("Library.example.org") && !graphContains("Renamed.example.org") && files.all { file ->
-                Files.exists(root.resolve(file["file"].asString)) && contents(file["file"].asString) == file["source"].asString
-            }
+            graphContains("Library.example.org") && !graphContains("Renamed.example.org") &&
+                files.all { file ->
+                    Files.exists(root.resolve(file["file"].asString)) && contents(file["file"].asString) == file["source"].asString
+                }
         }
         clean(open(data.text("file")))
     }
