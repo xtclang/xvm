@@ -358,7 +358,7 @@ class XdkAdapter internal constructor(
         val compilation: Request
     }
 
-    private enum class ProjectQueryKind { REFERENCES, RENAME, SYMBOLS, NAVIGATION, IMPORTS }
+    private enum class ProjectQueryKind { REFERENCES, RENAME, RENAME_PROPOSAL, SYMBOLS, NAVIGATION, IMPORTS }
 
     private data class ProjectQueryKey(
         val uri: String,
@@ -1335,24 +1335,41 @@ class XdkAdapter internal constructor(
         model: SemanticModel,
         symbol: SemanticModel.Symbol,
     ): Boolean =
-        symbol.name != "construct" &&
-            symbol.kind in
-            setOf(
-                SemanticModel.SymbolKind.METHOD,
-                SemanticModel.SymbolKind.TYPE,
-                SemanticModel.SymbolKind.PROPERTY,
-                SemanticModel.SymbolKind.PACKAGE,
-                SemanticModel.SymbolKind.MODULE,
-                SemanticModel.SymbolKind.PARAMETER,
-            ) &&
+        (
+            symbol.kind == SemanticModel.SymbolKind.PACKAGE && symbol.declarationSource == null && symbol.dependency == null &&
+                hasProject(
+                    uri,
+                )
+        ) ||
             (
-                symbol.declarationSource ?: model.parameters[symbol.id]
-                    ?.method
-                    ?.let(model::symbol)
-                    ?.declarationSource
-            )?.let {
-                synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
-            } == true
+                symbol.name != "construct" &&
+                    symbol.kind in
+                    setOf(
+                        SemanticModel.SymbolKind.METHOD,
+                        SemanticModel.SymbolKind.TYPE,
+                        SemanticModel.SymbolKind.PROPERTY,
+                        SemanticModel.SymbolKind.PACKAGE,
+                        SemanticModel.SymbolKind.MODULE,
+                        SemanticModel.SymbolKind.PARAMETER,
+                    ) &&
+                    (
+                        symbol.declarationSource ?: model.parameters[symbol.id]
+                            ?.method
+                            ?.let(model::symbol)
+                            ?.declarationSource
+                    )?.let {
+                        synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
+                    } == true
+            )
+
+    /** Hosts that own persistent source settings can accept the graph replacement with the edit. */
+    fun renameProposalAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+        newName: String,
+    ): CompletableFuture<XdkRenameProposal?> =
+        projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL), null) { it.renameProposal(uri, line, column, newName) }
 
     override fun getCodeActions(
         uri: String,
