@@ -20,6 +20,7 @@ class SemanticModel internal constructor(
     calls: List<CallSite> = emptyList(),
     functionCalls: List<FunctionCallSite> = emptyList(),
     imports: List<ImportAlias> = emptyList(),
+    lambdas: List<LambdaSite> = emptyList(),
 ) {
     enum class Status { UNAVAILABLE, PARTIAL, COMPLETE }
 
@@ -144,6 +145,9 @@ class SemanticModel internal constructor(
         val type: TypeId,
     )
 
+    /** Validated source lambda signature; capture parameters are absent from its function type. */
+    data class LambdaSite(val arrow: Range, val signature: Signature)
+
     data class CallArgument(
         val range: Range,
         val parameterIndex: Int,
@@ -216,6 +220,7 @@ class SemanticModel internal constructor(
     val expressions: List<ExpressionType> = immutableList(expressions)
     val calls: List<CallSite> = immutableList(calls)
     val functionCalls: List<FunctionCallSite> = immutableList(functionCalls)
+    val lambdas: List<LambdaSite> = immutableList(lambdas)
     val typeDeclarations: Map<SymbolId, TypeDeclaration> = facts.typeDeclarations
     val callables: Map<SymbolId, Callable> = facts.callables
 
