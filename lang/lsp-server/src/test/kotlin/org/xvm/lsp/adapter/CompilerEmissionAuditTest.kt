@@ -38,8 +38,8 @@ class CompilerEmissionAuditTest {
     fun `atomic sequential results retain their type in the serialized binary AST`(expression: String) {
         val result =
             compile(
-                "module Emission { @Atomic Int count=1; class Counter<T> { @Atomic Int count=1; } " +
-                    "Int run(Counter<String> counter)=$expression; }",
+                "module Emission { @Atomic Int count = 1; class Counter<T> { @Atomic Int count = 1; } " +
+                    "Int run(Counter<String> counter) = $expression; }",
             )
         val method = restoredMethod(result)
         val returned =
@@ -56,7 +56,7 @@ class CompilerEmissionAuditTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `generic atomic operations preserve their warning across source and dependency use`(external: Boolean) {
-        val base = "class Base<T> { @Atomic Int count=1; }"
+        val base = "class Base<T> { @Atomic Int count = 1; }"
         val repository =
             if (external) {
                 BuildRepository().apply { storeModule(roundTrip(compile("module Library { $base }")).module) }
@@ -66,7 +66,7 @@ class CompilerEmissionAuditTest {
         val declarations = if (external) "package lib import Library; import lib.Base;" else base
         val source =
             "module Emission { $declarations " +
-                "class Derived<T> extends Base<T> { @Atomic @Override Int count=2; } " +
+                "class Derived<T> extends Base<T> { @Atomic @Override Int count = 2; } " +
                 "Int run(Derived<String> value) { value.count += 1; return ++value.count; } }"
         val result = compile(source, repository, expectedCodes = listOf("VERIFY-75"))
         assertThat(restoredMethod(result).ast).isNotNull()
@@ -77,8 +77,8 @@ class CompilerEmissionAuditTest {
     fun `atomic operations can target enclosing instances`(expression: String) {
         val result =
             compile(
-                "module Emission { class Counter { @Atomic Int count=1; " +
-                    "class Worker { Int run()=$expression; } } }",
+                "module Emission { class Counter { @Atomic Int count = 1; " +
+                    "class Worker { Int run() = $expression; } } }",
             )
         val method = restoredMethod(result, "Counter", "Worker")
         val returned =
@@ -103,7 +103,7 @@ class CompilerEmissionAuditTest {
     fun `atomic compound assignments retain their concrete target and void result`(statement: String) {
         val result =
             compile(
-                "module Emission { @Atomic Int count=1; class Counter<T extends IntNumber>(T seed) { @Atomic T count=seed; } " +
+                "module Emission { @Atomic Int count = 1; class Counter<T extends IntNumber>(T seed) { @Atomic T count = seed; } " +
                     "void run(Counter<Int> counter) { $statement; } }",
             )
         val method = restoredMethod(result)
@@ -121,8 +121,8 @@ class CompilerEmissionAuditTest {
     fun `generic atomic referents retain their concrete result and target types`() {
         val result =
             compile(
-                "module Emission { class Counter<T extends IntNumber>(T seed) { @Atomic T count=seed; } " +
-                    "Int run(Counter<Int> counter)=++counter.count; }",
+                "module Emission { class Counter<T extends IntNumber>(T seed) { @Atomic T count = seed; } " +
+                    "Int run(Counter<Int> counter) = ++counter.count; }",
             )
         val method = restoredMethod(result)
         val returned =
@@ -191,11 +191,11 @@ class CompilerEmissionAuditTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["Int run()=++count;", "void run() { count -= 1; }"])
+    @ValueSource(strings = ["Int run() = ++count;", "void run() { count -= 1; }"])
     fun `invalid atomic operations produce source errors before emission`(method: String) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
-        val source = Source("module Emission { @Atomic String count=\"x\"; $method }", "file:///Emission.x")
+        val source = Source("module Emission { @Atomic String count = \"x\"; $method }", "file:///Emission.x")
         val result = EmbeddingSupport.instance().compileModule(source, null, errors)
         assertThat(result.succeeded()).isFalse()
         assertThat(errors.hasSeriousErrors()).isTrue()

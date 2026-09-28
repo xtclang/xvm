@@ -126,7 +126,7 @@ class XdkStdioTest {
             assertThat(targets.map { it.uri }).containsOnly(URI)
             assertThat(targets.map { it.range })
                 .containsExactlyInAnyOrder(
-                    Range(Position(0, source.indexOf("name=")), Position(0, source.indexOf("name=") + 4)),
+                    Range(Position(0, source.indexOf("name =")), Position(0, source.indexOf("name =") + 4)),
                     Range(Position(0, source.indexOf("get()")), Position(0, source.indexOf("get()") + 3)),
                 )
             assertThat(lookup(source.lastIndexOf("size"))).isEmpty()
@@ -142,7 +142,7 @@ class XdkStdioTest {
 
     @Test
     fun `private parameter rename round trips versioned edits and rejects silent capture`() {
-        val source = "module Stdio { private Int pick(Int input)=input; Int run()=pick(input=1); }"
+        val source = "module Stdio { private Int pick(Int input) = input; Int run() = pick(input = 1); }"
         Session(packagedJar(), directory).use { session ->
             session.initialize(versionedEdits = true)
             session.open(source)
@@ -163,7 +163,7 @@ class XdkStdioTest {
                 }
             session.change(changed, 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
-            val capture = "module Stdio { Int value=10; Int run() { Int local=1; return local+value; } }"
+            val capture = "module Stdio { Int value = 10; Int run() { Int local = 1; return local + value; } }"
             session.change(capture, 3)
             assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
             assertThat(session.await(documents.rename(RenameParams(document, Position(0, capture.indexOf("local")), "value")))).isNull()
@@ -172,7 +172,7 @@ class XdkStdioTest {
 
     @Test
     fun `compiler call hierarchy tokens and hints round trip and reject stale items`() {
-        val source = "module Stdio { static Int leaf(Int input)=input; Int run() { var n=leaf(1); return n; } }"
+        val source = "module Stdio { static Int leaf(Int input) = input; Int run() { var n = leaf(1); return n; } }"
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             session.open(source)
@@ -375,8 +375,8 @@ class XdkStdioTest {
             session.open(VALID)
             assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
             listOf("\n", "\r\n").forEachIndexed { index, newline ->
-                val closingLine = " /* 😀 */ } Int later=1; }"
-                val text = listOf("module Stdio {", " void damaged(Int) {", " Int hidden=1;", closingLine).joinToString(newline)
+                val closingLine = " /* 😀 */ } Int later = 1; }"
+                val text = listOf("module Stdio {", " void damaged(Int) {", " Int hidden = 1;", closingLine).joinToString(newline)
                 val version = index + 2
                 session.change(text, version)
                 assertThat(session.diagnosticsAt(version).diagnostics).isNotEmpty()
@@ -398,7 +398,7 @@ class XdkStdioTest {
         val declarations =
             "module Stdio { class Box<Element> { Element echo(Element value) { return value; } " +
                 "Int choose(Int n) { return n; } String choose(String text) { return text; } " +
-                "String label=\"box\"; private Int secret() { return 1; } } "
+                "String label = \"box\"; private Int secret() { return 1; } } "
         val prefix = "${declarations}void run(Box<String> box) { box."
         Session(packagedJar(), directory).use { session ->
             session.initialize()
@@ -432,7 +432,7 @@ class XdkStdioTest {
 
             val complete =
                 "module Stdio { <T> T echo(T value, T backup) { return value; } " +
-                    "void run() { String text=echo(backup=\"b\", value=\"a\"); } }"
+                    "void run() { String text = echo(backup = \"b\", value = \"a\"); } }"
             session.change(complete, 4)
             assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
             val selected =
@@ -442,7 +442,7 @@ class XdkStdioTest {
                             document,
                             Position(
                                 0,
-                                complete.indexOf("backup=\"b\"") + 10,
+                                complete.indexOf("backup = \"b\"") + "backup = \"b\"".length,
                             ),
                         ),
                     ),
@@ -505,7 +505,7 @@ class XdkStdioTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["(values[value.si", "(1, value.si", "[1=value.si", "Tuple<Int,Int>:(1, value.si"])
+    @ValueSource(strings = ["(values[value.si", "(1, value.si", "[1 = value.si", "Tuple<Int,Int>:(1, value.si"])
     fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`(expression: String) {
         val header = "module Stdio { Int pair(Int first, Int second) = first; Object run(String value, Int[] values) { return "
         Session(packagedJar(), directory).use { session ->
@@ -541,16 +541,16 @@ class XdkStdioTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "take(first=1, second=", "fn(1, ", "new Box<String>(",
-            "take(1, te", "take(first=1, second=te", "fn(1, te", "new Box<String>(te", "new Box<String>(value=te",
-            "new String[2](te", "new String[2](supply=te", "Box<String> box = new Box(te", "new @Tagged Box<String>(te",
+            "take(first = 1, second =", "fn(1, ", "new Box<String>(",
+            "take(1, te", "take(first = 1, second = te", "fn(1, te", "new Box<String>(te", "new Box<String>(value = te",
+            "new String[2](te", "new String[2](supply = te", "Box<String> box = new Box(te", "new @Tagged Box<String>(te",
         ],
     )
     fun `argument value edits round trip and clear diagnostics after acceptance`(call: String) {
         val prefix =
             "module Stdio { annotation Tagged into Object {} void take(Int first, String second) {} " +
                 "class Box<T> { construct(T value) {} } " +
-                "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { Int textNumber=1; /* 😀 */ $call"
+                "void run(Int number, String text, Boolean flag, function Int(Int, String) fn) { Int textNumber = 1; /* 😀 */ $call"
         val typed = if (call.endsWith("te")) 2 else 0
         Session(packagedJar(), directory).use { session ->
             session.initialize()
@@ -591,7 +591,7 @@ class XdkStdioTest {
     )
     fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
         val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('§')
-        val suffix = declaration.substringAfter('§') + "\r\n Int later=1; }"
+        val suffix = declaration.substringAfter('§') + "\r\n Int later = 1; }"
         val selected = if (declaration.contains("ecstasy.text.")) "StringBuffer" else "String"
         val column = prefix.substringAfterLast('\n').length
         Session(packagedJar(), directory).use { session ->
@@ -720,8 +720,8 @@ class XdkStdioTest {
     @ValueSource(strings = ["", "static "])
     fun `property and constant argument edits preserve receiver rules over stdio`(modifier: String) {
         val prefix =
-            "module Stdio { class Values { String textProperty=\"x\"; static String textConstant=\"c\"; " +
-                "Int textNumber=1; static void take(String value) {} ${modifier}void run() { take(value=te"
+            "module Stdio { class Values { String textProperty = \"x\"; static String textConstant = \"c\"; " +
+                "Int textNumber = 1; static void take(String value) {} ${modifier}void run() { take(value = te"
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             session.open("$prefix); } } }")
@@ -763,7 +763,7 @@ class XdkStdioTest {
 
             val call =
                 "module Stdio { <T> T pair(T first, T second) = first; " +
-                    "void run() { pair(second=\"x\", first="
+                    "void run() { pair(second = \"x\", first ="
             session.change("$call); } }", 3)
             assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
             val help = session.await(service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))))

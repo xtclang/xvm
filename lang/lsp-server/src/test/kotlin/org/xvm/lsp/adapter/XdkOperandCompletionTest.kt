@@ -9,9 +9,9 @@ class XdkOperandCompletionTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "module Operands { Int number=1; String numberText=\"x\"; class Inner { " +
+            "module Operands { Int number = 1; String numberText = \"x\"; class Inner { " +
                 "void pair(Int count) {} void run() { pair(nu§); } } }",
-            "module Operands { class Values { static Int number=1; static String numberText=\"x\"; } " +
+            "module Operands { class Values { static Int number = 1; static String numberText = \"x\"; } " +
                 "import Values.number; import Values.numberText; void pair(Int count) {} void run() { pair(nu§); } }",
         ],
     )
@@ -29,7 +29,7 @@ class XdkOperandCompletionTest {
     @ValueSource(
         strings = [
             "pair(1 + nu§, \"x\")", "pair(1 + §, \"x\")", "pair(-nu§, \"x\")",
-            "pair(2 * (1 + nu§), \"x\")", "pair(number=1 + nu§, text=\"x\")",
+            "pair(2 * (1 + nu§), \"x\")", "pair(number = 1 + nu§, text = \"x\")",
             "pair(1 + box.nu§, \"x\")", "fn(1 + nu§, \"x\")", "new Pair(1 + nu§, \"x\")",
         ],
     )
@@ -50,7 +50,7 @@ class XdkOperandCompletionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["pair(1 + nu§, True)", "pair(-nu§, True)", "pair(number=1 + nu§, unknown=1)"])
+    @ValueSource(strings = ["pair(1 + nu§, True)", "pair(-nu§, True)", "pair(number = 1 + nu§, unknown = 1)"])
     fun `incompatible later arguments reject compound suggestions`(call: String) {
         val marked = XdkArgumentContextFixture.HEADER + call + "; } }"
         XdkAdapter().use { adapter ->
@@ -91,7 +91,7 @@ class XdkOperandCompletionTest {
 private object XdkArgumentContextFixture {
     const val HEADER =
         "module Operands { class Pair(Int number, String text) {} " +
-            "class Box { Int number=1; String numberText=\"x\"; private Int numberHidden=2; } " +
+            "class Box { Int number = 1; String numberText = \"x\"; private Int numberHidden = 2; } " +
             "void pair(Int number, String text) {} void run(Int number, String numberText, Box box, " +
             "function void(Int, String) fn) { "
 }

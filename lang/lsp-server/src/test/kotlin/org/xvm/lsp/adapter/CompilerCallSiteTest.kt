@@ -47,8 +47,8 @@ class CompilerCallSiteTest {
     @Test
     fun `matching returns cannot validate a function call with invalid arguments`() {
         val prefix =
-            "module Calls { function Int(Int, String) make(function Int(Int, String) fn)=fn; " +
-                "Int apply(function Int(Int, String) fn)=make(fn)("
+            "module Calls { function Int(Int, String) make(function Int(Int, String) fn) = fn; " +
+                "Int apply(function Int(Int, String) fn) = make(fn)("
         assertThat(compile("${prefix}1, \"x\"); }").functionBindings()).hasSize(1)
         for (arguments in listOf("1", "True, \"x\"")) {
             val errors = ErrorList()
@@ -63,8 +63,8 @@ class CompilerCallSiteTest {
     fun `super records the inherited body and instantiated signature`() {
         val model =
             compile(
-                "module Calls { class Base<T> { T pick(T value)=value; } " +
-                    "class Child extends Base<String> { @Override String pick(String value)=super(value); } }",
+                "module Calls { class Base<T> { T pick(T value) = value; } " +
+                    "class Child extends Base<String> { @Override String pick(String value) = super(value); } }",
             ).semanticSnapshot()
         val call = model.calls.single()
         assertThat(model.symbol(call.method)!!.name).isEqualTo("pick")
@@ -84,7 +84,7 @@ class CompilerCallSiteTest {
             """
             module Calls {
                 <T> T echo(T value, T backup) { return value; }
-                void run() { String text = echo(backup="b", value="a"); }
+                void run() { String text = echo(backup = "b", value = "a"); }
             }
             """.trimIndent()
         val compilation = compile(source)
@@ -96,7 +96,7 @@ class CompilerCallSiteTest {
         assertThat(call.arguments.map { it.parameterIndex }).containsExactly(1, 0)
         assertThat(call.arguments).allSatisfy { assertThat(it.named).isTrue() }
         assertThat(call.arguments.map { source.lines()[it.range.start.line].substring(it.range.start.column, it.range.end.column) })
-            .containsExactly("backup=\"b\"", "value=\"a\"")
+            .containsExactly("backup = \"b\"", "value = \"a\"")
 
         ConstantPool.withPool(compilation.pool()).use {
             val node = nodes(compilation.parsed()).filterIsInstance<InvocationExpression>().single { it.resolvedMethod?.name == "echo" }
@@ -111,7 +111,7 @@ class CompilerCallSiteTest {
     @Test
     fun `defaulted arguments retain their declaration metadata without synthetic source ranges`() {
         val model =
-            compile("module Calls { Int add(Int left=1, Int right=2) { return left; } void run() { Int n=add(right=4); } }")
+            compile("module Calls { Int add(Int left = 1, Int right = 2) { return left; } void run() { Int n = add(right = 4); } }")
                 .semanticSnapshot()
         val call = model.calls.single { model.symbol(it.method)?.name == "add" }
         assertThat(call.signature.parameters).hasSize(2).allSatisfy { assertThat(it.defaulted).isTrue() }
@@ -137,9 +137,9 @@ class CompilerCallSiteTest {
                         Element echo(Element value) { return value; }
                         String choose(String value) { return value; }
                         Int choose(Int value) { return value; }
-                        String label="box";
+                        String label = "box";
                         private String secret() { return "hidden"; }
-                        private String hidden="hidden";
+                        private String hidden = "hidden";
                     }
                 }
                 """.trimIndent(),
@@ -161,7 +161,7 @@ class CompilerCallSiteTest {
     fun `incomplete call candidates have no selected overload and count only top-level commas`() {
         val model =
             partial(
-                "module Calls { void run(String text) { text.indexOf(text.replace(\"a,b\", \"c\"), startAt=2, ",
+                "module Calls { void run(String text) { text.indexOf(text.replace(\"a,b\", \"c\"), startAt = 2, ",
             )
         val site = model.sites.single()
         assertThat(site.kind).isEqualTo(PartialSemanticModel.Kind.CALL)
@@ -191,7 +191,7 @@ class CompilerCallSiteTest {
 
     @Test
     fun `own receiver exposes private members and copied facts survive other compilations and threads`() {
-        val model = partial("module Own { private String hidden=\"value\"; private Int secret() {return 1;} void run() { this.")
+        val model = partial("module Own { private String hidden = \"value\"; private Int secret() {return 1;} void run() { this.")
         val site = model.sites.single()
         assertThat(site.members.map { it.name }).contains("hidden", "secret")
         val firstScope = site.scope!!
@@ -214,7 +214,7 @@ class CompilerCallSiteTest {
         val errors = ErrorList()
         val failed =
             EmbeddingSupport.instance().compileModule(
-                Source("module Failed { Int choose(Int n) { return n; } void run() { Int n=choose(\"bad\"); }", URI),
+                Source("module Failed { Int choose(Int n) { return n; } void run() { Int n = choose(\"bad\"); }", URI),
                 null,
                 errors,
             )
@@ -223,7 +223,7 @@ class CompilerCallSiteTest {
         assertThat(failed.semanticSnapshot().calls).isEmpty()
         val binding =
             compile(
-                "module Binding { Int choose(Int n) { return n; } void run() { function Int(Int) fn=&choose(_); Int n=fn(1); } }",
+                "module Binding { Int choose(Int n) { return n; } void run() { function Int(Int) fn = &choose(_); Int n = fn(1); } }",
             ).semanticSnapshot()
         assertThat(binding.calls).isEmpty()
         assertThat(binding.functionCalls).hasSize(1)
@@ -240,7 +240,7 @@ class CompilerCallSiteTest {
             compile(
                 """
                 module Nested {
-                    String label=1.toString();
+                    String label = 1.toString();
                     String run(Int number) {
                         function String() fn = () -> number.toString();
                         Object object = new Object() {

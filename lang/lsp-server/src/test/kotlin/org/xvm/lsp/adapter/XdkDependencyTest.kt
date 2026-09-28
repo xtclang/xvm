@@ -27,11 +27,11 @@ class XdkDependencyTest {
     @Test
     fun `detached keys join source declarations across recompilation without conflating overloads or modules`() {
         val library = dependency(LIBRARY)
-        val other = dependency("module Other { static Int pick(Int n)=n; }", "file:///Other.x")
+        val other = dependency("module Other { static Int pick(Int n) = n; }", "file:///Other.x")
         val dependencies = XdkDependencies(listOf(library, other))
         val text =
             "module Consumer { package lib import Library; package other import Other; " +
-                "Int run()=lib.pick(1)+other.pick(2); String text()=lib.pick(\"x\"); }"
+                "Int run() = lib.pick(1) + other.pick(2); String text() = lib.pick(\"x\"); }"
 
         fun snapshot() =
             dependencies.open().let { inputs ->
@@ -61,7 +61,7 @@ class XdkDependencyTest {
     @Test
     fun `adapter navigates dependency overloads and inferred return types while binary only libraries have no source`() {
         val library = dependency(LIBRARY)
-        val source = "module Consumer { package lib import Library; void run() { var value=lib.make(); Int n=lib.pick(1); } }"
+        val source = "module Consumer { package lib import Library; void run() { var value = lib.make(); Int n = lib.pick(1); } }"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(library))
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
@@ -83,9 +83,11 @@ class XdkDependencyTest {
 
     @Test
     fun `inherited property accessors use dependency source indices and expire on replacement`() {
-        val text = "module Library { class Base { String name.get()=\"library\"; } }"
+        val text = "module Library { class Base { String name.get() = \"library\"; } }"
         val library = dependency(text)
-        val source = "module Consumer { package lib import Library; class Child extends lib.Base {} String read(Child child)=child.name; }"
+        val source =
+            "module Consumer { package lib import Library; class Child extends lib.Base {} " +
+                "String read(Child child) = child.name; }"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(library))
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
@@ -105,10 +107,12 @@ class XdkDependencyTest {
     @Test
     fun `annotation accessors use dependency source indices and expire on replacement`() {
         val text =
-            "module Library { annotation Read<T> into Ref<T> { @Override T get()=super(); } " +
-                "class Base { @Read String name=\"library\"; } }"
+            "module Library { annotation Read<T> into Ref<T> { @Override T get() = super(); } " +
+                "class Base { @Read String name = \"library\"; } }"
         val library = dependency(text)
-        val source = "module Consumer { package lib import Library; class Child extends lib.Base {} String read(Child child)=child.name; }"
+        val source =
+            "module Consumer { package lib import Library; class Child extends lib.Base {} " +
+                "String read(Child child) = child.name; }"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(library))
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
@@ -129,12 +133,12 @@ class XdkDependencyTest {
     fun `dependency replacement invalidates consumers but leaves unrelated successful sessions intact`() {
         val first = dependency(LIBRARY)
         val moved = dependency("\n$LIBRARY")
-        val source = "module Consumer { package lib import Library; Int run()=lib.pick(1); }"
+        val source = "module Consumer { package lib import Library; Int run() = lib.pick(1); }"
         val unrelated = "file:///Unrelated.x"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(first))
             assertThat(adapter.compile(CONSUMER, source).success).isTrue()
-            assertThat(adapter.compile(unrelated, "module Unrelated { Int value=1; }").success).isTrue()
+            assertThat(adapter.compile(unrelated, "module Unrelated { Int value = 1; }").success).isTrue()
             val cached = adapter.getHoverInfo(unrelated, 0, 23)
             assertThat(adapter.replaceDependencies(listOf(first))).isEmpty()
             assertThat(adapter.replaceDependencies(listOf(moved))).containsExactly(adapter.analysisScope(CONSUMER))
@@ -155,7 +159,7 @@ class XdkDependencyTest {
         directory = directory.toRealPath()
         val root = directory.resolve("Library.x").toFile()
         val member = directory.resolve("Library/Box.x").toFile()
-        root.writeText("module Library { static Box make()=new Box(); }")
+        root.writeText("module Library { static Box make() = new Box(); }")
         member.parentFile.mkdirs()
         member.writeText("class Box {}")
         CompilerTestSupport.configure()
@@ -163,14 +167,14 @@ class XdkDependencyTest {
         val result = EmbeddingSupport.instance().compileModule(ModuleInfo(root, false), null, errors)
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
         val artifact = result.toDependency()
-        val source = "module Consumer { package lib import Library; void run() { var box=lib.make(); } }"
+        val source = "module Consumer { package lib import Library; void run() { var box = lib.make(); } }"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(artifact))
             assertThat(adapter.compile(CONSUMER, source).success).isTrue()
             assertThat(adapter.findTypeDefinitions(CONSUMER, 0, source.indexOf("box")).single().uri)
                 .isEqualTo(member.toURI().toString())
             val uri = root.toURI().toString()
-            val current = "module Library { static Int local()=1; Int run()=local(); }"
+            val current = "module Library { static Int local() = 1; Int run() = local(); }"
             assertThat(adapter.compile(uri, current).success).isTrue()
             assertThat(adapter.findDefinition(uri, 0, current.lastIndexOf("local"))!!.uri).isEqualTo(uri)
         }
@@ -184,7 +188,7 @@ class XdkDependencyTest {
         val release = CountDownLatch(1)
         val held = AtomicBoolean(false)
         val support = EmbeddingSupport.instance()
-        val source = "module Consumer { package lib import Library; Int run()=lib.pick(1); }"
+        val source = "module Consumer { package lib import Library; Int run() = lib.pick(1); }"
         XdkAdapter(
             { text, repository, errors ->
                 if (!held.getAndSet(true)) {
@@ -214,8 +218,8 @@ class XdkDependencyTest {
 
     @Test
     fun `dependency replacement cancels an old cursor probe and new candidates use the replacement`() {
-        val first = dependency("module Library { class Box { Int number=1; } }")
-        val next = dependency("module Library { class Box { String label=\"new\"; } }")
+        val first = dependency("module Library { class Box { Int number = 1; } }")
+        val next = dependency("module Library { class Box { String label = \"new\"; } }")
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         val held = AtomicBoolean(false)
@@ -258,11 +262,11 @@ class XdkDependencyTest {
 
     @Test
     fun `generic dependency methods retain their declaration and instantiated selected signature`() {
-        val text = "module Library { class Box<T> { T echo(T value)=value; } }"
+        val text = "module Library { class Box<T> { T echo(T value) = value; } }"
         val artifact = dependency(text)
         val source =
             "module Consumer { package lib import Library; class Child extends lib.Box<String> {} " +
-                "String run(Child box)=box.echo(\"x\"); }"
+                "String run(Child box) = box.echo(\"x\"); }"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(artifact))
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
@@ -277,20 +281,20 @@ class XdkDependencyTest {
 
     @Test
     fun `a changed transitive artifact invalidates the linked consumer`() {
-        val baseText = "module Base { static Int value()=1; }"
+        val baseText = "module Base { static Int value() = 1; }"
         val base = dependency(baseText, "file:///Base.x")
         val moved = dependency("\n$baseText", "file:///Base.x")
         val inputs = XdkDependencies(listOf(base)).open()
         val errors = ErrorList()
         val result =
             EmbeddingSupport.instance().compileModule(
-                Source("module Library { package base import Base; static Int value()=base.value(); }", LIBRARY_URI),
+                Source("module Library { package base import Base; static Int value() = base.value(); }", LIBRARY_URI),
                 inputs.repository,
                 errors,
             )
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
         val library = result.toDependency()
-        val source = "module Consumer { package lib import Library; Int run()=lib.value(); }"
+        val source = "module Consumer { package lib import Library; Int run() = lib.value(); }"
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(base, library))
             assertThat(adapter.compile(CONSUMER, source).success).isTrue()
@@ -310,7 +314,9 @@ class XdkDependencyTest {
                     listOf(artifact, artifact),
                 )
             }.isInstanceOf(IllegalArgumentException::class.java)
-            assertThat(adapter.compile(CONSUMER, "module Consumer { package lib import Library; Int run()=lib.pick(1); }").success).isTrue()
+            assertThat(
+                adapter.compile(CONSUMER, "module Consumer { package lib import Library; Int run() = lib.pick(1); }").success,
+            ).isTrue()
         }
         val errors = ErrorList()
         val failed = EmbeddingSupport.instance().compileModule(Source("module Broken { Missing value; }", "file:///Broken.x"), null, errors)
@@ -332,6 +338,6 @@ class XdkDependencyTest {
         const val CONSUMER = "file:///Consumer.x"
         const val LIBRARY_URI = "file:///Library.x"
         const val LIBRARY =
-            "module Library { class Box {} static Box make()=new Box(); static Int pick(Int n)=n; static String pick(String n)=n; }"
+            "module Library { class Box {} static Box make() = new Box(); static Int pick(Int n) = n; static String pick(String n) = n; }"
     }
 }

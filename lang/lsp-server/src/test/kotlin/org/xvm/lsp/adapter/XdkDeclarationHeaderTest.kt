@@ -22,7 +22,7 @@ class XdkDeclarationHeaderTest {
     @ValueSource(strings = ["void damaged(Int value, Str) {}", "void damaged(Int ) {}", "void damaged(Int value {}"])
     fun `unfinished parameter headers preserve their written name and following declarations`(declaration: String) {
         XdkAdapter().use { adapter ->
-            val result = adapter.compile(URI, "module Headers { $declaration Int later=1; }")
+            val result = adapter.compile(URI, "module Headers { $declaration Int later = 1; }")
             assertThat(result.diagnostics).isNotEmpty()
             assertThat(
                 result.symbols
@@ -38,8 +38,8 @@ class XdkDeclarationHeaderTest {
         strings = ["void damaged(Str| value) {}", "void damaged(Int first, Str| second) {}", "Str| property;", "Str| damaged() = \"x\";"],
     )
     fun `header type prefixes expose compiler types with exact edits`(declaration: String) {
-        val prefix = "module Headers { String StringValue=\"x\"; " + declaration.substringBefore('|')
-        val suffix = declaration.substringAfter('|') + " Int later=1; }"
+        val prefix = "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('|')
+        val suffix = declaration.substringAfter('|') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -57,7 +57,7 @@ class XdkDeclarationHeaderTest {
     fun `an empty parameter type slot does not invent a parameter name`(parameters: String) {
         val prefix = "module Headers { void damaged($parameters"
         XdkAdapter().use { adapter ->
-            adapter.compile(URI, "$prefix) {} Int later=1; }")
+            adapter.compile(URI, "$prefix) {} Int later = 1; }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains("String")
         }
     }
@@ -87,7 +87,7 @@ class XdkDeclarationHeaderTest {
                 adapter.compile(URI, "$prefix value) {} } }")
                 assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).describedAs(setup).contains(name)
             }
-            val prefix = "module Headers { Int String=1; void damaged(Str"
+            val prefix = "module Headers { Int String = 1; void damaged(Str"
             adapter.compile(URI, "$prefix value) {} }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).doesNotContain("String")
         }
@@ -130,8 +130,8 @@ class XdkDeclarationHeaderTest {
 
     @Test
     fun `broken headers keep source folds and outline but discard old semantics`() {
-        val valid = "module Headers { void damaged(Int value) {} Int later=1; }"
-        val text = "module Headers {\r\n void damaged(Int) {\r\n Int hidden=1;\r\n }\r\n Int later=1; }"
+        val valid = "module Headers { void damaged(Int value) {} Int later = 1; }"
+        val text = "module Headers {\r\n void damaged(Int) {\r\n Int hidden = 1;\r\n }\r\n Int later = 1; }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, valid).success).isTrue()
             assertThat(adapter.compile(URI, text).success).isFalse()
@@ -152,7 +152,7 @@ class XdkDeclarationHeaderTest {
     fun `embedding header queries own their cursor but register no incomplete declaration`() {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(Str"
-        val text = "$prefix value) { Int hidden=1; } Int later=1; }"
+        val text = "$prefix value) { Int hidden = 1; } Int later = 1; }"
         val source = Source(text, URI)
         repeat(prefix.length) { source.next() }
         val cursor = source.position

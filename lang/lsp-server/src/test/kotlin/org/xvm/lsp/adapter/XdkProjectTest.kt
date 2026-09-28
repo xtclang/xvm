@@ -156,7 +156,7 @@ class XdkProjectTest {
     @Test
     fun `dependency edits cancel cursor work and new probes see rebuilt member types`() {
         val (library, consumer) = fixture()
-        library.writeText("module Library { class Box { Int number=1; } }")
+        library.writeText("module Library { class Box { Int number = 1; } }")
         val source = "module Consumer { package lib import Library; void run(lib.Box box) { box. } }"
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
@@ -179,7 +179,7 @@ class XdkProjectTest {
             val old = adapter.getCompletionsAsync(consumer.toURI().toString(), 0, cursor, ".")
             try {
                 check(entered.await(10, SECONDS))
-                adapter.compileAsync(library.toURI().toString(), "module Library { class Box { String label=\"new\"; } }")
+                adapter.compileAsync(library.toURI().toString(), "module Library { class Box { String label = \"new\"; } }")
                 assertThat(old.isCompletedExceptionally).isTrue()
                 assertThatThrownBy { old.join() }.hasRootCauseInstanceOf(CancellationException::class.java)
                 release.countDown()
@@ -248,8 +248,8 @@ class XdkProjectTest {
     }
 
     private companion object {
-        const val LIBRARY = "module Library { static Int value()=1; }"
-        const val INCOMPATIBLE = "module Library { static String value()=\"text\"; }"
-        const val CONSUMER = "module Consumer { package lib import Library; Int run()=lib.value(); }"
+        const val LIBRARY = "module Library { static Int value() = 1; }"
+        const val INCOMPATIBLE = "module Library { static String value() = \"text\"; }"
+        const val CONSUMER = "module Consumer { package lib import Library; Int run() = lib.value(); }"
     }
 }
