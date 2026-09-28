@@ -7,11 +7,32 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class XdkOperandCompletionTest {
     @ParameterizedTest
-    @ValueSource(strings = [
-        "pair(1 + nu§, \"x\")", "pair(1 + §, \"x\")", "pair(-nu§, \"x\")",
-        "pair(2 * (1 + nu§), \"x\")", "pair(number=1 + nu§, text=\"x\")",
-        "pair(1 + box.nu§, \"x\")", "fn(1 + nu§, \"x\")", "new Pair(1 + nu§, \"x\")",
-    ])
+    @ValueSource(
+        strings = [
+            "module Operands { Int number=1; String numberText=\"x\"; class Inner { " +
+                "void pair(Int count) {} void run() { pair(nu§); } } }",
+            "module Operands { class Values { static Int number=1; static String numberText=\"x\"; } " +
+                "import Values.number; import Values.numberText; void pair(Int count) {} void run() { pair(nu§); } }",
+        ],
+    )
+    fun `enclosing and imported values still require ordinary read and argument validation`(marked: String) {
+        val at = marked.indexOf('§')
+        XdkAdapter().use { adapter ->
+            val source = marked.replace("§", "")
+            adapter.compile(URI, source)
+            assertThat(adapter.getCompletions(URI, 0, at).map { it.label }).contains("number").doesNotContain("numberText")
+            assertThat(adapter.compile(URI, source.replaceRange(at - 2, at, "number")).diagnostics).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "pair(1 + nu§, \"x\")", "pair(1 + §, \"x\")", "pair(-nu§, \"x\")",
+            "pair(2 * (1 + nu§), \"x\")", "pair(number=1 + nu§, text=\"x\")",
+            "pair(1 + box.nu§, \"x\")", "fn(1 + nu§, \"x\")", "new Pair(1 + nu§, \"x\")",
+        ],
+    )
     fun `candidate insertion must fit the whole compound argument and later slots`(call: String) {
         val marked = XdkArgumentContextFixture.HEADER + call + "; } }"
         val at = marked.indexOf('§')
@@ -41,16 +62,23 @@ class XdkOperandCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["type.accept(nu§)", "box.acceptReceiver(nu§)"])
     fun `type value and receiver rewritten functions retain visible parameter mapping`(call: String) {
-        val marked = "module Operands { class Box { static void accept(Int count) {} " +
-            "static void acceptReceiver(Box receiver, Int count) {} } " +
-            "void run(Type<Box> type, Box box, Int number, String numberText) { $call; } }"
+        val marked =
+            "module Operands { class Box { static void accept(Int count) {} " +
+                "static void acceptReceiver(Box receiver, Int count) {} } " +
+                "void run(Type<Box> type, Box box, Int number, String numberText) { $call; } }"
         val at = marked.indexOf('§')
         XdkAdapter().use { adapter ->
             val source = marked.replace("§", "")
             adapter.compile(URI, source)
             assertThat(adapter.getCompletions(URI, 0, at).map { it.label }).contains("number").doesNotContain("numberText")
             val help = adapter.getSignatureHelp(URI, 0, at)
-            assertThat(help?.signatures?.single()?.parameters?.map { it.label }).containsExactly("Int count")
+            assertThat(
+                help
+                    ?.signatures
+                    ?.single()
+                    ?.parameters
+                    ?.map { it.label },
+            ).containsExactly("Int count")
             assertThat(adapter.compile(URI, source.replaceRange(at - 2, at, "number")).diagnostics).isEmpty()
         }
     }
