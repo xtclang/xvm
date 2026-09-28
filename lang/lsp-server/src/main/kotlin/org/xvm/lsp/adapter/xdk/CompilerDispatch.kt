@@ -64,9 +64,15 @@ internal fun TypeInfo.dispatch(
                     }
                 }
 
-                else -> {
+                Implementation.Implicit, Implementation.Union, Implementation.SansCode,
+                Implementation.Field, Implementation.Native,
+                -> {
+                    // These bodies do not independently identify a written callable contract:
+                    // assumed/multi-target dispatch, generated accessors or runtime implementations.
                     CompilerDispatch(listOf(body.identity), supported = false)
                 }
+
+                else -> CompilerDispatch(listOf(body.identity), supported = false)
             }
         }
     return CompilerDispatch(

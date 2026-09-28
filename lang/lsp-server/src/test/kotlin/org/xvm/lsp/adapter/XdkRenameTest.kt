@@ -78,10 +78,11 @@ class XdkRenameTest {
     }
 
     @Test
-    fun `method values make private parameter caller closure unavailable`() {
+    fun `private parameter rename preserves positional method value calls`() {
         val text = "module Rename { private Int pick(Int input) = input; Int run() { function Int(Int) f = &pick; return f(1); } }"
         withSource(text) { adapter ->
-            assertThat(adapter.prepareRename(URI, 0, text.indexOf("input"))).isNull()
+            val edit = requireNotNull(adapter.rename(URI, 0, text.indexOf("input"), "value"))
+            assertThat(apply(text, edit.changes.getValue(URI))).isEqualTo(text.replace("input", "value"))
         }
     }
 
