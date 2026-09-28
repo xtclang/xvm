@@ -26,9 +26,10 @@ class XdkRenameBoundaryTest {
         val text = "module App { Int pick(Int input) = input; $use }"
         workspace(text) { adapter, uri ->
             val edit = requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value"))
-            val changed = edit.changes.getValue(uri).sortedByDescending { it.range.start.column }.fold(text) { value, change ->
-                value.replaceRange(change.range.start.column, change.range.end.column, change.newText)
-            }
+            val changed =
+                edit.changes.getValue(uri).sortedByDescending { it.range.start.column }.fold(text) { value, change ->
+                    value.replaceRange(change.range.start.column, change.range.end.column, change.newText)
+                }
             assertThat(changed).isEqualTo(text.replace("input", "value"))
         }
     }
