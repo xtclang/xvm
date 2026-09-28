@@ -175,13 +175,19 @@ public class CmpExpression
 
         TypeConstant type1Orig = type1;
         TypeConstant type2Orig = type2;
+        boolean      fDeclare1 = false;
+        boolean      fDeclare2 = false;
         if (expr1 instanceof NameExpression exprName &&
+                exprName.getLeftExpression() == null && !exprName.isSuppressDeref() &&
                 ctx.getVar(exprName.getName()) instanceof Register reg) {
             type1Orig = reg.getOriginalType();
+            fDeclare1 = !type1Orig.equals(type1);
         }
         if (expr2 instanceof NameExpression exprName &&
+                exprName.getLeftExpression() == null && !exprName.isSuppressDeref() &&
                 ctx.getVar(exprName.getName()) instanceof Register reg) {
             type2Orig = reg.getOriginalType();
+            fDeclare2 = !type2Orig.equals(type2);
         }
 
         TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, false,
@@ -223,13 +229,18 @@ public class CmpExpression
                 boolean fConst1 = expr1New.isConstant();
                 boolean fConst2 = expr2New.isConstant();
 
-                // make sure that we can compare the left value to the right value
-                TypeConstant typeCommon = chooseCommonType(pool, fEqual, type1, fConst1,
-                                                                         type2, fConst2, true);
-                if (typeCommon == null) {
-                    // try to use the original types
-                    typeCommon = chooseCommonType(pool, fEqual, type1, type1Orig, fConst1,
-                                                                type2, type2Orig, fConst2, true);
+                // compute the type to compare the left value to the right value as;
+                // use the shared declared type for comparisons between local variables
+                TypeConstant typeCommon;
+                if (fDeclare1 && fDeclare2 && type1Orig.equals(type2Orig)) {
+                    typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2Orig, fConst2, true);
+                } else {
+                    typeCommon = chooseCommonType(pool, fEqual, type1, fConst1, type2, fConst2, true);
+                    if (typeCommon == null) {
+                        // try to use the declared types
+                        typeCommon = chooseCommonType(pool, fEqual, type1, type1Orig, fConst1,
+                                                                    type2, type2Orig, fConst2, true);
+                    }
                 }
                 if (typeCommon == null) {
                     // try to resolve the types using the current context
@@ -385,6 +396,13 @@ public class CmpExpression
             type2 = type2.getUnderlyingType2();
         }
 
+        // reference equality always uses Ref.equals()
+        if (fEqual
+                && type1 != null && type1.isA(pool.typeRef())
+                && type2 != null && type2.isA(pool.typeRef())) {
+            return pool.typeRef();
+        }
+
         TypeConstant typeCommon = Op.selectCommonType(type1, type2, ErrorListener.BLACKHOLE);
 
         if (type1 == null || type2 == null) {
@@ -406,13 +424,6 @@ public class CmpExpression
         }
 
         if (typeCommon == null) {
-            // equality check for any Ref objects is allowed
-            if (fEqual
-                    && type1.isA(pool.typeRef())
-                    && type2.isA(pool.typeRef())) {
-                return pool.typeRef();
-            }
-
             // equality check between Class and Type is allowed as a Type
             if (fEqual &&
                     (type1.isA(pool.typeType()) && type2.isA(pool.typeClass()) ||

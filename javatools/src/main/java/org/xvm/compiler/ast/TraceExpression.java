@@ -1,5 +1,7 @@
 package org.xvm.compiler.ast;
 
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -80,8 +82,29 @@ public class TraceExpression
 
     @Override
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
-        genCode(ctx, code, errs);
-        return m_aArgs[0];
+        if (isConstant() || !isSingle()) {
+            genCode(ctx, code, errs);
+            return m_aArgs[0];
+        }
+
+        Argument   arg  = expr.generateArgument(ctx, code, fLocalPropOk, errs);
+        Assignable LVal = createTempVar(code, getType());
+        LVal.assign(arg, code, errs);
+        m_aArgs = new Argument[] {LVal.getRegister()};
+
+        // properties and dynamic Ref/Var registers must not be read a second time, but a regular
+        // register can be - it simplifies the type inference analysis by the JIT compiler
+        return arg instanceof Register reg && reg.isNormal() ? arg : m_aArgs[0];
+    }
+
+    @Override
+    protected Argument ensurePointInTime(Code code, Argument arg, List<Expression> listExprs, int iExpr) {
+        return expr.ensurePointInTime(code, arg, listExprs, iExpr);
+    }
+
+    @Override
+    protected Argument ensurePointInTime(Code code, Argument arg, Expression exprRight) {
+        return expr.ensurePointInTime(code, arg, exprRight);
     }
 
     @Override
@@ -104,7 +127,7 @@ public class TraceExpression
         }
     }
 
-    void genCode(Context ctx, Code code, ErrorListener errs) {
+    private void genCode(Context ctx, Code code, ErrorListener errs) {
         if (isConstant()) {
             m_aArgs = toConstants();
         } else {
