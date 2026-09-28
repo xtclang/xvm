@@ -1,7 +1,6 @@
 package org.xtclang.idea.playbook
 
 import com.intellij.driver.sdk.invokeAction
-import com.intellij.driver.sdk.waitFor
 import java.nio.file.Files
 import kotlin.time.Duration.Companion.seconds
 
@@ -55,7 +54,7 @@ internal fun ParityScenarios.moduleCases() {
         val file = data.string("file")
         virtual(file, data.string("text"), data.int("version")) {
             with(driver) {
-                waitFor("virtual member participates in current type hierarchy", 45.seconds) {
+                awaitUi("virtual member participates in current type hierarchy", 45.seconds) {
                     edges(hierarchy(root, root.at(data.string("anchor"))), "subtypes").any { it.string("name") == data.string("name") }
                 }
             }
@@ -161,9 +160,10 @@ internal fun ParityScenarios.moduleCases() {
         server.restart()
         with(
             driver,
-        ) { waitFor("new language server process", 60.seconds) { server.getCurrentProcessId()?.let { it != oldProcess } == true } }
-        settle(reopened)
-        clean(reopened)
+        ) { awaitUi("new language server process", 60.seconds) { server.getCurrentProcessId()?.let { it != oldProcess } == true } }
+        // A new PID precedes initialization and LSP4IJ's asynchronous document reopening.
+        // Use the normal didOpen readiness check before touching the new synchronizer.
+        clean(open(data.string("file")))
         val (current, cursor) = editing(data.string("body"))
         with(driver) {
             lookup(current.editor, cursor) { it.any { item -> item.getLookupString() == data.string("label") } }
