@@ -3,9 +3,11 @@ package org.xvm.compiler.ast;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constants.Access;
@@ -47,14 +49,28 @@ final class PartialCallResolver {
         if (target == null || errs.isAbortDesired()) {
             return functionScope(site, ctx, scope, errs);
         }
+        var direct = methodScope(site, ctx, scope, target, errs);
+        if (!direct.candidates().isEmpty() || !direct.functions().isEmpty() || target.kind() != MethodKind.Method) {
+            return direct;
+        }
+        // Match InvocationExpression's fallback order: a Type<T>'s functions, then
+        // receiver-rewritten functions X.f(receiver, args) for ordinary instances.
+        var alternate = target.type().isTypeOfType()
+                ? new Target(target.type().getParamType(0).resolveConstraints(), MethodKind.Function, false)
+                : new Target(target.type(), MethodKind.Function, true);
+        return methodScope(site, ctx, scope, alternate, errs);
+    }
+
+    private static CursorBinding methodScope(IncompleteStatement site, Context ctx, CursorBinding scope,
+                                              Target target, ErrorListener errs) {
         String methodName = ((NameExpression) site.getTarget()).getName();
-        var lookup = ErrorListener.cancellable(ErrorListener.collecting(errs::log), errs::isAbortDesired);
+        var lookup = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         var info = target.type().ensureTypeInfo(ctx.getThisClassId(), lookup);
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired()) {
             return scope;
         }
         // InvocationExpression gives a property precedence over methods of the same name.
-        if (info.findProperty(methodName) != null) {
+        if (!target.receiverArgument() && info.findProperty(methodName) != null) {
             return functionScope(site, ctx, scope, errs);
         }
         var methods = info.findMethods(methodName, -1, target.kind()).stream()
@@ -62,17 +78,20 @@ final class PartialCallResolver {
                 .filter(method -> info.getType().getAccess() == Access.PRIVATE
                         || info.getMethodById(method).isVisible(ctx.getThisClassId()))
                 .toList();
-        var candidates = methods.stream()
-                .takeWhile(method -> !errs.isAbortDesired())
-                .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
-                        writtenArguments(site), probe).stream())
-                .filter(candidate -> acceptsLabel(site, candidate))
-                .toList();
+        var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
+        Function<List<Expression>, List<CursorBinding.Candidate>> fit = arguments -> {
+            var supplied = target.receiverArgument()
+                    ? Stream.concat(Stream.of(site.getReceiver().orElseThrow()), arguments.stream()).toList() : arguments;
+            return methods.stream().takeWhile(method -> !errs.isAbortDesired())
+                    .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
+                            supplied, probe).stream())
+                    .map(candidate -> target.receiverArgument() ? candidate.withReceiverArgument() : candidate)
+                    .filter(candidate -> acceptsLabel(site, candidate)).toList();
+        };
+        var candidates = fit.apply(writtenArguments(site));
         var result = scope.withCandidates(candidates);
         return candidates.isEmpty() ? result : argumentValues(site, ctx, result, errs,
-                arguments -> methods.stream().takeWhile(method -> !errs.isAbortDesired())
-                        .anyMatch(method -> !site.probeCallCandidate(ctx, target.type(), info,
-                                method, arguments, probe).isEmpty()));
+                arguments -> !fit.apply(arguments).isEmpty());
     }
 
     private static CursorBinding functionScope(IncompleteStatement site, Context ctx,
@@ -131,13 +150,16 @@ final class PartialCallResolver {
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired()) {
             return result;
         }
-        var properties = info.ensurePropertiesByName().values().stream()
+        var propertyNames = info.ensurePropertiesByName().values().stream()
                 .filter(property -> property.getName().startsWith(prefix))
                 .filter(property -> qualified || scope.instance() || property.isConstant())
                 .filter(property -> qualified || scope.variables().stream().noneMatch(variable -> variable.name().equals(property.getName())))
                 .filter(property -> info.getType().getAccess() == Access.PRIVATE || property.isVisible(ctx.getThisClassId()))
-                .map(property -> property.getName()).sorted()
-                .takeWhile(name -> !errs.isAbortDesired())
+                .map(property -> property.getName());
+        var properties = Stream.concat(propertyNames, qualified ? Stream.empty() : CursorScope.valueNames(cursor).stream())
+                .filter(name -> name.startsWith(prefix))
+                .filter(name -> qualified || scope.variables().stream().noneMatch(variable -> variable.name().equals(name)))
+                .distinct().sorted().takeWhile(name -> !errs.isAbortDesired())
                 .map(name -> propertyValue(cursor, ctx, name, errs))
                 .filter(Objects::nonNull)
                 .filter(property -> fitsName.test(property.name()))
@@ -259,5 +281,9 @@ final class PartialCallResolver {
         return new Target(receiver.getType(), MethodKind.Method);
     }
 
-    private record Target(TypeConstant type, MethodKind kind) {}
+    private record Target(TypeConstant type, MethodKind kind, boolean receiverArgument) {
+        private Target(TypeConstant type, MethodKind kind) {
+            this(type, kind, false);
+        }
+    }
 }
