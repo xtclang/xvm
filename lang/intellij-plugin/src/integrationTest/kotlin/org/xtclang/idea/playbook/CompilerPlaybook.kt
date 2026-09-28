@@ -1068,6 +1068,8 @@ class CompilerPlaybook(
                 }
                 val moved = open("X103/${data.text("destination")}")
                 check(moved.text == data.text("memberSource").replace(data.text("anchor"), data.text("replacement")))
+                check(Files.readString(root.resolve(data.text("companionDestination"))) == data.text("companionSource"))
+                check(!Files.exists(root.resolve(data.text("companion"))))
                 val reopened = open(data.text("file"))
                 reopened.awaitDiagnostics(emptyList())
                 // Restore through the same native refactoring path, including the reverse move.
@@ -1078,6 +1080,8 @@ class CompilerPlaybook(
                 }
                 reopened.awaitDiagnostics(emptyList())
                 check(Files.readString(root.resolve(data.text("member"))) == data.text("memberSource"))
+                check(Files.readString(root.resolve(data.text("companion"))) == data.text("companionSource"))
+                check(!Files.exists(root.resolve(data.text("companionDestination"))))
             }
         }
         scenario("X105") {
