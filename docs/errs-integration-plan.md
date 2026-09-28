@@ -820,9 +820,12 @@ configuration cache. `spotlessCheck` and LSP ktlint checks passed. No new native
 
 Remaining acceptance and scope:
 
-- [ ] Move the added manual rename cases into shared scenario data and both editor drivers, then
-  run selected cases with undo, closed consumers and resource edits. Existing X103 is not evidence
-  for every new variant.
+- [x] Move the added manual rename cases into shared scenario data and both editor drivers:
+  **X109–X117** cover public/constructor parameter slots, override slots, delegation, mixin
+  methods/properties, Lazy properties, qualified modules and implicit packages. Both drivers
+  compare every file, start with closed consumers and perform one Undo.
+- [ ] Run selected X109–X117 cases in both editors; implementation is not native acceptance.
+  Existing X103 is not evidence for every new variant.
 - [ ] Define/persist explicit source-graph replacement in each IDE before offering those module
   renames through standard LSP. The host proposal API is implemented and tested, but a proposal
   does not itself save settings or apply an edit.
