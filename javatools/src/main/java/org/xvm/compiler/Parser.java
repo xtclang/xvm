@@ -3490,6 +3490,11 @@ public class Parser {
      * @return an expression
      */
     Expression parsePrimaryExpression(boolean fExtended) {
+        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            return new IncompleteExpression(new IncompleteStatement(
+                    new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
+        }
         switch (peek().getId()) {
         case ANY: {
             IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());

@@ -285,6 +285,11 @@ final class CursorScope {
                     || identity.getComponent() instanceof ClassStructure || identity.getComponent() instanceof TypedefStructure;
     }
 
+    /** Candidate names only; ordinary read validation still proves accessibility and ownership. */
+    static Set<String> valueNames(IncompleteStatement site) {
+        return names(site);
+    }
+
     private static Set<String> names(IncompleteStatement site) {
         Set<String> names = new HashSet<>(ConstantPool.getImplicitImportNames());
         Stream.iterate(site.getParent(), Objects::nonNull, AstNode::getParent).forEach(node -> {
