@@ -1319,7 +1319,7 @@ class XdkAdapter internal constructor(
                 return PrepareRenameResult(range.toRange(), alias.name)
             }
         }
-        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectTarget(uri, it) } ?: return null
+        val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectTarget(uri, model, it) } ?: return null
         if (symbol.kind == SemanticModel.SymbolKind.MODULE && model.occurrenceAt(line, column)?.name != symbol.name) return null
         val range =
             model.occurrences
@@ -1332,6 +1332,7 @@ class XdkAdapter internal constructor(
     /** Eligibility is provisional; the worker proves binding/dispatch preservation before editing. */
     private fun isProjectTarget(
         uri: String,
+        model: SemanticModel,
         symbol: SemanticModel.Symbol,
     ): Boolean =
         symbol.name != "construct" &&
@@ -1342,8 +1343,14 @@ class XdkAdapter internal constructor(
                 SemanticModel.SymbolKind.PROPERTY,
                 SemanticModel.SymbolKind.PACKAGE,
                 SemanticModel.SymbolKind.MODULE,
+                SemanticModel.SymbolKind.PARAMETER,
             ) &&
-            symbol.declarationSource?.let {
+            (
+                symbol.declarationSource ?: model.parameters[symbol.id]
+                    ?.method
+                    ?.let(model::symbol)
+                    ?.declarationSource
+            )?.let {
                 synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
             } == true
 
@@ -1382,7 +1389,8 @@ class XdkAdapter internal constructor(
                     ?.document(uri)
                     ?.semantics
                     ?.let { model ->
-                        model.importAt(line, column) != null || model.symbolAt(line, column)?.let { isProjectTarget(uri, it) } == true
+                        model.importAt(line, column) != null ||
+                            model.symbolAt(line, column)?.let { isProjectTarget(uri, model, it) } == true
                     } == true && project.scope(uri) != null
             }
         ) {

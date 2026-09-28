@@ -51,6 +51,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -612,6 +613,9 @@ public class NewExpression
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        var bindings = ctx.getInvocationBindings();
+        var writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.<Expression>of();
+        bindings.begin(this);
         var construction = prepareConstruction(ctx, typeRequired, errs, false);
         if (construction == null) {
             return null;
@@ -726,6 +730,7 @@ public class NewExpression
             args = listArgs;
         }
 
+        var sourceArguments = InvocationBinding.arguments(writtenArgs, listArgs);
         if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
             return null;
         }
@@ -792,6 +797,11 @@ public class NewExpression
         m_plan = plan;
 
         Expression exprResult = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
+        if (exprResult == this && bindings.isEnabled()) {
+            MethodConstant selected = constructor.getIdentityConstant();
+            sourceArguments.ifPresent(arguments -> bindings.record(this,
+                    new InvocationBinding(selected, selected.getSignature(), arguments)));
+        }
         clearAnonTypeInfos();
         return exprResult;
     }
