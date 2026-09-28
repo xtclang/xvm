@@ -9,6 +9,7 @@ import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ImportStatement
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Java parser ranges propose edits; XdkProjectQueries proves their semantic safety before publication. */
 internal object XdkImports {
@@ -22,12 +23,12 @@ internal object XdkImports {
         val errors = ErrorList()
         val root =
             try {
-                Parser(Source(text), errors).parseSource()
+                ExecutionTrace.api("Parser.parseSource(imports)") { Parser(Source(text), errors).parseSource() }
             } catch (_: CompilerException) {
                 return emptyList()
             }
         if (errors.hasSeriousErrors()) return emptyList()
-        val tokens = Lexer(Source(text), errors).asSequence().toList()
+        val tokens = ExecutionTrace.api("Lexer.lex(imports)") { Lexer(Source(text), errors).asSequence().toList() }
         if (errors.hasSeriousErrors()) return emptyList()
         val imports =
             nodes(root)

@@ -3,7 +3,8 @@
 package org.xvm.lsp.server
 
 import org.eclipse.lsp4j.jsonrpc.Launcher
-import org.eclipse.lsp4j.launch.LSPLauncher
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
@@ -177,9 +178,18 @@ fun launchStdio(
     // Own the dispatcher as well as the server: LSP4J's default cached platform-thread
     // executor survives EOF, and adapter workers can keep the JVM alive indefinitely.
     val executor = Executors.newVirtualThreadPerTaskExecutor()
+    val trace = ProtocolTrace()
     try {
         val launcher: Launcher<LanguageClient> =
-            LSPLauncher.createServerLauncher(server, input, output, executor) { it }
+            object : Launcher.Builder<LanguageClient>() {
+                override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
+                    trace.wrap(super.wrapMessageConsumer(consumer), received = consumer is RemoteEndpoint)
+            }.setLocalService(server)
+                .setRemoteInterface(LanguageClient::class.java)
+                .setInput(input)
+                .setOutput(output)
+                .setExecutorService(executor)
+                .create()
         server.connect(launcher.remoteProxy)
         launcher.startListening().get()
     } catch (e: Exception) {
@@ -194,6 +204,7 @@ fun launchStdio(
             }
         }
     } finally {
+        trace.close()
         executor.shutdownNow()
         server.close()
     }

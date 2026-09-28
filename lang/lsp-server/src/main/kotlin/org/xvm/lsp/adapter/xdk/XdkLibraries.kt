@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.BuildRepository
+import org.xvm.lsp.util.ExecutionTrace
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Properties
@@ -22,7 +23,7 @@ internal object XdkLibraries {
         val revisions =
             names.split(',').associate { name ->
                 val bytes = resource(name).use { it.readBytes() }
-                val module = FileStructure(bytes.inputStream()).module
+                val module = ExecutionTrace.api("FileStructure.read(bundled-library)", name) { FileStructure(bytes.inputStream()).module }
                 repository.storeModule(module)
                 module.name to HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
             }
@@ -35,7 +36,9 @@ internal object XdkLibraries {
     /** Every bundled library is reserved; workspace discovery must not turn it into editable source. */
     val moduleNames: Set<String> by lazy { immutableSet(bundle.repository.moduleNames) }
 
-    private val configured by lazy { EmbeddingSupport.instance().configure(bundle.repository, null) }
+    private val configured by lazy {
+        ExecutionTrace.api("EmbeddingSupport.configure") { EmbeddingSupport.instance().configure(bundle.repository, null) }
+    }
 
     internal fun module(name: String) = bundle.repository.loadModule(name)
 
