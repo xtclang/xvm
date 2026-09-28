@@ -142,7 +142,7 @@ internal class XdkProjectQueries(
         if (declarationSource !in texts || symbol.declaration == null) return null
         val targets =
             when {
-                symbol.kind == SemanticModel.SymbolKind.TYPE -> {
+                symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE) -> {
                     setOf(target)
                 }
 
@@ -166,28 +166,44 @@ internal class XdkProjectQueries(
         val ids = before.constants.filterValues { it in targets }.keys
         val base = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
         val file = File(declarationSource)
+        val renamedModule = project.modules.values.singleOrNull { it.root == file && symbol.kind == SemanticModel.SymbolKind.MODULE }
+        // Explicit host configurations are not source documents and cannot be rewritten by this
+        // edit. Only discovery-owned, simple module identities can follow a root rename today.
+        if (renamedModule != null && (!discoverImports || renamedModule.name != symbol.name || name in project.modules ||
+                name in XdkLibraries.moduleNames)
+        ) return null
         val moves =
-            if (symbol.kind == SemanticModel.SymbolKind.TYPE && name != symbol.name &&
-                file.nameWithoutExtension == symbol.name && sources.keys.none { it.root == file }
+            if (symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE) &&
+                name != symbol.name && file.nameWithoutExtension == symbol.name
             ) {
-                val destination = File(file.parentFile, "$name.x")
-                // Moving a companion directory needs a separate directory/resource-operation proof.
-                if (File(file.parentFile, file.nameWithoutExtension).exists() || destination.exists() ||
-                    destination.path in texts
-                ) {
-                    return null
-                }
-                mapOf(file.path to destination.path)
+                XdkSourceMoves.plan(file, name, texts, sources.values.flatMap { it.inputs.directories }.toSet()) ?: return null
             } else {
-                emptyMap()
+                XdkSourceMoves()
             }
-        val plan = XdkRename.Plan(texts, base.edits, moves)
-        val after = compile(plan.proposed, moves = moves) ?: return null
+        val graph =
+            if (renamedModule == null) {
+                project
+            } else {
+                XdkProject(
+                    project.modules.values.map { module ->
+                        XdkSourceModule(
+                            if (module === renamedModule) name else module.name,
+                            File(moves.paths[module.root.path] ?: module.root.path).toURI().toString(),
+                            module.dependencies.mapTo(linkedSetOf()) { if (it == renamedModule.name) name else it },
+                        )
+                    },
+                )
+            }
+        val plan = XdkRename.Plan(texts, base.edits, moves.paths)
+        val after = compile(plan.proposed, moves = moves.paths, graph = graph) ?: return null
         if (!XdkRename.preservesBindings(before, after, plan) || !isCurrent()) return null
         return WorkspaceEdit(
             plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
             versioned = true,
-            renames = moves.entries.associate { (from, to) -> uris.getValue(from) to File(to).toURI().toString() },
+            renames = moves.resources.entries.associate { (from, to) ->
+                // Directory URIs must have the same shape even before the destination exists.
+                (uris[from] ?: File(from).toURI().toString().removeSuffix("/")) to File(to).toURI().toString().removeSuffix("/")
+            },
         )
     }
 
@@ -313,7 +329,8 @@ internal class XdkProjectQueries(
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val attempts =
             graph.buildOrder().mapNotNull { module ->
-                val source = sources.entries.firstOrNull { it.key.name == module.name }?.value ?: return@mapNotNull null
+                val source = sources.entries.firstOrNull { (moves[it.key.root.path] ?: it.key.root.path) == module.root.path }
+                    ?.value ?: return@mapNotNull null
                 checkCurrent()
                 if (module.dependencies.any { it !in artifacts && it !in XdkLibraries.moduleNames }) {
                     if (proof != Proof.COMPLETE) return@mapNotNull null
@@ -327,7 +344,8 @@ internal class XdkProjectQueries(
                 val open = XdkDependencies(inputs.values.toList()).open()
                 val heard = ErrorList()
                 val errors = ErrorListener.cancellable(heard, cancelled)
-                val compilation = compileTree(XdkSources.replay(module.root, source.inputs, text, moves), open.repository, errors)
+                val originalRoot = sources.entries.single { it.value === source }.key.root
+                val compilation = compileTree(XdkSources.replay(originalRoot, source.inputs, text, moves), open.repository, errors)
                 checkCurrent()
                 if (!compilation.succeeded() || heard.hasSeriousErrors() ||
                     compilation.file()?.module?.name != module.name

@@ -367,6 +367,15 @@ VS Code receipts above.
   names, module/package/directory moves, companion directories, annotation/mixin/delegation
   dispatch and public-parameter contracts. Keep binary declarations read-only and reject
   unknown external consumers. Add collision, changed binding, changed dispatch and undo tests.
+  The implementation checkpoint adds declared package/type companion-directory moves and
+  simple discovery-owned module renames, with closed import updates and a proposed graph proof.
+  Text edits precede minimal file/directory operations; destinations are never overwritten.
+  Explicit host module configuration, implicit package directories without written declarations,
+  qualified module names, constructor keywords and public parameter contracts remain refused.
+  Existing binding/dispatch proof rules continue to reject unsupported composition families.
+  X103 now exercises a nested companion file in both clients and VS Code undo; backend tests
+  exercise reverse renames, constructor type uses and resource capability negotiation.
+  Combined validation is pending; these conservative exclusions remain explicit follow-ups.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;

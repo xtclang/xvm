@@ -114,6 +114,7 @@ class XdkTeachingWorkspaceTest {
                 put("X100/" + data["neighbor"].asString, data["neighborText"].asString)
             }
             values("X103").let { data -> put("X103/" + data["member"].asString, data["memberSource"].asString) }
+            values("X103").let { data -> put("X103/" + data["companion"].asString, data["companionSource"].asString) }
             values("X105").let { data ->
                 put("X105/" + data["file"].asString, "module AutoImports {}")
                 put("X105/" + data["library"].asString, data["libraryText"].asString)
