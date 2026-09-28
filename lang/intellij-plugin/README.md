@@ -150,6 +150,21 @@ profile disables sole-candidate auto-insertion and automatic completion popups s
 every requested completion list first. Autosave is disabled to preserve unsaved-overlay checks;
 shipped plugin defaults are unchanged.
 
+`CompilerPlaybookTest.startupEditing` separately exercises five editor-edit phases during cold
+open/restart, including immediate repair, shortening and close/reopen. It does not wait for server
+readiness before editing. `run-1799467324333192176` passes with no IDE failures; its
+`startup-editing.json` records versions, PIDs and diagnostic/fold evidence. X103's reverse file
+rename exposed a real transport read-lock/VFS write-lock deadlock; the hook now uses immutable
+document text without an IDE read action. Both rename directions pass in `run-8812860837009261601`.
+Select only startup with `--tests '*CompilerPlaybookTest.startupEditing'`, or only feature cases
+with `--tests '*CompilerPlaybookTest.compilerPlaybook'` plus `-PintellijPlaybookCases=X103`.
+
+Each report's `server-trace/` directory contains child-server JSON lines with queue size and
+ordered jobs, javatools durations and LSP request-to-reply timings. See the
+[trace guide](../lsp-server/README.md#compiler-queue-and-api-timing). The normal startup information
+balloon uses an eight-second smart fadeout timer, paused during interaction; notification history
+is retained.
+
 Editor diagnostics are copied inside the disposable IDE by a small test-only probe. This avoids
 the driver's object descriptions evaluating cancelled lazy quick fixes when reading annotations.
 The probe reads installed severity/message/offset values; it does not issue substitute LSP queries.
@@ -177,21 +192,33 @@ The missing-case subset has 50/50 passing receipts; X29 now passes with current 
 The resumed 61-case batch passed every scenario assertion but failed the IDE-error gate on
 X41's unguarded PSI read. That harness call now uses a read action; X41/X108 pass together with
 no IDE errors. A subsequent full checkpoint was interrupted by desktop focus loss at X108.
-All 113 scenario assertions have passing receipts across runs; a clean single-session pass
-is still required. See the [L60 execution record](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
+The complete 113-case checkpoint now passes in `run-6034631232732848040`, with zero IDE errors
+and zero JUnit failures/errors/skips. Gradle took 6 minutes 40 seconds. Earlier runs exposed the
+session timeout, focus handling and X30's missing document-readiness check after restart; those
+corrections are included. The harness allows 30 minutes overall, with bounded operation waits.
+See the [L60 execution record](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
 
 X33–X35 and X99–X108 have passing native receipts
 across the checkpoint and focused X105 rerun. The receipts and the failures fixed during validation
 are recorded in the [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
-They do not establish a complete 113-case native pass. Earlier runs verified X92 Structure/folding
-and constructor checks through X90; X93–X98 now pass individually. Coverage metadata records
-implemented assertions independently of these runtime receipts.
+The full checkpoint above includes these assertions. Coverage metadata continues to record
+implemented assertions independently of runtime receipts. Separate startup and focus-recovery
+tests pass; startup acceptance also checks that the untouched information balloon disappears.
 
-Leave the isolated IDE focused during completion and Parameter Info checks: switching applications
-can dismiss those native popups even without editing. The driver requests programmatic focus for active-editor actions and popup checks,
-and fails explicitly if the application loses focus. Owned navigation popups count as IDE focus. It no longer uses Driver `ensureFocused()`
-and its title-bar mouse click; ordinary file opening and caret movement request no focus. Native
-UI controls may still use the mouse. A failed check closes the disposable IDE during cleanup.
+The isolated IDE's title and status bar show completed/selected cases, the remaining count and
+the current case. Focus restoration is indicated there too. The harness restores focus through
+`AppIcon`, without Driver's title-bar mouse click. If a popup was interrupted, it reopens only
+the unapplied inspection and only while the document's modification stamp is unchanged. Accepted
+completion edits, quick fixes, renames and file moves are not replayed. Editing a fixture during
+recovery fails explicitly. Automatic activation can redirect your typing into the test IDE;
+an isolated desktop is preferable when working concurrently. Other native controls may still use
+the mouse. Failed checks close the disposable IDE during cleanup.
+
+Readiness checks poll every 100 ms instead of the Driver default of one second, with the same
+failure deadlines. Test-editor scrolling disables animation for the operation and avoids the
+Driver helper's fixed 200 ms sleep. Native UI assertions are unchanged. The dedicated
+`--tests '*CompilerPlaybookTest.focusRecovery'` check creates an unowned test window to interrupt
+completion and Parameter Info, and verifies that completed completion/rename edits cannot replay.
 
 Live case results are appended to `build/reports/compiler-playbook/run-*/progress.jsonl`.
 The final report is `results.json` in the same directory; `ide-paths.txt` points to
