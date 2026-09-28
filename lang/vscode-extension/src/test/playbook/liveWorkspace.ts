@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { edges, hierarchy } from './modules';
 import { client, diagnostics, eventually, noErrors, playbook, position, targetNames, targets, Workspace } from './support';
 
-async function discovered<T>(workspace: Workspace, body: () => Promise<T>): Promise<T> {
+export async function discovered<T>(workspace: Workspace, body: () => Promise<T>): Promise<T> {
     const original = vscode.workspace.workspaceFolders!.map(folder => ({ uri: folder.uri.toString(), name: folder.name }));
     const folder = { uri: vscode.Uri.file(workspace.directory).toString(), name: 'Live discovery' };
     await client().sendNotification('workspace/didChangeWorkspaceFolders', { event: { added: [folder], removed: original } });
