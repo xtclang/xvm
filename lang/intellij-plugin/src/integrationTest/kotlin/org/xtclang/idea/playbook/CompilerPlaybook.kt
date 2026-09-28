@@ -1004,7 +1004,7 @@ class CompilerPlaybook(
     }
 
     private fun Driver.workspaceScenarios() {
-        (109..118).forEach { number ->
+        (109..121).forEach { number ->
             val id = "X$number"
             scenario(id) {
                 withContext(OnDispatcher.EDT) {

@@ -946,9 +946,17 @@ not claim a test receipt until the batch runs.
   implicit/union/generated/native bodies explicitly; these are not source-owned contracts and
   remain refused. A runtime callable-origin propagation API is unnecessary for parameter spelling.
   Execution is pending; exhaustive compiler fixtures for every generated route remain separate.
-- [ ] **5 — External consumers:** make the host's graph boundary explicit and exercise external roots.
+- [x] **5 — External consumers:** reuse `sourceModules` as the explicit consumer manifest, including
+  absolute roots outside workspace folders. Project proposals now carry an immutable scope receipt
+  (configured/discovered boundary, dependency-ordered modules, captured source URIs and input
+  revision); `xtc/rename` exposes the detached receipt. This is not a whole-world guarantee or a
+  stale-edit authorization. Five regressions cover closed external roots, unsaved external buffers,
+  missing consumers, disk changes during proof and discovery boundaries; server coverage checks
+  the wire receipt. Execution is pending.
 
-Validation is deferred until all five checkpoints are written.
+Shared X119–X121 exercise the new semantic cases through both editors, including Undo and
+closed consumers, and are included in the combined validation selection. The catalog now has
+126 cases. Validation is deferred until all five checkpoints are written.
 
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 

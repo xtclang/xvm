@@ -13,7 +13,27 @@ class XdkRenameProposal internal constructor(
     val edit: WorkspaceEdit,
     sourceModules: List<XdkSourceModule>? = null,
     previousSourceModules: List<XdkSourceModule>? = null,
+    val scope: XdkRenameScope? = null,
 ) {
     val sourceModules: List<XdkSourceModule>? = sourceModules?.let(::immutableList)
     val previousSourceModules: List<XdkSourceModule>? = previousSourceModules?.let(::immutableList)
+}
+
+/**
+ * The source boundary actually checked by a project rename. Absolute roots may be outside IDE
+ * workspace folders. Hosts must register every intended consumer; this is not a promise about
+ * unregistered repositories, binaries or reflective string references. Null proposal scope means
+ * a local module proof, not an empty or globally complete graph. This receipt describes the input
+ * snapshot; it is not authorization to apply an edit after its document versions become stale.
+ */
+class XdkRenameScope internal constructor(
+    val boundary: Boundary,
+    modules: List<XdkSourceModule>,
+    sourceUris: List<String>,
+    val revision: String,
+) {
+    enum class Boundary { CONFIGURED_GRAPH, DISCOVERED_GRAPH }
+
+    val modules: List<XdkSourceModule> = immutableList(modules)
+    val sourceUris: List<String> = immutableList(sourceUris)
 }
