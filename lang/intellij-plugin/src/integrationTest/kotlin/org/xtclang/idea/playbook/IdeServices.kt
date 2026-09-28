@@ -8,6 +8,8 @@ import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
 /** Test-only Driver proxies; no automation hooks are added to the shipped plugin. */
 @Remote("com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings", plugin = "com.redhat.devtools.lsp4ij")
 interface LspSettings {
+    fun getLanguageServerSettings(serverId: String): LspServerSettings?
+
     fun updateSettings(
         serverId: String,
         settings: LspServerSettings,
@@ -27,6 +29,8 @@ interface ProjectLspSettings {
     plugin = "com.redhat.devtools.lsp4ij",
 )
 interface LspServerSettings {
+    fun getConfigurationContent(): String?
+
     fun setConfigurationContent(content: String)
 
     fun setServerTrace(trace: ClientTraceLevel): LspServerSettings
