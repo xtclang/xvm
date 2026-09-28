@@ -109,12 +109,23 @@ class XdkLiteralRecoveryTest {
 
     @Test
     fun `unrelated missing syntax is not repaired by a literal cursor`() {
-        for (expression in listOf("[1 + , value.si", "[1=value.si +", "(, value.si", "[1=, value.si")) {
+        for (expression in listOf("[1 + , value.si", "(, value.si", "[1=, value.si")) {
             val prefix = "module Editing { Object run(String value) { return $expression"
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, "$prefix; } }")
                 assertThat(adapter.getCompletions(URI, 0, prefix.length)).describedAs(expression).isEmpty()
             }
+        }
+    }
+
+    @Test
+    fun `missing literal value operand retains lexical completion and ordinary errors`() {
+        val prefix = "module Editing { Object run(String value) { return [1=value.size +"
+        XdkAdapter().use { adapter ->
+            val baseline = adapter.compile(URI, "$prefix; } }")
+            assertThat(baseline.diagnostics).isNotEmpty()
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains("value")
+            assertThat(adapter.getCachedResult(URI)).isEqualTo(baseline)
         }
     }
 
