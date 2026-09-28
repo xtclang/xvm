@@ -123,6 +123,11 @@ public class LambdaExpression
         return m_lambda;
     }
 
+    /** The written arrow token, for source-position consumers. */
+    public Token getOperator() {
+        return operator;
+    }
+
     /**
      * @return the source bindings retained by this lambda's compilation context, or null before
      *         its generated method has been validated

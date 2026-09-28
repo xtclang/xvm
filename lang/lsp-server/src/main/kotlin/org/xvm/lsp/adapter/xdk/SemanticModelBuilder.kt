@@ -160,6 +160,7 @@ private class SemanticModelBuilder(
     private val callees = IdentityHashMap<NameExpression, Argument>()
     private val calls = linkedMapOf<SourceLocation, SemanticModel.CallSite>()
     private val functionCalls = linkedMapOf<SourceLocation, SemanticModel.FunctionCallSite>()
+    private val lambdaSites = linkedMapOf<SourceLocation, SemanticModel.LambdaSite>()
     private val callables = linkedMapOf<SymbolId, SemanticModel.Callable>()
     private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
     private val parameters = mutableMapOf<Pair<MethodConstant, Int>, SymbolId>()
@@ -228,7 +229,19 @@ private class SemanticModelBuilder(
         val lambdas = nodes.filterIsInstance<LambdaExpression>()
         lambdas.forEach { it.sourceBindings?.let { bindings -> captureOrigins.putAll(bindings.captureOrigins) } }
         lambdas.forEach { lambda ->
-            lambda.sourceBindings?.parameters?.forEach { declare(it.name(), it.register(), SymbolKind.PARAMETER, lambda.source) }
+            lambda.sourceBindings?.parameters?.forEach { binding ->
+                declare(binding.name(), binding.register(), SymbolKind.PARAMETER, lambda.source)
+                if (lambda.hasOnlyParamNames() && validatedType(lambda) != null) {
+                    (normalized(binding.register()) as? Register)?.let(registers::get)?.let { id ->
+                        symbols[id]?.let { symbols[id] = it.copy(inferred = true) }
+                    }
+                }
+            }
+            validatedType(lambda)?.let(::functionSignature)?.let { signature ->
+                val arrow = lambda.operator
+                val at = location(lambda.source, arrow.startPosition, arrow.endPosition)
+                lambdaSites[at] = SemanticModel.LambdaSite(at.range, signature)
+            }
         }
         // Parameters precede synthetic properties that share their source tokens.
         nodes.filterIsInstance<Parameter>().forEach {
@@ -264,11 +277,7 @@ private class SemanticModelBuilder(
                     (normalized(node.register) as? Register)?.let(registers::get)?.let { id ->
                         symbols[id]?.takeIf { it.kind == SymbolKind.VARIABLE }?.let { symbols[id] = it.copy(renameable = true) }
                     }
-                    if (node
-                            .childNodes()
-                            .asSequence()
-                            .any { it is VariableTypeExpression }
-                    ) {
+                    if (nodesIn(node).any { it is VariableTypeExpression }) {
                         (normalized(node.register) as? Register)?.let(registers::get)?.let { id ->
                             symbols[id]?.let { symbols[id] = it.copy(inferred = true) }
                         }
@@ -388,6 +397,7 @@ private class SemanticModelBuilder(
                     calls = calls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                     functionCalls = functionCalls.filterKeys { it.sourceName == source }.values.sortedBy { it.range.start },
                     imports = if (complete) compilerImportAliases(nodes, source, occurrences, constants) else emptyList(),
+                    lambdas = if (complete) lambdaSites.filterKeys { it.sourceName == source }.values.toList() else emptyList(),
                 )
             },
         )
