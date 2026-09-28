@@ -1751,7 +1751,7 @@ accepted edits before continuing. These are bounded semantic edits, not general 
 
 Shared cases **X109–X117** now carry these sources, expected edits and file destinations for
 both editor drivers. Each starts with other consumers closed and checks a single Undo against
-every original source and path. Their first selected native validation is pending. For manual
+every original source and path. Selected native validation passed (receipts below). For manual
 exploration, use a scratch workspace with automatic source discovery. Save
 `RenameLibrary.x` and `RenameConsumer.x`, then wait for clean diagnostics:
 
@@ -1794,8 +1794,10 @@ or a stale settings snapshot before accepting the edit. Standard `textDocument/r
 to refuse graph changes for clients without this persistence integration.
 An explicit graph must contain every consumer you intend to update. An omitted source module
 is outside the proof and will not be renamed; its mere presence beside a configured root does
-not cause rejection. Primary-constructor properties, lambda parameters, escaped public method
-values and unsupported composition routes remain refused.
+not cause rejection. The new X119–X121 cases cover primary-constructor properties, lambda
+parameters and escaped method values. Unsupported composition routes remain refused.
+Project `xtc/rename` responses also describe this input boundary in `scope`; absolute registered
+roots may be outside workspace folders. A scope receipt does not authorize applying stale edits.
 
 - **VS Code:** keep the explicit graph in workspace settings (`.vscode/settings.json`, or the
   `settings` object of a saved `.code-workspace`). Rename edits only `xtc.compiler.sourceModules`
@@ -2077,7 +2079,7 @@ module Advanced {
 | X118 | Repeat X116 with explicit sourceModules settings containing Library.example.org and Consumer → Library.example.org. | Rename changes the root URI, module name and dependency edge in settings; Undo and Redo restore the matching graph, source contents and resource paths together. Save All in VS Code persists the settings document with the sources. |
 | X119 | Rename the primary constructor property input in Library.Box with Consumer closed. | Header, constructor label and property access change together; Other.input stays unchanged. Undo restores every source. |
 | X120 | Rename a lambda input captured by a nested lambda. | Declaration and nested capture change; sibling lambda input stays unchanged. Undo restores the source. |
-| X121 | Rename a method input while a closed consumer stores its method value and also calls it by name. | Direct label and selected declaration change; positional function calls and the String overload stay unchanged. Undo restores both files. |
+| X121 | Rename a method input while a closed consumer stores its method value and also calls it by name. | Direct label and selected declaration change; positional function calls and Other.pick stay unchanged. Undo restores both files. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -2321,10 +2323,10 @@ Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
 - Persistent indexing and measured incremental work across larger module graphs
 - Binary source attachment, conditional-mixin hierarchy and broader implementation targets
-- Wider member/workspace rename: primary-constructor property parameters, lambda parameters,
-  method-value escapes and unsupported composition routes. The L62 extension covers public/explicit-
-  constructor parameters, supported composition families, qualified modules and implicit package
-  directories. Both clients implement graph persistence through native Rename. Shared X109–X118
+- Wider member/workspace rename: unsupported composition routes and automatic external-consumer
+  enumeration. X119–X121 add primary-constructor properties, lambda parameters and method-value
+  escapes. The L62 extension also covers public/explicit-constructor parameters, supported
+  composition families, qualified modules and implicit package directories. Both clients implement graph persistence through native Rename. Shared X109–X118
   pass in selected runs in both editors. VS Code edited-file moves with refactoring auto-save
   disabled remain refused. Consumers outside the graph remain unknown
 - Diagnostic-driven quick fixes and refactorings
@@ -2340,8 +2342,10 @@ See the [L55/L61/L62 receipts](../../docs/errs-integration-plan.md#teaching-work
 ### Rename extension batch acceptance
 
 X119–X121 are shared by both drivers and add primary-header properties, lambda captures and
-escaped method values. The catalog now contains 126 cases; these three additions await the
-combined validation run. No full 126-case receipt is claimed. Source-graph scope receipts on
+escaped method values. The catalog now contains 126 cases; X119–X121 pass in VS Code
+`run-c7xgn7` and IntelliJ `run-14634841832018763989`. The latter also passes X57, X118 and
+CFG1–CFG3 plus START with zero IDE errors. VS Code's single-folder settings correction passes
+X118 and CFG1–CFG3 in `run-Z5w8sz`. No full 126-case receipt is claimed. Source-graph scope receipts on
 `xtc/rename` describe configured/discovered inputs, including explicitly registered external
 roots. Unknown external consumers are not discovered by rename. Register them in sourceModules
 before renaming; an unreadable registered source refuses the proposal rather than reducing scope.
