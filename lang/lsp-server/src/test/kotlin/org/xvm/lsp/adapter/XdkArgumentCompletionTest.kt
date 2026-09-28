@@ -246,12 +246,12 @@ class XdkArgumentCompletionTest {
     }
 
     @Test
-    fun `argument values fit their calls while compound operand prefixes retain lexical completion`() {
+    fun `argument values fit their calls including compound operand prefixes`() {
         XdkAdapter().use { adapter ->
             for ((call, suffix, expected) in listOf(
                 Triple("pair(nu", ", text)", "number"),
                 Triple("pair(1, (te", "))", "text"),
-                Triple("pair(1 + nu", ", text)", "numberText"),
+                Triple("pair(1 + nu", ", text)", "number"),
                 Triple("pair(1, text.si", ")", null),
             )) {
                 val prefix = "$HEADER Int textNumber=1; String numberText=\"x\"; $call"
