@@ -72,7 +72,9 @@ internal fun TypeInfo.dispatch(
                     CompilerDispatch(listOf(body.identity), supported = false)
                 }
 
-                else -> CompilerDispatch(listOf(body.identity), supported = false)
+                else -> {
+                    CompilerDispatch(listOf(body.identity), supported = false)
+                }
             }
         }
     return CompilerDispatch(
