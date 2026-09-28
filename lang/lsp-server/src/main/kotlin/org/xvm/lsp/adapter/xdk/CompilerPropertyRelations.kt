@@ -11,6 +11,7 @@ import org.xvm.asm.constants.PropertyConstant
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Attempt-owned property dispatch facts, including written getter/setter owners. */
 internal class CompilerPropertyRelations(
@@ -38,7 +39,10 @@ internal fun compilerPropertyRelations(
         nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
             if (errors.isAbortDesired) return@flatMap emptyList()
             val structure = node.component as? ClassStructure ?: return@flatMap emptyList()
-            val info = structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+            val info =
+                ExecutionTrace.api("TypeConstant.ensureTypeInfo(property-relations)") {
+                    structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                }
             info.properties.values
                 .filter { property -> property.propertyBodies.any { it.identity in declarations } }
                 .map { property ->

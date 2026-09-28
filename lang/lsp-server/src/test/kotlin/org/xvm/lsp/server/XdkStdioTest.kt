@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
@@ -69,12 +70,50 @@ class XdkStdioTest {
     lateinit var directory: Path
 
     @Test
+    fun `packaged server records queue contents compiler calls and reply latency`() {
+        val traceDirectory =
+            Session(packagedJar(), directory).use { session ->
+                session.initialize()
+                session.open("module Stdio { Int answer() = 42; }")
+                assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+                session.await(session.server.textDocumentService.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI))))
+                session.traceDirectory
+            }
+        val entries =
+            Files.list(traceDirectory).use { files ->
+                files
+                    .filter { it.fileName.toString().startsWith("lsp-trace-") }
+                    .toList()
+                    .flatMap { Files.readAllLines(it) }
+                    .map { JsonParser.parseString(it).asJsonObject }
+            }
+        assertThat(entries).isNotEmpty()
+        val jobs = entries.filter { it["kind"].asString == "compiler-queue" }
+        assertThat(jobs).anySatisfy {
+            assertThat(it["event"].asString).isEqualTo("queued")
+            assertThat(it["queueSize"].asInt).isPositive()
+            assertThat(it["queuedJobs"].toString()).contains("compile", "Stdio.x")
+        }
+        assertThat(entries).anySatisfy {
+            assertThat(it["operation"].asString).startsWith("EmbeddingSupport.compileModule")
+            assertThat(it["event"].asString).isEqualTo("end")
+            assertThat(it["elapsedMs"].asDouble).isPositive()
+        }
+        assertThat(entries).anySatisfy {
+            assertThat(it["operation"].asString).isEqualTo("textDocument/documentSymbol")
+            assertThat(it["event"].asString).isEqualTo("end")
+            assertThat(it["boundary"].asString).isEqualTo("server-reply-written")
+        }
+        assertThat(entries.toString()).doesNotContain("Int answer() = 42")
+    }
+
+    @Test
     fun `property implementations round trip fields and accessors through the packaged server`() {
         val source =
             "module Stdio { interface Named { @RO String name; } " +
-                "class Stored implements Named { @Override String name=\"stored\"; } " +
-                "class Computed implements Named { @Override String name.get()=\"computed\"; } " +
-                "class Unrelated { String name=\"other\"; } Int size(String text)=text.size; }"
+                "class Stored implements Named { @Override String name = \"stored\"; } " +
+                "class Computed implements Named { @Override String name.get() = \"computed\"; } " +
+                "class Unrelated { String name = \"other\"; } Int size(String text) = text.size; }"
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             session.open(source)
@@ -884,6 +923,10 @@ class XdkStdioTest {
         directory: Path,
         invalidXdkHome: Boolean = false,
     ) : AutoCloseable {
+        // Keep child traces after JUnit deletes its temporary workspace, without mixing sessions.
+        val traceDirectory =
+            System.getProperty("xtc.trace.directory")?.let { Path.of(it).resolve(directory.fileName) }
+                ?: directory.resolve(".xtc/logs")
         private val stderr = directory.resolve("stderr.log")
         private val published = LinkedBlockingQueue<PublishDiagnosticsParams>()
         private val executor = Executors.newVirtualThreadPerTaskExecutor()
@@ -896,6 +939,8 @@ class XdkStdioTest {
                     .orElseThrow(),
                 "-ea",
                 "-Duser.home=$directory",
+                "-Dxtc.trace.directory=$traceDirectory",
+                "-Dxtc.trace.level=INFO",
                 "-jar",
                 jar.toString(),
             ).apply {

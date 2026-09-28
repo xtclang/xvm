@@ -59,6 +59,7 @@ import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolKind
 import org.xvm.lsp.adapter.xdk.SemanticModel.Type
 import org.xvm.lsp.adapter.xdk.SemanticModel.TypeForm
 import org.xvm.lsp.adapter.xdk.SemanticModel.TypeId
+import org.xvm.lsp.util.ExecutionTrace
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.UUID
@@ -77,24 +78,28 @@ fun EmbeddingSupport.Compilation.semanticSnapshot(): SemanticModel {
 }
 
 /** Copy all source views together, sharing symbol/type IDs within this compilation only. */
-fun EmbeddingSupport.Compilation.semanticSnapshots(): List<SemanticModel> {
-    val builder = SemanticModelBuilder()
-    val pool = pool() ?: return builder.build(this)
-    return ConstantPool.withPool(pool).use { builder.build(this) }
-}
+fun EmbeddingSupport.Compilation.semanticSnapshots(): List<SemanticModel> =
+    ExecutionTrace.api("Compilation.semanticSnapshots") {
+        val builder = SemanticModelBuilder()
+        val pool = pool() ?: return@api builder.build(this)
+        return@api ConstantPool.withPool(pool).use { builder.build(this) }
+    }
 
 /** Explicit compiler-worker inspection of implementation chains, reporting through the host listener. */
-fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<SemanticModel> {
-    val builder = SemanticModelBuilder()
-    val pool = pool() ?: return builder.build(this)
-    return ConstantPool.withPool(pool).use { builder.build(this, errors) }
-}
+fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<SemanticModel> =
+    ExecutionTrace.api("Compilation.semanticSnapshots(type-info)") {
+        val builder = SemanticModelBuilder()
+        val pool = pool() ?: return@api builder.build(this)
+        return@api ConstantPool.withPool(pool).use { builder.build(this, errors) }
+    }
 
 /** Bindings for local renames or partial repairs; never resume failed validation or inspect TypeInfo. */
 internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependencies.Open): CompilerRenameFacts =
-    ConstantPool.withPool(pool()).use {
-        val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
-        captureRenameFacts(builder.build(this), builder.constantBindings(), dependencies)
+    ExecutionTrace.api("Compilation.renameFacts") {
+        ConstantPool.withPool(pool()).use {
+            val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
+            captureRenameFacts(builder.build(this), builder.constantBindings(), dependencies)
+        }
     }
 
 /** Graph proof facts retain dependency declaration associations and actual dispatch chains. */
@@ -102,34 +107,39 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
 ): CompilerRenameFacts =
-    ConstantPool.withPool(pool()).use {
-        val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
-        val models = builder.build(this, errors)
-        captureRenameFacts(
-            models,
-            builder.constantBindings(),
-            dependencies,
-            builder.methodRelations(this, errors),
-            builder.propertyRelations(this, errors),
-        )
+    ExecutionTrace.api("Compilation.projectRenameFacts") {
+        ConstantPool.withPool(pool()).use {
+            val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId })
+            val models = builder.build(this, errors)
+            captureRenameFacts(
+                models,
+                builder.constantBindings(),
+                dependencies,
+                builder.methodRelations(this, errors),
+                builder.propertyRelations(this, errors),
+            )
+        }
     }
 
 /** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
-fun EmbeddingSupport.Compilation.toDependency(): XdkDependency {
-    require(succeeded()) { "A dependency artifact requires successful compilation" }
-    return ConstantPool.withPool(pool()).use {
-        val builder = SemanticModelBuilder()
-        builder.build(this)
-        XdkDependency.capture(this, builder.declarations())
+fun EmbeddingSupport.Compilation.toDependency(): XdkDependency =
+    ExecutionTrace.api("Compilation.toDependency") {
+        require(succeeded()) { "A dependency artifact requires successful compilation" }
+        return@api ConstantPool.withPool(pool()).use {
+            val builder = SemanticModelBuilder()
+            builder.build(this)
+            XdkDependency.capture(this, builder.declarations())
+        }
     }
-}
 
 internal fun EmbeddingSupport.Compilation.semanticSnapshots(
     errors: ErrorListener,
     dependencies: XdkDependencies.Open,
 ): List<SemanticModel> =
-    ConstantPool.withPool(pool()).use {
-        SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId }).build(this, errors)
+    ExecutionTrace.api("Compilation.semanticSnapshots(dependencies)") {
+        ConstantPool.withPool(pool()).use {
+            SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId }).build(this, errors)
+        }
     }
 
 /**
@@ -137,12 +147,13 @@ internal fun EmbeddingSupport.Compilation.semanticSnapshots(
  * this may build receiver TypeInfo and report through [errors]. Never call it on a request thread
  * or concurrently with another compilation using the same repository.
  */
-fun EmbeddingSupport.PartialAnalysis.semanticSnapshot(errors: ErrorListener): PartialSemanticModel {
-    val builder = SemanticModelBuilder()
-    if (errors.isAbortDesired) return PartialSemanticModel(builder.unavailable(), emptyList())
-    val pool = pool().orElse(null) ?: return PartialSemanticModel(builder.unavailable(), emptyList())
-    return ConstantPool.withPool(pool).use { builder.buildPartial(this, errors) }
-}
+fun EmbeddingSupport.PartialAnalysis.semanticSnapshot(errors: ErrorListener): PartialSemanticModel =
+    ExecutionTrace.api("PartialAnalysis.semanticSnapshot") {
+        val builder = SemanticModelBuilder()
+        if (errors.isAbortDesired) return@api PartialSemanticModel(builder.unavailable(), emptyList())
+        val pool = pool().orElse(null) ?: return@api PartialSemanticModel(builder.unavailable(), emptyList())
+        return@api ConstantPool.withPool(pool).use { builder.buildPartial(this, errors) }
+    }
 
 /** Compiler-worker extraction. All mutable state dies with the builder. */
 private class SemanticModelBuilder(
@@ -726,7 +737,10 @@ private class SemanticModelBuilder(
     ): List<PartialSemanticModel.Member> {
         // This explicit inspection owns its diagnostics. Ordinary snapshot extraction stays passive.
         val lookup = ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
-        val info = receiver.ensureTypeInfo(owner.identityConstant, lookup)
+        val info =
+            ExecutionTrace.api(
+                "TypeConstant.ensureTypeInfo(cursor-members)",
+            ) { receiver.ensureTypeInfo(owner.identityConstant, lookup) }
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired) return emptyList()
         val privateAccess = info.type.access == Access.PRIVATE
         val methods =

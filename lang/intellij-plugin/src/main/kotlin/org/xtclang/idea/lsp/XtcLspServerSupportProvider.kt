@@ -162,7 +162,10 @@ class XtcLspConnectionProvider(
                 "-Djava.awt.headless=true", // No GUI components
                 "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
                 "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens", // Keep semantic tokens opt-in until client rendering is stable
-            ),
+            ) +
+                listOf("xtc.trace.directory", "xtc.trace.level").mapNotNull { key ->
+                    System.getProperty(key)?.let { "-D$key=$it" }
+                },
         )
 
         // Convert to GeneralCommandLine for OSProcessStreamConnectionProvider.
