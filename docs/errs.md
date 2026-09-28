@@ -2288,3 +2288,16 @@ the code. The prior-art branch found real bugs in this category, not just untidi
 | `Parser.expectPartialClose`, call/statement endings and EOF containers | Retain existing grouping/index/call syntax only around the selected cursor hole at a statement or outer delimiter. Missing ends use zero-width positions in the unchanged source. This is parser recovery, not new AST semantics: existing child adoption/cloning and failed validation prevent emission. No AST class or collector changes are needed. |
 | `NameExpression` generic binding | A compiler correctness fix in existing name validation/emission, not LSP state. Remove bound hidden parameters from the exposed function type and emit a `BindFunctionAST` for the same arguments as FBind. The existing AST result field is reused. |
 | `PropertyInfo.layerOn` / Kotlin `XdkAst` | The compiler warning names the contributed declaration; Kotlin maps its structure/identity to the existing declaration token. This does not add source positions to runtime structures or retain another compiler graph. |
+
+### L62 client persistence and remaining rename identities (2026-09-28)
+
+X109–X118 move the parameter/composition/resource acceptance fixtures into shared data for both
+editor drivers, including closed consumers and Undo/Redo. Native Rename uses `xtc/rename` to carry
+an expected graph, replacement graph and versioned edit; each host persists its settings with
+the source transaction. No AST state, accessor or Java compiler pipeline change was needed.
+
+The [rename boundary audit](errs-integration-plan.md#rename-boundary-audit) records why primary
+constructor property parameters, lambda parameters, escaped method values and unknown dispatch
+routes remain refused. Explicit graph scope is different: unknown consumers are omitted, not
+automatically rejected. The host must include every intended consumer. New regression and editor
+fixtures are written; their combined validation is pending.
