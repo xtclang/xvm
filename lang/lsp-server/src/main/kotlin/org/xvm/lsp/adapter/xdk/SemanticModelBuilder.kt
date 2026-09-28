@@ -211,6 +211,7 @@ private class SemanticModelBuilder(
                 ?: return listOf(unavailable())
         val nodes = nodesIn(root)
         collect(nodes, compilation.callBindings(), compilation.functionBindings(), compilation.pool(), compilation.succeeded())
+        compilation.constructorBindings().forEach { (node, binding) -> copyConstruction(node, binding) }
         val implementations =
             if (compilation.succeeded() && errors != null) compilerImplementationTargets(nodes, errors) else emptyMap()
         // An inherited accessor need not appear in a written call or the consumer's constant table.
@@ -399,6 +400,11 @@ private class SemanticModelBuilder(
         declarations: Map<IdentityConstant, Set<IdentityConstant>> = emptyMap(),
     ): List<SemanticModel> {
         val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
+        val parameterSlots =
+            parameters.entries.filter { it.key.second >= 0 }.associate { (binding, id) ->
+                val owner = requireNotNull(symbol(binding.first, binding.first.name, SymbolKind.METHOD))
+                id to SemanticModel.ParameterSlot(owner, binding.second)
+            }
         val facts =
             SemanticModel.Facts(
                 symbols = symbols,
@@ -411,6 +417,7 @@ private class SemanticModelBuilder(
                             constants[target]?.let { it to implementations.mapNotNull(constants::get) }
                         }.toMap(),
                 callables = callables,
+                parameters = parameterSlots,
                 declarations =
                     declarations.entries
                         .mapNotNull { (target, contracts) ->
@@ -447,7 +454,7 @@ private class SemanticModelBuilder(
         val target = symbol(binding.method(), method.name, SymbolKind.METHOD) ?: return
         binding.arguments().forEach { argument ->
             val label = argument.label() ?: return@forEach
-            val parameter = parameters[binding.method() to argument.parameterIndex()] ?: return@forEach
+            val parameter = parameter(method, argument.parameterIndex()) ?: return@forEach
             val at = location(node.source, label.startPosition(), label.endPosition())
             occurrences[at] = Occurrence(at.range, label.name(), Role.REFERENCE, parameter, symbols[parameter]?.type)
         }
@@ -473,6 +480,51 @@ private class SemanticModelBuilder(
                     generateSequence(node.parent) { it.parent }
                         .firstOrNull { it in callableNodes || it is PropertyDeclarationStatement || it is TypeCompositionStatement }
                         ?.let(callableNodes::get),
+            )
+    }
+
+    private fun parameter(
+        method: MethodStructure,
+        index: Int,
+    ): SymbolId? {
+        val value = method.params.getOrNull(index + method.typeParamCount) ?: return null
+        return parameters.getOrPut(method.identityConstant to index) {
+            val id = SymbolId(this.id, symbols.size)
+            symbols[id] = Symbol(id, value.name, SymbolKind.PARAMETER, null, type(value.type), null, null)
+            id
+        }
+    }
+
+    private fun copyConstruction(
+        node: NewExpression,
+        binding: InvocationBinding,
+    ) {
+        val method = binding.method().component as? MethodStructure ?: return
+        val target = symbol(binding.method(), method.name, SymbolKind.METHOD) ?: return
+        binding.arguments().forEach { argument ->
+            val label = argument.label() ?: return@forEach
+            val parameter = parameter(method, argument.parameterIndex()) ?: return@forEach
+            val at = location(node.source, label.startPosition(), label.endPosition())
+            occurrences[at] = Occurrence(at.range, label.name(), Role.REFERENCE, parameter, symbols[parameter]?.type)
+        }
+        // Written constructors have source identities that can be compared across proof attempts.
+        // Implicit constructors remain absent from source call hierarchy, as before.
+        if (symbols[target]?.declaration == null) return
+        val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
+        val at = location(node.source, node.startPosition, node.endPosition)
+        calls[at] =
+            SemanticModel.CallSite(
+                at.range,
+                at.range,
+                target,
+                selected,
+                binding.arguments().map {
+                    SemanticModel.CallArgument(
+                        location(node.source, it.startPosition(), it.endPosition()).range,
+                        it.parameterIndex(),
+                        it.named(),
+                    )
+                },
             )
     }
 

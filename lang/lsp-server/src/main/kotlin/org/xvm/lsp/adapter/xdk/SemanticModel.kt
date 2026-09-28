@@ -108,6 +108,12 @@ class SemanticModel internal constructor(
         val defaulted: Boolean,
     )
 
+    /** Compiler-selected visible parameter slot, independent of its spelling and register. */
+    data class ParameterSlot(
+        val method: SymbolId,
+        val index: Int,
+    )
+
     /** Declared signature, including formal type parameters and conditional returns. */
     @ConsistentCopyVisibility
     data class Signature internal constructor(
@@ -226,6 +232,7 @@ class SemanticModel internal constructor(
     val lambdas: List<LambdaSite> = immutableList(lambdas)
     val typeDeclarations: Map<SymbolId, TypeDeclaration> = facts.typeDeclarations
     val callables: Map<SymbolId, Callable> = facts.callables
+    val parameters: Map<SymbolId, ParameterSlot> = facts.parameters
 
     /** One immutable symbol/type table shared by every source view of the compilation. */
     internal class Facts(
@@ -236,6 +243,7 @@ class SemanticModel internal constructor(
         implementations: Map<SymbolId, List<SymbolId>> = emptyMap(),
         callables: Map<SymbolId, Callable> = emptyMap(),
         declarations: Map<SymbolId, List<SymbolId>> = emptyMap(),
+        parameters: Map<SymbolId, ParameterSlot> = emptyMap(),
     ) {
         val symbolsById = immutableMap(symbols)
         val typesById = immutableMap(types)
@@ -246,6 +254,7 @@ class SemanticModel internal constructor(
         val implementations = immutableMap(implementations.mapValues { immutableList(it.value) })
         val callables = immutableMap(callables)
         val declarations = immutableMap(declarations.mapValues { immutableList(it.value) })
+        val parameters = immutableMap(parameters)
     }
 
     /** IDs from another snapshot return no result. */
@@ -380,6 +389,9 @@ class SemanticModel internal constructor(
                         .flatMap { it.declarations.entries }
                         .groupBy({ canonical(it.key) }, { it.value })
                         .mapValues { (_, groups) -> groups.flatten().map(::canonical).distinct() },
+                    tables.flatMap { it.parameters.entries }.associate { (id, slot) ->
+                        canonical(id) to slot.copy(method = canonical(slot.method))
+                    },
                 )
             return models.map { model ->
                 SemanticModel(
