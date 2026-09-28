@@ -9,7 +9,7 @@ class XdkIncompleteConstructorTest {
     fun `constructor signatures fit written arguments without selecting an overload`() {
         val declarations =
             "module Editing { class Box { construct(Int first, String second) {} " +
-                "construct(String first, Int second=0) {} } void run() { new Box("
+                "construct(String first, Int second = 0) {} } void run() { new Box("
         XdkAdapter().use { adapter ->
             for ((argument, labels) in listOf(
                 "" to listOf("new Box(Int first, String second)", "new Box(String first, Int second = …)"),
@@ -35,7 +35,7 @@ class XdkIncompleteConstructorTest {
         XdkAdapter().use { adapter ->
             for ((call, parameter) in listOf(
                 "new Box<String>(\"x\", " to 1,
-                "Box<String> box = new Box<String>(second=\"x\", first=" to 0,
+                "Box<String> box = new Box<String>(second = \"x\", first =" to 0,
             )) {
                 val prefix = declarations + call
                 adapter.compile(URI, "$prefix); } }")
@@ -54,7 +54,7 @@ class XdkIncompleteConstructorTest {
                 "class Hidden { private construct(Int value) {} } @Abstract class AbstractBox { construct(Int value) {} } " +
                 "void run() { "
         XdkAdapter().use { adapter ->
-            for (call in listOf("new Box(True, ", "new Box(unknown=", "new Hidden(", "new AbstractBox(", "new Missing(")) {
+            for (call in listOf("new Box(True, ", "new Box(unknown =", "new Hidden(", "new AbstractBox(", "new Missing(")) {
                 val prefix = declarations + call
                 adapter.compile(URI, "$prefix); } }")
                 assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).describedAs(call).isNull()

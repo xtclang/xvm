@@ -59,7 +59,7 @@ class XdkIncompleteFunctionTest {
     @Test
     fun `function producing expressions supply types without inventing a callee name`() {
         val prefix =
-            "module Editing { function Int(Int, String) make(function Int(Int, String) fn)=fn; " +
+            "module Editing { function Int(Int, String) make(function Int(Int, String) fn) = fn; " +
                 "void run(function Int(Int, String) fn) { make(fn)(1, "
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
@@ -83,7 +83,7 @@ class XdkIncompleteFunctionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["fn(True, ", "fn(name=", "fn(name=1, ", "fn(1, \"x\", True, "])
+    @ValueSource(strings = ["fn(True, ", "fn(name =", "fn(name = 1, ", "fn(1, \"x\", True, "])
     fun `function signatures reject incompatible named and excess written arguments`(call: String) {
         val prefix = "module Editing { void run(function Int(Int, String) fn) { $call"
         XdkAdapter().use { adapter ->
@@ -97,7 +97,7 @@ class XdkIncompleteFunctionTest {
         for (prefix in listOf(
             "module Editing { void run() { function Int(Int) fn; fn(",
             "module Editing { void run(function Int(Int)? fn) { fn(",
-            "module Editing { Int fn(Int n)=n; void run() { Int fn=1; fn(",
+            "module Editing { Int fn(Int n) = n; void run() { Int fn = 1; fn(",
         )) {
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, "$prefix); } }")

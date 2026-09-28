@@ -4,9 +4,9 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
 
-const LIBRARY = 'module Library { static Int value()=1; class Item {} }';
-const CONSUMER = 'module Consumer { package lib import Library; Int value=10; ' +
-    'private Int pick(Int input)=input; Int run() { Int local=pick(input=lib.value()); return local+value; } }';
+const LIBRARY = 'module Library { static Int value() = 1; class Item {} }';
+const CONSUMER = 'module Consumer { package lib import Library; Int value = 10; ' +
+    'private Int pick(Int input) = input; Int run() { Int local = pick(input = lib.value()); return local + value; } }';
 
 async function eventually(check: () => Promise<boolean> | boolean, description: string): Promise<void> {
     const end = Date.now() + 30_000;
@@ -60,7 +60,7 @@ suite('Compiler editor acceptance', function () {
             const originalVersion = document.version;
             const dependency = await vscode.workspace.openTextDocument(library);
             await vscode.window.showTextDocument(dependency);
-            await replace(dependency, LIBRARY.replace('Int value()=1', 'String value()="changed"'));
+            await replace(dependency, LIBRARY.replace('Int value() = 1', 'String value() = "changed"'));
             await eventually(() => vscode.languages.getDiagnostics(consumer).length > 0, 'unchanged consumer reports new dependency type');
             assert.strictEqual(document.version, originalVersion);
             await replace(dependency, LIBRARY);
@@ -83,8 +83,8 @@ suite('Compiler editor acceptance', function () {
             const rename = await vscode.commands.executeCommand<vscode.WorkspaceEdit>('vscode.executeDocumentRenameProvider', consumer,
                 document.positionAt(document.getText().lastIndexOf('input')), 'number');
             assert.ok(rename && await vscode.workspace.applyEdit(rename), 'versioned rename applies through the editor');
-            assert.ok(document.getText().includes('Int number)=number'));
-            assert.ok(document.getText().includes('pick(number=lib.value())'));
+            assert.ok(document.getText().includes('Int number) = number'));
+            assert.ok(document.getText().includes('pick(number = lib.value())'));
             const rejected = await getClient()!.sendRequest('textDocument/rename', {
                 textDocument: { uri: consumer.toString() }, position: document.positionAt(document.getText().indexOf('local')), newName: 'value'
             });
@@ -95,7 +95,7 @@ suite('Compiler editor acceptance', function () {
             // Repeated editor notifications and queries, including real invalid/valid transitions.
             for (let cycle = 0; cycle < 40; cycle++) {
                 const start = Date.now();
-                await replace(document, prefix.replace('Int local=', 'MissingType local=') + `// ${cycle}`);
+                await replace(document, prefix.replace('Int local =', 'MissingType local =') + `// ${cycle}`);
                 await eventually(() => vscode.languages.getDiagnostics(consumer).length > 0, `error cycle ${cycle}`);
                 await replace(document, prefix + `// ${cycle}`);
                 await eventually(() => vscode.languages.getDiagnostics(consumer).length === 0, `recovery cycle ${cycle}`);

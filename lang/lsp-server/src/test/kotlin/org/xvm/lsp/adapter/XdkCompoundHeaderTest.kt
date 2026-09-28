@@ -40,8 +40,8 @@ class XdkCompoundHeaderTest {
         ],
     )
     fun `written leaf type prefixes complete inside parameterized and compound headers`(declaration: String) {
-        val prefix = "module Headers { String StringValue=\"x\"; " + declaration.substringBefore('§')
-        val suffix = declaration.substringAfter('§') + " Int later=1; }"
+        val prefix = "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('§')
+        val suffix = declaration.substringAfter('§') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -86,7 +86,7 @@ class XdkCompoundHeaderTest {
     )
     fun `bounded missing type closers allow completion without hiding ordinary errors`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('§')
-        val suffix = declaration.substringAfter('§') + " Int later=1; }"
+        val suffix = declaration.substringAfter('§') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).describedAs(declaration).contains("String")
@@ -125,7 +125,7 @@ class XdkCompoundHeaderTest {
     fun `embedding retains only the owned written leaf and preserves listener stopping`() {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(Map<Int, List<ecstasy.text.Str"
-        val text = "$prefix>> value) { Int hidden=1; } Int later=1; }"
+        val text = "$prefix>> value) { Int hidden = 1; } Int later = 1; }"
         val source = Source(text, URI)
         repeat(prefix.length) { source.next() }
         val cursor = source.position
