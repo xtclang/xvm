@@ -1004,14 +1004,24 @@ class CompilerPlaybook(
     }
 
     private fun Driver.workspaceScenarios() {
-        (109..117).forEach { number ->
+        (109..118).forEach { number ->
             val id = "X$number"
             scenario(id) {
                 withContext(OnDispatcher.EDT) {
                     val manager = service<FileEditorManager>(singleProject())
                     manager.getAllEditors().map { it.getFile() }.distinctBy { it.getPath() }.forEach(manager::closeFile)
                 }
-                discovered(id) { data -> renameFamily(id, data, { open(it) }, { it.awaitDiagnostics(emptyList()) }) }
+                discovered(id) { data ->
+                    if (data.values.has("sourceModules")) {
+                        val modules = data.values["sourceModules"].deepCopy().asJsonArray
+                        modules.forEach { module ->
+                            val entry = module.asJsonObject
+                            entry.addProperty("uri", Path.of(singleProject().getBasePath()).resolve(id).resolve(entry["uri"].asString).toUri().toString())
+                        }
+                        configure("""{"xtc":{"compiler":{"sourceModules":$modules}}}""")
+                    }
+                    renameFamily(id, data, { open(it) }, { it.awaitDiagnostics(emptyList()) })
+                }
             }
         }
         scenario("X99") {

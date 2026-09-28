@@ -745,6 +745,31 @@ class XtcTextDocumentService(
             workspace = true,
         ) { edit -> edit?.let(::protocolEdit) }
 
+    /** Same lifecycle/version checks as standard Rename; settings are never installed by a proposal. */
+    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> {
+        val compiler = adapter as? XdkAdapter ?: return rename(params).thenApply { it?.let(::RenameProposal) }
+        return queryAsync(
+            "xtc/rename",
+            params.textDocument.uri,
+            { compiler.renameProposalAsync(params.textDocument.uri, params.position.line, params.position.character, params.newName) },
+            workspace = true,
+        ) { proposal ->
+            proposal?.let {
+                protocolEdit(it.edit)?.let { edit ->
+                    RenameProposal(
+                        edit,
+                        it.sourceModules?.let { modules ->
+                            SourceGraphReplacement(
+                                requireNotNull(it.previousSourceModules).map(::SourceModuleConfiguration),
+                                modules.map(::SourceModuleConfiguration),
+                            )
+                        },
+                    )
+                }
+            }
+        }
+    }
+
     /** Called while the document lifecycle is locked, after the query's version checks. */
     private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
         if ((edit.versioned && !server.supportsVersionedEdits) || (edit.renames.isNotEmpty() && !server.supportsFileRenames)) return null
