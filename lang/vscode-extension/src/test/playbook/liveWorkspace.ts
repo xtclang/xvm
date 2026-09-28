@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
+import { compilerSettingsLocation } from '../../rename-proposal';
 import { edges, hierarchy } from './modules';
 import { client, diagnostics, eventually, noErrors, playbook, position, targetNames, targets, Workspace } from './support';
 
@@ -11,6 +12,10 @@ export async function discovered<T>(workspace: Workspace, body: () => Promise<T>
     await vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
     try { return await body(); }
     finally {
+        // These are isolated test settings. A failed history assertion must not be hidden by
+        // the configuration API refusing cleanup of a dirty settings document.
+        const settings = vscode.workspace.textDocuments.find(document => document.uri.toString() === compilerSettingsLocation()?.uri.toString());
+        if (settings?.isDirty) await settings.save();
         await workspace.configure([]);
         await client().sendNotification('workspace/didChangeWorkspaceFolders', { event: { added: original, removed: [folder] } });
     }
