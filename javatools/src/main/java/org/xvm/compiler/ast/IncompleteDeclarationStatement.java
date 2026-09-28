@@ -2,10 +2,8 @@ package org.xvm.compiler.ast;
 
 import java.lang.reflect.Field;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
@@ -27,21 +25,21 @@ public final class IncompleteDeclarationStatement extends Statement {
 
     public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end,
                                           List<IncompleteStatement> cursors) {
-        this(kind, name, start, end, cursors, Set.of());
+        this(kind, name, start, end, cursors, List.of());
     }
 
     public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end,
-                                          List<IncompleteStatement> cursors, Set<String> formals) {
+                                          List<IncompleteStatement> cursors, List<Parameter> formals) {
         this.kind = kind;
         this.name = name;
         this.start = start;
         this.end = end;
-        this.cursors = new ArrayList<>(cursors);
-        this.formals = Set.copyOf(formals);
+        this.cursors = List.copyOf(cursors);
+        this.formals = List.copyOf(formals);
     }
 
-    /** Written but unregistered formals shadow enclosing names without inventing type identities. */
-    Set<String> formalNames() {
+    /** Original formal parameter syntax; constraints are resolved only on disposable query copies. */
+    List<Parameter> formalParameters() {
         return formals;
     }
 
@@ -70,6 +68,18 @@ public final class IncompleteDeclarationStatement extends Statement {
     }
 
     @Override
+    public IncompleteDeclarationStatement clone() {
+        var copy = new IncompleteDeclarationStatement(kind, name, start, end,
+                cursors.stream().map(site -> (IncompleteStatement) site.clone()).toList(),
+                formals.stream().map(formal -> (Parameter) formal.clone()).toList());
+        copy.adopt(copy.cursors);
+        copy.adopt(copy.formals);
+        copy.setParent(getParent());
+        copy.setStage(getStage());
+        return copy;
+    }
+
+    @Override
     public void resolveNames(StageMgr mgr, ErrorListener errs) {
         // A prefix is a query, not an unresolved name in an otherwise valid declaration.
         mgr.deferChildren();
@@ -84,7 +94,8 @@ public final class IncompleteDeclarationStatement extends Statement {
             if (bindings.isEnabled() && !errs.isAbortDesired()
                     && getComponent() instanceof ClassStructure owner) {
                 bindings.record(site, new CursorBinding(List.of(), owner.getFormalType(), false)
-                        .withTypes(CursorScope.declarationTypes(site, errs)));
+                        .withTypes(CursorScope.declarationTypes(site, errs))
+                        .withFormals(CursorScope.declarationFormals(site, errs)));
             }
             errs.error(Parser.INCOMPLETE_EXPRESSION, in(getSource(), site.getEndPosition(), site.getEndPosition()));
         });
@@ -114,13 +125,13 @@ public final class IncompleteDeclarationStatement extends Statement {
     }
 
     // Only real syntax children use the AST's ordinary adoption and clone mechanism.
-    protected List<IncompleteStatement> cursors;
+    protected final List<IncompleteStatement> cursors;
 
     private final Kind        kind;
     private final Token       name;
     private final long        start;
     private final long        end;
-    private final Set<String> formals;
+    protected final List<Parameter> formals;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteDeclarationStatement.class, "cursors");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteDeclarationStatement.class, "cursors", "formals");
 }
