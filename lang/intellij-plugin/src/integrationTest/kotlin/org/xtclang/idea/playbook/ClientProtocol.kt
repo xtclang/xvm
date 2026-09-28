@@ -10,7 +10,6 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.impl.RefWrapper
 import com.intellij.driver.client.service
 import com.intellij.driver.sdk.singleProject
-import com.intellij.driver.sdk.waitFor
 import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
@@ -22,7 +21,7 @@ class ClientProtocol(
 
     fun server(): StartedLanguageServer =
         with(driver) {
-            waitFor(
+            awaitUi(
                 message = "installed language client is started",
                 timeout = 45.seconds,
                 getter = { service<LanguageClients>(singleProject()).getStartedServers().toList() },
@@ -55,7 +54,7 @@ class ClientProtocol(
         future: ClientFuture,
     ): JsonElement =
         with(driver) {
-            waitFor("installed client response: $method", 60.seconds) { future.isDone() }
+            awaitUi("installed client response: $method", 60.seconds) { future.isDone() }
             if (future.isCancelled()) throw CancellationException("$method was cancelled")
             if (future.isCompletedExceptionally()) {
                 // Throw locally: ResponseError is not Java-serializable, so throwing it through

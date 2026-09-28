@@ -22,11 +22,20 @@ import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
 import java.nio.file.StandardOpenOption.CREATE
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlin.time.Duration.Companion.minutes
 
 /** Opt-in acceptance tests against the packaged plugin, a real IDE and the bundled compiler. */
 class CompilerPlaybookTest {
     @Test
-    fun compilerPlaybook() {
+    fun compilerPlaybook() = runPlaybook(PlaybookMode.FEATURES)
+
+    @Test
+    fun startupEditing() = runPlaybook(PlaybookMode.STARTUP)
+
+    @Test
+    fun focusRecovery() = runPlaybook(PlaybookMode.FOCUS_RECOVERY)
+
+    private fun runPlaybook(mode: PlaybookMode) {
         require(System.getProperty("xtc.playbook.adapter") == "compiler") { "Run with -Plsp.adapter=compiler" }
         val reports = Files.createDirectories(Path.of(System.getProperty("xtc.playbook.reports")))
         val run = Files.createTempDirectory(reports, "run-")
@@ -90,7 +99,7 @@ class CompilerPlaybookTest {
                 .toSet()
         require(selection.all { it in shared.implementedIds }) { "Unknown or unimplemented native case: $selection" }
         val cases =
-            CompilerPlaybook(fixtures, shared, lsp4ijVersion, selection.ifEmpty { shared.implementedIds }) { result ->
+            CompilerPlaybook(fixtures, shared, lsp4ijVersion, selection.ifEmpty { shared.implementedIds }, mode) { result ->
                 Files.writeString(run.resolve("progress.jsonl"), Gson().toJson(result) + "\n", CREATE, APPEND)
             }
         val previousDi = di
@@ -152,6 +161,8 @@ class CompilerPlaybookTest {
                 </application>
                 """.trimIndent(),
             )
+            // The full playbook exceeds Starter's ten-minute default; individual waits
+            // remain bounded so an unresponsive editor still fails promptly.
             context
                 .disableUltimateModule()
                 .applyVMOptionsPatch {
@@ -159,8 +170,9 @@ class CompilerPlaybookTest {
                     addSystemProperty("request.trial", false)
                     addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
                     addSystemProperty("xtc.lsp.semanticTokens", true)
+                    addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                     addSystemProperty("idea.auto.reload.plugins", false)
-                }.runIdeWithDriver()
+                }.runIdeWithDriver(runTimeout = 30.minutes)
                 .useDriverAndCloseIde {
                     cases.run(this)
                 }
@@ -173,7 +185,14 @@ class CompilerPlaybookTest {
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
                     "adapter" to "compiler",
-                    "selectedCases" to selection.ifEmpty { shared.implementedIds },
+                    "startupOnly" to (mode == PlaybookMode.STARTUP),
+                    "mode" to mode.name,
+                    "selectedCases" to
+                        when (mode) {
+                            PlaybookMode.FEATURES -> selection.ifEmpty { shared.implementedIds }
+                            PlaybookMode.STARTUP -> setOf("STARTUP")
+                            PlaybookMode.FOCUS_RECOVERY -> setOf("START_FOCUS")
+                        },
                     "sharedScenarios" to mapOf("file" to scenarioPath.toString(), "sha256" to shared.sourceHash, "ids" to shared.ids),
                     "cases" to cases.results,
                     "counts" to cases.results.groupingBy { it.status }.eachCount(),
