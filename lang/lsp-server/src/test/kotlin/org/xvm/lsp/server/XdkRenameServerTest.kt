@@ -36,8 +36,8 @@ class XdkRenameServerTest {
         directory = directory.toRealPath()
         val root = directory.resolve("Rename.x").toFile()
         val member = directory.resolve("Rename/Child.x").toFile()
-        val text = "module Rename { Int run() { Int local=1; return local; } }"
-        val child = "class Child { private Int pick(Int input)=input; Int run()=pick(input=1); }"
+        val text = "module Rename { Int run() { Int local = 1; return local; } }"
+        val child = "class Child { private Int pick(Int input) = input; Int run() = pick(input = 1); }"
         root.writeText(text)
         member.parentFile.mkdirs()
         member.writeText(child)
@@ -93,8 +93,8 @@ class XdkRenameServerTest {
         directory = directory.toRealPath()
         val library = directory.resolve("Library.x").toFile()
         val consumer = directory.resolve("Consumer.x").toFile()
-        val text = "module Library { class Box { Int pick(Int value)=value; } }"
-        val use = "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }"
+        val text = "module Library { class Box { Int pick(Int value) = value; } }"
+        val use = "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }"
         library.writeText(text)
         consumer.writeText(use)
         val uri = library.toURI().toString()
@@ -119,7 +119,7 @@ class XdkRenameServerTest {
             assertThat(changes.keys).containsExactlyInAnyOrder(uri, consumerUri)
             assertThat(changes.getValue(uri).textDocument.version).isEqualTo(7)
             assertThat<Int?>(changes.getValue(consumerUri).textDocument.version).isNull()
-            val overlay = use.replace("box.pick(1)", "box.pick(1)+box.pick(2)")
+            val overlay = use.replace("box.pick(1)", "box.pick(1) + box.pick(2)")
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(consumerUri, "xtc", 3, overlay)))
             documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(consumerUri))).get(30, SECONDS)
             val openEdit = requireNotNull(documents.rename(params).get(30, SECONDS))
@@ -143,7 +143,7 @@ class XdkRenameServerTest {
                     .get(20, SECONDS)
                     .capabilities.renameProvider,
             ).isNull()
-            val text = "module Rename { Int run() { Int local=1; return local; } }"
+            val text = "module Rename { Int run() { Int local = 1; return local; } }"
             val uri = "file:///Rename.x"
             server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
             assertThat(
@@ -200,7 +200,7 @@ class XdkRenameServerTest {
     @Test
     fun `member file rename requires resource operation support and follows versioned text edits`() {
         directory = directory.toRealPath()
-        val root = directory.resolve("App.x").toFile().also { it.writeText("module App { Item make()=new Item(); }") }
+        val root = directory.resolve("App.x").toFile().also { it.writeText("module App { Item make() = new Item(); }") }
         val member =
             directory.resolve("App/Item.x").toFile().also {
                 it.parentFile.mkdirs()

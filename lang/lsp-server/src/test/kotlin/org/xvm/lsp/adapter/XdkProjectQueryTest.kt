@@ -23,8 +23,8 @@ class XdkProjectQueryTest {
     @Test
     fun `graph proofs cannot resolve an undeclared import from an unrelated earlier root`() {
         CompilerTestSupport.configure()
-        val library = source("Library", "module Library { class Box { Int pick(Int value)=value; } }")
-        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }")
+        val library = source("Library", "module Library { class Box { Int pick(Int value) = value; } }")
+        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }")
 
         fun graph(dependencies: Set<String>) =
             XdkProjectQueries(
@@ -50,9 +50,9 @@ class XdkProjectQueryTest {
 
     @Test
     fun `references join serialized identities across unopened consumers and separate overloads`() {
-        val library = source("Library", "module Library { class Box { Int pick(Int value)=value; String pick(String value)=value; } }")
-        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }")
-        val other = source("Other", "module Other { package lib import Library; String run(lib.Box box)=box.pick(\"text\"); }")
+        val library = source("Library", "module Library { class Box { Int pick(Int value) = value; String pick(String value) = value; } }")
+        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }")
+        val other = source("Other", "module Other { package lib import Library; String run(lib.Box box) = box.pick(\"text\"); }")
         val query = query(library, consumer, other)
         val references = query.references(library.toURI().toString(), 0, library.readText().indexOf("pick"), true)
         assertThat(references.map { it.uri }).containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())
@@ -62,9 +62,9 @@ class XdkProjectQueryTest {
 
     @Test
     fun `member rename rebuilds consumers without changing a same-name overload`() {
-        val library = source("Library", "module Library { class Box { Int pick(Int value)=value; String pick(String value)=value; } }")
-        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }")
-        val other = source("Other", "module Other { package lib import Library; String run(lib.Box box)=box.pick(\"text\"); }")
+        val library = source("Library", "module Library { class Box { Int pick(Int value) = value; String pick(String value) = value; } }")
+        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }")
+        val other = source("Other", "module Other { package lib import Library; String run(lib.Box box) = box.pick(\"text\"); }")
         val edit =
             requireNotNull(
                 query(library, consumer, other).rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose"),
@@ -78,12 +78,13 @@ class XdkProjectQueryTest {
 
     @Test
     fun `override rename includes base and child declarations and both dispatch entry points`() {
-        val library = source("Library", "module Library { class Base { Int pick(Int value)=value; } }")
+        val library = source("Library", "module Library { class Base { Int pick(Int value) = value; } }")
         val consumer =
             source(
                 "Consumer",
-                "module Consumer { package lib import Library; class Child extends lib.Base { @Override Int pick(Int value)=value+1; } " +
-                    "Int run(lib.Base base, Child child)=base.pick(1)+child.pick(2); }",
+                "module Consumer { package lib import Library; " +
+                    "class Child extends lib.Base { @Override Int pick(Int value) = value + 1; } " +
+                    "Int run(lib.Base base, Child child) = base.pick(1) + child.pick(2); }",
             )
         val edit =
             requireNotNull(query(library, consumer).rename(consumer.toURI().toString(), 0, consumer.readText().indexOf("pick"), "choose"))
@@ -99,8 +100,8 @@ class XdkProjectQueryTest {
             source(
                 "Consumer",
                 "module Consumer { package lib import Library; " +
-                    "class Mapper implements lib.Mapper<String> { @Override String map(String value)=value; } " +
-                    "String run(lib.Mapper<String> api, Mapper impl)=api.map(\"a\")+impl.map(\"b\"); }",
+                    "class Mapper implements lib.Mapper<String> { @Override String map(String value) = value; } " +
+                    "String run(lib.Mapper<String> api, Mapper impl) = api.map(\"a\") + impl.map(\"b\"); }",
             )
         val edit =
             requireNotNull(query(library, consumer).rename(library.toURI().toString(), 0, library.readText().indexOf("map("), "convert"))
@@ -110,25 +111,25 @@ class XdkProjectQueryTest {
 
     @Test
     fun `super calls preserve their selected body while renaming an override family`() {
-        val library = source("Library", "module Library { class Base { Int pick(Int value)=value; } }")
+        val library = source("Library", "module Library { class Base { Int pick(Int value) = value; } }")
         val consumer =
             source(
                 "Consumer",
                 "module Consumer { package lib import Library; " +
-                    "class Child extends lib.Base { @Override Int pick(Int value)=super(value); } " +
-                    "Int run(Child child)=child.pick(value=1); }",
+                    "class Child extends lib.Base { @Override Int pick(Int value) = super(value); } " +
+                    "Int run(Child child) = child.pick(value = 1); }",
             )
         val base = artifact("Library", library.readText())
         artifact("Consumer", consumer.readText(), base)
         val edit =
             requireNotNull(query(library, consumer).rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose"))
-        assertThat(apply(consumer, edit)).contains("Int choose(Int value)=super(value)", "child.choose(value=1)")
+        assertThat(apply(consumer, edit)).contains("Int choose(Int value) = super(value)", "child.choose(value = 1)")
     }
 
     @Test
     fun `a compiling rename that captures an untouched consumer call is rejected`() {
-        val library = source("Library", "module Library { class Box { Int pick(Int value)=value; Int choose(Object value)=0; } }")
-        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.choose(1); }")
+        val library = source("Library", "module Library { class Box { Int pick(Int value) = value; Int choose(Object value) = 0; } }")
+        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box) = box.choose(1); }")
         val query = query(library, consumer)
         assertThat(query.rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), "choose")).isNull()
         // Success alone is insufficient: the unchanged call now selects the renamed Int overload.
@@ -153,7 +154,7 @@ class XdkProjectQueryTest {
         val consumer =
             source(
                 "Consumer",
-                "module Consumer { package lib import Library; class Box implements lib.API { @Override Int pick(Int value)=value; } }",
+                "module Consumer { package lib import Library; class Box implements lib.API { @Override Int pick(Int value) = value; } }",
             )
         val query =
             XdkProjectQueries(
@@ -168,12 +169,12 @@ class XdkProjectQueryTest {
 
     @Test
     fun `bundled XDK members resolve across modules but binaries and their contracts cannot be renamed`() {
-        val library = source("Library", "module Library { conditional Int run(String text)=text.indexOf('a'); }")
+        val library = source("Library", "module Library { conditional Int run(String text) = text.indexOf('a'); }")
         val consumer =
             source(
                 "Consumer",
-                "module Consumer { class Named { @Override String toString()=\"name\"; } " +
-                    "conditional Int run(String text)=text.indexOf('b'); }",
+                "module Consumer { class Named { @Override String toString() = \"name\"; } " +
+                    "conditional Int run(String text) = text.indexOf('b'); }",
             )
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(
@@ -207,13 +208,13 @@ class XdkProjectQueryTest {
 
     @Test
     fun `references and override edits include closed members of transitive consumers`() {
-        val library = source("Library", "module Library { class Base { Int pick(Int value)=value; } }")
+        val library = source("Library", "module Library { class Base { Int pick(Int value) = value; } }")
         val bridge = source("Bridge", "module Bridge { package lib import Library; class Middle extends lib.Base {} }")
-        val consumer = source("Consumer", "module Consumer { package mid import Bridge; Int run(Child child)=child.pick(1); }")
+        val consumer = source("Consumer", "module Consumer { package mid import Bridge; Int run(Child child) = child.pick(1); }")
         val member =
             directory.toRealPath().resolve("Consumer/Child.x").toFile().apply {
                 parentFile.mkdirs()
-                writeText("class Child extends mid.Middle { @Override Int pick(Int value)=value; }")
+                writeText("class Child extends mid.Middle { @Override Int pick(Int value) = value; }")
             }
         CompilerTestSupport.configure()
         val query =
@@ -240,8 +241,8 @@ class XdkProjectQueryTest {
 
     @Test
     fun `invalid identifiers and incomplete consumers reject method edits`() {
-        val library = source("Library", "module Library { class Box { Int pick(Int value)=value; } }")
-        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }")
+        val library = source("Library", "module Library { class Box { Int pick(Int value) = value; } }")
+        val consumer = source("Consumer", "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }")
         for (name in listOf("return", "bad name", "choose()")) {
             assertThat(query(library, consumer).rename(library.toURI().toString(), 0, library.readText().indexOf("pick"), name)).isNull()
         }

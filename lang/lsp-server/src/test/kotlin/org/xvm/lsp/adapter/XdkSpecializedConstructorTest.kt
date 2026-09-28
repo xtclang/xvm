@@ -18,7 +18,7 @@ class XdkSpecializedConstructorTest {
             "outer.new Part(\"x\", te", "box.new(\"x\", te", "new @Tagged Box<String>(\"x\", te",
             "Box<String> result = new Box(\"x\", te", "new Box(\"x\", te", "new String[2](te",
             "outer.new @Tagged Part(\"x\", te", "outer.new Outer<String>.Part(\"x\", te",
-            "new String[2](supply=te", "new @Tagged Box<String>(second=\"x\", first=te",
+            "new String[2](supply = te", "new @Tagged Box<String>(second = \"x\", first = te",
         ],
     )
     fun `specialized constructor arguments preserve compiler rules and source edits`(call: String) {
@@ -30,7 +30,7 @@ class XdkSpecializedConstructorTest {
             val help = adapter.getSignatureHelp(URI, 0, prefix.length)
             assertThat(help).describedAs(call).isNotNull()
             assertThat(help!!.signatures.map { it.label }).allMatch { it.contains("String") }
-            assertThat(help.signatures.map { it.activeParameter }).containsOnly(if (call.contains("first=te")) 0 else 1)
+            assertThat(help.signatures.map { it.activeParameter }).containsOnly(if (call.contains("first = te")) 0 else 1)
             val items = adapter.getCompletions(URI, 0, prefix.length)
             assertThat(items.map { it.label }).containsExactlyInAnyOrderElementsOf(
                 if (call == "new Box(\"x\", te") listOf("text", "textNumber") else listOf("text"),
@@ -80,7 +80,7 @@ class XdkSpecializedConstructorTest {
             assertThat(
                 adapter.getCompletions(URI, 0, prefix.length).map { it.label },
             ).containsExactlyInAnyOrder("valueItem", "valueSupplier")
-            for (call in listOf("new Item[True](va", "new Item[2, 3](va", "new Item[2](unknown=va")) {
+            for (call in listOf("new Item[True](va", "new Item[2, 3](va", "new Item[2](unknown = va")) {
                 val invalid = header + call
                 adapter.compile(URI, "$invalid); } }")
                 assertThat(adapter.getSignatureHelp(URI, 0, invalid.length)).describedAs(call).isNull()

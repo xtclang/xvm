@@ -17,13 +17,13 @@ class XdkRenameTest {
     @Test
     fun `local rename preserves captures and shadowed lambda parameters`() {
         val text =
-            "module Rename { Int run() { Int local=1; function Int() f=()->local; " +
-                "function Int(Int) g=(Int local)->local; return f()+g(2); } }"
+            "module Rename { Int run() { Int local = 1; function Int() f = () -> local; " +
+                "function Int(Int) g = (Int local) -> local; return f() + g(2); } }"
         withSource(text) { adapter ->
             val edit = requireNotNull(adapter.rename(URI, 0, text.indexOf("local"), "renamed"))
             assertThat(edit.versioned).isTrue()
             val changed = apply(text, edit.changes.getValue(URI))
-            assertThat(changed).contains("Int renamed=1", "f=()->renamed", "(Int local)->local")
+            assertThat(changed).contains("Int renamed = 1", "f = () -> renamed", "(Int local) -> local")
             assertThat(adapter.getCachedResult(URI)?.success).isTrue()
             assertThat(adapter.prepareRename(URI, 0, text.indexOf("local"))?.placeholder).isEqualTo("local")
             assertThat(adapter.compile(URI, changed).success).isTrue()
@@ -32,7 +32,7 @@ class XdkRenameTest {
 
     @Test
     fun `successful compilation alone does not allow capturing an untouched property`() {
-        val text = "module Rename { Int value=10; Int run() { Int local=1; return local+value; } }"
+        val text = "module Rename { Int value = 10; Int run() { Int local = 1; return local + value; } }"
         withSource(text) { adapter ->
             assertThat(adapter.rename(URI, 0, text.indexOf("local"), "value")).isNull()
             assertThat(adapter.getCachedResult(URI)?.diagnostics).isEmpty()
@@ -41,12 +41,12 @@ class XdkRenameTest {
 
     @Test
     fun `private parameter rename covers reordered named defaults and generic visible indices`() {
-        val text = "module Rename { private <T> T pick(T input, Int count=1)=input; String run()=pick(count=2, input=\"yes\"); }"
+        val text = "module Rename { private <T> T pick(T input, Int count = 1) = input; String run() = pick(count = 2, input = \"yes\"); }"
         withSource(text) { adapter ->
             val edit = requireNotNull(adapter.rename(URI, 0, text.lastIndexOf("input"), "value"))
             assertThat(edit.changes.getValue(URI)).hasSize(3)
             val changed = apply(text, edit.changes.getValue(URI))
-            assertThat(changed).contains("T value", "=value", "value=\"yes\"")
+            assertThat(changed).contains("T value", "= value", "value = \"yes\"")
             assertThat(adapter.compile(URI, changed).success).isTrue()
         }
     }
@@ -54,12 +54,12 @@ class XdkRenameTest {
     @Test
     fun `overloaded parameter labels only edit the selected private method`() {
         val text =
-            "module Rename { private Int pick(Int input)=input; private String pick(String input)=input; " +
-                "Int run()=pick(input=1); String text()=pick(input=\"one\"); }"
+            "module Rename { private Int pick(Int input) = input; private String pick(String input) = input; " +
+                "Int run() = pick(input = 1); String text() = pick(input = \"one\"); }"
         withSource(text) { adapter ->
             val edit = requireNotNull(adapter.rename(URI, 0, text.indexOf("input"), "number"))
             val changed = apply(text, edit.changes.getValue(URI))
-            assertThat(changed).contains("Int number)=number", "pick(number=1)", "String input)=input", "pick(input=\"one\")")
+            assertThat(changed).contains("Int number) = number", "pick(number = 1)", "String input) = input", "pick(input = \"one\")")
             assertThat(adapter.compile(URI, changed).success).isTrue()
         }
     }
@@ -68,7 +68,7 @@ class XdkRenameTest {
     fun `public parameters constructor properties lambda parameters and members are unavailable`() {
         val text =
             "module Rename { class Item(Int value) {} " +
-                "Int run(Int input) { function Int(Int) f=(Int argument)->argument; return f(input); } }"
+                "Int run(Int input) { function Int(Int) f = (Int argument) -> argument; return f(input); } }"
         withSource(text) { adapter ->
             for (name in listOf("Item", "value", "run", "input", "argument")) {
                 assertThat(adapter.prepareRename(URI, 0, text.indexOf(name))).describedAs(name).isNull()
@@ -79,7 +79,7 @@ class XdkRenameTest {
 
     @Test
     fun `method values make private parameter caller closure unavailable`() {
-        val text = "module Rename { private Int pick(Int input)=input; Int run() { function Int(Int) f=&pick; return f(1); } }"
+        val text = "module Rename { private Int pick(Int input) = input; Int run() { function Int(Int) f = &pick; return f(1); } }"
         withSource(text) { adapter ->
             assertThat(adapter.prepareRename(URI, 0, text.indexOf("input"))).isNull()
         }
@@ -87,7 +87,7 @@ class XdkRenameTest {
 
     @Test
     fun `collisions keywords and non-identifiers produce no edits or live diagnostics`() {
-        val text = "module Rename { Int run() { Int local=1; Int other=2; return local+other; } }"
+        val text = "module Rename { Int run() { Int local = 1; Int other = 2; return local + other; } }"
         withSource(text) { adapter ->
             for (name in listOf("other", "return", "", "two words", "x.y", "x/*comment*/")) {
                 assertThat(adapter.rename(URI, 0, text.indexOf("local"), name)).describedAs(name).isNull()
@@ -98,12 +98,12 @@ class XdkRenameTest {
 
     @Test
     fun `UTF16 positions and CRLF newlines survive a longer name`() {
-        val text = "module Rename {\r\n    Int run() { String emoji=\"🙂\"; Int local=1; return local; }\r\n}"
+        val text = "module Rename {\r\n    Int run() { String emoji = \"🙂\"; Int local = 1; return local; }\r\n}"
         withSource(text) { adapter ->
             val column = text.lines()[1].indexOf("local")
             val edit = requireNotNull(adapter.rename(URI, 1, column, "longerName"))
             val changed = apply(text, edit.changes.getValue(URI))
-            assertThat(changed).contains("Int longerName=1", "return longerName;")
+            assertThat(changed).contains("Int longerName = 1", "return longerName;")
             assertThat(adapter.compile(URI, changed).success).isTrue()
         }
     }
@@ -114,7 +114,7 @@ class XdkRenameTest {
         val root = directory.resolve("Rename.x").toFile()
         val member = directory.resolve("Rename/Child.x").toFile()
         val text = "module Rename {}"
-        val child = "class Child { private Int pick(Int input)=input; Int run()=pick(input=1); }"
+        val child = "class Child { private Int pick(Int input) = input; Int run() = pick(input = 1); }"
         root.writeText(text)
         member.parentFile.mkdirs()
         member.writeText(child)
@@ -124,7 +124,7 @@ class XdkRenameTest {
             assertThat(compilation.diagnostics).isEmpty()
             val edit = requireNotNull(adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value"))
             assertThat(edit.changes.keys).containsExactly(member.toURI().toString())
-            assertThat(apply(child, edit.changes.getValue(member.toURI().toString()))).contains("value=1")
+            assertThat(apply(child, edit.changes.getValue(member.toURI().toString()))).contains("value = 1")
             assertThat(member.readText()).isEqualTo(child)
             member.writeText("\n$child")
             assertThat(adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value")).isNull()
@@ -145,7 +145,7 @@ class XdkRenameTest {
                     }
                     EmbeddingSupport.instance().compileModule(source, null, errors)
                 }
-            val text = "module Rename { Int run() { Int local=1; return local; } }"
+            val text = "module Rename { Int run() { Int local = 1; return local; } }"
             try {
                 CompilerTestSupport.configure()
                 assertThat(adapter.compile(URI, text).success).isTrue()

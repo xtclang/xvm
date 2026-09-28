@@ -49,7 +49,7 @@ class XdkLanguageServerTest {
             val errors = ErrorList()
             val result =
                 EmbeddingSupport.instance().compileModule(
-                    Source("module Library { static $type value()=$value; }", "file:///Library.x"),
+                    Source("module Library { static $type value() = $value; }", "file:///Library.x"),
                     null,
                     errors,
                 )
@@ -58,7 +58,7 @@ class XdkLanguageServerTest {
         }
         val first = dependency("Int")
         val incompatible = dependency("String")
-        val source = "module Protocol { package lib import Library; Int run()=lib.value(); }"
+        val source = "module Protocol { package lib import Library; Int run() = lib.value(); }"
         Session(XdkAdapter()).use { session ->
             session.server.replaceCompilerDependencies(listOf(first))
             session.open(source, 7)

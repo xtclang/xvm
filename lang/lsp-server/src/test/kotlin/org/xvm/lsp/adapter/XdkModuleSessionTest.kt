@@ -20,15 +20,15 @@ class XdkModuleSessionTest {
     fun `structure warnings belong to a closed member declaration and follow its overlay`() {
         CompilerTestSupport.configure()
         val root = directory.resolve("Project.x").toFile().canonicalFile
-        root.writeText("module Project { class Base { @Atomic Int x=1; } }")
+        root.writeText("module Project { class Base { @Atomic Int x = 1; } }")
         val member = directory.resolve("Project/Child.x").toFile().canonicalFile
         member.parentFile.mkdirs()
-        val text = "class Child extends Base { @Atomic @Override Int x=2; }"
+        val text = "class Child extends Base { @Atomic @Override Int x = 2; }"
         member.writeText(text)
         XdkAdapter().use { adapter ->
             val warning = adapter.compile(root.toURI().toString(), root.readText()).diagnostics.single { it.code == "VERIFY-75" }
             assertThat(warning.location.uri).isEqualTo(member.toURI().toString())
-            assertThat(warning.location.startColumn).isEqualTo(text.indexOf("x=2"))
+            assertThat(warning.location.startColumn).isEqualTo(text.indexOf("x = 2"))
             assertThat(adapter.getCachedResult(root.toURI().toString())!!.diagnostics).isEmpty()
             val overlay = "// shifted\n$text"
             val shifted = adapter.compile(member.toURI().toString(), overlay).diagnostics.single { it.code == "VERIFY-75" }

@@ -95,7 +95,7 @@ class XdkGenericHeaderTest {
     @ValueSource(strings = ["Missing<String>.Ite§", "Owner<Missing>.Ite§", "Value<String>.Ite§", "Owner<String>.Hid§"])
     fun `invalid or inaccessible parameterized qualifiers never fall back to local names`(type: String) {
         val marked =
-            "module Headers { class ItemOutside {} class HiddenOutside {} String Value=\"x\"; " +
+            "module Headers { class ItemOutside {} class HiddenOutside {} String Value = \"x\"; " +
                 "class Owner<Element> { class Item {} private class Hidden {} } void damaged($type value) {} }"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, marked.replace("§", ""))
