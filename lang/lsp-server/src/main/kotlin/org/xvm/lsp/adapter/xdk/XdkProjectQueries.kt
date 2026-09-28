@@ -133,7 +133,7 @@ internal class XdkProjectQueries(
                 }
             val plan = XdkRename.Plan(texts, mapOf(source to replacements))
             val after = compile(plan.proposed) ?: return null
-            if (!XdkRename.preservesBindings(before, after, plan) || !isCurrent()) return null
+            if (!preservesBindings(before, after, plan) || !isCurrent()) return null
             return WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true)
         }
         val symbol = model.symbolAt(line, column) ?: return null
@@ -169,9 +169,13 @@ internal class XdkProjectQueries(
         val renamedModule = project.modules.values.singleOrNull { it.root == file && symbol.kind == SemanticModel.SymbolKind.MODULE }
         // Explicit host configurations are not source documents and cannot be rewritten by this
         // edit. Only discovery-owned, simple module identities can follow a root rename today.
-        if (renamedModule != null && (!discoverImports || renamedModule.name != symbol.name || name in project.modules ||
-                name in XdkLibraries.moduleNames)
-        ) return null
+        if (renamedModule != null && (
+                !discoverImports || renamedModule.name != symbol.name || name in project.modules ||
+                    name in XdkLibraries.moduleNames
+            )
+        ) {
+            return null
+        }
         val moves =
             if (symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE) &&
                 name != symbol.name && file.nameWithoutExtension == symbol.name
@@ -196,15 +200,37 @@ internal class XdkProjectQueries(
             }
         val plan = XdkRename.Plan(texts, base.edits, moves.paths)
         val after = compile(plan.proposed, moves = moves.paths, graph = graph) ?: return null
-        if (!XdkRename.preservesBindings(before, after, plan) || !isCurrent()) return null
+        if (!preservesBindings(before, after, plan) || !isCurrent()) return null
         return WorkspaceEdit(
             plan.edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
             versioned = true,
-            renames = moves.resources.entries.associate { (from, to) ->
-                // Directory URIs must have the same shape even before the destination exists.
-                (uris[from] ?: File(from).toURI().toString().removeSuffix("/")) to File(to).toURI().toString().removeSuffix("/")
-            },
+            renames =
+                moves.resources.entries.associate { (from, to) ->
+                    // Directory URIs must have the same shape even before the destination exists.
+                    (uris[from] ?: File(from).toURI().toString().removeSuffix("/")) to File(to).toURI().toString().removeSuffix("/")
+                },
         )
+    }
+
+    private fun preservesBindings(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: XdkRename.Plan,
+    ): Boolean {
+        // Compilation still checks the complete graph. Binding/dispatch equivalence is needed
+        // for every edited module and its transitive consumers; independent roots have identical
+        // inputs and no path to an edited declaration. Unsupported dynamic bindings in those
+        // unrelated roots must not veto an otherwise proven edit.
+        val affected =
+            plan.edits.keys
+                .mapNotNull { project.scope(it) }
+                .flatMapTo(linkedSetOf(), project::affected)
+        val movedScopes =
+            affected.mapTo(linkedSetOf()) { scope ->
+                val path = requireNotNull(XdkSources.file(scope)).path
+                File(plan.moves[path] ?: path).toURI().toString()
+            }
+        return XdkRename.preservesBindings(before.within(affected), after.within(movedScopes), plan)
     }
 
     /** Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. */
@@ -328,55 +354,50 @@ internal class XdkProjectQueries(
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val attempts =
-            graph.buildOrder().mapNotNull { module ->
-                val source = sources.entries.firstOrNull { (moves[it.key.root.path] ?: it.key.root.path) == module.root.path }
-                    ?.value ?: return@mapNotNull null
-                checkCurrent()
-                if (module.dependencies.any { it !in artifacts && it !in XdkLibraries.moduleNames }) {
-                    if (proof != Proof.COMPLETE) return@mapNotNull null
-                    return null
-                }
-                // An earlier independent root is not a dependency. Reopening all prior artifacts
-                // both admits undeclared source imports and retains quadratic compiler state.
-                // Host binaries remain available, including their transitive binary dependencies.
-                val sourceDependencies = graph.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
-                val inputs = artifacts.filterKeys { it !in graph.modules || it in sourceDependencies }
-                val open = XdkDependencies(inputs.values.toList()).open()
-                val heard = ErrorList()
-                val errors = ErrorListener.cancellable(heard, cancelled)
-                val originalRoot = sources.entries.single { it.value === source }.key.root
-                val compilation = compileTree(XdkSources.replay(originalRoot, source.inputs, text, moves), open.repository, errors)
-                checkCurrent()
-                if (!compilation.succeeded() || heard.hasSeriousErrors() ||
-                    compilation.file()?.module?.name != module.name
-                ) {
-                    if (proof == Proof.REPAIR) return@mapNotNull compilation.renameFacts(open)
-                    if (proof == Proof.NAVIGATION) return@mapNotNull null
-                    return null
-                }
-                val facts = compilation.projectRenameFacts(open, errors)
-                if (heard.hasSeriousErrors() || errors.isAbortDesired) {
+            graph
+                .buildOrder()
+                .mapNotNull { module ->
+                    val source =
+                        sources.entries
+                            .firstOrNull { (moves[it.key.root.path] ?: it.key.root.path) == module.root.path }
+                            ?.value ?: return@mapNotNull null
                     checkCurrent()
-                    if (proof != Proof.COMPLETE) return@mapNotNull null
-                    return null
-                }
-                artifacts[module.name] = compilation.toDependency()
-                facts
-            }
+                    if (module.dependencies.any { it !in artifacts && it !in XdkLibraries.moduleNames }) {
+                        if (proof != Proof.COMPLETE) return@mapNotNull null
+                        return null
+                    }
+                    // An earlier independent root is not a dependency. Reopening all prior artifacts
+                    // both admits undeclared source imports and retains quadratic compiler state.
+                    // Host binaries remain available, including their transitive binary dependencies.
+                    val sourceDependencies = graph.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+                    val inputs = artifacts.filterKeys { it !in graph.modules || it in sourceDependencies }
+                    val open = XdkDependencies(inputs.values.toList()).open()
+                    val heard = ErrorList()
+                    val errors = ErrorListener.cancellable(heard, cancelled)
+                    val originalRoot =
+                        sources.entries
+                            .single { it.value === source }
+                            .key.root
+                    val compilation = compileTree(XdkSources.replay(originalRoot, source.inputs, text, moves), open.repository, errors)
+                    checkCurrent()
+                    if (!compilation.succeeded() || heard.hasSeriousErrors() ||
+                        compilation.file()?.module?.name != module.name
+                    ) {
+                        if (proof == Proof.REPAIR) return@mapNotNull module.uri to compilation.renameFacts(open)
+                        if (proof == Proof.NAVIGATION) return@mapNotNull null
+                        return null
+                    }
+                    val facts = compilation.projectRenameFacts(open, errors)
+                    if (heard.hasSeriousErrors() || errors.isAbortDesired) {
+                        checkCurrent()
+                        if (proof != Proof.COMPLETE) return@mapNotNull null
+                        return null
+                    }
+                    artifacts[module.name] = compilation.toDependency()
+                    module.uri to facts
+                }.toMap()
         checkCurrent()
-        return CompilerRenameFacts(
-            attempts.flatMap { it.models },
-            attempts.flatMap { it.constants.entries }.associate { it.toPair() },
-            ProofRelations(
-                attempts.flatMapTo(linkedSetOf()) { it.methods.declarations },
-                attempts.flatMap { it.methods.chains },
-            ),
-            ProofRelations(
-                attempts.flatMapTo(linkedSetOf()) { it.properties.declarations },
-                attempts.flatMap { it.properties.chains },
-            ),
-            attempts.flatMap { it.imports }.distinct(),
-        )
+        return CompilerRenameFacts.merge(attempts)
     }
 
     private fun checkCurrent() {
