@@ -2,8 +2,11 @@
 
 L56–L59 add startup synchronization guards, written formal bounds, compound argument fitting and
 inferred lambda/destructured-type hints. The combined JVM checks pass; expanded shared X42/X97/X108
-pass in VS Code `run-APcBZB`. Their IntelliJ drivers compile; native startup typing and the full
-113-case IntelliJ checkpoint remain pending. See the [combined receipt](../../docs/errs-integration-plan.md#l56l59-combined-validation-receipt-2026-09-28).
+pass in VS Code `run-APcBZB`. The later fixture-spacing checkpoint passes all 113 VS Code cases
+in `run-aOarm7`. IntelliJ passes all 113 scenarios together in `run-6034631232732848040`, with zero
+IDE errors; its separate startup-editing and focus-recovery checks also pass. Both harnesses show
+live case progress. See the
+[current validation record](../../docs/errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
 
 C28/L53/L54 adds empty/qualified type slots, generic/multiple-return headers and native IntelliJ
 workspace/refactoring assertions. The [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54)
@@ -46,9 +49,20 @@ The unit tests cover notification permutations; these steps exercise the actual 
 4. Repeat with a bulk replacement and with an unsaved edit made before the server initializes.
    Record the server PID, final document version, diagnostic state and IDE-error log.
 
-This remains native acceptance work. The regular harness's readiness wait is intentional for
-independent feature cases and cannot stand in for this test. X42/X97/X108 now contain the shared
-L57–L59 semantic variants for separate selected editor runs.
+The dedicated native startup test passes all five phases in `run-1799467324333192176`, with no
+IDE failures. It uses real unsaved editor transactions before server initialization completes;
+ordinary feature cases still wait for readiness. Run it independently with:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    --tests '*CompilerPlaybookTest.startupEditing' \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+The report includes `startup-editing.json` (PID/version/text stamps and phase results) and
+`server-trace/` (one execution trace per child process). X103's forward/reverse file rename also
+passes after removing the transport read lock that caused a real EDT deadlock. This regression
+was unrelated to focus loss. X42/X97/X108 contain the shared L57–L59 semantic variants.
 
 ## Current development batch: workspace queries and editing
 
@@ -73,8 +87,8 @@ as well as resolved names; inlays retain their existing compiler-derived scope.
 Backend verification passes, and focused VS Code X94–X98 pass in `run-KoAP6K` (five passed,
 98 not-selected). Native IntelliJ execution is deferred; both drivers compile. In a fresh
 compiler-mode workspace, set `xtc.compiler.sourceModules` to `null` (or leave it unconfigured in
-IntelliJ). Create `Library.x` with `module Library { static Int answer()=42; }` and `Consumer.x` with
-`module Consumer { package lib import Library; Int run()=lib.answer(); }`. Opening only Consumer
+IntelliJ). Create `Library.x` with `module Library { static Int answer() = 42; }` and `Consumer.x` with
+`module Consumer { package lib import Library; Int run() = lib.answer(); }`. Opening only Consumer
 should resolve `answer`; workspace symbol search should find Library's declaration. Add a separate
 broken module and verify Library remains searchable. Create/remove another module and wait for its
 file watcher notification; its workspace symbols should appear/disappear. Set `sourceModules` to
@@ -97,14 +111,13 @@ broader refactorings, monikers, inline completion/values, colors and notebooks a
 absent features. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
 to distinguish an unsupported feature from a failed playbook case.
 
-IntelliJ now has implementations for all 113 shared scenarios, plus startup. The 50 newly added
-cases and X20/X81/X82 assertion additions are under validation; no full native pass is claimed.
+IntelliJ implements and passes all 113 shared scenarios, plus startup. The complete native run
+includes the 50 newly added cases and X20/X81/X82 assertion additions, with zero IDE errors.
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
-records outstanding receipts and actual client gaps. X93–X98 pass individually; the complete
-113-case native checkpoint remains pending. L55's proof-memory fix passes its 24-root regression,
-but still needs the real teaching-workspace/open-buffer acceptance. L56 adds transport ordering and stale-fold guards with deterministic regressions; actual editing
-during native startup still needs acceptance. Waiting for readiness in the
-playbook does not prove that ordinary typing during startup works.
+records receipts and actual client gaps. L60 is complete. L55's proof-memory fix passes its 24-root regression,
+but still needs the real teaching-workspace/open-buffer acceptance. L56 now passes a separate
+native test of edits, replacement and close/reopen during initialization, including current
+diagnostics/folds. The normal feature readiness wait is not used as that evidence.
 
 ---
 
@@ -479,12 +492,19 @@ is observable under mock or tree-sitter.
 | 7a.2 | Invalid external XDK | Set `XDK_HOME` to a nonexistent directory, restart and edit the file | The bundled libraries still supply compiler analysis |
 | 7a.3 | Cold start | Watch the log on the first `.x` file opened in a session | `first compilation in this server took ... (cold)`, around a second. Slow once is expected; slow every time is not |
 | 7a.4 | Steady state | Edit the same file ten times, watching `compiled in` | Settles to tens of milliseconds. A number that keeps climbing means something is accumulating - compare `footprint` across the run |
-| 7a.5 | Queue depth | Type quickly across two or three open files | `queue=` rises above 1 and falls back. `waited` staying high is the signal that one-at-a-time has become the bottleneck |
+| 7a.5 | Queue depth and contents | Type quickly across two or three open files | In the execution trace, inspect `queueSize` and FIFO `queuedJobs`, plus `debouncingJobs` and `runningJobs`. Job IDs, operation names and URIs show what is waiting and running; `waitMs` and `runMs` separate delay from execution. |
 | 7a.6 | Superseded edit | Type continuously for several seconds without pausing | Log shows `superseded before it started, skipped` or `superseded after ..., abandoned`. No diagnostics are published for text that has already been replaced - a squiggle under an identifier you have finished typing is the failure this prevents |
 | 7a.7 | Memory over a session | Leave the server up, edit for a while, watch `heap=` in the `footprint` on each line | Normal allocation/GC produces a sawtooth. Record sustained growth across repeated collections or after closing files; a single increasing sequence is not proof of retained compiler state. |
 | 7a.8 | A diagnostic no other adapter can find | See the duplicate-annotation file below | One `WARNING VERIFY-75`, the annotation is ignored |
 | 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file | Diagnostics stop at a hundred serious errors rather than filling the panel with consequences of the first one |
 | 7a.10 | References follow meaning, not spelling | Two classes each with a property `x`; Shift+F12 on one | Only that class's `x`. A text search cannot do this, and neither can a grammar |
+
+Execution trace files are `~/.xtc/logs/lsp-trace-<pid>-<process-start>.jsonl`; native IntelliJ runs
+save them in `run-*/server-trace/`. They include compiler queue counts and lists, javatools phase
+and API timings, process/thread IDs, and server request-to-reply latency. Use the
+[trace guide](../lsp-server/README.md#compiler-queue-and-api-timing) for field meanings and controls.
+The service-started notification balloon fades after roughly eight seconds unless being interacted
+with; the notification and server log remain available afterward.
 | 7a.11 | Definition of a method call | F12 on `p.sum()` | Jumps to `sum`'s declaration. The name in a call resolves to nothing by itself - which method it is depends on the target and the arguments - so this is the compiler's answer, not a name match |
 | 7a.12 | Definition of something from the core library | F12 on `Int` or `Console` | Nothing happens. It resolves perfectly well and this document has nowhere to point at; jumping to another mention of `Int` in the same file would be worse than doing nothing |
 | 7a.13 | Hover shows a type | Hover over a variable in an expression | The declaration, and the type the compiler decided. On a document that does not compile the type may be absent - an expression only has one once it has been validated |
@@ -1122,9 +1142,11 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X106 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X108 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
+The test window's status bar shows completed/selected cases, remaining cases and the current case,
+including failure counts. Focused selections use their own total rather than all 113 scenarios.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
 `:lang:lsp-server:compilerStdioTest --rerun` to the command.
 
@@ -1168,7 +1190,8 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. It now implements startup and all 113 shared scenarios; the added parity batch is under validation. Native
+disabled. Startup and all 113 shared scenarios have passing native receipts, including a clean
+full-suite checkpoint. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1194,12 +1217,13 @@ non-snippet editor proposals.
 X33–X35 and X99–X108 have passing native receipts across the checkpoint and
 focused X105 rerun. Execution details and the fixes found during validation are in the
 [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
-They do not establish a complete native pass. Earlier runs verified both X92 Structure/folding
-variants after `2e98860e1` and constructor assertions through X90; X93–X98 now pass individually.
-The resumed runs now have passing assertions for all 113 scenarios. The 61-case batch still
-failed its IDE-error gate on X41's test-driver PSI read; that call now uses a read action,
-and X41/X108 pass with no IDE errors. The full checkpoint was interrupted by desktop focus
-loss and remains pending. See the [L60 receipts](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
+The later full checkpoint `run-6034631232732848040` passes all 113 scenarios plus START, with
+zero IDE errors and zero JUnit failures/errors/skips. Gradle completes in 6 minutes 40 seconds.
+Corrections found during validation include X41's PSI read action, the session timeout, focus
+handling, and X30's document-readiness check after restart. The driver allows 30 minutes overall
+while retaining individual bounded waits. Separate startup acceptance also verifies disappearance
+of the untouched information balloon. See the
+[L60 receipts](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
 
 Parameter Info checks keep every overload's text assertion, but only enabled overload rows
 may bold the active argument. Inactive rows are dimmed according to `activeSignature`.
@@ -1212,13 +1236,14 @@ required. See the [IntelliJ test and configuration instructions](../intellij-plu
 
 During an automated run, leave its isolated editor window to the harness. The driver selects tabs,
 invokes active-editor commands and closes buffers; concurrent manual navigation can change those
-targets or cancel requests even without typing. Keep the isolated IDE focused during completion
-and Parameter Info checks: switching to another application or editor instance can dismiss those
-native popups. This is a constraint of scripted UI testing, not a restriction on ordinary editing.
-The harness uses conditional programmatic focus for active-editor actions and popup checks instead
-of Driver's title-bar mouse click. Owned navigation popups count as IDE focus; switching applications
-fails clearly without a repeated foreground loop. Ordinary file
-opening and caret movement request no focus. Other native controls may still use the mouse.
+targets or cancel requests even without typing. The title and status bar show completed/selected
+cases, remaining cases and the current case. When focus is lost during popup inspection, the
+harness activates the IDE without moving the pointer and reopens the inspection only if the
+document's modification stamp is unchanged. Accepted completion edits, quick fixes, renames and
+file moves are outside the replay path. Typing in the fixture during recovery fails the check.
+Automatic activation can redirect typing into the test IDE; use an isolated desktop for concurrent
+work. Ordinary file opening and caret movement request no focus. Other native controls may still
+use the mouse. Readiness polling is 100 ms; operation deadlines remain unchanged.
 The disposable profile disables autosave and automatic completion/sole-candidate insertion;
 personal settings and shipped plugin defaults are unchanged. Cleanup closes the IDE after a
 failed check; the recorded failures were not IDE crashes.
@@ -1424,11 +1449,11 @@ Parameter Info** at `|`; leave the closing `)` in place, as an editor normally d
 | # | Call / action | Expected result |
 |---|---------------|-----------------|
 | X15 | `box.choose("x", |);`, then `box.choose(1, |);` | The first offers the `String` overload, the second the `Int` overload. The second parameter is active. These are applicable **candidates**, not final overload selections. |
-| X16 | `box.pair(second="x", first=|);` | Signature types are `String` from `Box<String>`; `first` is active despite being the second written argument. Insert `"y"`: diagnostics clear and the now-valid call uses the compiler-selected signature. Go to Definition on `pair` reaches its declaration. |
+| X16 | `box.pair(second = "x", first = |);` | Signature types are `String` from `Box<String>`; `first` is active despite being the second written argument. Insert `"y"`: diagnostics clear and the now-valid call uses the compiler-selected signature. Go to Definition on `pair` reaches its declaration. |
 | X17 | `box.generic("x", |);`, then `box.generic(|);` | The first infers `String` for the expected second parameter. Without an argument, the type remains formal `U`, not an invented `Object`. |
-| X18 | `box.choose(True, |);`, `box.pair(unknown=|);`, and `box.pair(first="x", first=|);`, one at a time | No applicable signature for incompatible types, an unknown label or a duplicate label. Earlier hints must not remain visible as the answer to the new request. |
+| X18 | `box.choose(True, |);`, `box.pair(unknown = |);`, and `box.pair(first = "x", first = |);`, one at a time | No applicable signature for incompatible types, an unknown label or a duplicate label. Earlier hints must not remain visible as the answer to the new request. |
 | X19 | Inside `Box.inspect`: `pair(itemLocal, |);`. Then add `static String join(String first, String second) = first;` to `Tools` and try `Tools.join("x", |);` in `run`. | Implicit-instance and static calls both show applicable candidates with the second parameter active. Fill in the missing values and confirm diagnostics clear. |
-| X20 | Use `box.pair(second="x", |);`. Then complete `box.choose("x", "y");` and navigate from `choose`; repeat with `box.choose(1, 2);`. | After a named argument without a new label, no guessed parameter is highlighted. Complete calls select and navigate to the correct distinct overloads. |
+| X20 | Use `box.pair(second = "x", |);`. Then complete `box.choose("x", "y");` and navigate from `choose`; repeat with `box.choose(1, 2);`. | After a named argument without a new label, no guessed parameter is highlighted. Complete calls select and navigate to the correct distinct overloads. |
 
 The candidate label/documentation does not mean an unfinished overload has been selected. Ecstasy
 allows trailing commas in valid calls: such a call can already have a selected signature.
@@ -1486,7 +1511,7 @@ class Child extends Base<String> {
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
 | X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Separate declaration, document colors, monikers and inline values are not advertised. Native formatting is exercised further in X102/X107. |
-| X32 | Try completion in `box.pair(unknown=\|);`, `box.pair(first="x", first=\|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
+| X32 | Try completion in `box.pair(unknown = \|);`, `box.pair(first = "x", first = \|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
 
 ### F. Type-definition and implementation lookup
 
@@ -1541,12 +1566,12 @@ the theme; VS Code's **Developer: Inspect Editor Tokens and Scopes** shows the a
 
 ```xtc
 module Consumers {
-    static Int leaf(Int input, Int extra=2) = input + extra;
+    static Int leaf(Int input, Int extra = 2) = input + extra;
     static String leaf(String text) = text;
     Int run(Int seed) {
         var number = leaf(1);
         val label = leaf("text");
-        number += leaf(input=2, extra=3);
+        number += leaf(input = 2, extra = 3);
         function Int() fn = () -> leaf(seed);
         return number + label.size + fn();
     }
@@ -1560,7 +1585,7 @@ module Consumers {
 | X41 | Inspect tokens for `leaf`, `seed`, `number` and the `number +=` target. Select `number` to highlight occurrences. | Method, parameter and variable kinds reflect resolved identities. Static/declaration/modification modifiers are present where applicable. Highlights distinguish the write and subsequent read. Theme colors may coincide. |
 | X42 | Inspect inline hints in `run`; compare positional and named calls. Then use the shared `inferred` source with a destructured pair and `(value) -> value`. | `number: Int` and `label: String` inferred-type hints; `input:` and `text:` before positional values. The named call has no redundant hints and omitted default `extra` has none. Explicit declarations get no inferred-type hint. The original fixture also has an inferred `Int` lambda return (three type hints total); the additional shared source has two destructured types plus lambda parameter/return types (four total). |
 | X43 | Keep hierarchy items open, insert a blank line before `run`, then reopen hierarchy. Break the module with an unfinished declaration, correct it and close/reopen the file. | Fresh results use current ranges. Old hierarchy items do not resolve against the edited snapshot. A parse failure clears semantic answers; correction restores them. |
-| X44 | In the section D two-file fixture, add `static Int target(Int n)=n;` to Project and `Int callTarget()=target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
+| X44 | In the section D two-file fixture, add `static Int target(Int n) = n;` to Project and `Int callTarget() = target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
 
 Also unavailable: separate Go to Declaration, document links and linked editing. The bounded
 rename checks below exercise recompilation plus binding comparison. The interactive fixtures
@@ -1643,24 +1668,24 @@ Create these two files on disk:
 
 ```xtc
 // Library.x
-module Library { static Int value()=1; }
+module Library { static Int value() = 1; }
 ```
 
 ```xtc
 // Consumer.x
-module Consumer { package lib import Library; Int run()=lib.value(); }
+module Consumer { package lib import Library; Int run() = lib.value(); }
 ```
 
 | # | Action | Expected result |
 |---|--------|-----------------|
 | X45 | Open Consumer.x without opening Library.x. Navigate from `value`. | Both modules compile; Consumer has no errors and definition points into Library.x. No separate Gradle build is needed. |
-| X46 | Open Library.x and change its method to `static String value()="text";` without saving. | Consumer gains a type error without an edit/version change there. Disk still contains the Int version. |
+| X46 | Open Library.x and change its method to `static String value() = "text";` without saving. | Consumer gains a type error without an edit/version change there. Disk still contains the Int version. |
 | X47 | Replace Library's method with `MissingType broken;`, then restore the original method. | The original compiler error belongs to Library. Consumer reports `DEPENDENCY-FAILED` and has no stale navigation; correction clears both files. |
 | X48 | Make the unsaved String change again, then discard and close Library.x. Reopen it. | Consumer recovers using the Int version on disk; reopening uses current text. Closing an overlay does not retain its unsaved artifact. |
 | X49 | While Library is closed, delete its root on disk, then restore it; ensure watched-file notifications reach the server. | Library reports `SOURCE-UNAVAILABLE`; Consumer reports `DEPENDENCY-FAILED`. Restoring the file clears both without editing Consumer. |
 | X50 | Open an unsaved Library/Extra.x with `class Extra { MissingType broken; }`, then discard/close it. Repeat with a saved member and disk deletion. | The member owns its compiler diagnostic. Consumer blocks, then recovers when the invalid member disappears; removed diagnostics clear. |
 | X51 | Make rapid valid/invalid edits in Library while querying Consumer, then leave a valid Int method. Keep an unrelated module open. | Final diagnostics/navigation use the latest inputs; obsolete requests cannot restore older facts. The unrelated module remains available. |
-| X52 | Add Bridge.x with `module Bridge { package lib import Library; static Int value()=lib.value(); }`; register Bridge depending on Library and change Consumer's edge/import to Bridge. Repeat X46–X47. | Changes propagate Library → Bridge → Consumer. A broken Bridge blocks Consumer; correction restores the chain. |
+| X52 | Add Bridge.x with `module Bridge { package lib import Library; static Int value() = lib.value(); }`; register Bridge depending on Library and change Consumer's edge/import to Bridge. Repeat X46–X47. | Changes propagate Library → Bridge → Consumer. A broken Bridge blocks Consumer; correction restores the chain. |
 
 There is a 100 ms edit debounce; compiler cancellation remains cooperative. Source cycles and
 overlapping roots are rejected during configuration. Blocked consumers currently expose no
@@ -1698,7 +1723,7 @@ module Rename {
     Int value = 10;
     private Int pick(Int input) = input;
     Int run() {
-        Int local = pick(input=1);
+        Int local = pick(input = 1);
         function Int() captured = () -> local;
         return captured() + value;
     }
@@ -1711,7 +1736,7 @@ accepted edits before continuing. These are bounded semantic edits, not general 
 | # | Action | Expected result |
 |---|--------|-----------------|
 | X53 | Rename `local` to `renamed`. | Declaration and captured use change; `value` and unrelated names do not. Recompilation has no errors. |
-| X54 | Rename `input` to `number`, first at its declaration, then after undo at `input=1`. | Declaration, method body and named label all change; `=` and argument value remain intact. |
+| X54 | Rename `input` to `number`, first at its declaration, then after undo at `input = 1`. | Declaration, method body and named label all change; `=` and argument value remain intact. |
 | X55 | Rename `local` to `value`. | No edits: the untouched property use would silently bind to the local even though compilation would succeed. |
 | X56 | Without registering Rename.x in a source graph, try renaming `pick`, module `Rename`, property `value`, or a public method's parameter. | Rename unavailable. Public/lambda/constructor parameters, properties and module names remain unsupported. Ordinary instance methods require the explicit graph and checks in section I. |
 | X57 | Start a rename and edit another file in the same module, close/reopen the target, or change its version before applying. | Pending work is canceled or rejected as changed; an edit for an old open-buffer version is not applied. Fast machines may need the controlled server regression below to exercise this race. |
@@ -1927,32 +1952,32 @@ module Advanced {
 | X71 | In `edit`, replace `1 + word.size` with `1 + word.`, `flag ? word. : 0`, `flag ? 0 : word.`, and `pair(word., 2)` in turn. Complete after the dot, then restore the original. | `size` is offered in the original lexical context, including when another argument follows the cursor. No stale result or fabricated value for the incomplete expression. |
 | X72 | Find Implementations on `meter.count` and `meter.computed`. | `count` reaches Trace's written `get` and `set`; `computed` reaches its explicit `get` and `set`, which precede the annotation. Property queries return the combined accessor set, not a read/write-specific target. Native annotation storage has no invented source body. |
 | X73 | In `applyPair`, replace the call with `fn()` and then `fn(1, )`; request signature help after `(` and after the comma. Try `fn(True, )`, then restore the original. | `Int fn(Int, String)` with the corresponding parameter highlighted, no invented names/defaults/runtime target. The incompatible Boolean argument produces no candidate. Normal diagnostics clear after restoring the complete call. |
-| X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second="b", first=)`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Specialized constructions are exercised separately in X83–X85. |
+| X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second = "b", first = )`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Specialized constructions are exercised separately in X83–X85. |
 | X75 | In `edit`, replace `1 + word.size` with `(word.si`, `pair((word.si`, and `word[word.si` in turn, leaving the semicolon and method/module braces. Trigger completion after `si`, then restore. | `size` is offered despite missing `)`/`]`. The edit replaces only `si`; Problems continues showing the normal compiler errors until the source is repaired. No missing operand or value is invented. |
 | X76 | In `edit`, replace `1 + word.size` with `pair((pair(1, `, leaving the semicolon and braces. Request signature help after the comma, then restore. | The innermost `Int pair(Int first, Int second)` candidate highlights `second` despite the missing call/group delimiters. Problems clears after restoring the original source. |
-| X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first=1, second=)` and `new Packet<String>(second="b", first=)`. Accept `text`, then restore before the next edit. | The compiler offers compatible `text` plus the bundled module properties `simpleName` and `qualifiedName`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
+| X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first = 1, second = )` and `new Packet<String>(second = "b", first = )`. Accept `text`, then restore before the next edit. | The compiler offers compatible `text` plus the bundled module properties `simpleName` and `qualifiedName`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
 | X78 | In `alternatives`, remove `text` from `choose(text)` and complete inside `choose()`. Request signature help before accepting `number`. Restore and repeat with `text`. | Both `number` and `text` are offered, along with compatible module properties `simpleName` and `qualifiedName`; `flag` is excluded. Signature help retains both overload candidates until a value is inserted. Either accepted completion compiles and clears Problems. |
-| X79 | In `values`, shorten `text` to `te` in each of the three calls and invoke completion at its end. Also try `take(first=1, second=te)` and `new Packet<String>(second="b", first=te)`. Accept `text`, restoring between edits. | Only compatible `text` is offered; same-prefix `Int textNumber` is excluded. The edit replaces exactly `te`, preserving the label, commas and closing delimiter. The completed source compiles and Problems clears. |
+| X79 | In `values`, shorten `text` to `te` in each of the three calls and invoke completion at its end. Also try `take(first = 1, second = te)` and `new Packet<String>(second = "b", first = te)`. Accept `text`, restoring between edits. | Only compatible `text` is offered; same-prefix `Int textNumber` is excluded. The edit replaces exactly `te`, preserving the label, commas and closing delimiter. The completed source compiles and Problems clears. |
 | X80 | In `prefixes`, shorten `choose(valueText)` to `choose(va)` and invoke completion after `va`. Request signature help, then accept `valueNumber`; restore and repeat accepting `valueText`. | Both compatible names are offered; `valueFlag` is excluded. Both overload signatures remain until acceptance. Exactly `va` is replaced, the completed call compiles and Problems clears. |
-| X81 | In `ArgumentValues.inspectValues`, shorten `takeValue(valueText)` to `takeValue(va)`, then try `takeValue(value=va)`. Complete after `va`, accept `valueText`, and restore between edits. | The compatible property `valueText` and constant `valueConstant` are offered with String types; `valueNumber` is excluded. Exactly `va` is replaced, preserving the label and delimiter. Acceptance clears Problems. |
+| X81 | In `ArgumentValues.inspectValues`, shorten `takeValue(valueText)` to `takeValue(va)`, then try `takeValue(value = va)`. Complete after `va`, accept `valueText`, and restore between edits. | The compatible property `valueText` and constant `valueConstant` are offered with String types; `valueNumber` is excluded. Exactly `va` is replaced, preserving the label and delimiter. Acceptance clears Problems. |
 | X82 | In `ArgumentValues.inspectConstants`, shorten `takeValue(valueConstant)` to `takeValue(va)` and invoke completion. Accept `valueConstant`. | Only the compatible constant is offered; instance properties require an instance receiver. The completed call restores the original source and clears Problems. |
 | X83 | In `constructions`, shorten the final `text` to `te` in `outer.new Part`, `packet.new`, and `new @Marked Packet<String>` in turn. Request completion and signature help; accept `text`, then restore. | String constructor parameters and active parameter `second`; only `text` fits the prefix, not `textNumber`. Acceptance replaces exactly `te` and clears Problems. |
 | X84 | Shorten `text` in the two constructions with omitted `<String>`. Request completion and signature help, then accept `text`. | The declaration's `Packet<String>` expected type constrains completion to `text`. The standalone construction also permits `textNumber`: its provisional String signature can change as more arguments determine the omitted class type. Neither unfinished call selects an overload. |
-| X85 | Replace `new String[2](text)` with `new String[2](te)`, then `new String[2](supply=te)`. Request help and accept `text`. | Parameter `supply` is active (index 1), since `[2]` supplies `size`. Only the compatible String value is offered. Acceptance clears Problems. |
+| X85 | Replace `new String[2](text)` with `new String[2](te)`, then `new String[2](supply = te)`. Request help and accept `text`. | Parameter `supply` is active (index 1), since `[2]` supplies `size`. Only the compatible String value is offered. Acceptance clears Problems. |
 | X86 | In `literal`, replace `[word.size]` with `(1, word.si`, `Tuple<Int, Int>:(1, word.si`, `[word.si`, and `["key"=word.si` in turn, leaving the semicolon. Complete `size`, then restore. | Member completion survives missing tuple/list/map closers and replaces only `si`. Accepting the member alone leaves delimiter diagnostics; restoring the complete expression clears Problems. |
 | X87 | Before the module's final brace, add `Int declaredSize(String word) = word.si`, `Int declaredSize = "x".si`, or `void defaults(Int size = Int64.Ma {}` in turn. Complete at the prefix, then repair the missing `;` or `)`, and remove the added declaration. | `size`/`MaxValue` is offered in the declaration's real compiler context. The missing terminator remains a normal diagnostic until repaired. Method defaults must still be constants. Shorthand constructor defaults have backend coverage. |
 | X88 | In `anonymousConstructions`, shorten `text` to `te` in `new Packet<String>("anonymous", text)`. Request signature help and completion, then accept `text`. | The inherited constructor has String parameters and active parameter `second`. Only `text` fits; acceptance clears Problems. The anonymous method still captures its enclosing `text`. |
 | X89 | Shorten `text` in `new CursorReader("a", text)` to `te`. Request help/completion, accept `text`, then repeat after deleting the constructor call's `)` before `{`. Restore the fixture. | The constructor declared inside the anonymous body supplies `new CursorReader(String first, String second)`, without a generated class suffix. Completion replaces only `te`. Missing-`)` diagnostics remain until the delimiter is restored. |
 | X90 | In `constructions`, replace `new String[2](text)` with `new String[te](text)`. Request completion and signature help inside the brackets, then accept `textNumber`. Repeat with `new String[te` before the semicolon, then restore `](text)` and the fixture. | Only the Int value `textNumber` fits the size prefix; the String value `text` is excluded. Help shows the fixed-size Array constructor with `Int size` active at index 0. Acceptance replaces only `te`. A missing bracket remains a diagnostic until repaired. IntelliJ verifies the full candidate set, visible size highlight and exact accepted edit; the disposable test profile disables sole-candidate auto-insertion. |
-| X91 | In `Editing.x`, temporarily use `module Editing { String StringValue="x"; void damaged(Str value) {} Int later=1; }`. Request completion just after `Str`, then accept `String`. Repeat with `void damaged(Int first, Str second) {}`, `Str property;`, and `Str damaged() = "x";` in the same module, then restore the fixture. | Compiler type candidates include `String`, exclude the value `StringValue`, and replace only the three prefix characters. No call signature is shown in the declaration header. Each repaired source clears diagnostics. Both native drivers use these same inputs and assertions. |
-| X92 | In `Editing.x`, use a multiline `module Editing` with `void damaged(Int) {` on line 2, `Int hidden=1;` on line 3, its closing brace on line 4, and `Int later=1;` afterward. Repeat with the header `void damaged(Int value, Str)`. Repair either header to `void damaged(Int value)` and restore the fixture. | Diagnostics remain while the parameter header is incomplete. Outline includes `Editing`, `damaged` and `later`; `hidden` does not leak from the skipped body. The method folds through its actual closing brace. Repair clears diagnostics. IntelliJ verifies native diagnostics, Problems rows, Structure inclusions/exclusions and the exact fold at zero-based lines 1–3 for both variants. |
+| X91 | In `Editing.x`, temporarily use `module Editing { String StringValue = "x"; void damaged(Str value) {} Int later = 1; }`. Request completion just after `Str`, then accept `String`. Repeat with `void damaged(Int first, Str second) {}`, `Str property;`, and `Str damaged() = "x";` in the same module, then restore the fixture. | Compiler type candidates include `String`, exclude the value `StringValue`, and replace only the three prefix characters. No call signature is shown in the declaration header. Each repaired source clears diagnostics. Both native drivers use these same inputs and assertions. |
+| X92 | In `Editing.x`, use a multiline `module Editing` with `void damaged(Int) {` on line 2, `Int hidden = 1;` on line 3, its closing brace on line 4, and `Int later = 1;` afterward. Repeat with the header `void damaged(Int value, Str)`. Repair either header to `void damaged(Int value)` and restore the fixture. | Diagnostics remain while the parameter header is incomplete. Outline includes `Editing`, `damaged` and `later`; `hidden` does not leak from the skipped body. The method folds through its actual closing brace. Repair clears diagnostics. IntelliJ verifies native diagnostics, Problems rows, Structure inclusions/exclusions and the exact fold at zero-based lines 1–3 for both variants. |
 | X93 | In the same temporary `Editing.x` module, complete `ecstasy.text.Str` as a parameter type, property type and return type (return `new StringBuffer()`). Accept `StringBuffer`. Then use the X93 source below (also in the shared catalog): `Owner` extends `Base` and declares public/private/protected nested types, a typedef and a value; `Alias` imports `Owner`. Complete `Owner.Ite` and `Alias.Ite`, accepting `ItemPublic` and `ItemAlias`. Restore the fixture. | The bundled XDK qualifier resolves; only `Str` or `Ite` is replaced. Owner/alias candidates include inherited `ItemBase`, public `ItemPublic` and typedef `ItemAlias`, and exclude `ItemPrivate`, `ItemProtected`, `ItemValue` and enclosing `StringValue`. No call signature appears. Every accepted edit compiles and clears diagnostics. Both native drivers use the shared variants and assertions. |
 | X94 | In temporary `Editing.x`, complete `Str` in `List<Str>`, `Map<Int, List<Str>>`, `Map<Str, Int>`, `List<(Int \| Str)>`, `Object + Str` and `Object - Str` parameter headers. Also try `List<Str>` property/return types and `List<ecstasy.text.Str>`. Use the shared X94 variants. Finally remove both `>` from the nested `Map` header, accept `String`, then restore `>>`. | Only the selected leaf token changes; generic arguments, compound operators and qualifiers stay intact. Values such as `StringValue` are excluded and no call signature appears. Complete accepted headers clear Problems. Missing `>` still reports an error after acceptance; adding the closers clears it. Type suggestions establish visibility, not generic-constraint compatibility. Both drivers consume the same nine variants. |
 | X95 | In temporary `Editing.x`, use the shared X95 replacement program. Complete the marked type in class `extends`, interface `extends`, `implements`, `delegates`, `incorporates` and mixin `into` headers. Also try `Owner.Nes`, `List<Str>` and the missing-`>` variant. Accept the selected entry, then restore the repaired declaration. | Completion replaces only the final token and offers visible types rather than values. Complete accepted headers clear Problems; accepting `String` with a missing `>` leaves an error until the closer is restored. No signature appears in a type slot. Both drivers consume the same nine variants; native IntelliJ assertions pass. |
 | X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ assertions pass. |
 | X97 | In temporary `Editing.x`, run the shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values, construction, arithmetic/unary expressions and a missing right operand. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. Both drivers use the same data. Expanded X42/X97/X108 pass in VS Code `run-APcBZB`; their new IntelliJ variants await native execution. |
 | X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
-| X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value()=1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run()=lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
+| X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value() = 1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run() = lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
 | X100 | Create a healthy module with `class Base {}` and `class Child extends Base {}`, plus an independent module. Break the neighbor with `Missing broken;`, then request Base's subtypes. | Child remains navigable. Exact references return no complete answer while the graph is broken. Repairing the neighbor restores full graph queries. |
 | X101 | Open `module LibrarySource { package xml import xml.xtclang.org; void accept(xml.Document document, String text) {} }`. Go to Definition on `Document` and `String`, and Type Definition on `text`. | Matching XDK source opens at the declaration token, read-only. Library symbols cannot be renamed; the VS Code formatting provider returns no edits. IntelliJ Reformat opens **Clear Read-Only Status**: cancel it, then verify the buffer/disk bytes and read-only status are unchanged. The native Rename action displays the server’s rejection. Missing/ambiguous source metadata gives no guessed target. |
 | X102 | In a source graph, declare Base's `Int value` getter and Child's `@Override Int value` getter; use both properties. Rename `value` to `amount`. | Both declarations and uses change. `get`, `set` and setter parameters keep their names. Binary contracts and annotation/delegation families remain unavailable. |

@@ -4,7 +4,9 @@ L56–L59 add IntelliJ startup message ordering and stale-fold guards, compiler-
 completion/hover in unfinished headers, compound argument validation with callable fallbacks,
 and inferred lambda/destructured-type hints. Shared X42/X97/X108 exercise the semantic additions;
 [validation and outstanding acceptance](../../docs/errs-integration-plan.md#l56-startup-synchronization-implementation-2026-09-28)
-are recorded separately from native IntelliJ execution.
+are recorded separately from native IntelliJ execution. L56 now has a passing five-phase native
+startup check; queue/API/request timing and the X103 transport deadlock fix are described in the
+[current hardening record](../../docs/errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
 
 C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
 arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
@@ -178,14 +180,14 @@ outside rename scope.
 The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
 [validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
 The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. L55 now fixes
-proof retention in a 24-root/512 MiB regression; the actual teaching workspace and editing during
-IntelliJ startup remain open acceptance/investigation work. The active checklist records those limits and the
-current native inventory: assertions for all 113 shared cases. The new parity batch is under
-validation; 50/50 newly implemented cases have individual passing receipts. X57 now verifies
-IntelliJ's guarded symbol-rename application. X29 and X93–X98 pass individually; the full 113-case native checkpoint remains pending.
-All 113 scenario assertions have passing receipts across resumed runs. A test-driver read-action
-defect found by the IDE-error gate is fixed and passes focused validation; a later full run lost
-desktop focus. These results do not claim a clean combined native pass.
+proof retention in a 24-root/512 MiB regression; the actual teaching workspace remains open
+acceptance work. Native startup editing now passes the five-phase L56 check, including restart,
+replacement and close/reopen. The X103 reverse-rename deadlock in the startup transport hook is fixed. The active checklist records those limits and the
+current native inventory: all 113 shared cases pass together in `run-6034631232732848040`, with
+zero IDE errors and zero JUnit failures/errors/skips. This includes the 50 formerly missing cases,
+X57's guarded symbol rename and X93–X98. Separate startup and focus-recovery tests also pass.
+Both editor harnesses show completed/remaining counts and the current case; these test displays
+do not add LSP work-done progress support.
 
 The standalone server closes resources and exits when its stdio client disconnects, including
 without a shutdown/exit handshake. Lifecycle regressions cover Tree-sitter, compiler and mock;
@@ -577,6 +579,37 @@ Log messages use SLF4J with a short class name (`%logger{0}`) to identify their 
 | `XtcQueryEngine` | Tree-sitter query execution |
 | `WorkspaceIndexer` | Background file scanner |
 | `WorkspaceIndex` | Symbol index |
+
+### Compiler queue and API timing
+
+Execution tracing is enabled at INFO in ordinary runs and tests. Each process writes JSON lines to
+`~/.xtc/logs/lsp-trace-<pid>-<process-start>.jsonl`, as well as the existing stderr/server log.
+Use `XTC_LSP_TRACE_DIR` or `-Dxtc.trace.directory` to select a directory; use
+`XTC_LSP_TRACE_LEVEL=OFF` or `-Dxtc.trace.level=OFF` to disable it. System properties take precedence.
+Files roll at 20 MB with seven days/100 MB retained per process; this is not a global directory cap.
+
+Each event records sequence, wall time, process/thread, operation, URI and span/parent IDs.
+Compiler queue events include `queueSize` and the ordered `queuedJobs` list, plus separate
+`debouncingSize`/`debouncingJobs` and `runningSize`/`runningJobs`. Job labels have the form
+`#91 compile file:///workspace/Startup.x`; cursor, project-query and rename-proof jobs are named too.
+Submission, enqueue and execution counters distinguish debounce/coalescing from actual compiler work.
+Cancellation of running work remains visible until the worker returns. `waitMs` includes debounce;
+`runMs` measures execution and `elapsedMs` includes the entire job lifetime.
+
+Javatools spans time full/source-tree/cursor compilation, parser/lexer operations, dependency
+read/write, TypeInfo queries, footprint inspection and semantic-copy phases. AST/constant getters
+inside a copy phase are included in its duration rather than emitting a line for every getter.
+`activeApiThreads` counts threads inside instrumented API boundaries; nested calls on the same
+thread do not imply parallel compilation. A returned compilation can still contain diagnostics.
+Request spans run from server receipt through reply serialization/write; they include asynchronous
+queue waits, but not the editor's later rendering time. Notifications record document versions and
+diagnostic counts. Source buffers, protocol payloads and exception messages are excluded.
+
+JVM test traces are under `build/reports/execution-trace`; packaged-server tests use per-test
+subdirectories there so their traces survive temporary workspace cleanup. IntelliJ playbook runs
+place each child server's trace in their report's `server-trace/` directory, preserving restarts as
+separate files.
+The IntelliJ provider forwards the trace directory/level JVM properties to its child server.
 
 ### Tailing Logs
 

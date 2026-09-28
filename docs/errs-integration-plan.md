@@ -23,10 +23,11 @@ master's dependencies and passes 455 tests (three existing skips), including all
 regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
 requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
-Current inventory: 2026-09-27, code checkpoint `511195564`. This is the active task list;
-the dated implementation records below retain their historical scope and results. L55 onward
-are planned work, not completed commits or new capabilities. Compiler API changes get separate
-C-series extraction boundaries when their implementations establish what is required.
+Current inventory: 2026-09-28, committed checkpoint `c2b321f4a` plus the uncommitted native,
+tracing and fixture-spacing batch recorded below. This is the active task list; dated records
+retain their historical scope and results. Checkboxes distinguish completed acceptance from
+implemented-but-unverified work and planned features. Compiler API changes get separate C-series
+extraction boundaries when their implementations establish what is required.
 
 **We have broad editor support, not full LSP coverage.** XdkAdapter implements all 24 entries
 in our `AdapterCapability` enum, plus compiler diagnostics and document/workspace synchronization.
@@ -57,7 +58,7 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   before/after proof. Bound peak memory without weakening binding/dispatch checks. Acceptance:
   successful and rejected renames under a declared heap budget, unchanged diagnostics, and
   release of all query-owned compiler objects after success, cancellation and failure.
-- [ ] **L56 — Editing during IntelliJ startup.** Reproduce ordinary edits while initial
+- [x] **L56 — Editing during IntelliJ startup.** Reproduce ordinary edits while initial
   `didOpen` is pending; trace document text/version ordering through LSP4IJ and the server.
   Fix confirmed synchronization or stale-result delivery, including shortened-document folds.
   Acceptance: typing, bulk replacement and close/reopen during startup converge to current
@@ -77,15 +78,17 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   inferred locals and selected positional parameter names: destructuring and lambda
   parameters/returns now use actual compiler types. Shared scenarios and current-version
   invalidation checks pass; partial source never invents an inferred type.
-- [ ] **L60 — Native parity checkpoint.** All 50 newly added cases, X20/X81/X82 and X93–X98
-  now have individual passing receipts. Run the complete 113-case checkpoint together.
+- [x] **L60 — Native parity checkpoint.** The complete 113-case suite passes together in
+  `run-6034631232732848040`, with zero IDE errors. All 50 newly added cases, X20/X81/X82 and
+  X93–X98 are included.
   Every missing IntelliJ case already has a VS Code implementation. Track each case in
   `scenarios.json`; X20's signature display discrepancy
   and X81/X82's Property-kind assertions are resolved. Use native editor actions for user-visible
   behavior and the installed client transport for protocol-only assertions such as stale handles,
   cancellation and edit versions. Label those layers explicitly. Record assertions implemented,
   cases selected and cases passed separately. Full parity is required work; a selected passing
-  subset does not close L60. Run the broader checkpoint occasionally, not after each change.
+  subset does not close L60; the complete run above does. Run the broader checkpoint occasionally,
+  not after each change.
 
 ### L56 startup synchronization implementation (2026-09-28)
 
@@ -104,8 +107,129 @@ bounded initialization ordering item from L80, not the whole capability audit.
 Deterministic regressions cover typing/replacement before open, pre-listener edits, close/reopen,
 stale shortened-document folds, delayed closes while a reopened buffer is still pending, and watcher
 negotiation. All eight client middleware tests and the capability-registration test pass. Native
-startup acceptance remains required before closing L56 in full; a readiness-waiting harness is
-not that proof.
+startup acceptance is now recorded below; the ordinary feature readiness wait is not that proof.
+
+### Native startup, rename deadlock and execution tracing (2026-09-28)
+
+The separate `CompilerPlaybookTest.startupEditing` check makes real, unsaved editor transactions
+before initial startup or restarted-server initialization completes. Five phases cover cold open,
+unknown-name insertion, immediate repair, long-to-short replacement and close/reopen plus editing.
+It checks current client version/text, published and installed editor diagnostics, exact shortened
+folds, unchanged disk text, replacement PID and exit of the previous process. These are editor
+transactions, not a claim to simulate physical typing. The probe is test-only; the shipping plugin
+has no readiness barrier. `run-1799467324333192176` passes START/STARTUP with zero IDE failures.
+
+A real X103 freeze was reproduced in `run-18230526726141991629`, after seven feature passes.
+The EDT held the VFS rename write lock while LSP4IJ's `onFileRenameAfter` waited for didOpen.
+Our startup-message snapshot callback requested a blocking IDE read action on that notification
+thread. This was a production plugin lock cycle, unrelated to desktop focus or compiler speed.
+The hook now reads the existing opened-document identity and the Document API's immutable text
+without a read action; it adds no mutable document cache. X103's forward and reverse resource
+rename both pass in `run-8812860837009261601`, with no IDE failures. The five-phase startup check
+also passes after this fix. The later full native checkpoint is recorded below under L60.
+
+The next full run, `run-5653317395986057876`, passed 61 scenarios plus START, including X103,
+before Starter's default ten-minute whole-IDE timeout terminated it during X86. The resulting
+JMX connection refusal was a consequence of that shutdown, not an X86 assertion failure or a
+repeated rename deadlock. There were no reported IDE errors; 51 scenarios were not reached.
+The driver now allows 30 minutes for the whole session and retains its individual bounded waits.
+The corrected runner compiled and reused the configuration cache. Its first rerun,
+`run-13531221189698116807`, passed 17 scenarios plus START before X17 found both the active and
+focused IDE windows null. No IDE errors were reported; 95 scenarios were not reached. This is
+a separate desktop-focus interruption; it did not close L60.
+
+The harness now restores interrupted popup focus with `AppIcon` window/application activation
+and component focus without moving the pointer. On macOS the window overload calls
+`Desktop.requestForeground(false)`; the no-argument application overload adds the required
+`requestForeground(true)`. The window-only version timed out at X94 in
+`run-8104497655710049205` after 30 passing scenarios (zero IDE errors), so it did not close L60.
+With explicit application activation, X94 passes in `run-11175036742022156624` and the dedicated
+focus regression passes in `run-4951684034310159112`, both without IDE errors.
+`PopupInspection` captures a document modification
+stamp and refuses to reopen after any edit; completion acceptance, quick fixes, rename application
+and file moves remain outside the replay path. A dedicated native regression deliberately
+interrupts completion/Parameter Info and rejects recovery after accepted completion/rename edits.
+Restoration and reopening are logged separately. The test IDE's title and status bar show the
+selected total, completed/remaining counts, current case and focus-restoration state. VS Code's
+playbook has the corresponding status-bar progress display. These are test-only helpers.
+
+Harness waits now poll every 100 ms instead of the Driver default of one second, retaining each
+failure deadline. A single IDE-side call checks focus ownership, and synchronous test scrolling
+avoids the Driver helper's fixed 200 ms pause. Assertions are preserved. X16/X17/X20/X34/X97/X103/X105
+pass in `run-793185410831092997`, with zero IDE failures. Their combined scenario time fell from
+93.846 seconds in the earlier full run to 32.630 seconds in this selection (about 2.9 times faster).
+This is an observed comparison with different session histories, not a controlled benchmark.
+The dedicated focus regression passes in `run-9052387951904069468` with zero IDE failures. Its
+earlier rename failure was a fixture mistake: a public method parameter is intentionally ineligible
+for rename. The corrected private-method fixture exercises a real rename and verifies that its
+completed edit is never replayed. An interrupted full run, `run-9402596203997157027`, passed eleven
+scenarios before the modification-stamp guard stopped X12 after an external edit. It is not a
+passing checkpoint. Automatic activation can still redirect user typing into the test IDE; an
+isolated desktop avoids that interference.
+The same seven VS Code cases pass with the status-bar display enabled in `run-blew7d`
+(seven passed, zero skipped, 16 seconds of scenario execution).
+
+Queue tracing now records both counts and ordered human-readable jobs, keeping debounced, queued
+and running work distinct. Nested javatools spans, process/thread IDs, compilation times and LSP
+receive-to-reply durations correlate the work without source text. See the
+[trace fields and controls](../lang/lsp-server/README.md#compiler-queue-and-api-timing).
+The clean startup run produced five per-process trace files, 491 API spans and a maximum observed
+API concurrency of one; this is evidence for that run, not a global concurrency guarantee.
+IntelliJ's service-started balloon uses the platform smart fadeout timer (eight seconds, paused
+while interacting); notification history remains available. The initial smart-only call waited
+for an input event to start its clock, leaving the balloon visible during pointer-free test runs.
+It now also schedules the timer immediately, and the native startup check verifies disappearance
+without mouse or keyboard input.
+
+The first full run with explicit application activation, `run-17709873479397394537`, completed
+all 113 scenarios: 112 passed and X30 failed, with zero IDE errors. X30 assumed that a replacement
+server PID implied that LSP4IJ had finished reopening its documents. Faster polling exposed the
+missing readiness check; the scenario now waits for didOpen through the ordinary open helper
+before accessing the new synchronizer. This run took 6 minutes 42 seconds including Gradle and
+startup, but its failed X30 means it is not a clean checkpoint.
+The following run, `run-9607396768138373685`, passed 22 scenarios before timing out on X83's
+editor-focus step after window activation; it reported no IDE errors. Component focus now goes
+through `IdeFocusManager.requestFocus` on the next Swing event, and timeout messages include
+window/owner state. This follows the platform's
+[replacement for its deprecated focus-settling helper](https://github.com/JetBrains/intellij-community/blob/f7eb985738a2329c5c9baabc9d1d5067e70acc45/platform/ide-core/src/com/intellij/openapi/wm/IdeFocusManager.java).
+The separate startup run `run-12431789842449790480` passes all five phases and confirms that the
+untouched startup balloon disappears, with zero IDE errors.
+
+**Final checkpoint: `run-6034631232732848040` passes all 113 shared scenarios plus START in one
+session, with zero IDE errors and zero JUnit failures/errors/skips.** Gradle succeeds in
+6 minutes 40 seconds and reuses the configuration cache; scenario execution totals 367.160 seconds.
+X30 passes with document readiness after restart. This closes L60. The separate startup/balloon
+and deliberate focus-recovery receipts remain additional checks, not part of the 113-case total.
+
+Commit boundaries for this checkpoint:
+
+| Commit | Future PR scope |
+| --- | --- |
+| `a75e2f5a2` | L56 transport read-lock fix for the IntelliJ VFS rename deadlock. |
+| `24b6b03ff` | Queue/API/protocol tracing and JVM/stdio regressions, including normal Gradle test logging and IntelliJ trace configuration. |
+| `51579aa59` | Startup balloon timeout, preserving notification history. |
+| `7aa642b79` | Test-fixture operator spacing and matching anchors. |
+| `4d7f0f22b` | Pointer-free popup recovery, faster native waits, restart readiness, progress in both editor harnesses, and native startup/focus acceptance tests. |
+
+The native startup and balloon acceptance tests share harness support in `4d7f0f22b`; carry those
+tests with the corresponding fixes when extracting PRs, or land the harness support first.
+The spacing cleanup changes shared data and backend fixture strings together; X16's argument
+position and the stdio signature-help offset move with their anchors. Deliberately unformatted
+formatter inputs and caret markers remain intact. Documentation and matching manual examples
+follow in the documentation checkpoint. Validation below covers the integrated tree; each
+extracted PR still needs independent checks. No compiler/AST API is added by this batch.
+
+Validation after fixture spacing: the complete LSP JVM run executed 1,255 tests with three
+existing disabled tests. Three old-spacing assertions failed; their corrections passed a
+47-test rerun of XdkArrayDimensionTest, XdkRenameTest, XdkWorkspaceRefactoringTest and
+CompilerBoundaryRequirementsTest. Initial XML is retained in
+`lang/lsp-server/build/reports/fixture-spacing-initial-jvm`; this is combined evidence, not a
+claim that the initial run was green. All 67 packaged stdio cases and 40 IntelliJ unit tests pass.
+VS Code passes all 113 scenarios in `run-aOarm7`; no cases are skipped or unselected. Kotlin lint,
+Spotless and integration-driver compilation pass. No Java compiler source changed in this batch.
+The ordinary VS Code extension suite also passes all eight tests, including the changed project
+fixtures and 40 error/repair cycles (observed p50 511 ms, p95 825 ms). Its Gradle invocation took
+34 seconds and stored the configuration cache.
 
 ### L57 written formal bounds implementation (2026-09-28)
 
@@ -186,8 +310,9 @@ header syntax; L58 depends on cursor argument fitting; L59 depends on the Kotlin
 and existing lambda register provenance. Each extracted PR still needs its own build and tests.
 Selected VS Code X42/X97/X108 pass in `run-APcBZB` (three passed, 110 not selected), including
 the added formal/operand/hint variants. Both editor drivers compile.
-The complete 113-case native checkpoint and live startup typing acceptance remain open. The
-expanded shared catalog does not retroactively validate new variants with older receipts.
+At that checkpoint, the complete native run and live startup editing acceptance remained open.
+The dedicated startup run now passes; the newer native/tracing section above records that proof
+and the remaining full-run gate. Older receipts do not validate later expanded variants.
 
 ### L56–L59 combined validation receipt (2026-09-28)
 
@@ -221,9 +346,10 @@ The receipt records `64658640f` plus the constructor-order correction subsequent
 ```
 
 L57–L59's bounded implementation work is complete. L64 retains recursive unfinished bounds,
-further recovery/member enumeration and literal synthesis. L56 retains actual startup-typing
-acceptance; L60 retains the complete 113-case native run, including the newly expanded variants.
-These are separate from the passing backend and selected VS Code receipts above.
+further recovery/member enumeration and literal synthesis. L56's startup-editing acceptance
+subsequently passed in its dedicated native run; L60's complete 113-case native run also passes,
+including the newly expanded variants. These are separate from the backend and selected
+VS Code receipts above.
 
 ### Finish the existing editor features
 
@@ -345,9 +471,8 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   and commit extraction map together. Validate each later extracted PR independently.
 
 Current native automation inventory: **113 shared cases with driver assertions**, plus startup.
-The previously missing 50 case bodies and X20/X81/X82 assertions are now written; the combined
-integration-test compilation passes. This is implementation inventory, **not a full native pass**.
-Validation is in progress. X93–X98 have individual passing receipts. Completion requires
+The previously missing 50 case bodies and X20/X81/X82 assertions are now written, compiled and
+included in the clean 113-case native checkpoint `run-6034631232732848040`. Completion still requires
 explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
 is a percentage of total LSP completeness.
 
@@ -361,12 +486,10 @@ negative answers and cancellation. Diagnostics for nonexistent/deleted files are
 client's verbose trace because LSP4IJ drops publications without a virtual file. That proves
 protocol delivery, not a Problems row for a nonexistent file.
 
-Current validation: **50/50 previously missing cases pass individually**, and X20/X81/X82
-also pass. X29 now passes after refreshing popup metadata. X93–X98 also pass; the complete
-113-case native checkpoint is the remaining gate. The resumed runs now cover all 113 scenario
-assertions, but one batch failed the IDE-error gate and the subsequent full run lost desktop
-focus. X41's read-action correction passes a focused run with no IDE errors. Each run writes
-live `progress.jsonl` and final `results.json`.
+Current validation: **all 113 scenarios pass together** in `run-6034631232732848040`, including
+all 50 previously missing cases, X20/X81/X82 and X93–X98. The IDE-error gate is clean, and the
+JUnit XML reports no failures, errors or skips. Earlier failures and their corrections are
+retained below. Each run writes live `progress.jsonl` and final `results.json`.
 
 | Native receipt | Selection | Result |
 |---|---|---|
@@ -394,6 +517,17 @@ live `progress.jsonl` and final `results.json`.
 | `run-10987416205556113042` | Remaining 61 | All 61 scenario assertions and startup passed, but the Gradle task failed on an IDE read-access violation in X41's harness inspection |
 | `run-9044375786228422295` | All 113 after the X41 correction | 37 scenarios and startup passed; X108 lost desktop focus; 75 scenarios not reached |
 | `run-14909426972982808602` | X41/X108 | Both and startup passed; zero IDE errors, zero JUnit failures/errors/skips; Gradle succeeded |
+| `run-5653317395986057876` | All 113 with tracing and spaced fixtures | 61 scenarios and startup passed; Starter's ten-minute session limit terminated the IDE during X86; 51 scenarios not reached, no reported IDE errors. Whole-run limit corrected to 30 minutes |
+| `run-13531221189698116807` | All 113 with the corrected session limit | 17 scenarios and startup passed; X17 lost desktop focus (`active=null`, `focused=null`); 95 scenarios not reached, no reported IDE errors |
+| `run-793185410831092997` | X16/X17/X20/X34/X97/X103/X105 with faster waits and visible progress | All seven passed; zero IDE errors; combined scenario time 32.630 seconds |
+| `run-9052387951904069468` | Dedicated focus recovery | Completion/signature interruption and completed-edit replay rejection passed; zero IDE errors |
+| `run-8104497655710049205` | All 113 with window-only activation | 30 scenarios passed; X94 timed out restoring focus; 82 not reached; zero IDE errors |
+| `run-11175036742022156624` / `run-4951684034310159112` | X94 / dedicated focus recovery with application activation | Both passed; zero IDE errors |
+| `run-17709873479397394537` | All 113 with application activation | 112 passed; X30 exposed a restart-readiness assumption; zero IDE errors |
+| `run-9607396768138373685` | All 113 with restart readiness corrected | 22 passed; X83 timed out waiting for editor focus; 90 not reached; zero IDE errors |
+| `run-12431789842449790480` | Startup editing and untouched notification expiry | All five startup phases and balloon disappearance passed; zero IDE errors |
+| `run-17503400761898076918` / `run-3387470687976244966` | X30/X83 / dedicated focus recovery through the IDE focus manager | Both selections passed; zero IDE errors; deprecated focus scheduling subsequently replaced with the recommended Swing event dispatch |
+| `run-6034631232732848040` | All 113 with progress, faster waits, focus recovery and restart readiness | All 113 plus START passed in one session; zero IDE errors and zero JUnit failures/errors/skips; Gradle succeeded in 6m 40s. L60 complete |
 
 X97's diagnostic-read failure was a harness transport problem. Driver 262's `RefProducer`
 calls `toString()` when exporting highlighters; their descriptions evaluate lazy quick fixes.
@@ -413,8 +547,9 @@ active and focused IDE windows null; screenshots show another application in the
 The resumed runs completed those outstanding scenario assertions. They do not establish a
 clean 113-case pass: the 61-case batch's IDE-error gate correctly rejected an unguarded PSI
 read, and the subsequent full run lost desktop focus at X108. X41 and X108 then passed together
-with no IDE errors. The harness does not repeatedly bring IntelliJ to the front to conceal
-desktop interference; the complete uninterrupted checkpoint remains open.
+with no IDE errors. Those runs used the earlier fail-on-focus-loss policy. The harness now
+restores focus without pointer input and only reopens unapplied inspections while their source
+is unchanged; the dedicated regression and current full-run evidence are recorded above.
 
 The resumed run found three more harness defects, fixed in `6d7e5b7e5`:
 
@@ -532,9 +667,8 @@ The three previously partial assertion sets pass in `run-4120946877197382622`:
 - [x] X81 — inspect Property completion-kind metadata in addition to candidates/type/edit.
 - [x] X82 — inspect Property completion-kind metadata in addition to candidates/edit.
 
-X97/X98 now have passing execution receipts. Complete L60 only when
-all the above assertions are implemented, each case has a passing receipt on the integrated
-branch and the complete implemented native suite passes together. A client limitation must be
+L60 is complete: all the above assertions are implemented and the complete 113-case native suite
+passes together on the integrated branch in `run-6034631232732848040`. A client limitation must be
 reported explicitly; it cannot silently remove an expected shared assertion.
 
 ## Large-graph proof memory checkpoint (L55)
@@ -1358,11 +1492,15 @@ forms remain explicit follow-ups.
 
 ## IntelliJ native assertion parity
 
+This is the historical L38 checkpoint. The [L60 inventory](#intellij-parity-backlog-l60) and
+[current native validation](#native-startup-rename-deadlock-and-execution-tracing-2026-09-28)
+supersede its coverage counts and focus policy.
+
 Host-only follow-up L38 is in `3c68c2dfe`, independent of C22. The same commit's X94 catalog and
 consumer hunks belong to L37. The user requested a background audit
 and implementation of the remaining native gaps. Coverage labels describe assertions implemented,
 while recorded native runs separately establish runtime evidence. Keep both visible in the report.
-The implemented catalog now contains **43 full, three partial and 53 unimplemented** scenarios,
+At this checkpoint the implemented catalog contained **43 full, three partial and 53 unimplemented** scenarios,
 plus START. This adds 11 native cases and completes assertions in 14 previous partials. Integration
 compilation and ktlint pass with configuration-cache reuse. Runtime validation is incomplete:
 implemented coverage must not be read as a single successful native run.
@@ -1376,7 +1514,7 @@ unchecked completion Property-kind metadata.
 
 Native checkpoint evidence (both reports have zero IDE internal failures):
 
-- Latest, after `2e98860e1`: **19 passed, one failed, 27 not-run and 53 not-implemented**, including
+- Latest in this checkpoint, after `2e98860e1`: **19 passed, one failed, 27 not-run and 53 not-implemented**, including
   START in the pass count. Report:
   `lang/intellij-plugin/build/reports/compiler-playbook/run-469432121529144568/results.json`.
   X92 passes both incomplete-header variants: Structure retains `Editing`, `damaged` and `later`,
@@ -1395,18 +1533,17 @@ Both reports use catalog SHA-256
 The harness no longer calls Driver `ensureFocused()`, whose `toFront()` implementation clicks
 the title bar and whose input-focus probe injects a key event. Conditional programmatic focus is
 limited to completion and Parameter Info; ordinary file opening and caret movement request no
-focus. Popup polling fails clearly on focus loss instead of repeatedly raising the IDE. Leave the
-isolated IDE focused during that phase. Cleanup closes the IDE after failure; neither recorded
-failure was an IDE crash.
+focus. At this checkpoint popup polling failed on focus loss; it now restores focus and reopens
+only unapplied inspections while the source is unchanged. Cleanup closes the IDE after failure;
+neither recorded failure was an IDE crash.
 
-Next checkpoint: finish all currently implemented cases in one uninterrupted native run before
-adding another assertion batch. The following batch should add a reusable single/multiple/
-empty-target navigation helper, followed by X5, X33–X38, X64–X68 and X72. Other missing families
-are workspace lifecycle/configuration
+The planned follow-up was to finish the implemented cases before adding another assertion batch,
+then add a reusable single/multiple/empty-target navigation helper followed by X5, X33–X38,
+X64–X68 and X72. Other missing families at that time were workspace lifecycle/configuration
 (16 cases), hierarchies/stale snapshots (7), hover/tokens/inlays/binary contracts (4), rename/
 workspace edits/cross-consumer references (10), and negative-capability/CRLF checks (3). The shared
-catalog records every remaining ID and limitation; the counts are harness scope, not missing
-compiler features.
+catalog now implements these cases; L60 records execution evidence. These historical counts were
+harness scope, not missing compiler features.
 
 | Future PR | Contents | Prerequisites |
 |---|---|---|
