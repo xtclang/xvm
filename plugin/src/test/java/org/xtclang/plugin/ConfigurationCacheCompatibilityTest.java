@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,11 +16,14 @@ import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Exercises real plugin tasks through configuration-cache storage and reuse.
  */
+@EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+    disabledReason = "Runs TestKit Gradle builds; enable with RUN_INTEGRATION_TESTS=true")
 class ConfigurationCacheCompatibilityTest {
     @TempDir
     Path testProjectDir;
@@ -71,7 +75,7 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals("FIRST", Files.readString(compiled).strip());
         assertFalse(Files.exists(destination.resolve("excluded.txt")));
 
-        Files.writeString(input, "second");
+        edit(input, "second");
         final var changed = runBuild("compileXtc");
         assertTrue(changed.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.SUCCESS, changed.task(":processXtcResources").getOutcome());
@@ -79,7 +83,7 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals("SECOND", Files.readString(destination.resolve("included.txt")).strip());
         assertEquals("SECOND", Files.readString(compiled).strip());
 
-        Files.writeString(resources.resolve("excluded.txt"), "changed but excluded");
+        edit(resources.resolve("excluded.txt"), "changed but excluded");
         final var unchanged = runBuild("compileXtc");
         assertTrue(unchanged.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.UP_TO_DATE, unchanged.task(":processXtcResources").getOutcome());
@@ -299,7 +303,7 @@ class ConfigurationCacheCompatibilityTest {
         final var reused = runBuild("compileXtc");
         assertTrue(reused.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.UP_TO_DATE, reused.task(":compileXtc").getOutcome());
-        Files.writeString(source, "module Example { /* changed */ }");
+        edit(source, "module Example { /* changed */ }");
         final var changed = runBuild("compileXtc");
         assertTrue(changed.getOutput().contains("Configuration cache entry reused"));
         assertEquals(TaskOutcome.SUCCESS, changed.task(":generateSources").getOutcome());
@@ -307,9 +311,22 @@ class ConfigurationCacheCompatibilityTest {
         assertEquals("module Example { /* changed */ }", Files.readString(output));
     }
 
+    /**
+     * Rewrites an input between builds without depending on the clock. Gradle reuses a file's cached hash
+     * while its length and modification time are unchanged, and a rewrite within one timestamp tick keeps
+     * the old time, so move the timestamp explicitly instead of waiting for the clock to advance.
+     */
+    private static void edit(final Path file, final String content) throws IOException {
+        final var previous = Files.getLastModifiedTime(file).toInstant();
+        Files.writeString(file, content);
+        Files.setLastModifiedTime(file, FileTime.from(previous.plusSeconds(1)));
+    }
+
     private BuildResult runBuild(final String... tasksAndOptions) {
         final var arguments = new ArrayList<>(List.of(tasksAndOptions));
-        arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--stacktrace"));
+        // Without file-system watching, every build re-reads its inputs from disk instead of trusting a
+        // retained snapshot that is only corrected once an asynchronous change notification arrives.
+        arguments.addAll(List.of("--configuration-cache", "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace"));
         return GradleRunner.create()
             .withProjectDir(testProjectDir.toFile())
             .withPluginClasspath()

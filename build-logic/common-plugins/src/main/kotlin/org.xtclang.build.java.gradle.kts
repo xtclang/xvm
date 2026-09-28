@@ -187,6 +187,8 @@ tasks.withType<Test>().configureEach {
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
     inputs.property("failFastTests", failFastTests)
+    // Tests gated by @EnabledIfEnvironmentVariable must re-run when the gate flips, not stay UP-TO-DATE.
+    inputs.property("runIntegrationTests", providers.environmentVariable("RUN_INTEGRATION_TESTS").orElse(""))
     // Skip all tests when -PskipAllTests is set (configuration cache safe)
     onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }
