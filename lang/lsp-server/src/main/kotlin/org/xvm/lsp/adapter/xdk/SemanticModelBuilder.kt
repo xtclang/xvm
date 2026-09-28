@@ -622,7 +622,9 @@ private class SemanticModelBuilder(
                             immutableList(
                                 candidates.mapNotNull { candidate ->
                                     val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
-                                    val signature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
+                                    val declaredSignature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
+                                    val offset = if (candidate.receiverArgument()) 1 else 0
+                                    val signature = declaredSignature.copy(parameters = declaredSignature.parameters.drop(offset))
                                     val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
                                     val name =
                                         when {
@@ -649,10 +651,10 @@ private class SemanticModelBuilder(
                                             ),
                                         arguments =
                                             immutableList(
-                                                candidate.arguments().map {
+                                                candidate.arguments().filter { it.parameterIndex() >= offset }.map {
                                                     SemanticModel.CallArgument(
                                                         location(site.source, it.startPosition(), it.endPosition()).range,
-                                                        it.parameterIndex(),
+                                                        it.parameterIndex() - offset,
                                                     )
                                                 },
                                             ),
