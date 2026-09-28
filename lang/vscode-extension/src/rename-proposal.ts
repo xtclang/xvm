@@ -1,11 +1,25 @@
 import { modify, parse, ParseError } from 'jsonc-parser';
 import * as vscode from 'vscode';
-import { LanguageClient, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { LanguageClient, RenameFile, RenameParams, RequestType, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 
 interface SourceModule { name: string; uri: string; dependencies?: string[] }
 interface RenameProposal {
     edit: WorkspaceEdit;
     graph?: { before: SourceModule[]; after: SourceModule[] };
+}
+const renameRequest = new RequestType<RenameParams, RenameProposal | null, void>('xtc/rename');
+
+/** VS Code's native Rename saves affected files when files.refactoring.autoSave is enabled.
+ * Without that save, moving an edited model can lose its text Undo. Reordering the operations
+ * fixes Undo but breaks Redo, so refuse this unsupported editor configuration before editing.
+ */
+function editsMovedSource(edit: WorkspaceEdit): boolean {
+    const changes = edit.documentChanges ?? [];
+    const moves = changes.filter(RenameFile.is).map(move => new URL(move.oldUri).href.replace(/\/$/, ''));
+    return changes.filter(TextDocumentEdit.is).some(change => {
+        const uri = new URL(change.textDocument.uri).href;
+        return moves.some(from => uri === from || uri.startsWith(from + '/'));
+    });
 }
 
 /** Workspace settings only: a refactoring must not rewrite settings shared by other projects. */
@@ -29,7 +43,9 @@ function modulesIn(text: string, path: string[]): unknown {
 export function compilerSourceModules(): unknown[] | null {
     const location = compilerSettingsLocation();
     const document = location && vscode.workspace.textDocuments.find(document => !document.isClosed && document.uri.toString() === location.uri.toString());
-    if (document?.isDirty) {
+    // The document is current even immediately after a save, before VS Code's settings
+    // watcher has refreshed getConfiguration(). Falling back then briefly reinstalls the old graph.
+    if (document) {
         const value = modulesIn(document.getText(), location!.path);
         if (value === null || Array.isArray(value)) return value;
     }
@@ -56,10 +72,10 @@ export async function renameWithConfiguration(
     const config = compilerSourceModules();
     const settings = config && location ? await vscode.workspace.openTextDocument(location.uri).then(value => value, () => undefined) : undefined;
     const snapshot = settings && { version: settings.version, text: settings.getText() };
-    const proposal = await client.sendRequest<RenameProposal | null>('xtc/rename', {
+    const proposal = await client.sendRequest(renameRequest, {
         textDocument: client.code2ProtocolConverter.asTextDocumentIdentifier(document),
         position: client.code2ProtocolConverter.asPosition(position), newName
-    }, token);
+    }, token).catch(error => client.handleFailedRequest(renameRequest, token, error, null, false));
     if (!proposal || token.isCancellationRequested) return null;
     if (proposal.graph) {
         if (!settings || !snapshot || !location || !Array.isArray(config)
@@ -80,6 +96,9 @@ export async function renameWithConfiguration(
             }))
         };
         proposal.edit = { ...proposal.edit, documentChanges: [...(proposal.edit.documentChanges ?? []), configurationEdit] };
+    }
+    if (editsMovedSource(proposal.edit) && !vscode.workspace.getConfiguration('files.refactoring').get('autoSave', true)) {
+        throw new Error('Renaming an edited source file requires files.refactoring.autoSave in VS Code so Undo and Redo preserve its contents.');
     }
     const converted = await client.protocol2CodeConverter.asWorkspaceEdit(proposal.edit, token);
     if (token.isCancellationRequested) return null;
