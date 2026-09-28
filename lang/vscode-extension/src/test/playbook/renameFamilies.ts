@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { compilerSourceModules } from '../../rename-proposal';
+import { compilerSettingsLocation, compilerSourceModules, renameWithConfiguration } from '../../rename-proposal';
 import { discovered } from './liveWorkspace';
 import { client, eventually, noErrors, playbook, position, symbols, Workspace } from './support';
 
@@ -10,6 +10,54 @@ async function contents(workspace: Workspace, file: string): Promise<string> {
     const uri = workspace.uri(file);
     return vscode.workspace.textDocuments.find(document => !document.isClosed && document.uri.toString() === uri.toString())?.getText()
         ?? fs.readFile(uri.fsPath, 'utf8');
+}
+
+/** Exercise the installed client's real proposal, including the asynchronous conversion boundary. */
+async function configurationGuards(document: vscode.TextDocument, at: vscode.Position, replacement: string,
+    token: vscode.CancellationToken): Promise<void> {
+    const languageClient = client();
+    const otherFolder = vscode.workspace.workspaceFolders?.[1];
+    if (otherFolder) {
+        const configuration = vscode.workspace.getConfiguration('xtc.compiler', otherFolder.uri);
+        const previous = configuration.inspect('sourceModules')?.workspaceFolderValue;
+        try {
+            await configuration.update('sourceModules', [], vscode.ConfigurationTarget.WorkspaceFolder);
+            await assert.rejects(() => renameWithConfiguration(languageClient, document, at, replacement, token), /folder overrides/);
+        } finally {
+            await configuration.update('sourceModules', previous, vscode.ConfigurationTarget.WorkspaceFolder);
+        }
+    }
+    const settings = await vscode.workspace.openTextDocument(compilerSettingsLocation()!.uri);
+    const original = settings.getText();
+    const converter = languageClient.protocol2CodeConverter;
+    // No fake compiler reply: delay the actual conversion only long enough for a real settings edit.
+    const delayedConverter = new Proxy(converter, {
+        get(target, property, receiver) {
+            if (property === 'asWorkspaceEdit') return async (...args: Parameters<typeof converter.asWorkspaceEdit>) => {
+                const converted = await converter.asWorkspaceEdit(...args);
+                const edit = new vscode.WorkspaceEdit();
+                edit.insert(settings.uri, settings.positionAt(settings.getText().length), '\n// Settings edited during Rename\n');
+                assert.ok(await vscode.workspace.applyEdit(edit));
+                return converted;
+            };
+            return Reflect.get(target, property, receiver);
+        }
+    });
+    const delayedClient = new Proxy(languageClient, {
+        get(target, property) {
+            if (property === 'protocol2CodeConverter') return delayedConverter;
+            const value = Reflect.get(target, property, target);
+            return typeof value === 'function' ? value.bind(target) : value;
+        }
+    });
+    try {
+        await assert.rejects(() => renameWithConfiguration(delayedClient, document, at, replacement, token), /changed while converting Rename/);
+    } finally {
+        const restore = new vscode.WorkspaceEdit();
+        restore.replace(settings.uri, new vscode.Range(settings.positionAt(0), settings.positionAt(settings.getText().length)), original);
+        assert.ok(await vscode.workspace.applyEdit(restore));
+        assert.ok(await settings.save());
+    }
 }
 
 export function renameFamilyCases(): void {
@@ -28,6 +76,10 @@ export function renameFamilyCases(): void {
                 assert.ok(provider);
                 const cancellation = new vscode.CancellationTokenSource();
                 try {
+                    if ('sourceModules' in data) {
+                        await configurationGuards(document, position(document, data.anchor), data.replacement, cancellation.token);
+                        for (const file of data.files) assert.strictEqual(await contents(workspace, file.file), file.source);
+                    }
                     if (data.files.some(file => file.file !== file.destination && file.source !== file.expected)) {
                         const configuration = vscode.workspace.getConfiguration('files.refactoring');
                         const previous = configuration.inspect<boolean>('autoSave')?.workspaceValue;
