@@ -1147,11 +1147,11 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X118 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X121 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
-including failure counts. Focused selections use their own total rather than all 123 scenarios.
+including failure counts. Focused selections use their own total rather than all 126 scenarios.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
 `:lang:lsp-server:compilerStdioTest --rerun` to the command.
 
@@ -1283,14 +1283,14 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 123 scenarios: X1–X118, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 126 scenarios: X1–X121, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 123 cases. IntelliJ now has assertions for the same 123, plus a separate startup check.
+all 126 cases. IntelliJ now has assertions for the same 126, plus a separate startup check.
 The newly added cases still need native pass receipts; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -2075,6 +2075,9 @@ module Advanced {
 | X116 | In the shared `X116` fixture, qualified module rename preserves its domain and alias and moves its companion. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X117 | In the shared `X117` fixture, implicit package rename moves the nested directory. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X118 | Repeat X116 with explicit sourceModules settings containing Library.example.org and Consumer → Library.example.org. | Rename changes the root URI, module name and dependency edge in settings; Undo and Redo restore the matching graph, source contents and resource paths together. Save All in VS Code persists the settings document with the sources. |
+| X119 | Rename the primary constructor property input in Library.Box with Consumer closed. | Header, constructor label and property access change together; Other.input stays unchanged. Undo restores every source. |
+| X120 | Rename a lambda input captured by a nested lambda. | Declaration and nested capture change; sibling lambda input stays unchanged. Undo restores the source. |
+| X121 | Rename a method input while a closed consumer stores its method value and also calls it by name. | Direct label and selected declaration change; positional function calls and the String overload stay unchanged. Undo restores both files. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -2333,3 +2336,12 @@ the existing native navigation actions. Backend/protocol cases cover multiple in
 property overrides, import aliases, closed consumers, indexed libraries and stale source.
 Combined backend/protocol validation and selected X4/X102/X103/X104 runs pass in both clients.
 See the [L55/L61/L62 receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).
+
+### Rename extension batch acceptance
+
+X119–X121 are shared by both drivers and add primary-header properties, lambda captures and
+escaped method values. The catalog now contains 126 cases; these three additions await the
+combined validation run. No full 126-case receipt is claimed. Source-graph scope receipts on
+`xtc/rename` describe configured/discovered inputs, including explicitly registered external
+roots. Unknown external consumers are not discovered by rename. Register them in sourceModules
+before renaming; an unreadable registered source refuses the proposal rather than reducing scope.
