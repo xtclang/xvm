@@ -605,6 +605,11 @@ private class SemanticModelBuilder(
                             },
                         ),
                     members = immutableList(members),
+                    formals = immutableList(cursor?.formals().orEmpty().mapNotNull { formal ->
+                        val bound = type(formal.constraint()) ?: return@mapNotNull null
+                        val token = formal.name()
+                        PartialSemanticModel.Formal(token.valueText, bound, location(site.source, token.startPosition, token.endPosition).range)
+                    }),
                     memberPrefix =
                         (site.argumentPrefix.orElse(null) ?: site.memberName.orElse(null))?.let { name ->
                             PartialSemanticModel.MemberPrefix(

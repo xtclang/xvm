@@ -21,7 +21,7 @@ import org.xvm.compiler.ast.IncompleteStatement;
 public record CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
-                            List<Property> argumentProperties) {
+                            List<Property> argumentProperties, List<Formal> formals) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
@@ -29,6 +29,24 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         functions = List.copyOf(functions);
         argumentValues = List.copyOf(argumentValues);
         argumentProperties = List.copyOf(argumentProperties);
+        formals = List.copyOf(formals);
+    }
+
+    /** Retain the original complete constructor for existing embedding consumers. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues,
+                         List<Property> argumentProperties) {
+        this(variables, thisType, instance, types, candidates, callsInspected, functions,
+                argumentValues, argumentProperties, List.of());
+    }
+
+    /** A written formal and its compiler-resolved bound, not an invented declaration identity. */
+    public record Formal(Token name, TypeConstant constraint) {}
+
+    public CursorBinding withFormals(List<Formal> formals) {
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected,
+                functions, argumentValues, argumentProperties, formals);
     }
 
     /** Retain variable-completion callers. Record patterns must also include argument properties. */
@@ -68,7 +86,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     private CursorBinding withCallFacts(CallFacts calls) {
-        return new CursorBinding(variables, thisType, instance, types, calls);
+        return new CursorBinding(variables, thisType, instance, types, calls).withFormals(formals);
     }
 
     public CursorBinding withCandidates(List<Candidate> candidates) {
@@ -80,7 +98,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     public CursorBinding withTypes(List<NamedType> types) {
-        return new CursorBinding(variables, thisType, instance, types, callFacts());
+        return new CursorBinding(variables, thisType, instance, types, callFacts()).withFormals(formals);
     }
 
     /** Readable source variables whose proposed insertion fits at least one incomplete-call candidate. */
