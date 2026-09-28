@@ -271,7 +271,7 @@ internal class XdkProjectQueries(
     }
 
     /** Candidate syntax is insufficient: every edit must compile and preserve all existing bindings. */
-    fun importActions(
+    fun codeActions(
         uri: String,
         range: Range,
     ): List<CodeAction> {
@@ -295,7 +295,19 @@ internal class XdkProjectQueries(
                     edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                 )
             }
-        return if (isCurrent()) actions else emptyList()
+        val members = before.memberActions.filter { it.selected(source, range) }.take(32).mapNotNull { candidate ->
+            checkCurrent()
+            val edit = candidate.edit(text) ?: return@mapNotNull null
+            val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
+            val after = compile(plan.proposed) ?: return@mapNotNull null
+            if (!XdkRename.preservesMemberAddition(before, after, plan, candidate)) return@mapNotNull null
+            CodeAction(
+                candidate.title,
+                if (candidate.implementation) CodeAction.CodeActionKind.QUICKFIX else CodeAction.CodeActionKind.REFACTOR_REWRITE,
+                edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+            )
+        }
+        return if (isCurrent()) actions + members else emptyList()
     }
 
     private fun autoImports(
@@ -457,7 +469,7 @@ internal class XdkProjectQueries(
                         if (proof == Proof.NAVIGATION) return@mapNotNull null
                         return null
                     }
-                    val facts = compilation.projectRenameFacts(open, errors)
+                    val facts = compilation.projectRenameFacts(open, errors, includeMembers = proof == Proof.REPAIR)
                     if (heard.hasSeriousErrors() || errors.isAbortDesired) {
                         checkCurrent()
                         if (proof != Proof.COMPLETE) return@mapNotNull null
