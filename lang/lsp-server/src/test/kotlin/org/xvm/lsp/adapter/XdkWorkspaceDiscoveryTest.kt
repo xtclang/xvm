@@ -38,8 +38,8 @@ class XdkWorkspaceDiscoveryTest {
 
     @Test
     fun `unopened graph resolves imports and indexes independent healthy modules despite a broken neighbor`() {
-        val base = source("Base.x", "module Base { static Int answer()=42; }")
-        val appText = "module App { package lib import Base; Int run()=lib.answer(); }"
+        val base = source("Base.x", "module Base { static Int answer() = 42; }")
+        val appText = "module App { package lib import Base; Int run() = lib.answer(); }"
         val app = source("App.x", appText)
         source("Broken.x", "module Broken { Missing value; }")
         XdkAdapter().use { adapter ->

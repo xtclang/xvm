@@ -60,7 +60,7 @@ class XdkPresentationTest {
                 Int run() {
                     var /*inferred*/number = pick(/*positional*/1);
                     val /*text*/label = pick(/*string*/"text");
-                    Int explicit = pick(second=3, first=4);
+                    Int explicit = pick(second = 3, first = 4);
                     return number + explicit + label.size;
                 }
             }
@@ -111,7 +111,7 @@ class XdkPresentationTest {
     @Test
     fun `failed inference never becomes an Object type hint or a token for the unresolved name`() {
         XdkAdapter().use { adapter ->
-            val source = "module Presentation { void run() { var value=/*unknown*/missing; } }"
+            val source = "module Presentation { void run() { var value = /*unknown*/missing; } }"
             assertThat(adapter.compile(URI, source).success).isFalse()
             assertThat(adapter.getInlayHints(URI, ALL)).isEmpty()
             val unknown = at(source, "unknown")

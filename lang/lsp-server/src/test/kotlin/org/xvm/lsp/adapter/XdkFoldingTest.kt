@@ -10,8 +10,8 @@ class XdkFoldingTest {
     @ValueSource(strings = ["\n", "\r\n"])
     fun `method folds stop before their closing brace and following same-line declarations`(newline: String) {
         listOf("Int value", "Int", "Int value, Str").forEach { parameters ->
-            val closingLine = " /* 😀 */ } Int later=1; }"
-            val text = listOf("module Folds {", " void damaged($parameters) {", " Int hidden=1;", closingLine).joinToString(newline)
+            val closingLine = " /* 😀 */ } Int later = 1; }"
+            val text = listOf("module Folds {", " void damaged($parameters) {", " Int hidden = 1;", closingLine).joinToString(newline)
             XdkAdapter().use { adapter ->
                 val result = adapter.compile(URI, text)
                 assertThat(result.success).describedAs(parameters).isEqualTo(parameters == "Int value")

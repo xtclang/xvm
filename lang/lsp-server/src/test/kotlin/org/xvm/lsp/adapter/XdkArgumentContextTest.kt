@@ -10,8 +10,8 @@ class XdkArgumentContextTest {
     @ValueSource(
         strings = [
             "pair(nu§, \"x\")", "pair((nu§), \"x\")", "pair(((nu§)), \"x\")",
-            "pair(§, \"x\")", "pair(number=nu§, text=\"x\")", "pair(number=§, text=\"x\")",
-            "pair(box.nu§, \"x\")", "pair((box.nu§), \"x\")", "pair(number=box.nu§, text=\"x\")",
+            "pair(§, \"x\")", "pair(number = nu§, text = \"x\")", "pair(number = §, text = \"x\")",
+            "pair(box.nu§, \"x\")", "pair((box.nu§), \"x\")", "pair(number = box.nu§, text = \"x\")",
             "fn(nu§, \"x\")", "fn((nu§), \"x\")", "new Pair(nu§, \"x\")",
         ],
     )
@@ -32,7 +32,7 @@ class XdkArgumentContextTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["pair(nu§, True)", "pair((nu§), True)", "pair(box.nu§, True)", "pair(number=nu§, unknown=1)"])
+    @ValueSource(strings = ["pair(nu§, True)", "pair((nu§), True)", "pair(box.nu§, True)", "pair(number = nu§, unknown = 1)"])
     fun `later incompatible arguments cannot produce a fitting suggestion`(call: String) {
         val marked = HEADER + call + "; } }"
         XdkAdapter().use { adapter ->
@@ -45,7 +45,7 @@ class XdkArgumentContextTest {
         const val URI = "untitled:Arguments.x"
         const val HEADER =
             "module Arguments { class Pair(Int number, String text) {} " +
-                "class Box { Int number=1; String numberText=\"x\"; private Int numberHidden=2; } " +
+                "class Box { Int number = 1; String numberText = \"x\"; private Int numberHidden = 2; } " +
                 "void pair(Int number, String text) {} void run(Int number, String numberText, Box box, " +
                 "function void(Int, String) fn) { "
     }
