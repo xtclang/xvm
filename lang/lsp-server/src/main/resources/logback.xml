@@ -42,6 +42,23 @@
     <variable name="LOG_LEVEL" value="${xtc.logLevel:-${XTC_LOG_LEVEL:-INFO}}"/>
     <logger name="org.xvm.lsp" level="${LOG_LEVEL}"/>
 
+    <!-- Per-process JSON lines retain ordering, queue contents and timing without source text. -->
+    <define name="TRACE_PROCESS" class="org.xvm.lsp.util.TraceProcessId"/>
+    <variable name="TRACE_DIRECTORY" value="${xtc.trace.directory:-${XTC_LSP_TRACE_DIR:-${user.home}/.xtc/logs}}"/>
+    <appender name="EXECUTION_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${TRACE_DIRECTORY}/lsp-trace-${TRACE_PROCESS}.jsonl</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${TRACE_DIRECTORY}/lsp-trace-${TRACE_PROCESS}.%d{yyyy-MM-dd}.%i.jsonl</fileNamePattern>
+            <maxFileSize>20MB</maxFileSize>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+        </rollingPolicy>
+        <encoder><pattern>%msg%n</pattern></encoder>
+    </appender>
+    <logger name="org.xvm.lsp.trace" level="${xtc.trace.level:-${XTC_LSP_TRACE_LEVEL:-INFO}}">
+        <appender-ref ref="EXECUTION_TRACE"/>
+    </logger>
+
     <!-- Eclipse LSP4J - only errors -->
     <logger name="org.eclipse.lsp4j" level="ERROR"/>
 
