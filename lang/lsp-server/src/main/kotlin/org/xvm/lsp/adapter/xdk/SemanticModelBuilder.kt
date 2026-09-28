@@ -117,6 +117,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 dependencies,
                 builder.methodRelations(this, errors),
                 builder.propertyRelations(this, errors),
+                errors,
             )
         }
     }

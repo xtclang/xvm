@@ -390,7 +390,10 @@ VS Code receipts above.
   1. Public parameter slots, override callers and explicit constructor labels: code and regression
      fixtures added; validation pending. Escaped method values, binary contracts, primary-constructor
      property parameters and lambda parameters retain conservative refusal.
-  2. Annotation/mixin/delegation families: next implementation checkpoint.
+  2. Annotation/mixin/delegation families: code and regression fixtures added; validation pending.
+     Compiler dispatch provenance follows existing into/capped/delegate metadata, including the
+     declared receiver property, without generating forwarding methods. Unknown routes and binary
+     contracts still refuse edits. No new AST or Java API changes are required for this checkpoint.
   3. Qualified modules, implicit packages and explicit module roots: next implementation checkpoint.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override

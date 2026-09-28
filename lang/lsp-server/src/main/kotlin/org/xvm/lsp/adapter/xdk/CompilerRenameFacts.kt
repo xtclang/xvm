@@ -1,8 +1,12 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.asm.ClassStructure
 import org.xvm.asm.Constant
+import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorListener
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
+import org.xvm.lsp.util.ExecutionTrace
 import java.util.UUID
 
 /** Compiler-proven identities copied before an attempt's pool and AST can be released. */
@@ -26,6 +30,13 @@ internal sealed interface ProofIdentity {
     data class Parameter(
         val method: ProofIdentity,
         val index: Int,
+    ) : ProofIdentity
+
+    /** A generated forwarding method is identified by its host, written contracts and receivers. */
+    data class Composed(
+        val owner: ProofIdentity,
+        val members: List<ProofIdentity>,
+        val delegates: List<ProofIdentity>,
     ) : ProofIdentity
 
     /** No cross-attempt equivalence is safe when neither a declaration nor artifact proves it. */
@@ -85,6 +96,7 @@ internal fun captureRenameFacts(
     dependencies: XdkDependencies.Open? = null,
     methods: CompilerMethodRelations = CompilerMethodRelations(emptySet(), emptyList()),
     properties: CompilerPropertyRelations = CompilerPropertyRelations(),
+    errors: ErrorListener? = null,
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -101,10 +113,32 @@ internal fun captureRenameFacts(
             val value = constant as? IdentityConstant
             val module = value?.moduleConstant?.name
             val location = declarations[constant] ?: value?.let { dependencies?.declarations?.get(it)?.location }
+            val host = (constant as? MethodConstant)?.namespace
+            val sourceHost = host != null && (host in declarations || dependencies?.declarations?.containsKey(host) == true)
             when {
                 // Bundled source navigation must use the same artifact identity as binary-only views.
                 location != null && module !in XdkLibraries.moduleNames -> {
                     ProofIdentity.Source(location, constant.format, requireNotNull(value).name)
+                }
+
+                constant is MethodConstant && sourceHost && errors != null -> {
+                    val structure = host?.component as? ClassStructure
+                    val info =
+                        structure?.let {
+                            ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-provenance)") {
+                                it.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                            }
+                        }
+                    val route = info?.let { owner -> owner.getMethodById(constant)?.let { owner.dispatch(it, errors) } }
+                    if (route == null || !route.supported || route.methods.isEmpty() || constant in route.methods) {
+                        ProofIdentity.Unproven()
+                    } else {
+                        ProofIdentity.Composed(
+                            identity(requireNotNull(host)),
+                            route.methods.map(::identity),
+                            route.delegates.map(::identity),
+                        )
+                    }
                 }
 
                 module != null && module in XdkLibraries.moduleNames -> {

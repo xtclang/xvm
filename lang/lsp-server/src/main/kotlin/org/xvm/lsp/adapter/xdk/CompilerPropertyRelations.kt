@@ -1,7 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
-import org.xvm.asm.Component.Format
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.PropertyStructure
@@ -49,11 +48,16 @@ internal fun compilerPropertyRelations(
                     CompilerPropertyRelations.Chain(
                         structure.identityConstant,
                         property.propertyBodies.map { it.identity },
-                        structure.format != Format.MIXIN &&
-                            property.propertyBodies.all {
-                                it.refAnnotations.isEmpty() &&
-                                    it.implementation in setOf(Implementation.Explicit, Implementation.Declared, Implementation.Default)
-                            },
+                        property.propertyBodies.all {
+                            it.implementation in
+                                setOf(
+                                    Implementation.Explicit,
+                                    Implementation.Declared,
+                                    Implementation.Default,
+                                    Implementation.FromInto,
+                                    Implementation.Delegating,
+                                )
+                        },
                     )
                 }
         }
