@@ -62,21 +62,21 @@ needed to identify a failure can run earlier; a complete playbook after every ed
   Fix confirmed synchronization or stale-result delivery, including shortened-document folds.
   Acceptance: typing, bulk replacement and close/reopen during startup converge to current
   diagnostics/folds without a test-only readiness wait or IDE exceptions.
-- [ ] **L57 — Semantic formals in unfinished headers.** Resolve written but unregistered class
+- [x] **L57 — Semantic formals in unfinished headers.** Resolve written but unregistered class
   and method formals through real compiler facts, with constraints, shadowing and qualifier
-  substitution. Current names only suppress invalid outer-name candidates. Acceptance:
+  substitution. Bound-labelled completion/hover and virtual-child lookup are implemented. Acceptance:
   positive completion/hover/type facts where justified, negative unresolved constraints, and
   no fabricated components, mutable AST cache or retained compiler context.
-- [ ] **L58 — Missing value operands and remaining callable recovery.** Extend recovery and
+- [x] **L58 — Missing value operands and remaining callable recovery.** Extend recovery and
   compiler fitting beyond the proven qualified/grouped argument cases: missing/compound value
   operands, enclosing-instance members, type-valued receiver fallback and receiver-rewritten
   calls. Cover each syntax form with positive, rejection and repair cases; preserve ordinary
-  compiler diagnostics and exact edits. Literal synthesis, imported constant enumeration and
-  broader enclosing-instance enumeration need explicit compiler-backed rules.
-- [ ] **L59 — Inferred-type presentation.** Broaden hover/inlay displays beyond successful
-  inferred locals and selected positional parameter names, starting with destructuring and
-  lambda parameters/returns where the compiler supplies an actual type. Preserve uncertainty
-  in partial source; add shared scenarios and current-version invalidation checks.
+  compiler diagnostics and exact edits. Lexical enclosing/imported properties are covered;
+  literal synthesis and arbitrary enclosing-instance enumeration remain in L64.
+- [x] **L59 — Inferred-type presentation.** Broaden hover/inlay displays beyond successful
+  inferred locals and selected positional parameter names: destructuring and lambda
+  parameters/returns now use actual compiler types. Shared scenarios and current-version
+  invalidation checks pass; partial source never invents an inferred type.
 - [ ] **L60 — Native parity checkpoint.** All 50 newly added cases, X20/X81/X82 and X93–X98
   now have individual passing receipts. Run the complete 113-case checkpoint together.
   Every missing IntelliJ case already has a VS Code implementation. Track each case in
@@ -102,8 +102,10 @@ client's registration capability and logs rejected registration futures. This cl
 bounded initialization ordering item from L80, not the whole capability audit.
 
 Deterministic regressions cover typing/replacement before open, pre-listener edits, close/reopen,
-stale shortened-document folds and watcher negotiation. Validation is pending the combined
-L56–L59 checkpoint; native startup acceptance remains required before closing L56 in full.
+stale shortened-document folds, delayed closes while a reopened buffer is still pending, and watcher
+negotiation. All eight client middleware tests and the capability-registration test pass. Native
+startup acceptance remains required before closing L56 in full; a readiness-waiting harness is
+not that proof.
 
 ### L57 written formal bounds implementation (2026-09-28)
 
@@ -119,9 +121,14 @@ these as type parameters with bounds; partial hover uses the same facts. Query r
 replace normal diagnostics. Recovery nodes use final child lists and independently clone their
 written parameters, following the existing syntax-only node ownership pattern.
 
-New positive, shadowing, cyclic/unresolved and parameterized-qualifier regressions await the
-combined L56–L59 validation. These bounds are not proof that an incomplete declaration's body or
-inheritance is valid, nor an exact concrete type for a formal.
+All eleven written-formal regressions pass: exact edits/repair, shadowing, sibling bounds,
+unresolved/cyclic constraints, hover in a retained header, virtual-child substitution and negative
+typedef/static-child controls. The snapshot copier also rejects direct constraint cycles without
+rejecting legal recursion through concrete generic arguments. These bounds are not proof that an incomplete declaration's body or
+inheritance is valid, nor an exact concrete type for a formal. Bound resolution of unfinished
+self-referential constraints (for example `T extends Chain<T>`) remains conservative: no fabricated
+formal identity is created. Unrelated parse errors, including an unclosed outer body away from
+the selected cursor, can still suppress the partial query; L64 retains that recovery work.
 
 ### L58 compound operands and callable fallbacks implementation (2026-09-28)
 
@@ -137,7 +144,10 @@ receiver; the host hides that parameter and adjusts source argument mappings. Le
 names now include enclosing/import scopes, but ordinary read validation and complete argument
 fitting remain authoritative for accessibility, shadowing and conversions.
 
-New operand, rejection, repair and callable regressions await combined validation. Literal
+The focused combined recovery suite passes 108 cases with zero skips. It includes whole-operand
+validation, named-slot replacement, lexical enclosing/imported properties, callable fallbacks and
+repair. Ambiguous grouping that parses as a tuple does not invent a different argument boundary.
+Outside a call, a missing operand still receives lexical completion without a fit claim. Literal
 synthesis remains separate: no literal candidates or guessed expected types are invented here.
 No new mutable AST field is required; parser ownership and copied candidate metadata carry the
 additional information. The existing four-argument Candidate constructor remains available.
@@ -153,8 +163,67 @@ suppress inferred hints, and replacement/close discard the previous snapshot.
 
 The sole Java AST addition is `LambdaExpression.getOperator()`, exposing its existing written
 arrow token. Resolution, presentation and new state stay in the Kotlin snapshot/builder; there is
-no new lambda field, clone-reset rule or retained validation context. New hint/range/hover and
-failure/repair regressions await the combined L56–L59 checkpoint.
+no new lambda field, clone-reset rule or retained validation context. Four hint/range/hover and
+failure/repair regressions pass. Shared X42 now checks the existing fixture plus a destructured
+pair and inferred lambda signature in both editor drivers; the existing fixture now has three
+type hints because its lambda return is included.
+
+### L56–L59 commit and extraction map
+
+All development remains on `lagergren/errs`. Keep each implementation with its validation
+corrections; the first checkpoint in a pair is not independently validated for extraction.
+
+| Scope | Implementation | Validation correction / shared acceptance |
+|---|---|---|
+| L56 — startup ordering and stale folds | `5bae37534` | `17fd2dc58`; client unit tests plus server `initialized` negotiation |
+| L57 — written formal bounds | `2c790a6d9` | `a39aaa435`; X108 variants in `64658640f` |
+| L58 — compound values and callable fallbacks | `4633331cc` | `fef2c090e`, `0a2f86e5f`; X97 variants in `64658640f` |
+| L59 — inferred lambda/destructured types | `a51872e03` | X42 data and both drivers in `64658640f`; builder formatting accompanies `a39aaa435` |
+
+`64658640f` is shared test data/driver work, split by X42/X97/X108 when extracting. L56 can form
+an IntelliJ/client protocol change independently of compiler recovery. L57 depends on retained
+header syntax; L58 depends on cursor argument fitting; L59 depends on the Kotlin semantic snapshot
+and existing lambda register provenance. Each extracted PR still needs its own build and tests.
+Selected VS Code X42/X97/X108 pass in `run-APcBZB` (three passed, 110 not selected), including
+the added formal/operand/hint variants. Both editor drivers compile.
+The complete 113-case native checkpoint and live startup typing acceptance remain open. The
+expanded shared catalog does not retroactively validate new variants with older receipts.
+
+### L56–L59 combined validation receipt (2026-09-28)
+
+The final combined invocation passes in **7m22s**, with configuration-cache storage and
+`spotlessCheck` passing. JUnit XML records:
+
+| Suite | Executed / passed | Existing disabled tests |
+|---|---:|---:|
+| Java compiler and embedding API | 105 | 4 |
+| Full LSP server unit/adapter suite | 1,252 | 3 |
+| Packaged stdio and process lifecycle | 66 | 0 |
+| IntelliJ plugin unit suite | 40 | 0 |
+
+The disabled cases are the existing Source/Lexer fixtures and Tree-sitter navigation/inlay
+placeholders; no new compiler regression was skipped. IntelliJ unit tests ran earlier in this
+batch and remained up to date in the final invocation. Both native-driver Kotlin and VS Code
+TypeScript compilation pass. No native IntelliJ UI run is claimed for this batch.
+
+Selected VS Code **X42, X97, X108: 3 passed, 110 not selected**, receipt `run-APcBZB`, shared
+catalog SHA-256 `b513d6915ab66b317cfc86fa42783f669826e496ca74cf0060c907ce7cf79eeb`.
+The receipt records `64658640f` plus the constructor-order correction subsequently committed as
+`0a2f86e5f`. The combined rerun passes that generic-constructor regression and the rest of the suite.
+
+```bash
+./gradlew :javatools:test --tests 'org.xvm.compiler.*' --tests 'org.xvm.api.*' \
+  :lang:lsp-server:test :lang:lsp-server:compilerStdioTest \
+  :lang:intellij-plugin:test :lang:intellij-plugin:compileIntegrationTestKotlin \
+  :lang:vscode-extension:testCompilerPlaybook spotlessCheck \
+  -PcompilerPlaybookCases=X42,X97,X108 -Plsp.adapter=compiler \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache --continue --console=plain
+```
+
+L57–L59's bounded implementation work is complete. L64 retains recursive unfinished bounds,
+further recovery/member enumeration and literal synthesis. L56 retains actual startup-typing
+acceptance; L60 retains the complete 113-case native run, including the newly expanded variants.
+These are separate from the passing backend and selected VS Code receipts above.
 
 ### Finish the existing editor features
 
@@ -172,7 +241,8 @@ failure/repair regressions await the combined L56–L59 checkpoint.
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
   code generation/doc comments and reference/test lenses are separate subfeatures. Use the
   compiler for semantic transformations and verify versioned multi-file edits.
-- [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover remaining
+- [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover unfinished
+  self-referential bounds, literal synthesis and arbitrary enclosing-instance enumeration, plus remaining
   declaration-name, keyword/snippet and callable contexts, candidate documentation/ranking,
   import-producing edits, and overload/active-argument displays. Test exact token replacement,
   named/default arguments, inaccessible candidates and supported client edit formats.
@@ -3075,7 +3145,7 @@ semantic copying. Keep that evidence; concentrate further work on these gaps:
 |---|---|---|
 | 1. Diagnostic audit — complete within the documented scope | Runtime `@Parsed` metadata and non-module source diagnostics are fixed. I4 fixes bound-generic typing/binary-AST failures. I7 fixes reproduced atomic AST result/owner errors; bounded ToIntExpression metadata probes pass without a reporting change. Historical capture counts are not an exhaustive audit. | `TypeInfoFinalCompositionTest` retains valid/invalid annotation controls; `EmbeddingDiagnosticsTest` pins positioned file/in-memory root diagnostics and discovery fallback; `CompilerBoundaryRequirementsTest` checks bound-generic artifact serialization; `CompilerEmissionAuditTest` checks atomic/switch output and diagnostic controls. |
 | 2. Cursor-based incomplete analysis — bounded scope complete | Explicit cursors and module overlays support standalone statements, simple assignment/initializer values, single returns and final nested call arguments. Adapter/server ownership and cancellation now cover delivery; binary/conditional prefixes and arguments following an incomplete member expression are now covered by C10. | `XdkPartialAnalysisTest`, `XdkCursorRequestTest`, `XdkCursorServerTest` and packaged stdio cover unchanged source, overlays, lexical context, positions and stale-result rejection. Compiler mode remains Java-only. |
-| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. Literal synthesis and fitting inside qualified/compound/grouped expressions or before later arguments remain follow-ups. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. C19/L34 adds single-dimensional array-size fitting and missing-bracket recovery. C20/L35 adds unqualified declaration type prefixes and structural header recovery; C21/L36 adds visible flat qualified type prefixes; C22/L37 adds written leaf names inside parameterized/compound types and bounded missing type closers. C23/L39 adds class/interface composition header recovery and visible-type queries without registering partial inheritance. C24/L41 adds registered formals, empty generic slots, parameterized qualifiers with substituted types and whole-final-token edits. C28/L53 adds trailing dots, qualifier-token edits, empty type operands, generic method/ordinary multiple-return declarations and module/package headers. Semantic identities for unregistered header formals, missing value operands, unfinished declaration names, enclosing-instance member completion, type-valued receiver fallbacks and receiver-rewritten calls remain outside the proven scope. C26 covers generic base-name prefixes; C27/L51 adds written function/sequence leaf types. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
+| 3. Completion and signature help — bounded POC complete | Scope/member completion, imported type names, static lookup and incomplete-call candidate fitting now have consumers. Candidate-specific expected types and named-argument mappings are copied. C11/L23 extends signatures to incomplete function values and ordinary constructors, including explicit class type substitution. C12/L24 retains missing enclosing call/group/index closers around a cursor. C13/L25 completes readable locals/parameters in empty final positional and pending named slots using compiler fitting. C14/L26 adds direct final bare-name prefixes with exact token replacement. C15/L28 adds implicit property/constant values with compiler read validation. L58 adds full compound-argument validation alongside the qualified/grouped/later-argument cases; literal synthesis remains a follow-up. C16/L29 adds specialized constructors and class inference; C17/L30 adds bounded declaration/tuple/literal recovery. C18/L31 adds anonymous construction without capture/body emission. C19/L34 adds single-dimensional array-size fitting and missing-bracket recovery. C20/L35 adds unqualified declaration type prefixes and structural header recovery; C21/L36 adds visible flat qualified type prefixes; C22/L37 adds written leaf names inside parameterized/compound types and bounded missing type closers. C23/L39 adds class/interface composition header recovery and visible-type queries without registering partial inheritance. C24/L41 adds registered formals, empty generic slots, parameterized qualifiers with substituted types and whole-final-token edits. C28/L53 adds trailing dots, qualifier-token edits, empty type operands, generic method/ordinary multiple-return declarations and module/package headers. L57 adds bound-labelled completion/hover and virtual-child lookup for written header formals, without fabricated semantic identities. L58 adds missing operands, lexical enclosing/imported property names, type-valued receiver functions and receiver-rewritten calls. Unfinished declaration names, arbitrary enclosing-instance enumeration and broader formal-member recovery remain outside the proven scope. C26 covers generic base-name prefixes; C27/L51 adds written function/sequence leaf types. Completed function calls have separate signature facts in E5/L20. An unfinished call never claims a selected overload. | Adapter/stdio requests cover declaration order, assignment state, narrowing, imports, access checks, generic receivers/methods, overload filtering, named slots, module overlays and token edits. Completed calls retain exact compiler selection. |
 | 4. Other semantic consumers | Lookup, static call hierarchy, resolved-name tokens and bounded hints have consumers. Bounded rename includes named-label references and all-binding validation. L17 adds configured-graph exact references and ordinary instance-method override rename with dispatch checks. L18 adds ordinary property/accessor implementation targets; L19 adds concrete delegation, E5/L20 adds super-call facts, and L22 adds written Ref/Var annotation accessor targets. Native annotation storage and unknown runtime targets remain outside the proven surface. | `XdkSemanticLookupTest`, `XdkCallHierarchyTest`, `XdkPresentationTest`, `CompilerRenameRequirementsTest`, `XdkProjectQueryTest`, `XdkDependencyTest` and packaged stdio. Rename is advertised only for bounded targets and clients supporting versioned document edits. |
 | 5. Dependency/source boundary — host API complete | `XdkDependency` binds bytes/source locations to a revision. Explicit source roots/edges now add automatic dependency builds with overlays. Editor configuration is available; automatic discovery and persistent indexing remain open. | `XdkDependencyTest` and `XdkLanguageServerTest` prove artifact replacement; `XdkProjectTest` and `XdkProjectServerTest` exercise source rebuilding, cancellation and unchanged consumer versions; `CompilerConfigurationTest` and the VS Code suite cover editor settings. |
 | 6. Lifetime and compatibility | Integrated repeated-workload and migration regressions are complete; prolonged editor use and independent extracted-PR validation remain open. | `XdkRetentionTest` observes compiler results/roots/pools across graph rebuilds, repository replacement, cursor/rename queries and close/reopen. `EmbeddingApiCompatibilityTest` exercises listener and record migration; `CompilerBoundaryRequirementsTest` verifies copied facts and unchanged emitted bytes. |

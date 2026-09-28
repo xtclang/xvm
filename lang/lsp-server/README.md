@@ -1,5 +1,11 @@
 # Ecstasy LSP Server
 
+L56–L59 add IntelliJ startup message ordering and stale-fold guards, compiler-bound formal
+completion/hover in unfinished headers, compound argument validation with callable fallbacks,
+and inferred lambda/destructured-type hints. Shared X42/X97/X108 exercise the semantic additions;
+[validation and outstanding acceptance](../../docs/errs-integration-plan.md#l56-startup-synchronization-implementation-2026-09-28)
+are recorded separately from native IntelliJ execution.
+
 C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
 arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
 implemented in both editors. IntelliJ now asserts X33/X35 navigation and the complete X101
@@ -141,7 +147,7 @@ Capability coverage, semantic completeness and native test coverage are tracked 
 | Semantic tokens | None | Syntax-based | Java lexical tokens plus resolved names and declaration/read-only/static/write modifiers |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
 | Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
-| Inlay hints | None | None | Inferred local types and selected positional parameter names |
+| Inlay hints | None | None | Inferred local/destructured types, lambda parameters/returns and selected positional parameter names |
 | Type hierarchy | None | None | Declared extends/implements across the source graph, with generic parents |
 | Code lenses / linked editing | Basic | Implemented | Module run command / identity-based local-variable ranges |
 | Native library | Not needed | Required | Not needed |
@@ -265,8 +271,9 @@ recover around a cursor hole. Expression-bodied declarations/property initialize
 terminator, and parameter defaults can lack `)` before a body. Incomplete property initializers use
 their real source-owned compiler context. Member/return and parameter type prefixes use the
 enclosing compiler scope, including flat qualified names, without registering incomplete declarations.
-Missing value operands, declaration/parameter names, missing map entries and unterminated literal
-contents remain outside this recovery. The
+Explicit cursor queries also recover missing operands inside compound call arguments and validate
+the complete proposed expression. Declaration/parameter names, missing map entries and
+unterminated literal contents remain outside this recovery. The
 [capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
 
 Declaration-header recovery retains malformed method names and source extents for outline and
@@ -284,7 +291,9 @@ parameterized qualifiers also work; aliases retain their substituted type. Mid-t
 replace the entire final identifier, including a generic base before written type arguments.
 Empty type operands, qualifier-middle edits, trailing dots, generic-method/multi-return declarations,
 constraints and module/package composition headers now have bounded recovery. Unregistered header
-formals hide outer names but are not fabricated completion candidates; see
+formals retain their written constraints for bound-labelled completion and hover, including
+sibling constraints and virtual child types reached through those bounds. Unresolved/cyclic bounds
+hide outer names without producing candidates. They do not register fabricated components; see
 [shared X91–X98 and X106–X108](../doc/manual-test-plan.md#xdkadapter-playbook) and the
 [C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
 
@@ -300,7 +309,8 @@ See [C24/L41](../../docs/errs-integration-plan.md#generic-type-completion-batch)
 Static call hierarchy groups selected source call sites by method/lambda, including unopened source
 modules. It does not expand virtual dispatch, function values, constructors or binary-only sources.
 Semantic tokens classify resolved names and modifiers; highlights distinguish reads and writes.
-Inlay hints show inferred local types after successful compilation and selected positional
+Inlay hints show inferred local/destructured types, inferred lambda parameters and validated
+lambda return types after successful compilation, plus selected positional
 parameter names, omitting named arguments and synthetic defaults. These queries use copied facts
 and expire with the module snapshot.
 

@@ -1,5 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
+L56–L59 add startup synchronization guards, written formal bounds, compound argument fitting and
+inferred lambda/destructured-type hints. The combined JVM checks pass; expanded shared X42/X97/X108
+pass in VS Code `run-APcBZB`. Their IntelliJ drivers compile; native startup typing and the full
+113-case IntelliJ checkpoint remain pending. See the [combined receipt](../../docs/errs-integration-plan.md#l56l59-combined-validation-receipt-2026-09-28).
+
 C28/L53/L54 adds empty/qualified type slots, generic/multiple-return headers and native IntelliJ
 workspace/refactoring assertions. The [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54)
 distinguishes full backend results, selected VS Code checks and selected native IntelliJ receipts.
@@ -25,6 +30,25 @@ process baseline so existing old servers and another IDE's workspace are not cou
 The focused JVM/provider regressions pass; this installed-IDE acceptance is still pending.
 See [the lifecycle diagnosis](../../docs/errs-lsp-process-lifecycle.md) for the failure mechanisms
 and the distinction between fixed code and previously orphaned processes.
+
+## IntelliJ startup editing acceptance (L56)
+
+Run in a fresh compiler-mode project before waiting for the Language Servers panel to report ready.
+The unit tests cover notification permutations; these steps exercise the actual client/editor path.
+
+1. Open a valid `.x` module and immediately type a deliberate unknown name in a method body.
+   Problems must eventually show the diagnostic for the current buffer. Repair it while startup
+   is still progressing; stale initial text must not bring the diagnostic back.
+2. During a fresh startup, replace a long module containing several foldable methods with a short
+   valid module. Folds must use the shortened text, with no line/offset exception in `idea.log`.
+3. Close and reopen that file during startup, then edit it again. The final buffer must receive
+   current diagnostics and folds; a delayed close must not retire the reopened document.
+4. Repeat with a bulk replacement and with an unsaved edit made before the server initializes.
+   Record the server PID, final document version, diagnostic state and IDE-error log.
+
+This remains native acceptance work. The regular harness's readiness wait is intentional for
+independent feature cases and cannot stand in for this test. X42/X97/X108 now contain the shared
+L57–L59 semantic variants for separate selected editor runs.
 
 ## Current development batch: workspace queries and editing
 
@@ -78,8 +102,8 @@ cases and X20/X81/X82 assertion additions are under validation; no full native p
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
 records outstanding receipts and actual client gaps. X93–X98 pass individually; the complete
 113-case native checkpoint remains pending. L55's proof-memory fix passes its 24-root regression,
-but still needs the real teaching-workspace/open-buffer acceptance. Editing during startup
-still needs the controlled reproduction and fix in L56; waiting for readiness in the
+but still needs the real teaching-workspace/open-buffer acceptance. L56 adds transport ordering and stale-fold guards with deterministic regressions; actual editing
+during native startup still needs acceptance. Waiting for readiness in the
 playbook does not prove that ordinary typing during startup works.
 
 ---
@@ -1534,7 +1558,7 @@ module Consumers {
 | X39 | Show incoming calls for the Int `leaf`, then outgoing calls for `run`. | Incoming groups two sites under `run` and one under `<lambda>`. Outgoing `run` lists the Int and String overload separately; the lambda's call is not attributed to `run`. |
 | X40 | Expand the lambda's outgoing calls. Inspect the dynamic `fn()` call. | The lambda leads to Int `leaf`; `fn()` does not invent a statically selected edge. Call ranges navigate to the caller's source. |
 | X41 | Inspect tokens for `leaf`, `seed`, `number` and the `number +=` target. Select `number` to highlight occurrences. | Method, parameter and variable kinds reflect resolved identities. Static/declaration/modification modifiers are present where applicable. Highlights distinguish the write and subsequent read. Theme colors may coincide. |
-| X42 | Inspect inline hints in `run`; compare positional and named calls. | `number: Int` and `label: String` inferred-type hints; `input:` and `text:` before positional values. The named call has no redundant hints and omitted default `extra` has none. Explicit declarations get no inferred-type hint. |
+| X42 | Inspect inline hints in `run`; compare positional and named calls. Then use the shared `inferred` source with a destructured pair and `(value) -> value`. | `number: Int` and `label: String` inferred-type hints; `input:` and `text:` before positional values. The named call has no redundant hints and omitted default `extra` has none. Explicit declarations get no inferred-type hint. The original fixture also has an inferred `Int` lambda return (three type hints total); the additional shared source has two destructured types plus lambda parameter/return types (four total). |
 | X43 | Keep hierarchy items open, insert a blank line before `run`, then reopen hierarchy. Break the module with an unfinished declaration, correct it and close/reopen the file. | Fresh results use current ranges. Old hierarchy items do not resolve against the edited snapshot. A parse failure clears semantic answers; correction restores them. |
 | X44 | In the section D two-file fixture, add `static Int target(Int n)=n;` to Project and `Int callTarget()=target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
 
@@ -1926,7 +1950,7 @@ module Advanced {
 | X94 | In temporary `Editing.x`, complete `Str` in `List<Str>`, `Map<Int, List<Str>>`, `Map<Str, Int>`, `List<(Int \| Str)>`, `Object + Str` and `Object - Str` parameter headers. Also try `List<Str>` property/return types and `List<ecstasy.text.Str>`. Use the shared X94 variants. Finally remove both `>` from the nested `Map` header, accept `String`, then restore `>>`. | Only the selected leaf token changes; generic arguments, compound operators and qualifiers stay intact. Values such as `StringValue` are excluded and no call signature appears. Complete accepted headers clear Problems. Missing `>` still reports an error after acceptance; adding the closers clears it. Type suggestions establish visibility, not generic-constraint compatibility. Both drivers consume the same nine variants. |
 | X95 | In temporary `Editing.x`, use the shared X95 replacement program. Complete the marked type in class `extends`, interface `extends`, `implements`, `delegates`, `incorporates` and mixin `into` headers. Also try `Owner.Nes`, `List<Str>` and the missing-`>` variant. Accept the selected entry, then restore the repaired declaration. | Completion replaces only the final token and offers visible types rather than values. Complete accepted headers clear Problems; accepting `String` with a missing `>` leaves an error until the closer is restored. No signature appears in a type slot. Both drivers consume the same nine variants; native IntelliJ assertions pass. |
 | X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ assertions pass. |
-| X97 | In temporary `Editing.x`, run the nine shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values and construction. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
+| X97 | In temporary `Editing.x`, run the shared argument-context variants: before later arguments, nested groups, named arguments, qualified receiver properties, function values, construction, arithmetic/unary expressions and a missing right operand. Accept `number`. | Fitting offers `number`, excludes `numberText`/private `numberHidden`, preserves all surrounding syntax, retains signature help and clears diagnostics after acceptance. Both drivers use the same data. Expanded X42/X97/X108 pass in VS Code `run-APcBZB`; their new IntelliJ variants await native execution. |
 | X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
 | X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value()=1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run()=lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
 | X100 | Create a healthy module with `class Base {}` and `class Child extends Base {}`, plus an independent module. Break the neighbor with `Missing broken;`, then request Base's subtypes. | Child remains navigable. Exact references return no complete answer while the graph is broken. Repairing the neighbor restores full graph queries. |
@@ -1937,7 +1961,7 @@ module Advanced {
 | X105 | Use unresolved `Document` in a type header; apply the import quick fix for `xml.xtclang.org`. Then try unresolved `Widget` declared in a separate discovered source module. | Only imports whose complete graph compiles are offered; applying clears diagnostics. Source imports also add the discovered dependency edge. Explicit graphs do not silently gain dependencies. |
 | X106 | In Editing.x, complete `Str` inside `function Str(Int)`, `function void(Str)`, `function (Int, Str)(Int)` and `Function<<Str>, <Int>>` parameter types. Repeat with a missing function/sequence closer. | Only the written leaf token is replaced. Complete forms compile; missing delimiters remain diagnostics until repaired. No callable signature is invented for a declaration header. The same eight variants are implemented in both drivers. |
 | X107 | Complete a trailing `ecstasy.text.` type, edit `te` inside `ecstasy.text.StringBuffer`, and fill empty union/intersection/difference operands. | Insert only into an empty slot or replace only the selected qualifier token; preserve the remaining suffix and compile the accepted source. |
-| X108 | Complete `Str` in multiple-return lists, generic method parameters/returns/constraints, class constraints, and package compositions. | Use enclosing type scope, keep header formals unregistered, and preserve exact replacement ranges. Completing the shared examples restores compilation. |
+| X108 | Complete `Str` in multiple-return lists, generic method parameters/returns/constraints, class constraints, package compositions and written `Element`/`Other` formals with direct or sibling constraints. | Use enclosing type scope, resolve written bounds without registering header components, and preserve exact replacement ranges. Completing the shared examples restores compilation. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -1964,10 +1988,13 @@ module Editing {
 Argument-value suggestions cover visible readable locals/parameters and implicit properties/constants
 in empty final positional slots, pending named values and direct final bare-name prefixes. They use
 compiler inference, conversions and receiver-specific types. Locals retain flow narrowing; ordinary
-property reads do not gain that narrowing. Literal synthesis and enumeration of arbitrary enclosing
-instances or imported constants remain unsupported.
-Compound operand expressions retain ordinary scope/member completion without argument-type filtering. X97 adds compiler
-fitting for qualified/grouped values and empty/prefix slots before later written arguments. X83–X87 add specialized constructors and bounded declaration/literal recovery.
+property reads do not gain that narrowing. Lexically visible enclosing/imported property names
+are checked by ordinary read validation and argument fitting; arbitrary enclosing-instance enumeration and literal synthesis remain unsupported.
+X97 fits qualified/grouped values, compound operators and empty/prefix operand slots against the
+complete argument expression and later written arguments. Type-valued and receiver-rewritten
+function fallbacks preserve visible signature parameter mapping. Outside a call, missing operand
+slots provide lexical completion without an argument-fit claim. X83–X87 add specialized
+constructors and bounded declaration/literal recovery.
 X88–X89 add anonymous superclass forwarding and constructors declared inside retained bodies, including
 interface implementations and captured locals. Cursor analysis prepares declaration signatures but does
 not validate capture behavior or emit unfinished bodies. X91–X92 add simple unqualified member/return
@@ -1982,12 +2009,14 @@ The focused X94–X96 run `run-MdzjLq` passes all three cases; 98 other cases ar
 X98 adds generic base-name completion while preserving written type arguments.
 X106 adds function-parameter/return and sequence leaf types. X107/X108 add trailing dots, empty type
 operands, qualifier-middle edits, and generic/multiple-return headers. Unregistered header formals
-shadow outer names without fabricated type identities; module/package compositions have bounded
+provide bound-labelled completion/hover after compiler constraint resolution, including sibling
+bounds and qualified children. Cyclic/unresolved bounds still shadow outer names without fabricated
+type identities; module/package compositions have bounded
 compiler recovery. X90 adds empty/final-prefix single-dimensional
 size slots, including a missing `]`; fitting uses the real Array constructor's Int parameter. The
 prefix query does not validate a following supplier. Types without an element default still require
-a supplier when compiled normally. Multidimensional construction, unfinished declaration names
-and missing value operands remain unsupported; no literal value or declaration token is invented.
+a supplier when compiled normally. Multidimensional construction and unfinished declaration names
+remain unsupported; no literal value or declaration token is invented.
 
 ## VS Code Extension Playbook
 
