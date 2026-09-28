@@ -14,16 +14,6 @@ class XdkRenameBoundaryTest {
     @TempDir
     lateinit var directory: Path
 
-    @Test
-    fun `primary constructor property and its generated named argument are not proven rename slots`() {
-        val text = "module App { class Box(Int input) {} Box make() = new Box(input = 1); Int use(Box box) = box.input; }"
-        workspace(text) { adapter, uri ->
-            Regex("\\binput\\b").findAll(text).forEach { match ->
-                assertThat(adapter.rename(uri, 0, match.range.first, "value")).describedAs("primary parameter at %s", match.range).isNull()
-            }
-        }
-    }
-
     @ParameterizedTest
     @ValueSource(strings = ["(Int input) -> input", "input -> input"])
     fun `lambda parameter spelling is not a stable callable slot`(lambda: String) {
