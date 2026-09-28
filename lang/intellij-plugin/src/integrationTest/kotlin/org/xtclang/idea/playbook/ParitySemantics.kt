@@ -7,7 +7,6 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.PsiManager
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.semanticCases() {
@@ -101,7 +100,7 @@ internal fun ParityScenarios.semanticCases() {
         val support = with(driver) { semanticSupport(doc.editor).getSemanticTokensSupport() }
         val tokens =
             with(driver) {
-                waitFor("native editor receives semantic token classifications", 45.seconds, getter = {
+                awaitUi("native editor receives semantic token classifications", 45.seconds, getter = {
                     support
                         .getValidLSPFuture()
                         ?.takeIf { it.isDone() && !it.isCompletedExceptionally() }
@@ -172,7 +171,7 @@ internal fun ParityScenarios.semanticCases() {
                     val psi = requireNotNull(service<PsiManager>(singleProject()).findFile(doc.editor.editor.getVirtualFile()))
                     utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
                 }
-            waitFor("native read/write occurrence highlights", 45.seconds) {
+            awaitUi("native read/write occurrence highlights", 45.seconds) {
                 val future = highlights.getValidLSPFuture()
                 future != null && future.isDone() && !future.isCompletedExceptionally() &&
                     future.get().let { values ->
@@ -198,7 +197,7 @@ internal fun ParityScenarios.semanticCases() {
             val support = with(driver) { semanticSupport(doc.editor).getInlayHintsSupport() }
             val hints =
                 with(driver) {
-                    waitFor("native inlay provider has inferred types and parameter labels", 45.seconds, getter = {
+                    awaitUi("native inlay provider has inferred types and parameter labels", 45.seconds, getter = {
                         support
                             .getValidLSPFuture()
                             ?.takeIf {
@@ -224,7 +223,7 @@ internal fun ParityScenarios.semanticCases() {
             check(labels.none { it.contains(expected.string("excludedHint")) })
             val offsets = hints.map { ParityWorkspace.offset(doc.text, it.getAsJsonObject("position")) }.toSet()
             with(driver) {
-                waitFor("inlay labels are installed in the editor", 45.seconds) {
+                awaitUi("inlay labels are installed in the editor", 45.seconds) {
                     withContext(OnDispatcher.EDT) {
                         cast(doc.editor.editor, NativeInlayEditor::class)
                             .getInlayModel()

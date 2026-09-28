@@ -5,7 +5,6 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.VirtualFile
-import com.intellij.driver.sdk.waitFor
 import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
@@ -103,7 +102,7 @@ internal fun ParityWorkspace.renameTransaction(
             withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
                 utility(NativeRenameRequests::class).request(server, document.editor.editor.getVirtualFile(), at, name)
             }
-        waitFor("native rename transaction", 60.seconds) { pending.isDone() }
+        awaitUi("native rename transaction", 60.seconds) { pending.isDone() }
         requireNotNull(cast(pending, NativeRenameFuture::class).get())
     }
 }
@@ -122,7 +121,7 @@ internal fun ParityWorkspace.applyRename(
     val before = document.text
     with(driver) {
         rename(document.editor, at, name)
-        waitFor("native rename changes ${document.file}", 45.seconds) { document.text != before }
+        awaitUi("native rename changes ${document.file}", 45.seconds) { document.text != before }
     }
     settle(document)
     clean(document)
