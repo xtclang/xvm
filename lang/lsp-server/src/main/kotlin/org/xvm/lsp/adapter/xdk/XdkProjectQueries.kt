@@ -136,12 +136,20 @@ internal class XdkProjectQueries(
             if (!preservesBindings(before, after, plan) || !isCurrent()) return null
             return WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true)
         }
-        val symbol = model.symbolAt(line, column) ?: return null
-        val target = before.constants[symbol.id] ?: return null
+        val selected = model.symbolAt(line, column) ?: return null
+        val target = before.constants[selected.id] ?: return null
+        val symbol =
+            before.models.asSequence().flatMap { it.symbols.asSequence() }.firstOrNull {
+                before.constants[it.id] == target && it.declaration != null && it.declarationSource in texts
+            } ?: return null
         val declarationSource = symbol.declarationSource ?: return null
         if (declarationSource !in texts || symbol.declaration == null) return null
         val targets =
             when {
+                target is ProofIdentity.Parameter -> {
+                    parameterFamily(before, target) ?: return null
+                }
+
                 symbol.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.MODULE) -> {
                     setOf(target)
                 }
@@ -340,6 +348,40 @@ internal class XdkProjectQueries(
         // A binary/library contract or synthetic method cannot be edited from configured sources.
         if (!facts.methods.declarations.containsAll(family)) return null
         return family
+    }
+
+    /** Parameter names belong to callable slots, including differently named overrides. */
+    private fun parameterFamily(
+        facts: CompilerRenameFacts,
+        target: ProofIdentity.Parameter,
+    ): Set<ProofIdentity>? {
+        val declarations =
+            facts.models
+                .flatMap { it.symbols }
+                .filter {
+                    it.declaration != null && it.declarationSource in texts
+                }.mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
+                .toMap()
+        val method = declarations[target.method] ?: return null
+        val methods =
+            if (method.name == "construct" || SemanticModel.Modifier.STATIC in method.modifiers) {
+                setOf(target.method)
+            } else {
+                methodFamily(facts, target.method) ?: return null
+            }
+        // A method value can escape this call graph. Until its named-argument provenance is
+        // available, changing the callable contract cannot be proven safe.
+        if (facts.models.any { model ->
+                model.occurrences.any { occurrence ->
+                    occurrence.role == SemanticModel.Role.REFERENCE && facts.constants[occurrence.symbol] in methods &&
+                        model.calls.none { occurrence.range.start in it.callee }
+                }
+            }
+        ) {
+            return null
+        }
+        val parameters = methods.mapTo(linkedSetOf()) { ProofIdentity.Parameter(it, target.index) }
+        return parameters.takeIf { declarations.keys.containsAll(it) }
     }
 
     private enum class Proof { COMPLETE, NAVIGATION, REPAIR }
