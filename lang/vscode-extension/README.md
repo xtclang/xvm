@@ -364,6 +364,12 @@ production extension. The catalog is a declared compilation/test input. Reports 
 SHA-256 and complete ID list. The [shared scenario notes](../doc/manual-test-plan.md#shared-editor-scenarios)
 explain native assertions and remaining IntelliJ coverage gaps.
 
+The L55/L61/L62 checkpoint passes selected X4/X102/X103/X104. X4 checks the declaration
+provider; X103 moves a member file and its companion directory, then verifies the real Undo
+command restores both source and resources. A fixture watcher may cancel an unapplied rename
+query; only that query is retried, with the edit applied once. See the
+[batch receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).
+
 **Tests are not auto-attached to `:check`.** The test downloads ~210 MB on first run and requires either a display or `xvfb`; both make it a poor fit for unconditional CI runs. Wire it into your CI pipeline explicitly when you want it.
 
 For end-to-end LSP / DAP / file-association regression coverage, see the **VS Code Extension** section in [`../doc/manual-test-plan.md`](../doc/manual-test-plan.md).
