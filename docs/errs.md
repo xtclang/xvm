@@ -500,6 +500,16 @@ null stand-in.
   syntax. Enforcement lives at the boundaries where a listener enters the system or is stored — not
   on all 586 parameters, which would be decoration.
 
+### Written formal syntax in incomplete headers (L57)
+
+`IncompleteDeclarationStatement` and `IncompleteTypeCompositionStatement` now retain the parsed
+formal `Parameter` children instead of just a set of names. This belongs on the AST because the
+constraints are written source syntax. Both use final lists and clone those children independently;
+no resolved bound, compiler context or mutable semantic cache is stored on a node. `CursorScope`
+performs bound resolution on disposable copies, and the attempt-owned `CursorBinding` carries
+source names and compiler-resolved bounds. The LSP copies these into detached facts and labels
+bounds explicitly, without fabricating declaration identities for unfinished headers.
+
 ## Using it
 
 Worked examples of the API the phases arrived at. Each is real code from the tree or the tests,
