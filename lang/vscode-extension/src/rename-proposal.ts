@@ -1,8 +1,7 @@
-import { modify, parse, ParseError } from 'jsonc-parser';
 import * as vscode from 'vscode';
 import { LanguageClient, RenameFile, RenameParams, RequestType, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { SourceModule, sourceGraphEdits, sourceGraphKey, sourceModulesIn } from './source-graph-configuration';
 
-interface SourceModule { name: string; uri: string; dependencies?: string[] }
 interface RenameProposal {
     edit: WorkspaceEdit;
     graph?: { before: SourceModule[]; after: SourceModule[] };
@@ -32,13 +31,6 @@ export function compilerSettingsLocation(): { uri: vscode.Uri; path: string[] } 
     return { uri: vscode.Uri.joinPath(folders[0].uri, '.vscode', 'settings.json'), path: ['xtc.compiler.sourceModules'] };
 }
 
-function modulesIn(text: string, path: string[]): unknown {
-    const errors: ParseError[] = [];
-    const value = parse(text, errors, { allowTrailingComma: true });
-    if (errors.length) throw new Error('Fix the workspace settings JSON before renaming a configured module.');
-    return path.reduce((current, key) => current?.[key], value);
-}
-
 /** Unsaved settings participate in the same transaction and Undo as unsaved source documents. */
 export function compilerSourceModules(): unknown[] | null {
     const location = compilerSettingsLocation();
@@ -46,19 +38,20 @@ export function compilerSourceModules(): unknown[] | null {
     // The document is current even immediately after a save, before VS Code's settings
     // watcher has refreshed getConfiguration(). Falling back then briefly reinstalls the old graph.
     if (document) {
-        const value = modulesIn(document.getText(), location!.path);
+        const value = sourceModulesIn(document.getText(), location!.path);
         if (value === null || Array.isArray(value)) return value;
     }
     return vscode.workspace.getConfiguration('xtc.compiler').get<unknown[] | null>('sourceModules', null);
 }
 
-function canonical(modules: SourceModule[]): string {
-    const folders = vscode.workspace.workspaceFolders;
-    return JSON.stringify(modules.map(module => ({
-        name: module.name,
-        uri: new URL(module.uri, folders?.length === 1 ? folders[0].uri.toString().replace(/\/?$/, '/') : undefined).href,
-        dependencies: [...(module.dependencies ?? [])].sort()
-    })).sort((left, right) => left.name.localeCompare(right.name)));
+/** Settings scopes and workspace topology are part of the proposal's immutable input. */
+function configurationState(document: vscode.TextDocument): string {
+    return JSON.stringify({
+        workspace: vscode.workspace.workspaceFile?.toString(),
+        folders: vscode.workspace.workspaceFolders?.map(folder => folder.uri.toString()),
+        graph: compilerSourceModules(),
+        override: vscode.workspace.getConfiguration('xtc.compiler', document.uri).inspect('sourceModules')?.workspaceFolderValue
+    });
 }
 
 export async function renameWithConfiguration(
@@ -70,6 +63,9 @@ export async function renameWithConfiguration(
 ): Promise<vscode.WorkspaceEdit | null> {
     const location = compilerSettingsLocation();
     const config = compilerSourceModules();
+    const state = configurationState(document);
+    const folders = vscode.workspace.workspaceFolders;
+    const base = folders?.length === 1 ? folders[0].uri.toString().replace(/\/?$/, '/') : undefined;
     const settings = config && location ? await vscode.workspace.openTextDocument(location.uri).then(value => value, () => undefined) : undefined;
     const snapshot = settings && { version: settings.version, text: settings.getText() };
     const proposal = await client.sendRequest(renameRequest, {
@@ -79,15 +75,14 @@ export async function renameWithConfiguration(
     if (!proposal || token.isCancellationRequested) return null;
     if (proposal.graph) {
         if (!settings || !snapshot || !location || !Array.isArray(config)
-            || !Array.isArray(modulesIn(snapshot.text, location.path))
-            || canonical(modulesIn(snapshot.text, location.path) as SourceModule[]) !== canonical(proposal.graph.before)
-            || canonical(config as SourceModule[]) !== canonical(proposal.graph.before)) {
+            || vscode.workspace.getConfiguration('xtc.compiler', document.uri).inspect('sourceModules')?.workspaceFolderValue !== undefined
+            || sourceGraphKey(config, base) !== sourceGraphKey(proposal.graph.before, base)) {
             throw new Error('Module rename needs an explicit graph in this workspace’s settings. Global or folder overrides cannot be rewritten safely.');
         }
-        if (settings.isClosed || settings.version !== snapshot.version || JSON.stringify(compilerSourceModules()) !== JSON.stringify(config)) {
+        if (settings.isClosed || settings.version !== snapshot.version || configurationState(document) !== state) {
             throw new Error('Compiler settings changed while calculating Rename. Try again.');
         }
-        const edits = modify(snapshot.text, location.path, proposal.graph.after, { formattingOptions: { insertSpaces: true, tabSize: 4 } });
+        const edits = sourceGraphEdits(snapshot.text, location.path, proposal.graph.before, proposal.graph.after, base);
         const configurationEdit: TextDocumentEdit = {
             textDocument: { uri: settings.uri.toString(), version: snapshot.version },
             edits: edits.map(edit => ({
@@ -102,6 +97,9 @@ export async function renameWithConfiguration(
     }
     const converted = await client.protocol2CodeConverter.asWorkspaceEdit(proposal.edit, token);
     if (token.isCancellationRequested) return null;
+    if (proposal.graph && (settings?.isClosed || settings?.version !== snapshot?.version || configurationState(document) !== state)) {
+        throw new Error('Compiler settings changed while converting Rename. Try again.');
+    }
     if (!client.validateWorkspaceEdit(proposal.edit)) throw new Error('Documents changed while calculating Rename. Try again.');
     return converted ?? null;
 }
