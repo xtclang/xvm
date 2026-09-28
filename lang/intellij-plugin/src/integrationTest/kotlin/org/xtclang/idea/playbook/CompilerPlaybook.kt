@@ -1009,14 +1009,26 @@ class CompilerPlaybook(
             scenario(id) {
                 withContext(OnDispatcher.EDT) {
                     val manager = service<FileEditorManager>(singleProject())
-                    manager.getAllEditors().map { it.getFile() }.distinctBy { it.getPath() }.forEach(manager::closeFile)
+                    manager
+                        .getAllEditors()
+                        .map { it.getFile() }
+                        .distinctBy { it.getPath() }
+                        .forEach(manager::closeFile)
                 }
                 discovered(id) { data ->
                     if (data.values.has("sourceModules")) {
                         val modules = data.values["sourceModules"].deepCopy().asJsonArray
                         modules.forEach { module ->
                             val entry = module.asJsonObject
-                            entry.addProperty("uri", Path.of(singleProject().getBasePath()).resolve(id).resolve(entry["uri"].asString).toUri().toString())
+                            entry.addProperty(
+                                "uri",
+                                Path
+                                    .of(singleProject().getBasePath())
+                                    .resolve(id)
+                                    .resolve(entry["uri"].asString)
+                                    .toUri()
+                                    .toString(),
+                            )
                         }
                         configure("""{"xtc":{"compiler":{"sourceModules":$modules}}}""")
                     }
