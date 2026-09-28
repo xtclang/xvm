@@ -519,6 +519,14 @@ retaining operators. No operator node, mutable AST field or per-node semantic ca
 `PartialCallResolver` owns callable fallbacks; receiver insertion is immutable candidate metadata
 copied by the Kotlin host. Ordinary compiler argument fitting proves each suggested insertion.
 
+### Inferred lambda presentation (L59)
+
+`LambdaExpression.getOperator()` exposes the existing arrow token for an exact source hint
+position. This is a passive syntax accessor and introduces no field or cloning requirement.
+The Kotlin builder copies the validated function signature, marks parameters whose existing
+syntax omits types, and excludes generated capture parameters. Destructured local hints use the
+compiler's existing per-variable registers; no inferred type is guessed from source spelling.
+
 ## Using it
 
 Worked examples of the API the phases arrived at. Each is real code from the tree or the tests,
