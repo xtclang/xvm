@@ -18,10 +18,10 @@ class XdkLiveWorkspaceTest {
 
     @Test
     fun `unsaved imports and new module buffers update the discovered graph and close restores disk`() {
-        val library = source("Library", "module Library { static String answer()=\"ok\"; }")
+        val library = source("Library", "module Library { static String answer() = \"ok\"; }")
         val original = "module App {}"
         val app = source("App", original)
-        val changed = "module App { package lib import Library; String run()=lib.answer(); }"
+        val changed = "module App { package lib import Library; String run() = lib.answer(); }"
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(app, original).success).isTrue()
@@ -48,8 +48,8 @@ class XdkLiveWorkspaceTest {
     fun `folder changes update imports and an explicit graph keeps authority`() {
         val first = directory.resolve("first").toFile().also { it.mkdirs() }
         val second = directory.resolve("second").toFile().also { it.mkdirs() }
-        val app = first.resolve("App.x").also { it.writeText("module App { package lib import Library; String run()=lib.answer(); }") }
-        second.resolve("Library.x").writeText("module Library { static String answer()=\"ok\"; }")
+        val app = first.resolve("App.x").also { it.writeText("module App { package lib import Library; String run() = lib.answer(); }") }
+        second.resolve("Library.x").writeText("module Library { static String answer() = \"ok\"; }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(first.path))
             assertThat(adapter.compile(app.toURI().toString(), app.readText()).success).isFalse()

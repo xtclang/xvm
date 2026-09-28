@@ -31,7 +31,9 @@ class CompilerBoundaryRequirementsTest {
     @ValueSource(strings = ["id", "&id", "pick", "&pick"])
     fun `bound generic functions retain binary AST and emit readable artifacts`(reference: String) {
         val result =
-            compile("module Boundary { static <T> T id(T value)=value; <T> T pick(T value)=value; function Int(Int) make()=$reference; }")
+            compile(
+                "module Boundary { static <T> T id(T value) = value; <T> T pick(T value) = value; function Int(Int) make() = $reference; }",
+            )
         val artifact = bytes(result)
         val restored = FileStructure(ByteArrayInputStream(artifact)).module
         assertThat(restored.name).isEqualTo("Boundary")
@@ -41,12 +43,12 @@ class CompilerBoundaryRequirementsTest {
 
     @Test
     fun `serialized dependency identities match source declarations without conflating overloads or modules`() {
-        val library = compile("module Library { static Int pick(Int n)=n; static String pick(String n)=n; }")
-        val other = compile("module Other { static Int pick(Int n)=n; }")
+        val library = compile("module Library { static Int pick(Int n) = n; static String pick(String n) = n; }")
+        val other = compile("module Other { static Int pick(Int n) = n; }")
         val repository = repository(library, other)
         val source =
             "module Consumer { package lib import Library; package other import Other; " +
-                "Int run()=lib.pick(1)+other.pick(2); String text()=lib.pick(\"x\"); }"
+                "Int run() = lib.pick(1) + other.pick(2); String text() = lib.pick(\"x\"); }"
         val consumer = compile(source, repository)
         val methods = nodes(library.parsed()).filterIsInstance<MethodDeclarationStatement>().filter { it.nameToken.valueText == "pick" }
         val calls = consumer.callBindings().values.filter { it.method().name == "pick" }
@@ -71,8 +73,8 @@ class CompilerBoundaryRequirementsTest {
 
     @Test
     fun `a fresh dependency repository changes selected types and rejects removed members`() {
-        fun dependency(type: String) = compile("module Library { static $type value()=${if (type == "Int") "1" else "\"new\""}; }")
-        val text = "module Consumer { package lib import Library; void run() { var value=lib.value(); } }"
+        fun dependency(type: String) = compile("module Library { static $type value() = ${if (type == "Int") "1" else "\"new\""}; }")
+        val text = "module Consumer { package lib import Library; void run() { var value = lib.value(); } }"
         val first = compile(text, repository(dependency("Int"))).semanticSnapshot()
         val second = compile(text, repository(dependency("String"))).semanticSnapshot()
 
@@ -89,7 +91,7 @@ class CompilerBoundaryRequirementsTest {
         assertThat(returned(second)).isEqualTo("String")
         assertThat(second.symbol(first.calls.single().method)).isNull()
         val errors = ErrorList()
-        val removed = repository(compile("module Library { static Int replacement()=1; }"))
+        val removed = repository(compile("module Library { static Int replacement() = 1; }"))
         val failed = EmbeddingSupport.instance().compileModule(Source(text, "file:///Boundary.x"), removed, errors)
         assertThat(failed.succeeded()).isFalse()
         assertThat(errors.hasSeriousErrors()).isTrue()
@@ -99,15 +101,15 @@ class CompilerBoundaryRequirementsTest {
     @Test
     fun `semantic inspection preserves emitted bytes and copied snapshots contain no compiler objects`() {
         val source =
-            "module Boundary { interface Reader { Int read(); @RO Int value { @Override Int get()=1; } } " +
-                "class Value implements Reader { @Override Int read()=1; @Override Int value=2; } " +
-                "class Computed implements Reader { @Override Int read()=2; @Override Int value.get()=3; } " +
+            "module Boundary { interface Reader { Int read(); @RO Int value { @Override Int get() = 1; } } " +
+                "class Value implements Reader { @Override Int read() = 1; @Override Int value = 2; } " +
+                "class Computed implements Reader { @Override Int read() = 2; @Override Int value.get() = 3; } " +
                 "class Forward(Reader target) delegates Reader(target) {} " +
                 "class Concrete(Value target) delegates Reader(target) {} " +
                 "class Outer(Concrete target) delegates Reader(target) {} " +
-                "annotation Tracked<T> into Var<T> { @Override T get()=super(); @Override void set(T value) { super(value); } } " +
-                "class Annotated { @Tracked Int value=1; @Lazy Int later.calc()=2; } " +
-                "Int run(Int captured) { function Int() fn=()->captured; return fn(); } }"
+                "annotation Tracked<T> into Var<T> { @Override T get() = super(); @Override void set(T value) { super(value); } } " +
+                "class Annotated { @Tracked Int value = 1; @Lazy Int later.calc() = 2; } " +
+                "Int run(Int captured) { function Int() fn = () -> captured; return fn(); } }"
         val baseline = bytes(compile(source))
         val inspected = compile(source)
         val errors = ErrorList()
@@ -121,7 +123,7 @@ class CompilerBoundaryRequirementsTest {
     fun `retained snapshots remain isolated through repeated replacement and concurrent pool free queries`() {
         val snapshots =
             (0 until 20).map { version ->
-                compile("module Boundary { Int run(Int n) { var value=n+$version; return value; } }")
+                compile("module Boundary { Int run(Int n) { var value = n + $version; return value; } }")
                     .semanticSnapshot()
             }
         assertThat(snapshots.map { it.id }.distinct()).hasSize(20)

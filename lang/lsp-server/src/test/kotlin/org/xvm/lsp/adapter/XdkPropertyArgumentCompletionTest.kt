@@ -24,7 +24,7 @@ class XdkPropertyArgumentCompletionTest {
     @CsvSource(
         delimiter = '|',
         value = [
-            "take(|valueNumber", "take(va|valueNumber", "take(value=va|valueNumber",
+            "take(|valueNumber", "take(va|valueNumber", "take(value = va|valueNumber",
             "widen(va|valueNumber", "box.take(va|valueText", "new Box<String>(va|valueText", "fn(va|valueText",
         ],
     )
@@ -34,7 +34,7 @@ class XdkPropertyArgumentCompletionTest {
     ) {
         val header =
             "module Editing { " +
-                "Int valueNumber=1; String valueText=\"x\"; Boolean valueFlag=True; " +
+                "Int valueNumber = 1; String valueText = \"x\"; Boolean valueFlag = True; " +
                 "void take(Int value) {} void widen(Int128 value) {} " +
                 "class Box<T> { construct(T value) {} void take(T value) {} } " +
                 "void run(Box<String> box, function void(String) fn) { "
@@ -61,8 +61,8 @@ class XdkPropertyArgumentCompletionTest {
     @ValueSource(strings = ["", "static "])
     fun `implicit reads respect inherited access and availability of this`(modifier: String) {
         val prefix =
-            "module Editing { class Base { protected Int valueProtected=1; private Int valueHidden=2; } " +
-                "class Child extends Base { private Int valueOwn=3; static Int valueConstant=4; static String valueText=\"x\"; " +
+            "module Editing { class Base { protected Int valueProtected = 1; private Int valueHidden = 2; } " +
+                "class Child extends Base { private Int valueOwn = 3; static Int valueConstant = 4; static String valueText = \"x\"; " +
                 "static void take(Int value) {} ${modifier}void run() { take(va"
         XdkAdapter().use { adapter ->
             val text = "$prefix); } } }"
@@ -77,13 +77,13 @@ class XdkPropertyArgumentCompletionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["Int value;", "String value=\"x\";", "Int value=2;"])
+    @ValueSource(strings = ["Int value;", "String value = \"x\";", "Int value = 2;"])
     fun `unreadable or incompatible locals still shadow properties`(local: String) {
-        val prefix = "module Editing { Int value=1; void take(Int input) {} void run() { $local take(va"
+        val prefix = "module Editing { Int value = 1; void take(Int input) {} void run() { $local take(va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            if (local == "Int value=2;") {
+            if (local == "Int value = 2;") {
                 assertThat(items.map { it.label }).containsExactly("value")
                 assertThat(items.single().kind).isEqualTo(CompletionItem.CompletionKind.VARIABLE)
             } else {
@@ -95,7 +95,7 @@ class XdkPropertyArgumentCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["", "if (value.is(String)) { "])
     fun `property completion does not invent local variable narrowing`(guard: String) {
-        val prefix = "module Editing { Object value=\"x\"; void take(String text) {} void run() { $guard take(va"
+        val prefix = "module Editing { Object value = \"x\"; void take(String text) {} void run() { $guard take(va"
         val suffix = if (guard.isEmpty()) "); } }" else "); } } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, "${prefix.dropLast(2)}value$suffix").diagnostics.map { it.code }).contains("COMPILER-150")
@@ -121,7 +121,7 @@ class XdkPropertyArgumentCompletionTest {
     @Test
     fun `properties preserve overload alternatives`() {
         val prefix =
-            "module Editing { Int valueNumber=1; String valueText=\"x\"; Boolean valueFlag=True; " +
+            "module Editing { Int valueNumber = 1; String valueText = \"x\"; Boolean valueFlag = True; " +
                 "void choose(Int value) {} void choose(String value) {} void run() { choose(va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
@@ -148,7 +148,7 @@ class XdkPropertyArgumentCompletionTest {
         val root = directory.resolve("Editing.x").toFile().canonicalFile
         val member = directory.resolve("Editing/Child.x").toFile().canonicalFile
         member.parentFile.mkdirs()
-        root.writeText("module Editing { class Base { Int value=1; } }")
+        root.writeText("module Editing { class Base { Int value = 1; } }")
         val prefix = "class Child extends Base { void take(String text) {} void run() { take(va"
         member.writeText("$prefix); } }")
         XdkAdapter().use { adapter ->
@@ -157,7 +157,7 @@ class XdkPropertyArgumentCompletionTest {
             adapter.compile(rootUri, root.readText())
             adapter.compile(uri, member.readText())
             assertThat(adapter.getCompletions(uri, 0, prefix.length)).isEmpty()
-            adapter.compile(rootUri, root.readText().replace("Int value=1", "String value=\"x\""))
+            adapter.compile(rootUri, root.readText().replace("Int value = 1", "String value = \"x\""))
             val cached = adapter.getCachedResult(uri)
             assertThat(adapter.getCompletions(uri, 0, prefix.length).single().detail).contains("String")
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
@@ -166,14 +166,14 @@ class XdkPropertyArgumentCompletionTest {
             adapter.compile(rootUri, root.readText())
             adapter.compile(uri, member.readText())
             assertThat(adapter.getCompletions(uri, 0, prefix.length)).isEmpty()
-            assertThat(root.readText()).contains("Int value=1")
+            assertThat(root.readText()).contains("Int value = 1")
         }
     }
 
     @Test
     fun `accepted property facts are immutable detached and do not change syntax or diagnostics`() {
         CompilerTestSupport.configure()
-        val prefix = "module Editing { String value=\"x\"; void take(String text) {} void run() { take(va"
+        val prefix = "module Editing { String value = \"x\"; void take(String text) {} void run() { take(va"
         val text = "$prefix); } }"
         val source = Source(text)
         val cursor = Source(text).apply { repeat(prefix.length) { next() } }.position
