@@ -1,11 +1,13 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.execution.configurations.GeneralCommandLine
-import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.psi.PsiFile
+import com.intellij.ui.BalloonImpl
 import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
@@ -214,10 +216,18 @@ class XtcLspConnectionProvider(
         content: String,
         type: NotificationType,
     ) {
-        NotificationGroupManager
-            .getInstance()
-            .getNotificationGroup("XTC Language Server")
-            .createNotification(title, content, type)
-            .notify(project)
+        object : Notification("XTC Language Server", title, content, type) {
+            override fun setBalloon(balloon: Balloon) {
+                super.setBalloon(balloon)
+                // The IDE timer pauses during interaction and hides only the balloon, keeping
+                // the startup details in Notifications and the log for later inspection.
+                (balloon as? BalloonImpl)?.apply {
+                    startSmartFadeoutTimer(8_000)
+                    // Smart fadeout alone waits for input before starting its clock. Also
+                    // schedule it now so an untouched startup balloon disappears.
+                    startFadeoutTimer(8_000)
+                }
+            }
+        }.notify(project)
     }
 }
