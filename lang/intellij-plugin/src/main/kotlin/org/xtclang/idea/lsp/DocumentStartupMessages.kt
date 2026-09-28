@@ -52,8 +52,9 @@ internal class DocumentStartupMessages(
                     is DidCloseTextDocumentParams -> params.textDocument.uri
                     else -> ((message as? RequestMessage)?.params as? FoldingRangeRequestParams)?.textDocument?.uri
                 }
-            // Read actions precede the transport lock: EDT edits must never wait behind a
-            // response thread holding this lock while waiting for a write action to finish.
+            // The snapshot provider must not acquire an IDE read action: VFS rename can hold
+            // the write lock while waiting for this transport to finish didOpen/didChange.
+            // Capture before our lock so document lookup never runs under the transport lock.
             val current = uri?.let(snapshot)
             synchronized(lock) {
                 when (params) {
