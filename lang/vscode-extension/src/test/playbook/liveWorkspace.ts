@@ -103,7 +103,11 @@ export function liveWorkspaceCases(): void {
             // Call the registered provider used by Rename, preserving its ordered WorkspaceEdit.
             const cancellation = new vscode.CancellationTokenSource();
             try {
-                const edit = await provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token);
+                // Fixture creation can deliver a late watcher notification that cancels the
+                // proof. Retry only the unapplied query; apply the resulting edit exactly once.
+                const edit = await eventually(
+                    async () => provider.provideRenameEdits(document, position(document, data.anchor), data.replacement, cancellation.token),
+                    edit => !!edit, 'Companion rename proof after fixture watcher notifications');
                 assert.ok(edit);
                 assert.ok(await vscode.workspace.applyEdit(edit));
             } finally { cancellation.dispose(); }
