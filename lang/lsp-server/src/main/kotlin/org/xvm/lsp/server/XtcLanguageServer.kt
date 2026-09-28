@@ -275,7 +275,10 @@ class XtcLanguageServer(
             EditCapabilities(
                 workspaceEdits?.documentChanges == true,
                 workspaceEdits?.resourceOperations?.contains("rename") == true,
-                params.capabilities?.workspace?.didChangeWatchedFiles?.dynamicRegistration == true,
+                params.capabilities
+                    ?.workspace
+                    ?.didChangeWatchedFiles
+                    ?.dynamicRegistration == true,
             ),
         )
 
@@ -309,7 +312,6 @@ class XtcLanguageServer(
                     logger.info("initialize: workspace indexing: {} ({}%)", message, percent)
                 }
             }
-
         }
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
