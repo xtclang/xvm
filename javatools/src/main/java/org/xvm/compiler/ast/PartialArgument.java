@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
+import java.util.stream.StreamSupport;
 
 import org.xvm.compiler.Token.Id;
 
@@ -20,12 +21,17 @@ record PartialArgument(IncompleteStatement cursor, int index) {
     }
 
     private static Optional<IncompleteStatement> cursor(Expression expression) {
-        return switch (expression) {
-            case LabeledExpression label -> cursor(label.getUnderlyingExpression());
-            case ParenthesizedExpression group -> cursor(group.getUnderlyingExpression());
-            case IncompleteExpression hole when !hole.getSite().isCall() -> Optional.of(hole.getSite());
-            default -> Optional.empty();
-        };
+        if (expression instanceof IncompleteExpression hole) {
+            return hole.getSite().isCall() ? Optional.empty() : Optional.of(hole.getSite());
+        }
+        if (expression instanceof LambdaExpression || expression instanceof InvocationExpression
+                || expression instanceof NewExpression) {
+            return Optional.empty();
+        }
+        var sites = StreamSupport.stream(expression.children().spliterator(), false)
+                .filter(Expression.class::isInstance).map(Expression.class::cast)
+                .flatMap(child -> cursor(child).stream()).toList();
+        return sites.size() == 1 ? Optional.of(sites.getFirst()) : Optional.empty();
     }
 
     /** Candidate enumeration uses the compiler's ordinary unbound-parameter marker, never a type. */
@@ -51,12 +57,14 @@ record PartialArgument(IncompleteStatement cursor, int index) {
     }
 
     private static Expression substitute(Expression written, Expression value) {
-        return switch (written) {
-            case LabeledExpression label -> new LabeledExpression(label.getNameToken(),
-                    substitute(label.getUnderlyingExpression(), value));
-            case ParenthesizedExpression group -> new ParenthesizedExpression(
-                    substitute(group.getUnderlyingExpression(), value), group.getStartPosition(), group.getEndPosition());
-            default -> value;
-        };
+        if (written instanceof IncompleteExpression) {
+            return value;
+        }
+        var copy = (Expression) written.clone();
+        var children = StreamSupport.stream(copy.children().spliterator(), false).toList();
+        children.stream().filter(Expression.class::isInstance).map(Expression.class::cast)
+                .filter(child -> cursor(child).isPresent())
+                .forEach(child -> copy.replaceChild(child, substitute(child, value)));
+        return copy;
     }
 }
