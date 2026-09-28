@@ -235,6 +235,7 @@ class SemanticModel internal constructor(
         typeDefinitions: Map<TypeId, List<SymbolId>> = emptyMap(),
         implementations: Map<SymbolId, List<SymbolId>> = emptyMap(),
         callables: Map<SymbolId, Callable> = emptyMap(),
+        declarations: Map<SymbolId, List<SymbolId>> = emptyMap(),
     ) {
         val symbolsById = immutableMap(symbols)
         val typesById = immutableMap(types)
@@ -244,6 +245,7 @@ class SemanticModel internal constructor(
         val typeDefinitions = immutableMap(typeDefinitions.mapValues { immutableList(it.value) })
         val implementations = immutableMap(implementations.mapValues { immutableList(it.value) })
         val callables = immutableMap(callables)
+        val declarations = immutableMap(declarations.mapValues { immutableList(it.value) })
     }
 
     /** IDs from another snapshot return no result. */
@@ -289,6 +291,16 @@ class SemanticModel internal constructor(
         line: Int,
         column: Int,
     ): SourceLocation? = symbolAt(line, column)?.let { symbol -> symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) } }
+
+    /** Local aliases stay local; overrides expose their written contracts, never runtime bodies. */
+    fun declarationLocationsAt(
+        line: Int,
+        column: Int,
+    ): List<SourceLocation> {
+        importAt(line, column)?.let { return listOf(SourceLocation(sourceName, it.declaration)) }
+        val symbol = symbolAt(line, column) ?: return emptyList()
+        return locations(facts.declarations[symbol.id].orEmpty()).ifEmpty { locations(listOf(symbol.id)) }
+    }
 
     /** Nominal types, flow-narrowed values and selected call results; never follow generic arguments. */
     fun typeDefinitionLocationsAt(
@@ -364,6 +376,9 @@ class SemanticModel internal constructor(
                         val id = canonical(callable.symbol)
                         id to callable.copy(symbol = id)
                     },
+                    tables.flatMap { it.declarations.entries }
+                        .groupBy({ canonical(it.key) }, { it.value })
+                        .mapValues { (_, groups) -> groups.flatten().map(::canonical).distinct() },
                 )
             return models.map { model ->
                 SemanticModel(
