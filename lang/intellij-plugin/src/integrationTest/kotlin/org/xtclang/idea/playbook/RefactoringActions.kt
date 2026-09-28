@@ -15,7 +15,6 @@ import com.intellij.driver.sdk.ui.components.elements.list
 import com.intellij.driver.sdk.ui.components.elements.popup
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 /** Exercise the installed Rename handler and its dialog, including ordered resource operations. */
@@ -28,24 +27,27 @@ fun Driver.rename(
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("RenameElement", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Rename")
-    waitFor("native rename dialog", 45.seconds) { dialog.present() }
+    awaitUi("native rename dialog", 45.seconds) { dialog.present() }
     val input = dialog.x(JEditorUiComponent::class.java) { byType("com.intellij.openapi.editor.impl.EditorComponentImpl") }
     input.text = replacement
     val button = cast(dialog.button("Refactor").component, NativeButton::class)
-    waitFor("rename accepts the new name", 10.seconds) { button.isEnabled() }
+    awaitUi("rename accepts the new name", 10.seconds) { button.isEnabled() }
     withContext(OnDispatcher.EDT) { button.doClick() }
-    waitFor("rename dialog closes", 45.seconds) { dialog.notPresent() }
+    awaitUi("rename dialog closes", 45.seconds) { dialog.notPresent() }
 }
 
 /** Select the intention list, excluding its separate preview popup, without moving the pointer. */
 fun Driver.choosePopup(
+    editor: JEditorUiComponent,
     expected: List<String>,
     selected: String,
+    reopen: () -> Unit,
 ) {
+    val inspection = PopupInspection(this, editor, reopen)
     val popup = ui.popup("//div[@class='HeavyWeightWindow'][.//div[@class='MyList']]")
-    waitFor("native popup contains $expected", 45.seconds) {
-        requirePopupFocus()
-        if (!popup.present()) return@waitFor false
+    awaitUi("native popup contains $expected", 45.seconds) {
+        inspection.recover()
+        if (!popup.present()) return@awaitUi false
         val rows = popup.list().items
         expected.all { name -> rows.any { it.contains(name) } }
     }
@@ -54,23 +56,26 @@ fun Driver.choosePopup(
     check(index >= 0)
     withContext(OnDispatcher.EDT) { cast(list.component, NativeListSelection::class).setSelectedIndex(index) }
     popup.keyboard { enter() }
-    waitFor("chosen popup closes", 15.seconds) { popup.notPresent() }
+    awaitUi("chosen popup closes", 15.seconds) { popup.notPresent() }
 }
 
 /** LSP4IJ renders multiple navigation targets through IntelliJ's Show Usages table. */
 fun Driver.chooseTargets(
+    editor: JEditorUiComponent,
     expected: List<String>,
     selected: String,
+    reopen: () -> Unit,
 ) {
+    val inspection = PopupInspection(this, editor, reopen)
     val popup = ui.popup()
     val table = popup.accessibleTable()
-    waitFor(
+    awaitUi(
         message = "native navigation chooser contains exactly $expected",
         errorMessage = { "Expected $expected; rendered rows: ${if (table.present()) table.content() else "no table"}" },
         timeout = 45.seconds,
     ) {
-        requirePopupFocus()
-        if (!popup.present()) return@waitFor false
+        inspection.recover()
+        if (!popup.present()) return@awaitUi false
         val rows =
             table
                 .content()
@@ -86,7 +91,7 @@ fun Driver.chooseTargets(
             .key
     withContext(OnDispatcher.EDT) { cast(table.component, NativeTableSelection::class).setRowSelectionInterval(row, row) }
     popup.keyboard { enter() }
-    waitFor("selected declaration closes the chooser", 15.seconds) { popup.notPresent() }
+    awaitUi("selected declaration closes the chooser", 15.seconds) { popup.notPresent() }
 }
 
 fun Driver.quickFix(
@@ -97,7 +102,7 @@ fun Driver.quickFix(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("ShowIntentionActions", component = editor.component)
-    choosePopup(listOf(title), title)
+    choosePopup(editor, listOf(title), title) { invokeAction("ShowIntentionActions", component = editor.component) }
 }
 
 /** Inspect the rendered native hierarchy, then the result of the native references action. */
@@ -111,8 +116,8 @@ fun Driver.partialGraphHierarchy(
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("TypeHierarchy", component = editor.component)
     val browser = ui.x { byType("com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyBrowser") }
-    waitFor("native type hierarchy includes $child", 45.seconds) {
-        if (!browser.present()) return@waitFor false
+    awaitUi("native type hierarchy includes $child", 45.seconds) {
+        if (!browser.present()) return@awaitUi false
         // The native browser expands its root. Observe it without expandAll's nested ten-second
         // loading deadline cutting short this asynchronous hierarchy request.
         browser.tree().collectExpandedPaths().any { path -> path.path.last().contains(child) }
@@ -123,7 +128,7 @@ fun Driver.partialGraphHierarchy(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("FindUsages", component = editor.component)
-    waitFor("incomplete graph withholds references while retaining local navigation", 45.seconds) {
+    awaitUi("incomplete graph withholds references while retaining local navigation", 45.seconds) {
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
             if (view == null || view == previous || view.isSearchInProgress()) return@withContext false
@@ -170,7 +175,7 @@ fun Driver.rejectRename(
     }
     invokeAction("RenameElement", now = false, component = editor.component)
     // The guarded XTC handler preserves the server reason and adds its native action prefix.
-    waitFor("library rename displays its rejection", 45.seconds) { ui.x { byVisibleText("Rename failed: $reason") }.present() }
+    awaitUi("library rename displays its rejection", 45.seconds) { ui.x { byVisibleText("Rename failed: $reason") }.present() }
     check(ui.dialog(title = "Rename").notPresent())
     check(editor.text == original)
     withContext(OnDispatcher.EDT) { service<EditorHints>().hideAllHints() }
@@ -181,7 +186,7 @@ fun Driver.rejectFormatting(editor: JEditorUiComponent) {
     focusEditor(editor)
     invokeAction("ReformatCode", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Clear Read-Only Status")
-    waitFor("reformat is blocked by read-only source", 45.seconds) { dialog.present() }
+    awaitUi("reformat is blocked by read-only source", 45.seconds) { dialog.present() }
     withContext(OnDispatcher.EDT) { cast(dialog.button("Cancel").component, NativeButton::class).doClick() }
-    waitFor("read-only prompt closes", 15.seconds) { dialog.notPresent() }
+    awaitUi("read-only prompt closes", 15.seconds) { dialog.notPresent() }
 }
