@@ -3,7 +3,6 @@ package org.xtclang.idea.lsp
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
@@ -77,12 +76,13 @@ class XtcLanguageServerFactory : LanguageServerFactory {
                 object : DefaultLauncherBuilder<S>(this) {
                     private val documents =
                         DocumentStartupMessages { uri ->
-                            ReadAction.computeBlocking<DocumentStartupMessages.Snapshot?, RuntimeException> {
-                                if (project.isDisposed || serverWrapper.isDisposed) return@computeBlocking null
-                                val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return@computeBlocking null
-                                val document = opened.synchronizer?.document ?: return@computeBlocking null
-                                DocumentStartupMessages.Snapshot(opened, document.modificationStamp, document.text)
-                            }
+                            if (project.isDisposed || serverWrapper.isDisposed) return@DocumentStartupMessages null
+                            val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return@DocumentStartupMessages null
+                            val document = opened.synchronizer?.document ?: return@DocumentStartupMessages null
+                            // File rename waits for didOpen while holding the IDE write lock.
+                            // Transport hooks must use the document's lock-free immutable text;
+                            // acquiring a read action here deadlocks that rename on the EDT.
+                            DocumentStartupMessages.Snapshot(opened, document.modificationStamp, document.immutableCharSequence.toString())
                         }
 
                     override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
