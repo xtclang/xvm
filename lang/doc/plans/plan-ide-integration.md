@@ -205,9 +205,9 @@ themselves violate LSP; an inherited empty method does not count as an implement
 The remaining limits within implemented features are tracked separately: malformed/header/value
 completion and signatures (L57/L58/L64), inferred displays (L59), rename proof and editable target
 scope (L55/L62), hierarchy/classification (L65), formatting/links/linked editing (L66), and index
-scale/source metadata (L67). Native startup synchronization remains an investigation (L56).
-Capability negotiation and refresh still need the L80/L81 audit, including moving dynamic watcher
-registration until after `initialized`. No production fix for the startup race is claimed yet.
+scale/source metadata (L67). L56 now has client startup ordering and stale-fold guards, with validation pending the L56–L59 batch.
+Dynamic watcher registration now waits for `initialized` and negotiated support. The remaining
+capability negotiation and refresh work still belongs to the L80/L81 audit.
 
 **Implementation and validation are separate.** The shared playbook has 113 cases. IntelliJ has
 assertions for all 113, including the 50 newly implemented parity cases and completed X20/X81/X82
