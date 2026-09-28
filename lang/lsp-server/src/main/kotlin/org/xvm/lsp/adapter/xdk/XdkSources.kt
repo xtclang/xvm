@@ -77,12 +77,12 @@ internal class XdkSources private constructor(
             moves: Map<String, String> = emptyMap(),
         ): XdkSources =
             XdkSources(
-                root,
+                File(moves[root.path] ?: root.path),
                 inputs.text.entries.associate { (file, original) ->
                     val path = moves[file.path] ?: file.path
                     File(path) to (text[path] ?: original)
                 },
-                inputs.directories,
+                inputs.directories.mapTo(linkedSetOf()) { File(moves[it.path] ?: it.path) },
                 inputs.aliases.filterKeys { it.path !in moves },
             )
 

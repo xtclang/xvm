@@ -78,6 +78,7 @@ class CompilerPlaybookTest {
             fixture("X100/${it.text("neighbor")}", it.text("neighborText"))
         }
         shared.scenarios.getValue("X103").let { fixture("X103/${it.text("member")}", it.text("memberSource")) }
+        shared.scenarios.getValue("X103").let { fixture("X103/${it.text("companion")}", it.text("companionSource")) }
         shared.scenarios.getValue("X105").let {
             fixture("X105/${it.text("file")}", "module AutoImports {}")
             fixture("X105/${it.text("library")}", it.text("libraryText"))
