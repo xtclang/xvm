@@ -17,8 +17,19 @@ class SourceGraphConfigurationTest {
         val changed = SourceGraphConfiguration.replace(original, before, after, base)
         assertThat(changed).contains("Renamed", "42", "\"formatting\": null")
         val restored = SourceGraphConfiguration.replace(changed, after, before, base)
-        val compiler = JsonParser.parseString(restored).asJsonObject["xtc"].asJsonObject["compiler"].asJsonObject
-        assertThat(compiler["sourceModules"].asJsonArray.single().asJsonObject["name"].asString).isEqualTo("Library")
+        val compiler =
+            JsonParser
+                .parseString(restored)
+                .asJsonObject["xtc"]
+                .asJsonObject["compiler"]
+                .asJsonObject
+        assertThat(
+            compiler["sourceModules"]
+                .asJsonArray
+                .single()
+                .asJsonObject["name"]
+                .asString,
+        ).isEqualTo("Library")
         assertThat(compiler["other"].asInt).isEqualTo(42)
         assertThat(SourceGraphConfiguration.replace(restored, before, after, base)).isEqualTo(changed)
     }
@@ -29,6 +40,15 @@ class SourceGraphConfigurationTest {
             .isInstanceOf(IllegalArgumentException::class.java)
         assertThatThrownBy { SourceGraphConfiguration.replace(original, after, before, base) }
             .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `malformed intervening settings become a guarded refusal`() {
+        listOf("{", "[]", """{"xtc":1}""", original.replace("\"Library.x\"", "null"), original.replace("\"Library\"", "1"))
+            .forEach { content ->
+                assertThatThrownBy { SourceGraphConfiguration.replace(content, before, after, base) }
+                    .isInstanceOf(IllegalArgumentException::class.java)
+            }
     }
 
     @Test
