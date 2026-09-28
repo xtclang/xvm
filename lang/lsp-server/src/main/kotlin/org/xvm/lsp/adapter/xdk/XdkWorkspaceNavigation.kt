@@ -83,6 +83,12 @@ internal class XdkWorkspaceNavigation(
         column: Int,
     ): List<Location> = locations(views[sourceUri(uri)]?.typeDefinitionLocationsAt(line, column).orEmpty())
 
+    fun declarations(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> = locations(views[sourceUri(uri)]?.declarationLocationsAt(line, column).orEmpty())
+
     fun implementations(
         uri: String,
         line: Int,

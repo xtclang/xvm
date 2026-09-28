@@ -785,6 +785,13 @@ interface Adapter : Closeable {
         column: Int,
     ): Location?
 
+    /** All written contracts when a member overrides more than one declaration. */
+    fun findDeclarations(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> = listOfNotNull(findDeclaration(uri, line, column))
+
     /**
      * Find the type definition of the symbol at a position.
      *

@@ -78,7 +78,7 @@ export async function hover(document: vscode.TextDocument, at: vscode.Position):
     return (result ?? []).flatMap(item => item.contents.map(content => typeof content === 'string' ? content : content.value)).join('\n');
 }
 
-export async function targets(document: vscode.TextDocument, kind: 'Definition' | 'TypeDefinition' | 'Implementation', at: vscode.Position) {
+export async function targets(document: vscode.TextDocument, kind: 'Definition' | 'Declaration' | 'TypeDefinition' | 'Implementation', at: vscode.Position) {
     const result = await vscode.commands.executeCommand<(vscode.Location | vscode.LocationLink)[]>(`vscode.execute${kind}Provider`, document.uri, at);
     return (result ?? []).map(item => 'targetUri' in item
         ? new vscode.Location(item.targetUri, item.targetSelectionRange ?? item.targetRange)
