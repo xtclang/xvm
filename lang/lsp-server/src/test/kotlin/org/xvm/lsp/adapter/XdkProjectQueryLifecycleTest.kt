@@ -47,7 +47,7 @@ class XdkProjectQueryLifecycleTest {
                     .toPath()
                     .toUri()
                     .toString()
-            val overlay = CONSUMER.replace("box.pick(1)", "box.pick(1)+box.pick(2)")
+            val overlay = CONSUMER.replace("box.pick(1)", "box.pick(1) + box.pick(2)")
             assertThat(session.adapter.compile(alias, overlay).success).isTrue()
             val references = session.adapter.findReferences(session.libraryUri, 0, LIBRARY.indexOf("pick"), false)
             assertThat(references).hasSize(2)
@@ -191,7 +191,7 @@ class XdkProjectQueryLifecycleTest {
     }
 
     private companion object {
-        const val LIBRARY = "module Library { class Box { Int pick(Int value)=value; } }"
-        const val CONSUMER = "module Consumer { package lib import Library; Int run(lib.Box box)=box.pick(1); }"
+        const val LIBRARY = "module Library { class Box { Int pick(Int value) = value; } }"
+        const val CONSUMER = "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(1); }"
     }
 }

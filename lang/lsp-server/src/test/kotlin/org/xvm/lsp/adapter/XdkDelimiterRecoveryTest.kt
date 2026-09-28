@@ -89,7 +89,7 @@ class XdkDelimiterRecoveryTest {
     @ParameterizedTest
     @ValueSource(strings = ["(pair(1, va", "use((pair(1, va", "values[pair(1, va", "use(fn(va", "use(new Box(va"])
     fun `typed argument prefixes still fit inside missing enclosing delimiters`(expression: String) {
-        val prefix = "$HEADER Int valueNumber=1; return $expression"
+        val prefix = "$HEADER Int valueNumber = 1; return $expression"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, "$prefix; } Int later() = 42; }")
             assertThat(cached.diagnostics).isNotEmpty()

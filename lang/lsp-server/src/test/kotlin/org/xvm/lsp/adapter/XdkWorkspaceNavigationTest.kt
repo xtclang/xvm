@@ -12,13 +12,13 @@ class XdkWorkspaceNavigationTest {
 
     @Test
     fun `unopened consumers contribute implementations subtype edges and selected incoming calls`() {
-        val libraryText = "module Library { class Base { Int pick(Int value)=value; String pick(String value)=value; } }"
+        val libraryText = "module Library { class Base { Int pick(Int value) = value; String pick(String value) = value; } }"
         val library = source("Library", libraryText)
         val consumerText =
             "module Consumer { package lib import Library; class Child extends lib.Base { " +
-                "@Override Int pick(Int value)=value+1; } Int run(lib.Base box)=box.pick(1); }"
+                "@Override Int pick(Int value) = value + 1; } Int run(lib.Base box) = box.pick(1); }"
         val consumer = source("Consumer", consumerText)
-        source("Unrelated", "module Unrelated { class Base { Int pick(Int value)=value; } }")
+        source("Unrelated", "module Unrelated { class Base { Int pick(Int value) = value; } }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(library, libraryText).diagnostics).isEmpty()

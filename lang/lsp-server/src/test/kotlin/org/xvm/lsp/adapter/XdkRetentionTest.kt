@@ -45,14 +45,14 @@ class XdkRetentionTest {
             (1..2).map { version ->
                 support
                     .compileModule(
-                        Source("module External { static Int value()=$version; }", "External.x"),
+                        Source("module External { static Int value() = $version; }", "External.x"),
                         null,
                         ErrorList(),
                     ).toDependency()
             }
         val library =
             directory.resolve("Library.x").toFile().apply {
-                writeText("module Library { package ext import External; static Int value()=ext.value(); class Box { Int number=1; } }")
+                writeText("module Library { package ext import External; static Int value() = ext.value(); class Box { Int number = 1; } }")
             }
         val consumer = directory.resolve("Consumer.x").toFile().apply { writeText(CONSUMER) }
         val uri = consumer.toURI().toString()
@@ -148,7 +148,7 @@ class XdkRetentionTest {
         const val CYCLES = 120
         const val CONSUMER =
             "module Consumer { package lib import Library; " +
-                "String textValue=\"x\"; Int sizeValue=2; void textTake(String value) {} " +
-                "Int run() { Int local=lib.value(); return local; } void take(lib.Box value) {} void probe(lib.Box box) {} }"
+                "String textValue = \"x\"; Int sizeValue = 2; void textTake(String value) {} " +
+                "Int run() { Int local = lib.value(); return local; } void take(lib.Box value) {} void probe(lib.Box box) {} }"
     }
 }

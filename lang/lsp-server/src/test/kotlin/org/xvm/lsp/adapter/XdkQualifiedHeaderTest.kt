@@ -27,7 +27,7 @@ class XdkQualifiedHeaderTest {
     )
     fun `qualified type prefixes replace only the final token`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('|')
-        val suffix = declaration.substringAfter('|') + " Int later=1; }"
+        val suffix = declaration.substringAfter('|') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -44,7 +44,7 @@ class XdkQualifiedHeaderTest {
     fun `qualified scope includes accessible types and excludes values and private children`() {
         val prefix =
             "module Headers { class Owner { class ItemPublic {} private class ItemPrivate {} " +
-                "protected class ItemProtected {} static Int ItemValue=1; typedef String as ItemAlias; } " +
+                "protected class ItemProtected {} static Int ItemValue = 1; typedef String as ItemAlias; } " +
                 "void damaged(Owner.Ite"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix value) {} }")
@@ -86,7 +86,7 @@ class XdkQualifiedHeaderTest {
         val alias = if (qualified.startsWith("Alias.")) "import Owner.Hidden as Alias; " else ""
         val prefix =
             "module Headers { class Owner { class ItemPublic {} private class Hidden { class Item {} } } " +
-                alias + "Int number=1; void damaged($qualified"
+                alias + "Int number = 1; void damaged($qualified"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, "$prefix value) {} }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length)).describedAs(qualified).isEmpty()
@@ -164,7 +164,7 @@ class XdkQualifiedHeaderTest {
     fun `embedding type queries preserve qualifier syntax without validating or caching it`() {
         CompilerTestSupport.configure()
         val prefix = "module Headers { void damaged(ecstasy.text.Str"
-        val text = "$prefix value) {} Int later=1; }"
+        val text = "$prefix value) {} Int later = 1; }"
         val source = Source(text, URI)
         repeat(prefix.length) { source.next() }
         val cursor = source.position

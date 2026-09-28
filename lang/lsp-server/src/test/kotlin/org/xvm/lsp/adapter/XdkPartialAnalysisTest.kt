@@ -44,7 +44,7 @@ class XdkPartialAnalysisTest {
     )
     fun `compound values and following arguments preserve the cursor context`(statement: String) {
         CompilerTestSupport.configure()
-        val marked = "module Editing { Int work(Int first, Int second)=first; Int run(String value, Boolean flag) { $statement } }"
+        val marked = "module Editing { Int work(Int first, Int second) = first; Int run(String value, Boolean flag) { $statement } }"
         val prefix = marked.substringBefore('|')
         val text = marked.replace("|", "")
         val errors = ErrorList()
@@ -466,7 +466,7 @@ class XdkPartialAnalysisTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["value.", "value.si", "value.indexOf(", "val", "value.indexOf(startAt="])
+    @ValueSource(strings = ["value.", "value.si", "value.indexOf(", "val", "value.indexOf(startAt ="])
     fun `module cursor diagnostics honor cancellation and budgets without duplicates`(operation: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
