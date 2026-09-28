@@ -1054,6 +1054,18 @@ class XdkAdapter internal constructor(
                 ?.semantics
                 ?.typeAt(line, column)
                 ?.displayName
+        if (type == null && analysis(uri)?.semantics?.status != SemanticModel.Status.COMPLETE) {
+            val partial = analyzeAtAsync(uri, Position(line, column + 1)).join()
+            val site = partial?.sites?.singleOrNull()
+            val prefix = site?.memberPrefix
+            val text = currentText(uri)?.lineSequence()?.elementAtOrNull(line)
+            if (partial != null && prefix != null && text != null && prefix.range.end.column <= text.length) {
+                val written = text.substring(prefix.range.start.column, prefix.range.end.column)
+                site.formals.singleOrNull { it.name == written }?.let {
+                    return "```xtc\n${XdkCursorQueries.formalDetail(partial, it)}\n```"
+                }
+            }
+        }
         return when {
             type == null -> declared
             declared == null -> "```xtc\n$type\n```"

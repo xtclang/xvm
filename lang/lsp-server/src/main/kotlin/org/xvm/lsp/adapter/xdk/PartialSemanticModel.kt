@@ -15,6 +15,9 @@ class PartialSemanticModel internal constructor(
 ) {
     enum class Kind { NAME, MEMBER_ACCESS, CALL }
 
+    /** Written declaration plus resolved upper bound; this is not a registered type identity. */
+    data class Formal(val name: String, val constraint: TypeId, val declaration: Range)
+
     @ConsistentCopyVisibility
     data class Member internal constructor(
         val symbol: SymbolId,
@@ -69,6 +72,7 @@ class PartialSemanticModel internal constructor(
         val functions: List<FunctionCandidate> = emptyList(),
         val argumentValues: List<Member> = emptyList(),
         val argumentOffset: Int = 0,
+        val formals: List<Formal> = emptyList(),
     ) {
         /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
         fun argumentIndexAt(position: Position): Int? =
