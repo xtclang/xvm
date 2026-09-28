@@ -1328,7 +1328,13 @@ class XdkAdapter internal constructor(
         symbol: SemanticModel.Symbol,
     ): Boolean =
         symbol.name != "construct" &&
-            symbol.kind in setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.PROPERTY) &&
+            symbol.kind in setOf(
+                SemanticModel.SymbolKind.METHOD,
+                SemanticModel.SymbolKind.TYPE,
+                SemanticModel.SymbolKind.PROPERTY,
+                SemanticModel.SymbolKind.PACKAGE,
+                SemanticModel.SymbolKind.MODULE,
+            ) &&
             symbol.declarationSource?.let {
                 synchronized(lifecycle) { project.scope(uri) != null && project.scope(it) != null }
             } == true

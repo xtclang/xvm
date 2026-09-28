@@ -93,6 +93,7 @@ export function liveWorkspaceCases(): void {
     playbook('X103', async (workspace, data) => {
         await workspace.write(data.file, data.source);
         await workspace.write(data.member, data.memberSource);
+        await workspace.write(data.companion, data.companionSource);
         await discovered(workspace, async () => {
             const document = await workspace.open(data.file, data.source);
             await noErrors(document.uri);
@@ -111,6 +112,14 @@ export function liveWorkspaceCases(): void {
             assert.strictEqual(moved.getText(), data.memberSource.replace(data.anchor, data.replacement));
             assert.strictEqual(await fs.stat(workspace.uri(data.member).fsPath).catch(() => null), null);
             assert.ok(document.getText().includes(data.replacement));
+            assert.strictEqual(await fs.readFile(workspace.uri(data.companionDestination).fsPath, 'utf8'), data.companionSource);
+            assert.strictEqual(await fs.stat(workspace.uri(data.companion).fsPath).catch(() => null), null);
+            await vscode.window.showTextDocument(document);
+            await vscode.commands.executeCommand('undo');
+            await eventually(async () => document.getText(), text => text === data.source, 'Undo restores the renamed type uses');
+            assert.strictEqual(await fs.readFile(workspace.uri(data.companion).fsPath, 'utf8'), data.companionSource);
+            assert.strictEqual(await fs.stat(workspace.uri(data.destination).fsPath).catch(() => null), null);
+            await noErrors(document.uri);
         });
     });
 
