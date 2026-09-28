@@ -18,10 +18,8 @@ import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
 import com.intellij.driver.sdk.ui.components.common.codeEditorForFile
 import com.intellij.driver.sdk.ui.components.common.ideFrame
-import com.intellij.driver.sdk.waitFor
 import com.intellij.driver.sdk.waitForIndicators
 import com.intellij.driver.sdk.waitForProblemsViewFile
-import com.intellij.driver.sdk.waitNotNull
 import com.intellij.openapi.progress.ProcessCanceledException
 import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
 import java.nio.file.Files
@@ -30,12 +28,15 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+enum class PlaybookMode { FEATURES, STARTUP, FOCUS_RECOVERY }
+
 /** Drive editor actions and inspect the diagnostics/lookup actually delivered to IntelliJ. */
 class CompilerPlaybook(
     private val fixtures: Map<String, String>,
     private val shared: SharedScenarios,
     private val lsp4ijVersion: String,
     private val selectedIds: Set<String> = shared.implementedIds,
+    private val mode: PlaybookMode = PlaybookMode.FEATURES,
     private val onResult: (Result) -> Unit = {},
 ) {
     data class Result(
@@ -51,7 +52,7 @@ class CompilerPlaybook(
     private val completed = mutableListOf<Result>()
     val results: List<Result>
         get() =
-            completed.filter { it.id == "START" } +
+            completed.filter { it.id.startsWith("START") } +
                 shared.scenarios.map { (id, scenario) ->
                     val executed = completed.singleOrNull { it.id == id }
                     val status =
@@ -77,12 +78,25 @@ class CompilerPlaybook(
         with(driver) {
             case("START", "Packaged XTC and pinned LSP4IJ load") {
                 waitForIndicators(2.minutes)
+                withContext(OnDispatcher.EDT) { utility(PlaybookProgress::class).install(singleProject()) }
                 check(getPlugin("org.xtclang.idea")?.isEnabled() == true)
                 check(getPlugin("com.intellij.modules.ultimate")?.isEnabled() != true) {
                     "The playbook must run with Ultimate features disabled"
                 }
                 val lsp = requireNotNull(getPlugin("com.redhat.devtools.lsp4ij"))
                 check(lsp.isEnabled() && lsp.getVersion() == lsp4ijVersion)
+            }
+            if (mode == PlaybookMode.STARTUP) {
+                case("STARTUP", "Edits, bulk replacement and close/reopen before server initialization") {
+                    startupEditing(fixtures, shared)
+                }
+                return@with
+            }
+            if (mode == PlaybookMode.FOCUS_RECOVERY) {
+                case("START_FOCUS", "Restore interrupted popups without replaying completed edits") {
+                    focusRecovery(fixtures, shared)
+                }
+                return@with
             }
             configure(shared.graph)
             case(shared.dependencyNavigation.id, "Initial compiler configuration and cross-module definition") {
@@ -106,7 +120,7 @@ class CompilerPlaybook(
                 library.text = scenario.edit.apply(fixtures.getValue(scenario.file))
                 val changed = open(scenario.consumer)
                 changed.awaitError()
-                waitFor("consumer owns its type mismatch", 45.seconds) {
+                awaitUi("consumer owns its type mismatch", 45.seconds) {
                     receivedDiagnostics(changed).let { items ->
                         items.isNotEmpty() && items.none { it.code == shared.scenarios.getValue(scenario.id).text("diagnosticCode") }
                     }
@@ -133,13 +147,13 @@ class CompilerPlaybook(
                     val text = expected.edit.apply(fixtures.getValue(scenario.file))
                     editor.text = text
                     val range = offset(text, expected.rangeStart)..offset(text, expected.rangeEnd)
-                    waitFor("compiler diagnostic at shared source span", 45.seconds) {
+                    awaitUi("compiler diagnostic at shared source span", 45.seconds) {
                         editor.diagnostics().any {
                             it.severity == expected.severity && it.start in range &&
                                 it.description.contains(expected.messageContains, ignoreCase = true)
                         }
                     }
-                    waitFor("compiler diagnostic codes, source, and nonempty ranges", 45.seconds) {
+                    awaitUi("compiler diagnostic codes, source, and nonempty ranges", 45.seconds) {
                         receivedDiagnostics(editor).let { items ->
                             items.isNotEmpty() &&
                                 items.all {
@@ -166,7 +180,7 @@ class CompilerPlaybook(
             case(shared.warning.id, "Exactly one compiler warning for the duplicate inherited annotation") {
                 val scenario = shared.warning
                 val editor = open(scenario.file)
-                waitFor("one duplicate-annotation warning", 45.seconds) {
+                awaitUi("one duplicate-annotation warning", 45.seconds) {
                     editor.diagnostics().let { values ->
                         values.size == scenario.count &&
                             values.all {
@@ -177,7 +191,7 @@ class CompilerPlaybook(
                 }
                 problems(editor)
                 val data = shared.scenarios.getValue(scenario.id)
-                waitFor("compiler warning metadata", 45.seconds) {
+                awaitUi("compiler warning metadata", 45.seconds) {
                     receivedDiagnostics(editor).let { items ->
                         items.size == scenario.count &&
                             items.all {
@@ -199,7 +213,7 @@ class CompilerPlaybook(
                 restore(data.text("errorFile"))
                 val restored = open(scenario.file)
                 restored.text = fixtures.getValue(scenario.file)
-                waitFor("restored compiler warning", 45.seconds) {
+                awaitUi("restored compiler warning", 45.seconds) {
                     receivedDiagnostics(restored).let { items -> items.size == scenario.count && items.single().code == scenario.code }
                 }
             }
@@ -529,7 +543,7 @@ class CompilerPlaybook(
                 if (variant["validAfterAcceptance"].asBoolean) {
                     editor.awaitDiagnostics(emptyList())
                 } else {
-                    waitFor("missing array bracket remains a diagnostic", 30.seconds) { editor.diagnostics().isNotEmpty() }
+                    awaitUi("missing array bracket remains a diagnostic", 30.seconds) { editor.diagnostics().isNotEmpty() }
                 }
                 val accepted = prefix.dropLast(-data.values["replacementStartDelta"].asInt) + selected
                 editor.text =
@@ -628,7 +642,7 @@ class CompilerPlaybook(
                 problems(editor)
                 structure(editor, data.strings("symbols"), listOf(data.text("excludedSymbol")))
                 val expected = data.values["foldStart"].asInt..data.values["foldEnd"].asInt
-                waitFor(
+                awaitUi(
                     message = "unfinished declaration body fold $expected",
                     errorMessage = { "Expected native fold $expected; actual: ${folds(editor)}" },
                     timeout = 45.seconds,
@@ -658,8 +672,8 @@ class CompilerPlaybook(
             caret(reopened, reopened.text.indexOf(data.text("unionUse")) + data.values["unionOffset"].asInt)
             invokeAction("LSP.GotoTypeDefinition", component = reopened.component)
             val expected = data.strings("unionTargets")
-            chooseTargets(expected, expected.last())
-            waitFor("selected union declaration opens", 30.seconds) {
+            chooseTargets(reopened, expected, expected.last()) { invokeAction("LSP.GotoTypeDefinition", component = reopened.component) }
+            awaitUi("selected union declaration opens", 30.seconds) {
                 withContext(OnDispatcher.EDT) {
                     service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
                         reopened.text.substring(selected.getCaretModel().getOffset()).startsWith(expected.last())
@@ -711,7 +725,7 @@ class CompilerPlaybook(
             val editor = open(data.text("file"))
             editor.awaitDiagnostics(emptyList())
             structure(editor, data.strings("symbolNames"))
-            waitFor("native fold regions", 45.seconds) { folds(editor).size >= data.values["minimumFolds"].asInt }
+            awaitUi("native fold regions", 45.seconds) { folds(editor).size >= data.values["minimumFolds"].asInt }
             selectionParents(editor, editor.text.indexOf(data.text("anchor")) + data.values["offset"].asInt)
         }
         scenario("X70") { data ->
@@ -845,7 +859,7 @@ class CompilerPlaybook(
                     SharedScenarios.text(data.text("declaration"), it.toString(), it.toString())
                 } + data.text("moduleEnd")
             editor.awaitError()
-            waitFor("bounded source diagnostics without an internal compiler failure", 45.seconds) {
+            awaitUi("bounded source diagnostics without an internal compiler failure", 45.seconds) {
                 receivedDiagnostics(editor).let { items ->
                     items.isNotEmpty() && items.count { it.severity == "Error" } <= data.values["maximumErrors"].asInt &&
                         items.none { it.code == data.text("diagnosticCode") }
@@ -862,7 +876,7 @@ class CompilerPlaybook(
         check(positions.isNotEmpty())
         caret(editor, 0)
         invokeAction("GotoNextError", component = editor.component)
-        waitFor("Next Problem moves to an actual compiler diagnostic", 15.seconds) {
+        awaitUi("Next Problem moves to an actual compiler diagnostic", 15.seconds) {
             withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().getOffset() in positions }
         }
         // Next Problem also shows a diagnostic hint; dismiss it before another editor/tool-window action.
@@ -889,13 +903,13 @@ class CompilerPlaybook(
             }
         if (!visible) invokeAction("ActivateProblemsViewToolWindow", component = editor.component)
         selectProblemsViewTab(HIGHLIGHTING_PANEL_ID)
-        waitFor("Problems tool window is visible", 15.seconds) {
+        awaitUi("Problems tool window is visible", 15.seconds) {
             withContext(OnDispatcher.EDT) {
                 utility(ProblemsViewToolWindowUtils::class).getToolWindow(singleProject())?.isVisible() == true
             }
         }
         waitForProblemsViewFile(file)
-        waitFor("Problems rows match editor diagnostic locations, including clearing", 45.seconds) {
+        awaitUi("Problems rows match editor diagnostic locations, including clearing", 45.seconds) {
             getProblemsViewProblems(file)
                 .map { it.getLine() to it.getColumn() }
                 .sortedWith(compareBy({ it.first }, { it.second })) == expected
@@ -937,25 +951,41 @@ class CompilerPlaybook(
         continueAfterFailure: Boolean = false,
         action: () -> Unit,
     ) {
-        if (id != "START" && id !in selectedIds) return
+        if (!id.startsWith("START") && id !in selectedIds) return
         check(completed.none { it.id == id }) { "Duplicate native case $id" }
         val start = TimeSource.Monotonic.markNow()
         println("IntelliJ playbook $id: $description")
+        if (id != "START") progress(id, "running")
         try {
             action()
             check(!isPluginLoaded("com.intellij.modules.ultimate")) {
                 "Ultimate became active during $id; this cannot establish Community support"
             }
             completed += Result(id, description, "passed", start.elapsedNow().inWholeMilliseconds).also(onResult)
+            progress(id, "passed")
         } catch (failure: Throwable) {
             completed +=
                 Result(id, description, "failed", start.elapsedNow().inWholeMilliseconds, failure.stackTraceToString()).also(onResult)
+            runCatching { progress(id, "failed") }.onFailure(failure::addSuppressed)
             if (!continueAfterFailure || failure is InterruptedException ||
                 (failure !is Exception && failure !is AssertionError)
             ) {
                 throw failure
             }
         }
+    }
+
+    private fun Driver.progress(
+        id: String,
+        status: String,
+    ) {
+        val total = if (mode == PlaybookMode.FEATURES) selectedIds.size else 1
+        val done = completed.count { it.id != "START" }
+        val failed = completed.count { it.status == "failed" }
+        val text =
+            "XTC playbook: $done/$total completed, ${total - done} left | $id $status" +
+                if (failed > 0) " | $failed failed" else ""
+        withContext(OnDispatcher.EDT) { utility(PlaybookProgress::class).update(singleProject(), text) }
     }
 
     private fun Driver.workspaceScenarios() {
@@ -1003,7 +1033,7 @@ class CompilerPlaybook(
                     val editor = open(data.text("file"))
                     editor.awaitDiagnostics(emptyList())
                     rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
-                    waitFor("all source rename edits applied", 45.seconds) {
+                    awaitUi("all source rename edits applied", 45.seconds) {
                         editor.text.split(data.text("replacement")).size - 1 == data.values["edits"].asInt
                     }
                     editor.awaitDiagnostics(emptyList())
@@ -1019,7 +1049,7 @@ class CompilerPlaybook(
                 editor.awaitDiagnostics(emptyList())
                 val root = Path.of(editor.editor.getVirtualFile().getPath()).parent
                 rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
-                waitFor("type rename moves the member file", 45.seconds) {
+                awaitUi("type rename moves the member file", 45.seconds) {
                     Files.exists(root.resolve(data.text("destination"))) && !Files.exists(root.resolve(data.text("member"))) &&
                         editor.text.contains(data.text("replacement"))
                 }
@@ -1029,7 +1059,7 @@ class CompilerPlaybook(
                 reopened.awaitDiagnostics(emptyList())
                 // Restore through the same native refactoring path, including the reverse move.
                 rename(reopened, reopened.text.indexOf(data.text("replacement")), data.text("anchor"))
-                waitFor("reverse rename restores source and the member", 45.seconds) {
+                awaitUi("reverse rename restores source and the member", 45.seconds) {
                     Files.exists(root.resolve(data.text("member"))) && !Files.exists(root.resolve(data.text("destination"))) &&
                         reopened.text == data.text("source")
                 }
@@ -1044,7 +1074,7 @@ class CompilerPlaybook(
                     editor.text = variant["source"].asString
                     editor.awaitError()
                     quickFix(editor, editor.text.indexOf(variant["anchor"].asString), variant["title"].asString)
-                    waitFor("native import quick fix applied", 45.seconds) { variant["importText"].asString in editor.text }
+                    awaitUi("native import quick fix applied", 45.seconds) { variant["importText"].asString in editor.text }
                     editor.awaitDiagnostics(emptyList())
                 }
                 editor.text = "module AutoImports {}"
@@ -1088,7 +1118,7 @@ class CompilerPlaybook(
 
     private fun Driver.open(file: String): JEditorUiComponent {
         val target =
-            waitFor(
+            awaitUi(
                 message = "File is available: $file",
                 timeout = 10.seconds,
                 getter = { findFile(relativePath = file) },
@@ -1102,7 +1132,7 @@ class CompilerPlaybook(
         val editor = ideFrame().codeEditorForFile(Path.of(file).fileName.toString())
         // A focused run may edit the very first file. Wait for the client's initial snapshot to be
         // sent before changing its document; merely opening the tab does not mean LSP startup ended.
-        waitFor("language client opened $file", 45.seconds) {
+        awaitUi("language client opened $file", 45.seconds) {
             service<LanguageClients>(singleProject())
                 .getStartedServers()
                 .flatMap { it.getOpenedDocuments() }
@@ -1128,7 +1158,7 @@ class CompilerPlaybook(
         val targetOffset = offset(fixtures.getValue(location.targetFile), location.target)
         caret(editor, offset(editor.text, location.cursor))
         invokeAction("GotoDeclaration", component = editor.component)
-        waitFor("definition ${location.targetFile}:$targetOffset", 45.seconds) {
+        awaitUi("definition ${location.targetFile}:$targetOffset", 45.seconds) {
             withContext(OnDispatcher.EDT) {
                 service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let {
                     it.getVirtualFile().getPath().endsWith("/${location.targetFile}") && it.getCaretModel().getOffset() == targetOffset
@@ -1153,7 +1183,7 @@ class CompilerPlaybook(
                     it.getVirtualFile().getPath() to it.getCaretModel().getOffset()
                 }
             }
-        waitFor(
+        awaitUi(
             message = "$action navigates to a single declaration",
             errorMessage = { "Origin: $origin; selected: ${selected()}; diagnostics: ${editor.diagnostics()}" },
             timeout = 45.seconds,
@@ -1182,7 +1212,7 @@ class CompilerPlaybook(
     }
 
     private fun JEditorUiComponent.diagnostics(): List<Diagnostic> =
-        waitNotNull("read editor diagnostics", 45.seconds) { readDiagnostics() }
+        awaitUiNotNull("read editor diagnostics", 45.seconds) { readDiagnostics() }
 
     private fun JEditorUiComponent.readDiagnostics(): List<Diagnostic>? =
         try {
@@ -1195,7 +1225,7 @@ class CompilerPlaybook(
         }
 
     private fun JEditorUiComponent.awaitError() {
-        waitFor(
+        awaitUi(
             message = "compiler error in editor",
             timeout = 45.seconds,
             errorMessage = { "Source: $text; editor diagnostics: ${readDiagnostics()}" },
@@ -1203,7 +1233,7 @@ class CompilerPlaybook(
     }
 
     private fun JEditorUiComponent.awaitDiagnostics(expected: List<Diagnostic>) {
-        waitFor(
+        awaitUi(
             message = "diagnostics $expected",
             errorMessage = { "Expected $expected; editor diagnostics: ${readDiagnostics()}" },
             timeout = 45.seconds,

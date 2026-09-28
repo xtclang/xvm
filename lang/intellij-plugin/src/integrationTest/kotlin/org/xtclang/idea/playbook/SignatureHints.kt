@@ -9,7 +9,6 @@ import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.ui
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 /** A snapshot of the response produced by IntelliJ's Parameter Info action. */
@@ -19,7 +18,7 @@ data class Signature(
     val activeParameter: Int?,
 )
 
-/** Inspect the native action's existing future, then the visible popup; never issue a second LSP request. */
+/** Inspect the native action's future and visible popup; reopen only after recorded focus loss. */
 fun Driver.signature(
     editor: JEditorUiComponent,
     at: Int,
@@ -35,7 +34,8 @@ fun Driver.signature(
             val file = requireNotNull(service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()))
             utility(LspFileSupport::class).getSupport(file).getSignatureHelpSupport()
         }
-    editor.scrollToCaret()
+    editor.scrollToCaretNow()
+    val inspection = PopupInspection(this, editor) { invokeAction("ParameterInfo", component = editor.component) }
     invokeAction("ParameterInfo", component = editor.component)
 
     fun renderedHints() =
@@ -43,7 +43,7 @@ fun Driver.signature(
             .xx("//div[@class='ParameterInfoComponent']//div[@class='JBHtmlPane']")
             .list()
             .map { cast(it.component, ParameterHintText::class).getText() }
-    waitFor(
+    awaitUi(
         message = "native parameter information for offset $at",
         timeout = 45.seconds,
         errorMessage = {
@@ -58,9 +58,9 @@ fun Driver.signature(
                 "global=${help?.getActiveParameter()}; rendered hints: ${renderedHints()}"
         },
     ) {
-        requirePopupFocus()
+        inspection.recover()
         val future = support.getValidLSPFuture()
-        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@waitFor false
+        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@awaitUi false
         val help = future.get()
         val signatures =
             help?.getSignatures().orEmpty().map { item ->
@@ -74,9 +74,9 @@ fun Driver.signature(
                     item.getActiveParameter() ?: help?.getActiveParameter(),
                 )
             }
-        if (!matches(signatures)) return@waitFor false
+        if (!matches(signatures)) return@awaitUi false
         val rendered = renderedHints()
-        if (signatures.isEmpty()) return@waitFor rendered.isEmpty()
+        if (signatures.isEmpty()) return@awaitUi rendered.isEmpty()
         val activeSignature = help?.getActiveSignature()
         rendered.size == signatures.size &&
             signatures.indices.all { index ->

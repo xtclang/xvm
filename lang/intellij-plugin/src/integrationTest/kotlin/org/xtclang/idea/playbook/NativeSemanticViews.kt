@@ -15,7 +15,6 @@ import com.intellij.driver.sdk.ui.components.elements.accessibleTable
 import com.intellij.driver.sdk.ui.components.elements.popup
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
-import com.intellij.driver.sdk.waitFor
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -47,7 +46,7 @@ internal fun Driver.nativeLocations(
         val editor = document.editor
         focusEditor(editor)
         withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-        editor.scrollToCaret()
+        editor.scrollToCaretNow()
         invokeAction(action, component = editor.component)
     }
     if (expected.isEmpty()) {
@@ -59,7 +58,7 @@ internal fun Driver.nativeLocations(
                 else -> support.getImplementationSupport()
             }
         invoke()
-        waitFor("native $kind receives no targets", 45.seconds) {
+        awaitUi("native $kind receives no targets", 45.seconds) {
             val future = feature.getValidLSPFuture()
             future != null && future.isDone() && !future.isCompletedExceptionally() && future.get().isEmpty()
         }
@@ -76,12 +75,13 @@ internal fun Driver.nativeLocations(
         }
     val opened =
         expected.indices.map { index ->
+            val inspection = PopupInspection(this, document.editor, ::invoke)
             invoke()
             if (expected.size > 1) {
                 val popup = ui.popup()
                 val table = popup.accessibleTable()
-                waitFor("native $kind chooser has ${expected.size} targets", 45.seconds) {
-                    requirePopupFocus()
+                awaitUi("native $kind chooser has ${expected.size} targets", 45.seconds) {
+                    inspection.recover()
                     table.present() && table.content().size == expected.size
                 }
                 withContext(OnDispatcher.EDT) {
@@ -89,7 +89,7 @@ internal fun Driver.nativeLocations(
                 }
                 popup.keyboard { enter() }
             }
-            waitFor(
+            awaitUi(
                 message = "$kind opens an exact source target",
                 timeout = 30.seconds,
                 getter = {
@@ -120,10 +120,10 @@ internal fun Driver.nativeHover(
             .moveToOffset(at)
     }
     val support = semanticSupport(document.editor).getHoverSupport()
-    document.editor.scrollToCaret()
+    document.editor.scrollToCaretNow()
     invokeAction("QuickJavaDoc", component = document.editor.component)
     val protocol = ClientProtocol(this)
-    waitFor("native documentation contains $pattern", 45.seconds) {
+    awaitUi("native documentation contains $pattern", 45.seconds) {
         val future = support.getValidLSPFuture()
         future != null && future.isDone() && !future.isCompletedExceptionally() &&
             future.get().any { pattern.containsMatchIn(protocol.copy(it.hover()).toString()) } &&
@@ -144,11 +144,11 @@ internal fun Driver.nativeHierarchy(
             .getCaretModel()
             .moveToOffset(at)
     }
-    document.editor.scrollToCaret()
+    document.editor.scrollToCaretNow()
     invokeAction(if (kind == "type") "TypeHierarchy" else "CallHierarchy", component = document.editor.component)
     val className = if (kind == "type") "LSPTypeHierarchyBrowser" else "LSPCallHierarchyBrowser"
     val browser = ui.x("//div[@class='$className']")
-    waitFor("native $kind hierarchy contains $names", 45.seconds) {
+    awaitUi("native $kind hierarchy contains $names", 45.seconds) {
         browser.present() &&
             browser.tree().collectExpandedPaths().let { rows ->
                 names.all { name -> rows.any { path -> path.path.last().contains(name) } }
