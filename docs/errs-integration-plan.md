@@ -1009,7 +1009,7 @@ cursor/recovery syntax into `org.xvm.compiler.ast.partial`. Candidate classes ar
 `IncompleteTypeCompositionStatement`, together with `CursorScope`, `PartialArgument`,
 `PartialCallResolver` and `PartialConstructionResolver` where access permits.
 
-- [ ] Inventory package-private and protected access across the proposed boundary, including
+- [x] Inventory package-private and protected access across the proposed boundary, including
   accesses on *other* AST node instances (Java protected access is narrower across packages).
 - [ ] Keep partial-only implementation helpers package-private within the new package. Keep
   classic parser/validation hooks in the AST where they own normal language semantics.
@@ -1024,6 +1024,25 @@ cursor/recovery syntax into `org.xvm.compiler.ast.partial`. Candidate classes ar
 - [ ] Update imports, API/AST ownership notes and extraction map; run compiler recovery,
   cursor validation/cloning and semantic snapshot tests after the move. Ordinary complete-source
   compilation and failed-emission behavior must remain unchanged.
+
+Access audit result: the all-eight-class move is **not** a narrow visibility change. Keep the
+current package for this checkpoint. No public forwarding facade or widened classic-AST access
+has been introduced merely to make a relocation compile.
+
+| Boundary | Actual access from partial code | Consequence of a direct subpackage move |
+| --- | --- | --- |
+| Construction preparation | `NewExpression.prepareConstruction`, its `Construction` result, `body`, `type`, `args` | Constructor probing would need several new exported operations or an AST-package query service. |
+| Expression validation and parenting | `Expression.validate`, `AstNode.introduceParentage`, assignment to `NameExpression.left` | Protected access on other AST instances is not legal from the moved helpers; existing public child replacement alone does not expose validation. |
+| Argument and inference machinery | `AstNode.probeCallCandidate`, `containsNamedArgs`, `rearrangeNamedArgs`, `Expression.inferTypeFromConstructor` | These are compiler-internal operations, not general embedding contracts. Moving resolvers also requires a deliberate compiler-service boundary. |
+| Type syntax recovery | `NamedTypeExpression.left`, `names`, `paramTypes` and internal constructors | CursorScope currently transforms disposable syntax using package access; broad field getters would expose incidental representations. |
+| Traversal and cloning | `AstNode.fieldsForNames` returns Fields without enabling cross-package access | Reflective reads/writes of protected child fields currently rely on a shared package. Import changes alone would compile some nodes but break traversal at runtime. |
+| Classic AST recovery checks | `IncompleteStatement.isWithin` used by normal validation | A narrow recovery predicate can remain in the AST, but does not solve the other boundaries. |
+
+A future move should first define a small compiler-owned partial-query service and explicit child
+access for AST subclasses, then move the four syntax nodes and whichever helpers no longer rely
+on implementation access. That service design is a separate refactor; it must not duplicate normal
+validation or move compiler inference rules into the LSP. The requested organizational direction
+remains recorded, with these concrete prerequisites rather than a blanket public-API expansion.
 
 This is structural organization, not a new LSP dependency in the compiler. The partial nodes
 represent incomplete source syntax usable by embedding hosts generally. No move is included in
