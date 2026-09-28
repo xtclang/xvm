@@ -38,6 +38,12 @@ other protocol features still have no handler.
 The [adapter matrix and absent-feature inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 separate those states. Tree-sitter remains the shipped default; compiler mode remains opt-in.
 
+The accepted [embedded execution and debugging plan](../lang/doc/plans/plan-embedded-execution.md)
+extends the overall XTC tooling goal with R1–R8. Both IDEs should use one compile/build contract
+and a supervised persistent execution worker, with a fresh application container per run.
+The current branch can remain compiler-focused; runtime delivery is a separate extraction track.
+Compiler source/artifact revisions, cancellation and ownership must support that track now.
+
 The protocol inventory is checked against Microsoft's
 [LSP 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/),
 [3.18 method model](https://raw.githubusercontent.com/microsoft/language-server-protocol/gh-pages/_specifications/lsp/3.18/metaModel/metaModel.json)
@@ -435,6 +441,8 @@ evidence that existing push diagnostics, full tokens or eagerly populated respon
   `workspace/executeCommand` registry if server-run actions are required, with negotiated
   `workspace/applyEdit` and failure handling. Current module Run lenses use a client command;
   no server execute-command provider is advertised. Do not conflate running XTC with debugging.
+  Embedded Run commands must route to the shared build/execution service defined by R2–R5,
+  rather than assembling another CLI command or duplicating compilation in a protocol handler.
 - [ ] **L74 — Cross-project symbol identities.** Implement `textDocument/moniker` and stable
   import/export identities tied to module/artifact versions; snapshot-local symbol IDs cannot
   substitute for cross-project identities. Verify unrelated projects and binary/source matches.
@@ -460,6 +468,7 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 - [ ] **L79 — Debug inline values.** Define a debugger integration, then implement
   `textDocument/inlineValue` and `workspace/inlineValue/refresh`. Compiler type inlay hints do
   not provide runtime values. DAP breakpoints, stepping and evaluation remain a separate project.
+  The accepted R6–R7 runtime/DAP bridge is the dependency for those values.
 
 ### Protocol correctness and the completion gate
 
@@ -487,6 +496,30 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   batch; run selected native cases first and a full implemented IntelliJ checkpoint before
   submission. Update this checklist, the capability matrix, playbook, AST/API ownership record
   and commit extraction map together. Validate each later extracted PR independently.
+  Establish explicit response-time and memory targets using representative project sizes, and
+  include prolonged editing/restart/process-leak workloads on supported platforms. Record
+  packaging, source attachment and failure-recovery acceptance in both clients.
+
+### Embedded Run and debugging track (R1–R8)
+
+The [execution plan](../lang/doc/plans/plan-embedded-execution.md) records the source audit,
+recommended process model, compiler API implications and full acceptance cases. Its task list
+is part of overall professional XTC tooling completeness; these tasks are not silently added
+to the compiler-only PR:
+
+- [ ] **R1:** controlled repeat-run/runtime API baseline, including native-pool growth.
+- [ ] **R2:** immutable build results and compiler-proven runnable targets, including unsaved sources.
+- [ ] **R3:** asynchronous embedding/lib_runner sessions, arguments, console/input and reliable stop.
+- [ ] **R4:** supervised persistent execution worker, bounded retention and crash/close recovery.
+- [ ] **R5:** shared IntelliJ Community and VS Code Run/Stop/Rerun behavior and scenarios.
+- [ ] **R6:** DAP lifecycle backed by real run sessions, with honest advertised capabilities.
+- [ ] **R7:** session-scoped runtime debugging, source maps, breakpoints, stacks, variables and stepping.
+- [ ] **R8:** runtime/client parity, repeated-run/debug soak and independent release validation.
+
+Implementation order is R1/R2, then R3, R4/R5, R6, R7 and R8. Compiler-only operations must
+continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse and lib_runner
+child containers are the foundation; existing IDE shell commands and the DAP stub do not satisfy
+this track. In particular, the stub's verified breakpoint response is not real breakpoint support.
 
 Current native automation inventory: **113 shared cases with driver assertions**, plus startup.
 The previously missing 50 case bodies and X20/X81/X82 assertions are now written, compiled and

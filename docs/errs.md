@@ -1,5 +1,12 @@
 # Threading `errs` through the compiler
 
+**Execution architecture:** the accepted [embedded Run and debugging plan](../lang/doc/plans/plan-embedded-execution.md)
+keeps the compiler PR focused while defining how compilation artifacts feed reusable runtime
+sessions. Both IDEs will use the same build/run contract; a supervised execution worker reuses
+EmbeddingSupport/lib_runner and creates fresh application containers. R1–R8 cover the runtime and
+DAP work. Compiler ASTs/pools stay worker-owned, compile-only paths never start the VM, and source
+revisions remain paired with emitted artifacts for reruns and future breakpoint mapping.
+
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
 startup/cancellation race. Both have isolated fixes and process regressions; see
 [the diagnosis and master extraction notes](errs-lsp-process-lifecycle.md). These defects are
