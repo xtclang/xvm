@@ -7,7 +7,6 @@ import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 fun Driver.lookup(
@@ -18,10 +17,11 @@ fun Driver.lookup(
     dismissPopups()
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-    editor.scrollToCaret()
+    editor.scrollToCaretNow()
+    val inspection = PopupInspection(this, editor) { invokeAction("CodeCompletion", component = editor.component) }
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
-    waitFor(
+    awaitUi(
         message = "shared completion scope",
         timeout = 45.seconds,
         errorMessage = {
@@ -33,7 +33,7 @@ fun Driver.lookup(
                 }
         },
     ) {
-        requirePopupFocus()
+        inspection.recover()
         manager.getActiveLookup()?.let { !it.isCalculating() && matches(it.getItems()) } == true
     }
 }
@@ -101,11 +101,14 @@ fun Driver.accept(
     val expected = expectedText ?: before.replaceRange(at - prefix.length, at, label)
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
-    editor.scrollToCaret()
+    editor.scrollToCaretNow()
+    val inspection = PopupInspection(this, editor) { invokeAction("CodeCompletion", component = editor.component) }
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
-    waitFor("$label completion or single-item insertion", 45.seconds) {
-        requirePopupFocus()
+    awaitUi("$label completion or single-item insertion", 45.seconds) {
+        // An insertion may already have completed before focus was lost. Never reopen it.
+        if (editor.text == expected) return@awaitUi true
+        inspection.recover()
         editor.text == expected ||
             manager.getActiveLookup()?.let { !it.isCalculating() && it.getItems().any { item -> item.getLookupString() == label } } ==
             true
@@ -120,5 +123,5 @@ fun Driver.accept(
         }
         invokeAction("EditorChooseLookupItem", component = editor.component)
     }
-    waitFor("exact replacement of the typed prefix", 15.seconds) { editor.text == expected }
+    awaitUi("exact replacement of the typed prefix", 15.seconds) { editor.text == expected }
 }

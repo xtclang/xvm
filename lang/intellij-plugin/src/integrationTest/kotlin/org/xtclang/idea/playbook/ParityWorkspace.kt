@@ -16,7 +16,6 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.codeEditorForFile
 import com.intellij.driver.sdk.ui.components.common.ideFrame
-import com.intellij.driver.sdk.waitFor
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -135,7 +134,7 @@ class ParityWorkspace(
             val target = requireNotNull(refresh(directory.resolve(file)))
             withContext(OnDispatcher.EDT) { service<FileEditorManager>(singleProject()).openFile(target, false, false) }
             val document = Document(file, target)
-            waitFor("LSP4IJ opens $id/$file", 45.seconds) {
+            awaitUi("LSP4IJ opens $id/$file", 45.seconds) {
                 clientDocument(document)?.getSynchronizer()?.getDidOpenFuture()?.let { it.isDone() && !it.isCompletedExceptionally() } ==
                     true
             }
@@ -157,7 +156,7 @@ class ParityWorkspace(
 
     fun settle(document: Document) {
         val pending = requireNotNull(clientDocument(document)).getSynchronizer().flushPendingChanges()
-        with(driver) { waitFor("client sends current $id/${document.file}", 45.seconds) { pending.isDone() } }
+        with(driver) { awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() } }
         check(!pending.isCompletedExceptionally()) { "Document synchronization failed" }
         query("textDocument/documentSymbol", document)
     }
@@ -219,7 +218,7 @@ class ParityWorkspace(
         matches: (List<ReceivedDiagnostic>) -> Boolean,
     ): List<ReceivedDiagnostic> =
         with(driver) {
-            waitFor(
+            awaitUi(
                 message = "current diagnostics for $id/${document.file}",
                 timeout = 45.seconds,
                 getter = { receivedDiagnostics(document.editor) },
@@ -315,7 +314,7 @@ class ParityWorkspace(
                 service<ParityDocuments>().reloadFromDisk(cast(document.editor.document, ParityDocument::class))
                 service<FileEditorManager>(singleProject()).closeFile(document.editor.editor.getVirtualFile())
             }
-            waitFor("client closes ${document.file}", 30.seconds) { clientDocument(document) == null }
+            awaitUi("client closes ${document.file}", 30.seconds) { clientDocument(document) == null }
         }
 
     override fun close() {
