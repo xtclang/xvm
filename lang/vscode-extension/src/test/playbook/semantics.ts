@@ -133,14 +133,20 @@ export function semanticCases(): void {
 
     playbook('X42', async (workspace, data) => {
         const document = await workspace.open(data.file);
-        const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
-        const hints = await vscode.commands.executeCommand<vscode.InlayHint[]>('vscode.executeInlayHintProvider', document.uri, range);
-        assert.ok(hints);
-        const labels = hints.map(hint => typeof hint.label === 'string' ? hint.label : hint.label.map(part => part.value).join(''));
-        for (const expected of data.hints) { assert.ok(labels.some(label => label.includes(expected)), JSON.stringify(hints)); }
-        assert.ok(!hints.some(hint => hint.position.line === position(document, data.anchor).line));
-        assert.strictEqual(hints.filter(hint => hint.kind === vscode.InlayHintKind.Type).length, data.typeHintCount);
-        assert.ok(!labels.some(label => label.includes(data.excludedHint)));
+        async function verify(expected: typeof data.inferred): Promise<void> {
+            await noErrors(document.uri);
+            const range = new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length));
+            const hints = await vscode.commands.executeCommand<vscode.InlayHint[]>('vscode.executeInlayHintProvider', document.uri, range);
+            assert.ok(hints);
+            const labels = hints.map(hint => typeof hint.label === 'string' ? hint.label : hint.label.map(part => part.value).join(''));
+            for (const label of expected.hints) { assert.ok(labels.some(actual => actual.includes(label)), JSON.stringify(hints)); }
+            assert.ok(!hints.some(hint => hint.position.line === position(document, expected.anchor).line));
+            assert.strictEqual(hints.filter(hint => hint.kind === vscode.InlayHintKind.Type).length, expected.typeHintCount);
+            assert.ok(!labels.some(label => label.includes(expected.excludedHint)));
+        }
+        await verify({ ...data, source: document.getText() });
+        await workspace.replace(document, data.inferred.source);
+        await verify(data.inferred);
     });
 
     playbook('X43', async (workspace, data) => {
