@@ -70,11 +70,12 @@ class XdkHeaderSlotsTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["<String> void damaged(Str§ value) {}", "class Damaged<String> extends Str§ {}"])
-    fun `unregistered formals shadow outer types without acquiring fabricated identities`(declaration: String) {
+    fun `unregistered formals shadow outer types and report their own bound`(declaration: String) {
         val marked = "module Headers { $declaration }"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, marked.replace("§", ""))
-            assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§')).map { it.label }).doesNotContain("String")
+            assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§')).single { it.label == "String" }.detail)
+                .isEqualTo("type parameter String extends Object")
         }
     }
 

@@ -4,8 +4,11 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -50,7 +53,16 @@ final class CursorScope {
         AstNode scope = declarationScope(site);
         if (site.getTarget() instanceof NamedTypeExpression type) {
             if (unregisteredFormals(site).contains(firstName(type))) {
-                return List.of();
+                if (type.left != null || type.getNames().length < 2) {
+                    return List.of();
+                }
+                var bound = resolveFormals(site, errs).stream()
+                        .filter(formal -> formal.name().getValueText().equals(firstName(type)))
+                        .findFirst();
+                return bound.map(formal -> parameterizedTypes(new NamedTypeExpression(
+                        new NamedTypeExpression(type, formal.constraint()),
+                        type.names.subList(1, type.names.size()), type.paramTypes, type.getEndPosition()),
+                        scope, site.getCompletionPrefix(), errs)).orElseGet(List::of);
             }
             if (type.left != null) {
                 return parameterizedTypes(type, scope, site.getCompletionPrefix(), errs);
@@ -78,11 +90,81 @@ final class CursorScope {
     }
 
     private static Set<String> unregisteredFormals(IncompleteStatement site) {
+        return formalParameters(site).stream().map(Parameter::getName).collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static List<Parameter> formalParameters(IncompleteStatement site) {
         return switch (site.getParent()) {
-            case IncompleteDeclarationStatement declaration -> declaration.formalNames();
-            case IncompleteTypeCompositionStatement declaration -> declaration.formalNames();
-            default -> Set.of();
+            case IncompleteDeclarationStatement declaration -> declaration.formalParameters();
+            case IncompleteTypeCompositionStatement declaration -> declaration.formalParameters();
+            default -> List.of();
         };
+    }
+
+    /** Resolve bounds on disposable syntax only; no unfinished class/method or formal is registered. */
+    static List<CursorBinding.Formal> declarationFormals(IncompleteStatement site, ErrorListener errs) {
+        return site.getTarget() instanceof NamedTypeExpression named
+                && (named.left != null || named.getNames().length > 1) ? List.of() : resolveFormals(site, errs);
+    }
+
+    private static List<CursorBinding.Formal> resolveFormals(IncompleteStatement site, ErrorListener errs) {
+        var parameters = formalParameters(site);
+        var byName = parameters.stream().collect(Collectors.toMap(Parameter::getName, Function.identity(),
+                (first, second) -> first));
+        return parameters.stream().takeWhile(parameter -> !errs.isAbortDesired()).map(parameter -> {
+            TypeConstant bound = formalBound(parameter, declarationScope(site), byName, Set.of(), errs);
+            return bound == null ? null : new CursorBinding.Formal(parameter.getNameToken(), bound);
+        }).filter(Objects::nonNull).toList();
+    }
+
+    private static TypeConstant formalBound(Parameter parameter, AstNode scope, Map<String, Parameter> parameters,
+                                           Set<String> resolving, ErrorListener errs) {
+        if (resolving.contains(parameter.getName()) || errs.isAbortDesired()) {
+            return null;
+        }
+        if (parameter.getType() == null) {
+            return scope.pool().typeObject();
+        }
+        var active = Stream.concat(resolving.stream(), Stream.of(parameter.getName()))
+                .collect(Collectors.toUnmodifiableSet());
+        var copy = substituteFormals((TypeExpression) parameter.getType().clone(), scope, parameters, active, errs);
+        if (copy == null) {
+            return null;
+        }
+        copy.setParent(scope);
+        var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
+        TypeConstant bound = resolveType(copy, probe);
+        return bound != null && visibleNames(copy, scope.getComponent().getIdentityConstant()) ? bound : null;
+    }
+
+    /** Written references to sibling formals resolve through their bounds, never an outer homonym. */
+    private static TypeExpression substituteFormals(TypeExpression type, AstNode scope,
+            Map<String, Parameter> parameters, Set<String> resolving, ErrorListener errs) {
+        if (type instanceof BadTypeExpression) {
+            return null;
+        }
+        if (type instanceof NamedTypeExpression named && named.left == null
+                && parameters.containsKey(named.getNames()[0])) {
+            TypeConstant bound = formalBound(parameters.get(named.getNames()[0]), scope, parameters, resolving, errs);
+            if (bound == null || named.paramTypes != null) {
+                return null;
+            }
+            var replacement = new NamedTypeExpression(named, bound);
+            return named.getNames().length == 1 ? replacement
+                    : new NamedTypeExpression(replacement, named.names.subList(1, named.names.size()),
+                            null, named.getEndPosition());
+        }
+        var children = StreamSupport.stream(type.children().spliterator(), false).toList();
+        for (AstNode child : children) {
+            if (child instanceof TypeExpression childType) {
+                TypeExpression replacement = substituteFormals(childType, scope, parameters, resolving, errs);
+                if (replacement == null) {
+                    return null;
+                }
+                type.replaceChild(child, replacement);
+            }
+        }
+        return type;
     }
 
     /** Use contextual TypeInfo to enumerate children, then normal type-name resolution to bind them. */
