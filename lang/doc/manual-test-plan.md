@@ -1792,6 +1792,10 @@ Explicit source settings now use the native Rename action through `xtc/rename`, 
 and after source graphs. It does not install either graph. Both clients reject a mismatched graph
 or a stale settings snapshot before accepting the edit. Standard `textDocument/rename` continues
 to refuse graph changes for clients without this persistence integration.
+An explicit graph must contain every consumer you intend to update. An omitted source module
+is outside the proof and will not be renamed; its mere presence beside a configured root does
+not cause rejection. Primary-constructor properties, lambda parameters, escaped public method
+values and unsupported composition routes remain refused.
 
 - **VS Code:** keep the explicit graph in workspace settings (`.vscode/settings.json`, or the
   `settings` object of a saved `.code-workspace`). Rename edits only `xtc.compiler.sourceModules`
