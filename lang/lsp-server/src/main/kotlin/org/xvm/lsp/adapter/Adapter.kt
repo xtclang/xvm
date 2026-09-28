@@ -38,6 +38,7 @@ interface Adapter : Closeable {
                 .filterNot {
                     it in
                         setOf(
+                            AdapterCapability.DECLARATION,
                             AdapterCapability.TYPE_HIERARCHY,
                             AdapterCapability.TYPE_DEFINITION,
                             AdapterCapability.IMPLEMENTATION,
