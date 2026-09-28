@@ -8,6 +8,11 @@ IDE errors; its separate startup-editing and focus-recovery checks also pass. Bo
 live case progress. See the
 [current validation record](../../docs/errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
 
+The later L55/L61/L62 batch passes the real teaching-workspace memory/rename acceptance,
+declaration lookup and companion-directory rename checks. Selected X4/X102/X103/X104 pass in
+both clients; VS Code verifies Undo and IntelliJ verifies native reverse rename. See the
+[current batch receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).
+
 C28/L53/L54 adds empty/qualified type slots, generic/multiple-return headers and native IntelliJ
 workspace/refactoring assertions. The [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54)
 distinguishes full backend results, selected VS Code checks and selected native IntelliJ receipts.
@@ -104,9 +109,9 @@ and the other distribution libraries, is now shared by production and compiler t
 > See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
 The [active compiler completion checklist (L55–L82)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
-tracks the remaining implementation and validation work. All 24 project-defined adapter
+tracks the remaining implementation and validation work. All 25 project-defined adapter
 capabilities have compiler implementations, many with explicit bounds; this is not full LSP
-coverage. Separate declaration lookup, pull diagnostics, token range/delta, lazy resolve,
+coverage. Pull diagnostics, token range/delta, lazy resolve,
 broader refactorings, monikers, inline completion/values, colors and notebooks are among the
 absent features. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
 to distinguish an unsupported feature from a failed playbook case.
@@ -114,9 +119,9 @@ to distinguish an unsupported feature from a failed playbook case.
 IntelliJ implements and passes all 113 shared scenarios, plus startup. The complete native run
 includes the 50 newly added cases and X20/X81/X82 assertion additions, with zero IDE errors.
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
-records receipts and actual client gaps. L60 is complete. L55's proof-memory fix passes its 24-root regression,
-but still needs the real teaching-workspace/open-buffer acceptance. L56 now passes a separate
-native test of edits, replacement and close/reopen during initialization, including current
+records receipts and actual client gaps. L60 is complete. L55 passes both its 24-root memory
+regression and the real 25-root teaching workspace with one and five unsaved buffers at 512 MiB.
+L56 now passes a separate native test of edits, replacement and close/reopen during initialization, including current
 diagnostics/folds. The normal feature readiness wait is not used as that evidence.
 
 ---
@@ -2228,10 +2233,11 @@ Done - see §6, §7, §7a and [module sessions and hierarchy](#compiler-module-s
 
 Still to come:
 - Broader Java parser recovery, incomplete-expression contexts and callable forms
-- Unsaved import-edge/dynamic workspace-folder discovery and a persistent cross-module index
+- Persistent indexing and measured incremental work across larger module graphs
 - Binary source attachment, conditional-mixin hierarchy and broader implementation targets
-- Wider member/workspace rename: instance-property/accessor families, constructors and
-  mixin/delegating/capped chains; public-parameter caller closure and consumers outside the graph
+- Wider member/workspace rename: constructor/public-parameter contracts, composition families,
+  qualified or explicitly configured module moves and implicit package directories; consumers
+  outside the graph remain unknown
 - Diagnostic-driven quick fixes and refactorings
 
 L61 declaration acceptance: X4 now also requests Go to Declaration for the shadowed local and
@@ -2239,4 +2245,5 @@ property and checks that their distinct declaration targets match definition. VS
 declaration provider; IntelliJ checks the request through the installed client transport beside
 the existing native navigation actions. Backend/protocol cases cover multiple inherited contracts,
 property overrides, import aliases, closed consumers, indexed libraries and stale source.
-Execution is pending the combined L55/L61/L62 checkpoint.
+Combined backend/protocol validation and selected X4/X102/X103/X104 runs pass in both clients.
+See the [L55/L61/L62 receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).

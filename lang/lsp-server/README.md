@@ -122,13 +122,16 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 ### Backend Comparison
 
-Compiler mode has implementations for all 24 capabilities in this project's adapter interface,
+Compiler mode has implementations for all 25 capabilities in this project's adapter interface,
 plus push diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Separate go-to-declaration, pull
-diagnostics, monikers, inline completion/values, colors, notebooks and broader refactorings are
+bounded; the interface does not cover every LSP feature. Pull diagnostics, monikers,
+inline completion/values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L82 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
+Explicit declaration lookup returns local/import-alias declarations or the inherited written
+contracts of an overriding method/property, including multiple source targets. Definition and
+implementation retain their separate meanings. Indexed library sources remain read-only.
 
 | Feature | Mock | Tree-sitter | XDK compiler |
 |---------|------|-------------|--------------|
@@ -168,8 +171,12 @@ when independent neighbors fail. Exact references and refactoring require comple
 Graph rename additionally covers inline source types and static members through recompilation and
 binding/dispatch comparison. Import actions remove proven-unused ordinary imports or sort contiguous
 imports while retaining comments; they use versioned edits. Source property/accessor families,
-explicit import aliases and simple member-file type moves also use compiler proof. File moves require
-client resource-operation support and exclude module roots, collisions and companion directories.
+explicit import aliases and member-file type/package moves also use compiler proof. Resource moves
+include existing companion directories and simple discovery-owned module roots, updating closed
+imports while retaining local package aliases. Versioned text edits precede file/directory moves.
+They require client resource-operation support and reject collisions, symlinks, qualified module
+names and module roots owned by explicit host configuration. Implicit package directories without
+written declarations, constructor keywords and public parameter contracts remain unsupported.
 Compiler mode handles `workspace/didRenameFiles` for local XTC files, refreshing old and new
 locations even without watcher events. This also enables LSP4IJ's close/open sequence for renamed
 buffers, preventing stale overlays when an open member is renamed again.
@@ -180,8 +187,9 @@ outside rename scope.
 The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
 [validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
 The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. L55 now fixes
-proof retention in a 24-root/512 MiB regression; the actual teaching workspace remains open
-acceptance work. Native startup editing now passes the five-phase L56 check, including restart,
+proof retention in a 24-root/512 MiB regression; the actual 25-root teaching workspace also
+passes at 512 MiB with one and five unsaved buffers, stable diagnostics and released compiler
+objects. Native startup editing now passes the five-phase L56 check, including restart,
 replacement and close/reopen. The X103 reverse-rename deadlock in the startup transport hook is fixed. The active checklist records those limits and the
 current native inventory: all 113 shared cases pass together in `run-6034631232732848040`, with
 zero IDE errors and zero JUnit failures/errors/skips. This includes the 50 formerly missing cases,
