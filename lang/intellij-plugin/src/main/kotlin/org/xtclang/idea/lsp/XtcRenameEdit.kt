@@ -109,8 +109,11 @@ class XtcRenameEdit private constructor(
                             cancellation.checkCanceled()
                             val server = snapshot.server
                             cancellation.execute(
-                                if (server is XtcLanguageServer) server.renameProposal(params)
-                                else server.textDocumentService.rename(params).thenApply { it?.let(::RenameProposal) },
+                                if (server is XtcLanguageServer) {
+                                    server.renameProposal(params)
+                                } else {
+                                    server.textDocumentService.rename(params).thenApply { it?.let(::RenameProposal) }
+                                },
                             )
                         }.thenApply { proposal ->
                             val edit = proposal?.edit

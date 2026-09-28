@@ -43,7 +43,10 @@ internal class SourceGraphEdit private constructor(
         )
     }
 
-    private fun replacement(expected: List<SourceModuleConfiguration>, next: List<SourceModuleConfiguration>): String =
+    private fun replacement(
+        expected: List<SourceModuleConfiguration>,
+        next: List<SourceModuleConfiguration>,
+    ): String =
         try {
             snapshot.replacement(expected, next)
         } catch (failure: IllegalArgumentException) {
@@ -69,10 +72,15 @@ internal class SourceGraphEdit private constructor(
             return SourceGraphEdit(this, graph)
         }
 
-        fun replacement(expected: List<SourceModuleConfiguration>, next: List<SourceModuleConfiguration>): String =
+        fun replacement(
+            expected: List<SourceModuleConfiguration>,
+            next: List<SourceModuleConfiguration>,
+        ): String =
             SourceGraphConfiguration.replace(
                 requireNotNull(settings.getLanguageServerSettings(serverId)?.configurationContent),
-                expected, next, Path.of(requireNotNull(project.basePath)).toUri(),
+                expected,
+                next,
+                Path.of(requireNotNull(project.basePath)).toUri(),
             )
 
         fun install(content: String?) {
@@ -84,7 +92,14 @@ internal class SourceGraphEdit private constructor(
     }
 
     companion object {
-        fun capture(project: Project, serverId: String): Snapshot =
-            Snapshot(project, serverId, GlobalLanguageServerSettings.getInstance().getLanguageServerSettings(serverId)?.configurationContent)
+        fun capture(
+            project: Project,
+            serverId: String,
+        ): Snapshot =
+            Snapshot(
+                project,
+                serverId,
+                GlobalLanguageServerSettings.getInstance().getLanguageServerSettings(serverId)?.configurationContent,
+            )
     }
 }
