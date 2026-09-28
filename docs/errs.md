@@ -1672,6 +1672,15 @@ are copied from existing signature slots and source tokens in `SemanticModelBuil
 or retained field is fabricated. Register-backed `super` call provenance remains an explicit gap,
 not an accessor added speculatively to the AST.
 
+**Composition rename checkpoint (2026-09-28; validation pending):** Kotlin worker inspection follows
+existing `MethodInfo`/`MethodBody` into, narrowing and delegation links. Detached generated-method
+identities include their host, written contracts and receiver properties, so before/after proof
+can compare a forwarding route without pretending it is a written declaration. Source mixin and
+Ref/Var-annotated property families use existing compiler composition metadata. No AST field,
+Java API, optimized-chain generation or forwarding-method generation is added. Unsupported routes
+and binary contracts remain non-editable; regression fixtures cover mixins, Lazy properties and
+delegation through interface and concrete receiver types.
+
 **Public-parameter rename checkpoint (2026-09-28; validation pending):** successful
 `NewExpression.validate` records the selected constructor and written argument labels in the
 existing attempt-owned `InvocationBinding.Collector`, before argument validation rewrites the
