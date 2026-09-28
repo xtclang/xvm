@@ -1256,7 +1256,13 @@ class XdkAdapter internal constructor(
     ): List<Location> {
         if (module(uri) == null && hasProject(uri)) return workspaceNavigation(uri)?.declarations(uri, line, column).orEmpty()
         val module = module(uri) ?: return emptyList()
-        return module.locations(module.document(uri)?.semantics?.declarationLocationsAt(line, column).orEmpty())
+        return module.locations(
+            module
+                .document(uri)
+                ?.semantics
+                ?.declarationLocationsAt(line, column)
+                .orEmpty(),
+        )
     }
 
     override fun findReferences(
@@ -1314,6 +1320,7 @@ class XdkAdapter internal constructor(
             }
         }
         val symbol = model.symbolAt(line, column)?.takeIf { it.renameable || isProjectTarget(uri, it) } ?: return null
+        if (symbol.kind == SemanticModel.SymbolKind.MODULE && model.occurrenceAt(line, column)?.name != symbol.name) return null
         val range =
             model.occurrences
                 .firstOrNull {
@@ -1328,7 +1335,8 @@ class XdkAdapter internal constructor(
         symbol: SemanticModel.Symbol,
     ): Boolean =
         symbol.name != "construct" &&
-            symbol.kind in setOf(
+            symbol.kind in
+            setOf(
                 SemanticModel.SymbolKind.METHOD,
                 SemanticModel.SymbolKind.TYPE,
                 SemanticModel.SymbolKind.PROPERTY,
