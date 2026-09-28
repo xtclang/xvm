@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
-/** Package the single IDE-side reader from test classes, without changing the shipping artifact. */
+/** Package IDE-side test helpers without changing the shipping artifact. */
 object DiagnosticProbePlugin {
     fun create(directory: Path): Path {
         val plugin = directory.resolve("xtc-playbook-probe")
@@ -21,6 +21,7 @@ object DiagnosticProbePlugin {
                   <vendor>xtclang.org</vendor>
                   <depends>com.intellij.modules.platform</depends>
                   <depends>com.intellij.modules.lang</depends>
+                  <depends>com.redhat.devtools.lsp4ij</depends>
                 </idea-plugin>
                 """.trimIndent().toByteArray(),
             )
