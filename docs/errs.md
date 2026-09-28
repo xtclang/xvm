@@ -20,7 +20,7 @@ that is not full protocol or language coverage. See the
 L55's real-workspace acceptance, the bounded L56–L59 work and native parity checkpoint are
 complete. L61–L82 feature/protocol scopes and their remaining limits stay on the active checklist.
 
-L60 now has IntelliJ implementations for all 113 shared playbook cases, including the 50
+L60 established IntelliJ implementations for its 113 shared playbook cases, including the 50
 previously missing cases. All 113 pass together in `run-6034631232732848040`, with zero IDE errors
 and zero JUnit failures/errors/skips, closing L60. X20 has an Ecstasy Parameter
 Info rendering fix, X81/X82 inspect completion kinds, and X57 verifies a native rename guard
@@ -1677,8 +1677,9 @@ derived from compiler parent identities and the captured source-directory layout
 AST source spans. Proposed directory moves replay the whole captured membership. Qualified module
 renames replace the simple name and preserve the domain. An immutable host-facing rename proposal
 also carries the replacement explicit module graph; the host must persist and install it when
-accepting the edit. Ordinary LSP rename keeps refusing explicit graph changes until the clients
-support that transaction. This checkpoint adds no Java API, AST field or clone rule.
+accepting the edit. The later native-persistence checkpoint below implements that transaction
+through `xtc/rename`; ordinary LSP rename still refuses graph changes for generic clients.
+This checkpoint adds no Java API, AST field or clone rule.
 
 **Composition rename checkpoint (2026-09-28; backend validated):** Kotlin worker inspection follows
 existing `MethodInfo`/`MethodBody` into, narrowing and delegation links. Detached generated-method
@@ -1706,8 +1707,9 @@ retained; record deconstruction patterns must add the constructor-binding compon
 Kotlin parameter-slot facts join public declarations, override slots and named
 callers across source modules. Escaped method values and binary contracts still refuse edits.
 Primary-constructor property parameters and lambda parameters remain outside this checkpoint.
-The combined run passed 76 LSP tests and 10 Java API tests with no failures or skips. New editor
-acceptance is still pending; see the integration commit map and additional manual playbook checks.
+The combined run passed 76 LSP tests and 10 Java API tests with no failures or skips. Subsequent
+shared X109–X118 acceptance passes in both clients; see the native-persistence checkpoint below
+and the integration commit map for the distinct validation receipts.
 
 **Rename follow-up (2026-09-23):** no AST field, accessor or clone rule was added. The existing
 attempt-owned `InvocationBinding.Argument` now carries a nullable immutable `Label(name, start, end)`
@@ -2300,4 +2302,8 @@ The [rename boundary audit](errs-integration-plan.md#rename-boundary-audit) reco
 constructor property parameters, lambda parameters, escaped method values and unknown dispatch
 routes remain refused. Explicit graph scope is different: unknown consumers are omitted, not
 automatically rejected. The host must include every intended consumer. New regression and editor
-fixtures are written; their combined validation is pending.
+fixtures pass: all ten new editor scenarios have selected receipts in both clients, 54 LSP tests
+and four IntelliJ settings tests pass. The catalog now has 123 cases; its preceding 113-case full
+checkpoint remains historical, not a new full run. VS Code edited-file moves require its normal
+refactoring auto-save policy; disabling that policy is explicitly refused because unsaved
+resource Undo is not reliable. See the [validation and extraction map](errs-integration-plan.md#shared-rename-and-native-settings-validation).

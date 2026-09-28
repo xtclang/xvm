@@ -382,7 +382,7 @@ VS Code receipts above.
   exercise reverse renames, constructor type uses and resource capability negotiation.
   That initial backend/editor validation passed. The following extension was implemented in three
   separate commits before a combined backend run (76 LSP tests and 10 Java API tests passed, none
-  skipped). New native/shared-playbook coverage remains pending:
+  skipped). Shared X109–X118 now have passing selected runs in both editors:
   1. Public parameter slots, override callers and explicit constructor labels: backend validated.
      Escaped method values, binary contracts, primary-constructor
      property parameters and lambda parameters retain conservative refusal.
@@ -398,10 +398,11 @@ VS Code receipts above.
      use `xtc/rename` with before/after graph checks. VS Code edits the workspace settings document
      in the WorkspaceEdit (including unsaved configuration and Save All); IntelliJ persists its
      existing LSP4IJ configuration with native Undo/Redo. Standard LSP rename still refuses graph
-     replacement for other clients. Shared X118 and settings/protocol regression tests are written;
-     this batch's execution is pending.
-  L62 remains open for these client transactions, remaining conservative exclusions, unknown
-  external consumers and shared editor acceptance. The `construct` keyword is never renamed.
+     replacement for other clients. Shared X118 and settings/protocol regression tests pass.
+     VS Code edited-file moves require its default `files.refactoring.autoSave = true`;
+     disabling that policy refuses the proposal before changing sources or settings.
+  L62 remains open for the conservative exclusions, additional composition routes, unknown
+  external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
@@ -537,7 +538,8 @@ continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse a
 child containers are the foundation; existing IDE shell commands and the DAP stub do not satisfy
 this track. In particular, the stub's verified breakpoint response is not real breakpoint support.
 
-Current native automation inventory: **113 shared cases with driver assertions**, plus startup.
+Current native automation inventory: **123 shared cases with driver assertions**, plus startup.
+The ten L62 additions have selected passing receipts below; no full 123-case run is claimed.
 The previously missing 50 case bodies and X20/X81/X82 assertions are now written, compiled and
 included in the clean 113-case native checkpoint `run-6034631232732848040`. Completion still requires
 explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
@@ -553,7 +555,7 @@ negative answers and cancellation. Diagnostics for nonexistent/deleted files are
 client's verbose trace because LSP4IJ drops publications without a virtual file. That proves
 protocol delivery, not a Problems row for a nonexistent file.
 
-Current validation: **all 113 scenarios pass together** in `run-6034631232732848040`, including
+L60 checkpoint validation: **all its 113 scenarios pass together** in `run-6034631232732848040`, including
 all 50 previously missing cases, X20/X81/X82 and X93–X98. The IDE-error gate is clean, and the
 JUnit XML reports no failures, errors or skips. Earlier failures and their corrections are
 retained below. Each run writes live `progress.jsonl` and final `results.json`.
@@ -827,18 +829,67 @@ Remaining acceptance and scope:
   **X109–X117** cover public/constructor parameter slots, override slots, delegation, mixin
   methods/properties, Lazy properties, qualified modules and implicit packages. Both drivers
   compare every file, start with closed consumers and perform one Undo.
-- [ ] Run selected X109–X117 cases in both editors; implementation is not native acceptance.
-  Existing X103 is not evidence for every new variant.
+- [x] Run selected X109–X118 cases in both editors with closed consumers, resource operations,
+  exact before/after contents and native history. The receipts below include every new variant;
+  existing X103 is not used as substitute evidence.
 - [x] Implement explicit graph persistence in both native Rename paths through `xtc/rename`.
   The protocol includes expected/replacement graphs and versioned source/resource edits. Clients
   validate settings, preserve unrelated options and restore the graph on Undo/Redo. VS Code
   supports workspace settings and unsaved configuration; Save All persists it. IntelliJ updates
   LSP4IJ's existing global configuration store and guards both history directions. Generic
-  standard LSP clients continue to refuse graph changes. X118 and settings/server tests await
-  this batch's combined run.
+  standard LSP clients continue to refuse graph changes. X118 and settings/server tests pass.
+  VS Code follows its native refactoring save policy and refuses edited-file moves when
+  `files.refactoring.autoSave` is disabled; it never overrides that user preference.
 - [x] Audit primary-constructor properties, lambda parameters, escaped method values, dispatch
   routes and omitted consumers. `XdkRenameBoundaryTest` adds focused acceptance/refusal fixtures;
-  execution is pending with the combined batch. The findings below retain explicit follow-ups.
+  all eight tests pass. The findings below retain explicit follow-ups.
+
+### Shared rename and native settings validation
+
+| Review unit | Implementation checkpoint | Extraction boundary |
+| --- | --- | --- |
+| Shared rename acceptance | `0a82d44fc` | Scenario data X109–X118, both drivers, fixture setup and manual rows; keep final action IDs, refactoring metadata and history assertions with these tests |
+| Graph persistence | `3e3cbf405` | Proposal DTO/extension, adapter local/project routing, both native clients and settings/server tests; include final settings guards and VS Code resource-history refusal |
+| Remaining scope audit | `a2f84748d` | Boundary regression class and audit documentation; include canonical temporary-path correction |
+
+Validation follow-up **`2e39ee8bd`** belongs with these units, not a new feature PR. The native persistence
+unit depends on the resource proposal/proof API from the preceding L62 implementation batch.
+The adapter keeps returning standard edits to generic clients only when no graph replacement is
+required. Extracted PRs must still build and pass independently.
+
+Validation after the three implementation commits:
+
+- Compiler/LSP: **54 tests** across parameter, resource, project and local rename, protocol, and
+  boundary classes. The first run exposed only a macOS `/var` versus `/private/var` assertion;
+  canonicalizing that fixture path and rerunning all eight boundary tests passed. No skips.
+- IntelliJ settings: **4 tests**, no failures/errors/skips, including changed graphs, malformed
+  intervening settings, duplicate graph entries, unrelated options and both history directions.
+- IntelliJ native: `run-6245646041474423108` passed **X109–X118, X53 and X57**, plus startup,
+  with zero reported IDE errors. The first run exposed a harness action-ID mistake (`Undo`
+  instead of `$Undo`); correcting Undo/Redo action IDs made the full selected batch pass.
+- VS Code: `run-3CeLiB` passed **X109–X117, X53, X57 and X103**. X118 exposed a settings-cache
+  delay after saving; reading the live settings document fixed it. `run-7Xbo86` then passed
+  **X118 and CFG1–CFG3**, including resource moves, closed consumers, graph persistence, Undo,
+  Redo, second Undo and refusal when refactoring auto-save is disabled.
+
+The resource-history investigation reproduced a VS Code limitation: applying a plain WorkspaceEdit
+that edits and moves the same dirty source can restore its path without restoring its text.
+Reordering moves ahead of text appeared to fix Undo but broke Redo, so that workaround was removed.
+VS Code's native Rename uses `files.refactoring.autoSave` (default true); the harness now applies
+refactoring metadata to match it. The adapter refuses edited-file moves if that setting is false.
+It does not change the setting, save files from the provider or install a private undo stack.
+Text-only renames and moves of unedited companions do not need this guard. Supporting the disabled
+policy safely remains a follow-up, not passing coverage. The opened settings document also stays
+authoritative immediately after save, before the asynchronous configuration cache catches up. The relevant editor behavior is in
+[VS Code's Rename action](https://github.com/microsoft/vscode/blob/main/src/vs/editor/contrib/rename/browser/rename.ts)
+and [bulk-edit save policy](https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/bulkEdit/browser/bulkEditService.ts).
+
+Final `spotlessCheck`, LSP/plugin ktlint and TypeScript lint pass. ESLint reports only five existing
+unused-argument warnings in unrelated playbook files. No Gradle build logic was changed; the final
+editor and plugin checks reused or successfully stored the configuration cache.
+
+These are selected receipts against the integrated branch, not a new full 123-case run. The compiler
+adapter remains opt-in; Tree-sitter remains the shipped default.
 
 ### Rename boundary audit
 
@@ -850,9 +901,18 @@ Remaining acceptance and scope:
 | Composition routes | Method dispatch accepts written Explicit/Default/Declared/Abstract, follows FromInto/Capped/Delegating, and refuses unknown, recursive or over-depth routes. Implicit, Union, SansCode, Field and Native fall through to unsupported. Property chains accept Explicit/Declared/Default/FromInto/Delegating only, and every member must remain a written source declaration. Existing binary-contract tests and the new union-receiver case cover important refusals; this is not exhaustive native route coverage. | Add compiler fixtures per remaining route and source-owned declaration provenance before enabling one. Keep binary/native contracts read-only; generated forwarding bodies are not a source identity. |
 | Consumers outside an explicit graph | **Not automatically refused.** The supplied graph is the host's declared proof boundary. `XdkProject.buildOrder()` cannot enumerate unknown clients; an omitted Consumer.x remains untouched even when it happens to be beside a registered root. The new test contrasts this with registering that consumer. | Include every intended consumer in the graph, or define a wider host index/dependency manifest. Workspace roots/discovery are not evidence about arbitrary external repositories or binaries. Do not call this whole-program rename. |
 
-The remaining scope work is therefore explicit: primary-constructor provenance, lambda callable
-provenance, escaped-value flow, additional composition fixtures/routes, and a host-defined external
-consumer boundary. These are not marked implemented merely because current edits fail closed.
+Remaining rename work (refusals are not completed support):
+
+- [ ] Publish immutable primary-constructor property/parameter provenance and prove both contracts.
+- [ ] Define stable lambda parameter identities and invocation/escape proof, including shadowing.
+- [ ] Track callable origins through stored, returned and passed method values.
+- [ ] Add fixtures for each unsupported composition route before enabling source-owned routes;
+  keep native/binary contracts read-only.
+- [ ] Define an external consumer manifest/index boundary beyond the explicitly configured graph.
+- [ ] Support VS Code edited-file resource history with refactoring auto-save disabled, or retain
+  the documented pre-edit refusal.
+- [ ] Broaden native configuration acceptance beyond the single-folder fixtures: saved VS Code
+  multi-root workspaces, global/folder overrides, and intervening settings edits during history.
 This batch changes no Java AST node or compiler pipeline; the client persistence protocol and
 scope tests consume the existing immutable embedding facts.
 
