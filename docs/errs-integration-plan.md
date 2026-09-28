@@ -1048,6 +1048,16 @@ This is structural organization, not a new LSP dependency in the compiler. The p
 represent incomplete source syntax usable by embedding hosts generally. No move is included in
 the current rename validation batch.
 
+## Native configuration acceptance follow-up
+
+The VS Code launcher now accepts `-PcompilerPlaybookMultiRoot=true` for a saved two-folder
+workspace. X118 exercises the same real compiler proposal and native Rename/Undo/Redo in either
+layout, rejects a graph override in the other folder, and deterministically edits the actual
+settings document during the real client's edit conversion. The refusal must leave every source
+unchanged. This is client race coverage, not a mocked compiler reply. IntelliJ's project-owned
+settings have no VS Code workspace/folder override hierarchy; its existing X118 and pure history
+guards remain the corresponding coverage. Fresh selected validation is pending for this change.
+
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 
 All three implementation checkpoints were committed before running playbooks. Validation then
