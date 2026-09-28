@@ -36,7 +36,9 @@ internal sealed interface ProofIdentity {
     ) : ProofIdentity
 
     /** The single compiler-generated shorthand constructor, with no invented declaration span. */
-    data class PrimaryConstructor(val owner: ProofIdentity) : ProofIdentity
+    data class PrimaryConstructor(
+        val owner: ProofIdentity,
+    ) : ProofIdentity
 
     /** A mixin super register is relative to its written method and each adopting host's chain. */
     data class Super(
