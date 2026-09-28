@@ -510,6 +510,15 @@ performs bound resolution on disposable copies, and the attempt-owned `CursorBin
 source names and compiler-resolved bounds. The LSP copies these into detached facts and labels
 bounds explicitly, without fabricating declaration identities for unfinished headers.
 
+### Compound value cursor ownership (L58)
+
+`Parser` now creates the existing zero-width `IncompleteExpression` at a missing primary operand
+only for an explicit cursor. `IncompleteStatement.getArgumentCall` follows enclosing expression
+syntax, and the separate `PartialArgument` helper clones and substitutes the selected hole while
+retaining operators. No operator node, mutable AST field or per-node semantic cache is added.
+`PartialCallResolver` owns callable fallbacks; receiver insertion is immutable candidate metadata
+copied by the Kotlin host. Ordinary compiler argument fitting proves each suggested insertion.
+
 ## Using it
 
 Worked examples of the API the phases arrived at. Each is real code from the tree or the tests,

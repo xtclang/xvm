@@ -153,9 +153,18 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     /** Fits the written arguments; missing arguments cannot establish a selected overload. */
     public record Candidate(MethodConstant method, SignatureConstant signature,
-                            List<InvocationBinding.Argument> arguments, boolean converting) {
+                            List<InvocationBinding.Argument> arguments, boolean converting, boolean receiverArgument) {
         public Candidate {
             arguments = List.copyOf(arguments);
+        }
+
+        public Candidate(MethodConstant method, SignatureConstant signature,
+                         List<InvocationBinding.Argument> arguments, boolean converting) {
+            this(method, signature, arguments, converting, false);
+        }
+
+        public Candidate withReceiverArgument() {
+            return new Candidate(method, signature, arguments, converting, true);
         }
     }
 
