@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -17,6 +18,43 @@ import java.time.Duration
 class XdkTeachingWorkspaceTest {
     @TempDir
     lateinit var directory: Path
+
+    @Test
+    fun `delegate property names use the compiler composition binding`() {
+        val text =
+            "module Delegate { interface Api {} class Engine implements Api {} " +
+                "class Forward(Engine target) delegates Api(target) {} }"
+        val uri = directory.resolve("Delegate.x").toUri().toString()
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            val use = text.lastIndexOf("target")
+            assertThat(adapter.findDefinition(uri, 0, use)?.startColumn).isEqualTo(text.indexOf("target"))
+        }
+    }
+
+    @Test
+    fun `unproven bindings still reject rename when they occur in a transitive consumer`() {
+        val library = "module Library { class Box { Int number = 1; } }"
+        val consumer =
+            "module Consumer { package lib import Library; " +
+                "annotation Tracked<T> into Var<T> { @Override T get() = super(); } " +
+                "class State { @Tracked Int value = 1; } Int use(lib.Box box) = box.number; }"
+        directory.resolve("Library.x").toFile().writeText(library)
+        directory.resolve("Consumer.x").toFile().writeText(consumer)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val uri =
+                directory
+                    .resolve("Library.x")
+                    .toFile()
+                    .canonicalFile
+                    .toURI()
+                    .toString()
+            assertThat(adapter.compile(uri, library).diagnostics).isEmpty()
+            assertThat(adapter.compile(directory.resolve("Consumer.x").toUri().toString(), consumer).diagnostics).isEmpty()
+            assertThat(adapter.rename(uri, 0, library.indexOf("number"), "amount")).isNull()
+        }
+    }
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
@@ -47,7 +85,14 @@ class XdkTeachingWorkspaceTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             val target = "X102/PropertyRename.x"
             val text = fixtures.getValue(target)
-            fun uri(file: String) = directory.resolve(file).toFile().canonicalFile.toURI().toString()
+
+            fun uri(file: String) =
+                directory
+                    .resolve(file)
+                    .toFile()
+                    .canonicalFile
+                    .toURI()
+                    .toString()
             val buffers =
                 buildMap {
                     put(uri(target), text + "\n// Unsaved target buffer\n")
@@ -72,7 +117,7 @@ class XdkTeachingWorkspaceTest {
             val beforeRefusal = adapter.getCachedResult(uri(target))
             observed.clear()
             assertThat(adapter.rename(uri(target), 0, collision.indexOf("value"), "amount")).isNull()
-            assertThat(adapter.getCachedResult(uri(target))).isSameAs(beforeRefusal)
+            assertThat(adapter.getCachedResult(uri(target))).isEqualTo(beforeRefusal)
             released(observed)
             fixtures.forEach { (file, source) -> assertThat(directory.resolve(file).toFile().readText()).isEqualTo(source) }
             println("Teaching workspace: roots=${roots.size}, open buffers=${buffers.size}, heap=${Runtime.getRuntime().maxMemory()} bytes")
@@ -90,10 +135,15 @@ class XdkTeachingWorkspaceTest {
     /** Mirror the native workspace inputs, reading the shared catalog instead of copying XTC. */
     private fun teachingSources(): Map<String, String> {
         val lang = Path.of(System.getProperty("xtc.composite.root")).resolve("lang")
-        val catalog = JsonParser.parseString(lang.resolve("test-fixtures/compiler-playbook/scenarios.json").toFile().readText()).asJsonObject
+        val catalog =
+            JsonParser
+                .parseString(
+                    lang.resolve("test-fixtures/compiler-playbook/scenarios.json").toFile().readText(),
+                ).asJsonObject
         val manual = lang.resolve("doc/manual-test-plan.md").toFile().readText()
         val blocks = Regex("```xtc\\n([\\s\\S]*?)\\n```").findAll(manual).map { it.groupValues[1] }.toList()
         val cases = catalog.getAsJsonObject("cases")
+
         fun values(id: String) = cases.getAsJsonObject(id).getAsJsonObject("values")
         return buildMap {
             catalog.getAsJsonObject("common").getAsJsonArray("fixtures").forEach { element ->
