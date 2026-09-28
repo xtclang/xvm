@@ -1147,11 +1147,11 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X108 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X118 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
-including failure counts. Focused selections use their own total rather than all 113 scenarios.
+including failure counts. Focused selections use their own total rather than all 123 scenarios.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
 `:lang:lsp-server:compilerStdioTest --rerun` to the command.
 
@@ -1195,8 +1195,8 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. Startup and all 113 shared scenarios have passing native receipts, including a clean
-full-suite checkpoint. Native
+disabled. The catalog now has 123 scenarios. The preceding 113-case suite has a clean full-run
+receipt; X109–X118 pass in the selected native rename batch. No new full 123-case run is claimed. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1283,14 +1283,14 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 113 scenarios: X1–X108, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 123 scenarios: X1–X118, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 113 cases. IntelliJ now has assertions for the same 113, plus a separate startup check.
+all 123 cases. IntelliJ now has assertions for the same 123, plus a separate startup check.
 The newly added cases still need native pass receipts; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1753,10 +1753,10 @@ Shared cases **X109–X117** now carry these sources, expected edits and file de
 both editor drivers. Each starts with other consumers closed and checks a single Undo against
 every original source and path. Their first selected native validation is pending. For manual
 exploration, use a scratch workspace with automatic source discovery. Save
-`Library.x` and `Consumer.x`, then wait for clean diagnostics:
+`RenameLibrary.x` and `RenameConsumer.x`, then wait for clean diagnostics:
 
 ```xtc
-module Library {
+module RenameLibrary {
     class Box {
         construct(Int input, Int count = 1) { total = input + count; }
         Int total;
@@ -1766,18 +1766,18 @@ module Library {
 ```
 
 ```xtc
-module Consumer {
-    package lib import Library;
+module RenameConsumer {
+    package lib import RenameLibrary;
     lib.Box make() = new lib.Box(count = 2, input = 1);
     Int use(lib.Box box) = box.pick(count = 2, input = 1);
 }
 ```
 
 - Rename the `pick` parameter `input` to `value`. Its declaration, body and named caller change;
-  the constructor parameter stays unchanged. Undo, close Consumer.x, and repeat to cover closed callers.
+  the constructor parameter stays unchanged. Undo, close RenameConsumer.x, and repeat to cover closed callers.
 - Rename `input` at the constructor's named call. Its constructor declaration/body change, while
   the `pick` parameter stays unchanged. Undo. Rename to the already-used `count`: no edit is offered.
-- Change the module declaration/import to `Library.example.org`. Rename the module's `Library`
+- Change the module declaration/import to `RenameLibrary.example.org`. Rename the module's `RenameLibrary`
   token to `Renamed`: the domain and local alias `lib` stay unchanged, and the root file moves.
 - In a separate `App.x`, use `module App { void accept(tools.deep.Box value) {} }` and create
   `App/tools/deep/Box.x` containing `class Box {}`. Rename `tools` to `helpers`: only the package
@@ -1800,8 +1800,14 @@ values and unsupported composition routes remain refused.
 - **VS Code:** keep the explicit graph in workspace settings (`.vscode/settings.json`, or the
   `settings` object of a saved `.code-workspace`). Rename edits only `xtc.compiler.sourceModules`
   in the same WorkspaceEdit as source text and moves. Comments and unrelated settings survive.
-  Unsaved settings feed the compiler immediately; **Save All** persists them with source buffers.
+  Open settings documents feed the compiler immediately, including the interval after saving
+  before VS Code refreshes its configuration cache. Native Rename follows
+  `files.refactoring.autoSave` (default true); **Save All** also persists the settings and sources.
   Undo/Redo restore the graph along with the files. Global/folder-only configurations are refused.
+  If Rename edits a file it also moves, disabling refactoring auto-save refuses the proposal
+  before any edits: VS Code cannot reliably restore that unsaved resource history. Text-only
+  renames and moves of unedited companions remain available. The harness checks both refusal
+  and the enabled-policy transaction; it uses refactoring metadata like the native action.
 - **IntelliJ:** use the existing LSP4IJ XTC server Configuration JSON under `xtc.compiler`.
   LSP4IJ 0.21 reads this from its global server settings. Rename replaces only the source graph
   in that persistent store and joins its undo actions to the native global Rename command.
@@ -1809,8 +1815,10 @@ values and unsupported composition routes remain refused.
   Changes made to settings while the proof runs invalidate the proposal; Undo/Redo also reject
   an independently changed graph instead of overwriting it.
 
-X118 checks persistence, root/edge replacement, Undo and Redo in both drivers. The first selected
-editor validation of these new cases is pending.
+X118 checks persistence, root/edge replacement, Undo, Redo and second Undo in both drivers.
+All X109–X118 have passing selected receipts: IntelliJ `run-6245646041474423108`, VS Code
+`run-3CeLiB` (X109–X117) and `run-7Xbo86` (X118 plus CFG1–CFG3 after the save-cache correction).
+See the [validation record](../../docs/errs-integration-plan.md#shared-rename-and-native-settings-validation).
 
 ### I. Configured-graph references and method rename
 
@@ -2311,11 +2319,11 @@ Still to come:
 - Persistent indexing and measured incremental work across larger module graphs
 - Binary source attachment, conditional-mixin hierarchy and broader implementation targets
 - Wider member/workspace rename: primary-constructor property parameters, lambda parameters,
-  method-value escapes, unsupported composition routes and client persistence for explicitly
-  configured module moves. The L62 backend extension covers public/explicit-constructor parameters,
-  supported composition families, qualified modules and implicit package directories; its shared
-  checks above have not yet been added to both automated editor harnesses. Consumers outside the
-  graph remain unknown
+  method-value escapes and unsupported composition routes. The L62 extension covers public/explicit-
+  constructor parameters, supported composition families, qualified modules and implicit package
+  directories. Both clients implement graph persistence through native Rename. Shared X109–X118
+  pass in selected runs in both editors. VS Code edited-file moves with refactoring auto-save
+  disabled remain refused. Consumers outside the graph remain unknown
 - Diagnostic-driven quick fixes and refactorings
 
 L61 declaration acceptance: X4 now also requests Go to Declaration for the shadowed local and
