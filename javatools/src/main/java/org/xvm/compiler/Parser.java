@@ -5003,7 +5003,7 @@ public class Parser {
                         type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
                     } catch (IncompleteHeader error) {
                         throw error.withFormals(Stream.concat(typeParams.stream(),
-                                Stream.of(new Parameter(null, param))).toList());
+                                Stream.of(new Parameter(new BadTypeExpression((Expression) error.site.getTarget().clone()), param))).toList());
                     }
                 }
                 typeParams.add(new Parameter(type, param));
@@ -5263,10 +5263,10 @@ public class Parser {
 
     private static class IncompleteHeader extends CompilerException {
         private IncompleteHeader(IncompleteStatement site) {
-            this(site, Set.of());
+            this(site, List.of());
         }
 
-        private IncompleteHeader(IncompleteStatement site, Set<String> formals) {
+        private IncompleteHeader(IncompleteStatement site, List<Parameter> formals) {
             super("Incomplete declaration header");
             this.site = site;
             this.formals = formals;
@@ -5274,12 +5274,11 @@ public class Parser {
 
         private IncompleteHeader withFormals(List<Parameter> parameters) {
             return parameters == null ? this : new IncompleteHeader(site,
-                    Stream.concat(formals.stream(), parameters.stream().map(Parameter::getName))
-                            .collect(Collectors.toUnmodifiableSet()));
+                    Stream.concat(formals.stream(), parameters.stream()).distinct().toList());
         }
 
         private final IncompleteStatement site;
-        private final Set<String> formals;
+        private final List<Parameter> formals;
     }
 
     /** Keep a type's real body for structure, but never register an unfinished inheritance header. */
@@ -5297,7 +5296,7 @@ public class Parser {
                 StatementBlock body = parseTypeCompositionBody(category);
                 return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, body,
                         start, body.getEndPosition(), sites,
-                        error instanceof IncompleteHeader incomplete ? incomplete.formals : Set.of());
+                        error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
             }
             if (match(Id.SEMICOLON) != null) {
                 break;
@@ -5306,7 +5305,7 @@ public class Parser {
         }
         return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, null,
                 start, prev().getEndPosition(), sites,
-                error instanceof IncompleteHeader incomplete ? incomplete.formals : Set.of());
+                error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
     }
 
     /**
@@ -5347,7 +5346,7 @@ public class Parser {
             current();
         }
         return new IncompleteDeclarationStatement(kind, name, start, prev().getEndPosition(), sites,
-                error instanceof IncompleteHeader incomplete ? incomplete.formals : Set.of());
+                error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
     }
 
     /** Declaration return slots select types without publishing an unfinished callable. */
