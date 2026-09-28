@@ -2233,3 +2233,10 @@ Still to come:
 - Wider member/workspace rename: instance-property/accessor families, constructors and
   mixin/delegating/capped chains; public-parameter caller closure and consumers outside the graph
 - Diagnostic-driven quick fixes and refactorings
+
+L61 declaration acceptance: X4 now also requests Go to Declaration for the shadowed local and
+property and checks that their distinct declaration targets match definition. VS Code uses its
+declaration provider; IntelliJ checks the request through the installed client transport beside
+the existing native navigation actions. Backend/protocol cases cover multiple inherited contracts,
+property overrides, import aliases, closed consumers, indexed libraries and stale source.
+Execution is pending the combined L55/L61/L62 checkpoint.
