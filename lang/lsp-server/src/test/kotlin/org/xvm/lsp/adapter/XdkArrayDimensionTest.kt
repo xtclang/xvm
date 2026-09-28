@@ -80,14 +80,14 @@ class XdkArrayDimensionTest {
     @Test
     fun `dimensions use compiler readability narrowing and property validation`() {
         val prefix =
-            "module Dimensions { Int countProperty=2; String countText=\"x\"; " +
+            "module Dimensions { Int countProperty = 2; String countText = \"x\"; " +
                 "void run(Int? countMaybe, Int countParameter) { Int countUnassigned; " +
                 "if (countMaybe != Null) { new Int[co"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix]; } } }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .containsExactlyInAnyOrder("countMaybe", "countParameter", "countProperty")
-            val changed = prefix.replace("Int countProperty", "String countProperty").replace("=2;", "=\"two\";")
+            val changed = prefix.replace("Int countProperty", "String countProperty").replace("= 2;", "= \"two\";")
             adapter.compile(URI, "$changed]; } } }")
             assertThat(adapter.getCompletions(URI, 0, changed.length).map { it.label })
                 .containsExactlyInAnyOrder("countMaybe", "countParameter")

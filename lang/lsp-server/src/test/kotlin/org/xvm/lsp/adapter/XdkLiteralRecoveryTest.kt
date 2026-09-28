@@ -18,7 +18,7 @@ class XdkLiteralRecoveryTest {
     @ValueSource(
         strings = [
             "(1, value.si|)", "Tuple<Int, Int>:(1, value.si|)", "[value.si|]", "List<Int>:[value.si|]",
-            "Set<Int>:[value.si|]", "[\"key\"=value.si|]", "Map<String, Int>:[\"key\"=value.si|]", "[(1, value.si|)]",
+            "Set<Int>:[value.si|]", "[\"key\" = value.si|]", "Map<String, Int>:[\"key\" = value.si|]", "[(1, value.si|)]",
         ],
     )
     fun `missing literal closers preserve member completion and following declarations`(expression: String) {
@@ -88,7 +88,7 @@ class XdkLiteralRecoveryTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["(1, pair(1, va", "[pair(1, va", "[1=pair(1, va", "Tuple<Int, Int>:(1, pair(1, va"])
+    @ValueSource(strings = ["(1, pair(1, va", "[pair(1, va", "[1 = pair(1, va", "Tuple<Int, Int>:(1, pair(1, va"])
     fun `literal nesting retains the inner argument fitter and signature`(expression: String) {
         val prefix =
             "module Editing { Int pair(Int first, Int second) = first; " +
@@ -109,7 +109,7 @@ class XdkLiteralRecoveryTest {
 
     @Test
     fun `unrelated missing syntax is not repaired by a literal cursor`() {
-        for (expression in listOf("[1 + , value.si", "(, value.si", "[1=, value.si")) {
+        for (expression in listOf("[1 + , value.si", "(, value.si", "[1 = , value.si")) {
             val prefix = "module Editing { Object run(String value) { return $expression"
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, "$prefix; } }")
@@ -120,7 +120,7 @@ class XdkLiteralRecoveryTest {
 
     @Test
     fun `missing literal value operand retains lexical completion and ordinary errors`() {
-        val prefix = "module Editing { Object run(String value) { return [1=value.size +"
+        val prefix = "module Editing { Object run(String value) { return [1 = value.size +"
         XdkAdapter().use { adapter ->
             val baseline = adapter.compile(URI, "$prefix; } }")
             assertThat(baseline.diagnostics).isNotEmpty()

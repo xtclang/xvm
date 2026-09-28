@@ -25,7 +25,7 @@ class XdkArgumentCompletionTest {
         delimiter = '|',
         ignoreLeadingAndTrailingWhitespace = false,
         value = [
-            "pair(|number", "pair(1, |text", "pair(second=|text", "pair(second=\"x\", first=|number",
+            "pair(|number", "pair(1, |text", "pair(second = |text", "pair(second = \"x\", first = |number",
             "box.pair(|text", "new Box<String>(|text", "fn(|number", "fn(1, |text",
         ],
     )
@@ -46,7 +46,7 @@ class XdkArgumentCompletionTest {
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             // Inserting the offered source name produces a real compilable call when all slots
             // are supplied; the probe itself never claims that selection.
-            if (call.endsWith(", ") || call.contains("first=")) {
+            if (call.endsWith(", ") || call.contains("first =")) {
                 assertThat(adapter.compile(URI, "$prefix$expected); } }").diagnostics).isEmpty()
             }
         }
@@ -67,17 +67,17 @@ class XdkArgumentCompletionTest {
     @CsvSource(
         delimiter = '|',
         value = [
-            "pair(nu|number", "pair(1, te|text", "pair(second=te|text", "pair(second=\"x\", first=nu|number",
-            "box.pair(te|text", "new Box<String>(te|text", "new Box<String>(value=te|text", "fn(nu|number", "fn(1, te|text",
+            "pair(nu|number", "pair(1, te|text", "pair(second = te|text", "pair(second = \"x\", first = nu|number",
+            "box.pair(te|text", "new Box<String>(te|text", "new Box<String>(value = te|text", "fn(nu|number", "fn(1, te|text",
         ],
     )
     fun `typed argument prefixes offer fitting values and replace exactly their token`(
         call: String,
         expected: String,
     ) {
-        val prefix = "$HEADER Int textNumber=1; String numberText=\"x\"; $call"
+        val prefix = "$HEADER Int textNumber = 1; String numberText = \"x\"; $call"
         XdkAdapter().use { adapter ->
-            val original = "$prefix); Int later=1; } }"
+            val original = "$prefix); Int later = 1; } }"
             adapter.compile(URI, original)
             val cached = adapter.getCachedResult(URI)
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -87,7 +87,7 @@ class XdkArgumentCompletionTest {
             )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(1)
-            if (call !in listOf("pair(nu", "pair(second=te", "fn(nu")) {
+            if (call !in listOf("pair(nu", "pair(second = te", "fn(nu")) {
                 assertThat(adapter.compile(URI, original.replaceRange(prefix.length - 2, prefix.length, expected)).diagnostics).isEmpty()
             }
         }
@@ -95,7 +95,7 @@ class XdkArgumentCompletionTest {
 
     @Test
     fun `typed prefix preserves fitting overload alternatives and rejects other same prefix values`() {
-        val prefix = "$HEADER Int valueNumber=1; String valueText=\"x\"; Boolean valueFlag=True; choose(va"
+        val prefix = "$HEADER Int valueNumber = 1; String valueText = \"x\"; Boolean valueFlag = True; choose(va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).containsExactlyInAnyOrder("valueNumber", "valueText")
@@ -109,12 +109,12 @@ class XdkArgumentCompletionTest {
             for (call in listOf(
                 "pair(1",
                 "pair(1, \"x\", ",
-                "pair(unknown=",
-                "pair(first=1, first=",
+                "pair(unknown =",
+                "pair(first = 1, first =",
                 "pair(True, ",
                 "missing(",
-                "pair(unknown=te",
-                "pair(first=1, first=nu",
+                "pair(unknown = te",
+                "pair(first = 1, first = nu",
                 "pair(True, te",
                 "pair(1, missing",
                 "missing(te",
@@ -168,7 +168,7 @@ class XdkArgumentCompletionTest {
     @ValueSource(strings = ["", "te"])
     fun `proposed values leave original arguments diagnostics and selected call facts untouched`(typed: String) {
         CompilerTestSupport.configure()
-        val prefix = "$HEADER pair(second=$typed"
+        val prefix = "$HEADER pair(second = $typed"
         val text = "$prefix); } }"
         val source = Source(text, URI)
         repeat(prefix.length) { source.next() }
@@ -233,7 +233,7 @@ class XdkArgumentCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["te", "\\u0074e"])
     fun `prefix edits use original UTF16 ranges with CRLF and escaped identifiers`(typed: String) {
-        val line = "void run(String text, Int textNumber) { /* 😀 */ take(value=$typed"
+        val line = "void run(String text, Int textNumber) { /* 😀 */ take(value = $typed"
         val header = "module Editing {\r\nvoid take(String value) {}\r\n"
         XdkAdapter().use { adapter ->
             val original = "$header$line); } }"
@@ -254,7 +254,7 @@ class XdkArgumentCompletionTest {
                 Triple("pair(1 + nu", ", text)", "number"),
                 Triple("pair(1, text.si", ")", null),
             )) {
-                val prefix = "$HEADER Int textNumber=1; String numberText=\"x\"; $call"
+                val prefix = "$HEADER Int textNumber = 1; String numberText = \"x\"; $call"
                 adapter.compile(URI, "$prefix$suffix; } }")
                 val names = adapter.getCompletions(URI, 0, prefix.length).map { it.label }
                 if (expected == null) {

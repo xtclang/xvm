@@ -31,9 +31,9 @@ class XdkIncompleteCallTest {
     fun `candidate inference copies expected types and named argument mappings`() {
         XdkAdapter().use { adapter ->
             for ((call, parameter) in listOf(
-                "pair(\"x\", second=" to 1,
-                "pair(second=\"x\", first=" to 0,
-                "pair(second=\"x\"" to 1,
+                "pair(\"x\", second =" to 1,
+                "pair(second = \"x\", first =" to 0,
+                "pair(second = \"x\"" to 1,
                 "generic(\"x\", " to 1,
             )) {
                 val prefix = "$BOX void run(Box<String> box) { box.$call"
@@ -64,7 +64,7 @@ class XdkIncompleteCallTest {
     @Test
     fun `invalid names duplicate bindings and incompatible arguments produce no applicable signatures`() {
         XdkAdapter().use { adapter ->
-            for (call in listOf("pair(unknown=", "pair(first=\"x\", first=", "choose(True, ")) {
+            for (call in listOf("pair(unknown =", "pair(first = \"x\", first =", "choose(True, ")) {
                 val prefix = "$BOX void run(Box<String> box) { box.$call"
                 adapter.compile(URI, "$prefix); } }")
                 assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).describedAs(call).isNull()

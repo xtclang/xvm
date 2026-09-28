@@ -93,7 +93,7 @@ class CompilerConfigurationTest {
                         session.libraryUri,
                         "xtc",
                         1,
-                        "module Library { static String value()=\"text\"; }",
+                        "module Library { static String value() = \"text\"; }",
                     ),
                 ),
             )
@@ -239,8 +239,8 @@ class CompilerConfigurationTest {
     }
 
     private companion object {
-        const val LIBRARY = "module Library { static Int value()=1; }"
-        const val CONSUMER = "module Consumer { package lib import Library; Int run()=lib.value(); }"
+        const val LIBRARY = "module Library { static Int value() = 1; }"
+        const val CONSUMER = "module Consumer { package lib import Library; Int run() = lib.value(); }"
         val CONFIG =
             mapOf(
                 "sourceModules" to

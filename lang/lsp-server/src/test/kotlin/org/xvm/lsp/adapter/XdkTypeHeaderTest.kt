@@ -35,8 +35,8 @@ class XdkTypeHeaderTest {
     )
     fun `composition type slots query the enclosing scope without registering a partial class`(header: String) {
         CompilerTestSupport.configure()
-        val prefix = "module Headers { class Base {} Int BaseValue=1; " + header.substringBefore('§')
-        val text = prefix + header.substringAfter('§') + " { Int inside=1; } Int later=2; }"
+        val prefix = "module Headers { class Base {} Int BaseValue = 1; " + header.substringBefore('§')
+        val text = prefix + header.substringAfter('§') + " { Int inside = 1; } Int later = 2; }"
         val source = Source(text, URI)
         repeat(prefix.length) { source.next() }
         val cursor = source.position
@@ -72,7 +72,7 @@ class XdkTypeHeaderTest {
     fun `qualified composition lookup excludes private types and value members`() {
         val prefix =
             "module Headers { import Owner as Alias; class Owner { class ItemPublic {} " +
-                "private class ItemHidden {} static Int ItemValue=1; } class Damaged extends Alias.Ite"
+                "private class ItemHidden {} static Int ItemValue = 1; } class Damaged extends Alias.Ite"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix {} }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).containsExactly("ItemPublic")
@@ -93,7 +93,7 @@ class XdkTypeHeaderTest {
     @Test
     fun `accepting a base type edits only the prefix and restores compiler diagnostics`() {
         val prefix = "module Headers { class Base {} class Damaged extends Ba"
-        val suffix = " { Int inside=1; } Int later=2; }"
+        val suffix = " { Int inside = 1; } Int later = 2; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             val item = adapter.getCompletions(URI, 0, prefix.length).single { it.label == "Base" }
@@ -113,7 +113,7 @@ class XdkTypeHeaderTest {
         child.parentFile.mkdirs()
         root.writeText("module Headers { class Owner { class ItemDisk {} } }")
         val prefix = "class Child extends Owner.Ite"
-        child.writeText("$prefix { Int inside=1; }")
+        child.writeText("$prefix { Int inside = 1; }")
         XdkAdapter().use { adapter ->
             val rootUri = root.toURI().toString()
             val childUri = child.toURI().toString()
@@ -130,7 +130,7 @@ class XdkTypeHeaderTest {
 
     @Test
     fun `malformed class headers retain outline and folds without stale semantic facts`() {
-        val text = "module Headers {\n class Damaged extends {\n  Int inside=1;\n }\n Int later=2;\n}"
+        val text = "module Headers {\n class Damaged extends {\n  Int inside = 1;\n }\n Int later = 2;\n}"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "module Headers { class Old {} }")
             val result = adapter.compile(URI, text)
