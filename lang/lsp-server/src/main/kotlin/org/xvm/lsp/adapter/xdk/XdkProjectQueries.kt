@@ -392,17 +392,9 @@ internal class XdkProjectQueries(
             } else {
                 methodFamily(facts, target.method) ?: return null
             }
-        // A method value can escape this call graph. Until its named-argument provenance is
-        // available, changing the callable contract cannot be proven safe.
-        if (facts.models.any { model ->
-                model.occurrences.any { occurrence ->
-                    occurrence.role == SemanticModel.Role.REFERENCE && facts.constants[occurrence.symbol] in methods &&
-                        model.calls.none { occurrence.range.start in it.callee }
-                }
-            }
-        ) {
-            return null
-        }
+        // InvocationExpression.testFunction rejects named arguments on function values. Escaping
+        // a selected method does not export parameter spellings; direct named calls and method
+        // value bindings are still checked by the complete before/after graph proof.
         val parameters = methods.mapTo(linkedSetOf()) { ProofIdentity.Parameter(it, target.index) }
         return parameters.takeIf { declarations.keys.containsAll(it) }
     }
