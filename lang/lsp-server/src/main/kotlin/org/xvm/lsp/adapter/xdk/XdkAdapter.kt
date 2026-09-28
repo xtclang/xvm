@@ -1369,7 +1369,11 @@ class XdkAdapter internal constructor(
         column: Int,
         newName: String,
     ): CompletableFuture<XdkRenameProposal?> =
-        projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL), null) { it.renameProposal(uri, line, column, newName) }
+        if (isProjectRename(uri, line, column)) {
+            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.RENAME_PROPOSAL), null) { it.renameProposal(uri, line, column, newName) }
+        } else {
+            renameAsync(uri, line, column, newName).thenApply { it?.let(::XdkRenameProposal) }
+        }
 
     override fun getCodeActions(
         uri: String,
@@ -1401,16 +1405,7 @@ class XdkAdapter internal constructor(
         column: Int,
         newName: String,
     ): CompletableFuture<WorkspaceEdit?> {
-        if (synchronized(lifecycle) {
-                module(uri)
-                    ?.document(uri)
-                    ?.semantics
-                    ?.let { model ->
-                        model.importAt(line, column) != null ||
-                            model.symbolAt(line, column)?.let { isProjectTarget(uri, model, it) } == true
-                    } == true && project.scope(uri) != null
-            }
-        ) {
+        if (isProjectRename(uri, line, column)) {
             return projectQuery<WorkspaceEdit?>(ProjectQueryKey(uri, ProjectQueryKind.RENAME), null) {
                 it.rename(uri, line, column, newName)
             }
@@ -1439,6 +1434,17 @@ class XdkAdapter internal constructor(
         previous?.result?.cancel(false)
         return request.result
     }
+
+    private fun isProjectRename(uri: String, line: Int, column: Int): Boolean =
+        synchronized(lifecycle) {
+                module(uri)
+                    ?.document(uri)
+                    ?.semantics
+                    ?.let { model ->
+                        model.importAt(line, column) != null ||
+                            model.symbolAt(line, column)?.let { isProjectTarget(uri, model, it) } == true
+                    } == true && project.scope(uri) != null
+            }
 
     private fun isStale(request: RenameRequest): Boolean =
         renames[request.uri] !== request || request.result.isCancelled || isStale(request.compilation)

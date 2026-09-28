@@ -3584,6 +3584,53 @@
         "limitations": []
       }
     },
+    "X118": {
+      "title": "explicit module rename persists graph roots and edges with Undo and Redo",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "Library",
+        "replacement": "Renamed",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library.example.org {}",
+            "destination": "Renamed.x",
+            "expected": "module Renamed.example.org {}"
+          },
+          {
+            "file": "Library/Box.x",
+            "source": "class Box {}",
+            "destination": "Renamed/Box.x",
+            "expected": "class Box {}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package lib import Library.example.org; lib.Box make() = new lib.Box(); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package lib import Renamed.example.org; lib.Box make() = new lib.Box(); }"
+          }
+        ],
+        "sourceModules": [
+          {
+            "name": "Library.example.org",
+            "uri": "Library.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "Library.example.org"
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

@@ -1787,11 +1787,26 @@ module Consumer {
   All written contract names/uses change and the resulting module compiles. Binary contracts and
   method-value escapes remain refused.
 
-Explicit source settings need an additional host operation. `XdkAdapter.renameProposalAsync`
-returns source edits and a replacement source graph without installing either. A host that owns
-those settings must persist the graph with accepting the edit, then call `replaceSourceModules`.
-Standard editor rename still refuses these graph changes; automatic persistence is not yet
-implemented in either IDE.
+Explicit source settings now use the native Rename action through `xtc/rename`, advertised as
+`experimental.xtcRenameProposal = 1`. The response contains versioned edits plus the exact before
+and after source graphs. It does not install either graph. Both clients reject a mismatched graph
+or a stale settings snapshot before accepting the edit. Standard `textDocument/rename` continues
+to refuse graph changes for clients without this persistence integration.
+
+- **VS Code:** keep the explicit graph in workspace settings (`.vscode/settings.json`, or the
+  `settings` object of a saved `.code-workspace`). Rename edits only `xtc.compiler.sourceModules`
+  in the same WorkspaceEdit as source text and moves. Comments and unrelated settings survive.
+  Unsaved settings feed the compiler immediately; **Save All** persists them with source buffers.
+  Undo/Redo restore the graph along with the files. Global/folder-only configurations are refused.
+- **IntelliJ:** use the existing LSP4IJ XTC server Configuration JSON under `xtc.compiler`.
+  LSP4IJ 0.21 reads this from its global server settings. Rename replaces only the source graph
+  in that persistent store and joins its undo actions to the native global Rename command.
+  Other projects using the same configured graph receive the usual configuration notification.
+  Changes made to settings while the proof runs invalidate the proposal; Undo/Redo also reject
+  an independently changed graph instead of overwriting it.
+
+X118 checks persistence, root/edge replacement, Undo and Redo in both drivers. The first selected
+editor validation of these new cases is pending.
 
 ### I. Configured-graph references and method rename
 
@@ -2047,6 +2062,7 @@ module Advanced {
 | X115 | In the shared `X115` fixture, annotated property rename preserves its Lazy implementation. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X116 | In the shared `X116` fixture, qualified module rename preserves its domain and alias and moves its companion. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X117 | In the shared `X117` fixture, implicit package rename moves the nested directory. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X118 | Repeat X116 with explicit sourceModules settings containing Library.example.org and Consumer → Library.example.org. | Rename changes the root URI, module name and dependency edge in settings; Undo and Redo restore the matching graph, source contents and resource paths together. Save All in VS Code persists the settings document with the sources. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
