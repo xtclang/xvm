@@ -384,8 +384,8 @@ VS Code receipts above.
   separate commits before a combined backend run (76 LSP tests and 10 Java API tests passed, none
   skipped). Shared X109–X118 now have passing selected runs in both editors:
   1. Public parameter slots, override callers and explicit constructor labels: backend validated.
-     Escaped method values, binary contracts, primary-constructor
-     property parameters and lambda parameters retain conservative refusal.
+     The subsequent rename batch adds primary-header properties, lambda parameters and escaped
+     method values; binary contracts retain conservative refusal. See its separate receipts below.
   2. Supported annotation/mixin/delegation families: backend validated.
      Compiler dispatch provenance follows existing into/capped/delegate metadata, including the
      declared receiver property, without generating forwarding methods. Unknown routes and binary
@@ -893,28 +893,26 @@ adapter remains opt-in; Tree-sitter remains the shipped default.
 
 ### Rename boundary audit
 
-| Boundary | Current evidence and behavior | Required extension |
+| Boundary | Current implementation | Remaining limit |
 | --- | --- | --- |
-| Primary-constructor property parameters | `SemanticModelBuilder` only creates parameter-slot identities for written method parameters; `CompilerPropertyRelations` takes written property declarations. A class-header parameter's generated constructor/property does not establish either complete family. New regression checks declaration, named constructor label and property access. | Copy the written header parameter's relationship to both generated property and constructor slot into immutable attempt facts, then prove both contracts together. No additional mutable AST field is needed. |
-| Lambda parameters | Written lambda bindings exist for navigation/captures, but are not ordinary method parameter-slot identities. `XdkProjectQueries` declines the target instead of treating a compiler-generated lambda method as a stable API contract. Typed/inferred lambda regressions are added. | Establish source-site/parameter-index identity and prove local invocation/escape behavior, including capture and shadowing. Captures of ordinary renamed locals already have separate passing coverage. |
-| Escaped method values | `parameterFamily` refuses a method reference not covered by a direct call's callee span. New cases store, return and pass `&pick`. This is conservative: the compiler does not yet publish callable-value provenance sufficient for downstream named arguments. | Carry callable origin/parameter-slot facts through function values before relaxing the guard. Do not infer origin from a variable's function type. |
-| Composition routes | Method dispatch accepts written Explicit/Default/Declared/Abstract, follows FromInto/Capped/Delegating, and refuses unknown, recursive or over-depth routes. Implicit, Union, SansCode, Field and Native fall through to unsupported. Property chains accept Explicit/Declared/Default/FromInto/Delegating only, and every member must remain a written source declaration. Existing binary-contract tests and the new union-receiver case cover important refusals; this is not exhaustive native route coverage. | Add compiler fixtures per remaining route and source-owned declaration provenance before enabling one. Keep binary/native contracts read-only; generated forwarding bodies are not a source identity. |
-| Consumers outside an explicit graph | **Not automatically refused.** The supplied graph is the host's declared proof boundary. `XdkProject.buildOrder()` cannot enumerate unknown clients; an omitted Consumer.x remains untouched even when it happens to be beside a registered root. The new test contrasts this with registering that consumer. | Include every intended consumer in the graph, or define a wider host index/dependency manifest. Workspace roots/discovery are not evidence about arbitrary external repositories or binaries. Do not call this whole-program rename. |
+| Primary-constructor property parameters | Existing header `Parameter.resolvedTarget` and persisted synthetic/shorthand constructor flags join property uses and generated constructor labels. Detached owner identity preserves call selection. | Explicit constructors keep their own written parameter contracts; generic/default, collision and cross-module cases are in the new validation batch. |
+| Lambda parameters | Written register/source identity plus capture normalization supports local replay, including lambda values that escape. Generated lambda methods are not exported as parameter contracts. | Incomplete analysis and binding changes still refuse edits. |
+| Escaped method values | Function-value calls cannot have named arguments: `InvocationExpression.testFunction` emits `COMPILER-141`. The previous requirement for callable-origin propagation was unnecessary for parameter spelling. Selected method-value references and direct named callers still undergo full replay. | Unknown runtime targets and reflective strings are not inferred from a function type. |
+| Composition routes | Method dispatch accepts written Explicit/Default/Declared/Abstract, follows FromInto/Capped/Delegating, and refuses unknown, recursive or over-depth routes. Implicit, Union, SansCode, Field and Native are explicitly unsupported. Property chains accept Explicit/Declared/Default/FromInto/Delegating only, and every member must remain source-owned. | Exhaustive compiler fixtures for every generated route are still missing. Keep binary/native contracts read-only and do not turn generated forwarding bodies into source identities. |
+| External consumers | `sourceModules` is the explicit consumer manifest and accepts absolute file roots outside workspace folders. `xtc/rename.scope` reports configured/discovered boundary, dependency-ordered modules, captured source URIs and input revision. | Omitted consumers are unknown and remain untouched, even beside a configured root. Hosts must enumerate every intended consumer. This is not whole-program rename or automatic external repository discovery. |
 
-Remaining rename work (refusals are not completed support):
+Remaining rename work:
 
-- [ ] Publish immutable primary-constructor property/parameter provenance and prove both contracts.
-- [ ] Define stable lambda parameter identities and invocation/escape proof, including shadowing.
-- [ ] Track callable origins through stored, returned and passed method values.
 - [ ] Add fixtures for each unsupported composition route before enabling source-owned routes;
   keep native/binary contracts read-only.
-- [ ] Define an external consumer manifest/index boundary beyond the explicitly configured graph.
 - [ ] Support VS Code edited-file resource history with refactoring auto-save disabled, or retain
-  the documented pre-edit refusal.
-- [ ] Broaden native configuration acceptance beyond the single-folder fixtures: saved VS Code
-  multi-root workspaces, global/folder overrides, and intervening settings edits during history.
-This batch changes no Java AST node or compiler pipeline; the client persistence protocol and
-scope tests consume the existing immutable embedding facts.
+  the documented pre-edit refusal (the current policy).
+- [ ] Add native multi-root workspace/override/racing-settings acceptance beyond the pure settings
+  regressions and the shared single-workspace X118 Undo/Redo case.
+- [ ] Define optional host discovery/indexing of external repositories if automatic enumeration
+  beyond explicit sourceModules is required. The configured boundary itself is implemented.
+
+This batch changes no Java AST node or compiler pipeline; it consumes existing compiler facts.
 
 ## Remaining rename implementation batch (2026-09-28)
 
@@ -932,31 +930,104 @@ not claim a test receipt until the batch runs.
   dispatch proof. A detached primary-constructor identity preserves selected calls across replay
   without inventing a declaration or adding AST state. Six regressions cover all three entry
   sites, closed consumers, generics/defaults and collisions/capture. Explicit constructor
-  parameters retain their separate written contracts. Execution is pending.
+  parameters retain their separate written contracts. The batch regression run passes.
 - [x] **3 — Lambda parameters:** reuse original written register/source bindings, including nested
   capture normalization. Route lambda parameters through local source replay rather than inventing
   generated method slots. Seven regressions cover typed/inferred parameters, both entry sites,
   nested capture, sibling shadowing, return/pass escapes, name capture and standalone compilation.
-  No AST state/API change; execution is pending.
+  No AST state/API change; the batch regression run passes.
 - [x] **4 — Escaped method values/composition:** remove the overly conservative escape guard:
   `InvocationExpression.testFunction` rejects named function-value arguments (`COMPILER-141`).
   Keep full binding/dispatch replay for selected methods and direct labels. Add stored/returned/
-  passed/overloaded cross-module cases, an independent compiler diagnostic regression, and
+  passed/cross-module cases and unrelated same-named members, an independent compiler diagnostic regression, and
   delegated parameter families with differently named receiver parameters. Enumerate unsupported
   implicit/union/generated/native bodies explicitly; these are not source-owned contracts and
   remain refused. A runtime callable-origin propagation API is unnecessary for parameter spelling.
-  Execution is pending; exhaustive compiler fixtures for every generated route remain separate.
+  The batch regression run passes; exhaustive compiler fixtures for every generated route remain separate.
 - [x] **5 — External consumers:** reuse `sourceModules` as the explicit consumer manifest, including
   absolute roots outside workspace folders. Project proposals now carry an immutable scope receipt
   (configured/discovered boundary, dependency-ordered modules, captured source URIs and input
   revision); `xtc/rename` exposes the detached receipt. This is not a whole-world guarantee or a
   stale-edit authorization. Five regressions cover closed external roots, unsaved external buffers,
   missing consumers, disk changes during proof and discovery boundaries; server coverage checks
-  the wire receipt. Execution is pending.
+  the wire receipt. The batch regression run passes.
 
 Shared X119–X121 exercise the new semantic cases through both editors, including Undo and
 closed consumers, and are included in the combined validation selection. The catalog now has
-126 cases. Validation is deferred until all five checkpoints are written.
+126 cases. All five checkpoints preceded the combined validation below.
+
+### Checkpoint and validation map
+
+| Item | Implementation commit | Extraction notes |
+| --- | --- | --- |
+| 1 configuration guards | `9e319b21f` | Include the final single-folder settings distinction and all-folder override recheck in the validation correction. |
+| 2 primary constructor properties | `fd9e047c2` | Existing compiler flags/source associations only; include formatting corrections and shared X119. |
+| 3 lambda parameters | `330d18d08` | Include shared X120; no Java AST changes. |
+| 4 method values and dispatch slots | `91f0d14fd` | Include parameter-family expansion/proof comparison corrections, corrected bound-method fixture and shared X121. |
+| 5 external consumer scope | `86fb4c3a2` | Also contains shared X119–X121 wiring; allocate those hunks to the corresponding semantic PRs. |
+
+The implementation commits deliberately precede testing. Validation correction `4937f4382` must
+be included when extracting PRs; individual checkpoint commits are not claimed independently green.
+Its Kotlin-only formatting hunks belong with their corresponding implementation slices. Its
+parameter proof changes belong with item 4 and its VS Code guard changes belong with item 1.
+This batch adds no Java compiler/AST API or mutable AST state.
+
+Combined backend validation passes **94 LSP tests** and **six IntelliJ settings tests**, with
+zero failures/errors/skips, plus **five pure VS Code settings tests**. Kotlin/TypeScript and both
+editor drivers compile. Root Spotless and Kotlin lint pass; ESLint has zero errors and the five
+pre-existing unused test-argument warnings.
+
+VS Code X57/X119–X121 and CFG1–CFG3 passed in `run-c7xgn7`; X118 exposed that single-folder
+workspace settings are also reported as folder values. The corrected scope guard passes X118
+plus CFG1–CFG3 in `run-Z5w8sz`. X118 still tests the intentional pre-edit auto-save refusal.
+The initial cross-module method-value fixture also exposed compiler ambiguity for an overloaded
+bare bound method reference; the passing case uses a compiler-resolved non-overloaded member
+and proves that another same-named member remains unchanged. Existing selected-overload direct
+call tests remain green. The adapter does not invent a binding for compiler-ambiguous source.
+
+IntelliJ X57/X118–X121 and CFG1–CFG3 plus START pass in
+`run-14634841832018763989`: nine successes and zero IDE errors, on IntelliJ 2026.2.3 with
+Ultimate disabled and LSP4IJ 0.21.0. Native saved multi-root/settings-race acceptance is still a follow-up; pure settings history regressions are not a native
+workspace acceptance receipt. No full 126-case playbook run is claimed.
+
+### Tooling warning audit
+
+The build already uses Kotlin 2.4.20. `dependencyInsight --configuration ktlint --dependency
+kotlin-compiler-embeddable` identifies ktlint 1.8.0's private Kotlin 2.2.21 as the source of the
+JVM Unsafe warnings. Each formatting/check worker can emit it, independently of Gradle's log
+level. As of this audit, [ktlint 1.8.0 is the latest stable release](https://github.com/ktlint/ktlint/releases)
+and the newer 2.0.0-ALPHA-4 changes coordinates, APIs and formatting behavior. A future upgrade
+should migrate the supported tool/plugin together and review formatting churn, rather than force
+an untested compiler version into ktlint's dependency graph. No warning suppression or dependency
+override is introduced in the rename batch.
+
+## Next checkpoint: isolate partial AST syntax
+
+After the current rename batch is tested, committed and pushed, evaluate moving the branch-added
+cursor/recovery syntax into `org.xvm.compiler.ast.partial`. Candidate classes are
+`IncompleteStatement`, `IncompleteExpression`, `IncompleteDeclarationStatement` and
+`IncompleteTypeCompositionStatement`, together with `CursorScope`, `PartialArgument`,
+`PartialCallResolver` and `PartialConstructionResolver` where access permits.
+
+- [ ] Inventory package-private and protected access across the proposed boundary, including
+  accesses on *other* AST node instances (Java protected access is narrower across packages).
+- [ ] Keep partial-only implementation helpers package-private within the new package. Keep
+  classic parser/validation hooks in the AST where they own normal language semantics.
+- [ ] Perform a mechanical move only if existing public/protected contracts or a few narrow,
+  meaningful helpers suffice. Do not expose AST internals broadly just to satisfy the move.
+- [ ] If access changes would be substantial, record the exact blockers and proposed minimal
+  boundary before restructuring. The initial inventory already shows package-private helpers;
+  this is not yet classified as a trivial import-only move. Concrete boundaries include
+  package-private `NewExpression.prepareConstruction`/its `Construction` result and protected
+  `Expression.validate` calls from the non-subclass partial resolvers. Moving partial helpers
+  together preserves their internal package access but does not solve these classic-AST calls.
+- [ ] Update imports, API/AST ownership notes and extraction map; run compiler recovery,
+  cursor validation/cloning and semantic snapshot tests after the move. Ordinary complete-source
+  compilation and failed-emission behavior must remain unchanged.
+
+This is structural organization, not a new LSP dependency in the compiler. The partial nodes
+represent incomplete source syntax usable by embedding hosts generally. No move is included in
+the current rename validation batch.
 
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 
