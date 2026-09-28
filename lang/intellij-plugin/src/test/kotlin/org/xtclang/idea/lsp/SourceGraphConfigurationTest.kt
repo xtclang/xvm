@@ -59,4 +59,27 @@ class SourceGraphConfigurationTest {
         assertThatThrownBy { SourceGraphConfiguration.replace(original.replace("[$entry]", "[$entry,$entry]"), before, after, base) }
             .isInstanceOf(IllegalArgumentException::class.java)
     }
+    @Test
+    fun `history preserves unrelated edits but refuses independently replaced dependency edges`() {
+        val withEdge = original.replace("\"uri\":\"Library.x\"", "\"uri\":\"Library.x\",\"dependencies\":[\"Other\"]")
+        val graph = listOf(SourceModuleConfiguration("Library", "file:///workspace/Library.x", listOf("Other")))
+        val changed = SourceGraphConfiguration.replace(withEdge, graph, after, base).replace("42", "17")
+        val restored = SourceGraphConfiguration.replace(changed, after, graph, base)
+        assertThat(restored).contains("17", "Other")
+        assertThatThrownBy { SourceGraphConfiguration.replace(restored.replace("Other", "Elsewhere"), graph, after, base) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
+    fun `absolute roots in separate projects preserve the complete graph and refuse duplicate roots`() {
+        val graph = listOf(SourceModuleConfiguration("Library", "file:///libraries/Library.x"), SourceModuleConfiguration("App", "file:///apps/App.x", listOf("Library")))
+        val content = """{"xtc":{"compiler":{"sourceModules":[{"name":"Library","uri":"file:///libraries/Library.x"},{"name":"App","uri":"file:///apps/App.x","dependencies":["Library"]}]}}}"""
+        val next = listOf(SourceModuleConfiguration("Renamed", "file:///libraries/Renamed.x"), graph[1].copy(dependencies = listOf("Renamed")))
+        val changed = SourceGraphConfiguration.replace(content, graph, next, base)
+        assertThat(changed).contains("file:///apps/App.x", "file:///libraries/Renamed.x")
+        assertThat(SourceGraphConfiguration.replace(changed, next, graph, base)).contains("file:///libraries/Library.x")
+        assertThatThrownBy { SourceGraphConfiguration.replace(content.replace("file:///apps/App.x", "file:///libraries/Library.x"), graph, next, base) }
+            .isInstanceOf(IllegalArgumentException::class.java).hasMessageContaining("Duplicate source module roots")
+    }
+
 }
