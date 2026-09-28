@@ -7,7 +7,6 @@ import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
-import com.intellij.driver.sdk.waitFor
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -57,7 +56,7 @@ class ClientTrace(
         matches: (List<JsonObject>) -> Boolean,
     ): List<JsonObject> =
         with(driver) {
-            waitFor(
+            awaitUi(
                 message = "received diagnostic publication for $uri",
                 timeout = 45.seconds,
                 getter = {
@@ -75,7 +74,7 @@ class ClientTrace(
         text: String,
     ): Int =
         with(driver) {
-            waitFor(
+            awaitUi(
                 message = "client document version for $uri",
                 errorMessage = {
                     val protocol = ClientProtocol(driver)

@@ -1,6 +1,5 @@
 package org.xtclang.idea.playbook
 
-import com.intellij.driver.sdk.waitFor
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.dependencyCases() {
@@ -105,7 +104,7 @@ internal fun ParityScenarios.dependencyCases() {
         val before = trace.notifications("window/showMessage").size
         configure(data["sourceModules"])
         with(driver) {
-            waitFor("client receives rejection of cyclic graph", 45.seconds) {
+            awaitUi("client receives rejection of cyclic graph", 45.seconds) {
                 trace.notifications("window/showMessage").drop(before).any { data.pattern("pattern").containsMatchIn(it.string("message")) }
             }
         }
