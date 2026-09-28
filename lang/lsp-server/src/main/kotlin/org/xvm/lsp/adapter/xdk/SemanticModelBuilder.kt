@@ -218,7 +218,12 @@ private class SemanticModelBuilder(
         implementations.values.flatten().filter { it in dependencies }.forEach { implementation ->
             symbol(implementation, implementation.name, kind(implementation))
         }
-        return finish(nodes, compilation.succeeded(), implementations)
+        val declarations =
+            if (compilation.succeeded() && errors != null) compilerDeclarationTargets(nodes, errors) else emptyMap()
+        (declarations.keys + declarations.values.flatten()).forEach { identity ->
+            symbol(identity, identity.name, kind(identity))
+        }
+        return finish(nodes, compilation.succeeded(), implementations, declarations)
     }
 
     private fun collect(
@@ -379,6 +384,7 @@ private class SemanticModelBuilder(
         nodes: List<AstNode>,
         complete: Boolean,
         implementations: Map<IdentityConstant, Set<IdentityConstant>> = emptyMap(),
+        declarations: Map<IdentityConstant, Set<IdentityConstant>> = emptyMap(),
     ): List<SemanticModel> {
         val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
         val facts =
@@ -393,6 +399,10 @@ private class SemanticModelBuilder(
                             constants[target]?.let { it to implementations.mapNotNull(constants::get) }
                         }.toMap(),
                 callables = callables,
+                declarations =
+                    declarations.entries.mapNotNull { (target, contracts) ->
+                        constants[target]?.let { it to contracts.mapNotNull(constants::get) }
+                    }.toMap(),
             )
         return immutableList(
             nodes.map { it.source?.fileName }.distinct().map { source ->
