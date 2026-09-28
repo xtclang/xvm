@@ -142,6 +142,20 @@ synthesis remains separate: no literal candidates or guessed expected types are 
 No new mutable AST field is required; parser ownership and copied candidate metadata carry the
 additional information. The existing four-argument Candidate constructor remains available.
 
+### L59 inferred presentation implementation (2026-09-28)
+
+The detached semantic model now copies validated lambda function signatures and source arrow
+ranges. Inferred lambda parameters are marked from the compiler's existing names-only syntax;
+synthetic capture parameters never become source hints. Return hints use the validated function
+return tuple, while explicit parameter types remain unannotated. Destructured local declarations
+reuse their independently validated registers and inferred type syntax. Failed compilations
+suppress inferred hints, and replacement/close discard the previous snapshot.
+
+The sole Java AST addition is `LambdaExpression.getOperator()`, exposing its existing written
+arrow token. Resolution, presentation and new state stay in the Kotlin snapshot/builder; there is
+no new lambda field, clone-reset rule or retained validation context. New hint/range/hover and
+failure/repair regressions await the combined L56–L59 checkpoint.
+
 ### Finish the existing editor features
 
 - [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
