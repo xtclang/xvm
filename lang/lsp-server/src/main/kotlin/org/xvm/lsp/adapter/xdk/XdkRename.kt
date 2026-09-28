@@ -124,6 +124,41 @@ internal object XdkRename {
         return actualDispatch.containsAll(knownDispatch)
     }
 
+    /** Permit exactly the selected owner/contract chain to acquire one written implementation. */
+    fun preservesMemberAddition(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+        candidate: XdkMemberActions.Candidate,
+    ): Boolean {
+        if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val expected = edges(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
+        if (expected.any { (site, target) -> actual[site] != target }) return false
+        val oldDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
+        val removed = (oldDispatch - newDispatch).singleOrNull() ?: return false
+        val added = (newDispatch - oldDispatch).singleOrNull() ?: return false
+        fun matches(target: Target, location: SemanticModel.SourceLocation): Boolean {
+            val declaration = target as? Target.Declaration ?: return false
+            val source = location.sourceName ?: return false
+            val text = plan.original[source] ?: return false
+            val start = offset(text, location.range.start)?.let { plan.map(source, it) } ?: return false
+            val end = offset(text, location.range.end)?.let { plan.map(source, it) } ?: return false
+            return declaration.site == Site(source, start, end)
+        }
+        if (!removed.supported || !added.supported || removed.owner != added.owner ||
+            !matches(removed.owner, candidate.owner) || removed.members.none { matches(it, candidate.contract) }
+        ) return false
+        val member = (added.members - removed.members.toSet()).singleOrNull() as? Target.Declaration ?: return false
+        val source = candidate.owner.sourceName ?: return false
+        val insertion = plan.edits[source]?.singleOrNull() ?: return false
+        return plan.edits.size == 1 && insertion.start == insertion.end &&
+            member.kind == SemanticModel.SymbolKind.METHOD && member.site.source == source &&
+            member.site.start >= insertion.start && member.site.end <= insertion.start + insertion.text.length &&
+            added.members.filterNot { it == member } == removed.members
+    }
+
     private data class Dispatch(
         val owner: Target,
         val members: List<Target>,
