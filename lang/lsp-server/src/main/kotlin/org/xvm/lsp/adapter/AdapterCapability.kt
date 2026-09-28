@@ -5,6 +5,7 @@ enum class AdapterCapability {
     HOVER,
     COMPLETION,
     DEFINITION,
+    DECLARATION,
     REFERENCES,
     DOCUMENT_SYMBOL,
     DOCUMENT_HIGHLIGHT,
