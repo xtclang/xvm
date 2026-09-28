@@ -133,8 +133,8 @@ public final class IncompleteStatement extends Statement {
     /** The real containing call for a direct, labeled or parenthesized argument cursor. */
     public Optional<IncompleteStatement> getArgumentCall() {
         AstNode parent = getParent();
-        while (parent instanceof IncompleteExpression || parent instanceof ParenthesizedExpression
-                || parent instanceof LabeledExpression) {
+        while (parent instanceof Expression && !(parent instanceof LambdaExpression)
+                && !(parent instanceof InvocationExpression) && !(parent instanceof NewExpression)) {
             parent = parent.getParent();
         }
         return parent instanceof IncompleteStatement call && call.isCall()
