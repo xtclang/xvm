@@ -152,9 +152,9 @@ class XdkProjectServerTest {
     @Test
     fun `transitive source changes rebuild consumers while an unrelated session stays available`() {
         val library = file("Library", LIBRARY)
-        val bridge = file("Bridge", "module Bridge { package lib import Library; static Int value()=lib.value(); }")
+        val bridge = file("Bridge", "module Bridge { package lib import Library; static Int value() = lib.value(); }")
         val consumer = file("Consumer", CONSUMER.replace("import Library", "import Bridge"))
-        val unrelated = file("Unrelated", "module Unrelated { Int value=1; }")
+        val unrelated = file("Unrelated", "module Unrelated { Int value = 1; }")
         Session(library, consumer, bridge).use { session ->
             session.open(consumer, consumer.readText(), 7)
             session.expect(consumer, 0, 7, false)
@@ -182,13 +182,13 @@ class XdkProjectServerTest {
             EmbeddingSupport
                 .instance()
                 .compileModule(
-                    Source("module Binary { static $type value()=" + (if (type == "Int") "1" else "\"text\"") + "; }", "file:///Binary.x"),
+                    Source("module Binary { static $type value() =" + (if (type == "Int") "1" else "\"text\"") + "; }", "file:///Binary.x"),
                     null,
                     ErrorList(),
                 ).toDependency()
         val first = artifact("Int")
         val incompatible = artifact("String")
-        val library = file("Library", "module Library { package base import Binary; static Int value()=base.value(); }")
+        val library = file("Library", "module Library { package base import Binary; static Int value() = base.value(); }")
         val consumer = file("Consumer", CONSUMER)
         Session(library, consumer).use { session ->
             session.server.replaceCompilerDependencies(listOf(first))
@@ -253,7 +253,7 @@ class XdkProjectServerTest {
             session.expect(consumer, mark, 8, false)
 
             val second = directory.resolve("second").toFile().also { it.mkdirs() }
-            val external = second.resolve("External.x").also { it.writeText("module External { static Int value()=1; }") }
+            val external = second.resolve("External.x").also { it.writeText("module External { static Int value() = 1; }") }
             val folder = WorkspaceFolder(second.toURI().toString(), "second")
             // The second folder is outside the original folder's automatic scan.
             session.server.workspaceService.didChangeWorkspaceFolders(
@@ -365,8 +365,8 @@ class XdkProjectServerTest {
     }
 
     private companion object {
-        const val LIBRARY = "module Library { static Int value()=1; }"
-        const val INCOMPATIBLE = "module Library { static String value()=\"text\"; }"
-        const val CONSUMER = "module Consumer { package lib import Library; Int run()=lib.value(); }"
+        const val LIBRARY = "module Library { static Int value() = 1; }"
+        const val INCOMPATIBLE = "module Library { static String value() = \"text\"; }"
+        const val CONSUMER = "module Consumer { package lib import Library; Int run() = lib.value(); }"
     }
 }

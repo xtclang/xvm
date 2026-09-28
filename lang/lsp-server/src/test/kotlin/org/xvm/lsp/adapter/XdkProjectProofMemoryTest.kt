@@ -33,7 +33,7 @@ class XdkProjectProofMemoryTest {
         val modules =
             (0 until 24).map { index ->
                 val file = directory.toRealPath().resolve("Root$index.x").toFile()
-                file.writeText("module Root$index { class Box { Int number=1; Int read()=number; } }")
+                file.writeText("module Root$index { class Box { Int number = 1; Int read() = number; } }")
                 XdkSourceModule("Root$index", file.toURI().toString())
             }
         val query =

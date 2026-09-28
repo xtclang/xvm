@@ -71,7 +71,7 @@ class DocumentStartupMessagesTest {
     @Test
     fun `late close preserves changes queued for the reopened incarnation`() {
         open("initial text")
-        buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 2, "module Reopened { Int value=1; }")
+        buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 2, "module Reopened { Int value = 1; }")
         change(2, buffers.getValue(uri).text)
         outgoing.consume(notification("textDocument/didClose", DidCloseTextDocumentParams(TextDocumentIdentifier(uri))))
         open("reopened snapshot before edit")

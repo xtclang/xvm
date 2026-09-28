@@ -56,7 +56,7 @@ class XdkCompletionSignatureTest {
 
     @Test
     fun `partial named arguments show labels without a fabricated parameter highlight`() {
-        val prefix = "module Editing { void run(String text) { text.indexOf(\"x\", startAt=2, "
+        val prefix = "module Editing { void run(String text) { text.indexOf(\"x\", startAt = 2, "
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix } }")
             val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
@@ -72,10 +72,10 @@ class XdkCompletionSignatureTest {
     fun `completed unqualified generic calls map named arguments to their actual parameters`() {
         val source =
             "module Editing { <T> T echo(T value, T backup) { return value; } " +
-                "void run() { String text = echo(backup=\"b\", value=\"a\"); } }"
+                "void run() { String text = echo(backup = \"b\", value = \"a\"); } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
-            for ((argument, expected) in listOf("backup=\"b\"" to 1, "value=\"a\"" to 0)) {
+            for ((argument, expected) in listOf("backup = \"b\"" to 1, "value = \"a\"" to 0)) {
                 val help = adapter.getSignatureHelp(URI, 0, source.indexOf(argument) + argument.length)!!
                 assertThat(help.signatures.single().label).isEqualTo("String echo(String value, String backup)")
                 assertThat(help.activeParameter).isEqualTo(expected)
@@ -89,14 +89,14 @@ class XdkCompletionSignatureTest {
     @Test
     fun `selected defaulted arguments and nested calls use compiler mappings`() {
         val source =
-            "module Editing { Int add(Int left=1, Int right=2) { return left; } " +
-                "void run() { Int n=add(right=add(left=3)); } }"
+            "module Editing { Int add(Int left = 1, Int right = 2) { return left; } " +
+                "void run() { Int n = add(right = add(left = 3)); } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
-            val inner = adapter.getSignatureHelp(URI, 0, source.indexOf("left=3") + "left=3".length)!!
+            val inner = adapter.getSignatureHelp(URI, 0, source.indexOf("left = 3") + "left = 3".length)!!
             assertThat(inner.activeParameter).isZero()
             assertThat(inner.signatures.single().label).isEqualTo("Int add(Int left = …, Int right = …)")
-            val outer = adapter.getSignatureHelp(URI, 0, source.lastIndexOf("right=") + "right=".length)!!
+            val outer = adapter.getSignatureHelp(URI, 0, source.lastIndexOf("right =") + "right =".length)!!
             assertThat(outer.activeParameter).isEqualTo(1)
         }
     }
@@ -169,6 +169,6 @@ class XdkCompletionSignatureTest {
             "module Editing { class Box<Element> { " +
                 "Element echo(Element value) { return value; } " +
                 "Int choose(Int n) { return n; } String choose(String s) { return s; } " +
-                "String label=\"box\"; private String hidden=\"hidden\"; private Int secret() { return 1; } }"
+                "String label = \"box\"; private String hidden = \"hidden\"; private Int secret() { return 1; } }"
     }
 }

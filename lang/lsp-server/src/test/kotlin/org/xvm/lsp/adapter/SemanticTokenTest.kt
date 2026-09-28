@@ -382,7 +382,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val originalSource =
                 """
                 module myapp {
-                    void run(String[] args=[]) {
+                    void run(String[] args = []) {
                         @Inject Console console;
                         if (args.empty) {
                             console.print("Hello!");
@@ -493,7 +493,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val originalSource =
                 """
                 module myapp {
-                    void run(String[] args=[]) {
+                    void run(String[] args = []) {
                         @Inject Console console;
                         console.print("Hello!");
                     }
