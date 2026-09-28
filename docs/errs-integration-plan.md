@@ -105,6 +105,24 @@ Deterministic regressions cover typing/replacement before open, pre-listener edi
 stale shortened-document folds and watcher negotiation. Validation is pending the combined
 L56–L59 checkpoint; native startup acceptance remains required before closing L56 in full.
 
+### L57 written formal bounds implementation (2026-09-28)
+
+Recovered method/class headers now retain their real `Parameter` syntax, including constraints.
+`CursorScope` resolves disposable constraint copies through the compiler, follows sibling bounds,
+rejects cycles/unresolved bounds and keeps written names shadowing enclosing names. Qualified
+lookup uses a resolved bound and ordinary parameterized child resolution. `CursorBinding.Formal`
+exposes a source name and upper bound without inventing a method/class or formal identity.
+Original `CursorBinding` constructors remain available; its record component list gains formals.
+
+The Kotlin snapshot copies only name, bound type and source range. Completion explicitly labels
+these as type parameters with bounds; partial hover uses the same facts. Query results do not
+replace normal diagnostics. Recovery nodes use final child lists and independently clone their
+written parameters, following the existing syntax-only node ownership pattern.
+
+New positive, shadowing, cyclic/unresolved and parameterized-qualifier regressions await the
+combined L56–L59 validation. These bounds are not proof that an incomplete declaration's body or
+inheritance is valid, nor an exact concrete type for a formal.
+
 ### Finish the existing editor features
 
 - [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
