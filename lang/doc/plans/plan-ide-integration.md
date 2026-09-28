@@ -208,19 +208,30 @@ scope (L55/L62), hierarchy/classification (L65), formatting/links/linked editing
 scale/source metadata (L67). L56 adds client startup ordering and stale-fold guards. L57 resolves
 written formal bounds without synthetic components; L58 extends whole-argument fitting and callable
 fallbacks; L59 copies validated lambda signatures and destructured local types. Combined validation
-and remaining native acceptance are recorded in the integration plan.
+and remaining native acceptance are recorded in the integration plan. L56's dedicated five-phase
+native startup test now passes; X103 also passes after fixing the transport snapshot read-lock/VFS
+write-lock deadlock on reverse rename. Execution tracing includes queue sizes and ordered job
+lists, compiler/API durations and server request-to-reply times. These are diagnostics improvements,
+not additional LSP capabilities or a completed L81 progress/trace-controls implementation.
 Dynamic watcher registration now waits for `initialized` and negotiated support. The remaining
 capability negotiation and refresh work still belongs to the L80/L81 audit.
 
 **Implementation and validation are separate.** The shared playbook has 113 cases. IntelliJ has
 assertions for all 113, including the 50 newly implemented parity cases and completed X20/X81/X82
-assertion sets. Their native validation is in progress; a full pass is not claimed. There are
-50/50 individual passes in the newly implemented subset. X57 now verifies guarded native symbol
+assertion sets. The complete suite passes in `run-6034631232732848040`, with zero IDE errors and
+zero JUnit failures/errors/skips. X57 now verifies guarded native symbol
 rename after reproducing LSP4IJ's stale-edit bug; other edit entry points remain an audit item.
-X29 and X93–X98 pass individually; the full 113-case native checkpoint remains pending.
+X29 and X93–X98 are included in that full checkpoint.
 All 113 scenario assertions now have passing receipts across runs. The resumed 61-case batch
 failed its separate IDE-error gate on a test-driver PSI read, now corrected; X41/X108 pass with
-no IDE errors. The later full checkpoint lost desktop focus, so it does not close L60.
+no IDE errors. Later full checkpoints were interrupted by desktop focus and then Starter's
+default ten-minute session timeout. The driver now permits 30 minutes overall; its first rerun
+lost focus at X17 after 17 passing scenarios. The harness now restores popup focus without pointer
+input, guards against replay after edits and uses shorter polling intervals. The dedicated
+focus-recovery regression and seven selected native cases pass with no IDE errors. Both editor
+harnesses show current-case and completed/remaining counts. The final full run also passes X30
+with document readiness after restart and closes L60. Separate startup acceptance verifies all
+five edit/restart phases and disappearance of the untouched information balloon.
 See L60/L82 and the [validation record](../../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
 
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
