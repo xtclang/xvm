@@ -23,14 +23,14 @@ class XdkAnonymousConstructorTest {
     @ValueSource(
         strings = [
             "new Base<String>(\"x\", te|) { String read() = text; }",
-            "new Base<String>(second=\"x\", first=te|) { String read() = text; }",
+            "new Base<String>(second = \"x\", first = te|) { String read() = text; }",
             "new @Tagged Base<String>(\"x\", te|) { String read() = text; }",
             "new AbstractBase(\"x\", te|) { @Override String read() = text; }",
             "new Object(1, te|) { construct(Int first, String second) {} String read() = text; }",
             "new Reader(\"x\", te|) { construct(String first, String second) {} @Override String read() = text; }",
             "new Base<String>(\"x\", te|) { Int next() { return ++captured; } }",
             "Base<String> value = new Base(\"x\", te|) { String read() = text; }",
-            "new Base<String>(\"x\", te|) { String text=\"body\"; String read() = text; }",
+            "new Base<String>(\"x\", te|) { String text = \"body\"; String read() = text; }",
         ],
     )
     fun `anonymous constructors fit written arguments without emitting or capturing the body`(expression: String) {
@@ -43,7 +43,7 @@ class XdkAnonymousConstructorTest {
             val help = adapter.getSignatureHelp(URI, 0, prefix.length)
             assertThat(help).describedAs(expression).isNotNull()
             assertThat(help!!.signatures.map { it.label }).noneMatch { it.contains(":1") }
-            assertThat(help.signatures.map { it.activeParameter }).containsOnly(if (expression.contains("first=te")) 0 else 1)
+            assertThat(help.signatures.map { it.activeParameter }).containsOnly(if (expression.contains("first = te")) 0 else 1)
             val items = adapter.getCompletions(URI, 0, prefix.length)
             assertThat(items.map { it.label }).describedAs(expression).containsExactly("text")
             assertThat(
@@ -78,7 +78,7 @@ class XdkAnonymousConstructorTest {
             "new Reader(\"x\", te|) { @Override String read() = text; }",
             "new Base<String>(True, te|) { String read() = text; }",
             "new Missing(\"x\", te|) {}",
-            "new Base<String>(\"x\", missing=te|) {}",
+            "new Base<String>(\"x\", missing = te|) {}",
         ],
     )
     fun `invalid anonymous construction never offers an ordinary base call`(expression: String) {
@@ -216,6 +216,6 @@ class XdkAnonymousConstructorTest {
         const val HEADER =
             "module Editing { class Base<T> { construct(T first, T second) {} } annotation Tagged into Object {} " +
                 "@Abstract class AbstractBase { construct(String first, String second) {} String read(); } " +
-                "interface Reader { String read(); } void run(String text, Int textNumber) { Int captured=1; "
+                "interface Reader { String read(); } void run(String text, Int textNumber) { Int captured = 1; "
     }
 }

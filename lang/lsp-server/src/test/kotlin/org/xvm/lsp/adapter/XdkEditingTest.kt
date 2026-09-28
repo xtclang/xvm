@@ -10,7 +10,7 @@ class XdkEditingTest {
     @Test
     fun `formatting preserves CRLF literal contents and comments and is stable after application`() {
         val text =
-            "module Editing {\r\nInt run() {\r\nString text=\"two  spaces\";   \r\n" +
+            "module Editing {\r\nInt run() {\r\nString text = \"two  spaces\";   \r\n" +
                 "// 😀 https://example.com/docs.  \r\nreturn 1;   \r\n}\r\n}"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
@@ -24,14 +24,14 @@ class XdkEditingTest {
             val ranged = adapter.formatRange(URI, text, Range(Position(4, 0), Position(5, 0)), OPTIONS)
             assertThat(ranged.map { it.range.start.line }).containsOnly(4)
             assertThat(adapter.onTypeFormatting(URI, 5, 1, "}", OPTIONS)).isEmpty()
-            val broken = "module Editing { String text=\"unfinished"
+            val broken = "module Editing { String text = \"unfinished"
             assertThat(adapter.formatDocument(URI, broken, OPTIONS)).isEmpty()
         }
     }
 
     @Test
     fun `links use Java lexical hosts and exact UTF16 ranges`() {
-        val text = "module Editing {\r\n// 😀 https://example.com/docs.\r\nString url=\"https://example.org/path\";\r\n}"
+        val text = "module Editing {\r\n// 😀 https://example.com/docs.\r\nString url = \"https://example.org/path\";\r\n}"
         XdkAdapter().use { adapter ->
             val links = adapter.getDocumentLinks(URI, text)
             assertThat(links.map { it.target }).containsExactly("https://example.com/docs", "https://example.org/path")
@@ -46,7 +46,7 @@ class XdkEditingTest {
 
     @Test
     fun `linked locals follow resolved identity and module lenses use the existing client command`() {
-        val text = "module Editing { Int one() { Int value=1; return value; } Int two() { Int value=2; return value; } }"
+        val text = "module Editing { Int one() { Int value = 1; return value; } Int two() { Int value = 2; return value; } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             val linked = requireNotNull(adapter.getLinkedEditingRanges(URI, 0, text.indexOf("value")))
