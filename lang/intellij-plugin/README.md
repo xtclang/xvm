@@ -139,8 +139,8 @@ See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help
 
 The suite reads all 113 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-It now has startup and all 113 scenario implementations. The new parity batch is under validation;
-this inventory does not establish a full native pass. Coverage includes native
+Startup and all 113 scenarios have a complete passing checkpoint recorded below. Later feature
+changes use selected runs with separate receipts. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
 highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
 Parameter Info, argument-value fitting and declaration recovery through X108. Native checks include the X34 multi-target chooser, X99/X100
@@ -219,6 +219,12 @@ failure deadlines. Test-editor scrolling disables animation for the operation an
 Driver helper's fixed 200 ms sleep. Native UI assertions are unchanged. The dedicated
 `--tests '*CompilerPlaybookTest.focusRecovery'` check creates an unowned test window to interrupt
 completion and Parameter Info, and verifies that completed completion/rename edits cannot replay.
+
+The later L55/L61/L62 checkpoint passes START and X4/X102/X103/X104 with zero IDE errors.
+X4 adds an installed-client declaration request check beside native navigation. X103 verifies
+forward/reverse native rename of a member file and its nested companion directory. The
+[batch receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62)
+distinguish these selected assertions from the earlier full playbook run.
 
 Live case results are appended to `build/reports/compiler-playbook/run-*/progress.jsonl`.
 The final report is `results.json` in the same directory; `ide-paths.txt` points to

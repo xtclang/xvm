@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-09-27 (compiler capability inventory and explicit L55–L82 completion checklist)
+> **Last Updated**: 2026-09-28 (teaching-workspace proof, declaration lookup and resource rename scope)
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
@@ -164,7 +164,7 @@ support for every XTC construct, optional LSP extension or native editor present
 | Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
 | Linked editing | - | Same-file identifiers | **Partial** - resolved rename-eligible local-variable occurrences in one successful source snapshot; no proposed-name proof |
 | Inlay hints | - | - | **Partial** - inferred local/destructured types, lambda parameters/returns and selected positional parameter names after successful compilation; named arguments/defaults omitted |
-| Go-to-declaration (separate LSP request) | - | - | **Implemented, validation pending** - local/import-alias declarations, inherited method/property contracts with multiple targets, and indexed library sources |
+| Go-to-declaration (separate LSP request) | - | - | **Done** - local/import-alias declarations, inherited method/property contracts with multiple targets, and indexed library sources |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
 | Find implementations | - | - | **Partial** - compiler composition targets across the complete source graph, including unopened source consumers; generic/inherited/mixin/delegated methods and property accessors; no invented binary source target |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges across the complete source graph; generic parents retained, digest-bound handles reject stale closed files |
@@ -175,8 +175,9 @@ support for every XTC construct, optional LSP extension or native editor present
 Source audit at `511195564` (2026-09-27): **all 24 project-defined adapter capabilities have
 compiler implementations**, plus push diagnostics and document/workspace synchronization.
 This covers the usual editor feature families, but several are bounded and some LSP operations
-are entirely absent. The 24-entry enum does not include all of LSP. We should describe the
-backend as broadly implemented with substantial partial areas, not as fully implemented.
+are entirely absent. L61 adds the 25th capability, explicit declaration lookup, with backend,
+protocol and selected editor validation. The enum does not include all of LSP; substantial
+semantic and protocol work remains.
 
 The active [full completion checklist, L55–L82](../../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 is the task source of truth. It distinguishes implementation work, confirmed reliability gaps,
@@ -184,9 +185,11 @@ investigations and optional features requiring a scope decision. The protocol in
 LSP 3.18 and the installed LSP4J 1.0.0 interfaces. Unadvertised optional features do not by
 themselves violate LSP; an inherited empty method does not count as an implementation.
 
+L61 declaration lookup passes combined backend/protocol checks and X4 in both editors. It returns
+local or import-alias declarations and inherited written member contracts, preserving multiple targets.
+
 | Entirely absent feature or extension | What exists today | Task |
 |---|---|---|
-| Separate go-to-declaration | Implemented with explicit capability and plural contract targets; combined validation pending | L61 |
 | Extract/inline/safe-delete refactorings, implement/override generation and general semantic quick fixes | Bounded proven rename, import cleanup and public-type imports | L62–L63 |
 | Pull document/workspace diagnostics | Versioned push diagnostics and Problems updates | L68 |
 | Semantic-token range/delta requests | Full-document tokens | L69 |
@@ -237,9 +240,10 @@ See L60/L82 and the [validation record](../../../docs/errs-integration-plan.md#h
 Configured-graph queries compile a captured source snapshot on the serialized worker and leave live
 diagnostics untouched. Graph proofs now discard each root's compiler objects after copying
 declaration/artifact comparison keys and dispatch facts. A 24-root memory regression covers
-success, rejection, cancellation and failure at 512 MiB; L55 still requires the real teaching
-workspace/open-buffer checkpoint. References distinguish overloads and concrete overrides; they do not expand
-to an entire override family. Method rename does expand that family, including generic interface
+success, rejection, cancellation and failure at 512 MiB. The real 25-root teaching workspace
+also passes with one and five unsaved buffers, unchanged diagnostics and released compiler objects.
+References distinguish overloads and concrete overrides; they do not expand to an entire override
+family. Method rename does expand that family, including generic interface
 contracts, then rejects changed bindings or dispatch relationships. Exact references and refactoring
 require a complete graph; navigation can retain healthy independent modules beside a broken one.
 Edits, close, settings/repository changes and cancellation retire outstanding queries;
