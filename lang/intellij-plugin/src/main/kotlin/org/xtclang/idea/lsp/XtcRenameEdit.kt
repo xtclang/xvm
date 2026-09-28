@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture
 class XtcRenameEdit private constructor(
     private val snapshot: Snapshot,
     val edit: WorkspaceEdit,
+    private val graph: SourceGraphEdit? = null,
 ) {
     /** Return false without changing any file when the request's documents have been retired. */
     fun apply(): Boolean {
@@ -31,10 +32,12 @@ class XtcRenameEdit private constructor(
         val project = snapshot.wrapper.project
         if (project.isDisposed) return false
         return WriteCommandAction.writeCommandAction(project).withName("Rename").withGlobalUndo().compute<Boolean, RuntimeException> {
-            if (!snapshot.isCurrent()) {
+            if (!snapshot.isCurrent() || graph?.isCurrent() == false) {
                 false
             } else {
+                graph?.beforeApply()
                 LSPIJUtils.applyWorkspaceEdit(edit)
+                graph?.apply()
                 true
             }
         }
@@ -97,16 +100,22 @@ class XtcRenameEdit private constructor(
                         },
                     )
                 val params = RenameParams(TextDocumentIdentifier(wrapper.toUriString(file)), LSPIJUtils.toPosition(offset, document), name)
+                val graph = SourceGraphEdit.capture(wrapper.project, wrapper.serverDefinition.id)
                 val cancellation = CancellationSupport()
                 val result =
                     snapshot
                         .flush()
                         .thenCompose {
                             cancellation.checkCanceled()
-                            cancellation.execute(snapshot.server.textDocumentService.rename(params))
-                        }.thenApply { edit ->
+                            val server = snapshot.server
+                            cancellation.execute(
+                                if (server is XtcLanguageServer) server.renameProposal(params)
+                                else server.textDocumentService.rename(params).thenApply { it?.let(::RenameProposal) },
+                            )
+                        }.thenApply { proposal ->
+                            val edit = proposal?.edit
                             val hasEdits = edit != null && (!edit.documentChanges.isNullOrEmpty() || !edit.changes.isNullOrEmpty())
-                            if (hasEdits) XtcRenameEdit(snapshot, edit) else null
+                            if (hasEdits) XtcRenameEdit(snapshot, edit, proposal.graph?.let(graph::replacement)) else null
                         }
                 result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
                 result

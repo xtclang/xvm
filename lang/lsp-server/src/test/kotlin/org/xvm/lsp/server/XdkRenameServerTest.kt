@@ -32,6 +32,42 @@ class XdkRenameServerTest {
     lateinit var directory: Path
 
     @Test
+    fun `host rename carries the expected graph and replacement without applying either`() {
+        directory = directory.toRealPath()
+        val library = directory.resolve("Library.x").toFile()
+        val consumer = directory.resolve("Consumer.x").toFile()
+        val text = "module Library.example.org { class Box {} }"
+        val use = "module Consumer { package lib import Library.example.org; lib.Box make() = new lib.Box(); }"
+        library.writeText(text)
+        consumer.writeText(use)
+        val uri = library.toURI().toString()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters().apply { capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename") }).get(20, SECONDS)
+            server.replaceCompilerSourceModules(
+                listOf(XdkSourceModule("Library.example.org", uri), XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library.example.org"))),
+            )
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
+            documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri))).get(30, SECONDS)
+            val params = RenameParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("Library")), "Renamed")
+            val proposal = requireNotNull(server.renameProposal(params).get(30, SECONDS))
+            val graph = requireNotNull(proposal.graph)
+            assertThat(graph.before.map { it.name }).containsExactlyInAnyOrder("Library.example.org", "Consumer")
+            assertThat(graph.after.map { it.name }).containsExactlyInAnyOrder("Renamed.example.org", "Consumer")
+            assertThat(graph.after.single { it.name == "Consumer" }.dependencies).containsExactly("Renamed.example.org")
+            assertThat(proposal.edit.documentChanges.first().left.textDocument.version).isEqualTo(7)
+            assertThat(proposal.edit.documentChanges.last().right).isInstanceOf(RenameFile::class.java)
+            assertThat(documents.rename(params).get(30, SECONDS)).isNull()
+            assertThat(library.readText()).isEqualTo(text)
+            assertThat(consumer.readText()).isEqualTo(use)
+        } finally {
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
     fun `rename negotiates document changes and includes open and closed file versions`() {
         directory = directory.toRealPath()
         val root = directory.resolve("Rename.x").toFile()
