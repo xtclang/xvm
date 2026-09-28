@@ -49,13 +49,16 @@ public class EmbeddingApiCompatibilityTest {
         var original = new EmbeddingSupport.Compilation(null, file, null);
         var structural = new EmbeddingSupport.Compilation(null, file, null, List.of());
         var selectedCalls = new EmbeddingSupport.Compilation(null, file, null, List.of(), Map.of());
+        var functionCalls = new EmbeddingSupport.Compilation(null, file, null, List.of(), Map.of(), Map.of());
         assertEquals(named, original);
         assertEquals(named, structural);
         assertEquals(named, selectedCalls);
+        assertEquals(named, functionCalls);
         assertSame(file.getConstantPool(), named.pool());
         assertEquals(0, switch (named) {
             case EmbeddingSupport.Compilation(var module, var structure, var ast,
-                    var trees, var bindings, var functions) -> trees.size() + bindings.size() + functions.size();
+                    var trees, var bindings, var functions, var constructors) ->
+                        trees.size() + bindings.size() + functions.size() + constructors.size();
         });
     }
 

@@ -62,7 +62,13 @@ internal object XdkRename {
         val target = model.symbolAt(line, column)?.takeIf { it.renameable || it.id in targets.orEmpty() } ?: return null
         if (target.kind == SemanticModel.SymbolKind.MODULE && model.occurrenceAt(line, column)?.name != target.name) return null
         val selected = targets ?: setOf(target.id)
-        if (name == target.name) return Plan(texts, emptyMap())
+        if (facts.models
+                .flatMap { it.symbols }
+                .filter { it.id in selected }
+                .all { it.name == name }
+        ) {
+            return Plan(texts, emptyMap())
+        }
         val edits =
             facts.models
                 .associate { view ->
@@ -78,7 +84,7 @@ internal object XdkRename {
                             }.map { occurrence ->
                                 val start = offset(text, occurrence.range.start) ?: return null
                                 val end = offset(text, occurrence.range.end) ?: return null
-                                if (text.substring(start, end) != target.name) return null
+                                if (text.substring(start, end) != occurrence.name) return null
                                 Edit(start, end, name)
                             }
                 }.filterValues { it.isNotEmpty() }
@@ -178,6 +184,13 @@ internal object XdkRename {
         allowUnresolved: Boolean = false,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
+        val declarations =
+            facts.models
+                .flatMap { it.symbols }
+                .filter { it.declaration != null && it.declarationSource in texts }
+                .mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
+                .toMap()
+
         fun site(
             source: String,
             range: SemanticModel.Range,
@@ -193,7 +206,8 @@ internal object XdkRename {
             model: SemanticModel,
             id: SemanticModel.SymbolId?,
         ): Target? {
-            val symbol = id?.let(model::symbol) ?: return null
+            val original = id?.let(model::symbol) ?: return null
+            val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
             val source = symbol.declarationSource
             val range = symbol.declaration
             return if (source != null && range != null && source in texts) {
