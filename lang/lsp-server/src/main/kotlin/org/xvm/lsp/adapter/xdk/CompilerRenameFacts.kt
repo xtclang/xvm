@@ -6,7 +6,9 @@ import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
+import org.xvm.asm.constants.PackageConstant
 import org.xvm.lsp.util.ExecutionTrace
+import java.io.File
 import java.util.UUID
 
 /** Compiler-proven identities copied before an attempt's pool and AST can be released. */
@@ -37,6 +39,11 @@ internal sealed interface ProofIdentity {
         val owner: ProofIdentity,
         val members: List<ProofIdentity>,
         val delegates: List<ProofIdentity>,
+    ) : ProofIdentity
+
+    /** An implicit package has a directory identity, with no invented source declaration. */
+    data class Directory(
+        val path: String,
     ) : ProofIdentity
 
     /** No cross-attempt equivalence is safe when neither a declaration nor artifact proves it. */
@@ -119,6 +126,27 @@ internal fun captureRenameFacts(
                 // Bundled source navigation must use the same artifact identity as binary-only views.
                 location != null && module !in XdkLibraries.moduleNames -> {
                     ProofIdentity.Source(location, constant.format, requireNotNull(value).name)
+                }
+
+                constant is PackageConstant && module !in XdkLibraries.moduleNames -> {
+                    val directory =
+                        when (val parent = identity(constant.parentConstant)) {
+                            is ProofIdentity.Source -> {
+                                parent.location.sourceName
+                                    ?.let(
+                                        ::File,
+                                    )?.let { File(it.parentFile, it.nameWithoutExtension) }
+                            }
+
+                            is ProofIdentity.Directory -> {
+                                File(parent.path)
+                            }
+
+                            else -> {
+                                null
+                            }
+                        }
+                    directory?.let { ProofIdentity.Directory(File(it, constant.name).path) } ?: ProofIdentity.Unproven()
                 }
 
                 constant is MethodConstant && sourceHost && errors != null -> {
