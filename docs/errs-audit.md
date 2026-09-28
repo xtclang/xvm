@@ -1,5 +1,18 @@
 # Failures with nowhere to go
 
+**Repair identity comparison:** an unresolved method signature can still expose a written parameter
+before the compiler has a resolved method slot. After a public-type auto-import, the same parameter
+has both identities. Comparing source-declaration identity with slot identity falsely rejected the
+valid `Document echo(Document doc) = doc` repair. Repair proofs now normalize written parameters
+to their declaration on both sides; generated/composed slots and normal rename retain their slot
+proof. The existing bundled-import regression exposes this mismatch.
+
+**Partial AST packaging:** the all-eight-class subpackage move would cross construction preparation,
+protected expression validation, type-syntax fields and reflective child traversal. The exact
+blockers and service-boundary prerequisite are in the integration plan; no broad visibility changes
+or relocation have been made. Real dispatch fixtures cover Explicit/Default, Delegating and Union;
+the generated/native/conditional route inventory is still incomplete.
+
 **Orphan server JVMs:** [the process-lifecycle audit](errs-lsp-process-lifecycle.md) documents
 the reproduced Tree-sitter worker leak after EOF, LSP4IJ stop-before-start race and master's
 logging-only exit handler. Fixes are isolated in `8e976f868` and `eefc1b8e6`; child-process tests
