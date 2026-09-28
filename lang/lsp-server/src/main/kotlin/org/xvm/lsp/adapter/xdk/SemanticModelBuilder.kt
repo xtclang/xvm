@@ -259,10 +259,11 @@ private class SemanticModelBuilder(
                     symbols[id]?.let {
                         // Function types expose positional arguments, not the lambda's written names.
                         // The original register/source binding remains stable through nested captures.
-                        symbols[id] = it.copy(
-                            inferred = lambda.hasOnlyParamNames() && validatedType(lambda) != null,
-                            renameable = complete,
-                        )
+                        symbols[id] =
+                            it.copy(
+                                inferred = lambda.hasOnlyParamNames() && validatedType(lambda) != null,
+                                renameable = complete,
+                            )
                     }
                 }
             }
