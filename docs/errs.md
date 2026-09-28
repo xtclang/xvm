@@ -7,6 +7,15 @@ EmbeddingSupport/lib_runner and creates fresh application containers. R1–R8 co
 DAP work. Compiler ASTs/pools stay worker-owned, compile-only paths never start the VM, and source
 revisions remain paired with emitted artifacts for reruns and future breakpoint mapping.
 
+**L63 member actions:** the compiler adapter now offers ordinary source-contract implement/override
+stubs at a class name. TypeInfo chooses the inherited signature; a private whole-graph compilation
+must preserve existing bindings and prove exactly one selected dispatch-chain addition. Bodies use
+`TODO()`. Unsupported signature forms and changes to existing call/descendant bindings remain
+withheld. This uses existing compiler APIs and adds no Java AST state. The requested `ast.partial`
+organization has an [access-boundary audit](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax):
+a direct move needs substantial internal access and reflective traversal changes, so it is deferred
+until a small compiler-owned service boundary is designed.
+
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
 startup/cancellation race. Both have isolated fixes and process regressions; see
 [the diagnosis and master extraction notes](errs-lsp-process-lifecycle.md). These defects are

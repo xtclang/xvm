@@ -410,7 +410,7 @@ VS Code receipts above.
   dispatch-chain addition. Generated bodies use `TODO()`. Conditional/multiple returns, method
   type parameters, default parameters, complex type spelling, binary contracts, changed existing
   call bindings and descendant-chain changes remain withheld. No failed-compilation TypeInfo is
-  inspected. Focused tests are written; validation is pending. Add independently proven fixes beyond
+  inspected. The 17 focused member-action tests pass; native action-menu acceptance remains pending. Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
   code generation/doc comments and reference/test lenses are separate subfeatures. Use the
@@ -1022,7 +1022,7 @@ cursor/recovery syntax into `org.xvm.compiler.ast.partial`. Candidate classes ar
   classic parser/validation hooks in the AST where they own normal language semantics.
 - [ ] Perform a mechanical move only if existing public/protected contracts or a few narrow,
   meaningful helpers suffice. Do not expose AST internals broadly just to satisfy the move.
-- [ ] If access changes would be substantial, record the exact blockers and proposed minimal
+- [x] If access changes would be substantial, record the exact blockers and proposed minimal
   boundary before restructuring. The initial inventory already shows package-private helpers;
   this is not yet classified as a trivial import-only move. Concrete boundaries include
   package-private `NewExpression.prepareConstruction`/its `Construction` result and protected
@@ -1065,17 +1065,51 @@ override family. Field accessors and shorthand constructors already have dedicat
 primary-parameter handling; making their generated method identities renameable would bypass those
 proofs. Implicit/SansCode/Native and further capped/conditional routes still need dedicated fixtures;
 this checkpoint does not claim exhaustive enumeration or enable them by body-category guesswork.
-New chain fixtures await the batched validation below.
+All three chain fixtures pass in the 67-case compiler/refactoring batch (zero failures/errors/skips).
+
+The same validation caught a repair-proof regression introduced by `4937f4382`: a parameter in
+an unresolved signature has a written declaration before it has a method slot. The later resolved
+slot is the same parameter, not rebinding. `1db6200cc` compares written parameter declarations on
+both sides of repair only. Keep that fix with the earlier slot-proof changes during extraction;
+it is independent of member generation. The bundled Document import and parameter-rename tests pass.
 
 ## Native configuration acceptance follow-up
 
 The VS Code launcher now accepts `-PcompilerPlaybookMultiRoot=true` for a saved two-folder
 workspace. X118 exercises the same real compiler proposal and native Rename/Undo/Redo in either
-layout, rejects a graph override in the other folder, and deterministically edits the actual
+layout, verifies that VS Code rejects a folder override of the workspace-scoped graph, and edits the actual
 settings document during the real client's edit conversion. The refusal must leave every source
 unchanged. This is client race coverage, not a mocked compiler reply. IntelliJ's project-owned
 settings have no VS Code workspace/folder override hierarchy; its existing X118 and pure history
-guards remain the corresponding coverage. Fresh selected validation is pending for this change.
+guards remain the corresponding coverage.
+
+Validation on 2026-09-29:
+
+- Compiler/refactoring batch: **67 tests**, zero failures/errors/skips. This includes the three
+  dispatch fixtures, import repair, parameter rename and project-query lifecycle regressions.
+- Expanded member-action suite: **17 tests**, zero failures/errors/skips. Three were added after
+  that batch: cross-module contracts, descendant-chain refusal and broken-neighbor refusal.
+  There are 70 distinct JVM cases across these focused runs, not a full-suite receipt.
+- Saved multi-root VS Code: X118 and CFG1–CFG3 pass in `run-ZOoaXw`.
+- Single-folder VS Code: X118 passes in `run-nFKwOD`, including the new in-flight settings guard.
+- Root Spotless, LSP ktlint, TypeScript compilation and changed TypeScript ESLint checks pass.
+  The real multi-root Gradle task stores its configuration-cache entry successfully.
+- No IntelliJ rerun or native member-generation action-menu acceptance is claimed. Intervening
+  independent graph edits during editor Undo/Redo remain a separate native history stress case;
+  these receipts cover in-flight Rename settings edits and ordinary grouped Undo/Redo.
+
+Extraction map for this checkpoint:
+
+| Review scope | Commits to keep together |
+| --- | --- |
+| Partial AST boundary audit (documentation only) | `54facc488`; the move is deferred, with explicit prerequisites. |
+| VS Code configuration/native coverage | `581daf039` + `1f20a7255`. |
+| Compiler dispatch route fixtures | `92f86b741` + its formatting hunk in `a1e7360d8`. |
+| L63 ordinary implement/override generation | `1df7643d2` + member-action corrections in `a1e7360d8` + `c8fcbd665`. |
+| Existing repair-proof regression | `1db6200cc`, retained with earlier slot-proof commit `4937f4382`; independent of L63. |
+
+The capability matrix, manual playbook, main compiler notes and audit describe the same limits.
+These review slices still need independent validation when extracted.
 
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 
