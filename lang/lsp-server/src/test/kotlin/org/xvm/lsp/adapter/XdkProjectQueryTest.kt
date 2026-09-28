@@ -251,6 +251,23 @@ class XdkProjectQueryTest {
         assertThat(query(library, consumer).references(library.toURI().toString(), 0, library.readText().indexOf("pick"), true)).isEmpty()
     }
 
+    @Test
+    fun `delegated method rename joins contracts and concrete receiver implementations across modules`() {
+        val library = source("Library", "module Library { interface Api { Int read(); } }")
+        val consumer =
+            source(
+                "Consumer",
+                "module Consumer { package lib import Library; " +
+                    "class Actual implements lib.Api { @Override Int read() = 1; } " +
+                    "class Forward(Actual target) delegates lib.Api(target) {} " +
+                    "Int use(Forward value) = value.read(); }",
+            )
+        val edit =
+            requireNotNull(query(library, consumer).rename(library.toURI().toString(), 0, library.readText().indexOf("read"), "fetch"))
+        assertThat(apply(library, edit)).contains("Int fetch()")
+        assertThat(apply(consumer, edit)).contains("Int fetch()", "value.fetch()")
+    }
+
     private fun artifact(
         name: String,
         text: String,
