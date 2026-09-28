@@ -50,6 +50,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.InvocationExpression;
+import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -377,15 +378,27 @@ public class EmbeddingSupport {
      *                     objects remain worker-owned and must be copied before concurrent use
      * @param functionBindings  validated function signatures with no selected runtime method;
      *                          ownership is the same as for callBindings
+     * @param constructorBindings validated constructor and argument provenance; the same ownership
+     *                            rules apply, with no additional state on the construction AST
      */
     public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
                               List<StatementBlock> sourceTrees,
                               Map<InvocationExpression, InvocationBinding> callBindings,
-                              Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
+                              Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
+                              Map<NewExpression, InvocationBinding> constructorBindings) {
         public Compilation {
-            sourceTrees      = List.copyOf(sourceTrees);
-            callBindings     = identitySnapshot(callBindings);
-            functionBindings = identitySnapshot(functionBindings);
+            sourceTrees         = List.copyOf(sourceTrees);
+            callBindings        = identitySnapshot(callBindings);
+            functionBindings    = identitySnapshot(functionBindings);
+            constructorBindings = identitySnapshot(constructorBindings);
+        }
+
+        /** Retain hosts that supply method and function bindings. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees,
+                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
+            this(module, file, ast, sourceTrees, callBindings, functionBindings, Map.of());
         }
 
         /** Retain hosts that supply only statically selected method calls. */
@@ -793,7 +806,8 @@ public class EmbeddingSupport {
          */
         Compilation result() {
             var facts = bindings.finishFacts(ast == null ? List.of() : List.of(ast));
-            return new Compilation(module, file, ast, sourceTrees, facts.methods(), facts.functions());
+            return new Compilation(module, file, ast, sourceTrees, facts.methods(), facts.functions(),
+                    facts.constructors());
         }
 
         /**
