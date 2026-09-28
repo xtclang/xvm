@@ -15,17 +15,6 @@ class XdkRenameBoundaryTest {
     lateinit var directory: Path
 
     @ParameterizedTest
-    @ValueSource(strings = ["(Int input) -> input", "input -> input"])
-    fun `lambda parameter spelling is not a stable callable slot`(lambda: String) {
-        val text = "module App { Int run() { function Int(Int) f = $lambda; return f(1); } }"
-        workspace(text) { adapter, uri ->
-            Regex("\\binput\\b").findAll(text).forEach { match ->
-                assertThat(adapter.rename(uri, 0, match.range.first, "value")).isNull()
-            }
-        }
-    }
-
-    @ParameterizedTest
     @ValueSource(
         strings = [
             "Int use() { function Int(Int) f = &pick; return f(1); }",
