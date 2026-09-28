@@ -13,8 +13,6 @@ import java.math.BigInteger;
 
 import java.util.Random;
 
-import java.util.concurrent.ThreadLocalRandom;
-
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,10 +88,9 @@ public class PackedIntegerTest {
     @Test
     public void testReadAndWritePackedLongRnd()
             throws IOException {
-        Random rnd    = ThreadLocalRandom.current();
-        long   lStart = System.currentTimeMillis();
-        long   lStop  = lStart + 1000;           // TODO move to "slow" tests (and up the seconds)
-        do {
+        // a fixed seed and count make every run check the same values, however fast the machine is
+        Random rnd = new Random(0x5EED_1DEAL);
+        for (int iter = 0; iter < 100_000; ++iter) {
             long lOrig = rnd.nextLong();
 
             ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
@@ -112,7 +109,7 @@ public class PackedIntegerTest {
                 in.readByte();
                 throw new IllegalStateException("oops .. bytes left over");
             } catch (IOException ignore) {}
-        } while (System.currentTimeMillis() < lStop);
+        }
     }
 
     @Test

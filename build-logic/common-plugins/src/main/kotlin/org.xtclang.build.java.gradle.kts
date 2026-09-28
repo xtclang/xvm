@@ -176,10 +176,8 @@ tasks.withType<JavaCompile>().configureEach {
         )
     )
 
-    // non-provider knobs at execution time
-    doFirst {
-        options.encoding = UTF_8.toString()
-    }
+    // Compiler options must be set before Gradle snapshots task inputs.
+    options.encoding = UTF_8.toString()
 }
 
 // Test: JVM args provider + typed Action for logging (no doFirst lambda)
@@ -189,6 +187,8 @@ tasks.withType<Test>().configureEach {
     inputs.property("defaultJvmArgs", defaultJvmArgs)
     inputs.property("showTestStdout", showTestStdout)
     inputs.property("failFastTests", failFastTests)
+    // Tests gated by @EnabledIfEnvironmentVariable must re-run when the gate flips, not stay UP-TO-DATE.
+    inputs.property("runIntegrationTests", providers.environmentVariable("RUN_INTEGRATION_TESTS").orElse(""))
     // Skip all tests when -PskipAllTests is set (configuration cache safe)
     onlyIf(SkipAllTestsSpec(project.hasProperty("skipAllTests")))
 }

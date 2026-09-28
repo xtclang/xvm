@@ -13,10 +13,13 @@ for syntax highlighting, code navigation, and IDE features.
 
 # Parse a specific file manually (from project root)
 cd lang/tree-sitter/build/generated
-../tree-sitter-cli/tree-sitter parse /path/to/file.x
+# Replace <version> with lang-tree-sitter-cli from gradle/libs.versions.toml,
+# and <platform> with your host, such as linux-x64 or macos-arm64.
+cli="../tree-sitter-cli/<version>/<platform>/tree-sitter"
+"$cli" parse /path/to/file.x
 
 # Check for errors only
-../tree-sitter-cli/tree-sitter parse /path/to/file.x 2>&1 | grep -E "(ERROR|MISSING)"
+"$cli" parse /path/to/file.x 2>&1 | grep -E "(ERROR|MISSING)"
 ```
 
 ## Grammar Generation
@@ -42,7 +45,7 @@ lang/
 │       │   ├── src/parser.c     # Generated parser
 │       │   └── src/scanner.c    # Generated external scanner
 │       └── tree-sitter-cli/
-│           └── tree-sitter      # Auto-downloaded CLI binary
+│           └── <version>/<platform>/tree-sitter  # Auto-downloaded CLI binary
 └── dsl/
     └── src/main/
         ├── kotlin/org/xtclang/tooling/
@@ -154,6 +157,10 @@ The tree-sitter grammar must be compiled into a native shared library (`.dylib`,
 by the JVM-based LSP server. We use **Zig** for cross-compilation, enabling builds for all platforms from
 any development machine.
 
+Downloads are verified against `native-tool-checksums.properties` before extraction, including when
+reusing the configuration cache. When changing tool versions in `gradle/libs.versions.toml`, update
+the corresponding checksum pins from their recorded upstream sources in the same change.
+
 ### Why Zig for Cross-Compilation?
 
 Traditional C/C++ cross-compilation requires platform-specific toolchains:
@@ -184,62 +191,61 @@ Each library exports the `tree_sitter_xtc` function symbol, which the JVM loads 
 
 ### Building Native Libraries
 
-Pre-built libraries are committed to source control. The build **verifies** they are up-to-date
-but does **not** auto-rebuild (to avoid downloading Zig in CI).
+Native libraries are built on demand and cached under
+`~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/`. Binaries are not committed.
+The first build downloads the pinned tools and cross-compiles grammar and runtime libraries
+for all five platforms. Later builds reuse matching cache entries.
+
+Run from the repository root with both language-build flags:
 
 ```bash
-# Verify pre-built libraries are up-to-date (FAILS if stale)
-./gradlew :lang:tree-sitter:ensureNativeLibraryUpToDate
-
-# Rebuild ALL platforms (downloads Zig, cross-compiles, updates resources)
-./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources
-
-# Build for a specific platform only
-./gradlew :lang:tree-sitter:buildNativeLibrary_linux_x64
+./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
-
-If `ensureNativeLibraryUpToDate` fails with a "STALE" error, run `copyAllNativeLibrariesToResources`
-to rebuild, then commit the updated libraries.
 
 ### Gradle Tasks
 
-| Task                                | Description                                                          |
-|-------------------------------------|----------------------------------------------------------------------|
-| `ensureNativeLibraryUpToDate`       | **Verify** pre-built library matches grammar inputs (fails if stale) |
-| `copyAllNativeLibrariesToResources` | Rebuild all platforms and copy to resources (downloads Zig)          |
-| `buildAllNativeLibraries`           | Build for all 5 platforms (downloads Zig)                            |
-| `buildNativeLibrary_<platform>`     | Cross-compile for specific platform                                  |
-| `checkNativeLibraryStaleness`       | Report if pre-built libraries need updating                          |
-| `downloadZig`                       | Download Zig compiler (called automatically by build tasks)          |
-| `extractZig`                        | Extract Zig from archive (pure Java)                                 |
+| Task | Description |
+|------|-------------|
+| `buildAllNativeLibrariesOnDemand` | Build or reuse all five grammar/runtime pairs in `build/native-out`; used by consumers |
+| `buildAllNativeLibraries` | Compile all five pairs into `build/native-cross` |
+| `buildNativeLibrary_<platform>` | Compile one grammar library, e.g. `buildNativeLibrary_linux_x64` |
+| `buildTreeSitterRuntime_<platform>` | Compile one runtime library |
+| `populateNativeLibraryCache` | Compile all pairs and populate the same persistent cache |
+| `downloadZig` / `verifyZig` / `extractZig` | Download, verify and extract the compiler; called automatically |
 
 ### How It Works
 
-1. **Grammar Generation**: `grammar.js` and `scanner.c` are generated from `XtcLanguage.kt` and `ScannerSpec.kt`
-2. **Tree-sitter Generate**: The tree-sitter CLI compiles `grammar.js` → `parser.c`
-3. **Zig Compilation**: Zig compiles `parser.c` + `scanner.c` → shared library
-4. **Resource Bundling**: Libraries are copied to `src/main/resources/native/<platform>/`
-5. **JAR Packaging**: The lsp-server JAR includes native libraries for the current platform
+1. `grammar.js` and `scanner.c` are generated from `XtcLanguage.kt` and `ScannerSpec.kt`.
+2. The pinned tree-sitter CLI generates `parser.c` and its headers.
+3. Zig compiles the grammar and tree-sitter runtime for each target.
+4. The LSP resource task copies all platforms from `build/native-out` into generated resources.
+5. The LSP JAR bundles every platform under `native/<platform>/`.
 
-### Pre-built Libraries
+Both cache population and on-demand builds use one versioned SHA-256 key. It includes grammar,
+scanner, generated parser/header and runtime contents; Zig executable and bundled library
+contents; CLI/Zig versions; compiler arguments; platform, target triple and library extension.
+Fields and relative paths are framed to avoid ambiguous concatenation. Absolute checkout paths
+and timestamps do not affect identity. The corresponding files and options are also declared
+as Gradle task inputs, so a changed input triggers the cache lookup.
 
-Pre-built libraries are committed to source control at:
+Each cache entry is immutable after publication. Builders write both libraries into a private
+sibling directory, require two nonempty regular files, then publish the directory with an atomic
+rename. Concurrent builds can reuse the winning complete entry; failed builds never expose a
+partial pair. Existing incomplete entries fail with their path instead of being silently reused.
+
+### Generated Libraries
+
 ```
-tree-sitter/src/main/resources/native/
+tree-sitter/build/native-out/
 ├── darwin-arm64/
 │   ├── libtree-sitter-xtc.dylib
-│   ├── libtree-sitter-xtc.inputs.sha256
-│   └── libtree-sitter-xtc.version
+│   └── libtree-sitter.dylib
 ├── darwin-x64/
 ├── linux-arm64/
 ├── linux-x64/
 └── windows-x64/
 ```
-
-Each platform directory includes:
-- The native library file
-- `.inputs.sha256` - Hash of `grammar.js` + `scanner.c` for staleness detection
-- `.version` - Build metadata (git commit, timestamp, compiler used)
 
 ## LSP Integration
 

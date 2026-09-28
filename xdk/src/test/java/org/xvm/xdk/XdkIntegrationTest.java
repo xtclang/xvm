@@ -15,6 +15,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -526,7 +528,7 @@ class XdkIntegrationTest {
     @Test
     @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
         disabledReason = "Compiles and runs XTC modules with recompilation; enable with RUN_INTEGRATION_TESTS=true")
-    void testRunnerRecompilesOutOfDateModule(@TempDir final Path tempDir) throws IOException, InterruptedException {
+    void testRunnerRecompilesOutOfDateModule(@TempDir final Path tempDir) throws IOException {
         // Step 1: Create and compile a module
         String sourceCodeV1 = """
             module RecompileTest {
@@ -556,11 +558,8 @@ class XdkIntegrationTest {
 
         File compiledModule = new File(outputDir, "RecompileTest.xtc");
         assertTrue(compiledModule.exists(), "Compiled module should exist");
-        long originalModTime = compiledModule.lastModified();
 
-        // Step 2: Wait a bit and modify the source file to make .xtc out of date
-        Thread.sleep(1100); // Ensure file timestamp changes (some filesystems have 1s resolution)
-
+        // Step 2: Modify the source file to make .xtc out of date
         String sourceCodeV2 = """
             module RecompileTest {
                 void run() {
@@ -570,6 +569,11 @@ class XdkIntegrationTest {
             }
             """;
         Files.writeString(sourceFile.toPath(), sourceCodeV2);
+        // Make the .xtc explicitly older than the edited source instead of waiting for the clock to
+        // move past it; a rewrite within one timestamp tick would otherwise still look up to date.
+        FileTime staleModTime = FileTime.from(
+            Files.getLastModifiedTime(sourceFile.toPath()).toInstant().minus(Duration.ofHours(1)));
+        Files.setLastModifiedTime(compiledModule.toPath(), staleModTime);
 
         // Step 3: Run Runner with -d flag on the source file
         // Runner should detect the .xtc is out of date and recompile
@@ -592,8 +596,8 @@ class XdkIntegrationTest {
         assertEquals(0, result, "Runner should succeed after recompilation with -d flag forwarded");
         assertFalse(runErrors.hasSeriousErrors(), "Should have no serious errors");
 
-        // Verify the module was recompiled (modification time should be newer)
-        assertTrue(compiledModule.lastModified() >= originalModTime,
-            "Compiled module should be recompiled (new or same timestamp)");
+        // Verify the module was recompiled: writing it again moved its timestamp past the stale one
+        assertTrue(compiledModule.lastModified() > staleModTime.toMillis(),
+            "Compiled module should be recompiled");
     }
 }

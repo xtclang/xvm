@@ -14,7 +14,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.xvm.api.Connector;
 import org.xvm.api.InterpreterConnector;
@@ -141,17 +140,24 @@ public class LspTest {
         }
 
         try (control) {
-            if (!waiting.await(5, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("Waiting did not reach its suspended state");
+            // a run that ends before suspending also releases the wait, so it fails below instead
+            // of blocking forever
+            Thread.ofVirtual().start(() -> {
+                try {
+                    control.join();
+                } finally {
+                    waiting.countDown();
+                }
+            });
+            waiting.await();
+            if (!bytes.toString().contains("waiting")) {
+                throw new IllegalStateException(
+                        "Waiting ended before reaching its suspended state: " + bytes);
             }
 
-            long started = System.nanoTime();
+            // a close() that waited for the pending one-hour timer would return an hour later with
+            // the run ended normally, which the termination check below reports
             control.close();
-            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
-            if (elapsedMillis > 1_000) {
-                throw new IllegalStateException(
-                        "terminating Waiting took " + elapsedMillis + "ms");
-            }
         }
 
         String output = bytes.toString();

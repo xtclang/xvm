@@ -72,6 +72,35 @@ public class XtcLauncherRuntimeTest {
         assertIterableEquals(sortedFiles(xdkDependency, xdkLauncher), runtime.classpath());
     }
 
+    @Test
+    void launcherVersionDoesNotHaveToMatchConsumerVersion() throws IOException {
+        final var project = ProjectBuilder.builder().build();
+        final var launcher = createLauncherJar(tempDir.resolve("javatools-1.2.3.jar"), "1.2.3");
+        final var emptyXdk = Files.createDirectory(tempDir.resolve("empty-xdk"));
+
+        final var runtime = XtcJavaToolsRuntime.resolveRuntime(
+            project.provider(() -> "8.0.0"),
+            project.provider(() -> project.files(launcher)),
+            project.provider(() -> project.fileTree(emptyXdk)), project.getLogger());
+
+        assertEquals(launcher.toFile(), runtime.launcherJar());
+    }
+
+    @Test
+    void versionedJitBridgeIsNotOnLauncherClasspath() throws IOException {
+        final var project = ProjectBuilder.builder().build();
+        final var launcher = createLauncherJar(tempDir.resolve("javatools.jar"), "1.2.3");
+        final var bridge = createJar(tempDir.resolve("javatools-jitbridge-1.2.3.jar"));
+        final var emptyXdk = Files.createDirectory(tempDir.resolve("empty-xdk"));
+
+        final var runtime = XtcJavaToolsRuntime.resolveRuntime(
+            project.provider(() -> "1.2.3"),
+            project.provider(() -> project.files(launcher, bridge)),
+            project.provider(() -> project.fileTree(emptyXdk)), project.getLogger());
+
+        assertEquals(List.of(launcher.toFile()), runtime.classpath());
+    }
+
     private List<File> sortedFiles(final Path... files) {
         return Stream.of(files)
             .map(Path::toFile)

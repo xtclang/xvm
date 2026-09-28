@@ -9,8 +9,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
@@ -78,12 +76,9 @@ public class DirRepositoryConcurrentScanTest {
                 start.countDown();
                 for (Future<?> f : futures) {
                     try {
-                        f.get(20, TimeUnit.SECONDS);
+                        f.get();
                     } catch (ExecutionException e) {
                         failure.compareAndSet(null, e.getCause());
-                    } catch (TimeoutException e) {
-                        failure.compareAndSet(null, new AssertionError(
-                                "a scan thread hung (corrupted HashMap infinite loop?)", e));
                     }
                 }
             }

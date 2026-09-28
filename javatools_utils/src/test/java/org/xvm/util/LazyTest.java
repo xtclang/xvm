@@ -1,11 +1,15 @@
 package org.xvm.util;
 
+import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
@@ -157,70 +161,39 @@ public class LazyTest {
     }
 
     @Test
-    public void testThreadSafety() throws InterruptedException {
+    public void testThreadSafety() throws Exception {
+        int threadCount = 10;
+        CountDownLatch arrived = new CountDownLatch(threadCount);
         AtomicInteger counter = new AtomicInteger(0);
         Lazy<String> lazy = Lazy.of(() -> {
             counter.incrementAndGet();
-            try {
-                Thread.sleep(10); // Slow computation
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            awaitAllCallers(arrived);
             return "result";
         });
 
-        int threadCount = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(threadCount);
-
-        for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                try {
-                    startLatch.await();
-                    assertEquals("result", lazy.get());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    doneLatch.countDown();
-                }
-            });
-        }
-
-        startLatch.countDown(); // Start all threads
-        doneLatch.await(5, TimeUnit.SECONDS);
-        executor.shutdown();
+        assertEveryConcurrentCallReturns("result", threadCount, () -> {
+            arrived.countDown();
+            return lazy.get();
+        });
 
         // Should only compute once despite concurrent access
         assertEquals(1, counter.get());
     }
 
     @Test
-    public void testBoundThreadSafety() throws InterruptedException {
-        Lazy.Bound<OwnerState, String> lazy  = Lazy.ofBound(OwnerState::compute);
-        OwnerState                     owner = new OwnerState("owner");
-
+    public void testBoundThreadSafety() throws Exception {
         int threadCount = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(threadCount);
+        CountDownLatch arrived = new CountDownLatch(threadCount);
+        Lazy.Bound<OwnerState, String> lazy = Lazy.ofBound(state -> {
+            awaitAllCallers(arrived);
+            return state.compute();
+        });
+        OwnerState owner = new OwnerState("owner");
 
-        for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                try {
-                    startLatch.await();
-                    assertEquals("owner:1", lazy.get(owner));
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    doneLatch.countDown();
-                }
-            });
-        }
-
-        startLatch.countDown();
-        doneLatch.await(5, TimeUnit.SECONDS);
-        executor.shutdown();
+        assertEveryConcurrentCallReturns("owner:1", threadCount, () -> {
+            arrived.countDown();
+            return lazy.get(owner);
+        });
 
         assertEquals(1, owner.counter.get());
     }
@@ -317,14 +290,16 @@ public class LazyTest {
     }
 
     @Test
-    public void testOfExpiringBasic() throws InterruptedException {
+    public void testOfExpiringBasic() {
         AtomicInteger counter = new AtomicInteger(0);
-        Supplier<Integer> expiring = Lazy.ofExpiring(counter::incrementAndGet, 50, TimeUnit.MILLISECONDS);
+        AtomicLong now = new AtomicLong();
+        Supplier<Integer> expiring = Lazy.ofExpiring(counter::incrementAndGet, 50, TimeUnit.MILLISECONDS, now::get);
 
         assertEquals(1, expiring.get());
-        assertEquals(1, expiring.get()); // Should return cached value
+        now.set(TimeUnit.MILLISECONDS.toNanos(50) - 1);
+        assertEquals(1, expiring.get()); // Should return cached value until the duration has passed
 
-        Thread.sleep(60); // Wait for expiration
+        now.set(TimeUnit.MILLISECONDS.toNanos(50));
 
         assertEquals(2, expiring.get()); // Should recompute
         assertEquals(2, counter.get());
@@ -358,6 +333,33 @@ public class LazyTest {
         assertThrows(NullPointerException.class, () -> Lazy.ofExpiring(null, 1, TimeUnit.SECONDS));
         assertThrows(NullPointerException.class, () -> Lazy.ofExpiring(() -> "x", 1, null));
         assertThrows(NullPointerException.class, () -> Lazy.synchronizedSupplier(null));
+    }
+
+    /**
+     * Blocks a lazy computation until every concurrent caller has counted down {@code arrived}. Each
+     * caller counts down just before its get(), so all callers reach get() before the value exists.
+     */
+    private static void awaitAllCallers(CountDownLatch arrived) {
+        try {
+            arrived.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Calls {@code caller} once on each of {@code threadCount} dedicated threads and asserts that every
+     * call returned {@code expected}; a call that throws fails the test with its cause. One thread per
+     * caller lets a computation block in {@link #awaitAllCallers} without starving the other callers.
+     */
+    private static <T> void assertEveryConcurrentCallReturns(T expected, int threadCount, Callable<T> caller)
+            throws Exception {
+        try (ExecutorService executor = Executors.newFixedThreadPool(threadCount)) {
+            for (Future<T> result : executor.invokeAll(Collections.nCopies(threadCount, caller))) {
+                assertEquals(expected, result.get());
+            }
+        }
     }
 
     private static class OwnerState {

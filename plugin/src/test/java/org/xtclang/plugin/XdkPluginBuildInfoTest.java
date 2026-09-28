@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 import org.gradle.testkit.runner.GradleRunner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
@@ -121,6 +122,8 @@ public class XdkPluginBuildInfoTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Runs a TestKit Gradle build; enable with RUN_INTEGRATION_TESTS=true")
     public void testPluginReadsXdkVersionFromBuildInfo() throws IOException {
         // Create a minimal test project that applies the plugin
         Files.writeString(settingsFile.toPath(), """
@@ -133,7 +136,7 @@ public class XdkPluginBuildInfoTest {
             }
 
             // Capture the xtcVersion at configuration time
-            val xtcVersionProvider = (extensions.getByName("xtcCompile") as org.xtclang.plugin.XtcCompilerExtension).xtcVersion
+            val xtcVersionProvider = xtcCompile.xtcVersion
 
             // Print the xtcVersion that the plugin resolved
             tasks.register("printXtcVersion") {
@@ -185,6 +188,8 @@ public class XdkPluginBuildInfoTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Runs a TestKit Gradle build; enable with RUN_INTEGRATION_TESTS=true")
     public void testXtcVersionCanBeOverridden() throws IOException {
         // Create a test project that overrides xtcVersion
         Files.writeString(settingsFile.toPath(), """
@@ -201,7 +206,7 @@ public class XdkPluginBuildInfoTest {
             }
 
             // Capture the xtcVersion at configuration time
-            val versionProvider = (extensions.getByName("xtcCompile") as org.xtclang.plugin.XtcCompilerExtension).xtcVersion
+            val versionProvider = xtcCompile.xtcVersion
 
             tasks.register("checkOverride") {
                 val version = versionProvider
@@ -226,6 +231,8 @@ public class XdkPluginBuildInfoTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Runs a TestKit Gradle build; enable with RUN_INTEGRATION_TESTS=true")
     public void testPluginReadsDefaultJvmArgsFromBuildInfo() throws IOException {
         // Create a minimal test project that applies the plugin
         Files.writeString(settingsFile.toPath(), """
@@ -272,6 +279,8 @@ public class XdkPluginBuildInfoTest {
     }
 
     @Test
+    @EnabledIfEnvironmentVariable(named = "RUN_INTEGRATION_TESTS", matches = "true",
+        disabledReason = "Runs a TestKit Gradle build; enable with RUN_INTEGRATION_TESTS=true")
     public void testExecutionModeCanBeOverriddenByGradleProperty() throws IOException {
         Files.writeString(settingsFile.toPath(), """
             rootProject.name = "test-execution-mode-override"

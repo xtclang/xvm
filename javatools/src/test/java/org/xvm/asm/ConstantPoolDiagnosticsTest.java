@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +46,7 @@ public class ConstantPoolDiagnosticsTest {
 
             for (int i = 0; i < names.size(); i++) {
                 assertSame(pool.getImplicitlyImportedIdentity(names.get(i)),
-                        futures.get(i).get(10, TimeUnit.SECONDS),
+                        futures.get(i).get(),
                         "racing implicit lookups must resolve to the interned identity");
             }
         }

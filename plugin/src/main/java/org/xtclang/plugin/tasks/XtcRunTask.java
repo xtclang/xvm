@@ -24,10 +24,10 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.file.Directory;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.logging.LogLevel;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.provider.Provider;
@@ -35,6 +35,7 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -85,6 +86,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private final Property<@NotNull DefaultXtcRuntimeExtension> taskLocalModules;
 
     private final Property<@NotNull Boolean> jit;
+    private final Property<@NotNull Boolean> parallel;
 
     // Command-line override properties (set via --module, --method, --args options)
     private final Property<String> cliModuleName;
@@ -101,13 +103,23 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"}) // Has to be public for code injection to work
     @Inject
     public XtcRunTask(final ObjectFactory objects, final Project project) {
-        super(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
+        this(objects, project, XtcProjectDelegate.resolveXtcRuntimeExtension(project));
+    }
+
+    protected XtcRunTask(final ObjectFactory objects, final Project project, final XtcRuntimeExtension extension) {
+        super(objects, project, extension);
         this.executedModules = new LinkedHashMap<>();
         this.taskLocalModules = objects.property(DefaultXtcRuntimeExtension.class).convention(objects.newInstance(DefaultXtcRuntimeExtension.class));
+        // Own the property even while inheriting the extension's value. An explicitly empty
+        // task list is a real override, and mutating it must not mutate other tasks.
+        this.taskLocalModules.get().getModules().unset().convention(ext.getModules());
         this.cliModuleName = objects.property(String.class);
         this.cliMethodName = objects.property(String.class);
-        this.cliModuleArgs = objects.listProperty(String.class);
+        // An absent option differs from an explicit --args= override. List properties
+        // otherwise default to an empty list, which would erase configured arguments.
+        this.cliModuleArgs = objects.listProperty(String.class).convention(project.provider(() -> null));
         this.jit = objects.property(Boolean.class).convention(ext.getJit());
+        this.parallel = objects.property(Boolean.class).convention(ext.getParallel());
     }
 
     @Input
@@ -141,7 +153,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
-    @Internal
+    @Input
+    @Optional
     public Property<String> getCliModuleName() {
         return cliModuleName;
     }
@@ -156,7 +169,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     }
 
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
-    @Internal
+    @Input
+    @Optional
     public Property<String> getCliMethodName() {
         return cliMethodName;
     }
@@ -167,13 +181,12 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
      */
     @Option(option = "args", description = "Module arguments (comma-separated)")
     public void setCliModuleArgs(final String args) {
-        if (args != null && !args.isBlank()) {
-            this.cliModuleArgs.set(List.of(args.split(",")));
-        }
+        this.cliModuleArgs.set(args == null || args.isBlank() ? List.of() : List.of(args.split(",")));
     }
 
     @SuppressWarnings("unused") // NOTE: Optional, so IntelliJ doesn't see it in use
-    @Internal
+    @Input
+    @Optional
     public ListProperty<String> getCliModuleArgs() {
         return cliModuleArgs;
     }
@@ -197,7 +210,7 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private String resolveJavaExecutable() {
         final String executable = toolchainExecutable.getOrNull();
         if (executable == null) {
-            throw new org.gradle.api.GradleException("Java toolchain not configured - cannot resolve java executable for forked execution");
+            throw new GradleException("Java toolchain not configured - cannot resolve java executable for forked execution");
         }
         return executable;
     }
@@ -222,16 +235,11 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         return result;
     }
 
-    // TODO: We may need to keep track of all input, even though we only resolve one out of three possible run configurations.
-    //   XTC Modules declared in run configurations in project, or overridden in task, that we want to run.
-    // Note: @Input removed because this task is never up-to-date (see constructor where outputs are configured)
-    // and the XtcRunModule objects are not serializable for configuration cache.
-    @Internal
+    // Run tasks always execute, but the cacheable XtcTestTask must track module selection,
+    // methods and arguments independently of the compiled module files.
+    @Nested
     @Override
     public ListProperty<@NotNull XtcRunModule> getModules() {
-        if (taskLocalModules.get().isEmpty()) {
-            return getExtension().getModules();
-        }
         return taskLocalModules.get().getModules();
     }
 
@@ -273,20 +281,17 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @Input
     @Override
     public Property<@NotNull Boolean> getParallel() {
-        return getExtension().getParallel();
+        return parallel;
     }
 
     @Internal
     @Override
     public boolean isEmpty() {
-        return taskLocalModules.get().isEmpty() && getExtension().isEmpty();
+        return taskLocalModules.get().isEmpty();
     }
 
     @Override
     public int size() {
-        if (taskLocalModules.get().isEmpty()) {
-            return getExtension().size();
-        }
         return taskLocalModules.get().size();
     }
 
@@ -300,7 +305,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     @TaskAction
     @Override
     public void executeTask() {
-        super.executeTask();
 
         // Validate that parallel execution is not enabled (not yet implemented)
         if (getParallel().get()) {
@@ -344,9 +348,6 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         }
 
         final var selectedModules = getModules().get();
-        if (!taskLocalModules.get().isEmpty()) {
-            logger.info("[plugin] Task local module configuration is present, overriding extension configuration.");
-        }
 
         // TODO: Add abstraction that actually implements a ModulePath instance, including keeping track of its status and perhaps a method for resolving it.
         // TODO: Here we should check that any module we resolve is actually in the source set output of the source set of this task.
@@ -357,7 +358,8 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
         // We will also check if the modules are in the module path, and if not, fail the build.
         logger.info("[plugin] Found {} modules(s) in task and extension specification.", size());
         selectedModules.forEach(module -> logger.info("[plugin]    ***** Module to run: {}", module));
-        return selectedModules.stream().map(XtcRunTask::validatedModule).sorted().toList();
+        return selectedModules.stream().map(this::applyCliOverrides)
+            .map(XtcRunTask::validatedModule).sorted().toList();
     }
 
     /**
@@ -366,13 +368,19 @@ public abstract class XtcRunTask extends XtcLauncherTask<XtcRuntimeExtension> im
     private XtcRunModule createCliOverrideModule(final String moduleName) {
         final var module = objects.newInstance(DefaultXtcRunModule.class);
         module.getModuleName().set(moduleName);
-        if (cliMethodName.isPresent()) {
-            module.getMethodName().set(cliMethodName.get());
+        return applyCliOverrides(module);
+    }
+
+    /** Apply command-line options without changing the configured module or its extension. */
+    protected XtcRunModule applyCliOverrides(final XtcRunModule module) {
+        if (!cliMethodName.isPresent() && !cliModuleArgs.isPresent()) {
+            return module;
         }
-        if (cliModuleArgs.isPresent() && !cliModuleArgs.get().isEmpty()) {
-            module.getModuleArgs().set(cliModuleArgs.get());
-        }
-        return module;
+        final var selected = objects.newInstance(DefaultXtcRunModule.class);
+        selected.getModuleName().set(module.getModuleName());
+        selected.getMethodName().set(cliMethodName.orElse(module.getMethodName()));
+        selected.getModuleArgs().set(cliModuleArgs.orElse(module.getModuleArgs()));
+        return selected;
     }
 
     /**

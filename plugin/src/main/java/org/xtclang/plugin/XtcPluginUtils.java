@@ -17,7 +17,6 @@ import java.nio.file.Files;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -30,6 +29,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 
 import org.gradle.api.GradleException;
+import org.gradle.api.logging.Logger;
 
 /**
  * XTC Plugin Helper methods in a utility class.
@@ -87,7 +87,7 @@ public final class XtcPluginUtils {
 
     /**
      * Format a message template by replacing {} placeholders with provided parameters.
-     * This uses the same formatting logic as the Console in javatools.
+     * Other braces and argument contents are literal, so formatting cannot mask the original failure.
      *
      * @param template The message template with {} placeholders
      * @param params   Parameters to substitute into the template
@@ -97,27 +97,17 @@ public final class XtcPluginUtils {
         if (template == null || params == null || params.length == 0) {
             return template;
         }
-        // First escape single quotes for MessageFormat (double them), then convert {} to {n}
-        final var escaped = template.replace("'", "''");
-        final var numbered = new StringBuilder(escaped.length() + params.length * 3);
-        int paramIndex = 0;
+        final var formatted = new StringBuilder(template.length());
         int pos = 0;
-        while (pos < escaped.length()) {
-            int openBrace = escaped.indexOf('{', pos);
-            if (openBrace == -1) {
-                numbered.append(escaped.substring(pos));
+        for (final var param : params) {
+            final int placeholder = template.indexOf("{}", pos);
+            if (placeholder < 0) {
                 break;
             }
-            numbered.append(escaped, pos, openBrace);
-            if (openBrace + 1 < escaped.length() && escaped.charAt(openBrace + 1) == '}') {
-                numbered.append('{').append(paramIndex++).append('}');
-                pos = openBrace + 2;
-            } else {
-                numbered.append('{');
-                pos = openBrace + 1;
-            }
+            formatted.append(template, pos, placeholder).append(param);
+            pos = placeholder + 2;
         }
-        return MessageFormat.format(numbered.toString(), params);
+        return formatted.append(template, pos, template.length()).toString();
     }
 
     /**
@@ -147,15 +137,18 @@ public final class XtcPluginUtils {
          * it belongs.
          *
          * @param file file to check
+         * @param artifactVersion retained for compatibility; the launcher's own manifest
+         *                        supplies its version, independently of the consumer project
          * @return true if the file is a valid JavaTools jar file, false otherwise.
          */
         public static boolean isValidJavaToolsArtifact(final File file, final String artifactVersion) {
             final String name = file.getName();
-            final String expectedVersionedName = "javatools-" + artifactVersion + ".jar";
-
-            // Check for exact name (XDK distribution) or exact versioned name (configuration resolution)
-            return (XDK_JAVATOOLS_NAME_JAR.equals(name) || expectedVersionedName.equals(name))
-                && hasJarExtension(file) && readXdkVersionFromJar(file) != null;
+            if (!XDK_JAVATOOLS_NAME_JAR.equals(name) && !name.matches("javatools-[0-9].*\\.jar")) {
+                return false;
+            }
+            final String version = readXdkVersionFromJar(file);
+            return version != null && (XDK_JAVATOOLS_NAME_JAR.equals(name)
+                || ("javatools-" + version + ".jar").equals(name));
         }
 
         /**
@@ -178,7 +171,7 @@ public final class XtcPluginUtils {
          * @param logger Gradle logger for error reporting
          * @return true if the file seems to be a valid XTC module, false otherwise (including I/O errors)
          */
-        public static boolean isValidXtcModuleSafe(final File file, final org.gradle.api.logging.Logger logger) {
+        public static boolean isValidXtcModuleSafe(final File file, final Logger logger) {
             try {
                 return isValidXtcModule(file);
             } catch (final GradleException e) {
@@ -222,21 +215,24 @@ public final class XtcPluginUtils {
          * Reads the XDK version from a jar manifest.
          *
          * @param file Jar file from which to read
-         * @return the XDK version string, as stored in the jar, or null if file not found, or entry could not be parsed.
+         * @return the manifest version, or null when no file was supplied
+         * @throws GradleException if the artifact cannot be read or its version is missing
          */
         public static String readXdkVersionFromJar(final File file) {
             if (file == null) {
                 return null;
             }
             final var path = file.getAbsolutePath();
-            assert file.isFile();
             try (var jarFile = new JarFile(file)) {
-                final var m = jarFile.getManifest();
-                final var implVersion = m.getMainAttributes().get(Attributes.Name.IMPLEMENTATION_VERSION);
+                final var manifest = jarFile.getManifest();
+                if (manifest == null) {
+                    throw failure("Missing manifest in launcher artifact '{}'", path);
+                }
+                final var implVersion = manifest.getMainAttributes().getValue(Attributes.Name.IMPLEMENTATION_VERSION);
                 if (implVersion == null) {
                     throw failure("Invalid manifest entries found in '{}'", path);
                 }
-                return implVersion.toString();
+                return implVersion;
             } catch (final IOException e) {
                 throw failure(e, "Not a valid '{}': '{}'", XDK_JAVATOOLS_NAME_JAR, path);
             }

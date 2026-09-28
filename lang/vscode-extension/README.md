@@ -46,7 +46,10 @@ Search for **Ecstasy Language Support** in the Extensions view (`Cmd+Shift+X` / 
     -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
-The resulting `xtc-language-<version>.vsix` is written to `lang/vscode-extension/`.
+The resulting `xtc-language-<version>.vsix` is written to `lang/vscode-extension/build/distributions/`.
+Gradle stages the package under `build/package` and bundles JavaScript under `build/bundle`.
+An optional `-Pvscode.version.suffix=alpha.1` changes only the staged manifest and artifact;
+source `package.json` and development output remain unchanged.
 
 ## Quick Start
 

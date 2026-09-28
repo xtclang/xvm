@@ -119,27 +119,13 @@ val publishSnapshotBundle = tasks.register("publishSnapshotBundle") {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin snapshot artifacts to an isolated file-backed Maven repository."
 
-    val snapshotBundleRepoProvider = xdkProperties.string("org.xtclang.publish.snapshotBundleRepo")
-    val versionProvider = xdkProperties.string("xdk.version")
-
-    doFirst {
-        val snapshotBundleRepo = snapshotBundleRepoProvider.orNull?.trim().orEmpty()
-        if (snapshotBundleRepo.isEmpty()) {
-            throw GradleException(
-                "❌ Missing required property: -Porg.xtclang.publish.snapshotBundleRepo=/path/to/staged/maven/repo"
-            )
-        }
-        val currentVersion = versionProvider.get()
-        if (!currentVersion.endsWith("-SNAPSHOT")) {
-            throw GradleException(
-                "❌ publishSnapshotBundle only supports SNAPSHOT versions. Current version: $currentVersion"
-            )
-        }
-        logger.lifecycle("📦 Publishing snapshot bundle to local Maven repository: $snapshotBundleRepo")
-    }
-
+    val hasDestination = !xdkProperties.string("org.xtclang.publish.snapshotBundleRepo", "")
+        .get().isBlank()
     publishedBuilds.forEach { build ->
-        dependsOn(build.task(":publishAllPublicationsToSnapshotBundleRepository"))
+        dependsOn(build.task(":validateSnapshotBundle"))
+        if (hasDestination) {
+            dependsOn(build.task(":publishAllPublicationsToSnapshotBundleRepository"))
+        }
     }
 }
 
@@ -156,38 +142,7 @@ val publish = tasks.register("publish") {
     group = PUBLISH_TASK_GROUP
     description = "Publish XDK and plugin artifacts to both local Maven and remote repositories."
 
-    // Capture version and allowRelease as Providers for configuration cache compatibility
-    val versionProvider = xdkProperties.string("xdk.version")
-    val allowReleaseProvider = xdkProperties.boolean("org.xtclang.allowRelease", false)
-
-    doFirst {
-        // Safety check: prevent accidental release publishing
-        val currentVersion = versionProvider.get()
-        val isSnapshot = currentVersion.endsWith("-SNAPSHOT")
-        val allowRelease = allowReleaseProvider.getOrElse(false)
-
-        if (!isSnapshot && !allowRelease) {
-            throw GradleException(
-                """
-                |❌ Cannot publish release version without explicit approval!
-                |
-                |Current version: $currentVersion
-                |
-                |This is a RELEASE version (no -SNAPSHOT suffix).
-                |To publish a release, you must explicitly set -Porg.xtclang.allowRelease=true
-                |
-                |Example: ./gradlew publish -Porg.xtclang.allowRelease=true
-                |
-                |This safety check prevents accidental release publishing.
-                """.trimMargin()
-            )
-        }
-        logger.lifecycle("${if (isSnapshot) "📦" else "⚠️ "} Publishing ${if (isSnapshot) "SNAPSHOT" else "RELEASE"} version: $currentVersion (allowRelease=$allowRelease)")
-    }
-
-    // Validate credentials before attempting remote publishing (use xdk's validateCredentials task)
-    dependsOn(xdk.task(":validateCredentials"))
-
+    // Each remote publishing task validates release approval and credentials before its action.
     // Always publish to both local and remote
     dependsOn(publishLocal)
 
@@ -212,29 +167,30 @@ val validateCredentials = tasks.register("validateCredentials") {
 }
 
 /**
- * Docker tasks - forwarded to docker subproject
- * TODO: Skip this and resolve the dist some other way.
+ * Docker aliases forwarded to the included build. Its distribution input carries the producer dependency.
  */
 
 private val dockerSubproject = gradle.includedBuild("docker")
-private val dockerTaskNames = listOf(
-    "dockerBuildAmd64", "dockerBuildArm64", "dockerBuild",
-    "dockerBuildMultiPlatform", "dockerPushMultiPlatform",
-    "dockerPushAmd64", "dockerPushArm64", "dockerPushAll",
-    "dockerBuildAndPush", "dockerBuildAndPushMultiPlatform",
-    "dockerCreateManifest", "dockerBuildPushAndManifest"
+private val dockerTaskAliases = mapOf(
+    "dockerBuildAmd64" to "buildAmd64",
+    "dockerBuildArm64" to "buildArm64",
+    "dockerBuild" to "buildAll",
+    "dockerBuildMultiPlatform" to "buildAll",
+    "dockerPushAmd64" to "pushAmd64",
+    "dockerPushArm64" to "pushArm64",
+    "dockerPushAll" to "pushAll",
+    "dockerPushMultiPlatform" to "pushAll",
+    "dockerBuildAndPush" to "pushAll",
+    "dockerBuildAndPushMultiPlatform" to "pushAll",
+    // buildx --push publishes the multi-platform manifest with the images.
+    "dockerBuildPushAndManifest" to "pushAll"
 )
 
-// Forward all docker tasks to the docker subproject
-dockerTaskNames.forEach { taskName ->
-    tasks.register(taskName) {
+// There is no standalone manifest-creation task in the included build.
+dockerTaskAliases.forEach { (alias, target) ->
+    tasks.register(alias) {
         group = "docker"
-        description = "Forward to docker subproject task: $taskName"
-        dependsOn(dockerSubproject.task(":$taskName"))
-
-        // Ensure XDK is built first for tasks that need it
-        if (taskName.contains("Build") || taskName.contains("Push")) {
-            dependsOn(installDist)
-        }
+        description = "Forward to docker task: $target"
+        dependsOn(dockerSubproject.task(":$target"))
     }
 }

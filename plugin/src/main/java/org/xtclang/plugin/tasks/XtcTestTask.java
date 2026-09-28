@@ -28,7 +28,6 @@ import org.jetbrains.annotations.NotNull;
 
 import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcRunModule;
-import org.xtclang.plugin.XtcRuntimeExtension;
 import org.xtclang.plugin.XtcTestExtension;
 import org.xtclang.plugin.internal.DefaultXtcRunModule;
 import org.xtclang.plugin.launchers.ExecutionStrategy;
@@ -52,27 +51,17 @@ import static org.xtclang.plugin.XtcPluginUtils.failure;
 @CacheableTask
 public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension {
     private final Property<@NotNull Boolean> failOnTestFailure;
-    private final XtcTestExtension testExtension;
     private final Provider<@NotNull Directory> outputDir;
 
     @SuppressWarnings({"ConstructorNotProtectedInAbstractClass", "this-escape"})
     @Inject
     public XtcTestTask(final ObjectFactory objects, final Project project) {
-        super(objects, project);
+        super(objects, project, XtcProjectDelegate.resolveXtcTestExtension(project));
 
         // Test-specific properties with conventions from extension
-        this.testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
+        final var testExtension = XtcProjectDelegate.resolveXtcTestExtension(project);
         this.outputDir = project.getLayout().getBuildDirectory().map(dir -> dir.dir("xunit"));
         this.failOnTestFailure = objects.property(Boolean.class).convention(testExtension.getFailOnTestFailure());
-    }
-
-    /**
-     * Override to return the xtcTest extension instead of xtcRun extension.
-     * This ensures that module configuration from xtcTest {} block is used.
-     */
-    @Override
-    protected XtcRuntimeExtension getExtension() {
-        return testExtension;
     }
 
     @Input
@@ -104,7 +93,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
             super.executeTask();
         } catch (final Exception e) {
             if (getFailOnTestFailure().get()) {
-                throw failure("Test failure.", e);
+                throw failure(e, "Test failure.");
             }
             logger.warn("[plugin] Test execution failed but failOnTestFailure is false", e);
         }
@@ -118,7 +107,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
     @Override
     protected List<XtcRunModule> resolveModulesToRunFromModulePath(final List<File> resolvedModulePath) {
         // If modules are explicitly configured, use those
-        if (!isEmpty()) {
+        if (getCliModuleName().isPresent() || !isEmpty()) {
             logger.info("[plugin] Test modules explicitly configured, using those.");
             return super.resolveModulesToRunFromModulePath(resolvedModulePath);
         }
@@ -135,7 +124,7 @@ public abstract class XtcTestTask extends XtcRunTask implements XtcTestExtension
         logger.info("[plugin] Auto-discovered {} test module(s):", discoveredModules.size());
         discoveredModules.forEach(module -> logger.info("[plugin]    Test module: {}", module.getModuleName().get()));
 
-        return discoveredModules;
+        return discoveredModules.stream().map(this::applyCliOverrides).toList();
     }
 
     /**

@@ -3,14 +3,16 @@ package org.xvm.util.converter;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,38 +45,28 @@ public class AbstractConverterMapTest {
     }
 
     @Test
-    void shouldComputeEachViewAtMostOnceUnderConcurrentFirstAccess() throws InterruptedException {
-        var map = new FactoryCountingMap();
-
+    void shouldComputeEachViewAtMostOnceUnderConcurrentFirstAccess() throws Exception {
         int threadCount = 16;
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(threadCount);
-        Set<Set<String>> observedKeyViews = ConcurrentHashMap.newKeySet();
+        // each caller counts down just before calling keySet(), and the factory cannot finish until
+        // all of them have, so every caller reaches keySet() before the view exists
+        CountDownLatch arrived = new CountDownLatch(threadCount);
+        var map = new FactoryCountingMap(arrived);
 
-        for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                try {
-                    startLatch.await();
-                    observedKeyViews.add(map.keySet());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    doneLatch.countDown();
-                }
-            });
+        // one thread per caller, so the blocked factory cannot starve the callers it waits for
+        List<Callable<Set<String>>> callers = Collections.nCopies(threadCount, () -> {
+            arrived.countDown();
+            return map.keySet();
+        });
+        try (ExecutorService executor = Executors.newFixedThreadPool(threadCount)) {
+            // every racing thread observed the identical view (compared by identity: distinct empty
+            // views would still be equal), and the overridable factory ran at most once: the racy
+            // duplicate-view caveat of a plain or volatile cache field does not exist for the
+            // compute-at-most-once holder
+            for (Future<Set<String>> view : executor.invokeAll(callers)) {
+                assertSame(map.keySet(), view.get());
+            }
         }
-
-        startLatch.countDown();
-        assertTrue(doneLatch.await(5, TimeUnit.SECONDS));
-        executor.shutdown();
-
-        // every racing thread observed the identical view, and the overridable factory ran at
-        // most once: the racy duplicate-view caveat of a plain or volatile cache field does not
-        // exist for the compute-at-most-once holder
-        assertEquals(1, observedKeyViews.size());
         assertEquals(1, map.keySetFactoryCalls.get());
-        assertSame(map.keySet(), observedKeyViews.iterator().next());
     }
 
     /**
@@ -83,9 +75,11 @@ public class AbstractConverterMapTest {
     private static final class FactoryCountingMap
             extends AbstractConverterMap<String, String, String, String> {
         private final AtomicInteger keySetFactoryCalls = new AtomicInteger();
+        private final CountDownLatch callersArrived;
 
-        private FactoryCountingMap() {
+        private FactoryCountingMap(CountDownLatch callersArrived) {
             super(new HashMap<>());
+            this.callersArrived = callersArrived;
         }
 
         @Override
@@ -111,6 +105,12 @@ public class AbstractConverterMapTest {
         @Override
         protected Set<String> newKeySet() {
             keySetFactoryCalls.incrementAndGet();
+            try {
+                callersArrived.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
             return super.newKeySet();
         }
     }

@@ -8,9 +8,6 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 
 // Build-classpath security constraints: the IntelliJ Platform Gradle Plugin drags vulnerable
 // transitive dependencies onto this project's build classpath. Force known-patched versions
@@ -47,11 +44,6 @@ val releaseChannelProvider = xdkProperties.string("xdk.intellij.release.channel"
 // named JETBRAINS_TOKEN. xdkProperties resolves that env var via the local key "jetbrains.token".
 val jetbrainsTokenProvider = xdkProperties.string("jetbrains.token", "")
 val jetbrainsPublishSuffixOverrideProvider = xdkProperties.string("jetbrains.publish.suffix", "")
-val utcPublishTimestamp: String =
-    DateTimeFormatter
-        .ofPattern("yyyyMMddHHmmss")
-        .withZone(ZoneOffset.UTC)
-        .format(Instant.now())
 val jetbrainsPublishVersionProvider =
     providers.provider {
         val baseVersion = xdkVersionProvider.get()
@@ -59,11 +51,13 @@ val jetbrainsPublishVersionProvider =
         if (!publishEnabled || !baseVersion.endsWith("-SNAPSHOT")) {
             return@provider baseVersion
         }
-        val suffix = jetbrainsPublishSuffixOverrideProvider.get().ifBlank { utcPublishTimestamp }
+        // CI already supplies its publication ID. An explicit suffix keeps that ID stable on cache reuse.
+        val suffix = jetbrainsPublishSuffixOverrideProvider.get().trim()
+        if (suffix.isEmpty()) {
+            throw GradleException("Snapshot publication requires -Pjetbrains.publish.suffix=<unique-build-id>, such as a UTC timestamp.")
+        }
         "$baseVersion.$suffix"
     }
-val usesGeneratedJetBrainsPublishSuffix: Boolean =
-    enablePublish && xdkVersion.endsWith("-SNAPSHOT") && jetbrainsPublishSuffixOverrideProvider.get().isBlank()
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // Propagated to the IDE JVM as a system property and environment variable, so the
@@ -500,9 +494,6 @@ val publishPlugin =
         // invokes publishPlugin (CI, local, snapshot pipeline). Catches removed/
         // changed APIs and missing dependencies that would otherwise reach users.
         dependsOn(verifyPlugin)
-        if (usesGeneratedJetBrainsPublishSuffix) {
-            notCompatibleWithConfigurationCache("JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness.")
-        }
     }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
@@ -517,12 +508,12 @@ val searchableOptionsStatus =
 logger.info("[ide] Searchable options: $searchableOptionsStatus")
 
 val buildSearchableOptions =
-    tasks.named("buildSearchableOptions") {
+    tasks.named<JavaExec>("buildSearchableOptions") {
         enabled = buildSearchableOptionsEnabled
         inputs.property("buildSearchableOptionsEnabled", buildSearchableOptionsEnabled)
         // IntelliJ headless tasks use custom classloading that triggers harmless CDS/class-sharing
         // warnings from the JVM. Suppress them consistently so normal builds stay readable.
-        (this as JavaExec).jvmArgs("-Xlog:cds=off")
+        jvmArgs("-Xlog:cds=off")
     }
 
 // =============================================================================
@@ -659,7 +650,7 @@ val configureDisabledPlugins =
         val configDir = sandboxConfigDir // Capture for configuration cache
         val pluginsList = disabledSandboxPlugins
         inputs.property("disabledPlugins", pluginsList)
-        outputs.dir(configDir) // Output is the config directory
+        outputs.file(configDir.map { it.resolve("disabled_plugins.txt") })
 
         doLast {
             val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")
@@ -680,7 +671,7 @@ val configureSandboxLogging =
         mustRunAfter(prepareSandbox)
 
         val configDir = sandboxConfigDir
-        outputs.dir(configDir)
+        outputs.file(configDir.map { it.resolve("options/log-categories.xml") })
 
         doLast {
             val optionsDir = configDir.get().resolve("options")
@@ -706,7 +697,7 @@ val configureSandboxAppearance =
         mustRunAfter(prepareSandbox)
 
         val configDir = sandboxConfigDir
-        outputs.dir(configDir)
+        doNotTrackState("Removes invalid overrides from user-managed sandbox settings on each IDE launch")
 
         doLast {
             val colorsSchemeFile = configDir.get().resolve("options/colors.scheme.xml")
@@ -792,7 +783,7 @@ val stopLspLogTail =
 // Ensure TextMate files, LSP server JAR, and mavenLocal artifacts are ready before IDE starts
 // NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
 val runIde =
-    tasks.named("runIde") {
+    tasks.named<JavaExec>("runIde") {
         parentPublishLocal.forEach { dependsOn(it) }
         dependsOn(
             copyTextMateToSandbox,
@@ -806,20 +797,18 @@ val runIde =
 
         // Pass log level to the IDE JVM so the IntelliJ plugin can forward it to the
         // out-of-process LSP server. Set both system property and env var for robustness.
-        (this as JavaExec).apply {
-            systemProperty("xtc.logLevel", logLevel)
-            environment("XTC_LOG_LEVEL", logLevel)
-            systemProperty("xtc.lsp.semanticTokens", ideLspSemanticTokens)
-            environment("XTC_LSP_SEMANTIC_TOKENS", ideLspSemanticTokens)
-            // IntelliJ's classloader setup disables JVM CDS optimizations and otherwise prints
-            // harmless class-sharing warnings. Suppress those so runIde output stays focused.
-            jvmArgs("-Xlog:cds=off")
-            // Sandbox plugin auto-reload is convenient during plugin development, but in this
-            // project it can leave IntelliJ holding a stale or partially reloaded plugin JAR
-            // while Gradle is still rebuilding and copying artifacts into the sandbox.
-            // Disable it for deterministic startup and classloading.
-            systemProperty("idea.auto.reload.plugins", "false")
-        }
+        systemProperty("xtc.logLevel", logLevel)
+        environment("XTC_LOG_LEVEL", logLevel)
+        systemProperty("xtc.lsp.semanticTokens", ideLspSemanticTokens)
+        environment("XTC_LSP_SEMANTIC_TOKENS", ideLspSemanticTokens)
+        // IntelliJ's classloader setup disables JVM CDS optimizations and otherwise prints
+        // harmless class-sharing warnings. Suppress those so runIde output stays focused.
+        jvmArgs("-Xlog:cds=off")
+        // Sandbox plugin auto-reload is convenient during plugin development, but in this
+        // project it can leave IntelliJ holding a stale or partially reloaded plugin JAR
+        // while Gradle is still rebuilding and copying artifacts into the sandbox.
+        // Disable it for deterministic startup and classloading.
+        systemProperty("idea.auto.reload.plugins", "false")
 
         finalizedBy(stopLspLogTail)
     }

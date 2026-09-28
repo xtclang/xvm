@@ -34,7 +34,7 @@ fun createDockerBuildTask(
                 val zipFile = files.find { it.name.endsWith(".zip") }
                 zipFile?.absolutePath ?: providers.environmentVariable("DIST_ZIP_URL").orNull ?: ""
             })
-            // CRITICAL: Wire the configuration files as task inputs for proper up-to-date checking
+            // Carry the producer dependency from the distribution artifact.
             xdkDistributionFiles.from(xdkDistConfiguration)
             logger.info("Docker task $taskName will use xdkDistConsumer config for distribution zip")
         } else {
@@ -81,7 +81,7 @@ fun createDockerBuildTask(
         baseImage.set(project.xdkProperties.string("org.xtclang.docker.image", "ghcr.io/xtclang/xvm"))
         dockerDir.set(layout.projectDirectory)
 
-        // Output marker file for caching
+        // Diagnostic marker; image and registry state cannot use Gradle's output cache.
         buildMarkerFile.set(layout.buildDirectory.file("docker/${taskName}.marker"))
 
         // Tags will be computed at execution time in the task action
