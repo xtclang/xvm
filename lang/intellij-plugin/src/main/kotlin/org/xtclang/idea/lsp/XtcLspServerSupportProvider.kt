@@ -3,6 +3,7 @@ package org.xtclang.idea.lsp
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
+import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
@@ -11,11 +12,15 @@ import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
+import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
 import java.nio.file.Path
+import java.net.URI
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -69,7 +74,21 @@ class XtcLanguageServerFactory : LanguageServerFactory {
             }
 
             override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
-                super.createLauncherBuilder<S>().configureGson {
+                object : DefaultLauncherBuilder<S>(this) {
+                    private val documents = DocumentStartupMessages { uri ->
+                        ReadAction.computeBlocking<DocumentStartupMessages.Snapshot?, RuntimeException> {
+                            if (project.isDisposed || serverWrapper.isDisposed) return@computeBlocking null
+                            val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return@computeBlocking null
+                            val document = opened.synchronizer?.document ?: return@computeBlocking null
+                            DocumentStartupMessages.Snapshot(opened, document.modificationStamp, document.text)
+                        }
+                    }
+
+                    override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
+                        val wrapped = super.wrapMessageConsumer(consumer)
+                        return if (consumer is RemoteEndpoint) documents.incoming(wrapped) else documents.outgoing(wrapped)
+                    }
+                }.configureGson {
                     // configureGson replaces the base callback; retain LSP4IJ's compatibility adapters.
                     JSONUtils.configureCompatibilityAdapters(it)
                     it.registerTypeAdapterFactory(ConfigurationJson)
