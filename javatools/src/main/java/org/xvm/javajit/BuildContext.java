@@ -2117,6 +2117,10 @@ public class BuildContext {
 
             RegisterInfo srcReg    = loadArgument(code, iArg);
             JitFlavor    srcFlavor = srcReg.flavor();
+            if (srcFlavor == AlwaysNull) {
+                // a narrowed Null is loaded as the boxed singleton, just like a Null constant
+                srcFlavor = Specific;
+            }
             if (srcFlavor == dstFlavor) {
                 if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
                         !srcReg.type().isJitAssignableTo(pd.type)) {
