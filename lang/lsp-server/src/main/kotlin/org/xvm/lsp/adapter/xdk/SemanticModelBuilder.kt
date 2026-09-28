@@ -106,6 +106,7 @@ internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependenc
 internal fun EmbeddingSupport.Compilation.projectRenameFacts(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
+    includeMembers: Boolean = false,
 ): CompilerRenameFacts =
     ExecutionTrace.api("Compilation.projectRenameFacts") {
         ConstantPool.withPool(pool()).use {
@@ -119,6 +120,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.propertyRelations(this, errors),
                 errors,
                 builder.superBindings(),
+                if (includeMembers) builder.memberActions(this, errors) else emptyList(),
             )
         }
     }
@@ -193,6 +195,11 @@ private class SemanticModelBuilder(
         compilation: EmbeddingSupport.Compilation,
         errors: ErrorListener,
     ): CompilerPropertyRelations = compilerPropertyRelations(nodesIn(requireNotNull(compilation.parsed())), errors)
+
+    fun memberActions(
+        compilation: EmbeddingSupport.Compilation,
+        errors: ErrorListener,
+    ): List<CompilerMemberAction> = compilerMemberActions(nodesIn(requireNotNull(compilation.parsed())), errors)
 
     fun declarations(): Map<IdentityConstant, SourceLocation> =
         constants.entries
