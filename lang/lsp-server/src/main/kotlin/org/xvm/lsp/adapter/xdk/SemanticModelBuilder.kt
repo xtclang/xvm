@@ -13,6 +13,7 @@ import org.xvm.asm.PackageStructure
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
+import org.xvm.asm.constants.FormalConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PropertyConstant
@@ -615,11 +616,18 @@ private class SemanticModelBuilder(
                             },
                         ),
                     members = immutableList(members),
-                    formals = immutableList(cursor?.formals().orEmpty().mapNotNull { formal ->
-                        val bound = type(formal.constraint()) ?: return@mapNotNull null
-                        val token = formal.name()
-                        PartialSemanticModel.Formal(token.valueText, bound, location(site.source, token.startPosition, token.endPosition).range)
-                    }),
+                    formals =
+                        immutableList(
+                            cursor?.formals().orEmpty().mapNotNull { formal ->
+                                val bound = type(formal.constraint()) ?: return@mapNotNull null
+                                val token = formal.name()
+                                PartialSemanticModel.Formal(
+                                    token.valueText,
+                                    bound,
+                                    location(site.source, token.startPosition, token.endPosition).range,
+                                )
+                            },
+                        ),
                     memberPrefix =
                         (site.argumentPrefix.orElse(null) ?: site.memberName.orElse(null))?.let { name ->
                             PartialSemanticModel.MemberPrefix(
@@ -632,7 +640,8 @@ private class SemanticModelBuilder(
                             immutableList(
                                 candidates.mapNotNull { candidate ->
                                     val method = candidate.method().component as? MethodStructure ?: return@mapNotNull null
-                                    val declaredSignature = signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
+                                    val declaredSignature =
+                                        signature(method, candidate.signature(), visibleOnly = true) ?: return@mapNotNull null
                                     val offset = if (candidate.receiverArgument()) 1 else 0
                                     val signature = declaredSignature.copy(parameters = declaredSignature.parameters.drop(offset))
                                     val id = symbol(candidate.method(), method.name, SymbolKind.METHOD) ?: return@mapNotNull null
@@ -1013,7 +1022,7 @@ private class SemanticModelBuilder(
         seen: Set<TypeConstant> = emptySet(),
     ): Boolean {
         if (constant in seen) return true
-        if (constant.containsUnresolved()) return false
+        if (constant.containsUnresolved() || !acyclicConstraint(constant)) return false
         val visited = seen + constant
         if (constant.isSingleDefiningConstant && constant.definingConstant is TypeParameterConstant) {
             val formal = constant.definingConstant as TypeParameterConstant
@@ -1025,6 +1034,43 @@ private class SemanticModelBuilder(
             constant.isRelationalType -> copyableType(constant.underlyingType, visited) && copyableType(constant.underlyingType2, visited)
             constant.isModifyingType -> copyableType(constant.underlyingType, visited)
             else -> true
+        }
+    }
+
+    /**
+     * Nullability follows formal bounds, so T extends T (including indirect cycles) is unsafe.
+     * A bound such as Iterable<T> terminates at Iterable; its arguments may legally refer to T.
+     * Keep this bound walk separate from the recursive graph copied by copyableType.
+     */
+    private fun acyclicConstraint(
+        constant: TypeConstant,
+        seen: Set<TypeConstant> = emptySet(),
+    ): Boolean {
+        if (constant in seen || constant.containsUnresolved()) return false
+        val visited = seen + constant
+        val formal = if (constant.isSingleDefiningConstant) constant.definingConstant as? FormalConstant else null
+        return when {
+            formal is TypeParameterConstant &&
+                (formal.method.isNascent || formal.method.rawParams[formal.register].containsUnresolved()) -> {
+                false
+            }
+
+            formal != null -> {
+                acyclicConstraint(formal.constraintType, visited)
+            }
+
+            constant.isRelationalType -> {
+                acyclicConstraint(constant.underlyingType, visited) &&
+                    acyclicConstraint(constant.underlyingType2, visited)
+            }
+
+            constant.isModifyingType -> {
+                acyclicConstraint(constant.underlyingType, visited)
+            }
+
+            else -> {
+                true
+            }
         }
     }
 
