@@ -1672,6 +1672,14 @@ are copied from existing signature slots and source tokens in `SemanticModelBuil
 or retained field is fabricated. Register-backed `super` call provenance remains an explicit gap,
 not an accessor added speculatively to the AST.
 
+**Resource rename checkpoint (2026-09-28; validation pending):** implicit package identities are
+derived from compiler parent identities and the captured source-directory layout, without invented
+AST source spans. Proposed directory moves replay the whole captured membership. Qualified module
+renames replace the simple name and preserve the domain. An immutable host-facing rename proposal
+also carries the replacement explicit module graph; the host must persist and install it when
+accepting the edit. Ordinary LSP rename keeps refusing explicit graph changes until the clients
+support that transaction. This checkpoint adds no Java API, AST field or clone rule.
+
 **Composition rename checkpoint (2026-09-28; validation pending):** Kotlin worker inspection follows
 existing `MethodInfo`/`MethodBody` into, narrowing and delegation links. Detached generated-method
 identities include their host, written contracts and receiver properties, so before/after proof
