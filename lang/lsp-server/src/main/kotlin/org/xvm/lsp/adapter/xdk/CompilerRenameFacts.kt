@@ -34,6 +34,11 @@ internal sealed interface ProofIdentity {
         val index: Int,
     ) : ProofIdentity
 
+    /** A mixin super register is relative to its written method and each adopting host's chain. */
+    data class Super(
+        val method: ProofIdentity,
+    ) : ProofIdentity
+
     /** A generated forwarding method is identified by its host, written contracts and receivers. */
     data class Composed(
         val owner: ProofIdentity,
@@ -104,6 +109,7 @@ internal fun captureRenameFacts(
     methods: CompilerMethodRelations = CompilerMethodRelations(emptySet(), emptyList()),
     properties: CompilerPropertyRelations = CompilerPropertyRelations(),
     errors: ErrorListener? = null,
+    supers: Map<SemanticModel.SymbolId, MethodConstant> = emptyMap(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -122,15 +128,17 @@ internal fun captureRenameFacts(
             val location = declarations[constant] ?: value?.let { dependencies?.declarations?.get(it)?.location }
             val host = (constant as? MethodConstant)?.namespace
             val sourceHost = host != null && (host in declarations || dependencies?.declarations?.containsKey(host) == true)
+            val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
                 // Bundled source navigation must use the same artifact identity as binary-only views.
                 location != null && module !in XdkLibraries.moduleNames -> {
                     ProofIdentity.Source(location, constant.format, requireNotNull(value).name)
                 }
 
-                constant is PackageConstant && module !in XdkLibraries.moduleNames -> {
+                constant is PackageConstant && module !in XdkLibraries.moduleNames &&
+                    (packageParent is ProofIdentity.Source || packageParent is ProofIdentity.Directory) -> {
                     val directory =
-                        when (val parent = identity(constant.parentConstant)) {
+                        when (val parent = packageParent) {
                             is ProofIdentity.Source -> {
                                 parent.location.sourceName
                                     ?.let(
@@ -141,16 +149,12 @@ internal fun captureRenameFacts(
                             is ProofIdentity.Directory -> {
                                 File(parent.path)
                             }
-
-                            else -> {
-                                null
-                            }
                         }
                     directory?.let { ProofIdentity.Directory(File(it, constant.name).path) } ?: ProofIdentity.Unproven()
                 }
 
-                constant is MethodConstant && sourceHost && errors != null -> {
-                    val structure = host?.component as? ClassStructure
+                constant is MethodConstant && module !in XdkLibraries.moduleNames && sourceHost && errors != null -> {
+                    val structure = host.component as? ClassStructure
                     val info =
                         structure?.let {
                             ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-provenance)") {
@@ -232,7 +236,7 @@ internal fun captureRenameFacts(
                     model.parameters.mapNotNull { (id, slot) ->
                         constants[slot.method]?.let { id to ProofIdentity.Parameter(identity(it), slot.index) }
                     }
-                }.toMap(),
+                }.toMap() + supers.mapValues { ProofIdentity.Super(identity(it.value)) },
         ProofRelations(
             methods.declarations.mapTo(linkedSetOf(), ::identity),
             methods.chains.map { ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported) },
