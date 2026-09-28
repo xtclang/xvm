@@ -374,7 +374,7 @@ VS Code receipts above.
   types/static members/ordinary method and property families/aliases/locals. Audit constructor
   names, module/package/directory moves, companion directories, annotation/mixin/delegation
   dispatch and public-parameter contracts. Keep binary declarations read-only and reject
-  unknown external consumers. Add collision, changed binding, changed dispatch and undo tests.
+  incomplete known graphs. Consumers outside an explicit graph are unknown, not refused. Add collision, changed binding, changed dispatch and undo tests.
   The first checkpoint added declared package/type companion-directory moves and simple
   discovery-owned module renames, with closed import updates and a proposed graph proof.
   Text edits precede minimal file/directory operations; destinations are never overwritten.
@@ -836,9 +836,25 @@ Remaining acceptance and scope:
   LSP4IJ's existing global configuration store and guards both history directions. Generic
   standard LSP clients continue to refuse graph changes. X118 and settings/server tests await
   this batch's combined run.
-- [ ] Audit primary-constructor property parameters, lambda parameters, escaped method values,
-  unsupported composition routes and consumers outside the configured graph. Current refusals
-  are deliberate; they are not counted as completed rename support.
+- [x] Audit primary-constructor properties, lambda parameters, escaped method values, dispatch
+  routes and omitted consumers. `XdkRenameBoundaryTest` adds focused acceptance/refusal fixtures;
+  execution is pending with the combined batch. The findings below retain explicit follow-ups.
+
+### Rename boundary audit
+
+| Boundary | Current evidence and behavior | Required extension |
+| --- | --- | --- |
+| Primary-constructor property parameters | `SemanticModelBuilder` only creates parameter-slot identities for written method parameters; `CompilerPropertyRelations` takes written property declarations. A class-header parameter's generated constructor/property does not establish either complete family. New regression checks declaration, named constructor label and property access. | Copy the written header parameter's relationship to both generated property and constructor slot into immutable attempt facts, then prove both contracts together. No additional mutable AST field is needed. |
+| Lambda parameters | Written lambda bindings exist for navigation/captures, but are not ordinary method parameter-slot identities. `XdkProjectQueries` declines the target instead of treating a compiler-generated lambda method as a stable API contract. Typed/inferred lambda regressions are added. | Establish source-site/parameter-index identity and prove local invocation/escape behavior, including capture and shadowing. Captures of ordinary renamed locals already have separate passing coverage. |
+| Escaped method values | `parameterFamily` refuses a method reference not covered by a direct call's callee span. New cases store, return and pass `&pick`. This is conservative: the compiler does not yet publish callable-value provenance sufficient for downstream named arguments. | Carry callable origin/parameter-slot facts through function values before relaxing the guard. Do not infer origin from a variable's function type. |
+| Composition routes | Method dispatch accepts written Explicit/Default/Declared/Abstract, follows FromInto/Capped/Delegating, and refuses unknown, recursive or over-depth routes. Implicit, Union, SansCode, Field and Native fall through to unsupported. Property chains accept Explicit/Declared/Default/FromInto/Delegating only, and every member must remain a written source declaration. Existing binary-contract tests and the new union-receiver case cover important refusals; this is not exhaustive native route coverage. | Add compiler fixtures per remaining route and source-owned declaration provenance before enabling one. Keep binary/native contracts read-only; generated forwarding bodies are not a source identity. |
+| Consumers outside an explicit graph | **Not automatically refused.** The supplied graph is the host's declared proof boundary. `XdkProject.buildOrder()` cannot enumerate unknown clients; an omitted Consumer.x remains untouched even when it happens to be beside a registered root. The new test contrasts this with registering that consumer. | Include every intended consumer in the graph, or define a wider host index/dependency manifest. Workspace roots/discovery are not evidence about arbitrary external repositories or binaries. Do not call this whole-program rename. |
+
+The remaining scope work is therefore explicit: primary-constructor provenance, lambda callable
+provenance, escaped-value flow, additional composition fixtures/routes, and a host-defined external
+consumer boundary. These are not marked implemented merely because current edits fail closed.
+This batch changes no Java AST node or compiler pipeline; the client persistence protocol and
+scope tests consume the existing immutable embedding facts.
 
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 
