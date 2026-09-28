@@ -1749,8 +1749,10 @@ accepted edits before continuing. These are bounded semantic edits, not general 
 
 #### Additional L62 rename checks
 
-These new cases are backend regressions and manual checks, not new numbered cases in either
-automated editor harness yet. Use a scratch workspace with automatic source discovery. Save
+Shared cases **X109–X117** now carry these sources, expected edits and file destinations for
+both editor drivers. Each starts with other consumers closed and checks a single Undo against
+every original source and path. Their first selected native validation is pending. For manual
+exploration, use a scratch workspace with automatic source discovery. Save
 `Library.x` and `Consumer.x`, then wait for clean diagnostics:
 
 ```xtc
@@ -2036,6 +2038,15 @@ module Advanced {
 | X106 | In Editing.x, complete `Str` inside `function Str(Int)`, `function void(Str)`, `function (Int, Str)(Int)` and `Function<<Str>, <Int>>` parameter types. Repeat with a missing function/sequence closer. | Only the written leaf token is replaced. Complete forms compile; missing delimiters remain diagnostics until repaired. No callable signature is invented for a declaration header. The same eight variants are implemented in both drivers. |
 | X107 | Complete a trailing `ecstasy.text.` type, edit `te` inside `ecstasy.text.StringBuffer`, and fill empty union/intersection/difference operands. | Insert only into an empty slot or replace only the selected qualifier token; preserve the remaining suffix and compile the accepted source. |
 | X108 | Complete `Str` in multiple-return lists, generic method parameters/returns/constraints, class constraints, package compositions and written `Element`/`Other` formals with direct or sibling constraints. | Use enclosing type scope, resolve written bounds without registering header components, and preserve exact replacement ranges. Completing the shared examples restores compilation. |
+| X109 | In the shared `X109` fixture, public parameter rename updates a closed caller and preserves another overload. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X110 | In the shared `X110` fixture, override parameter slots join differently named declarations and callers. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X111 | In the shared `X111` fixture, constructor parameter rename starts at a named argument. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X112 | In the shared `X112` fixture, delegation rename joins the contract and concrete receiver. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X113 | In the shared `X113` fixture, mixin method rename preserves contextual super. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X114 | In the shared `X114` fixture, mixin property rename updates declarations and access. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X115 | In the shared `X115` fixture, annotated property rename preserves its Lazy implementation. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X116 | In the shared `X116` fixture, qualified module rename preserves its domain and alias and moves its companion. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
+| X117 | In the shared `X117` fixture, implicit package rename moves the nested directory. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
@@ -2282,7 +2293,7 @@ Still to come:
 - Wider member/workspace rename: primary-constructor property parameters, lambda parameters,
   method-value escapes, unsupported composition routes and client persistence for explicitly
   configured module moves. The L62 backend extension covers public/explicit-constructor parameters,
-  supported composition families, qualified modules and implicit package directories; its manual
+  supported composition families, qualified modules and implicit package directories; its shared
   checks above have not yet been added to both automated editor harnesses. Consumers outside the
   graph remain unknown
 - Diagnostic-driven quick fixes and refactorings
