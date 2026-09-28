@@ -72,6 +72,7 @@ internal object XdkRename {
         }
         val edits =
             facts.models
+                .filter { it.sourceName != null }
                 .associate { view ->
                     val sourceName = view.sourceName ?: return null
                     val text = texts[sourceName] ?: return null
@@ -144,6 +145,7 @@ internal object XdkRename {
                 .toMap()
 
         fun target(constant: ProofIdentity): Target? {
+            if (constant is ProofIdentity.Directory) return Target.Directory(moved(constant.path))
             if (constant is ProofIdentity.Composed) return composedTarget(constant, texts, moved, translate)
             val symbol = declarations[constant] ?: return Target.External(constant)
             val source = symbol.declarationSource ?: return Target.External(constant)
@@ -176,6 +178,10 @@ internal object XdkRename {
 
         data class External(
             val constant: ProofIdentity,
+        ) : Target
+
+        data class Directory(
+            val path: String,
         ) : Target
 
         data class SourceProof(
@@ -249,6 +255,7 @@ internal object XdkRename {
         ): Target? {
             val original = id?.let(model::symbol) ?: return null
             val identity = facts.constants[id]
+            if (identity is ProofIdentity.Directory) return Target.Directory(moved(identity.path))
             if (identity is ProofIdentity.Composed) return composedTarget(identity, texts, moved, translate)
             val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
             val source = symbol.declarationSource
@@ -260,7 +267,7 @@ internal object XdkRename {
             }
         }
         val result = linkedMapOf<Site, Target>()
-        facts.models.forEach { model ->
+        facts.models.filter { it.sourceName != null }.forEach { model ->
             val source = model.sourceName ?: return null
             model.occurrences.forEach { occurrence ->
                 if (!allowUnresolved || occurrence.symbol != null) {
