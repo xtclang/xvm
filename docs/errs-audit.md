@@ -18,8 +18,16 @@ formal identity can still have a cyclic constraint: snapshot nullability recursi
 querying nullability, while allowing recursion through concrete generic arguments (`T extends Chain<T>`).
 This is a snapshot guard, not evidence that the normal compiler's cyclic-bound handling is complete.
 Final combined validation passes: 1,463 executed JVM tests and selected VS Code X42/X97/X108.
-Seven existing tests are disabled. Native startup typing and the complete IntelliJ checkpoint
-remain separate acceptance work; exact counts and commits are in the integration plan.
+Seven existing tests are disabled. Native startup editing subsequently passed its dedicated
+five-phase check. X103 exposed and then verified the fix for a startup-hook/VFS rename lock cycle;
+the later full IntelliJ checkpoint passes all 113 scenarios with zero IDE errors. Exact receipts
+are in the integration plan.
+
+**X103 native freeze:** VFS rename held the EDT write lock while LSP4IJ awaited didOpen; our
+transport snapshot callback waited for an IDE read lock. Reading the Document API's immutable
+text directly removes that cycle. Both rename directions and startup replacement/reopen now pass.
+Queue/API/reply tracing records counts, ordered jobs and timing for further investigations; see the
+[native and tracing record](errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
 
 Current follow-up tasks are centralized in the
 [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist).
@@ -29,8 +37,9 @@ optional LSP handler is separate from an error-listener defect or a missing nati
 
 Native parity audit (L60): the 50 missing case bodies and X20/X81/X82 assertions are now written,
 with all 50 cases and all three strengthened assertion sets passing individually. The full
-113-case checkpoint remains pending. Inspection found two client boundaries that the tests must
-not hide: LSP4IJ drops diagnostics for URIs without a virtual file, and its workspace-edit routine
+113-case checkpoint passes in `run-6034631232732848040` with zero IDE errors. Inspection found
+two client boundaries that the tests must not hide: LSP4IJ drops diagnostics for URIs without a
+virtual file, and its workspace-edit routine
 does not inspect document versions. The former needs protocol-trace assertions distinct from
 Problems-view claims. X57 reproduced the latter and now passes through a native Ecstasy rename
 handler that checks an immutable request snapshot inside the edit's write command. X53/X54/X60
@@ -39,11 +48,19 @@ points and null-version closed-file races are not covered by that fix.
 Dependency diagnostic publications now invalidate completed semantic caches, which LSP4IJ
 otherwise keys only to the requesting file's PSI stamp. The shared X31/X32 negative expectations
 were stale after formatting/refactoring/argument-completion development and are updated in both
-IDE drivers. No full native pass is claimed; follow the active L60 checklist.
+IDE drivers. The full native pass closes L60; client limitations remain explicitly documented.
 The resumed batch passed all 61 selected scenario assertions but correctly failed the IDE-error
 gate on X41's PSI read outside a read action. That test-driver defect is fixed in `6d7e5b7e5`,
 together with inactive-overload highlighting expectations and 7a.9's missing fixture. X41/X108
-pass with zero IDE errors; the subsequent full checkpoint remains interrupted by desktop focus.
+pass with zero IDE errors. A later full run passed 61 scenarios before Starter's default
+ten-minute session timeout shut down the IDE during X86; the limit is now 30 minutes. Its rerun
+passed 17 scenarios before losing desktop focus at X17. Neither closed the full-run gate.
+Popup recovery now restores focus without pointer input and rejects replay after document edits.
+The dedicated focus regression and seven selected native scenarios pass without IDE errors;
+both harnesses show completed/remaining counts and the current case. The final full run passes
+all 113 scenarios, including X30 after correcting its PID-versus-document readiness assumption.
+The startup check also confirms that the untouched balloon disappears. The integration plan
+records the measured native speedup and each separate acceptance result.
 
 Native open-member rename (L54): advertising and handling `workspace/didRenameFiles` enables
 LSP4IJ's file-rename lifecycle. Without that capability, its VFS listener skipped old-URI close
