@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.List;
-import java.util.Set;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
@@ -26,14 +25,14 @@ import static org.xvm.asm.ErrorListener.in;
 public final class IncompleteTypeCompositionStatement extends TypeCompositionStatement {
     public IncompleteTypeCompositionStatement(Source source, Token category, Token name,
             long start, long end, List<IncompleteStatement> cursors) {
-        this(source, category, name, null, null, start, end, cursors, Set.of());
+        this(source, category, name, null, null, start, end, cursors, List.of());
     }
 
     public IncompleteTypeCompositionStatement(Source source, Token category, Token name, List<Token> qualified,
-            StatementBlock body, long start, long end, List<IncompleteStatement> cursors, Set<String> formals) {
+            StatementBlock body, long start, long end, List<IncompleteStatement> cursors, List<Parameter> formals) {
         super(source, category, name, start, end);
         this.cursors = List.copyOf(cursors);
-        this.formals = Set.copyOf(formals);
+        this.formals = List.copyOf(formals);
         this.qualified = qualified == null ? null : List.copyOf(qualified);
         this.body = body;
     }
@@ -57,9 +56,11 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
     public IncompleteTypeCompositionStatement clone() {
         var copy = new IncompleteTypeCompositionStatement(source, category, name, qualified, null,
                 getStartPosition(), getEndPosition(),
-                cursors.stream().map(site -> (IncompleteStatement) site.clone()).toList(), formals);
+                cursors.stream().map(site -> (IncompleteStatement) site.clone()).toList(),
+                formals.stream().map(formal -> (Parameter) formal.clone()).toList());
         copy.body = body == null ? null : copy.adopt((StatementBlock) body.clone());
         copy.adopt(copy.cursors);
+        copy.adopt(copy.formals);
         copy.setParent(getParent());
         copy.setStage(getStage());
         return copy;
@@ -89,7 +90,7 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         }
     }
 
-    Set<String> formalNames() {
+    List<Parameter> formalParameters() {
         return formals;
     }
 
@@ -102,7 +103,8 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
             if (bindings.isEnabled() && !errs.isAbortDesired()
                     && CursorScope.declarationScope(site).getComponent() instanceof ClassStructure owner) {
                 bindings.record(site, new CursorBinding(List.of(), owner.getFormalType(), false)
-                        .withTypes(CursorScope.declarationTypes(site, errs)));
+                        .withTypes(CursorScope.declarationTypes(site, errs))
+                        .withFormals(CursorScope.declarationFormals(site, errs)));
             }
             errs.error(Parser.INCOMPLETE_EXPRESSION, in(getSource(), site.getEndPosition(), site.getEndPosition()));
         });
@@ -134,7 +136,7 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
     // Protected only so the existing reflective child traversal can read it.
     protected final List<IncompleteStatement> cursors;
 
-    private final Set<String> formals;
+    protected final List<Parameter> formals;
 
-    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteTypeCompositionStatement.class, "body", "cursors");
+    private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteTypeCompositionStatement.class, "body", "cursors", "formals");
 }
