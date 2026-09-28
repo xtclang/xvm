@@ -13,7 +13,7 @@ async function contents(workspace: Workspace, file: string): Promise<string> {
 }
 
 export function renameFamilyCases(): void {
-    for (const id of ['X109', 'X110', 'X111', 'X112', 'X113', 'X114', 'X115', 'X116', 'X117', 'X118'] as const) {
+    for (const id of ['X109', 'X110', 'X111', 'X112', 'X113', 'X114', 'X115', 'X116', 'X117', 'X118', 'X119', 'X120', 'X121'] as const) {
         playbook(id, async (workspace, data) => {
             for (const file of data.files) await workspace.write(file.file, file.source);
             await discovered(workspace, async () => {
