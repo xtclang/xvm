@@ -1,9 +1,9 @@
 # Embedded compilation, Run and future debugging
 
-Status: architectural investigation, 2026-09-28. The `errs` compiler/LSP work remains the current
+Status: accepted architecture and delivery plan, 2026-09-28. The `errs` compiler/LSP work remains the current
 implementation scope. This plan records the runtime contract it must accommodate; it does not
-claim that embedded IDE Run or debugging is implemented. No runtime experiments were run during
-this investigation: execution of the current development batch's tests is deliberately deferred.
+claim that embedded IDE Run or debugging is implemented. This investigation is based on source
+inspection; runtime experiments and repeat-run acceptance remain R1 work.
 
 ## What the code already does
 
