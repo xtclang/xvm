@@ -23,6 +23,11 @@ internal sealed interface ProofIdentity {
         val signature: XdkDependency.SymbolKey,
     ) : ProofIdentity
 
+    data class Parameter(
+        val method: ProofIdentity,
+        val index: Int,
+    ) : ProofIdentity
+
     /** No cross-attempt equivalence is safe when neither a declaration nor artifact proves it. */
     data class Unproven(
         val id: UUID = UUID.randomUUID(),
@@ -158,7 +163,14 @@ internal fun captureRenameFacts(
         }
     return CompilerRenameFacts(
         models,
-        constants.mapValues { identity(it.value) },
+        constants.mapValues { identity(it.value) } +
+            models
+                .distinctBy { it.id }
+                .flatMap { model ->
+                    model.parameters.mapNotNull { (id, slot) ->
+                        constants[slot.method]?.let { id to ProofIdentity.Parameter(identity(it), slot.index) }
+                    }
+                }.toMap(),
         ProofRelations(
             methods.declarations.mapTo(linkedSetOf(), ::identity),
             methods.chains.map { ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported) },
