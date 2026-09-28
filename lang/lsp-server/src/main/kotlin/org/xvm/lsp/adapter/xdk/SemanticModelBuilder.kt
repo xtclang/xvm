@@ -210,7 +210,7 @@ private class SemanticModelBuilder(
             compilation.parsed()
                 ?: return listOf(unavailable())
         val nodes = nodesIn(root)
-        collect(nodes, compilation.callBindings(), compilation.functionBindings(), compilation.pool())
+        collect(nodes, compilation.callBindings(), compilation.functionBindings(), compilation.pool(), compilation.succeeded())
         val implementations =
             if (compilation.succeeded() && errors != null) compilerImplementationTargets(nodes, errors) else emptyMap()
         // An inherited accessor need not appear in a written call or the consumer's constant table.
@@ -231,6 +231,7 @@ private class SemanticModelBuilder(
         bindings: Map<InvocationExpression, InvocationBinding>,
         functions: Map<InvocationExpression, InvocationBinding.FunctionCall>,
         pool: ConstantPool?,
+        complete: Boolean = false,
     ) {
         dependencies.forEach { (identity, declaration) ->
             // Artifact identities supply source associations, not semantic metadata: their pools
@@ -351,7 +352,18 @@ private class SemanticModelBuilder(
 
                 is NameExpression -> {
                     val at = location(node.source, node.nameToken.startPosition, node.nameToken.endPosition)
-                    refer(node.nameToken, callees[node] ?: node.resolvedTarget, expressionType, node.source, writes[at])
+                    // A simple delegate clause is validated through its composition property,
+                    // not by validating this NameExpression. Use the compiler-selected identity.
+                    val delegate =
+                        if (complete && node.isSimpleName) {
+                            (node.parent as? CompositionNode.Delegates)
+                                ?.takeIf { it.delegatee === node }
+                                ?.contribution
+                                ?.delegatePropertyConstant
+                        } else {
+                            null
+                        }
+                    refer(node.nameToken, callees[node] ?: node.resolvedTarget ?: delegate, expressionType, node.source, writes[at])
                 }
 
                 is NamedTypeExpression -> {
@@ -400,9 +412,10 @@ private class SemanticModelBuilder(
                         }.toMap(),
                 callables = callables,
                 declarations =
-                    declarations.entries.mapNotNull { (target, contracts) ->
-                        constants[target]?.let { it to contracts.mapNotNull(constants::get) }
-                    }.toMap(),
+                    declarations.entries
+                        .mapNotNull { (target, contracts) ->
+                            constants[target]?.let { it to contracts.mapNotNull(constants::get) }
+                        }.toMap(),
             )
         return immutableList(
             nodes.map { it.source?.fileName }.distinct().map { source ->
