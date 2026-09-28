@@ -47,7 +47,31 @@ internal class CompilerRenameFacts(
     val methods: ProofRelations = ProofRelations(),
     val properties: ProofRelations = ProofRelations(),
     val imports: List<XdkAutoImports.Target> = emptyList(),
-)
+    private val modules: Map<String, CompilerRenameFacts> = emptyMap(),
+) {
+    /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
+    fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
+
+    companion object {
+        fun merge(modules: Map<String, CompilerRenameFacts>): CompilerRenameFacts {
+            val attempts = modules.values
+            return CompilerRenameFacts(
+                attempts.flatMap { it.models },
+                attempts.flatMap { it.constants.entries }.associate { it.toPair() },
+                ProofRelations(
+                    attempts.flatMapTo(linkedSetOf()) { it.methods.declarations },
+                    attempts.flatMap { it.methods.chains },
+                ),
+                ProofRelations(
+                    attempts.flatMapTo(linkedSetOf()) { it.properties.declarations },
+                    attempts.flatMap { it.properties.chains },
+                ),
+                attempts.flatMap { it.imports }.distinct(),
+                modules,
+            )
+        }
+    }
+}
 
 /** Resolve keys by compiler equality, never by a printed signature or type name. */
 internal fun captureRenameFacts(
