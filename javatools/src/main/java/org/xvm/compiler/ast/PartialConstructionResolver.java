@@ -86,8 +86,12 @@ final class PartialConstructionResolver {
         var result = scope.withCandidates(candidates);
         return candidates.isEmpty() ? result : PartialCallResolver.argumentValues(site, ctx, result, errs,
                 values -> methods.stream().takeWhile(method -> !errs.isAbortDesired())
-                        .anyMatch(method -> !site.probeCallCandidate(ctx, method.info().getType(), method.info(),
-                                method.method(), arguments(site, values), validation).isEmpty()));
+                        .flatMap(method -> site.probeCallCandidate(ctx, method.info().getType(), method.info(),
+                                method.method(), arguments(site, values), validation).stream())
+                        .map(candidate -> anonymous ? candidate
+                                : infer(trial, ctx, construction.result(), candidate, arguments(site, values), errs))
+                        .filter(Objects::nonNull)
+                        .anyMatch(candidate -> PartialCallResolver.validateArguments(ctx, candidate, arguments(site, values), errs)));
     }
 
     private record Constructor(TypeInfo info, MethodConstant method) {}

@@ -86,12 +86,37 @@ final class PartialCallResolver {
                     .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
                             supplied, probe).stream())
                     .map(candidate -> target.receiverArgument() ? candidate.withReceiverArgument() : candidate)
-                    .filter(candidate -> acceptsLabel(site, candidate)).toList();
+                    .toList();
         };
-        var candidates = fit.apply(writtenArguments(site));
+        var candidates = fit.apply(writtenArguments(site)).stream()
+                .filter(candidate -> acceptsLabel(site, candidate)).toList();
         var result = scope.withCandidates(candidates);
         return candidates.isEmpty() ? result : argumentValues(site, ctx, result, errs,
-                arguments -> !fit.apply(arguments).isEmpty());
+                arguments -> fit.apply(arguments).stream().anyMatch(candidate ->
+                        validateArguments(ctx, candidate, target.receiverArgument()
+                                ? Stream.concat(Stream.of(site.getReceiver().orElseThrow()), arguments.stream()).toList()
+                                : arguments, errs)));
+    }
+
+    /** testFit can use an operator's optimistic implicit type; validate each actual insertion too. */
+    static boolean validateArguments(Context ctx, CursorBinding.Candidate candidate,
+                                     List<Expression> arguments, ErrorListener errs) {
+        var trial = ctx.enter();
+        var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
+        int formals = ((MethodStructure) candidate.method().getComponent()).getTypeParamCount();
+        return arguments.stream().allMatch(written -> {
+            var mapping = candidate.arguments().stream().filter(argument ->
+                    argument.startPosition() == written.getStartPosition()
+                            && argument.endPosition() == written.getEndPosition()).findFirst();
+            if (mapping.isEmpty() || probe.isAbortDesired()) {
+                return false;
+            }
+            var expected = candidate.signature().getRawParams()[formals + mapping.orElseThrow().parameterIndex()];
+            Expression value = written instanceof LabeledExpression label ? label.getUnderlyingExpression() : written;
+            Expression validated = ((Expression) value.clone()).validate(trial, expected, probe);
+            return validated != null && validated.getTypeFit().isFit()
+                    && !probe.hasSeriousErrors() && !probe.isAbortDesired();
+        });
     }
 
     private static CursorBinding functionScope(IncompleteStatement site, Context ctx,
