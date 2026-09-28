@@ -115,6 +115,7 @@ class XdkAdapter internal constructor(
             AdapterCapability.COMPLETION,
             AdapterCapability.HOVER,
             AdapterCapability.DEFINITION,
+            AdapterCapability.DECLARATION,
             AdapterCapability.REFERENCES,
             AdapterCapability.DOCUMENT_SYMBOL,
             AdapterCapability.DOCUMENT_HIGHLIGHT,
@@ -1240,6 +1241,22 @@ class XdkAdapter internal constructor(
         val module = module(uri) ?: return null
         val declaration = module.document(uri)?.semantics?.definitionLocationAt(line, column) ?: return null
         return module.sourceUri(declaration.sourceName)?.let { locationOf(it, declaration.range.toRange()) }
+    }
+
+    override fun findDeclaration(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): Location? = findDeclarations(uri, line, column).singleOrNull()
+
+    override fun findDeclarations(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<Location> {
+        if (module(uri) == null && hasProject(uri)) return workspaceNavigation(uri)?.declarations(uri, line, column).orEmpty()
+        val module = module(uri) ?: return emptyList()
+        return module.locations(module.document(uri)?.semantics?.declarationLocationsAt(line, column).orEmpty())
     }
 
     override fun findReferences(

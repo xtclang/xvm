@@ -61,6 +61,8 @@ export function navigationCases(): void {
         const [local, property] = scenario.locations.map(location => document.positionAt(scenarioOffset(document.getText(), location.cursor)));
         const localDefinition = await targets(document, 'Definition', local);
         const propertyDefinition = await targets(document, 'Definition', property);
+        assert.deepStrictEqual(await targets(document, 'Declaration', local), localDefinition);
+        assert.deepStrictEqual(await targets(document, 'Declaration', property), propertyDefinition);
         assert.strictEqual(localDefinition.length, data.targetCount);
         assert.strictEqual(propertyDefinition.length, data.targetCount);
         assert.ok(!localDefinition[0].range.isEqual(propertyDefinition[0].range));

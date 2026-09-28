@@ -175,6 +175,19 @@ class CompilerPlaybook(
                 val editor = open(shared.definitions.file)
                 shared.definitions.locations.forEach { navigate(editor, it) }
                 val uses = shared.definitions.locations.map { offset(editor.text, it.cursor) }
+                uses.forEach { at ->
+                    val client = ClientProtocol(this)
+                    val params = mapOf(
+                        "textDocument" to mapOf("uri" to editor.editor.getVirtualFile().getUrl()),
+                        "position" to mapOf(
+                            "line" to editor.text.take(at).count { it == '\n' },
+                            "character" to (at - editor.text.lastIndexOf('\n', at - 1) - 1),
+                        ),
+                    )
+                    check(client.query("textDocument/declaration", params) == client.query("textDocument/definition", params)) {
+                        "Local/property declarations must match their resolved definition"
+                    }
+                }
                 uses.forEach { at -> referencesAndHighlights(editor, at, uses.single { it != at }) }
             }
             case(shared.warning.id, "Exactly one compiler warning for the duplicate inherited annotation") {
