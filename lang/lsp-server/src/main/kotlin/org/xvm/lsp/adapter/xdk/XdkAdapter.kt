@@ -37,6 +37,7 @@ import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.tool.ModuleInfo
 import java.io.File
 import java.io.IOException
@@ -70,10 +71,12 @@ import org.xvm.util.Severity as XtcSeverity
  * The complete matching XDK library set is bundled; compilation does not start an interpreter.
  */
 class XdkAdapter internal constructor(
-    private val compileSource: (Source, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
-    private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
-    private val analyzeCursor: (Source, ModuleInfo?, Long, ModuleRepository?, ErrorListener) -> EmbeddingSupport.PartialAnalysis,
+    compileSource: (Source, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    analyzeCursor: (Source, ModuleInfo?, Long, ModuleRepository?, ErrorListener) -> EmbeddingSupport.PartialAnalysis,
 ) : AbstractAdapter() {
+    private val compiler = CompilerCalls(compileSource, compileTree, analyzeCursor)
+
     internal constructor(
         compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,
         compileTree: (ModuleInfo, ErrorListener) -> EmbeddingSupport.Compilation,
@@ -265,6 +268,7 @@ class XdkAdapter internal constructor(
                         dependencies,
                         project,
                         discovery.get().problem,
+                        queueTrace,
                         ::runCompilation,
                     )
                 request.result.whenComplete { _, _ ->
@@ -287,7 +291,7 @@ class XdkAdapter internal constructor(
                 scheduled[request] =
                     debouncer.schedule({
                         synchronized(lifecycle) {
-                            if (scheduled.remove(request) != null && !isStale(request)) compiles.execute(request.task)
+                            if (scheduled.remove(request) != null && !isStale(request)) compiles.execute(request.task.ready())
                         }
                     }, DEBOUNCE_MILLIS, TimeUnit.MILLISECONDS)
                 Submission(request = request, retired = retired, obsoleteQueries = obsoleteQueries)
@@ -319,7 +323,7 @@ class XdkAdapter internal constructor(
                 if (discovery.get().problem != null) return CompletableFuture.completedFuture(null)
                 val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
                 if (uri !in compilation.overlays) return CompletableFuture.completedFuture(null)
-                val request = CursorRequest(compilation, key, position, ::runCursorAnalysis)
+                val request = CursorRequest(compilation, key, position, queueTrace, ::runCursorAnalysis)
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
                         synchronized(lifecycle) {
@@ -330,7 +334,7 @@ class XdkAdapter internal constructor(
                 }
                 val previous = cursors.put(key, request)
                 previous?.let { compiles.remove(it.task) }
-                compiles.execute(request.task)
+                compiles.execute(request.task.ready())
                 request to previous
             }
         previous?.result?.cancel(false)
@@ -346,7 +350,7 @@ class XdkAdapter internal constructor(
 
     private sealed interface QueryWork {
         val result: CompletableFuture<*>
-        val task: Runnable
+        val task: CompilerQueueTrace.Work
     }
 
     private sealed interface QueryRequest : QueryWork {
@@ -366,21 +370,23 @@ class XdkAdapter internal constructor(
         val project: XdkProject,
         val dependencies: XdkDependencies,
         val overlays: Map<String, String>,
+        trace: CompilerQueueTrace,
         work: (ProjectRequest<T>) -> Unit,
     ) : QueryWork {
         override val result = CompletableFuture<T>()
-        override val task = Runnable { work(this) }
+        override val task = trace.task("project-${key.kind}", key.uri, result) { work(this) }
     }
 
     private class CursorRequest(
         override val compilation: Request,
         val key: CursorKey,
         val position: Position,
+        trace: CompilerQueueTrace,
         work: (CursorRequest) -> Unit,
     ) : QueryRequest {
         val uri: String get() = key.uri
         override val result = CompletableFuture<PartialSemanticModel?>()
-        override val task = Runnable { work(this) }
+        override val task = trace.task("cursor-${key.kind}", uri, result) { work(this) }
     }
 
     private class RenameRequest(
@@ -389,10 +395,11 @@ class XdkAdapter internal constructor(
         val uri: String,
         val position: Position,
         val name: String,
+        trace: CompilerQueueTrace,
         work: (RenameRequest) -> Unit,
     ) : QueryRequest {
         override val result = CompletableFuture<WorkspaceEdit?>()
-        override val task = Runnable { work(this) }
+        override val task = trace.task("rename-proof", uri, result) { work(this) }
     }
 
     /** Called under lifecycle; future callbacks must run after releasing it. */
@@ -423,7 +430,7 @@ class XdkAdapter internal constructor(
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 if (discovery.get().problem != null || project.scope(key.uri) == null) return CompletableFuture.completedFuture(unavailable)
                 val request =
-                    ProjectRequest(key, project, dependencies, overlays.toMap()) { work: ProjectRequest<T> ->
+                    ProjectRequest(key, project, dependencies, overlays.toMap(), queueTrace) { work: ProjectRequest<T> ->
                         fun stale(): Boolean = projectQueries[key] !== work || work.result.isCancelled
                         try {
                             if (stale()) throw CancellationException()
@@ -434,7 +441,7 @@ class XdkAdapter internal constructor(
                                             work.project,
                                             work.overlays,
                                             work.dependencies,
-                                            compileTree,
+                                            compiler::compileTree,
                                             ::stale,
                                             navigationCache,
                                             discoverImports = !discovery.get().explicit,
@@ -466,7 +473,7 @@ class XdkAdapter internal constructor(
                 }
                 val previous = projectQueries.put(key, request)
                 previous?.let { compiles.remove(it.task) }
-                compiles.execute(request.task)
+                compiles.execute(request.task.ready())
                 request to previous
             }
         previous?.result?.cancel(false)
@@ -486,7 +493,7 @@ class XdkAdapter internal constructor(
                 cursor?.let {
                     val sources = captureSources(request.compilation) { isStale(request) }
                     val dependencies = (completed[request.compilation.scope]?.inputs ?: request.compilation.dependencies).open()
-                    analyzeCursor(source, sources, it, dependencies.repository, errors).semanticSnapshot(errors)
+                    compiler.analyzeCursor(source, sources, it, dependencies.repository, errors).semanticSnapshot(errors)
                 }
             synchronized(lifecycle) {
                 if (isStale(request)) throw CancellationException()
@@ -549,10 +556,11 @@ class XdkAdapter internal constructor(
         val dependencies: XdkDependencies,
         val project: XdkProject,
         val problem: String?,
+        trace: CompilerQueueTrace,
         work: (Request) -> Unit,
     ) {
         val result = CompletableFuture<CompilationResult>()
-        val task = Runnable { work(this) }
+        val task = trace.task("compile", scope, result) { work(this) }
     }
 
     private data class Submission(
@@ -882,12 +890,13 @@ class XdkAdapter internal constructor(
         val dependencies = inputs.open()
         val compilation =
             if (sources == null) {
-                compileSource(source, dependencies.repository, errs)
+                compiler.compileSource(source, dependencies.repository, errs)
             } else {
-                compileTree(sources, dependencies.repository, errs)
+                compiler.compileTree(sources, dependencies.repository, errs)
             }
         if (isStale(request)) throw CancellationException()
-        logger.info("compile: scope={} [{}]", request.scope, EmbeddingSupport.instance().footprint(compilation))
+        val footprint = ExecutionTrace.api("EmbeddingSupport.footprint", request.uri) { EmbeddingSupport.instance().footprint(compilation) }
+        logger.info("compile: scope={} [{}]", request.scope, footprint)
         if (compiled.incrementAndGet() == 1L) logger.info("compile: first compilation in this server completed (cold)")
         val roots =
             buildMap {
@@ -1357,7 +1366,7 @@ class XdkAdapter internal constructor(
                 val compilation = requests[analysisScope(uri)] ?: return CompletableFuture.completedFuture(null)
                 val module = completed[compilation.scope]?.takeIf { it.succeeded } ?: return CompletableFuture.completedFuture(null)
                 if (prepareRename(uri, line, column) == null) return CompletableFuture.completedFuture(null)
-                val request = RenameRequest(compilation, module, uri, Position(line, column), newName, ::runRename)
+                val request = RenameRequest(compilation, module, uri, Position(line, column), newName, queueTrace, ::runRename)
                 request.result.whenComplete { _, _ ->
                     if (request.result.isCancelled) {
                         synchronized(lifecycle) {
@@ -1368,7 +1377,7 @@ class XdkAdapter internal constructor(
                 }
                 val previous = renames.put(uri, request)
                 previous?.let { compiles.remove(it.task) }
-                compiles.execute(request.task)
+                compiles.execute(request.task.ready())
                 request to previous
             }
         previous?.result?.cancel(false)
@@ -1417,9 +1426,9 @@ class XdkAdapter internal constructor(
                 }
             val compilation =
                 if (sources == null) {
-                    compileSource(Source(texts.getValue(request.compilation.uri), request.compilation.uri), repository, errors)
+                    compiler.compileSource(Source(texts.getValue(request.compilation.uri), request.compilation.uri), repository, errors)
                 } else {
-                    compileTree(sources, repository, errors)
+                    compiler.compileTree(sources, repository, errors)
                 }
             if (isStale(request)) throw CancellationException()
             return if (compilation.succeeded() && !heard.hasSeriousErrors()) compilation.renameFacts(dependencies) else null
@@ -1593,6 +1602,7 @@ class XdkAdapter internal constructor(
     }
 
     private val compiled = AtomicLong()
+    private val queueTrace = CompilerQueueTrace()
     private val lifecycle = Any()
     private var closed = false
 

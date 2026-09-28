@@ -14,6 +14,7 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Detached import candidates; only a successful whole-graph repair proof can publish an edit. */
 internal object XdkAutoImports {
@@ -66,12 +67,12 @@ internal object XdkAutoImports {
         val errors = ErrorList()
         val root =
             try {
-                Parser(Source(text), errors).parseSource()
+                ExecutionTrace.api("Parser.parseSource(auto-imports)") { Parser(Source(text), errors).parseSource() }
             } catch (_: CompilerException) {
                 return null
             }
         if (errors.hasSeriousErrors()) return null
-        val tokens = Lexer(Source(text), errors).asSequence().toList()
+        val tokens = ExecutionTrace.api("Lexer.lex(auto-imports)") { Lexer(Source(text), errors).asSequence().toList() }
         if (errors.hasSeriousErrors()) return null
         val type = root.childNodes().filterIsInstance<TypeCompositionStatement>().singleOrNull() ?: return null
         val newline = if ("\r\n" in text) "\r\n" else "\n"

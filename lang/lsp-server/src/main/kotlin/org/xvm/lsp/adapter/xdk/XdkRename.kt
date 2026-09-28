@@ -7,6 +7,7 @@ import org.xvm.compiler.Token
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.TextEdit
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Worker-only edit planning and binding comparison. Compiler constants never escape this proof. */
 internal object XdkRename {
@@ -209,13 +210,14 @@ internal object XdkRename {
         return result
     }
 
-    internal fun identifier(name: String): Boolean {
-        val errors = ErrorList()
-        val lexer = Lexer(Source(name), errors)
-        if (!lexer.hasNext()) return false
-        val token = lexer.next()
-        return token.id == Token.Id.IDENTIFIER && token.valueText == name && !lexer.hasNext() && !errors.hasSeriousErrors()
-    }
+    internal fun identifier(name: String): Boolean =
+        ExecutionTrace.api("Lexer.identifier(rename)") {
+            val errors = ErrorList()
+            val lexer = Lexer(Source(name), errors)
+            if (!lexer.hasNext()) return@api false
+            val token = lexer.next()
+            token.id == Token.Id.IDENTIFIER && token.valueText == name && !lexer.hasNext() && !errors.hasSeriousErrors()
+        }
 
     private val newlines = Regex("\\r\\n|\\r|\\n")
 
