@@ -184,6 +184,10 @@ internal object XdkRename {
             val path: String,
         ) : Target
 
+        data class Super(
+            val method: Target,
+        ) : Target
+
         data class SourceProof(
             val site: Site,
             val format: Constant.Format,
@@ -203,6 +207,10 @@ internal object XdkRename {
         translate: (String, Int) -> Int?,
     ): Target? {
         return when (identity) {
+            is ProofIdentity.Super -> {
+                composedTarget(identity.method, texts, moved, translate)?.let(Target::Super)
+            }
+
             is ProofIdentity.Composed -> {
                 val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
                 val members = identity.members.map { composedTarget(it, texts, moved, translate) ?: return null }
@@ -256,7 +264,11 @@ internal object XdkRename {
             val original = id?.let(model::symbol) ?: return null
             val identity = facts.constants[id]
             if (identity is ProofIdentity.Directory) return Target.Directory(moved(identity.path))
-            if (identity is ProofIdentity.Composed) return composedTarget(identity, texts, moved, translate)
+            if (identity is ProofIdentity.Composed ||
+                identity is ProofIdentity.Super
+            ) {
+                return composedTarget(identity, texts, moved, translate)
+            }
             val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
             val source = symbol.declarationSource
             val range = symbol.declaration

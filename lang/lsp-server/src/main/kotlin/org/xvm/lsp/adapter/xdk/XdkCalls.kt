@@ -17,7 +17,7 @@ internal class XdkCalls(
     private val calls =
         this.views.values
             .flatMap { it.calls }
-            .filter { it.caller in callables && it.method in callables }
+            .filter { it.caller != null && it.caller in callables && it.method in callables }
 
     fun prepare(
         uri: String,
