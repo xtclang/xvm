@@ -22,7 +22,9 @@ internal class XdkSourceMoves(
             // Symlinks may escape the captured tree; a rename proof cannot establish their membership.
             if (Files.isSymbolicLink(source.toPath()) ||
                 (companion.exists() && companion.walkTopDown().any { Files.isSymbolicLink(it.toPath()) })
-            ) return null
+            ) {
+                return null
+            }
             val prefix = companion.toPath()
             val members = texts.keys.map(::File).filter { it.toPath().startsWith(prefix) }
             val descendants = directories.filter { it.toPath().startsWith(prefix) }
@@ -36,8 +38,8 @@ internal class XdkSourceMoves(
             val resources =
                 buildMap {
                     put(source.path, destination.path)
-                    // A virtual companion with only unsaved files has no directory to rename.
-                    // Its new paths are represented by the source files the client already owns.
+                    // A virtual companion with only unsaved files has no directory to rename,
+                    // so the client cannot apply this resource operation safely.
                     if (companion.isDirectory) {
                         put(companion.path, movedCompanion.path)
                     } else if (members.isNotEmpty()) {
