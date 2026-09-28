@@ -16,7 +16,11 @@ class PartialSemanticModel internal constructor(
     enum class Kind { NAME, MEMBER_ACCESS, CALL }
 
     /** Written declaration plus resolved upper bound; this is not a registered type identity. */
-    data class Formal(val name: String, val constraint: TypeId, val declaration: Range)
+    data class Formal(
+        val name: String,
+        val constraint: TypeId,
+        val declaration: Range,
+    )
 
     @ConsistentCopyVisibility
     data class Member internal constructor(

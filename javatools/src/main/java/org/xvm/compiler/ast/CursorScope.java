@@ -56,13 +56,27 @@ final class CursorScope {
                 if (type.left != null || type.getNames().length < 2) {
                     return List.of();
                 }
-                var bound = resolveFormals(site, errs).stream()
-                        .filter(formal -> formal.name().getValueText().equals(firstName(type)))
-                        .findFirst();
-                return bound.map(formal -> parameterizedTypes(new NamedTypeExpression(
-                        new NamedTypeExpression(type, formal.constraint()),
-                        type.names.subList(1, type.names.size()), type.paramTypes, type.getEndPosition()),
-                        scope, site.getCompletionPrefix(), errs)).orElseGet(List::of);
+                var parameters = formalParameters(site).stream()
+                        .collect(Collectors.toMap(Parameter::getName, Function.identity(), (first, second) -> first));
+                var qualifier = formalConstraint(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
+                if (qualifier == null) {
+                    return List.of();
+                }
+                // NameResolver's FORMAL_TYPE mode permits virtual child classes, not typedefs
+                // or static nested types. An upper bound must not erase that distinction.
+                var candidates = parameterizedTypes(new NamedTypeExpression(
+                        qualifier, type.names.subList(1, type.names.size()), type.paramTypes, type.getEndPosition()),
+                        scope, site.getCompletionPrefix(), errs);
+                if (type.names.size() == 2) {
+                    return candidates.stream().filter(candidate ->
+                            candidate.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
+                }
+                var bound = formalBound(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
+                var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
+                var first = bound == null ? null : bound.ensureTypeInfo(scope.getComponent().getIdentityConstant(), probe)
+                        .getChildInfosByName().get(type.names.get(1).getValueText());
+                return first != null && first.getIdentity().getComponent() instanceof ClassStructure child
+                        && child.isVirtualChild() && !probe.hasSeriousErrors() && !probe.isAbortDesired() ? candidates : List.of();
             }
             if (type.left != null) {
                 return parameterizedTypes(type, scope, site.getCompletionPrefix(), errs);
@@ -119,15 +133,7 @@ final class CursorScope {
 
     private static TypeConstant formalBound(Parameter parameter, AstNode scope, Map<String, Parameter> parameters,
                                            Set<String> resolving, ErrorListener errs) {
-        if (resolving.contains(parameter.getName()) || errs.isAbortDesired()) {
-            return null;
-        }
-        if (parameter.getType() == null) {
-            return scope.pool().typeObject();
-        }
-        var active = Stream.concat(resolving.stream(), Stream.of(parameter.getName()))
-                .collect(Collectors.toUnmodifiableSet());
-        var copy = substituteFormals((TypeExpression) parameter.getType().clone(), scope, parameters, active, errs);
+        var copy = formalConstraint(parameter, scope, parameters, resolving, errs);
         if (copy == null) {
             return null;
         }
@@ -135,6 +141,20 @@ final class CursorScope {
         var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         TypeConstant bound = resolveType(copy, probe);
         return bound != null && visibleNames(copy, scope.getComponent().getIdentityConstant()) ? bound : null;
+    }
+
+    /** Keep real bound syntax: NameResolver must never interpret a TypeConstant's display string. */
+    private static TypeExpression formalConstraint(Parameter parameter, AstNode scope,
+            Map<String, Parameter> parameters, Set<String> resolving, ErrorListener errs) {
+        if (resolving.contains(parameter.getName()) || errs.isAbortDesired()) {
+            return null;
+        }
+        if (parameter.getType() == null) {
+            return new NamedTypeExpression(new NameExpression(parameter.getNameToken()), scope.pool().typeObject());
+        }
+        var active = Stream.concat(resolving.stream(), Stream.of(parameter.getName()))
+                .collect(Collectors.toUnmodifiableSet());
+        return substituteFormals((TypeExpression) parameter.getType().clone(), scope, parameters, active, errs);
     }
 
     /** Written references to sibling formals resolve through their bounds, never an outer homonym. */
@@ -145,11 +165,10 @@ final class CursorScope {
         }
         if (type instanceof NamedTypeExpression named && named.left == null
                 && parameters.containsKey(named.getNames()[0])) {
-            TypeConstant bound = formalBound(parameters.get(named.getNames()[0]), scope, parameters, resolving, errs);
-            if (bound == null || named.paramTypes != null) {
+            TypeExpression replacement = formalConstraint(parameters.get(named.getNames()[0]), scope, parameters, resolving, errs);
+            if (replacement == null || named.paramTypes != null) {
                 return null;
             }
-            var replacement = new NamedTypeExpression(named, bound);
             return named.getNames().length == 1 ? replacement
                     : new NamedTypeExpression(replacement, named.names.subList(1, named.names.size()),
                             null, named.getEndPosition());
@@ -250,7 +269,8 @@ final class CursorScope {
     private static boolean visibleNames(AstNode node, IdentityConstant owner) {
         return (!(node instanceof NamedTypeExpression named)
                 || named.getNameBindings().stream().allMatch(binding ->
-                        binding.target() instanceof IdentityConstant identity && visible(identity, owner)))
+                        binding.target() instanceof IdentityConstant identity && visible(identity, owner)
+                        || binding.target() instanceof TypeConstant && named.alreadyReached(Stage.Validated)))
                 && StreamSupport.stream(node.children().spliterator(), false).allMatch(child -> visibleNames(child, owner));
     }
 
