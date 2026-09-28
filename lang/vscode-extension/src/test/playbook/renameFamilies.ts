@@ -19,13 +19,10 @@ async function configurationGuards(document: vscode.TextDocument, at: vscode.Pos
     const otherFolder = vscode.workspace.workspaceFolders?.[1];
     if (otherFolder) {
         const configuration = vscode.workspace.getConfiguration('xtc.compiler', otherFolder.uri);
-        const previous = configuration.inspect('sourceModules')?.workspaceFolderValue;
-        try {
-            await configuration.update('sourceModules', [], vscode.ConfigurationTarget.WorkspaceFolder);
-            await assert.rejects(() => renameWithConfiguration(languageClient, document, at, replacement, token), /folder overrides/);
-        } finally {
-            await configuration.update('sourceModules', previous, vscode.ConfigurationTarget.WorkspaceFolder);
-        }
+        // The extension declares window scope. VS Code itself prevents an effective folder override.
+        await assert.rejects(() => Promise.resolve(configuration.update('sourceModules', [], vscode.ConfigurationTarget.WorkspaceFolder)),
+            /does not support the folder resource scope/);
+        assert.strictEqual(configuration.inspect('sourceModules')?.workspaceFolderValue, undefined);
     }
     const settings = await vscode.workspace.openTextDocument(compilerSettingsLocation()!.uri);
     const original = settings.getText();
