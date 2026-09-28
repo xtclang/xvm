@@ -96,23 +96,35 @@ class XdkMemberActionsTest {
         }
     }
 
-    private fun actions(adapter: XdkAdapter, uri: String, text: String): List<CodeAction> {
+    private fun actions(
+        adapter: XdkAdapter,
+        uri: String,
+        text: String,
+    ): List<CodeAction> {
         val offset = text.indexOf("Box")
         val at = position(text, offset)
         return adapter.getCodeActions(uri, Range(at, at), emptyList())
     }
 
-    private fun position(text: String, offset: Int): Position =
-        Position(text.take(offset).count { it == '\n' }, offset - text.lastIndexOf('\n', offset - 1) - 1)
+    private fun position(
+        text: String,
+        offset: Int,
+    ): Position = Position(text.take(offset).count { it == '\n' }, offset - text.lastIndexOf('\n', offset - 1) - 1)
 
-    private fun apply(text: String, edits: List<TextEdit>): String {
+    private fun apply(
+        text: String,
+        edits: List<TextEdit>,
+    ): String {
         fun offset(at: Position): Int = text.split('\n').take(at.line).sumOf { it.length + 1 } + at.column
         return edits.sortedByDescending { offset(it.range.start) }.fold(text) { result, edit ->
             result.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
         }
     }
 
-    private fun workspace(text: String, check: (XdkAdapter, String) -> Unit) {
+    private fun workspace(
+        text: String,
+        check: (XdkAdapter, String) -> Unit,
+    ) {
         val source = directory.resolve("App.x").toFile().apply { writeText(text) }
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))

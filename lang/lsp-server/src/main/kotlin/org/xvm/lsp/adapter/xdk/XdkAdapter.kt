@@ -358,7 +358,7 @@ class XdkAdapter internal constructor(
         val compilation: Request
     }
 
-    private enum class ProjectQueryKind { REFERENCES, RENAME, RENAME_PROPOSAL, SYMBOLS, NAVIGATION, IMPORTS }
+    private enum class ProjectQueryKind { REFERENCES, RENAME, RENAME_PROPOSAL, SYMBOLS, NAVIGATION, CODE_ACTIONS }
 
     private data class ProjectQueryKey(
         val uri: String,
@@ -1388,7 +1388,7 @@ class XdkAdapter internal constructor(
         diagnostics: List<Diagnostic>,
     ): CompletableFuture<List<CodeAction>> =
         if (hasProject(uri)) {
-            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.IMPORTS, range), emptyList()) { it.codeActions(uri, range) }
+            projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_ACTIONS, range), emptyList()) { it.codeActions(uri, range) }
         } else {
             CompletableFuture.completedFuture(emptyList())
         }
