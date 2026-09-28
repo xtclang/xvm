@@ -192,47 +192,54 @@ internal fun ParityScenarios.semanticCases() {
     }
     case("X42") { data ->
         val doc = open(data.string("file"))
-        clean(doc)
-        val support = with(driver) { semanticSupport(doc.editor).getInlayHintsSupport() }
-        val hints =
-            with(driver) {
-                waitFor("native inlay provider has inferred types and parameter labels", 45.seconds, getter = {
-                    support
-                        .getValidLSPFuture()
-                        ?.takeIf {
-                            it.isDone() && !it.isCompletedExceptionally()
-                        }?.get()
-                        ?.map { protocol.copy(it.inlayHint()).asJsonObject }
-                }, checker = { it != null && it.isNotEmpty() })
-            }!!
-        val labels =
-            hints.map {
-                it["label"].let { label ->
-                    if (label.isJsonPrimitive) label.asString else label.rows().joinToString("") { part -> part.string("value") }
+
+        fun verify(expected: JsonObject) {
+            clean(doc)
+            val support = with(driver) { semanticSupport(doc.editor).getInlayHintsSupport() }
+            val hints =
+                with(driver) {
+                    waitFor("native inlay provider has inferred types and parameter labels", 45.seconds, getter = {
+                        support
+                            .getValidLSPFuture()
+                            ?.takeIf {
+                                it.isDone() && !it.isCompletedExceptionally()
+                            }?.get()
+                            ?.map { protocol.copy(it.inlayHint()).asJsonObject }
+                    }, checker = { it != null && it.isNotEmpty() })
+                }!!
+            val labels =
+                hints.map {
+                    it["label"].let { label ->
+                        if (label.isJsonPrimitive) label.asString else label.rows().joinToString("") { part -> part.string("value") }
+                    }
                 }
-            }
-        data.strings("hints").forEach { expected -> check(labels.any { it.contains(expected) }) }
-        check(
-            hints.none {
-                it.getAsJsonObject("position").int("line") ==
-                    ParityWorkspace.position(doc.text, doc.at(data.string("anchor")))["line"]
-            },
-        )
-        check(hints.count { it.int("kind") == 1 } == data.int("typeHintCount"))
-        check(labels.none { it.contains(data.string("excludedHint")) })
-        val offsets = hints.map { ParityWorkspace.offset(doc.text, it.getAsJsonObject("position")) }.toSet()
-        with(driver) {
-            waitFor("inlay labels are installed in the editor", 45.seconds) {
-                withContext(OnDispatcher.EDT) {
-                    cast(doc.editor.editor, NativeInlayEditor::class)
-                        .getInlayModel()
-                        .getInlineElementsInRange(0, doc.text.length)
-                        .filter { it.isValid() && it.getWidthInPixels() > 0 }
-                        .map { it.getOffset() }
-                        .containsAll(offsets)
+            expected.strings("hints").forEach { expected -> check(labels.any { it.contains(expected) }) }
+            check(
+                hints.none {
+                    it.getAsJsonObject("position").int("line") ==
+                        ParityWorkspace.position(doc.text, doc.at(expected.string("anchor")))["line"]
+                },
+            )
+            check(hints.count { it.int("kind") == 1 } == expected.int("typeHintCount"))
+            check(labels.none { it.contains(expected.string("excludedHint")) })
+            val offsets = hints.map { ParityWorkspace.offset(doc.text, it.getAsJsonObject("position")) }.toSet()
+            with(driver) {
+                waitFor("inlay labels are installed in the editor", 45.seconds) {
+                    withContext(OnDispatcher.EDT) {
+                        cast(doc.editor.editor, NativeInlayEditor::class)
+                            .getInlayModel()
+                            .getInlineElementsInRange(0, doc.text.length)
+                            .filter { it.isValid() && it.getWidthInPixels() > 0 }
+                            .map { it.getOffset() }
+                            .containsAll(offsets)
+                    }
                 }
             }
         }
+        verify(data)
+        val inferred = data.getAsJsonObject("inferred")
+        replace(doc, inferred.string("source"))
+        verify(inferred)
     }
     case("X43") { data ->
         val doc = open(data.string("file"))
