@@ -123,6 +123,25 @@ New positive, shadowing, cyclic/unresolved and parameterized-qualifier regressio
 combined L56–L59 validation. These bounds are not proof that an incomplete declaration's body or
 inheritance is valid, nor an exact concrete type for a formal.
 
+### L58 compound operands and callable fallbacks implementation (2026-09-28)
+
+The explicit cursor parser retains an absent primary operand without consuming its delimiter.
+`PartialArgument` locates one cursor within an operator expression and replaces only that hole
+on a disposable clone. Candidate enumeration may leave the whole argument unbound, but every
+suggestion must fit the complete operator expression and all other written arguments. Lambda
+and nested-call boundaries keep their own contexts. Ordinary parsing/emission is unchanged.
+
+Call inspection follows the compiler's fallback from an instance method to functions on a
+`Type<T>` bound or receiver-rewritten functions. Candidate facts explicitly identify the injected
+receiver; the host hides that parameter and adjusts source argument mappings. Lexical property
+names now include enclosing/import scopes, but ordinary read validation and complete argument
+fitting remain authoritative for accessibility, shadowing and conversions.
+
+New operand, rejection, repair and callable regressions await combined validation. Literal
+synthesis remains separate: no literal candidates or guessed expected types are invented here.
+No new mutable AST field is required; parser ownership and copied candidate metadata carry the
+additional information. The existing four-argument Candidate constructor remains available.
+
 ### Finish the existing editor features
 
 - [ ] **L61 — Go-to-declaration.** Implement `textDocument/declaration`, add an explicit adapter
