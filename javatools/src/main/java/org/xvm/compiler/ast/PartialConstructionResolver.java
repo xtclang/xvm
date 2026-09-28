@@ -88,9 +88,8 @@ final class PartialConstructionResolver {
                 values -> methods.stream().takeWhile(method -> !errs.isAbortDesired())
                         .flatMap(method -> site.probeCallCandidate(ctx, method.info().getType(), method.info(),
                                 method.method(), arguments(site, values), validation).stream())
-                        .map(candidate -> anonymous ? candidate
-                                : infer(trial, ctx, construction.result(), candidate, arguments(site, values), errs))
-                        .filter(Objects::nonNull)
+                        // Ordinary construction validates against the prepared constructor, then
+                        // infers the result type. That later inference is not a new argument constraint.
                         .anyMatch(candidate -> PartialCallResolver.validateArguments(ctx, candidate, arguments(site, values), errs)));
     }
 
