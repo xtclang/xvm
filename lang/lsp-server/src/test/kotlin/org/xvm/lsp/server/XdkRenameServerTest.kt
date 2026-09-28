@@ -206,6 +206,10 @@ class XdkRenameServerTest {
                 it.parentFile.mkdirs()
                 it.writeText("class Item {}")
             }
+        directory.resolve("App/Item/Nested.x").toFile().also {
+            it.parentFile.mkdirs()
+            it.writeText("class Nested {}")
+        }
         listOf(false, true).forEach { enabled ->
             val server = XtcLanguageServer(XdkAdapter())
             server.connect(mock(LanguageClient::class.java))
@@ -229,11 +233,16 @@ class XdkRenameServerTest {
                     assertThat(edit).isNull()
                 } else {
                     val changes = requireNotNull(edit).documentChanges
-                    assertThat(changes.dropLast(1)).allMatch { it.isLeft }
-                    val move = changes.last().right as RenameFile
+                    assertThat(changes.takeWhile { it.isLeft }).hasSize(2)
+                    val moves = changes.dropWhile { it.isLeft }.map { it.right as RenameFile }
+                    assertThat(moves).hasSize(2)
+                    val move = moves.first()
                     assertThat(move.oldUri).isEqualTo(member.toURI().toString())
                     assertThat(move.newUri).endsWith("/Renamed.x")
                     assertThat(move.options.overwrite).isFalse()
+                    assertThat(moves.last().oldUri).endsWith("/App/Item")
+                    assertThat(moves.last().newUri).endsWith("/App/Renamed")
+                    assertThat(moves).allMatch { it.options.overwrite == false && it.options.ignoreIfExists == false }
                 }
                 assertThat(member.isFile).isTrue()
             } finally {
