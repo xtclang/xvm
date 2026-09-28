@@ -1,12 +1,10 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
-import org.xvm.asm.Component.Format
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.IdentityConstant
-import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
@@ -50,11 +48,7 @@ internal fun compilerMethodRelations(
                     CompilerMethodRelations.Chain(
                         structure.identityConstant,
                         method.chain.map { it.methodStructure?.identityConstant ?: it.identity },
-                        structure.format != Format.MIXIN &&
-                            method.chain.all {
-                                it.implementation in
-                                    setOf(Implementation.Explicit, Implementation.Default, Implementation.Declared, Implementation.Abstract)
-                            },
+                        info.dispatch(method, errors).supported,
                     )
                 }
         }
