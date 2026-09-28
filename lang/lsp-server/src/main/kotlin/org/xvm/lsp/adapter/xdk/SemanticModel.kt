@@ -376,7 +376,8 @@ class SemanticModel internal constructor(
                         val id = canonical(callable.symbol)
                         id to callable.copy(symbol = id)
                     },
-                    tables.flatMap { it.declarations.entries }
+                    tables
+                        .flatMap { it.declarations.entries }
                         .groupBy({ canonical(it.key) }, { it.value })
                         .mapValues { (_, groups) -> groups.flatten().map(::canonical).distinct() },
                 )
