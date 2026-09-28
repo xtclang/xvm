@@ -916,6 +916,25 @@ Remaining rename work (refusals are not completed support):
 This batch changes no Java AST node or compiler pipeline; the client persistence protocol and
 scope tests consume the existing immutable embedding facts.
 
+## Remaining rename implementation batch (2026-09-28)
+
+Implement items 1–5 in separate commits before combined validation. New tests cover success,
+refusal, unrelated binding preservation and configured boundaries; implementation checkmarks do
+not claim a test receipt until the batch runs.
+
+- [x] **1 — Configuration guards:** shared pure VS Code graph validation handles saved multi-root
+  JSONC, rejects absent/global-only graphs, folder overrides and malformed/duplicate entries;
+  captures workspace topology and rechecks settings after asynchronous edit conversion. Tests
+  exercise history against intervening graph changes and preservation of unrelated preferences.
+  IntelliJ adds matching cross-project root and dependency-edge history regressions.
+- [ ] **2 — Primary constructor properties:** join the written property and generated constructor slot.
+- [ ] **3 — Lambda parameters:** retain stable written bindings and prove shadow/capture behavior.
+- [ ] **4 — Escaped method values/composition:** audit actual callable-label semantics and routes,
+  enabling only cases justified by compiler bindings and full before/after proof.
+- [ ] **5 — External consumers:** make the host's graph boundary explicit and exercise external roots.
+
+Validation is deferred until all five checkpoints are written.
+
 ## Teaching workspace, declarations and resource moves (L55/L61/L62)
 
 All three implementation checkpoints were committed before running playbooks. Validation then
