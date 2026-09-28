@@ -273,6 +273,7 @@
     },
     "dependencies": {
         "jdk-utils": "^0.7.0",
+        "jsonc-parser": "^3.3.1",
         "vscode-languageclient": "^10.1.1"
     },
     "devDependencies": {

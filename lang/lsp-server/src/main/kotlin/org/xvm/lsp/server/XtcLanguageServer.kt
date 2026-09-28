@@ -573,6 +573,7 @@ class XtcLanguageServer(
      */
     private fun buildServerCapabilities(): ServerCapabilities =
         ServerCapabilities().apply {
+            experimental = mapOf("xtcRenameProposal" to 1)
             // Text document sync - Full means the client sends the entire document on each change.
             // Incremental sync (sending only deltas) is more efficient but requires diffing logic.
             textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
@@ -780,6 +781,10 @@ class XtcLanguageServer(
      * sending a request with method "xtc/health check". LSP4J dispatches via reflection.
      */
     @Suppress("unused")
+    /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
+    @JsonRequest("xtc/rename")
+    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
+
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =
         supplyAsync(
