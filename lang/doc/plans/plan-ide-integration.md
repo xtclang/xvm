@@ -164,7 +164,7 @@ support for every XTC construct, optional LSP extension or native editor present
 | Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
 | Linked editing | - | Same-file identifiers | **Partial** - resolved rename-eligible local-variable occurrences in one successful source snapshot; no proposed-name proof |
 | Inlay hints | - | - | **Partial** - inferred local/destructured types, lambda parameters/returns and selected positional parameter names after successful compilation; named arguments/defaults omitted |
-| Go-to-declaration (separate LSP request) | - | - | **Not implemented** - inherited stub; semantic go-to-definition is available across source graphs and indexed libraries |
+| Go-to-declaration (separate LSP request) | - | - | **Implemented, validation pending** - local/import-alias declarations, inherited method/property contracts with multiple targets, and indexed library sources |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
 | Find implementations | - | - | **Partial** - compiler composition targets across the complete source graph, including unopened source consumers; generic/inherited/mixin/delegated methods and property accessors; no invented binary source target |
 | Type hierarchy (supertypes/subtypes) | - | - | **Done** - direct declared extends/implements edges across the complete source graph; generic parents retained, digest-bound handles reject stale closed files |
@@ -186,7 +186,7 @@ themselves violate LSP; an inherited empty method does not count as an implement
 
 | Entirely absent feature or extension | What exists today | Task |
 |---|---|---|
-| Separate go-to-declaration | Go-to-definition/type-definition; declaration handler reaches an inherited stub | L61 |
+| Separate go-to-declaration | Implemented with explicit capability and plural contract targets; combined validation pending | L61 |
 | Extract/inline/safe-delete refactorings, implement/override generation and general semantic quick fixes | Bounded proven rename, import cleanup and public-type imports | L62–L63 |
 | Pull document/workspace diagnostics | Versioned push diagnostics and Problems updates | L68 |
 | Semantic-token range/delta requests | Full-document tokens | L69 |

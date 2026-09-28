@@ -698,6 +698,7 @@ class XtcLanguageServer(
             // Compiler semantic navigation; go-to-declaration remains unavailable.
             // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
             if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities) typeDefinitionProvider = Either.forLeft(true)
+            if (AdapterCapability.DECLARATION in adapter.capabilities) declarationProvider = Either.forLeft(true)
             if (AdapterCapability.IMPLEMENTATION in adapter.capabilities) implementationProvider = Either.forLeft(true)
             if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities) typeHierarchyProvider = Either.forLeft(true)
             if (AdapterCapability.CALL_HIERARCHY in adapter.capabilities) callHierarchyProvider = Either.forLeft(true)
