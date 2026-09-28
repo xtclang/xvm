@@ -260,10 +260,11 @@ internal fun captureRenameFacts(
             properties.chains.map { ProofRelations.Chain(identity(it.owner), it.properties.map(::identity), it.supported) },
         ),
         constants.values.mapNotNull(XdkAutoImports::target).distinct(),
-        memberActions = members.mapNotNull { member ->
-            val owner = identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
-            val contract = identity(member.contract) as? ProofIdentity.Source ?: return@mapNotNull null
-            XdkMemberActions.Candidate(owner.location, contract.location, member.insertion, member.declaration, member.implementation)
-        },
+        memberActions =
+            members.mapNotNull { member ->
+                val owner = identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
+                val contract = identity(member.contract) as? ProofIdentity.Source ?: return@mapNotNull null
+                XdkMemberActions.Candidate(owner.location, contract.location, member.insertion, member.declaration, member.implementation)
+            },
     )
 }
