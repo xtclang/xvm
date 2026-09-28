@@ -89,6 +89,33 @@ class XdkMemberActionsTest {
     }
 
     @Test
+    fun `source contract in another module generates an edit only in the implementing class`() {
+        val library = "module Library { interface Api { String read(String value); } }"
+        val file = directory.resolve("Library.x").toFile().apply { writeText(library) }
+        val text = "module App { package lib import Library; class Box implements lib.Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics).isEmpty()
+            assertThat(file.readText()).isEqualTo(library)
+        }
+    }
+
+    @Test
+    fun `descendant dispatch changes require broader proof and are withheld`() {
+        val text = "module App { class Base { Int read() = 1; } class Box extends Base {} class Child extends Box {} }"
+        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
+    }
+
+    @Test
+    fun `a broken neighbor prevents publishing a generation edit`() {
+        directory.resolve("Broken.x").toFile().writeText("module Broken { Missing value; }")
+        val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
+        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
+    }
+
+    @Test
     fun `code generation only appears at the selected class declaration`() {
         val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
