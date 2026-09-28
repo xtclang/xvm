@@ -1004,6 +1004,16 @@ class CompilerPlaybook(
     }
 
     private fun Driver.workspaceScenarios() {
+        (109..117).forEach { number ->
+            val id = "X$number"
+            scenario(id) {
+                withContext(OnDispatcher.EDT) {
+                    val manager = service<FileEditorManager>(singleProject())
+                    manager.getAllEditors().map { it.getFile() }.distinctBy { it.getPath() }.forEach(manager::closeFile)
+                }
+                discovered(id) { data -> renameFamily(id, data, { open(it) }, { it.awaitDiagnostics(emptyList()) }) }
+            }
+        }
         scenario("X99") {
             discovered("X99") { data ->
                 val consumer = open(data.text("file"))
