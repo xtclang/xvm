@@ -168,6 +168,7 @@ class XtcLanguageServer(
     private data class EditCapabilities(
         val versioned: Boolean = false,
         val renameFiles: Boolean = false,
+        val fileWatchers: Boolean = false,
     )
 
     private val editCapabilities = AtomicReference(EditCapabilities())
@@ -276,6 +277,7 @@ class XtcLanguageServer(
             EditCapabilities(
                 workspaceEdits?.documentChanges == true,
                 workspaceEdits?.resourceOperations?.contains("rename") == true,
+                params.capabilities?.workspace?.didChangeWatchedFiles?.dynamicRegistration == true,
             ),
         )
 
@@ -310,8 +312,6 @@ class XtcLanguageServer(
                 }
             }
 
-            // Register file watcher for *.x files (dynamic registration)
-            registerFileWatcher()
         }
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
@@ -326,6 +326,7 @@ class XtcLanguageServer(
      */
     override fun initialized(params: InitializedParams?) {
         logger.info("initialized: handshake complete, requesting editor configuration")
+        if (editCapabilities.getAndUpdate { it.copy(fileWatchers = false) }.fileWatchers) registerFileWatcher()
         requestFormattingConfig()
         requestCompilerConfig()
     }
@@ -812,8 +813,13 @@ class XtcLanguageServer(
                 "workspace/didChangeWatchedFiles",
                 watcherOptions,
             )
-        currentClient.registerCapability(RegistrationParams(listOf(registration)))
-        logger.info("initialize: registered file watcher for **/*.x")
+        currentClient.registerCapability(RegistrationParams(listOf(registration))).whenComplete { _, failure ->
+            if (failure == null) {
+                logger.info("initialized: registered file watcher for **/*.x")
+            } else {
+                logger.warn("initialized: client rejected file watcher registration", failure)
+            }
+        }
     }
 
     // =========================================================================
