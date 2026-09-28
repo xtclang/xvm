@@ -5,6 +5,7 @@ import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.compiler.BuildRepository
+import org.xvm.lsp.util.ExecutionTrace
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
@@ -53,13 +54,16 @@ class XdkDependency private constructor(
     fun bytes(): ByteArray = artifact.clone()
 
     /** A fresh compiler-owned tree for each attempt; no mutable repository survives publication. */
-    internal fun open(): FileStructure = FileStructure(ByteArrayInputStream(artifact))
+    internal fun open(): FileStructure =
+        ExecutionTrace.api("FileStructure.read(dependency)", module) {
+            FileStructure(ByteArrayInputStream(artifact))
+        }
 
     companion object {
         /** Binary-only libraries have identities and types, but deliberately no source locations. */
         fun fromBinary(bytes: ByteArray): XdkDependency {
             val owned = bytes.clone()
-            val file = FileStructure(ByteArrayInputStream(owned))
+            val file = ExecutionTrace.api("FileStructure.read(binary)") { FileStructure(ByteArrayInputStream(owned)) }
             return XdkDependency(file.module.name, owned, emptyMap())
         }
 
@@ -67,10 +71,16 @@ class XdkDependency private constructor(
             compilation: EmbeddingSupport.Compilation,
             locations: Map<IdentityConstant, SemanticModel.SourceLocation>,
         ): XdkDependency {
-            val artifact = ByteArrayOutputStream().also { compilation.file().writeTo(it) }.toByteArray()
+            val artifact =
+                ByteArrayOutputStream()
+                    .also {
+                        ExecutionTrace.api(
+                            "FileStructure.writeTo",
+                        ) { compilation.file().writeTo(it) }
+                    }.toByteArray()
             // Serialization establishes the artifact's constant indices. Resolve against its pool,
             // since emission may have removed or re-registered constants from the source attempt.
-            val file = FileStructure(ByteArrayInputStream(artifact))
+            val file = ExecutionTrace.api("FileStructure.read(emitted)") { FileStructure(ByteArrayInputStream(artifact)) }
             val declarations =
                 locations.entries
                     .mapNotNull { (identity, location) ->

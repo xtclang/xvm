@@ -14,6 +14,7 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.util.ExecutionTrace
 import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -112,7 +113,7 @@ internal object XdkLibrarySources {
         val errors = ErrorList()
         val root =
             try {
-                Parser(Source(text), errors).parseSource()
+                ExecutionTrace.api("Parser.parseSource(library-source)") { Parser(Source(text), errors).parseSource() }
             } catch (_: CompilerException) {
                 null
             }

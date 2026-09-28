@@ -12,6 +12,7 @@ import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Java-lexer editing helpers. A failed lex never authorizes a source rewrite. */
 internal object XdkLexical {
@@ -149,7 +150,7 @@ internal object XdkLexical {
         val errors = ErrorList()
         val tokens =
             try {
-                Lexer(Source(text), errors).asSequence().toList()
+                ExecutionTrace.api("Lexer.lex(presentation)") { Lexer(Source(text), errors).asSequence().toList() }
             } catch (_: CompilerException) {
                 return null
             }

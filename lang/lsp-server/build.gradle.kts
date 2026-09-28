@@ -250,7 +250,20 @@ val compileKotlin =
     }
 val classes = tasks.named("classes")
 
+tasks.withType<Test>().configureEach {
+    systemProperty(
+        "xtc.trace.directory",
+        layout.buildDirectory
+            .dir("reports/execution-trace")
+            .get()
+            .asFile.absolutePath,
+    )
+}
+
 tasks.test {
+    // Prefer the real logger over javatools' shaded no-op provider, without setting a provider
+    // property on Gradle's separate bootstrap classloader (which cannot see test dependencies).
+    classpath = configurations.testRuntimeClasspath.get().filter { it.name.startsWith("logback-classic-") } + classpath
     useJUnitPlatform { excludeTags("compiler-stdio") }
     testLogging {
         events("failed")
