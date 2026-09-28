@@ -3,7 +3,6 @@ package org.xtclang.idea.playbook
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
-import com.intellij.driver.sdk.waitFor
 import java.nio.file.Files
 import kotlin.time.Duration.Companion.seconds
 
@@ -29,7 +28,7 @@ internal fun ParityScenarios.navigationCases() {
         diagnostics(doc) { errors -> errors.any { it.code?.startsWith(data.string("parserCodePrefix")) == true } }
         with(driver) {
             structure(doc.editor, listOf(data.string("retainedSymbol")))
-            waitFor("recovered folds", 45.seconds) { folds(doc.editor).isNotEmpty() }
+            awaitUi("recovered folds", 45.seconds) { folds(doc.editor).isNotEmpty() }
             selectionParents(doc.editor, doc.at(data.string("anchor"), data.int("offset")))
         }
         check(targets(doc, "definition", doc.at(data.string("anchor"), data.int("offset"))).isEmpty())
