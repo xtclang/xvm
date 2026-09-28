@@ -50,8 +50,17 @@ function configurationState(document: vscode.TextDocument): string {
         workspace: vscode.workspace.workspaceFile?.toString(),
         folders: vscode.workspace.workspaceFolders?.map(folder => folder.uri.toString()),
         graph: compilerSourceModules(),
-        override: vscode.workspace.getConfiguration('xtc.compiler', document.uri).inspect('sourceModules')?.workspaceFolderValue
+        overrides: folderOverrides(document)
     });
+}
+
+function folderOverrides(document: vscode.TextDocument): unknown[] {
+    // In a single-folder window, .vscode/settings.json is the workspace graph itself.
+    // VS Code also reports it as workspaceFolderValue when queried with that folder's URI.
+    if (!vscode.workspace.workspaceFile && vscode.workspace.workspaceFolders?.length === 1) return [];
+    // In a workspace file, each folder can override the graph independently.
+    const roots = vscode.workspace.workspaceFolders?.map(folder => folder.uri) ?? [document.uri];
+    return roots.map(uri => vscode.workspace.getConfiguration('xtc.compiler', uri).inspect('sourceModules')?.workspaceFolderValue);
 }
 
 export async function renameWithConfiguration(
@@ -75,7 +84,7 @@ export async function renameWithConfiguration(
     if (!proposal || token.isCancellationRequested) return null;
     if (proposal.graph) {
         if (!settings || !snapshot || !location || !Array.isArray(config)
-            || vscode.workspace.getConfiguration('xtc.compiler', document.uri).inspect('sourceModules')?.workspaceFolderValue !== undefined
+            || folderOverrides(document).some(value => value !== undefined)
             || sourceGraphKey(config, base) !== sourceGraphKey(proposal.graph.before, base)) {
             throw new Error('Module rename needs an explicit graph in this workspace’s settings. Global or folder overrides cannot be rewritten safely.');
         }
