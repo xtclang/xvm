@@ -1818,6 +1818,11 @@ roots may be outside workspace folders. A scope receipt does not authorize apply
   an independently changed graph instead of overwriting it.
 
 X118 checks persistence, root/edge replacement, Undo, Redo and second Undo in both drivers.
+The VS Code driver also changes the real settings document during reply conversion and expects
+a stale-settings refusal without source edits. Run with `-PcompilerPlaybookMultiRoot=true`
+to open a saved two-folder `.code-workspace`; X118 additionally installs a source-graph override
+in the second folder and verifies refusal, then removes it and exercises native Rename/Undo/Redo.
+These new subchecks require a fresh selected receipt; earlier X118 runs do not cover them.
 All X109–X118 have passing selected receipts: IntelliJ `run-6245646041474423108`, VS Code
 `run-3CeLiB` (X109–X117) and `run-7Xbo86` (X118 plus CFG1–CFG3 after the save-cache correction).
 See the [validation record](../../docs/errs-integration-plan.md#shared-rename-and-native-settings-validation).
