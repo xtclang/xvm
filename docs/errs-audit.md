@@ -946,3 +946,26 @@ VS Code X94–X98 pass, with 98 cases explicitly not selected. Both editor drive
 IntelliJ remains deferred. All 24 distribution artifacts are in the production module index, and
 library-resolution/replacement/rename boundaries are tested against that same bundle. See the
 [commit map, AST placement and remaining limitations](errs-integration-plan.md#five-area-functionality-batch).
+
+
+## Rename contract and host-boundary audit (2026-09-28)
+
+The five-checkpoint rename batch reuses existing compiler facts for primary-header properties,
+lambda source bindings and positional method-value calls. No Java AST state, hook, public API or
+clone protocol is added. `COMPILER-141` independently verifies that function values do not export
+named argument spellings; the previous blanket method-escape refusal was too conservative.
+Composed parameter proof now follows the written callable contracts and preserves their slot.
+
+Explicit sourceModules roots can include external consumers. A detached proposal scope records
+the configured/discovered input boundary and revision; missing registered roots and changed disk
+snapshots cannot silently reduce the proof. Unknown consumers remain outside that boundary.
+Native testing corrected a VS Code scope guard: a single-folder workspace's own settings are
+also exposed as folder values, while saved multi-root folder overrides require separate refusal.
+
+Validation passes 94 LSP tests, six IntelliJ configuration tests, five pure VS Code settings tests,
+and selected X57/X118–X121/CFG1–CFG3 in both editors (plus IntelliJ START and zero IDE errors).
+See the [receipts and extraction map](errs-integration-plan.md#checkpoint-and-validation-map).
+These are selected runs, not a new full 126-case receipt. Unsupported generated/union/native
+dispatch fixtures and native multi-root/racing-settings acceptance remain explicit gaps.
+The [next structural checkpoint](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
+checks access boundaries before moving partial recovery nodes into `ast.partial`.
