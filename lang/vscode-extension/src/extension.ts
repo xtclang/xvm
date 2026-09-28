@@ -15,6 +15,7 @@ import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTr
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
+import { compilerSettingsLocation } from './rename-proposal';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
@@ -120,6 +121,11 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         }),
 
+        vscode.workspace.onDidChangeTextDocument(event => {
+            if (event.document.uri.toString() === compilerSettingsLocation()?.uri.toString()) {
+                void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler settings edit rejected: ${error}`));
+            }
+        }),
         vscode.workspace.onDidChangeConfiguration(event => {
             if (event.affectsConfiguration('xtc.trace.server')) {
                 void applyTraceConfig();
