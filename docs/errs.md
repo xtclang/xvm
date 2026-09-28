@@ -10,20 +10,20 @@ now distinguishes remaining semantic coverage, reliability investigations, unimp
 operations and native validation. All 24 adapter capability categories have implementations;
 that is not full protocol or language coverage. See the
 [current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
-The immediate order is to finish native parity, then large-graph proof memory, startup editing,
-semantic header/value completion and inferred displays, followed by combined validation.
+The bounded L56–L59 work and native parity checkpoint are complete. L55's real-workspace
+acceptance and the remaining L61–L82 feature/protocol scopes stay on the active checklist.
 
 L60 now has IntelliJ implementations for all 113 shared playbook cases, including the 50
-previously missing cases. The new batch compiles; native validation is ongoing and is not a full
-pass. The missing-case subset has 50/50 individual passing receipts. X20 has an Ecstasy Parameter
+previously missing cases. All 113 pass together in `run-6034631232732848040`, with zero IDE errors
+and zero JUnit failures/errors/skips, closing L60. X20 has an Ecstasy Parameter
 Info rendering fix, X81/X82 inspect completion kinds, and X57 verifies a native rename guard
 against obsolete edits. Dependency diagnostic publications also retire completed IntelliJ
 semantic caches. See the [case-by-case validation checklist](errs-integration-plan.md#intellij-parity-backlog-l60).
 These changes do not add compiler/AST state or modify the error-listener API.
-The resumed runs now cover all 113 scenario assertions. A 61-case batch still failed its IDE-error
-gate on X41's unguarded test-driver PSI read; `6d7e5b7e5` fixes that and two other harness issues.
-The focused X41/X108 run passes with zero IDE errors. The full single-session checkpoint remains
-open after another desktop-focus interruption; individual assertions are not a clean full run.
+Earlier runs exposed X41's unguarded PSI read, session/focus handling and X30's missing document
+readiness after restart. Their corrections are included in the full pass. Both harnesses now
+show live case progress; native waits are faster and focus recovery never replays accepted edits.
+Separate startup acceptance also verifies that the untouched information balloon disappears.
 
 L55 now has a 24-root regression for graph-proof heap retention. Dependency-closure filtering
 prevents undeclared imports and unnecessary deserialization; copied compiler-proven comparison
