@@ -764,6 +764,9 @@ class XtcTextDocumentService(
                                 modules.map(::SourceModuleConfiguration),
                             )
                         },
+                        it.scope?.let { scope ->
+                            RenameScope(scope.boundary.name, scope.modules.map(::SourceModuleConfiguration), scope.sourceUris, scope.revision)
+                        },
                     )
                 }
             }

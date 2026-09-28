@@ -141,7 +141,7 @@ internal class XdkProjectQueries(
             val plan = XdkRename.Plan(texts, mapOf(source to replacements))
             val after = compile(plan.proposed) ?: return null
             if (!preservesBindings(before, after, plan) || !isCurrent()) return null
-            return XdkRenameProposal(WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true))
+            return XdkRenameProposal(WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true), scope = renameScope())
         }
         val selected = model.symbolAt(line, column) ?: return null
         val target = before.constants[selected.id] ?: return null
@@ -237,8 +237,17 @@ internal class XdkProjectQueries(
             project.modules.values
                 .toList()
                 .takeIf { renamedModule != null && !discoverImports && !project.sameConfiguration(graph) },
+            renameScope(),
         )
     }
+
+    private fun renameScope(): XdkRenameScope =
+        XdkRenameScope(
+            if (discoverImports) XdkRenameScope.Boundary.DISCOVERED_GRAPH else XdkRenameScope.Boundary.CONFIGURED_GRAPH,
+            project.buildOrder(),
+            uris.values.sorted(),
+            revision(),
+        )
 
     private fun preservesBindings(
         before: CompilerRenameFacts,
