@@ -18,11 +18,17 @@ class XdkResourceRenameTest {
     @ParameterizedTest
     @ValueSource(strings = ["class", "package"])
     fun `member rename moves its companion tree and reverse rename restores the sources`(kind: String) {
-        val original = mapOf(
-            "App.x" to "module App { void accept(Box.Inner value) {} }",
-            "App/Box.x" to "$kind Box {}",
-            "App/Box/Inner.x" to "class Inner {}",
-        )
+        val original =
+            mapOf(
+                "App.x" to
+                    if (kind == "class") {
+                        "module App { Box make() = new Box(); void accept(Box.Nested value) {} }"
+                    } else {
+                        "module App { void accept(Box.Nested value) {} }"
+                    },
+                "App/Box.x" to "$kind Box {}",
+                "App/Box/Nested.x" to "class Nested {}",
+            )
         original.forEach { (file, text) -> source(file, text) }
         val root = uri("App.x")
         XdkAdapter().use { adapter ->
@@ -39,7 +45,7 @@ class XdkResourceRenameTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             val changed = directory.resolve("App.x").toFile().readText()
             assertThat(adapter.compile(root, changed).diagnostics).isEmpty()
-            assertThat(adapter.findDefinition(root, 0, changed.indexOf("Inner"))?.uri).isEqualTo(uri("App/Renamed/Inner.x"))
+            assertThat(adapter.findDefinition(root, 0, changed.indexOf("Nested"))?.uri).isEqualTo(uri("App/Renamed/Nested.x"))
             apply(requireNotNull(adapter.rename(root, 0, changed.indexOf("Renamed"), "Box")))
         }
         original.forEach { (file, text) -> assertThat(directory.resolve(file).toFile().readText()).isEqualTo(text) }
@@ -55,6 +61,11 @@ class XdkResourceRenameTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
+            assertThat(adapter.compile(uri("Consumer.x"), consumer).diagnostics).isEmpty()
+            // A use of the local package alias must not rename the imported module instead.
+            val alias = consumer.indexOf("lib.Box")
+            assertThat(adapter.prepareRename(uri("Consumer.x"), 0, alias)).isNull()
+            assertThat(adapter.rename(uri("Consumer.x"), 0, alias, "Renamed")).isNull()
             val edit = requireNotNull(adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed"))
             assertThat(edit.renames).hasSize(2)
             assertThat(edit.changes.keys).containsExactlyInAnyOrder(uri("Library.x"), uri("Consumer.x"))
@@ -66,6 +77,7 @@ class XdkResourceRenameTest {
             assertThat(changed).contains("package lib import Renamed")
             assertThat(adapter.compile(uri("Consumer.x"), changed).diagnostics).isEmpty()
             assertThat(adapter.findDefinition(uri("Consumer.x"), 0, changed.indexOf("Box"))?.uri).isEqualTo(uri("Renamed/Box.x"))
+            assertThat(adapter.compile(uri("Renamed.x"), directory.resolve("Renamed.x").toFile().readText()).diagnostics).isEmpty()
             apply(requireNotNull(adapter.rename(uri("Renamed.x"), 0, library.indexOf("Library"), "Library")))
         }
         assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(library)
@@ -106,11 +118,13 @@ class XdkResourceRenameTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = [
-        "interface Api { Int read(); } class Forward(Api target) delegates Api(target) {}",
-        "class Base { Int read = 1; } mixin Loud into Base { @Override Int read.get() = 2; } class Host extends Base incorporates Loud {}",
-        "class Holder { @Lazy Int read.calc() = 1; }",
-    ])
+    @ValueSource(
+        strings = [
+            "interface Api { Int read(); } class Forward(Api target) delegates Api(target) {}",
+            "class Base { Int read = 1; } mixin Loud into Base { @Override Int read.get() = 2; } class Host extends Base incorporates Loud {}",
+            "class Holder { @Lazy Int read.calc() = 1; }",
+        ],
+    )
     fun `unsupported delegation mixin and annotated property families remain refused`(body: String) {
         val text = "module App { $body }"
         source("App.x", text)
@@ -126,18 +140,30 @@ class XdkResourceRenameTest {
         edit.changes.forEach { (uri, edits) ->
             val file = Path.of(URI(uri)).toFile()
             val original = file.readText()
+
             fun offset(position: Position) = original.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
-            file.writeText(edits.sortedByDescending { offset(it.range.start) }.fold(original) { text, change ->
-                text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
-            })
+            file.writeText(
+                edits.sortedByDescending { offset(it.range.start) }.fold(original) { text, change ->
+                    text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
+                },
+            )
         }
         edit.renames.forEach { (from, to) -> Files.move(Path.of(URI(from)), Path.of(URI(to))) }
     }
 
-    private fun source(file: String, text: String) = directory.resolve(file).toFile().apply {
+    private fun source(
+        file: String,
+        text: String,
+    ) = directory.resolve(file).toFile().apply {
         parentFile.mkdirs()
         writeText(text)
     }
 
-    private fun uri(file: String): String = directory.resolve(file).toFile().canonicalFile.toURI().toString()
+    private fun uri(file: String): String =
+        directory
+            .resolve(file)
+            .toFile()
+            .canonicalFile
+            .toURI()
+            .toString()
 }
