@@ -82,6 +82,7 @@ internal class CompilerRenameFacts(
     val properties: ProofRelations = ProofRelations(),
     val imports: List<XdkAutoImports.Target> = emptyList(),
     private val modules: Map<String, CompilerRenameFacts> = emptyMap(),
+    val memberActions: List<XdkMemberActions.Candidate> = emptyList(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -102,6 +103,7 @@ internal class CompilerRenameFacts(
                 ),
                 attempts.flatMap { it.imports }.distinct(),
                 modules,
+                attempts.flatMap { it.memberActions },
             )
         }
     }
@@ -116,6 +118,7 @@ internal fun captureRenameFacts(
     properties: CompilerPropertyRelations = CompilerPropertyRelations(),
     errors: ErrorListener? = null,
     supers: Map<SemanticModel.SymbolId, MethodConstant> = emptyMap(),
+    members: List<CompilerMemberAction> = emptyList(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -257,5 +260,10 @@ internal fun captureRenameFacts(
             properties.chains.map { ProofRelations.Chain(identity(it.owner), it.properties.map(::identity), it.supported) },
         ),
         constants.values.mapNotNull(XdkAutoImports::target).distinct(),
+        memberActions = members.mapNotNull { member ->
+            val owner = identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
+            val contract = identity(member.contract) as? ProofIdentity.Source ?: return@mapNotNull null
+            XdkMemberActions.Candidate(owner.location, contract.location, member.insertion, member.declaration, member.implementation)
+        },
     )
 }
