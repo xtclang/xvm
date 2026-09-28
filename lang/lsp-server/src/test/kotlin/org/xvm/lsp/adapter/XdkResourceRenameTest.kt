@@ -113,7 +113,7 @@ class XdkResourceRenameTest {
             val changed = directory.resolve("App.x").toFile().readText()
             assertThat(changed).contains("construct(Int value)", "new Renamed(1)")
             assertThat(adapter.compile(uri("App.x"), changed).diagnostics).isEmpty()
-            assertThat(adapter.rename(uri("App.x"), 0, changed.indexOf("value"), "argument")).isNull()
+            assertThat(adapter.rename(uri("App.x"), 0, changed.indexOf("value"), "argument")).isNotNull()
         }
     }
 
