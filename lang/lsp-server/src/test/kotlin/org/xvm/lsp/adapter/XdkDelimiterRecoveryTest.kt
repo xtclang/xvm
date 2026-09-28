@@ -20,11 +20,28 @@ class XdkDelimiterRecoveryTest {
     @TempDir
     lateinit var directory: Path
 
+    @Test
+    fun `ambiguous grouping cannot invent an argument separator`() {
+        val prefix = "$HEADER return pair((value.si"
+        XdkAdapter().use { adapter ->
+            val original = "$prefix, 2); } }"
+            val baseline = adapter.compile(URI, original)
+            assertThat(baseline.diagnostics).isNotEmpty()
+            // The written comma belongs to a tuple until the user closes the group.
+            assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()
+            assertThat(adapter.getCachedResult(URI)).isEqualTo(baseline)
+            val grouped = original.replace("value.si,", "value.si),")
+            adapter.compile(URI, grouped)
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains("size")
+            assertThat(adapter.compile(URI, grouped.replace("value.si)", "value.size)")).diagnostics).isEmpty()
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings = [
             "(value.|", "((value.si|", "use((value.|", "values[value.|", "use(values[value.|", "values[value.si|]",
-            "use((value.si|)", "values[(value.si|]", "use(values[value.si|)", "pair((value.si|, 2)",
+            "use((value.si|)", "values[(value.si|]", "use(values[value.si|)",
         ],
     )
     fun `completion retains a cursor inside unclosed grouping calls and indexes`(expression: String) {
