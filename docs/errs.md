@@ -7,11 +7,11 @@ independent of the compiler error-listener/AST changes.
 
 The active [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
-operations and native validation. All 24 adapter capability categories have implementations;
+operations and native validation. The compiler now implements 25 adapter capability categories, including declaration lookup;
 that is not full protocol or language coverage. See the
 [current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
-The bounded L56–L59 work and native parity checkpoint are complete. L55's real-workspace
-acceptance and the remaining L61–L82 feature/protocol scopes stay on the active checklist.
+L55's real-workspace acceptance, the bounded L56–L59 work and native parity checkpoint are
+complete. L61–L82 feature/protocol scopes and their remaining limits stay on the active checklist.
 
 L60 now has IntelliJ implementations for all 113 shared playbook cases, including the 50
 previously missing cases. All 113 pass together in `run-6034631232732848040`, with zero IDE errors
@@ -29,7 +29,8 @@ L55 now has a 24-root regression for graph-proof heap retention. Dependency-clos
 prevents undeclared imports and unnecessary deserialization; copied compiler-proven comparison
 keys let completed roots release their pools before the next root compiles. Success, rejection,
 cancellation and failure release all observed compiler objects under the existing 512 MiB heap.
-The teaching-workspace/open-buffer acceptance gate remains open. See the
+The real 25-root teaching workspace also passes with one and five unsaved buffers, including
+successful/refused property renames, unchanged diagnostics and collection of query-owned objects. See the
 [memory checkpoint](errs-integration-plan.md#large-graph-proof-memory-checkpoint-l55).
 
 L54 native validation also exposed compiler-worker and JSON-RPC cancellation lock cycles, now
@@ -1561,6 +1562,13 @@ Configured source modules now rebuild automatically; editor project discovery/wi
 persistent workspace index remain separate from the host contract.
 
 ### AST changes for embedding and LSP: ownership and placement
+
+L55/L61/L62 add no Java AST fields, methods or clone hooks. Declaration targets are copied from
+existing TypeInfo method/property chains into immutable Kotlin facts. Simple delegate-name
+bindings come from `CompositionNode.Delegates.getContribution().getDelegatePropertyConstant()`;
+that contribution already records the compiler's selected target. The composition node remains
+the natural owner of the fact, while copying, navigation and rename proof policy stay in the LSP
+adapter. Resource moves replay captured module trees without mutating their ASTs.
 
 L50 adds two passive `ImportStatement` accessors: `getAliasToken()` returns existing written syntax;
 `getImportedIdentity()` returns the existing resolver identity, or null before resolution. Neither
