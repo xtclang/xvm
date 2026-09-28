@@ -394,7 +394,12 @@ VS Code receipts above.
      Compiler dispatch provenance follows existing into/capped/delegate metadata, including the
      declared receiver property, without generating forwarding methods. Unknown routes and binary
      contracts still refuse edits. No new AST or Java API changes are required for this checkpoint.
-  3. Qualified modules, implicit packages and explicit module roots: next implementation checkpoint.
+  3. Qualified modules and implicit package-directory moves: code and regression fixtures added;
+     validation pending. Domain suffixes and local import aliases are preserved. Explicit module
+     roots have a host API proposal containing edits and the replacement source graph. Neither
+     proposal creation nor a rejected standard rename mutates configuration. **Client follow-up:**
+     persist the replacement graph together with accepting edits in both IDEs; standard LSP rename
+     still refuses explicit graph changes because client settings have no portable editable URI.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
