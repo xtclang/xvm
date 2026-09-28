@@ -1,11 +1,16 @@
 package org.xvm.util;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
@@ -157,39 +162,33 @@ public class LazyTest {
     }
 
     @Test
-    public void testThreadSafety() throws InterruptedException {
+    public void testThreadSafety() throws Exception {
+        int threadCount = 10;
+        // Each caller counts down just before calling get(), and the computation cannot finish until
+        // all of them have, so every caller reaches get() before the value exists.
+        CountDownLatch arrived = new CountDownLatch(threadCount);
         AtomicInteger counter = new AtomicInteger(0);
         Lazy<String> lazy = Lazy.of(() -> {
             counter.incrementAndGet();
             try {
-                Thread.sleep(10); // Slow computation
+                arrived.await();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
             }
             return "result";
         });
 
-        int threadCount = 10;
-        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch doneLatch = new CountDownLatch(threadCount);
-
-        for (int i = 0; i < threadCount; i++) {
-            executor.submit(() -> {
-                try {
-                    startLatch.await();
-                    assertEquals("result", lazy.get());
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    doneLatch.countDown();
-                }
-            });
+        // One pool thread per caller: the computation blocks its thread until every caller has arrived.
+        List<Callable<String>> callers = Collections.nCopies(threadCount, () -> {
+            arrived.countDown();
+            return lazy.get();
+        });
+        try (ExecutorService executor = Executors.newFixedThreadPool(threadCount)) {
+            for (Future<String> result : executor.invokeAll(callers)) {
+                assertEquals("result", result.get());
+            }
         }
-
-        startLatch.countDown(); // Start all threads
-        doneLatch.await(5, TimeUnit.SECONDS);
-        executor.shutdown();
 
         // Should only compute once despite concurrent access
         assertEquals(1, counter.get());
@@ -317,14 +316,16 @@ public class LazyTest {
     }
 
     @Test
-    public void testOfExpiringBasic() throws InterruptedException {
+    public void testOfExpiringBasic() {
         AtomicInteger counter = new AtomicInteger(0);
-        Supplier<Integer> expiring = Lazy.ofExpiring(counter::incrementAndGet, 50, TimeUnit.MILLISECONDS);
+        AtomicLong now = new AtomicLong();
+        Supplier<Integer> expiring = Lazy.ofExpiring(counter::incrementAndGet, 50, TimeUnit.MILLISECONDS, now::get);
 
         assertEquals(1, expiring.get());
-        assertEquals(1, expiring.get()); // Should return cached value
+        now.set(TimeUnit.MILLISECONDS.toNanos(50) - 1);
+        assertEquals(1, expiring.get()); // Should return cached value until the duration has passed
 
-        Thread.sleep(60); // Wait for expiration
+        now.set(TimeUnit.MILLISECONDS.toNanos(50));
 
         assertEquals(2, expiring.get()); // Should recompute
         assertEquals(2, counter.get());

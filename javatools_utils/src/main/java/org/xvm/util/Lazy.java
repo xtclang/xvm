@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
@@ -230,12 +231,21 @@ public abstract class Lazy<T> implements Supplier<T> {
      */
     @SuppressWarnings("unused") // TODO: Will be used in the compiler
     public static <T> Supplier<T> ofExpiring(Supplier<T> supplier, long duration, TimeUnit unit) {
+        return ofExpiring(supplier, duration, unit, System::nanoTime);
+    }
+
+    /**
+     * Variant of {@link #ofExpiring(Supplier, long, TimeUnit)} that reads the current time from the
+     * given nanosecond source, so tests can advance time explicitly instead of waiting for it.
+     */
+    static <T> Supplier<T> ofExpiring(Supplier<T> supplier, long duration, TimeUnit unit, LongSupplier nanoTime) {
         if (duration <= 0) {
             throw new IllegalArgumentException("duration must be positive: " + duration);
         }
         return new ExpiringSupplier<>(
                 requireNonNull(supplier, "supplier"),
-                requireNonNull(unit, "unit").toNanos(duration));
+                requireNonNull(unit, "unit").toNanos(duration),
+                requireNonNull(nanoTime, "nanoTime"));
     }
 
     /**
@@ -553,17 +563,19 @@ public abstract class Lazy<T> implements Supplier<T> {
     private static final class ExpiringSupplier<T> implements Supplier<T> {
         private final Supplier<T> delegate;
         private final long durationNanos;
+        private final LongSupplier nanoTime;
         private final AtomicReference<T> value = new AtomicReference<>();
         private final AtomicLong expirationNanos = new AtomicLong();
 
-        ExpiringSupplier(Supplier<T> delegate, long durationNanos) {
+        ExpiringSupplier(Supplier<T> delegate, long durationNanos, LongSupplier nanoTime) {
             this.delegate = delegate;
             this.durationNanos = durationNanos;
+            this.nanoTime = nanoTime;
         }
 
         @Override
         public T get() {
-            long now = System.nanoTime();
+            long now = nanoTime.getAsLong();
             long expiration = expirationNanos.get();
 
             if (expiration != 0 && now < expiration) {
