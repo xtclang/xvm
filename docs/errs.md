@@ -2307,3 +2307,15 @@ and four IntelliJ settings tests pass. The catalog now has 123 cases; its preced
 checkpoint remains historical, not a new full run. VS Code edited-file moves require its normal
 refactoring auto-save policy; disabling that policy is explicitly refused because unsaved
 resource Undo is not reliable. See the [validation and extraction map](errs-integration-plan.md#shared-rename-and-native-settings-validation).
+
+
+### Primary-constructor rename association (implementation checkpoint)
+
+The remaining-rename batch reads existing compiler facts in Kotlin: `Parameter.getResolvedTarget`
+links a written class-header parameter to its property; `MethodStructure.isSynthetic` and
+`isShorthandConstructor` identify the generated constructor whose parameter initializes that
+property. These flags survive dependency serialization. Named constructor labels use the property
+identity, and written header properties join dispatch proof. A detached primary-constructor key
+records its owner for before/after call selection checks without inventing a source declaration.
+No Java API, AST field, compiler hook or clone rule is added. Explicit constructors keep their
+own written parameter slots. Tests are written; batch validation follows all five checkpoints.
