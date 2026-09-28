@@ -2931,16 +2931,19 @@
       }
     },
     "X103": {
-      "title": "member type rename applies a file move after source edits",
+      "title": "member type rename moves its file and companion directory after source edits",
       "manual": [
         "Inspect the preview before applying and undo after verification."
       ],
       "values": {
         "file": "MoveType.x",
-        "source": "module MoveType { Item make() = new Item(); }",
+        "source": "module MoveType { Item make() = new Item(); void accept(Item.Nested value) {} }",
         "member": "MoveType/Item.x",
         "memberSource": "class Item {}",
         "destination": "MoveType/Renamed.x",
+        "companion": "MoveType/Item/Nested.x",
+        "companionSource": "class Nested {}",
+        "companionDestination": "MoveType/Renamed/Nested.x",
         "anchor": "Item",
         "replacement": "Renamed"
       },
