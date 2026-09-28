@@ -56,7 +56,7 @@ internal fun TypeInfo.dispatch(
                             }
                         }
                     val selected = delegate?.getMethodBySignature(body.signature)
-                    if (selected == null || receiver == null) {
+                    if (selected == null) {
                         CompilerDispatch(listOf(body.identity), supported = false)
                     } else {
                         val target = delegate.dispatch(selected, errors, seen)
@@ -72,6 +72,6 @@ internal fun TypeInfo.dispatch(
     return CompilerDispatch(
         bodies.flatMap { it.methods }.distinct(),
         bodies.flatMap { it.delegates }.distinct(),
-        bodies.all { it.supported } && !errors.hasSeriousErrors && !errors.isAbortDesired,
+        bodies.all { it.supported } && !errors.hasSeriousErrors() && !errors.isAbortDesired,
     )
 }
