@@ -1672,6 +1672,18 @@ are copied from existing signature slots and source tokens in `SemanticModelBuil
 or retained field is fabricated. Register-backed `super` call provenance remains an explicit gap,
 not an accessor added speculatively to the AST.
 
+**Public-parameter rename checkpoint (2026-09-28; validation pending):** successful
+`NewExpression.validate` records the selected constructor and written argument labels in the
+existing attempt-owned `InvocationBinding.Collector`, before argument validation rewrites the
+expressions. `Compilation.constructorBindings` publishes immutable identity snapshots for surviving
+validated nodes. This hook belongs at constructor selection, where the compiler knows both the
+source arguments and the selected constructor. It adds no AST field, accessor or clone rule;
+discarded trial nodes do not survive collector publication. Existing Compilation constructors are
+retained; record deconstruction patterns must add the constructor-binding component. Detached
+Kotlin parameter-slot facts join public declarations, override slots and named
+callers across source modules. Escaped method values and binary contracts still refuse edits.
+Primary-constructor property parameters and lambda parameters remain outside this checkpoint.
+
 **Rename follow-up (2026-09-23):** no AST field, accessor or clone rule was added. The existing
 attempt-owned `InvocationBinding.Argument` now carries a nullable immutable `Label(name, start, end)`
 record copied from `LabeledExpression` before argument rewriting. Positional arguments and legacy
