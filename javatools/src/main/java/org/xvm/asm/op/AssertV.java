@@ -240,6 +240,8 @@ public class AssertV
             appendString(code, asParts[i]);
             appendValue(bctx, code, m_anValue[i]);
         }
+        appendString(code, asParts[m_anValue.length]);
+
         code.invokevirtual(CD_StringBuilder, "toString", MD_JavaToString)
             .invokestatic(CD_String, "of", MD_StringOf);
     }

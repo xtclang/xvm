@@ -88,16 +88,14 @@ public class Move
 
         if (typeTo == null) {
             type = typeFrom;
-        } else if (typeTo.isA(typeFrom)) {
-            // sometimes !typeTo.equals(typeFrom) can happen - (Trace for asserts and assignment of
-            // narrowed properties)
-            type = typeTo;
         } else if (typeTo instanceof CastTypeConstant typeInferred) {
+            // assignment replaces any narrowing inferred for the destination's previous value
             assert typeFrom.isA(typeInferred.getBaseType());
             type = typeFrom;
         } else {
             // this can happen inside an unreachable code
             //  (e.g.: "String s := value.is(String)" where "value" is known to be an "Int")
+            // or Trace for asserts and assignment of narrowed properties
             type = typeTo;
         }
         bctx.typeMatrix.assign(getAddress(), m_nToValue, type);
