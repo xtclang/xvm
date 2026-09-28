@@ -21,6 +21,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NameExpression;
+import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.StatementBlock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -57,6 +58,21 @@ public class BindingIdentitySnapshotTest {
                 functions -> host.compilation(Map.of(), functions).functionBindings(),
                 functions -> host.partial(Map.of(), Map.of(), functions).functionBindings())
                 .forEach(copy -> verifySnapshot(copy, EqualInvocation::new, call));
+    }
+
+    @Test
+    public void constructorFactsPreserveIdentityAtEveryPublicationBoundary() {
+        var host      = new HostInputs();
+        var pool      = host.file().getConstantPool();
+        var signature = pool.ensureSignatureConstant("construct", ConstantPool.NO_TYPES, ConstantPool.NO_TYPES);
+        var method    = pool.ensureMethodConstant(host.file().getModule().getIdentityConstant(), signature);
+        var binding   = new InvocationBinding(method, signature, List.of());
+
+        List.<UnaryOperator<Map<NewExpression, InvocationBinding>>>of(
+                constructors -> new InvocationBinding.Facts(Map.of(), Map.of(), constructors).constructors(),
+                constructors -> new EmbeddingSupport.Compilation(host.file().getModule(), host.file(),
+                        host.tree(), List.of(host.tree()), Map.of(), Map.of(), constructors).constructorBindings())
+                .forEach(copy -> verifySnapshot(copy, EqualConstruction::new, binding));
     }
 
     @Test
@@ -105,6 +121,22 @@ public class BindingIdentitySnapshotTest {
         @Override
         public boolean equals(Object other) {
             return other instanceof EqualInvocation;
+        }
+
+        @Override
+        public int hashCode() {
+            return 1;
+        }
+    }
+
+    private static class EqualConstruction extends NewExpression {
+        EqualConstruction() {
+            super(null, new Token(0, 3, Id.NEW, null), null, List.of(), -1, null, 4);
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            return other instanceof EqualConstruction;
         }
 
         @Override

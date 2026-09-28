@@ -386,6 +386,12 @@ VS Code receipts above.
   Combined backend and selected editor validation pass. L62 remains open for public-parameter
   caller closure, composition-family proof, qualified/explicit module moves and implicit package
   directories; these exclusions are not counted as completed functionality.
+  Implementation batch in progress (tests deliberately deferred until all three checkpoints):
+  1. Public parameter slots, override callers and explicit constructor labels: code and regression
+     fixtures added; validation pending. Escaped method values, binary contracts, primary-constructor
+     property parameters and lambda parameters retain conservative refusal.
+  2. Annotation/mixin/delegation families: next implementation checkpoint.
+  3. Qualified modules, implicit packages and explicit module roots: next implementation checkpoint.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Add independently proven fixes beyond
   import cleanup/public-type imports: missing declarations or members, implement/override
   members, extract local/method, inline and safe delete. Record supported XTC forms per action;
