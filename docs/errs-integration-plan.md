@@ -1048,6 +1048,18 @@ This is structural organization, not a new LSP dependency in the compiler. The p
 represent incomplete source syntax usable by embedding hosts generally. No move is included in
 the current rename validation batch.
 
+## Composition audit follow-up
+
+`CompilerDispatchRoutesTest` inspects real TypeInfo chains for written/default overrides,
+delegation (including its receiver property), and union dispatch. Existing project tests additionally
+exercise source-owned generic overrides, mixins/super and delegated method/parameter rename.
+Union dispatch remains refused: its independent callable targets do not constitute a written
+override family. Field accessors and shorthand constructors already have dedicated property and
+primary-parameter handling; making their generated method identities renameable would bypass those
+proofs. Implicit/SansCode/Native and further capped/conditional routes still need dedicated fixtures;
+this checkpoint does not claim exhaustive enumeration or enable them by body-category guesswork.
+New chain fixtures await the batched validation below.
+
 ## Native configuration acceptance follow-up
 
 The VS Code launcher now accepts `-PcompilerPlaybookMultiRoot=true` for a saved two-folder
