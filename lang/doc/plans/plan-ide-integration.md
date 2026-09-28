@@ -163,7 +163,7 @@ support for every XTC construct, optional LSP extension or native editor present
 | Semantic tokens | - | Lexer-based (18 contexts) | **Partial** - Java lexical comments/literals/keywords plus resolved names, declarations, readonly/static/abstract modifiers and writes |
 | Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
 | Linked editing | - | Same-file identifiers | **Partial** - resolved rename-eligible local-variable occurrences in one successful source snapshot; no proposed-name proof |
-| Inlay hints | - | - | **Partial** - inferred local types after successful compilation and selected positional parameter names; named arguments/defaults omitted |
+| Inlay hints | - | - | **Partial** - inferred local/destructured types, lambda parameters/returns and selected positional parameter names after successful compilation; named arguments/defaults omitted |
 | Go-to-declaration (separate LSP request) | - | - | **Not implemented** - inherited stub; semantic go-to-definition is available across source graphs and indexed libraries |
 | Go-to-type-definition | - | - | **Done** - copied source type identities, narrowed/parameterized/nullable/relational types, formals and selected-call returns; module and host-indexed dependency sources |
 | Find implementations | - | - | **Partial** - compiler composition targets across the complete source graph, including unopened source consumers; generic/inherited/mixin/delegated methods and property accessors; no invented binary source target |
@@ -205,7 +205,10 @@ themselves violate LSP; an inherited empty method does not count as an implement
 The remaining limits within implemented features are tracked separately: malformed/header/value
 completion and signatures (L57/L58/L64), inferred displays (L59), rename proof and editable target
 scope (L55/L62), hierarchy/classification (L65), formatting/links/linked editing (L66), and index
-scale/source metadata (L67). L56 now has client startup ordering and stale-fold guards, with validation pending the L56–L59 batch.
+scale/source metadata (L67). L56 adds client startup ordering and stale-fold guards. L57 resolves
+written formal bounds without synthetic components; L58 extends whole-argument fitting and callable
+fallbacks; L59 copies validated lambda signatures and destructured local types. Combined validation
+and remaining native acceptance are recorded in the integration plan.
 Dynamic watcher registration now waits for `initialized` and negotiated support. The remaining
 capability negotiation and refresh work still belongs to the L80/L81 audit.
 
@@ -383,14 +386,15 @@ size cursors with real constructor fitting, original-token replacement, active s
 bracket recovery. A written supplier after the cursor is parsed but is not validated by that prefix
 query. Normal compilation still checks suppliers and element defaults. Compiler mode advertises `[` as
 a signature-help trigger. X91–X96 add the bounded declaration-header recovery described above.
-Multidimensional construction, unfinished declaration names, missing operands/map entries and
-unterminated literal contents remain unsupported.
+Multidimensional construction, unfinished declaration names, missing map entries and
+unterminated literal contents remain unsupported. Explicit cursor queries now recover missing
+value operands within call arguments.
 Remaining limits: non-type cursors inside identifiers, further member/call syntax after a typed
-prefix, enclosing-instance member enumeration, arbitrary type-valued receiver fallbacks and
-receiver-to-argument rewrites. Qualified property prefixes, grouped values and slots before later
-written arguments now use compiler fitting; compound operands retain ordinary lexical/member
-completion. Argument completion does not synthesize literals or enumerate arbitrary
-enclosing-instance members or imported constants.
+prefix and arbitrary enclosing-instance enumeration. Qualified/grouped/compound arguments and
+slots before later written arguments use full compiler validation. Type-valued receiver functions
+and receiver-to-argument rewrites retain visible signature mappings. Lexical enclosing/imported
+property candidates require ordinary readable-value validation and argument fitting. Argument
+completion does not synthesize literals or enumerate arbitrary enclosing instances.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The
