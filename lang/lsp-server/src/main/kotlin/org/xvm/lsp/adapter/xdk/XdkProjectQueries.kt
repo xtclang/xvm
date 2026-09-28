@@ -140,7 +140,7 @@ internal class XdkProjectQueries(
         val target = before.constants[selected.id] ?: return null
         val symbol =
             before.models.asSequence().flatMap { it.symbols.asSequence() }.firstOrNull {
-                before.constants[it.id] == target && it.declaration != null && it.declarationSource in texts
+                before.constants[it.id] in members(target) && it.declaration != null && it.declarationSource in texts
             } ?: return null
         val declarationSource = symbol.declarationSource ?: return null
         if (declarationSource !in texts || symbol.declaration == null) return null
@@ -171,7 +171,7 @@ internal class XdkProjectQueries(
                     return null
                 }
             }
-        val ids = before.constants.filterValues { it in targets }.keys
+        val ids = before.constants.filterValues { members(it).all(targets::contains) }.keys
         val base = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
         val file = File(declarationSource)
         val renamedModule = project.modules.values.singleOrNull { it.root == file && symbol.kind == SemanticModel.SymbolKind.MODULE }
@@ -337,18 +337,21 @@ internal class XdkProjectQueries(
         facts: CompilerRenameFacts,
         target: ProofIdentity,
     ): Set<ProofIdentity>? {
-        val family = linkedSetOf(target)
+        val family = members(target).toMutableSet()
         do {
             val previousSize = family.size
-            facts.methods.chains.filter { chain -> chain.members.any(family::contains) }.forEach { chain ->
+            facts.methods.chains.filter { chain -> chain.members.flatMap(::members).any(family::contains) }.forEach { chain ->
                 if (!chain.supported) return null
-                family += chain.members
+                family += chain.members.flatMap(::members)
             }
         } while (family.size != previousSize)
         // A binary/library contract or synthetic method cannot be edited from configured sources.
         if (!facts.methods.declarations.containsAll(family)) return null
         return family
     }
+
+    private fun members(identity: ProofIdentity): Set<ProofIdentity> =
+        if (identity is ProofIdentity.Composed) identity.members.flatMapTo(linkedSetOf(), ::members) else setOf(identity)
 
     /** Parameter names belong to callable slots, including differently named overrides. */
     private fun parameterFamily(
