@@ -13,7 +13,10 @@ internal object XdkMemberActions {
     ) {
         val title: String get() = "${if (implementation) "Implement" else "Override"} $declaration"
 
-        fun selected(source: String, range: Range): Boolean =
+        fun selected(
+            source: String,
+            range: Range,
+        ): Boolean =
             owner.sourceName == source &&
                 owner.range.start <= SemanticModel.Position(range.end.line, range.end.column) &&
                 owner.range.end >= SemanticModel.Position(range.start.line, range.start.column)
@@ -28,9 +31,14 @@ internal object XdkMemberActions {
             val ownerLine = text.lineSequence().elementAtOrNull(owner.range.start.line).orEmpty()
             val indent = ownerLine.takeWhile { it == ' ' || it == '\t' }
             val memberIndent = "$indent    "
-            val body = "$memberIndent@Override$newline$memberIndent$declaration {${newline}$memberIndent    TODO();$newline$memberIndent}$newline"
-            return if (ownLine) XdkRename.Edit(lineStart, lineStart, body)
-                else XdkRename.Edit(at, at, "$newline$body$indent")
+            val body =
+                "$memberIndent@Override$newline$memberIndent$declaration {$newline" +
+                    "$memberIndent    TODO();$newline$memberIndent}$newline"
+            return if (ownLine) {
+                XdkRename.Edit(lineStart, lineStart, body)
+            } else {
+                XdkRename.Edit(at, at, "$newline$body$indent")
+            }
         }
     }
 }
