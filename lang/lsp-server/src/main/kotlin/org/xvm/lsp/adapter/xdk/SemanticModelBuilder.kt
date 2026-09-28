@@ -402,12 +402,8 @@ private class SemanticModelBuilder(
         }
         parameters.forEach { (parameter, id) ->
             val method = parameter.first.component as? MethodStructure ?: return@forEach
-            val owner = constants[parameter.first]
-            val directCallsOnly =
-                occurrences.filterValues { it.symbol == owner && it.role == Role.REFERENCE }.all { (at, _) ->
-                    calls.any { (site, call) -> site.sourceName == at.sourceName && at.range.start in call.callee }
-                }
-            if (method.access == Access.PRIVATE && !method.isConstructor && directCallsOnly) {
+            // Calls through function values are positional (COMPILER-141 rejects named arguments).
+            if (method.access == Access.PRIVATE && !method.isConstructor) {
                 symbols[id]?.let { symbols[id] = it.copy(renameable = true) }
             }
         }
