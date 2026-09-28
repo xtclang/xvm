@@ -92,15 +92,16 @@ The standalone master extraction follows these boundaries:
    Compiler coverage remains appropriate on `errs`.
 
 No embedding API, AST, semantic-model, rename-proof, native playbook or dependency upgrade
-belongs in this extraction. The local branch below is prepared; no PR has been created.
+belongs in this extraction. The branch below is published in
+[PR #653](https://github.com/xtclang/xvm/pull/653), with review requested from `ggleyzer`.
 The provider workaround and regressions are isolated in **8e976f868**; server cleanup, process
 exit and regressions are in **eefc1b8e6**. See the integration plan for the verified commit map.
 
-### Prepared master branch
+### Published master branch
 
 `lagergren/fix-lsp-process-lifecycle` contains one commit, **cf54e2a19**, based on freshly fetched
 `origin/master` **ce3ab1d81**. Its separate worktree is `build/lsp-process-lifecycle`; the main
-checkout remains on `lagergren/errs`. The branch is local only.
+checkout remains on `lagergren/errs`. PR #653 targets `master` and contains only this fix.
 
 The diff is **nine files, +476/−24 lines**: four production files (+91/−24), four regression
 files (+377), and eight lines of normal Gradle test wiring. It keeps master's IntelliJ 2026.1

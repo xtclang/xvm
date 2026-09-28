@@ -17,10 +17,11 @@ the two Markdown files above.
 extraction boundary, upstream reproduction and 15/15 child-process regressions are recorded in
 [the lifecycle diagnosis](errs-lsp-process-lifecycle.md). Installed IDE restart/project-close
 acceptance remains to be recorded. This fix adds no compiler or AST requirement.
-The isolated master branch is now prepared locally as `lagergren/fix-lsp-process-lifecycle`,
+The isolated master branch is published as `lagergren/fix-lsp-process-lifecycle`,
 commit `cf54e2a19` on `ce3ab1d81`, in `build/lsp-process-lifecycle`. Its nine-file diff keeps
 master's dependencies and passes 455 tests (three existing skips), including all 20 new lifecycle
-regressions. The branch is not pushed and has no PR; see the diagnosis for the exact size and checks.
+regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
+requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
 Current inventory: 2026-09-27, code checkpoint `511195564`. This is the active task list;
 the dated implementation records below retain their historical scope and results. L55 onward
