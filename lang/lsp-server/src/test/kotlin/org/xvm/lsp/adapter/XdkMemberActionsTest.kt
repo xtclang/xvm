@@ -116,6 +116,32 @@ class XdkMemberActionsTest {
     }
 
     @Test
+    fun `missing implementation at construction can be repaired from fresh declarations`() {
+        val text = "module App { interface Api { String read(String value); } class Box implements Api {} Box make() = new Box(); }"
+        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val uri = source.toURI().toString()
+            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
+            assertThat(source.readText()).isEqualTo(text)
+        }
+    }
+
+    @Test
+    fun `declaration errors do not produce a member fix from failed type information`() {
+        val text = "module App { interface Api { Missing read(); } class Box implements Api {} Box make() = new Box(); }"
+        val source = directory.resolve("App.x").toFile().apply { writeText(text) }
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val uri = source.toURI().toString()
+            assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
+            assertThat(actions(adapter, uri, text)).isEmpty()
+        }
+    }
+
+    @Test
     fun `code generation only appears at the selected class declaration`() {
         val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
