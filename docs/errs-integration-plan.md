@@ -794,11 +794,16 @@ Five separate implementation commits precede combined validation:
    and X125 exact platform regressions. Validation pending until all five checkpoints are ready.
 2. L69: negotiated semantic-token range/delta and bounded result lifetime; implementation and
    regression tests written, validation pending.
-3. L70: versioned lazy completion/code-action resolution; other resolvers remain separate.
+3. L70: versioned lazy completion documentation/code-action edit resolution is written;
+   selected properties require client support. Initial queries still compute compiler proof and
+   detached facts; resolve delays payload conversion/transfer, not a second compiler pass.
+   Bounded connection-local handles reject edits, dependency/configuration changes, close/reopen,
+   and foreign connections. Shared X127 exercises native-client transport; validation pending.
+   Code lens/link/inlay/workspace-symbol resolvers remain a separate L70 follow-up.
 4. L71: compiler-proven file-tree rename edits and create/delete lifecycle participation.
 5. PLAT2c: evaluated Gradle inputs and origin-aware effective paths in both hosts.
 
-The new catalog has 131 scenarios. The previous 128-case receipts remain historical evidence;
+The new catalog has 132 scenarios. The previous 128-case receipts remain historical evidence;
 new cases and changes are not validated by those receipts. X118 now carries ordered custom
 resource roots through native module rename and Undo in both hosts.
 
