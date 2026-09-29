@@ -105,7 +105,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 
-import static org.xvm.javajit.TypeSystem.HASH;
+import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
@@ -7212,6 +7212,12 @@ public abstract class TypeConstant
 
         ConstantPool     pool = loader.module.getConstantPool();
         IdentityConstant id   = getSingleUnderlyingClass(true);
+
+        if (id instanceof ModuleConstant) {
+            // the module class uses a synthetic name, not a user-supplied identifier
+            return loader.prefix + Builder.MODULE;
+        }
+
         if (id.equals(pool.clzArray())) {
             // see ParameterizedTypeConstant#buildJitClassName
             TypeConstant typeEl = getParamType(0);
@@ -7249,16 +7255,15 @@ public abstract class TypeConstant
             return Builder.N_nFunction;
         }
 
-        StringBuilder sb = new StringBuilder()
-                .append(loader.prefix)
-                .append(id.getClassJitName(ts));
+        StringBuilder sb = new StringBuilder(id.getClassJitName(ts));
 
         TypeConstant typeCanonical = getCallableJitType();
-        if (typeCanonical.getParamsCount() > 0) {
+        if (typeCanonical.getParamsCount() > 0 || sb.indexOf(HASH_MARKER) >= 0) {
             // it's critical here to use the class module loader's pool
-            sb.appendCodePoint(HASH).append(pool.register(typeCanonical).getPosition());
+            TypeSystem.appendJitSuffix(sb, pool.register(typeCanonical).getPosition());
         }
-        return sb.toString();
+        // the loader's module prefix is already escaped
+        return loader.prefix + TypeSystem.escapeJitName(sb.toString(), true);
     }
 
     /**

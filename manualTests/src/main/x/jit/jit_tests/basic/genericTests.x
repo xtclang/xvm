@@ -36,6 +36,8 @@ package genericTests {
 
         testFormalComparison();
         testFormalType();
+        testGenericLocalClassName();
+        testEscapedClassName();
     }
 
     void testFormalComparison() {
@@ -54,6 +56,27 @@ package genericTests {
         Iterator<String> iterator = ["alpha"].iterator();
         assert iterator.Element.is(Type<Orderable>);
     }
+
+    void testGenericLocalClassName() {
+        // this validates the synthetic class name generation for generic classes inside methods
+        class Box<Element>(Element value) {}
+
+        assert new Box<Int>(42).value == 42;
+        assert new Box<String>("value").value == "value";
+    }
+
+    void testEscapedClassName() {
+        // literal markers in names must not be interpreted as generated constant-id suffixes
+        class Boxꖛ1ꖛ2<Element>(Element value) {}
+
+        assert new Boxꖛ1ꖛ2<Int>(42).value == 42;
+        assert new Boxꖛ1ꖛ2<String>("value").value == "value";
+
+        // this class has a literal marker but no generated suffix
+        assert new Valueꖛ1(9).value == 9;
+    }
+
+    class Valueꖛ1(Int value) {}
 
     static <Element, Result> Result apply(
             function Result(Element) transform, Element value) = transform(value);

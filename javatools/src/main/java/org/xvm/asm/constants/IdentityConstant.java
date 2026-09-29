@@ -17,8 +17,7 @@ import org.xvm.javajit.TypeSystem;
 
 import org.xvm.util.Handy;
 
-import static org.xvm.javajit.TypeSystem.HASH;
-import static org.xvm.javajit.TypeSystem.escapeJitClassName;
+import static org.xvm.javajit.TypeSystem.appendJitSuffix;
 
 /**
  * An IdentityConstant identifies a Module, Package, Class, Typedef, Property, MultiMethod, or
@@ -702,7 +701,7 @@ public abstract class IdentityConstant
      * @return a dot or '$'-delimited string that represents the corresponding Jit class name
      */
     protected String getClassJitName(TypeSystem ts) {
-        return escapeJitClassName(buildJitClassName(ts).substring(1));
+        return buildJitClassName(ts).substring(1);
     }
 
     /**
@@ -725,7 +724,7 @@ public abstract class IdentityConstant
                                    .append(getName());
         if (fUsePosition) {
             assert getComponent() != null;
-            sb.append(HASH).append(getPosition());
+            appendJitSuffix(sb, getPosition());
         }
         return sb;
     }
