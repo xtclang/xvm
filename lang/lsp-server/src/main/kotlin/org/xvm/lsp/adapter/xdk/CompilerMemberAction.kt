@@ -20,7 +20,7 @@ internal data class CompilerMemberAction(
     val implementation: Boolean,
 )
 
-/** Inherited source methods. A proposed declaration still needs a complete graph proof. */
+/** Inherited methods from source and immutable dependency artifacts. A proposed declaration still needs a complete graph proof. */
 internal fun compilerMemberActions(
     nodes: List<AstNode>,
     errors: ErrorListener,
