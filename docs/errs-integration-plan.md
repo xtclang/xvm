@@ -800,10 +800,17 @@ Five separate implementation commits precede combined validation:
    Bounded connection-local handles reject edits, dependency/configuration changes, close/reopen,
    and foreign connections. Shared X127 exercises native-client transport; validation pending.
    Code lens/link/inlay/workspace-symbol resolvers remain a separate L70 follow-up.
-4. L71: compiler-proven file-tree rename edits and create/delete lifecycle participation.
+4. L71: negotiated pre/post file hooks, compiler-proven file/package renames (including combined
+   batch proof and required companion moves), and binding-preserving container moves are written.
+   Duplicate small-file watcher/operation events coalesce by contents; directory/large-file events
+   always propagate without scanning entire trees on the notification thread. X128 drives both
+   hosts' native file-operation listeners. Tests are written; batch validation pending.
+   Cross-package relocations needing rewritten qualification, collisions, overlapping operations,
+   symlinks and explicit root/settings changes remain conservative refusals. `willRenameFiles`
+   cannot veto the host's move: a null result means no safe automatic reference update.
 5. PLAT2c: evaluated Gradle inputs and origin-aware effective paths in both hosts.
 
-The new catalog has 132 scenarios. The previous 128-case receipts remain historical evidence;
+The new catalog has 133 scenarios. The previous 128-case receipts remain historical evidence;
 new cases and changes are not validated by those receipts. X118 now carries ordered custom
 resource roots through native module rename and Undo in both hosts.
 

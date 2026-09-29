@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 132 scenarios. X124–X127 are added for the next combined validation;
+The current catalog has 133 scenarios. X124–X128 are added for the next combined validation;
 the receipts below cover the preceding 128-case catalog. The
 [2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the full selection, resumed cases, failures and focused corrections separately. Historical
@@ -2133,6 +2133,7 @@ module Advanced {
 | X125 | Hover a generic echo call; request signature help before an existing positional/named argument; complete direct and chained `.tr()`; navigate the narrowed JsonObject variable's type. | Hover identifies echo, active parameters are 1/0, completion offers trim, and type definition opens bundled Map.x. |
 | X126 | Request full tokens, insert a leading newline, request a delta and a range when negotiated, then close/reopen and request using the old ID. | Applying edits reconstructs the full result; empty ranges are empty; retired IDs return full data. Unsupported client operations are refused explicitly. |
 | X127 | Request an unused-import action, resolve its edit when negotiated, edit the source, then try resolving the old handle. | Initial lazy actions omit edits; resolve returns versioned edits without changing the title; obsolete handles are refused. Eager-only clients retain complete actions. |
+| X128 | Rename Box.x to Crate.x and an implicit tools package folder to util through the IDE file API. | The installed file listener obtains compiler-proven declaration/reference edits before moving files; root and member diagnostics remain clear. |
 
 **Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
 scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
