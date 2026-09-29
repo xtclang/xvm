@@ -146,6 +146,48 @@ class XdkMemberActionsTest {
         workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["Int read(Int value = -2);", "String read(String value = \"text\");", "Char read(Char value = 'x');"])
+    fun `fresh declaration repair retains literal defaults`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} " +
+            "Box make() = new Box(); void use(Box box) { box.read(); } }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains(signature.substringAfter("value = ").substringBefore(')'))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `validated computed primitive default is rendered as its constant value`() {
+        val text = "module App { interface Api { Int read(Int value = 1 + 2); } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement Int64 read(Int64 value = 3)" }
+            assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `unvalidated computed defaults remain a refusal during fresh declaration repair`() {
+        val text = "module App { interface Api { Int read(Int value = 1 + 2); } class Box implements Api {} Box make() = new Box(); }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            assertThat(actions(adapter, uri, text).filter { it.title.contains(" read(") }).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Boolean read(Boolean value = True);", "String? read(String? value = Null);"])
+    fun `validated singleton defaults use explicit XDK identities`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains(" = ecstasy.")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
     @Test
     fun `existing call intentionally selects the generated override`() {
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} Int use(Box box) = box.read(); }"
