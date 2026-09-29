@@ -353,7 +353,7 @@ internal class XdkProjectQueries(
                         project
                     }
                 val edit = XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
-                val plan = XdkRename.Plan(texts, mapOf(source to edit.all))
+                val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
                 val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
                 if (!XdkRename.preservesKnownBindings(before, after, plan)) return@mapNotNull null
                 CodeAction(
