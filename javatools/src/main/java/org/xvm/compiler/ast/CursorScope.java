@@ -49,14 +49,14 @@ final class CursorScope {
     }
 
     /** Header lookup uses the real enclosing declaration; no method Context is invented. */
-    static List<CursorBinding.NamedType> declarationTypes(IncompleteStatement site, ErrorListener errs) {
-        AstNode scope = declarationScope(site);
+    static List<CursorBinding.NamedType> declarationTypes(IncompleteStatement site, AstNode scope,
+            List<Parameter> writtenFormals, ErrorListener errs) {
         if (site.getTarget() instanceof NamedTypeExpression type) {
-            if (unregisteredFormals(site).contains(firstName(type))) {
+            if (writtenFormals.stream().anyMatch(formal -> formal.getName().equals(firstName(type)))) {
                 if (type.left != null || type.getNames().length < 2) {
                     return List.of();
                 }
-                var parameters = formalParameters(site).stream()
+                var parameters = writtenFormals.stream()
                         .collect(Collectors.toMap(Parameter::getName, Function.identity(), (first, second) -> first));
                 var qualifier = formalConstraint(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
                 if (qualifier == null) {
@@ -87,46 +87,29 @@ final class CursorScope {
         }
         String prefix = site.getCompletionPrefix();
         var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
-        return names(site).stream().filter(name -> name.startsWith(prefix)).sorted()
+        return names(site, writtenFormals).stream().filter(name -> name.startsWith(prefix)).sorted()
                 .takeWhile(name -> !errs.isAbortDesired())
                 .map(name -> namedType(name, new NameResolver(scope, name).forceResolve(probe)))
                 .filter(Objects::nonNull).toList();
-    }
-
-    /** A syntax-only type has no component; its parent retains the real enclosing/import scope. */
-    static AstNode declarationScope(IncompleteStatement site) {
-        return site.getParent() instanceof IncompleteTypeCompositionStatement declaration
-                ? declaration.isComponentNode() ? declaration : declaration.getParent() : site;
     }
 
     private static String firstName(NamedTypeExpression type) {
         return type.left instanceof NamedTypeExpression left ? firstName(left) : type.getNames()[0];
     }
 
-    private static Set<String> unregisteredFormals(IncompleteStatement site) {
-        return formalParameters(site).stream().map(Parameter::getName).collect(Collectors.toUnmodifiableSet());
-    }
-
-    private static List<Parameter> formalParameters(IncompleteStatement site) {
-        return switch (site.getParent()) {
-            case IncompleteDeclarationStatement declaration -> declaration.formalParameters();
-            case IncompleteTypeCompositionStatement declaration -> declaration.formalParameters();
-            default -> List.of();
-        };
-    }
-
     /** Resolve bounds on disposable syntax only; no unfinished class/method or formal is registered. */
-    static List<CursorBinding.Formal> declarationFormals(IncompleteStatement site, ErrorListener errs) {
+    static List<CursorBinding.Formal> declarationFormals(IncompleteStatement site, AstNode scope,
+            List<Parameter> writtenFormals, ErrorListener errs) {
         return site.getTarget() instanceof NamedTypeExpression named
-                && (named.left != null || named.getNames().length > 1) ? List.of() : resolveFormals(site, errs);
+                && (named.left != null || named.getNames().length > 1) ? List.of() : resolveFormals(scope, writtenFormals, errs);
     }
 
-    private static List<CursorBinding.Formal> resolveFormals(IncompleteStatement site, ErrorListener errs) {
-        var parameters = formalParameters(site);
+    private static List<CursorBinding.Formal> resolveFormals(AstNode scope, List<Parameter> parameters,
+            ErrorListener errs) {
         var byName = parameters.stream().collect(Collectors.toMap(Parameter::getName, Function.identity(),
                 (first, second) -> first));
         return parameters.stream().takeWhile(parameter -> !errs.isAbortDesired()).map(parameter -> {
-            TypeConstant bound = formalBound(parameter, declarationScope(site), byName, Set.of(), errs);
+            TypeConstant bound = formalBound(parameter, scope, byName, Set.of(), errs);
             return bound == null ? null : new CursorBinding.Formal(parameter.getNameToken(), bound);
         }).filter(Objects::nonNull).toList();
     }
@@ -311,6 +294,10 @@ final class CursorScope {
     }
 
     private static Set<String> names(IncompleteStatement site) {
+        return names(site, List.of());
+    }
+
+    private static Set<String> names(IncompleteStatement site, List<Parameter> writtenFormals) {
         Set<String> names = new HashSet<>(ConstantPool.getImplicitImportNames());
         Stream.iterate(site.getParent(), Objects::nonNull, AstNode::getParent).forEach(node -> {
             if (node.isComponentNode() && node.getComponent() != null) {
@@ -334,7 +321,7 @@ final class CursorScope {
                 }
             }
         });
-        names.removeAll(unregisteredFormals(site));
+        writtenFormals.stream().map(Parameter::getName).forEach(names::remove);
         return names;
     }
 }
