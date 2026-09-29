@@ -16,6 +16,7 @@ data class Signature(
     val label: String,
     val parameters: List<String>,
     val activeParameter: Int?,
+    val documentation: String? = null,
 )
 
 /** Inspect the native action's future and visible popup; reopen only after recorded focus loss. */
@@ -23,6 +24,7 @@ fun Driver.signature(
     editor: JEditorUiComponent,
     at: Int,
     keepOpen: Boolean = false,
+    inspectDocumentation: Boolean = false,
     matches: (List<Signature>) -> Boolean,
 ) {
     dismissPopups()
@@ -81,6 +83,15 @@ fun Driver.signature(
                             }
                     },
                     item.getActiveParameter() ?: help?.getActiveParameter(),
+                    if (inspectDocumentation)
+                        ClientProtocol(this).copy(item.getDocumentation()).let {
+                            when {
+                                it.isJsonPrimitive -> it.asString
+                                it.isJsonObject -> it.asJsonObject["value"]?.asString
+                                else -> null
+                            }
+                        }
+                    else null,
                 )
             }
         if (!matches(signatures)) return@awaitUi false

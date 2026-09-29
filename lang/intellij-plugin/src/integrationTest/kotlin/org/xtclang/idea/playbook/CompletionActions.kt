@@ -1,5 +1,6 @@
 package org.xtclang.idea.playbook
 
+import com.google.gson.JsonObject
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
@@ -89,6 +90,22 @@ fun Driver.hasCompletionKinds(
                 protocol.copy(proposal.getItem()).asJsonObject["kind"]?.asInt == kind
             } == true
     }
+}
+
+/**
+ * Read metadata from the actual native proposal, without issuing a competing completion request.
+ */
+fun Driver.hasCompletionMetadata(
+    items: List<CompletionItem>,
+    label: String,
+    expected: JsonObject,
+): Boolean {
+    val item = items.singleOrNull { it.getLookupString() == label } ?: return false
+    val proposal = cast(item, NativeCompletionElement::class).getObject()
+    val value = ClientProtocol(this).copy(proposal.getItem()).asJsonObject
+    return value["detail"]?.asString?.contains(expected["detailContains"].asString) == true &&
+        (expected["kind"] == null || value["kind"]?.asInt == expected["kind"].asInt) &&
+        (expected["sorted"]?.asBoolean != true || value["sortText"]?.asString?.isNotBlank() == true)
 }
 
 @Remote("com.intellij.codeInsight.lookup.LookupElement")
