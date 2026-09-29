@@ -109,6 +109,8 @@ interface SignatureHelp {
 interface SignatureInformation {
     fun getLabel(): String
 
+    fun getDocumentation(): ClientValue?
+
     fun getActiveParameter(): Int?
 
     fun getParameters(): List<ParameterInformation>

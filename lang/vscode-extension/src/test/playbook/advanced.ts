@@ -456,11 +456,22 @@ export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | '
                 const at = document.positionAt(cursor);
                 const items = (await workspace.completion(document, at)).filter(item => item.kind !== vscode.CompletionItemKind.Snippet);
                 assert.ok(variant.include.every(name => items.some(item => label(item) === name)));
-                assert.ok(data.exclude.every(name => items.every(item => label(item) !== name)));
+                const excluded = 'exclude' in variant ? variant.exclude : data.exclude;
+                assert.ok(excluded.every(name => items.every(item => label(item) !== name)));
                 const help = await workspace.signature(document, at);
                 if ('callContext' in data && data.callContext) assert.ok(help?.signatures.length);
                 else assert.ok(!help?.signatures.length);
+                if ('activeParameter' in variant) assert.ok(help?.signatures.every(signature => (signature.activeParameter ?? help.activeParameter) === variant.activeParameter));
+                if ('signatureDocumentationContains' in variant) assert.ok(help?.signatures.some(signature => {
+                    const documentation = typeof signature.documentation === 'string' ? signature.documentation : signature.documentation?.value;
+                    return documentation?.includes(variant.signatureDocumentationContains);
+                }));
                 const selected = items.find(item => label(item) === variant.selected)!;
+                if ('metadata' in variant) {
+                    assert.ok(selected.detail?.includes(variant.metadata.detailContains));
+                    if ('kind' in variant.metadata) assert.strictEqual(selected.kind, variant.metadata.kind - 1); // VS Code's enum is zero-based; LSP is one-based.
+                    if (variant.metadata.sorted) assert.ok(selected.sortText?.length);
+                }
                 assert.ok(selected.range instanceof vscode.Range && selected.range.isEqual(new vscode.Range(at.translate(0, -before), at.translate(0, after))));
                 await workspace.accept(document, selected);
                 assert.strictEqual(document.getText(), marked.slice(0, cursor - before) + variant.selected + marked.slice(cursor + data.marker.length + after));
