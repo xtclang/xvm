@@ -1120,7 +1120,9 @@ class CompilerPlaybook(
         }
         scenario("X122") {
             discovered("X122") { data ->
-                memberActions(data, open(data.text("file"))) { it.awaitDiagnostics(emptyList()) }
+                memberActions(data, open(data.text("file"))) { editor, broken ->
+                    if (broken) editor.awaitError() else editor.awaitDiagnostics(emptyList())
+                }
             }
         }
         scenario("X105") {
