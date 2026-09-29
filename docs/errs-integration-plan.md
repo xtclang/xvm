@@ -5656,7 +5656,7 @@ Implement as four separate checkpoints, then validate together:
    and duplicate-implementation refusal in both drivers. This adds the 127th catalog scenario;
    implementation is present, but the new native receipt is pending this batch.
 2. [x] Fresh declaration-only analysis for member generation beside missing-implementation errors.
-3. [ ] Broader compiler-selected signatures: parameterized types, conditional/multiple returns,
+3. [x] Broader compiler-selected signatures: parameterized types, conditional/multiple returns,
    default arguments and generic methods.
 4. [ ] Prove intentional dispatch changes for existing calls and derived classes.
 
@@ -5670,3 +5670,10 @@ and code generation are unchanged. No new mutable AST fields are added, and no c
 is returned by declaration analysis. The LSP uses a fresh source tree and repository after a failed
 normal attempt, retains its known bindings and adds header-derived member candidates. A proposed
 edit still requires complete graph compilation. Declaration errors and cancellation withhold facts.
+
+Checkpoint 3 renders nested parameterized types, conditional/multiple returns, method type
+parameters and constraints from compiler identities. Validated String/Char/integer defaults use
+the compiler's literal spelling. Computed/unvalidated defaults, annotated/relational types and
+unresolvable cross-module type spellings remain refusals. Every candidate still requires the
+whole-graph compilation and binding/dispatch proof. Tests are written; execution is pending the
+fourth checkpoint.
