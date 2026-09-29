@@ -1,6 +1,17 @@
 # Failures with nowhere to go
 
-**Current hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
+**Latest native audit:** X118's indefinite Rename was a lock cycle between the IDE write lock,
+LSP4IJ's synchronous file-operation listener and our diagnostic refresh acquiring a read lock on
+the transport worker. Ordered shared-pool cache updates fix it; native Rename/Undo/Redo passes
+repeatedly in about seven seconds. X128 now preflights at the host Rename action because VFS
+before-events arrive after the physical move. LSP4IJ's undo-transparent lazy-action application
+also broke X122 Redo; selective capability negotiation keeps action edits eager while completion
+documentation stays lazy. All ten selected new/regression cases have passing native receipts,
+with zero IDE errors. External-resource tests use explicit VFS loading/refresh; autonomous
+watching of unopened external roots is still open. See the
+[diagnoses, receipts and remaining tasks](errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29).
+
+**Earlier hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
 add project source-graph settings; L68 adds negotiated pull diagnostics, including closed roots
 and result IDs. The combined run passes 861 compiler/backend, 54 packaged-stdio and 50 IntelliJ
 unit tests (965 total), with zero failures/errors/skips. Updated X76/X118 and new X123 pass in both
