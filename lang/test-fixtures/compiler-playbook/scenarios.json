@@ -3802,7 +3802,11 @@
           {
             "name": "Library.example.org",
             "uri": "Library.x",
-            "dependencies": []
+            "dependencies": [],
+            "resourceRoots": [
+              "assets",
+              "fallback"
+            ]
           },
           {
             "name": "Consumer",
@@ -3979,6 +3983,53 @@
         "file": "Navigation.x",
         "broken": "module Navigation { Int run() = missing; }",
         "repaired": "module Navigation { Int run() = 1; }"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X124": {
+      "title": "external resource settings survive reset and repair through editor file watchers",
+      "manual": [],
+      "values": {
+        "file": "Assets.x",
+        "text": "module Assets { static String text() = $./data.txt; }",
+        "resource": "data.txt",
+        "contents": "resource repaired",
+        "module": "Assets"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X125": {
+      "title": "platform generic hover, written-call signature, chained completion and narrowed bundled type",
+      "manual": [],
+      "values": {
+        "file": "Demo.x",
+        "hoverSource": "module Demo { <T> T echo(T value) = value; String run() = echo(\"value\"); }",
+        "hoverAnchor": "echo(\"value\")",
+        "hoverExpected": "String echo(String value)",
+        "signatures": [
+          {
+            "text": "module Demo { <T> T echo(T value, T backup) = value; String run() = echo(\"a\", \u00a7\"b\"); }",
+            "active": 1
+          },
+          {
+            "text": "module Demo { <T> T echo(T value, T backup) = value; String run() = echo(backup = \"b\", \u00a7value = \"a\"); }",
+            "active": 0
+          }
+        ],
+        "completions": [
+          "module Demo { String run(String text) = text.tr\u00a7(); }",
+          "module Demo { String run(String text) = text.trim().tr\u00a7(); }"
+        ],
+        "completion": "trim",
+        "narrowedSource": "module Demo { package json import json.xtclang.org; import json.Doc; import json.JsonObject; String run(Doc value) { assert value.is(JsonObject); return value.toString(); } }",
+        "narrowedAnchor": "value.toString",
+        "targetSuffix": "/Map.x"
       },
       "intellij": {
         "coverage": "full",

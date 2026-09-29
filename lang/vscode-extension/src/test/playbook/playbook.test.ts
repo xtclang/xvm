@@ -9,6 +9,7 @@ import { liveWorkspaceCases } from './liveWorkspace';
 import { memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
+import { platformCases } from './platform';
 import { propertyCases } from './properties';
 import { renameCases } from './rename';
 import { renameFamilyCases } from './renameFamilies';
@@ -43,6 +44,7 @@ suite('XdkAdapter playbook', function () {
     renameFamilyCases();
     memberActionCases();
     pullDiagnosticCases();
+    platformCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

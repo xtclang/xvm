@@ -189,7 +189,7 @@ export class Workspace {
         return document;
     }
 
-    async configure(modules: { name: string; uri: string; dependencies?: string[] }[]): Promise<void> {
+    async configure(modules: { name: string; uri: string; dependencies?: string[]; resourceRoots?: string[] }[]): Promise<void> {
         await vscode.workspace.getConfiguration('xtc.compiler').update('sourceModules', modules, vscode.ConfigurationTarget.Workspace);
     }
 

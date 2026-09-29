@@ -66,6 +66,7 @@ fun Driver.renameFamily(
     clean(renamed)
     if (data.values.has("sourceModules")) {
         check(graphContains("Renamed.example.org") && !graphContains("Library.example.org"))
+        check(graphContains("assets") && graphContains("fallback"))
     }
     focusEditor(renamed)
     invokeAction("\$Undo", now = false, component = renamed.component)
@@ -87,6 +88,7 @@ fun Driver.renameFamily(
     clean(open(data.text("file")))
     if (data.values.has("sourceModules")) {
         check(graphContains("Library.example.org") && !graphContains("Renamed.example.org"))
+        check(graphContains("assets") && graphContains("fallback"))
         val restored = open(data.text("file"))
         focusEditor(restored)
         invokeAction("\$Redo", now = false, component = restored.component)
