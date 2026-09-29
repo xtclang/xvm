@@ -86,4 +86,82 @@ internal fun ParityScenarios.platformCases() {
             }
         )
     }
+    case("X126") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        val full = query("textDocument/semanticTokens/full", document).asJsonObject
+        check(full["data"].asJsonArray.size() > 0 && full.string("resultId").isNotEmpty())
+        replace(document, "\n" + data.string("source"))
+        val caps = protocol.capabilities().asJsonObject["semanticTokensProvider"].asJsonObject
+        val deltaSupported =
+            caps["full"].let { it.isJsonObject && it.asJsonObject["delta"]?.asBoolean == true }
+        if (deltaSupported) {
+            val delta =
+                query(
+                        "textDocument/semanticTokens/full/delta",
+                        document,
+                        extra = mapOf("previousResultId" to full.string("resultId")),
+                    )
+                    .asJsonObject
+            val patched = full["data"].asJsonArray.map { it.asInt }.toMutableList()
+            delta["edits"]
+                .rows()
+                .sortedByDescending { it.int("start") }
+                .forEach { edit ->
+                    val start = edit.int("start")
+                    patched.subList(start, start + edit.int("deleteCount")).clear()
+                    patched.addAll(start, edit["data"]?.asJsonArray?.map { it.asInt }.orEmpty())
+                }
+            check(
+                patched ==
+                    query("textDocument/semanticTokens/full", document)
+                        .asJsonObject["data"]
+                        .asJsonArray
+                        .map { it.asInt }
+            )
+        } else {
+            check(
+                runCatching {
+                        query(
+                            "textDocument/semanticTokens/full/delta",
+                            document,
+                            extra = mapOf("previousResultId" to full.string("resultId")),
+                        )
+                    }
+                    .exceptionOrNull()
+                    ?.message
+                    ?.contains("not negotiated") == true
+            )
+        }
+        if (caps["range"]?.let { it.isJsonObject || it.asBoolean } == true) {
+            check(
+                query(
+                        "textDocument/semanticTokens/range",
+                        document,
+                        extra =
+                            mapOf(
+                                "range" to
+                                    mapOf(
+                                        "start" to mapOf("line" to 0, "character" to 0),
+                                        "end" to mapOf("line" to 1, "character" to 0),
+                                    )
+                            ),
+                    )
+                    .asJsonObject["data"]
+                    .asJsonArray
+                    .isEmpty
+            )
+        }
+        discard(document)
+        val reopened = open(data.string("file"))
+        if (deltaSupported)
+            check(
+                query(
+                        "textDocument/semanticTokens/full/delta",
+                        reopened,
+                        extra = mapOf("previousResultId" to full.string("resultId")),
+                    )
+                    .asJsonObject
+                    .has("data")
+            )
+    }
 }
