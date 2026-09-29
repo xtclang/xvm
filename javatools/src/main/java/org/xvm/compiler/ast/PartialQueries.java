@@ -26,7 +26,7 @@ public final class PartialQueries {
         var bindings = ctx.getCursorBindings();
         bindings.begin(site);
         if (bindings.isEnabled() && !errs.isAbortDesired()) {
-            var scope = ctx.cursorBinding();
+            var scope = CursorScope.capture(ctx);
             bindings.record(site, site.isNameCompletion()
                     ? scope.withTypes(CursorScope.types(site, ctx, errs)) : scope);
         }
