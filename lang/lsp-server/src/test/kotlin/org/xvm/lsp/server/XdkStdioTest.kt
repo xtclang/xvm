@@ -45,7 +45,12 @@ import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRangeParams
+import org.eclipse.lsp4j.SemanticTokensCapabilities
+import org.eclipse.lsp4j.SemanticTokensClientCapabilitiesRequests
+import org.eclipse.lsp4j.SemanticTokensClientCapabilitiesRequestsFull
+import org.eclipse.lsp4j.SemanticTokensDeltaParams
 import org.eclipse.lsp4j.SemanticTokensParams
+import org.eclipse.lsp4j.SemanticTokensRangeParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
@@ -73,6 +78,61 @@ import org.junit.jupiter.params.provider.ValueSource
 @Tag("compiler-stdio")
 class XdkStdioTest {
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `semantic token range and deltas round trip the packaged transport`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val source = "module Stdio { Int answer() = 42; }"
+            session.open(source)
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            val full = session.await(documents.semanticTokensFull(SemanticTokensParams(id)))
+            assertThat(full.data).isNotEmpty()
+            session.change("\n$source", 2)
+            val delta =
+                session
+                    .await(
+                        documents.semanticTokensFullDelta(
+                            SemanticTokensDeltaParams(id, full.resultId)
+                        )
+                    )
+                    .right
+            val patched = full.data.toMutableList()
+            delta.edits
+                .sortedByDescending { it.start }
+                .forEach { edit ->
+                    patched.subList(edit.start, edit.start + edit.deleteCount).clear()
+                    patched.addAll(edit.start, edit.data.orEmpty())
+                }
+            assertThat(patched)
+                .isEqualTo(
+                    session.await(documents.semanticTokensFull(SemanticTokensParams(id))).data
+                )
+            assertThat(
+                    session
+                        .await(
+                            documents.semanticTokensRange(
+                                SemanticTokensRangeParams(id, Range(Position(1, 0), Position(2, 0)))
+                            )
+                        )
+                        .data
+                )
+                .isEqualTo(patched)
+            documents.didClose(DidCloseTextDocumentParams(id))
+            session.open(source)
+            assertThat(
+                    session
+                        .await(
+                            documents.semanticTokensFullDelta(
+                                SemanticTokensDeltaParams(id, full.resultId)
+                            )
+                        )
+                        .isLeft
+                )
+                .isTrue()
+        }
+    }
 
     @Test
     fun `configured resource roots and resource-only changes round trip through packaged diagnostics`() {
@@ -1382,11 +1442,21 @@ class XdkStdioTest {
                             }
                             capabilities =
                                 ClientCapabilities().apply {
-                                    if (pullDiagnostics)
-                                        textDocument =
-                                            TextDocumentClientCapabilities().apply {
+                                    textDocument =
+                                        TextDocumentClientCapabilities().apply {
+                                            if (pullDiagnostics)
                                                 diagnostic = DiagnosticCapabilities()
-                                            }
+                                            semanticTokens =
+                                                SemanticTokensCapabilities().apply {
+                                                    requests =
+                                                        SemanticTokensClientCapabilitiesRequests(
+                                                            SemanticTokensClientCapabilitiesRequestsFull(
+                                                                true
+                                                            ),
+                                                            true,
+                                                        )
+                                                }
+                                        }
                                     workspace =
                                         WorkspaceClientCapabilities().apply {
                                             workspaceEdit =
