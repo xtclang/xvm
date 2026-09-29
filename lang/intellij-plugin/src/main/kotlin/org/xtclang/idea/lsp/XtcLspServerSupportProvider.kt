@@ -86,30 +86,30 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
             override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
                 object : DefaultLauncherBuilder<S>(this) {
-                        private val documents = DocumentStartupMessages { uri ->
-                            if (project.isDisposed || serverWrapper.isDisposed)
-                                return@DocumentStartupMessages null
-                            val opened =
-                                serverWrapper.getOpenedDocument(URI(uri))
-                                    ?: return@DocumentStartupMessages null
-                            val document =
-                                opened.synchronizer?.document ?: return@DocumentStartupMessages null
+                        private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
+                            if (project.isDisposed || serverWrapper.isDisposed) return null
+                            val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return null
+                            val document = opened.synchronizer?.document ?: return null
                             // File rename waits for didOpen while holding the IDE write lock.
                             // Transport hooks must use the document's lock-free immutable text;
                             // acquiring a read action here deadlocks that rename on the EDT.
-                            DocumentStartupMessages.Snapshot(
+                            return DocumentStartupMessages.Snapshot(
                                 opened,
                                 document.modificationStamp,
                                 document.immutableCharSequence.toString(),
                             )
                         }
 
+                        private val documents = DocumentStartupMessages(::snapshot)
+                        private val diagnostics = DiagnosticResultMessages(::snapshot)
+
                         override fun wrapMessageConsumer(
                             consumer: MessageConsumer
                         ): MessageConsumer {
                             val wrapped = super.wrapMessageConsumer(consumer)
-                            return if (consumer is RemoteEndpoint) documents.incoming(wrapped)
-                            else documents.outgoing(wrapped)
+                            return if (consumer is RemoteEndpoint)
+                                documents.incoming(diagnostics.incoming(wrapped))
+                            else documents.outgoing(diagnostics.outgoing(wrapped))
                         }
                     }
                     .configureGson {
