@@ -468,6 +468,12 @@ when the batch completes. Earlier receipts do not validate these new changes.
   New X123 checks native error/clear rendering plus full/unchanged/repaired diagnostic responses
   on each installed connection. Both drivers are implemented; execution receipts are pending.
   The catalog is now 128 cases, not a claim that all 128 have passed.
+- **L67 diagnostic indexing:** per-root cached results now include source membership/text and
+  dependency artifact revisions. Unchanged roots reuse detached diagnostics/artifacts; a changed
+  library rebuilds its consumers. Removed roots drop their cache entries. Concurrent document and
+  workspace pulls own separate queue requests. Tests measure a 21-root graph's cold/warm compile
+  counts, changed-closure recompilation, removed-root eviction and cancellation isolation. This is
+  bounded in-memory reuse; persistent indexing and the broader navigation index remain open.
 
 ### L64 completion and signature batch (2026-09-29)
 
