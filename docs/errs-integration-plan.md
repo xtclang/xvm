@@ -455,6 +455,13 @@ when the batch completes. Earlier receipts do not validate these new changes.
   history select the same owner; a newly installed project override invalidates old global rename
   history. Pure settings tests cover discovery versus an empty graph, unrelated setting retention,
   duplicate roots and blank fields. Native settings/rename validation is pending.
+- **L68:** compiler clients advertising diagnostic pull negotiate one channel. Document/workspace
+  requests share version guards, per-document result IDs, related reports, empty removal reports
+  and refresh support. Closed roots compile on the existing serialized worker without installing
+  overlays or ASTs. A bounded detached cache compares complete source membership/text, graph and
+  artifact revisions. Push-only clients retain the existing path. Tests cover IDs, repairs, close,
+  closed roots, cancellation, stale requests and packaged stdio. Native acceptance remains pending;
+  the active checklist is not yet closed.
 
 ### L64 completion and signature batch (2026-09-29)
 
