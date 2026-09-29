@@ -21,28 +21,6 @@ async function assertTokenRanges(document: vscode.TextDocument): Promise<void> {
 }
 
 export function advancedCases(): void {
-    playbook('X123', async (workspace, data) => {
-        const document = await workspace.open(data.file);
-        assert.ok(client().initializeResult?.capabilities.diagnosticProvider);
-        const params = { textDocument: { uri: document.uri.toString() }, identifier: 'xtc' };
-        try {
-            await workspace.replace(document, data.broken);
-            await diagnostics(document.uri, values => values.some(value => value.severity === vscode.DiagnosticSeverity.Error), 'Pull errors reach Problems');
-            const first = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', params);
-            assert.strictEqual(first.kind, 'full');
-            assert.ok(first.resultId);
-            const unchanged = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', { ...params, previousResultId: first.resultId });
-            assert.strictEqual(unchanged.kind, 'unchanged');
-            await workspace.replace(document, data.repaired);
-            await noErrors(document.uri);
-            const repaired = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', { ...params, previousResultId: first.resultId });
-            assert.strictEqual(repaired.kind, 'full');
-            assert.ok(repaired.kind === 'full' && repaired.items.length === 0);
-            assert.notStrictEqual(repaired.resultId, first.resultId);
-        } finally {
-            await workspace.replace(document, fixture(data.file));
-        }
-    });
     playbook('X68', async (workspace, data) => {
         const document = await workspace.open(data.file);
         await noErrors(document.uri);
@@ -524,4 +502,29 @@ export function typeHeaderCases(ids: readonly ('X94' | 'X95' | 'X96' | 'X97' | '
             }
         });
     }
+}
+
+export function pullDiagnosticCases(): void {
+    playbook('X123', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        assert.ok(client().initializeResult?.capabilities.diagnosticProvider);
+        const params = { textDocument: { uri: document.uri.toString() }, identifier: 'xtc' };
+        try {
+            await workspace.replace(document, data.broken);
+            await diagnostics(document.uri, values => values.some(value => value.severity === vscode.DiagnosticSeverity.Error), 'Pull errors reach Problems');
+            const first = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', params);
+            assert.strictEqual(first.kind, 'full');
+            assert.ok(first.resultId);
+            const unchanged = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', { ...params, previousResultId: first.resultId });
+            assert.strictEqual(unchanged.kind, 'unchanged');
+            await workspace.replace(document, data.repaired);
+            await noErrors(document.uri);
+            const repaired = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', { ...params, previousResultId: first.resultId });
+            assert.strictEqual(repaired.kind, 'full');
+            assert.ok(repaired.kind === 'full' && repaired.items.length === 0);
+            assert.notStrictEqual(repaired.resultId, first.resultId);
+        } finally {
+            await workspace.replace(document, fixture(data.file));
+        }
+    });
 }
