@@ -524,7 +524,7 @@ class XtcTextDocumentService(
         ) { results ->
             val current = diagnosticReports.record(results)
             // Unknown or removed documents have an empty report, never an old cached error.
-            if (params.textDocument.uri !in current)
+            if (!diagnosticReports.includes(current, params.textDocument.uri))
                 diagnosticReports.record(params.textDocument.uri, emptyList())
             diagnosticReports.document(
                 params.textDocument.uri,
