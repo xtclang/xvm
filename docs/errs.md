@@ -14,6 +14,19 @@ uses the ordinary parent source afterward. This is the existing general AST sour
 not partial/LSP-only behavior; no state or clone work was added. The parsed-enum reproduction and
 closed-diagnostic repair regression pass; real-platform revalidation belongs to the active batch.
 
+**PLAT2/PLAT3 implementation:** source modules now carry optional ordered resource roots through
+both editors and the server. Compiler resource lookup, cache identities and resource watchers share
+those inputs; evaluated Gradle import and a richer paths/origins UI remain planned. Hover uses the
+resolved occurrence, completed-call whitespace retains parameter mapping, and inferred/narrowed
+types collect their nominal declarations before detached semantic tables are frozen.
+
+Member prefixes before existing call parentheses use the existing partial AST nodes. `Parser`
+retains the original callee hole and written arguments; `PartialQueries` validates that retained
+callee in its real context so the attempt's collector owns the correct source binding. These are
+parser/validation responsibilities, not editor logic. No field, public API, clone protocol or new
+partial node is introduced. Hover/type presentation stays in Kotlin. Focused platform regressions
+pass; combined and real-platform acceptance remain pending.
+
 **L64 completion batch:** guarded recursive formal names can now retain explicitly written
 constraints without invented type identities. Literal argument proposals reuse normal compiler
 fitting and validation. Detached completion/signature results carry documentation and deterministic
