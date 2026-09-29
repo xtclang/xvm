@@ -164,4 +164,40 @@ internal fun ParityScenarios.platformCases() {
                     .has("data")
             )
     }
+    case("X127") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        val action =
+            query(
+                    "textDocument/codeAction",
+                    document,
+                    extra =
+                        mapOf(
+                            "range" to
+                                mapOf(
+                                    "start" to mapOf("line" to 0, "character" to 0),
+                                    "end" to
+                                        mapOf("line" to 0, "character" to document.text.length),
+                                ),
+                            "context" to mapOf("diagnostics" to emptyList<Any>()),
+                        ),
+                )
+                .rows()
+                .single()
+        val capability = protocol.capabilities().asJsonObject["codeActionProvider"]
+        if (
+            capability.isJsonObject && capability.asJsonObject["resolveProvider"]?.asBoolean == true
+        ) {
+            check(action.has("data") && !action.has("edit"))
+            val resolved = protocol.query("codeAction/resolve", action).asJsonObject
+            check(resolved["edit"].asJsonObject["documentChanges"].asJsonArray.size() == 1)
+            check(resolved.string("title") == action.string("title"))
+            replace(document, "\n" + data.string("source"))
+            check(
+                runCatching { protocol.query("codeAction/resolve", action) }
+                    .exceptionOrNull()
+                    ?.message
+                    ?.contains("expired or changed") == true
+            )
+        } else check(action.has("edit"))
+    }
 }
