@@ -2,10 +2,12 @@ package org.xvm.lsp.server
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
-import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
 
-/** Strict editor configuration; absent values preserve the host graph and an empty list clears it. */
+/**
+ * Strict editor configuration; absent values preserve the host graph and an empty list clears it.
+ */
 internal object CompilerConfiguration {
     const val SECTION = "xtc.compiler"
     const val INITIALIZATION_KEY = "xtcCompiler"
@@ -13,7 +15,8 @@ internal object CompilerConfiguration {
 
     fun initial(options: Any?): JsonElement? = objectValue(options)?.get(INITIALIZATION_KEY)
 
-    fun changed(settings: Any?): JsonElement? = objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
+    fun changed(settings: Any?): JsonElement? =
+        objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
 
     fun automatic(raw: Any?): Boolean = objectValue(raw)?.get("sourceModules")?.isJsonNull == true
 
@@ -34,9 +37,9 @@ internal object CompilerConfiguration {
                 if (root.isAbsolute) {
                     root
                 } else {
-                    require(
-                        workspaceUris.size == 1,
-                    ) { "Relative source URIs require exactly one workspace folder; use file URIs otherwise" }
+                    require(workspaceUris.size == 1) {
+                        "Relative source URIs require exactly one workspace folder; use file URIs otherwise"
+                    }
                     URI.create(workspaceUris.single().trimEnd('/') + "/").resolve(root)
                 }
             require(uri.scheme == "file") { "Source module roots must use file URIs" }
@@ -44,24 +47,35 @@ internal object CompilerConfiguration {
                 module
                     .get("dependencies")
                     ?.let { values ->
-                        require(values.isJsonArray) { "dependencies must be an array of module names" }
+                        require(values.isJsonArray) {
+                            "dependencies must be an array of module names"
+                        }
                         values.asJsonArray.map { string(it, "dependency") }.toSet()
-                    }.orEmpty()
+                    }
+                    .orEmpty()
             XdkSourceModule(name, uri.toString(), dependencies)
         }
     }
 
     private fun objectValue(raw: Any?) =
-        gson.toJsonTree(raw)?.takeUnless { it.isJsonNull }?.let {
-            require(it.isJsonObject) { "Compiler configuration must be an object" }
-            it.asJsonObject
-        }
+        gson
+            .toJsonTree(raw)
+            ?.takeUnless { it.isJsonNull }
+            ?.let {
+                require(it.isJsonObject) { "Compiler configuration must be an object" }
+                it.asJsonObject
+            }
 
     private fun string(
         value: JsonElement?,
         field: String,
     ): String {
-        require(value != null && value.isJsonPrimitive && value.asJsonPrimitive.isString && value.asString.isNotBlank()) {
+        require(
+            value != null &&
+                value.isJsonPrimitive &&
+                value.asJsonPrimitive.isString &&
+                value.asString.isNotBlank()
+        ) {
             "$field must be a non-blank string"
         }
         return value.asString

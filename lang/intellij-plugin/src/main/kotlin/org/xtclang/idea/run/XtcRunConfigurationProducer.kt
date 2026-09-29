@@ -8,13 +8,14 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 
 /**
- * Produces XTC run configurations automatically when the user invokes
- * Run (Ctrl+Shift+R) from a .x file context.
+ * Produces XTC run configurations automatically when the user invokes Run (Ctrl+Shift+R) from a .x
+ * file context.
  *
  * This allows users to run XTC modules without manually creating run configurations.
  */
 class XtcRunConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfiguration>() {
-    override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType().configurationFactories.first()
+    override fun getConfigurationFactory(): ConfigurationFactory =
+        XtcRunConfigurationType().configurationFactories.first()
 
     override fun setupConfigurationFromContext(
         configuration: XtcRunConfiguration,
@@ -56,8 +57,8 @@ class XtcRunConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfigura
     }
 
     /**
-     * Extract the module name from an XTC source file.
-     * Looks for "module <name>" declaration in the file content.
+     * Extract the module name from an XTC source file. Looks for "module <name>" declaration in the
+     * file content.
      */
     private fun extractModuleName(file: PsiFile): String? {
         val text = file.text

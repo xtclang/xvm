@@ -1,16 +1,16 @@
 package org.xvm.lsp.server
 
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.IOException
+import java.io.InputStream
+import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.IOException
-import java.io.InputStream
-import java.util.concurrent.atomic.AtomicInteger
 
 class LspTransportLifecycleTest {
     @ParameterizedTest
@@ -46,13 +46,12 @@ class LspTransportLifecycleTest {
                     closed.incrementAndGet()
                 }
             }
-        val statuses =
-            buildList {
-                val server = XtcLanguageServer(adapter, ::add)
-                server.shutdown().join()
-                launchStdio(server, ByteArrayInputStream(byteArrayOf()), ByteArrayOutputStream())
-                server.exit()
-            }
+        val statuses = buildList {
+            val server = XtcLanguageServer(adapter, ::add)
+            server.shutdown().join()
+            launchStdio(server, ByteArrayInputStream(byteArrayOf()), ByteArrayOutputStream())
+            server.exit()
+        }
         assertThat(closed.get()).isEqualTo(1)
         assertThat(statuses).containsExactly(0)
     }
@@ -63,11 +62,10 @@ class LspTransportLifecycleTest {
             object : Adapter by MockAdapter() {
                 override fun close(): Unit = error("close failed")
             }
-        val statuses =
-            buildList {
-                val result = runCatching { XtcLanguageServer(adapter, ::add).exit() }
-                assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
-            }
+        val statuses = buildList {
+            val result = runCatching { XtcLanguageServer(adapter, ::add).exit() }
+            assertThat(result.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+        }
         assertThat(statuses).containsExactly(1)
     }
 }

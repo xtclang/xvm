@@ -6,13 +6,21 @@ import com.intellij.driver.client.service
 import com.intellij.driver.sdk.singleProject
 import java.nio.file.Path
 
-/** Use the installed client's transport for the same workspace notification as the VS Code driver. */
+/**
+ * Use the installed client's transport for the same workspace notification as the VS Code driver.
+ */
 fun Driver.changeWorkspaceFolders(
     removed: Path,
     added: Path,
 ) {
-    fun folder(path: Path) = new(RemoteWorkspaceFolder::class, path.toUri().toString().removeSuffix("/"), path.fileName.toString())
-    val event = new(RemoteWorkspaceFoldersEvent::class, listOf(folder(added)), listOf(folder(removed)))
+    fun folder(path: Path) =
+        new(
+            RemoteWorkspaceFolder::class,
+            path.toUri().toString().removeSuffix("/"),
+            path.fileName.toString(),
+        )
+    val event =
+        new(RemoteWorkspaceFoldersEvent::class, listOf(folder(added)), listOf(folder(removed)))
     val params = new(RemoteWorkspaceFoldersParams::class, event)
     service<LanguageClients>(singleProject())
         .getStartedServers()

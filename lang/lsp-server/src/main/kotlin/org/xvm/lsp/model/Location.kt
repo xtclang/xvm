@@ -1,8 +1,6 @@
 package org.xvm.lsp.model
 
-/**
- * Immutable source location.
- */
+/** Immutable source location. */
 data class Location(
     val uri: String,
     val startLine: Int,

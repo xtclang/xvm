@@ -18,7 +18,10 @@ fun Driver.lookup(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     editor.scrollToCaretNow()
-    val inspection = PopupInspection(this, editor) { invokeAction("CodeCompletion", component = editor.component) }
+    val inspection =
+        PopupInspection(this, editor) {
+            invokeAction("CodeCompletion", component = editor.component)
+        }
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
     awaitUi(
@@ -43,11 +46,18 @@ fun Driver.hasType(
     label: String,
     pattern: String,
 ): Boolean =
-    items.firstOrNull { it.getLookupString() == label }?.let { item ->
-        val presentation = new(LookupElementPresentation::class)
-        item.renderElement(presentation)
-        Regex(pattern).containsMatchIn(presentation.getTypeText().orEmpty() + " " + presentation.getTailText().orEmpty())
-    } == true
+    items
+        .firstOrNull { it.getLookupString() == label }
+        ?.let { item ->
+            val presentation = new(LookupElementPresentation::class)
+            item.renderElement(presentation)
+            Regex(pattern)
+                .containsMatchIn(
+                    presentation.getTypeText().orEmpty() +
+                        " " +
+                        presentation.getTailText().orEmpty()
+                )
+        } == true
 
 fun Driver.acceptCandidates(
     editor: JEditorUiComponent,
@@ -72,10 +82,12 @@ fun Driver.hasCompletionKinds(
 ): Boolean {
     val protocol = ClientProtocol(this)
     return labels.all { label ->
-        items.singleOrNull { it.getLookupString() == label }?.let {
-            val proposal = cast(it, NativeCompletionElement::class).getObject()
-            protocol.copy(proposal.getItem()).asJsonObject["kind"]?.asInt == kind
-        } == true
+        items
+            .singleOrNull { it.getLookupString() == label }
+            ?.let {
+                val proposal = cast(it, NativeCompletionElement::class).getObject()
+                protocol.copy(proposal.getItem()).asJsonObject["kind"]?.asInt == kind
+            } == true
     }
 }
 
@@ -84,7 +96,10 @@ interface NativeCompletionElement {
     fun getObject(): NativeCompletionProposal
 }
 
-@Remote("com.redhat.devtools.lsp4ij.client.features.LSPCompletionProposal", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.client.features.LSPCompletionProposal",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeCompletionProposal {
     fun getItem(): ClientValue
 }
@@ -102,7 +117,10 @@ fun Driver.accept(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     editor.scrollToCaretNow()
-    val inspection = PopupInspection(this, editor) { invokeAction("CodeCompletion", component = editor.component) }
+    val inspection =
+        PopupInspection(this, editor) {
+            invokeAction("CodeCompletion", component = editor.component)
+        }
     invokeAction("CodeCompletion", component = editor.component)
     val manager = utility(EditorLookupManager::class).getInstance(singleProject())
     awaitUi("$label completion or single-item insertion", 45.seconds) {
@@ -110,8 +128,9 @@ fun Driver.accept(
         if (editor.text == expected) return@awaitUi true
         inspection.recover()
         editor.text == expected ||
-            manager.getActiveLookup()?.let { !it.isCalculating() && it.getItems().any { item -> item.getLookupString() == label } } ==
-            true
+            manager.getActiveLookup()?.let {
+                !it.isCalculating() && it.getItems().any { item -> item.getLookupString() == label }
+            } == true
     }
     if (editor.text != expected) {
         withContext(OnDispatcher.EDT) {

@@ -1,7 +1,14 @@
 package org.xvm.lsp.adapter.treesitter
 
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.extension
+import kotlin.io.path.readText
+import kotlin.time.measureTimedValue
 import org.xvm.lsp.adapter.AbstractAdapter
-import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCodeActions
 import org.xvm.lsp.adapter.AdapterFormatter
 import org.xvm.lsp.adapter.CodeAction
@@ -47,14 +54,6 @@ import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
-import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.io.path.extension
-import kotlin.io.path.readText
-import kotlin.time.measureTimedValue
 
 /**
  * XTC Compiler Adapter implementation using Tree-sitter for fast, syntax-level intelligence.
@@ -83,15 +82,14 @@ import kotlin.time.measureTimedValue
  * - Smart completion based on types
  * - Inlay hints (type annotations)
  *
- * // TODO LSP: This adapter provides ~80% of LSP functionality without the compiler.
- * // For full semantic features, combine with a CompilerAdapter via CompositeAdapter.
+ * // TODO LSP: This adapter provides ~80% of LSP functionality without the compiler. // For full
+ * semantic features, combine with a CompilerAdapter via CompositeAdapter.
  */
 @Suppress("LoggingSimilarMessage")
 class TreeSitterAdapter : AbstractAdapter() {
     override val displayName: String = "TreeSitter"
 
-    @Volatile
-    override var editorFormattingConfig: FormattingConfig? = null
+    @Volatile override var editorFormattingConfig: FormattingConfig? = null
 
     private val parser: XtcParser = XtcParser()
     private val queryEngine: XtcQueryEngine = XtcQueryEngine(parser.getLanguage())
@@ -113,8 +111,16 @@ class TreeSitterAdapter : AbstractAdapter() {
         // Perform health check to verify native library is working
         logger.info("========================================")
         logger.info("initializing...")
-        logger.info("Java version: {} ({})", System.getProperty("java.version"), System.getProperty("java.vendor"))
-        logger.info("Platform: {} / {}", System.getProperty("os.name"), System.getProperty("os.arch"))
+        logger.info(
+            "Java version: {} ({})",
+            System.getProperty("java.version"),
+            System.getProperty("java.vendor"),
+        )
+        logger.info(
+            "Platform: {} / {}",
+            System.getProperty("os.name"),
+            System.getProperty("os.arch"),
+        )
         logger.info("========================================")
 
         if (!healthCheck()) {
@@ -128,23 +134,23 @@ class TreeSitterAdapter : AbstractAdapter() {
     }
 
     /**
-     * Perform health check by delegating to the parser's health check.
-     * This verifies the native tree-sitter library is loaded and functional.
+     * Perform health check by delegating to the parser's health check. This verifies the native
+     * tree-sitter library is loaded and functional.
      */
     override fun healthCheck(): Boolean = parser.healthCheck()
 
     companion object {
         /**
-         * Minimum Java version required for tree-sitter FFM API.
-         * Update when jtreesitter dependency changes its requirements.
-         * IntelliJ 2026.1+ ships with JBR 25 which satisfies this minimum.
+         * Minimum Java version required for tree-sitter FFM API. Update when jtreesitter dependency
+         * changes its requirements. IntelliJ 2026.1+ ships with JBR 25 which satisfies this
+         * minimum.
          */
         const val MIN_JAVA_VERSION = 25
 
         /**
-         * Conservative `http(s)` URL matcher for document-link extraction.
-         * Stops at the first whitespace, quote, angle bracket, or closing paren/bracket --
-         * common sentence-terminating punctuation is then trimmed in [urlTrailingTrim].
+         * Conservative `http(s)` URL matcher for document-link extraction. Stops at the first
+         * whitespace, quote, angle bracket, or closing paren/bracket -- common sentence-terminating
+         * punctuation is then trimmed in [urlTrailingTrim].
          */
         private val urlPattern = Regex("""\bhttps?://[^\s<>"'`)\]]+""")
 
@@ -229,7 +235,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                     workspaceIndex.symbolCount,
                     workspaceIndex.fileCount,
                 )
-            }.exceptionally { e ->
+            }
+            .exceptionally { e ->
                 logger.error("workspace indexing failed: {}", e.message, e)
                 null
             }
@@ -240,7 +247,10 @@ class TreeSitterAdapter : AbstractAdapter() {
         changeType: Int,
     ) {
         if (!indexReady.get()) {
-            logger.info("didChangeWatchedFile: index not ready, ignoring {}", uri.substringAfterLast('/'))
+            logger.info(
+                "didChangeWatchedFile: index not ready, ignoring {}",
+                uri.substringAfterLast('/'),
+            )
             return
         }
 
@@ -259,9 +269,10 @@ class TreeSitterAdapter : AbstractAdapter() {
                     logger.info("removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
             }
-        }.onFailure { e ->
-            logger.warn("didChangeWatchedFile failed for {}: {}", uri, e.message)
         }
+            .onFailure { e ->
+                logger.warn("didChangeWatchedFile failed for {}: {}", uri, e.message)
+            }
     }
 
     override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
@@ -295,9 +306,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 logger.error("parse failed for {}: {}", uri, e.message)
                 return CompilationResult.failure(
                     uri,
-                    listOf(
-                        Diagnostic.error(Location.of(uri, 0, 0), "Parse failed: ${e.message}"),
-                    ),
+                    listOf(Diagnostic.error(Location.of(uri, 0, 0), "Parse failed: ${e.message}")),
                 )
             }
 
@@ -316,7 +325,8 @@ class TreeSitterAdapter : AbstractAdapter() {
         val diagnostics = if (tree.hasErrors) collectSyntaxErrors(tree.root, uri) else emptyList()
 
         // Extract symbols for document outline
-        val (symbols, queryElapsed) = measureTimedValue { queryEngine.findAllDeclarations(tree, uri) }
+        val (symbols, queryElapsed) =
+            measureTimedValue { queryEngine.findAllDeclarations(tree, uri) }
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compilationResults[uri] = result
@@ -325,7 +335,10 @@ class TreeSitterAdapter : AbstractAdapter() {
         if (indexReady.get()) {
             indexer.reindexFile(uri, content)
         } else {
-            logger.info("workspace index not ready, skipping reindex for {}", uri.substringAfterLast('/'))
+            logger.info(
+                "workspace index not ready, skipping reindex for {}",
+                uri.substringAfterLast('/'),
+            )
         }
 
         logger.info(
@@ -348,26 +361,27 @@ class TreeSitterAdapter : AbstractAdapter() {
     ): SymbolInfo? {
         logger.info("findSymbolAt: uri={}, line={}, column={}", uri, line, column)
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("findSymbolAt: no parsed tree for uri")
-                return null
-            }
+            parsedTrees[uri]
+                ?: run {
+                    logger.info("findSymbolAt: no parsed tree for uri")
+                    return null
+                }
         return queryEngine.findDeclarationAt(tree, line, column, uri).also { result ->
             logger.info("findSymbolAt -> {}", result?.let { "'${it.name}' (${it.kind})" } ?: "null")
         }
     }
 
     /**
-     * Context-aware completion: filters and augments suggestions based on the AST
-     * context at the cursor position and the trigger character.
+     * Context-aware completion: filters and augments suggestions based on the AST context at the
+     * cursor position and the trigger character.
      *
-     * | Context | What to show |
-     * |---------|-------------|
-     * | After `.` | Same-class members (methods, properties) from enclosing class body |
-     * | In type position | Only types (classes, interfaces, enums, etc.) |
-     * | After `@` | Known annotation names |
-     * | In `import` statement | Qualified names from workspace index |
-     * | Default | Keywords + types + locals + imports (current behavior) |
+     * | Context               | What to show                                                       |
+     * |-----------------------|--------------------------------------------------------------------|
+     * | After `.`             | Same-class members (methods, properties) from enclosing class body |
+     * | In type position      | Only types (classes, interfaces, enums, etc.)                      |
+     * | After `@`             | Known annotation names                                             |
+     * | In `import` statement | Qualified names from workspace index                               |
+     * | Default               | Keywords + types + locals + imports (current behavior)             |
      */
     override fun getCompletions(
         uri: String,
@@ -375,11 +389,16 @@ class TreeSitterAdapter : AbstractAdapter() {
         column: Int,
         triggerCharacter: String?,
     ): List<CompletionItem> {
-        logger.info("getCompletions: uri={}, line={}, column={}, trigger={}", uri, line, column, triggerCharacter)
+        logger.info(
+            "getCompletions: uri={}, line={}, column={}, trigger={}",
+            uri,
+            line,
+            column,
+            triggerCharacter,
+        )
 
         val tree = parsedTrees[uri]
-        val contextNode =
-            tree?.nodeAt(line, maxOf(0, column - 1))
+        val contextNode = tree?.nodeAt(line, maxOf(0, column - 1))
         val context =
             if (tree != null) {
                 classifyCompletionContext(contextNode, triggerCharacter)
@@ -400,7 +419,10 @@ class TreeSitterAdapter : AbstractAdapter() {
                     // After '.': show members from the enclosing class body
                     if (tree != null) {
                         val members = collectClassMembers(tree, uri, line, column)
-                        logger.info("getCompletions: member-context candidates={}", members.map { it.label })
+                        logger.info(
+                            "getCompletions: member-context candidates={}",
+                            members.map { it.label },
+                        )
                         addAll(members)
                     }
                 }
@@ -411,7 +433,16 @@ class TreeSitterAdapter : AbstractAdapter() {
                     val declarationContext =
                         contextNode?.text?.firstOrNull()?.isLowerCase() == true &&
                             generateSequence(contextNode) { it.parent }
-                                .any { it.type in setOf("module_body", "class_body", "package_body", "enum_body", "block") }
+                                .any {
+                                    it.type in
+                                        setOf(
+                                            "module_body",
+                                            "class_body",
+                                            "package_body",
+                                            "enum_body",
+                                            "block",
+                                        )
+                                }
                     val builtIns =
                         if (declarationContext) {
                             declarationContextBuiltInTypeCompletions()
@@ -430,10 +461,13 @@ class TreeSitterAdapter : AbstractAdapter() {
                     addAll(builtIns)
                     if (tree != null) {
                         val fileTypes =
-                            queryEngine
-                                .findAllDeclarations(tree, uri)
-                                .filter { it.kind in typeSymbolKinds }
-                        logger.info("getCompletions: type-context fileTypes={}", fileTypes.map { it.name })
+                            queryEngine.findAllDeclarations(tree, uri).filter {
+                                it.kind in typeSymbolKinds
+                            }
+                        logger.info(
+                            "getCompletions: type-context fileTypes={}",
+                            fileTypes.map { it.name },
+                        )
                         fileTypes.forEach { symbol ->
                             add(
                                 CompletionItem(
@@ -441,13 +475,16 @@ class TreeSitterAdapter : AbstractAdapter() {
                                     kind = toCompletionKind(symbol.kind),
                                     detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
                                     insertText = symbol.name,
-                                ),
+                                )
                             )
                         }
                         // Add workspace index types
                         if (indexReady.get()) {
                             val workspaceTypes = workspaceIndexTypeCompletions()
-                            logger.info("getCompletions: type-context workspaceTypes(sample)={}", workspaceTypes.take(10).map { it.label })
+                            logger.info(
+                                "getCompletions: type-context workspaceTypes(sample)={}",
+                                workspaceTypes.take(10).map { it.label },
+                            )
                             addAll(workspaceTypes)
                         }
                     }
@@ -455,21 +492,26 @@ class TreeSitterAdapter : AbstractAdapter() {
 
                 CompletionContext.ANNOTATION -> {
                     // After '@': known annotation names
-                    val common =
-                        commonAnnotations.map { name ->
-                            CompletionItem(
-                                label = name,
-                                kind = CompletionKind.CLASS,
-                                detail = "annotation",
-                                insertText = name,
-                            )
-                        }
-                    logger.info("getCompletions: annotation-context common={}", common.map { it.label })
+                    val common = commonAnnotations.map { name ->
+                        CompletionItem(
+                            label = name,
+                            kind = CompletionKind.CLASS,
+                            detail = "annotation",
+                            insertText = name,
+                        )
+                    }
+                    logger.info(
+                        "getCompletions: annotation-context common={}",
+                        common.map { it.label },
+                    )
                     addAll(common)
                     // Also add annotations found in the current file
                     if (tree != null) {
                         val fileAnnotations = collectAnnotationNames(tree.root)
-                        logger.info("getCompletions: annotation-context fileAnnotations={}", fileAnnotations)
+                        logger.info(
+                            "getCompletions: annotation-context fileAnnotations={}",
+                            fileAnnotations,
+                        )
                         fileAnnotations.forEach { name ->
                             add(
                                 CompletionItem(
@@ -477,7 +519,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                                     kind = CompletionKind.CLASS,
                                     detail = "annotation",
                                     insertText = name,
-                                ),
+                                )
                             )
                         }
                     }
@@ -499,7 +541,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                                     kind = toCompletionKind(symbol.kind),
                                     detail = symbol.kind.name.lowercase(),
                                     insertText = symbol.qualifiedName,
-                                ),
+                                )
                             )
                         }
                     }
@@ -522,7 +564,10 @@ class TreeSitterAdapter : AbstractAdapter() {
                     addAll(builtIns)
                     if (tree != null) {
                         val declarations = queryEngine.findAllDeclarations(tree, uri)
-                        logger.info("getCompletions: default-context declarations={}", declarations.map { "${it.kind}:${it.name}" })
+                        logger.info(
+                            "getCompletions: default-context declarations={}",
+                            declarations.map { "${it.kind}:${it.name}" },
+                        )
                         declarations.mapTo(this) { it.toCompletionItem() }
                         val imports = queryEngine.findImports(tree)
                         logger.info("getCompletions: default-context imports={}", imports)
@@ -530,7 +575,9 @@ class TreeSitterAdapter : AbstractAdapter() {
                     }
                 }
             }
-        }.distinctBy { it.label }.also { logger.info("getCompletions -> {} items ({})", it.size, context) }
+        }
+            .distinctBy { it.label }
+            .also { logger.info("getCompletions -> {} items ({})", it.size, context) }
     }
 
     // ========================================================================
@@ -571,13 +618,21 @@ class TreeSitterAdapter : AbstractAdapter() {
                     return CompletionContext.IMPORT
                 }
 
-                "module_body", "class_body", "package_body", "interface_body",
-                "enum_body", "mixin_body", "service_body", "const_body", "block",
-                -> {
+                "module_body",
+                "class_body",
+                "package_body",
+                "interface_body",
+                "enum_body",
+                "mixin_body",
+                "service_body",
+                "const_body",
+                "block" -> {
                     return CompletionContext.BODY
                 }
 
-                "type_expression", "type_name", "generic_type" -> {
+                "type_expression",
+                "type_name",
+                "generic_type" -> {
                     return CompletionContext.TYPE
                 }
 
@@ -604,9 +659,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         return CompletionContext.DEFAULT
     }
 
-    /**
-     * Collect method and property names from the enclosing class body for member completion.
-     */
+    /** Collect method and property names from the enclosing class body for member completion. */
     private fun collectClassMembers(
         tree: XtcTree,
         uri: String,
@@ -618,8 +671,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         // Walk up to find the enclosing class body
         val classBodyTypes = setOf("class_body", "module_body", "package_body", "enum_body")
         val classBody =
-            generateSequence(node) { it.parent }
-                .firstOrNull { it.type in classBodyTypes }
+            generateSequence(node) { it.parent }.firstOrNull { it.type in classBodyTypes }
                 ?: return emptyList()
 
         // Extract declarations from the class body
@@ -628,7 +680,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                 val name = child.childByFieldName("name")?.text ?: continue
                 val kind =
                     when (child.type) {
-                        "method_declaration", "function_declaration" -> CompletionKind.METHOD
+                        "method_declaration",
+                        "function_declaration" -> CompletionKind.METHOD
                         "constructor_declaration" -> CompletionKind.METHOD
                         "property_declaration" -> CompletionKind.PROPERTY
                         else -> continue
@@ -639,7 +692,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                         kind = kind,
                         detail = child.type.replace("_declaration", "").replace("_", " "),
                         insertText = name,
-                    ),
+                    )
                 )
             }
         }
@@ -662,8 +715,8 @@ class TreeSitterAdapter : AbstractAdapter() {
      * Completions for a cursor inside a function/control-flow body.
      *
      * Order, most-relevant first; `distinctBy { it.label }` at the end of `getCompletions`
-     * preserves the first occurrence so this controls which "kind" wins when a name is offered
-     * by multiple sources.
+     * preserves the first occurrence so this controls which "kind" wins when a name is offered by
+     * multiple sources.
      *
      * 1. In-scope locals, parameters, enclosing-scope members.
      * 2. File-level declarations not on the cursor's scope chain.
@@ -677,17 +730,18 @@ class TreeSitterAdapter : AbstractAdapter() {
         line: Int,
         column: Int,
         uri: String,
-    ): List<CompletionItem> =
-        buildList {
-            if (tree != null) {
-                queryEngine.enumerateInScope(tree, line, column, uri).mapTo(this) { it.toCompletionItem() }
-                queryEngine.findAllDeclarations(tree, uri).mapTo(this) { it.toCompletionItem() }
-                queryEngine.findImports(tree).mapTo(this) { it.toImportCompletionItem() }
+    ): List<CompletionItem> = buildList {
+        if (tree != null) {
+            queryEngine.enumerateInScope(tree, line, column, uri).mapTo(this) {
+                it.toCompletionItem()
             }
-            if (indexReady.get()) addAll(workspaceIndexTypeCompletions())
-            addAll(builtInTypeCompletions())
-            addAll(keywordCompletions().filter { it.label in bodyFlowKeywords })
+            queryEngine.findAllDeclarations(tree, uri).mapTo(this) { it.toCompletionItem() }
+            queryEngine.findImports(tree).mapTo(this) { it.toImportCompletionItem() }
         }
+        if (indexReady.get()) addAll(workspaceIndexTypeCompletions())
+        addAll(builtInTypeCompletions())
+        addAll(keywordCompletions().filter { it.label in bodyFlowKeywords })
+    }
 
     private fun SymbolInfo.toCompletionItem(): CompletionItem =
         CompletionItem(
@@ -722,9 +776,9 @@ class TreeSitterAdapter : AbstractAdapter() {
     /**
      * Find definition: same-file first, then cross-file via workspace index.
      *
-     * Searches AST declarations in the current file first. If not found and the
-     * workspace index is ready, falls back to cross-file lookup, preferring type
-     * declarations (classes, interfaces, etc.) over methods/properties.
+     * Searches AST declarations in the current file first. If not found and the workspace index is
+     * ready, falls back to cross-file lookup, preferring type declarations (classes, interfaces,
+     * etc.) over methods/properties.
      */
     override fun findDefinition(
         uri: String,
@@ -741,7 +795,12 @@ class TreeSitterAdapter : AbstractAdapter() {
         // `Boolean whitespace;` instead of the local declaration.
         val scoped = queryEngine.resolveByNameInScope(tree, line, column, name, uri)
         if (scoped != null) {
-            logger.info("definition '{}' -> scope-local {}:{}", name, scoped.startLine, scoped.startColumn)
+            logger.info(
+                "definition '{}' -> scope-local {}:{}",
+                name,
+                scoped.startLine,
+                scoped.startColumn,
+            )
             return scoped
         }
 
@@ -752,7 +811,12 @@ class TreeSitterAdapter : AbstractAdapter() {
         val decl = symbols.find { it.name == name }
 
         if (decl != null) {
-            logger.info("definition '{}' -> same-file {}:{}", name, decl.location.startLine, decl.location.startColumn)
+            logger.info(
+                "definition '{}' -> same-file {}:{}",
+                name,
+                decl.location.startLine,
+                decl.location.startColumn,
+            )
             return decl.location
         }
 
@@ -798,14 +862,13 @@ class TreeSitterAdapter : AbstractAdapter() {
     }
 
     /**
-     * Finds all identifier nodes with the same text in the current file's AST.
-     * When [includeDeclaration] is false, drops the location matching the
-     * declaration site -- looked up via [XtcQueryEngine.findAllDeclarations],
-     * whose returned location is the identifier-token range, so it compares
-     * equal to the matching entry from [XtcQueryEngine.findAllIdentifiers].
+     * Finds all identifier nodes with the same text in the current file's AST. When
+     * [includeDeclaration] is false, drops the location matching the declaration site -- looked up
+     * via [XtcQueryEngine.findAllDeclarations], whose returned location is the identifier-token
+     * range, so it compares equal to the matching entry from [XtcQueryEngine.findAllIdentifiers].
      *
-     * TODO: Same-file text matching only -- cannot distinguish shadowed locals.
-     * A compiler adapter would provide scope-aware, cross-file reference search.
+     * TODO: Same-file text matching only -- cannot distinguish shadowed locals. A compiler adapter
+     *   would provide scope-aware, cross-file reference search.
      */
     override fun findReferences(
         uri: String,
@@ -820,22 +883,31 @@ class TreeSitterAdapter : AbstractAdapter() {
                 allRefs
             } else {
                 val declLocation =
-                    queryEngine
-                        .findAllDeclarations(tree, uri)
-                        .find { it.name == name }
-                        ?.location
+                    queryEngine.findAllDeclarations(tree, uri).find { it.name == name }?.location
                 declLocation?.let { decl -> allRefs.filter { it != decl } } ?: allRefs
             }
-        logger.info("references '{}' -> {} found (includeDecl={})", name, result.size, includeDeclaration)
+        logger.info(
+            "references '{}' -> {} found (includeDecl={})",
+            name,
+            result.size,
+            includeDeclaration,
+        )
         if (result.isNotEmpty()) {
             result.forEach { loc ->
-                logger.info("  {}:{}:{}", loc.uri.substringAfterLast('/'), loc.startLine + 1, loc.startColumn + 1)
+                logger.info(
+                    "  {}:{}:{}",
+                    loc.uri.substringAfterLast('/'),
+                    loc.startLine + 1,
+                    loc.startColumn + 1,
+                )
             }
         }
         return result
     }
 
-    /** Resolves identifier at position, logging failures. Returns (tree, identifierText) or null. */
+    /**
+     * Resolves identifier at position, logging failures. Returns (tree, identifierText) or null.
+     */
     private fun getIdentifierAt(
         uri: String,
         line: Int,
@@ -844,18 +916,25 @@ class TreeSitterAdapter : AbstractAdapter() {
     ): Pair<XtcTree, String>? {
         val tree = parsedTrees[uri] ?: return null
         val id =
-            identifierNodeAt(tree, line, column) ?: return null.also {
-                logger.info("{}: no identifier at {}:{}:{}", op, uri.substringAfterLast('/'), line, column)
-            }
+            identifierNodeAt(tree, line, column)
+                ?: return null.also {
+                    logger.info(
+                        "{}: no identifier at {}:{}:{}",
+                        op,
+                        uri.substringAfterLast('/'),
+                        line,
+                        column,
+                    )
+                }
         return tree to id.text
     }
 
     /**
      * Finds the identifier node at the given position, tolerating a caret that sits at the
      * exclusive end of the word. When the user selects a whole identifier and invokes
-     * go-to-declaration (issue #459), the editor reports the caret at selection end -- one
-     * past the last character -- where [XtcTree.nodeAt] returns the *following* node.
-     * Retry one column to the left so the lookup still lands on the identifier.
+     * go-to-declaration (issue #459), the editor reports the caret at selection end -- one past the
+     * last character -- where [XtcTree.nodeAt] returns the *following* node. Retry one column to
+     * the left so the lookup still lands on the identifier.
      */
     private fun identifierNodeAt(
         tree: XtcTree,
@@ -884,8 +963,14 @@ class TreeSitterAdapter : AbstractAdapter() {
         logger.info("highlight '{}' -> {} occurrences", name, locations.size)
         return locations.map { loc ->
             val node = tree.nodeAt(loc.startLine, loc.startColumn)
-            val kind = if (node != null && isAssignmentTarget(node)) HighlightKind.WRITE else HighlightKind.READ
-            val range = Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
+            val kind =
+                if (node != null && isAssignmentTarget(node)) HighlightKind.WRITE
+                else HighlightKind.READ
+            val range =
+                Range(
+                    Position(loc.startLine, loc.startColumn),
+                    Position(loc.endLine, loc.endColumn),
+                )
             DocumentHighlight(range, kind)
         }
     }
@@ -902,19 +987,24 @@ class TreeSitterAdapter : AbstractAdapter() {
         return LinkedEditingRanges(
             ranges =
                 locations.map { loc ->
-                    Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
-                },
+                    Range(
+                        Position(loc.startLine, loc.startColumn),
+                        Position(loc.endLine, loc.endColumn),
+                    )
+                }
         )
     }
 
     private fun isAssignmentTarget(node: XtcNode): Boolean {
         val parent = node.parent ?: return false
         return when (parent.type) {
-            "assignment_statement", "assignment_expression" -> {
+            "assignment_statement",
+            "assignment_expression" -> {
                 parent.childByFieldName("left")?.let { isOrContains(it, node) } == true
             }
 
-            "variable_declaration", "parameter" -> {
+            "variable_declaration",
+            "parameter" -> {
                 parent.childByFieldName("name")?.let { isSameNode(it, node) } == true
             }
 
@@ -927,28 +1017,38 @@ class TreeSitterAdapter : AbstractAdapter() {
     private fun isOrContains(
         container: XtcNode,
         target: XtcNode,
-    ): Boolean = isSameNode(container, target) || container.children.any { isOrContains(it, target) }
+    ): Boolean =
+        isSameNode(container, target) || container.children.any { isOrContains(it, target) }
 
     private fun isSameNode(
         a: XtcNode,
         b: XtcNode,
     ): Boolean =
-        a.startLine == b.startLine && a.startColumn == b.startColumn &&
-            a.endLine == b.endLine && a.endColumn == b.endColumn
+        a.startLine == b.startLine &&
+            a.startColumn == b.startColumn &&
+            a.endLine == b.endLine &&
+            a.endColumn == b.endColumn
 
     override fun getSelectionRanges(
         uri: String,
         positions: List<Position>,
     ): List<SelectionRange> {
-        logger.info("getSelectionRanges: uri={}, positions={}", uri, positions.map { "${it.line}:${it.column}" })
+        logger.info(
+            "getSelectionRanges: uri={}, positions={}",
+            uri,
+            positions.map { "${it.line}:${it.column}" },
+        )
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("getSelectionRanges: no parsed tree for uri")
-                return emptyList()
+            parsedTrees[uri]
+                ?: run {
+                    logger.info("getSelectionRanges: no parsed tree for uri")
+                    return emptyList()
+                }
+        return positions
+            .map { pos -> buildSelectionRange(tree, pos.line, pos.column) }
+            .also {
+                logger.info("getSelectionRanges -> {} ranges", it.size)
             }
-        return positions.map { pos -> buildSelectionRange(tree, pos.line, pos.column) }.also {
-            logger.info("getSelectionRanges -> {} ranges", it.size)
-        }
     }
 
     private fun buildSelectionRange(
@@ -960,25 +1060,27 @@ class TreeSitterAdapter : AbstractAdapter() {
         val node = tree.nodeAt(line, column) ?: return fallback
 
         // Walk up from the leaf node to the root, skipping nodes with identical ranges
-        val nodes =
-            buildList {
-                add(node)
-                generateSequence(node.parent) { it.parent }.forEach { ancestor ->
+        val nodes = buildList {
+            add(node)
+            generateSequence(node.parent) { it.parent }
+                .forEach { ancestor ->
                     val prev = last()
-                    if (ancestor.startLine != prev.startLine ||
-                        ancestor.startColumn != prev.startColumn ||
-                        ancestor.endLine != prev.endLine ||
-                        ancestor.endColumn != prev.endColumn
+                    if (
+                        ancestor.startLine != prev.startLine ||
+                            ancestor.startColumn != prev.startColumn ||
+                            ancestor.endLine != prev.endLine ||
+                            ancestor.endColumn != prev.endColumn
                     ) {
                         add(ancestor)
                     }
                 }
-            }
+        }
 
         // Build the SelectionRange chain from outermost (parent) to innermost (leaf)
         return nodes.foldRight(null) { n, parent ->
             SelectionRange(
-                range = Range(Position(n.startLine, n.startColumn), Position(n.endLine, n.endColumn)),
+                range =
+                    Range(Position(n.startLine, n.startColumn), Position(n.endLine, n.endColumn)),
                 parent = parent,
             )
         } ?: fallback
@@ -987,16 +1089,18 @@ class TreeSitterAdapter : AbstractAdapter() {
     override fun getFoldingRanges(uri: String): List<FoldingRange> {
         logger.info("getFoldingRanges: uri={}", uri.substringAfterLast('/'))
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("getFoldingRanges: no parsed tree for uri")
-                return emptyList()
-            }
+            parsedTrees[uri]
+                ?: run {
+                    logger.info("getFoldingRanges: no parsed tree for uri")
+                    return emptyList()
+                }
         return buildList {
             collectFoldingRanges(tree.root, this)
             mergeConsecutiveLineComments(tree.root, this)
-        }.also {
-            logger.info("getFoldingRanges -> {} ranges", it.size)
         }
+            .also {
+                logger.info("getFoldingRanges -> {} ranges", it.size)
+            }
     }
 
     private fun collectFoldingRanges(
@@ -1006,17 +1110,25 @@ class TreeSitterAdapter : AbstractAdapter() {
         // Foldable node types: declarations and block constructs that span multiple lines
         val foldKind =
             when (node.type) {
-                "class_declaration", "interface_declaration", "mixin_declaration",
-                "service_declaration", "const_declaration", "enum_declaration",
-                "method_declaration", "constructor_declaration",
-                "module_declaration", "package_declaration",
-                -> {
+                "class_declaration",
+                "interface_declaration",
+                "mixin_declaration",
+                "service_declaration",
+                "const_declaration",
+                "enum_declaration",
+                "method_declaration",
+                "constructor_declaration",
+                "module_declaration",
+                "package_declaration" -> {
                     null
                 }
 
                 // no special kind = code region
 
-                "comment", "line_comment", "block_comment", "doc_comment" -> {
+                "comment",
+                "line_comment",
+                "block_comment",
+                "doc_comment" -> {
                     FoldingRange.FoldingKind.COMMENT
                 }
 
@@ -1071,16 +1183,18 @@ class TreeSitterAdapter : AbstractAdapter() {
         node: XtcNode,
         result: MutableList<XtcNode>,
     ) {
-        if ((node.type == "comment" || node.type == "line_comment") && node.startLine == node.endLine) {
+        if (
+            (node.type == "comment" || node.type == "line_comment") &&
+                node.startLine == node.endLine
+        ) {
             result.add(node)
         }
         node.children.forEach { collectLineComments(it, result) }
     }
 
     /**
-     * TODO: Same-file rename only. Finds the identifier AST node at the cursor position.
-     * A compiler adapter would validate that the rename is semantically safe and preview
-     * cross-file impacts.
+     * TODO: Same-file rename only. Finds the identifier AST node at the cursor position. A compiler
+     *   adapter would validate that the rename is semantically safe and preview cross-file impacts.
      */
     override fun prepareRename(
         uri: String,
@@ -1092,18 +1206,19 @@ class TreeSitterAdapter : AbstractAdapter() {
 
         logger.info("prepareRename '{}' at {}:{}", id.text, line, column)
         return PrepareRenameResult(
-            range = Range(Position(id.startLine, id.startColumn), Position(id.endLine, id.endColumn)),
+            range =
+                Range(Position(id.startLine, id.startColumn), Position(id.endLine, id.endColumn)),
             placeholder = id.text,
         )
     }
 
     /**
-     * Scope-aware same-file rename. Resolves the declaration the cursor's identifier refers
-     * to, then renames only the occurrences that resolve to that same declaration -- so
-     * renaming a local variable no longer sweeps up every same-named variable and property
-     * in the file (issue #459). Falls back to whole-file text matching only when the name
-     * cannot be resolved to any in-scope declaration (e.g. an unresolved member access).
-     * A compiler adapter would rename across the workspace and update import paths.
+     * Scope-aware same-file rename. Resolves the declaration the cursor's identifier refers to,
+     * then renames only the occurrences that resolve to that same declaration -- so renaming a
+     * local variable no longer sweeps up every same-named variable and property in the file
+     * (issue #459). Falls back to whole-file text matching only when the name cannot be resolved to
+     * any in-scope declaration (e.g. an unresolved member access). A compiler adapter would rename
+     * across the workspace and update import paths.
      */
     override fun rename(
         uri: String,
@@ -1130,7 +1245,10 @@ class TreeSitterAdapter : AbstractAdapter() {
 
         val locations =
             if (declaration == null) {
-                logger.info("rename '{}': no in-scope declaration, falling back to text match", name)
+                logger.info(
+                    "rename '{}': no in-scope declaration, falling back to text match",
+                    name,
+                )
                 allOccurrences
             } else {
                 allOccurrences.filter { loc ->
@@ -1147,25 +1265,40 @@ class TreeSitterAdapter : AbstractAdapter() {
                         }
 
                         else -> {
-                            queryEngine.resolveByNameInScope(tree, loc.startLine, loc.startColumn, name, uri) == declaration
+                            queryEngine.resolveByNameInScope(
+                                tree,
+                                loc.startLine,
+                                loc.startColumn,
+                                name,
+                                uri,
+                            ) == declaration
                         }
                     }
                 }
             }
 
-        logger.info("rename '{}' -> '{}' ({} of {} occurrences)", name, newName, locations.size, allOccurrences.size)
-        val edits =
-            locations.map { loc ->
-                val range = Range(Position(loc.startLine, loc.startColumn), Position(loc.endLine, loc.endColumn))
-                TextEdit(range, newName)
-            }
+        logger.info(
+            "rename '{}' -> '{}' ({} of {} occurrences)",
+            name,
+            newName,
+            locations.size,
+            allOccurrences.size,
+        )
+        val edits = locations.map { loc ->
+            val range =
+                Range(
+                    Position(loc.startLine, loc.startColumn),
+                    Position(loc.endLine, loc.endColumn),
+                )
+            TextEdit(range, newName)
+        }
         return WorkspaceEdit(mapOf(uri to edits))
     }
 
     /**
-     * True when [id] is the name identifier of a declaration node (variable, parameter,
-     * property, method, class, ...) rather than a reference to one -- detected by the parent
-     * declaring a `name` field that spans exactly this node.
+     * True when [id] is the name identifier of a declaration node (variable, parameter, property,
+     * method, class, ...) rather than a reference to one -- detected by the parent declaring a
+     * `name` field that spans exactly this node.
      */
     private fun isDeclarationName(id: XtcNode): Boolean {
         val nameNode = id.parent?.childByFieldName("name") ?: return false
@@ -1199,8 +1332,10 @@ class TreeSitterAdapter : AbstractAdapter() {
         val callTypes = setOf("call_expression", "generic_type")
         val callNode =
             generateSequence(node) { it.parent }
-                .firstOrNull { it.type in callTypes && (it.childByFieldName("arguments") ?: it.childByType("arguments")) != null }
-                ?: return null
+                .firstOrNull {
+                    it.type in callTypes &&
+                        (it.childByFieldName("arguments") ?: it.childByType("arguments")) != null
+                } ?: return null
 
         // Extract function name using the 'function' field for call_expression,
         // falling back to type_name for generic_type nodes.
@@ -1211,18 +1346,14 @@ class TreeSitterAdapter : AbstractAdapter() {
                     "member_expression" -> funcNode.childByFieldName("member")?.text
                     else -> null
                 }
-            }
-                ?: callNode
-                    .childByType("type_name")
-                    ?.childByType("identifier")
-                    ?.text
-                ?: return null
+            } ?: callNode.childByType("type_name")?.childByType("identifier")?.text ?: return null
 
         // Count commas before the cursor to determine active parameter
         val argsNode = callNode.childByFieldName("arguments") ?: callNode.childByType("arguments")
         val activeParam =
             argsNode?.children?.count { child ->
-                child.type == "," && (child.endLine < line || (child.endLine == line && child.endColumn <= column))
+                child.type == "," &&
+                    (child.endLine < line || (child.endLine == line && child.endColumn <= column))
             } ?: 0
 
         // Find method declarations with matching name in same file
@@ -1232,26 +1363,28 @@ class TreeSitterAdapter : AbstractAdapter() {
             return null
         }
 
-        val signatures =
-            methods.map { method ->
-                // Find the method_declaration node to extract parameters
-                val methodNode =
-                    tree
-                        .nodeAt(method.location.startLine, method.location.startColumn)
-                        ?.let { findDeclarationNode(it, "method_declaration") }
-                val params =
-                    methodNode
-                        ?.childByFieldName("parameters")
-                        ?.let { extractParameters(it) }
-                        ?: emptyList()
-                val paramLabel = params.joinToString(", ") { p -> p.label }
-                SignatureInfo(
-                    label = "$funcName($paramLabel)",
-                    parameters = params,
-                )
-            }
+        val signatures = methods.map { method ->
+            // Find the method_declaration node to extract parameters
+            val methodNode =
+                tree.nodeAt(method.location.startLine, method.location.startColumn)?.let {
+                    findDeclarationNode(it, "method_declaration")
+                }
+            val params =
+                methodNode?.childByFieldName("parameters")?.let { extractParameters(it) }
+                    ?: emptyList()
+            val paramLabel = params.joinToString(", ") { p -> p.label }
+            SignatureInfo(
+                label = "$funcName($paramLabel)",
+                parameters = params,
+            )
+        }
 
-        logger.info("signatureHelp '{}' -> {} signatures, active param {}", funcName, signatures.size, activeParam)
+        logger.info(
+            "signatureHelp '{}' -> {} signatures, active param {}",
+            funcName,
+            signatures.size,
+            activeParam,
+        )
         return SignatureHelp(
             signatures = signatures,
             activeParameter = activeParam,
@@ -1295,7 +1428,14 @@ class TreeSitterAdapter : AbstractAdapter() {
                 declarations = queryEngine.findAllDeclarations(tree, uri),
                 findIdentifiers = { name -> queryEngine.findAllIdentifiers(tree, name, uri) },
             )
-        return codeActions.getCodeActions(tree, uri, range, queryData, workspaceIndex, indexReady.get())
+        return codeActions.getCodeActions(
+            tree,
+            uri,
+            range,
+            queryData,
+            workspaceIndex,
+            indexReady.get(),
+        )
     }
 
     // ========================================================================
@@ -1327,12 +1467,13 @@ class TreeSitterAdapter : AbstractAdapter() {
                                 command = "xtc.runModule",
                                 arguments = listOf(uri, decl.name),
                             ),
-                    ),
+                    )
                 )
             }
-        }.also {
-            logger.info("getCodeLenses -> {} lenses", it.size)
         }
+            .also {
+                logger.info("getCodeLenses -> {} lenses", it.size)
+            }
     }
 
     // ========================================================================
@@ -1345,10 +1486,14 @@ class TreeSitterAdapter : AbstractAdapter() {
         options: FormattingOptions,
     ): List<TextEdit> {
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("formatDocument: no parsed tree for {}, falling back to base", uri.substringAfterLast('/'))
-                return super.formatDocument(uri, content, options)
-            }
+            parsedTrees[uri]
+                ?: run {
+                    logger.info(
+                        "formatDocument: no parsed tree for {}, falling back to base",
+                        uri.substringAfterLast('/'),
+                    )
+                    return super.formatDocument(uri, content, options)
+                }
         val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
         return formatter.formatDocument(tree, content, config, options)
     }
@@ -1360,10 +1505,14 @@ class TreeSitterAdapter : AbstractAdapter() {
         options: FormattingOptions,
     ): List<TextEdit> {
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("formatRange: no parsed tree for {}, falling back to base", uri.substringAfterLast('/'))
-                return super.formatRange(uri, content, range, options)
-            }
+            parsedTrees[uri]
+                ?: run {
+                    logger.info(
+                        "formatRange: no parsed tree for {}, falling back to base",
+                        uri.substringAfterLast('/'),
+                    )
+                    return super.formatRange(uri, content, range, options)
+                }
         val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
         return formatter.formatRange(tree, content, range, config, options)
     }
@@ -1380,10 +1529,14 @@ class TreeSitterAdapter : AbstractAdapter() {
         options: FormattingOptions,
     ): List<TextEdit> {
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("onTypeFormatting: no parsed tree for {}", uri.substringAfterLast('/'))
-                return emptyList()
-            }
+            parsedTrees[uri]
+                ?: run {
+                    logger.info(
+                        "onTypeFormatting: no parsed tree for {}",
+                        uri.substringAfterLast('/'),
+                    )
+                    return emptyList()
+                }
         val config = FormattingConfig.resolve(uri, options, editorFormattingConfig)
         logger.info(
             "onTypeFormatting: uri={} line={} column={} ch='{}' config={}",
@@ -1399,11 +1552,11 @@ class TreeSitterAdapter : AbstractAdapter() {
     /**
      * Emit document links for `http(s)` URLs that appear inside comments and string literals.
      *
-     * Imports deliberately do NOT participate -- navigation between an `import` and its
-     * declaration is the job of `textDocument/definition` (Cmd/Ctrl-click), which is
-     * position-aware and knows the difference between a package component and a type
-     * component. Document links are reserved for free-text content where there is no
-     * AST-level "declaration" to jump to (URLs in `// see https://...`, etc.).
+     * Imports deliberately do NOT participate -- navigation between an `import` and its declaration
+     * is the job of `textDocument/definition` (Cmd/Ctrl-click), which is position-aware and knows
+     * the difference between a package component and a type component. Document links are reserved
+     * for free-text content where there is no AST-level "declaration" to jump to (URLs in `// see
+     * https://...`, etc.).
      */
     override fun getDocumentLinks(
         uri: String,
@@ -1411,28 +1564,31 @@ class TreeSitterAdapter : AbstractAdapter() {
     ): List<DocumentLink> {
         val tree = parsedTrees[uri] ?: return emptyList()
         val hosts = queryEngine.findCommentAndStringNodes(tree, uri)
-        val links =
-            buildList {
-                for ((text, loc) in hosts) {
-                    urlPattern.findAll(text).forEach { match ->
-                        // Strip trailing punctuation that's almost never part of the URL itself
-                        // (sentences in comments end with these, e.g. "see https://example.com.")
-                        val trimmed = match.value.trimEnd(*urlTrailingTrim)
-                        if (trimmed.isEmpty()) return@forEach
-                        val range = rangeWithinText(text, match.range.first, trimmed.length, loc)
-                        add(DocumentLink(range, trimmed, trimmed))
-                    }
+        val links = buildList {
+            for ((text, loc) in hosts) {
+                urlPattern.findAll(text).forEach { match ->
+                    // Strip trailing punctuation that's almost never part of the URL itself
+                    // (sentences in comments end with these, e.g. "see https://example.com.")
+                    val trimmed = match.value.trimEnd(*urlTrailingTrim)
+                    if (trimmed.isEmpty()) return@forEach
+                    val range = rangeWithinText(text, match.range.first, trimmed.length, loc)
+                    add(DocumentLink(range, trimmed, trimmed))
                 }
             }
-        logger.info("getDocumentLinks: {} URL links across {} comment/string nodes", links.size, hosts.size)
+        }
+        logger.info(
+            "getDocumentLinks: {} URL links across {} comment/string nodes",
+            links.size,
+            hosts.size,
+        )
         return links
     }
 
     /**
-     * Convert an offset+length within a host node's text into an absolute LSP [Range].
-     * URLs cannot contain whitespace, so the match is always single-line, but the host
-     * node (e.g., a block comment) may span many lines, so we walk the prefix counting
-     * newlines to find the absolute (line, column) for the start.
+     * Convert an offset+length within a host node's text into an absolute LSP [Range]. URLs cannot
+     * contain whitespace, so the match is always single-line, but the host node (e.g., a block
+     * comment) may span many lines, so we walk the prefix counting newlines to find the absolute
+     * (line, column) for the start.
      */
     private fun rangeWithinText(
         text: String,
@@ -1459,10 +1615,11 @@ class TreeSitterAdapter : AbstractAdapter() {
     override fun getSemanticTokens(uri: String): SemanticTokens? {
         logger.info("getSemanticTokens: uri={}", uri.substringAfterLast('/'))
         val tree =
-            parsedTrees[uri] ?: run {
-                logger.info("getSemanticTokens: no parsed tree for uri")
-                return null
-            }
+            parsedTrees[uri]
+                ?: run {
+                    logger.info("getSemanticTokens: no parsed tree for uri")
+                    return null
+                }
         val data = SemanticTokenEncoder().encode(tree.root)
         val tokenTypeCounts =
             data
@@ -1470,20 +1627,26 @@ class TreeSitterAdapter : AbstractAdapter() {
                 .mapNotNull { chunk ->
                     val tokenTypeIndex = chunk.getOrNull(3) ?: return@mapNotNull null
                     SemanticTokenLegend.tokenTypes.getOrNull(tokenTypeIndex)
-                }.groupingBy { it }
+                }
+                .groupingBy { it }
                 .eachCount()
-        logger.info("getSemanticTokens -> {} data items ({} tokens) types={}", data.size, data.size / 5, tokenTypeCounts)
+        logger.info(
+            "getSemanticTokens -> {} data items ({} tokens) types={}",
+            data.size,
+            data.size / 5,
+            tokenTypeCounts,
+        )
         return data.takeIf { it.isNotEmpty() }?.let { SemanticTokens(it) }
     }
 
     /**
      * Release resources for a closed document.
      *
-     * Closes the native tree-sitter [XtcTree] for this URI, freeing its native memory
-     * (backed by `Arena.global()` / FFM). Without this, parsed trees accumulate for the
-     * JVM lifetime since [compile] intentionally does NOT close old trees eagerly -- see the
-     * race condition comment in [compile] for details. This method is the primary mechanism
-     * for reclaiming native tree memory when the editor closes a document.
+     * Closes the native tree-sitter [XtcTree] for this URI, freeing its native memory (backed by
+     * `Arena.global()` / FFM). Without this, parsed trees accumulate for the JVM lifetime since
+     * [compile] intentionally does NOT close old trees eagerly -- see the race condition comment in
+     * [compile] for details. This method is the primary mechanism for reclaiming native tree memory
+     * when the editor closes a document.
      */
     override fun closeDocument(uri: String) {
         logger.info("closeDocument: uri={}", uri)
@@ -1505,29 +1668,27 @@ class TreeSitterAdapter : AbstractAdapter() {
     private fun collectSyntaxErrors(
         node: XtcNode,
         uri: String,
-    ): List<Diagnostic> =
-        buildList {
-            val message =
-                when {
-                    node.isError -> "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
-                    node.isMissing -> "Syntax error: missing ${node.type}"
-                    else -> null
-                }
-
-            if (message != null) {
-                add(
-                    Diagnostic.error(
-                        Location(uri, node.startLine, node.startColumn, node.endLine, node.endColumn),
-                        message,
-                    ),
-                )
+    ): List<Diagnostic> = buildList {
+        val message =
+            when {
+                node.isError ->
+                    "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
+                node.isMissing -> "Syntax error: missing ${node.type}"
+                else -> null
             }
 
-            // Recursively check children
-            node.children
-                .filter { it.hasError }
-                .forEach { addAll(collectSyntaxErrors(it, uri)) }
+        if (message != null) {
+            add(
+                Diagnostic.error(
+                    Location(uri, node.startLine, node.startColumn, node.endLine, node.endColumn),
+                    message,
+                )
+            )
         }
+
+        // Recursively check children
+        node.children.filter { it.hasError }.forEach { addAll(collectSyntaxErrors(it, uri)) }
+    }
 
     private fun findIdentifierNode(node: XtcNode): XtcNode? =
         if (node.type == "identifier" || node.type == "type_name") {

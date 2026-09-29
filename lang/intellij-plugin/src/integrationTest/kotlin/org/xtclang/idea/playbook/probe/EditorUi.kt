@@ -58,7 +58,8 @@ object EditorUi {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val frame = SwingUtilities.getWindowAncestor(editor.contentComponent) ?: return false
         val manager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
-        return sequenceOf(manager.activeWindow, manager.focusedWindow).filterNotNull().any { active ->
+        return sequenceOf(manager.activeWindow, manager.focusedWindow).filterNotNull().any { active
+            ->
             generateSequence(active) { it.owner }.any { it === frame }
         }
     }

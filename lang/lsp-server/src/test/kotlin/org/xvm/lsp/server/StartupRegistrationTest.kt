@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import java.util.concurrent.CompletableFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities
@@ -16,14 +17,14 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.mock.MockAdapter
-import java.util.concurrent.CompletableFuture
 
 class StartupRegistrationTest {
     @Test
     fun `watcher requests wait for initialized and require negotiated dynamic registration`() {
         listOf(false, true).forEach { supported ->
             val client = mock(LanguageClient::class.java)
-            `when`(client.registerCapability(any())).thenReturn(CompletableFuture.completedFuture(null))
+            `when`(client.registerCapability(any()))
+                .thenReturn(CompletableFuture.completedFuture(null))
             XtcLanguageServer(MockAdapter()).use { server ->
                 server.connect(client)
                 val params =
@@ -32,7 +33,8 @@ class StartupRegistrationTest {
                             ClientCapabilities().apply {
                                 workspace =
                                     WorkspaceClientCapabilities().apply {
-                                        didChangeWatchedFiles = DidChangeWatchedFilesCapabilities(supported)
+                                        didChangeWatchedFiles =
+                                            DidChangeWatchedFilesCapabilities(supported)
                                     }
                             }
                     }
@@ -40,7 +42,8 @@ class StartupRegistrationTest {
                 verify(client, never()).registerCapability(any(RegistrationParams::class.java))
                 server.initialized(InitializedParams())
                 server.initialized(InitializedParams())
-                verify(client, times(if (supported) 1 else 0)).registerCapability(any(RegistrationParams::class.java))
+                verify(client, times(if (supported) 1 else 0))
+                    .registerCapability(any(RegistrationParams::class.java))
             }
         }
     }
