@@ -36,6 +36,38 @@ class CompilerConfigurationTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `explicit source graph overrides build imports and absent reports retain discovery`() {
+        val explicit =
+            mapOf(
+                "sourceModules" to emptyList<Any>(),
+                "buildModels" to listOf(mapOf("schemaVersion" to 99)),
+            )
+        assertThat(CompilerConfiguration.buildModel(explicit)).isNull()
+        assertThat(CompilerConfiguration.modules(explicit, emptyList())).isEmpty()
+        assertThat(
+                CompilerConfiguration.buildModel(
+                    mapOf("sourceModules" to null, "buildModels" to emptyList<Any>())
+                )
+            )
+            .isNull()
+        assertThatThrownBy {
+                CompilerConfiguration.buildModel(
+                    mapOf("sourceModules" to null, "buildModels" to listOf(1))
+                )
+            }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy {
+                CompilerConfiguration.buildModel(
+                    mapOf(
+                        "sourceModules" to null,
+                        "buildModels" to listOf(mapOf("schemaVersion" to 99)),
+                    )
+                )
+            }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
     fun `resource root configuration distinguishes automatic empty and ordered custom paths`() {
         directory = directory.toRealPath()
         val workspace = directory.toUri().toString()

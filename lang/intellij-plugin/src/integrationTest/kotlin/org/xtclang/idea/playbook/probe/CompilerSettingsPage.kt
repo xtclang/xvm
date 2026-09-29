@@ -14,11 +14,39 @@ import java.net.URI
 import java.nio.file.Path
 import javax.swing.JCheckBox
 import javax.swing.JTable
+import org.xtclang.idea.lsp.CompilerBuildModel
 import org.xtclang.idea.lsp.CompilerProjectConfigurable
 
 /** Exercise the real project settings component and its Apply/Reset contract on the EDT. */
 object CompilerSettingsPage {
     private const val SERVER = "xtcLanguageServer"
+
+    @JvmStatic
+    fun useBuildModel(project: Project): String {
+        val page = CompilerProjectConfigurable(project)
+        fun descendants(component: Component): Sequence<Component> = sequence {
+            yield(component)
+            if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
+        }
+        descendants(page.createComponent()).filterIsInstance<JCheckBox>().single().isSelected = true
+        if (page.isModified()) page.apply()
+        CompilerBuildModel.publish(project)
+        return CompilerBuildModel.describe(project)
+    }
+
+    @JvmStatic
+    fun refreshBuildModel(project: Project) {
+        val before =
+            ProjectLanguageServerSettings.getInstance(project)
+                .getLanguageServerSettings(SERVER)
+                ?.configurationContent
+        CompilerBuildModel.publish(project)
+        check(
+            ProjectLanguageServerSettings.getInstance(project)
+                .getLanguageServerSettings(SERVER)
+                ?.configurationContent == before
+        )
+    }
 
     @JvmStatic
     fun installProjectGraph(project: Project) {
