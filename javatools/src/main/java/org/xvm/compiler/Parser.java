@@ -3651,7 +3651,8 @@ public class Parser {
                 return expr;
             }
 
-            if (left == null && name.getEndPosition() == f_cursor && canRetainIncomplete()) {
+            if (left == null && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
+                    && canRetainIncompleteAt(name.getEndPosition())) {
                 log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
                 throw new IncompleteSyntax(new IncompleteStatement(name, f_cursor, INCOMPLETE_EXPRESSION));
             }
@@ -5657,14 +5658,19 @@ public class Parser {
     }
 
     private boolean canRetainIncomplete() {
+        return canRetainIncompleteAt(f_cursor);
+    }
+
+    /** A mid-token value cursor uses the same recovery boundary after its complete written token. */
+    private boolean canRetainIncompleteAt(long cursor) {
         if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
             return false;
         }
-        if (f_cursor == NO_CURSOR) {
+        if (cursor == NO_CURSOR) {
             return eof();
         }
-        return prev().getEndPosition() <= f_cursor
-                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+        return prev().getEndPosition() <= cursor
+                && cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
                 && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
                         || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON) || peek(Id.L_CURLY));
     }
