@@ -438,6 +438,18 @@ VS Code receipts above.
   unsaved import edges and workspace-folder refresh are already implemented. Complete-graph
   references/refactorings must retain their proof requirements beside broken neighbors.
 
+### L12, project settings and L62–L68 hardening batch (2026-09-29)
+
+Implementation checkpoints are committed separately; the combined validation receipt follows
+when the batch completes. Earlier receipts do not validate these new changes.
+
+- **L12:** reproduced the X76 overlap with an anonymous `new Packet<String>(...) { ... }`.
+  Its generated class name borrowed the entire parameterized type span and was copied as a
+  source declaration alongside the real `Packet` and `String` references. Semantic copying now
+  retains the anonymous identity without assigning it a fabricated declaration. A regression
+  covers complete source and unrelated missing nested call delimiters. No AST API changed.
+  Validation is pending the batch run.
+
 ### L64 completion and signature batch (2026-09-29)
 
 Implement four checkpoints before combined validation:
