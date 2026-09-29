@@ -40,8 +40,21 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
                 argumentValues, argumentProperties, List.of());
     }
 
-    /** A written formal and its compiler-resolved bound, not an invented declaration identity. */
-    public record Formal(Token name, TypeConstant constraint) {}
+    /**
+     * A written formal, not an invented declaration identity. A recursive written constraint has
+     * no resolved type until its declaration exists; only that case supplies text instead.
+     */
+    public record Formal(Token name, TypeConstant constraint, String writtenConstraint) {
+        public Formal(Token name, TypeConstant constraint) {
+            this(name, constraint, null);
+        }
+
+        public Formal {
+            if ((constraint == null) == (writtenConstraint == null)) {
+                throw new IllegalArgumentException("A formal needs either a resolved or a written constraint");
+            }
+        }
+    }
 
     public CursorBinding withFormals(List<Formal> formals) {
         return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected,
