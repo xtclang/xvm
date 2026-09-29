@@ -30,6 +30,22 @@ internal object XdkLexical {
     private val strings =
         setOf(Token.Id.LIT_STRING, Token.Id.LIT_CHAR, Token.Id.LIT_BINSTR, Token.Id.TEMPLATE)
 
+    /**
+     * Over-approximate path expressions without interpreting paths or suppressing compiler errors.
+     */
+    fun mayUseResources(text: String): Boolean =
+        lex(text)?.any {
+            it.id in
+                setOf(
+                    Token.Id.DIV,
+                    Token.Id.DIR_CUR,
+                    Token.Id.DIR_PARENT,
+                    Token.Id.BIN_FILE,
+                    Token.Id.STR_FILE,
+                    Token.Id.TEMPLATE,
+                )
+        } ?: true
+
     fun format(
         text: String,
         config: FormattingConfig,
