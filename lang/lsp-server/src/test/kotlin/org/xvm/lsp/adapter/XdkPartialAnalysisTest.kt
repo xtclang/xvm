@@ -21,12 +21,12 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
-import org.xvm.compiler.ast.IncompleteExpression
-import org.xvm.compiler.ast.IncompleteStatement
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.ReturnStatement
+import org.xvm.compiler.ast.partial.IncompleteExpression
+import org.xvm.compiler.ast.partial.IncompleteStatement
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.tool.ModuleInfo
 

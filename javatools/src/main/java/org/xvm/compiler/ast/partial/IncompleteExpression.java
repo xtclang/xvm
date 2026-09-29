@@ -1,10 +1,13 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.lang.reflect.Field;
 
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.Expression;
 
 /**
  * An incomplete operation in a value position. Retaining the enclosing assignment or return lets
@@ -61,13 +64,13 @@ public final class IncompleteExpression extends Expression {
     }
 
     @Override
-    protected Expression validate(Context ctx, TypeConstant required, ErrorListener errs) {
+    private Expression validate(Context ctx, TypeConstant required, ErrorListener errs) {
         site.validate(ctx, required, errs);
         return null;
     }
 
     @Override
-    protected Expression validateMulti(Context ctx, TypeConstant[] required, ErrorListener errs) {
+    private Expression validateMulti(Context ctx, TypeConstant[] required, ErrorListener errs) {
         site.validate(ctx, required != null && required.length == 1 ? required[0] : null, errs);
         return null;
     }
@@ -77,7 +80,7 @@ public final class IncompleteExpression extends Expression {
         return site.toString();
     }
 
-    protected IncompleteStatement site;
+    private IncompleteStatement site;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteExpression.class, "site");
 }
