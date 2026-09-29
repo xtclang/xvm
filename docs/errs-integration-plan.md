@@ -759,12 +759,12 @@ passes START plus X60/X77/X78/X105/X122/X123 on the final code, with zero IDE fa
 JUnit failures/errors/skips. This completes the focused cross-editor recheck; the earlier native
 128-case coverage remains a collection of resumed receipts.
 
-- [ ] **Combined validation task wiring:** running `:lang:vscode-extension:testCompilerPlaybook`
-  with `:lang:spotlessCheck spotlessCheck` in one invocation is rejected before testing. Gradle
-  reports an undeclared dependency between `:lang:spotlessKotlinGradle` and the VS Code
-  `copyLicense` output under `lang`. Run those checks separately until their declared file
-  inputs/outputs or ordering are corrected; this failure is not a test result. Standalone
-  `:lang:spotlessCheck spotlessCheck` passes.
+- [x] **Combined validation task wiring:** the earlier attempt to run `:lang:vscode-extension:testCompilerPlaybook`
+  with `:lang:spotlessCheck spotlessCheck` in one invocation was rejected before testing. Gradle
+  reported an undeclared dependency between `:lang:spotlessKotlinGradle` and the VS Code
+  `copyLicense` output under `lang`; that failure was not a test result. The L69–L71 batch
+  below fixes both copy tasks to declare individual files. `packageExtension` and both formatting
+  checks now pass together in the combined invocation.
 
 The initial broad backend run passed 1,412 tests with zero failures/errors and three pre-existing
 disabled Tree-sitter placeholders (inlay types, cross-file rename and shadow-aware references).
@@ -791,20 +791,22 @@ Five separate implementation commits precede combined validation:
 
 1. Acceptance: correct single-file VS Code task outputs; expire CFG2's expected cyclic-graph
    notification after asserting rejection; add shared X124 external-resource Apply/Reset/repair
-   and X125 exact platform regressions. Validation pending until all five checkpoints are ready.
-2. L69: negotiated semantic-token range/delta and bounded result lifetime; implementation and
-   regression tests written, validation pending.
+   and X125 exact platform regressions. Validation receipts and corrections are recorded below.
+2. L69: negotiated semantic-token range/delta and bounded result lifetime; backend, packaged
+   protocol and shared X126 checks pass in both hosts.
 3. L70: versioned lazy completion documentation/code-action edit resolution is written;
    selected properties require client support. Initial queries still compute compiler proof and
    detached facts; resolve delays payload conversion/transfer, not a second compiler pass.
    Bounded connection-local handles reject edits, dependency/configuration changes, close/reopen,
-   and foreign connections. Shared X127 exercises native-client transport; validation pending.
+   and foreign connections. Shared X127 exercises each client's negotiated transport contract.
+   IntelliJ requests eager action edits because LSP4IJ 0.21.0 loses Redo for resolved edits;
+   completion documentation resolve remains enabled. Backend/protocol and shared checks pass.
    Code lens/link/inlay/workspace-symbol resolvers remain a separate L70 follow-up.
 4. L71: negotiated pre/post file hooks, compiler-proven file/package renames (including combined
    batch proof and required companion moves), and binding-preserving container moves are written.
    Duplicate small-file watcher/operation events coalesce by contents; directory/large-file events
    always propagate without scanning entire trees on the notification thread. X128 drives both
-   hosts' native file-operation listeners. Tests are written; batch validation pending.
+   hosts' file Rename actions. Backend/protocol and shared checks pass.
    Cross-package relocations needing rewritten qualification, collisions, overlapping operations,
    symlinks and explicit root/settings changes remain conservative refusals. `willRenameFiles`
    cannot veto the host's move: a null result means no safe automatic reference update.
@@ -815,21 +817,122 @@ Five separate implementation commits precede combined validation:
    schema and retain explicit overrides. IntelliJ's Community settings page and VS Code's native
    commands show effective paths, missing outputs and origin, with refresh/prepare/open-build/reset
    actions. Gradle runs only through an explicit host action, never inside the server. Build-script
-   parsing is not used. New TestKit, server, importer and shared X129 tests await batch validation.
+   parsing is not used. New TestKit, server, importer and shared X129 tests pass.
    Automatic IntelliJ Gradle-sync import and nested/composite build aggregation beyond each
    exported root remain follow-ups; use explicit refresh or import each workspace-root report.
 
 Master fix extraction: early resource-root capture is already fixed by `5d88b64d4` (#651).
 The remaining Copy-destination mismatch is independently fixed in
-[`ee1792753`, PR #655](https://github.com/xtclang/xvm/pull/655), based on master `a96bb0f75`.
+[`ee1792753`, PR #655](https://github.com/xtclang/xvm/pull/655), based on master `a96bb0f75`
+and merged as `6f8f1f897` on 2026-09-29.
 Its three source-set regressions fail before the fix; all 57 plugin tests pass afterwards,
 including six configuration-cache TestKit cases, with zero skips. Spotless passes.
 Carry the corresponding provider wiring in this batch, but do not extract it again with the
-LSP model bridge once #655 is merged. These receipts validate the standalone fix, not this batch.
+LSP model bridge: #655 is already merged. These receipts validate the standalone fix, not this batch.
 
 The new catalog has 134 scenarios. The previous 128-case receipts remain historical evidence;
 new cases and changes are not validated by those receipts. X118 now carries ordered custom
 resource roots through native module rename and Undo in both hosts.
+
+Extraction checkpoints (each still requires independent validation when split):
+
+| Commit | Future PR scope |
+|---|---|
+| `581e09197` | Resource/settings and platform acceptance; includes the VS Code single-output task fix. |
+| `5322d0bda` | L69 negotiated token range/delta, report lifetime and X126. |
+| `ec6976526` | L70 completion documentation/action edit resolve, detached handles and X127. |
+| `b420f0f19` | L71 file-operation participation, combined rename proof and X128. |
+| `18f5cb8a2` | PLAT2c/L67 evaluated Gradle input bridge, both host path views/importers and X129. |
+| `4208d5ec7` | L71 validation corrections: logical snapshot roots and early symlink refusal; carry with `b420f0f19`. |
+| `db63c64d8` | Carry the action-kind and workspace fixture fixes with L70, the TypeScript/macOS model fixtures with PLAT2c. |
+| `d5de386f2` | IntelliJ diagnostic-refresh/Rename lock ordering; carry with native pull-diagnostic integration. |
+| `409b356d3` | L70 IntelliJ capability compatibility and regressions: eager action edits preserve Redo with LSP4IJ 0.21.0. |
+| `57feaf3df` | L71 native Rename preflight and real chooser/dialog coverage; includes X124 VFS fixture and X127/X129 ordering/setup corrections in the same driver file. Split those fixture hunks with their owning acceptance slices. |
+| `68e537a` | VS Code selected-acceptance corrections; carry X118 resource ownership with rename/settings, X125 hover with platform acceptance, X127 graph setup with L70, and X129 order/settings with PLAT2c. |
+
+The first combined pass found a shadowed Kotlin action-kind local, a TypeScript test API newer
+than the configured target library, and a TestKit path assertion that did not canonicalize macOS's
+`/var` alias. The second combined pass passes all 21 plugin tests, 60 IntelliJ unit tests,
+71 packaged-server protocol tests, TypeScript compilation and formatting. The backend run has
+1,439 tests, five failures and three pre-existing disabled Tree-sitter tests. Corrections under
+validation cover two file-operation defects (symlink identity lost before refusal, and proposed
+container destinations required to exist), one more macOS path expectation, and two code-action
+fixtures that lacked a project workspace. The final combined recheck passes all 1,436 enabled
+backend tests (three existing Tree-sitter placeholders disabled), all 71 packaged-server protocol
+tests, 60 IntelliJ unit tests, native-driver compilation, VS Code packaging and both formatting
+checks. The focused compiler input run passes all 96 `ModuleInfo` tests with no skips. All 16
+VS Code extension tests also pass, including the two new model importer tests.
+
+VS Code 1.139.1 `run-KEzKf8` passes CFG2/X105/X122/X124/X126/X128 and exposes four fixture failures.
+`run-AW9amt` passes X118/X125/X127/X129 after correcting relative resource paths, reading rendered
+hover Markdown, explicitly configuring the action fixture graph and rereading current settings.
+All ten selected cases therefore have passing receipts across two runs; this is not a full
+134-case run. Both use catalog SHA-256
+`ed7da902a5b5b3e2f256be4a52c3a94c17f400a4ff082e7cd14ee1ef14c1da33`.
+
+Native `run-10979214218498979471` passes START, then deadlocks during X118 module rename. The IDE
+and blocked test worker were stopped after capturing thread stacks; this is failed acceptance,
+not a skipped/green case. The EDT holds the write lock in `XtcRenameEdit.apply`, and LSP4IJ's
+`AbstractLSPFileListener.before` waits for `willRenameFiles`. Its message worker is blocked inside
+our `XtcLanguageClient.refreshDiagnostics` acquiring a read lock; the compiler worker is idle.
+Moving diagnostic/cache work onto an ordered shared-pool executor breaks that transport lock
+cycle while preserving notification order. Native `run-15252624690665022121` then passes START
+and X118, including Rename/Undo/Redo (6.36 seconds for X118).
+
+That recheck exposes a separate X128 host defect: IntelliJ's `PersistentFSImpl.renameFile` moves
+the physical file before publishing the VFS before-event. LSP4IJ 0.21.0 sends `willRenameFiles`
+from that event, so the compiler sees the old path missing and the new path already present and
+correctly refuses reference edits. Raw VFS rename is therefore not a usable preflight boundary.
+The XTC project-tree Rename handler now requests compiler proof before any disk change, then
+combines the returned versioned edits and requested file move in the existing guarded Undo
+transaction. X128 invokes the registered handler and submits its actual Rename dialog for both
+a `.x` file and an implicit package directory. Direct low-level VFS moves still provide
+notifications but cannot promise reference updates; cross-directory moves and arbitrary container
+actions need a corresponding host preflight entry point before being advertised as native support.
+No compiler refusal was weakened. The selected native recheck passes as recorded below.
+
+The wider recheck `run-4597434703547124054` again passes X118 (6.85 seconds), then fails X122
+Redo after a lazily resolved member-generation action. LSP4IJ's
+`LSPLazyCodeActionIntentionAction` wraps resolved edits in
+`DocumentUtil.writeInRunUndoTransparentAction`; eager edits use the ordinary command path.
+The client now omits `edit` from its code-action resolve capabilities until that upstream path
+supports reliable Undo/Redo. The server's resolver and VS Code negotiation stay enabled;
+completion documentation resolve remains enabled in IntelliJ. Two client-capability regressions
+cover this selective negotiation. X127 checks the negotiated eager fallback in IntelliJ, not a
+native lazy-action acceptance claim. `run-13167310945496563336` also records an X105 intention
+popup failure with lazy import edits; the server returned the expected action. Recheck X105/X122
+after applying the capability correction, without replaying any previously applied edits.
+
+Final native receipts: `run-8616709537315408794` passes START and
+CFG2/X105/X118/X122/X125/X126/X127/X129, with zero IDE errors. X124 and X128 initially fail:
+the external fixture was not loaded/refreshed in VFS, and Rename's competing-handler chooser
+was entered under a plain read action. `run-431060674485649448` passes START, X124 (9.32 seconds)
+and X128 (4.91 seconds) after correcting those driver boundaries. X128 exercises the actual
+scope chooser and name dialog, then asserts both source/reference edits and the resulting paths.
+All ten selected native cases therefore have passing receipts across two final runs; this is
+not a new full 134-case run. Both runs use the catalog hash recorded above. The plugin has 62
+passing unit tests, zero skips, including the two new capability regressions.
+The final IntelliJ unit rerun and read-only root/lang `spotlessCheck` tasks pass. All checkpoint
+commits remain local on `lagergren/errs`; this validation does not publish the branch or establish
+independently passing extracted PRs.
+
+X124 establishes external-resource reactions after native VFS refresh, with the fixture directory
+loaded first; it does not establish autonomous OS watching of arbitrary roots unknown to VFS.
+Track that distinction instead of treating synthetic LSP notifications as editor coverage:
+
+- [ ] PLAT2/L67: register/lifetime-manage external source/resource roots with IntelliJ's VFS and
+  verify disk changes while the IDE remains focused, including roots not previously opened,
+  missing-root creation and settings replacement. Current acceptance explicitly refreshes VFS.
+- [ ] L70: repair or upgrade LSP4IJ's lazy-action application path, then re-enable edit resolution
+  only after native import/member generation and Undo/Redo pass together.
+- [ ] L71: extend native preflight beyond single file/package Rename to the remaining supported
+  moves; retain refusals where graph persistence or rewritten qualification is required.
+
+The container-move proof needs a protected `ModuleInfo(File, String)` constructor for host-supplied
+logical source identities. It avoids filesystem discovery when replaying immutable text/membership
+at a proposed destination. `XdkSources` obtains the module name from snapshot text; ordinary CLI
+constructors keep their existing discovery behavior. This belongs at the compiler input boundary,
+not in AST nodes, and adds no mutable fields. Carry it with L71's proof fixes when extracting PRs.
 
 #### Resource configuration and build-model integration (PLAT2 / L67)
 
@@ -1034,9 +1137,9 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 |---|---|---|
 | L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. | Fix the real-platform source-location crash below; retain broader workload coverage rather than treating the selected fixtures as universal proof. |
-| L69 token range/delta | Negotiated range/delta and bounded result history are implemented; batch validation pending. | Validate X126 and protocol cases; measure representative workspace payload/cache costs. |
-| L70 lazy resolve | Completion documentation and action edits are implemented with stale-safe detached handles; validation pending. | Lens/link/inlay/workspace-symbol resolvers remain follow-ups. |
-| L71 file operations | Six negotiated pre/post hooks and proven file/package/container rename support are implemented; validation pending. | Validate X128 and operation ordering; cross-package qualification rewrites and explicit graph persistence remain unsupported. |
+| L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
+| L70 lazy resolve | Completion documentation and action edits pass backend/protocol and negotiated X127. IntelliJ keeps action edits eager for reliable Undo/Redo. | Fix/upgrade the native lazy-edit application path; lens/link/inlay/workspace-symbol resolvers remain follow-ups. |
+| L71 file operations | Six negotiated pre/post hooks and proven file/package/container operations pass backend/protocol checks; native file/package Rename passes X128. | Extend native preflight to other move actions; cross-package qualification rewrites and explicit graph persistence remain unsupported. |
 | L72 save/sync/formatting | Full sync, didSave and single-range formatting work. | Separate save hooks, incremental patches and multiple-range formatting; define edit ordering, overlapping ranges and UTF-16/CRLF behavior without changing the existing Full-sync contract prematurely. |
 | L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
@@ -1060,20 +1163,26 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   combined batch and selected X123 pass in both editors, including the nested-report decoding
   correction. PLAT1's real-platform source-location crash is fixed; the later native demo found
   and corrected a standalone closed-member pull gap, recorded above.
-- [ ] **L69 — Semantic token range/delta (implemented; batch validation pending).** Negotiated
+- [x] **L69 — Semantic token range/delta.** Negotiated
   range/delta handlers use detached, connection-local result IDs, a bounded history (128 reports /
   one million integers), full fallback after eviction/foreign IDs/close/restart, and negotiated
   refresh on semantic changes. Range reports preserve UTF-16 coordinates. Unit, compiler-service,
-  packaged transport and shared X126 coverage are written; this checkbox awaits the combined run.
-- [ ] **L70 — Lazy resolve operations (initial implementation; validation pending).** Negotiated
+  packaged transport and shared X126 pass; representative workload measurements remain in L82.
+- [ ] **L70 — Lazy resolve operations (initial implementation validated).** Negotiated
   completion documentation and action edit resolution use bounded detached handles and reject
-  stale versions, dependencies and connections. Shared X127 is written. `codeLens/resolve`,
+  stale versions, dependencies and connections. Shared X127 passes with each host's negotiated
+  behavior. IntelliJ omits action-edit resolution until its native application path preserves
+  Undo/Redo; completion documentation remains lazy. `codeLens/resolve`,
   `documentLink/resolve`, `inlayHint/resolve` and `workspaceSymbol/resolve` remain follow-ups.
-- [ ] **L71 — File-operation participation (bounded implementation; validation pending).**
+- [ ] **L71 — File-operation participation (bounded implementation validated).**
   All six pre/post operations negotiate independently. Proven file/package and safe container moves
   return pre-operation edits; create/delete hooks return no speculative edits and refresh membership
-  afterwards. Shared X128 drives native listeners. Cross-package qualification rewrites and moves
-  requiring explicit source-graph persistence remain unsupported; null replies cannot veto moves.
+  afterwards. Shared X128 drives VS Code's native file action and IntelliJ's registered XTC Rename
+  handler/chooser/dialog. IntelliJ's VFS before-event is too late for compiler proof; its handler
+  preflights before disk mutation. Add corresponding native preflight for cross-directory and
+  arbitrary-container actions before advertising those host paths. Cross-package qualification
+  rewrites and moves requiring explicit source-graph persistence remain unsupported; ordinary
+  LSP null replies cannot veto moves.
 - [ ] **L72 — Save hooks, incremental sync and multiple-range formatting.** Add negotiated
   `willSave`/`willSaveWaitUntil`, optional incremental `didChange` support and
   `textDocument/rangesFormatting`. Full document synchronization, didSave handling and
