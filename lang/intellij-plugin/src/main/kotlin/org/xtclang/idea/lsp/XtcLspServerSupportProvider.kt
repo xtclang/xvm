@@ -117,6 +117,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
                         // adapters.
                         JSONUtils.configureCompatibilityAdapters(it)
                         it.registerTypeAdapterFactory(ConfigurationJson)
+                        it.registerTypeAdapterFactory(DiagnosticReportJson)
                     }
         }
 
