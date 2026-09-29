@@ -17,6 +17,35 @@ class XdkDiagnosticIndexTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `an early resource failure with an enum default returns diagnostics instead of crashing`() {
+        CompilerTestSupport.configure()
+        val root =
+            directory.resolve("Defaults.x").toFile().apply {
+                writeText(
+                    """
+                    module Defaults {
+                        enum Kind default(Plain) {Plain, Fancy}
+                        String template = $./missing.txt;
+                    }
+                    """
+                        .trimIndent()
+                )
+            }
+        XdkAdapter().use { adapter ->
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("Defaults", root.toURI().toString()))
+            )
+            val reports = adapter.workspaceDiagnosticsAsync().get(30, SECONDS)
+            assertThat(reports).hasSize(1)
+            assertThat(reports.single().success).isFalse()
+            assertThat(reports.single().diagnostics.map { it.code }).contains("PARSER-24")
+            assertThat(reports.single().diagnostics.map { it.code }).doesNotContain("EMB-5")
+            root.writeText("module Defaults { enum Kind default(Plain) {Plain, Fancy} }")
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+        }
+    }
+
+    @Test
     fun `closed graph pulls reuse unchanged roots and rebuild only changed dependency closure`() {
         CompilerTestSupport.configure()
         val compiled = ConcurrentHashMap<String, AtomicInteger>()
