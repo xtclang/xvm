@@ -123,8 +123,8 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 ### Backend Comparison
 
 Compiler mode has implementations for all 25 capabilities in this project's adapter interface,
-plus push diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Pull diagnostics, monikers,
+plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
+bounded; the interface does not cover every LSP feature. Monikers,
 inline completion/values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L82 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
@@ -370,7 +370,7 @@ settings, without a custom Kotlin host:
 ```json
 {
   "xtc.compiler.sourceModules": [
-    { "name": "Library", "uri": "Library.x" },
+    { "name": "Library", "uri": "Library.x", "resourceRoots": ["assets/templates"] },
     { "name": "Consumer", "uri": "Consumer.x", "dependencies": ["Library"] }
   ]
 }
@@ -383,6 +383,16 @@ Malformed, cyclic, overlapping or duplicate graphs are rejected as a whole, pres
 graph and showing an error. Identical graphs preserve current analyses; an empty list clears the
 configured graph and disables discovery. Setting `sourceModules` to `null` restores discovery.
 No Gradle process is started by analysis or edits.
+
+Each module may supply ordered `resourceRoots` using the same URI rules. Explicit roots replace
+conventions; an empty array disables resource lookup, and omitted/null uses compiler layout
+deduction (including conventional `src/main/resources`). Custom Gradle source sets currently
+require explicit configuration; evaluated build-model import is planned. IntelliJ exposes these
+paths in **Languages & Frameworks > Ecstasy Compiler**, and VS Code uses the workspace schema.
+Resource contents and root changes invalidate the owning module and its consumers, including
+closed-file diagnostic pulls. Resource watchers cover external roots when the client supports
+dynamic registration. See the [paths/build-model plan](../../docs/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67)
+for ownership, generated directories and the planned paths/origins controls.
 
 Other LSP clients can send the same `{ "sourceModules": [...] }` object in
 `initializationOptions.xtcCompiler`, answer `workspace/configuration` for `xtc.compiler`, or send

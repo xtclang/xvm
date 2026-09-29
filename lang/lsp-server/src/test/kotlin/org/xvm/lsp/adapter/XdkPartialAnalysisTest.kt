@@ -385,7 +385,7 @@ class XdkPartialAnalysisTest {
             listOf(
                 "module Editing { void run(String value) { value." to "size; } }",
                 "module Editing { void run(String value) { value.si" to "ze; } }",
-                "module Editing { void run(String value) { value.ind" to "(); } }",
+                "module Editing { void run(String value) { value.ind" to "exOf(); } }",
                 "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
                 "module Editing { void run(String value) { value." to " } void broken( { }",
             )) {

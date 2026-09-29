@@ -539,13 +539,13 @@ implementation gaps, not scenarios that an editor driver can truthfully mark imp
 
 ### Platform demo blockers (2026-09-29)
 
-**Next bug-fix pass, before claiming full-platform acceptance.** These were found while preparing
+**Platform bug-fix pass.** These were found while preparing
 [root `demo.md`](../demo.md), using packaged server code at `4553f43af` and sibling platform
-`b8be627b7`. No platform files or production code were changed. The preceding 965-test receipt
-and selected native passes do not cover this workload. The user requested tracking first and
-fixing next; the following tasks are deliberately still open.
+`b8be627b7`. No platform files were changed during discovery or revalidation. The preceding
+965-test receipt and selected native passes do not cover this workload; the implementation and
+new acceptance evidence are recorded below.
 
-- [ ] **PLAT1 — Source-location collection crashes on the common module.** Initialize compiler
+- [x] **PLAT1 — Source-location collection crashes on the common module.** Initialize compiler
   mode with workspace root `platform` and explicit roots `auth.xqiz.it` at
   `auth/src/main/x/auth.x`, plus `common.xqiz.it` at `common/src/main/x/common.x` depending on
   auth. Call `workspace/diagnostic` with `previousResultIds: []` (no open documents required).
@@ -566,12 +566,11 @@ fixing next; the following tasks are deliberately still open.
   now returns no source when neither a parent nor child can supply one, and returns the original
   source after adoption. No field, cloning responsibility or LSP-specific API is added. A closed
   diagnostic regression combines the enum with a missing embedded template, checks the ordinary
-  `PARSER-24` report, and verifies repair. Both focused tests pass; broader/platform validation
-  remains pending. Audit `rootsBySource`, folding/selection and error-location
+  `PARSER-24` report, and verifies repair. Both focused tests pass; broader/platform acceptance is recorded below. Audit `rootsBySource`, folding/selection and error-location
   callers for the same assumption. Add regression coverage that returns ordinary compiler
   diagnostics after an early failure, then re-run real common/full-platform pulls. Do not hide
   the exception by dropping all diagnostics or disabling related reports.
-- [ ] **PLAT2 — Gradle resource roots are absent from the source model.** A separate one-root
+- [x] **PLAT2 — Gradle resource roots are absent from the source model.** A separate one-root
   workspace pull for `stub.xqiz.it` at `stub/src/main/x/stub.x` returns
   `PARSER-24: Invalid path: "./not-deployed.html".` The file exists at
   `stub/src/main/resources/not-deployed.html`. This is an ordinary compilation diagnostic,
@@ -582,7 +581,7 @@ fixing next; the following tasks are deliberately still open.
   minimal source/resource fixture and packaged diagnostic regression. Then audit common's
   `_webModule.txt` / `_createAuthenticator.txt` and kernel's `/cfg.json` resources; their outcomes
   remain unverified because PLAT1 interrupts the common-dependent graph first.
-- [ ] **PLAT3 — Real-source presentation/recovery discrepancies.** The explicit auth+githubCLI
+- [x] **PLAT3 — Real-source presentation/recovery discrepancies.** The explicit auth+githubCLI
   graph compiles cleanly (seven document reports). With these sources open, packaged requests
   expose the following non-crashing cases to minimize after PLAT1/PLAT2:
 
@@ -601,29 +600,68 @@ fixing next; the following tasks are deliberately still open.
 **PLAT2 checkpoint:** `7bce2da9b`; server and both plugins compile. The three resource-input
 regressions pass after normalizing the test's macOS temporary-directory alias; resource-only
 watched deletion/repair and delayed registration tests also pass. Six VS Code configuration tests
-pass. Broader validation and packaged resource acceptance remain pending.
+pass. Broader validation and packaged resource acceptance are recorded below.
 
 **PLAT3 implementation checkpoint:** hover selects the resolved occurrence and substituted call
 signature; whitespace before written arguments keeps their compiler parameter mapping. Inferred
 nominal types now intern declaration targets before immutable fact tables are frozen. Parser
 recovery retains a member prefix before existing call parentheses and keeps the written arguments;
 the existing partial semantic bridge validates its original callee. Four minimized platform
-regressions and all 25 parser recovery tests pass. Combined/platform validation remains pending.
+regressions and all 25 parser recovery tests pass. Combined/platform acceptance is recorded below.
 The accompanying Java run executed 511 tests and skipped 40 unrelated fixture-dependent tests;
 the affected parser, partial syntax, cursor-binding and composition-source classes had no skips.
 
-**PLAT2 implementation checkpoint (validation pending):** `resourceRoots` is an optional ordered
+**Real-platform acceptance at `b9b153298`:** the rebuilt packaged server returns all 49 document
+reports for eleven main modules with **zero diagnostics**, after explicitly setting platformUI's
+resource roots to its actual `platformUI/gui/dist` directory. Its build adds that nonconventional
+generated input with `sourceSets.main.resources.srcDir(guiDistDir)`. The generated `spa` directory
+already exists in this checkout; the server neither builds it nor copies it. Without that setting,
+the same graph correctly reports only the missing `/spa` resource. Common's embedded templates,
+stub's HTML and kernel's `cfg.json` now resolve by convention.
+
+Packaged real-source requests also confirm the corrected `sendRequest` hover, four signature
+parameters with `group` active, chained `.tr()` completion offering `trim`, and narrowed `repo`
+type-definition navigation to bundled `Map.x`. Existing five OAuth subtypes, property overrides,
+six callers and bundled `ResponseIn` navigation still work. `demo.md` includes the exact resource
+setting. This is protocol acceptance, not a new native platform IDE run. Shared editor-driver
+coverage for the resource column/external watchers and these exact real-source variants remains a
+follow-up; existing X118/X123 must not be cited as that evidence.
+
+**PLAT2 behavior:** `resourceRoots` is an optional ordered
 list on each source module, carried through server configuration and native rename round trips.
 Explicit roots replace defaults, `[]` disables resources, and omitted/null uses the compiler's
 existing layout deduction. IntelliJ's existing module table adds a JSON-array resource column;
 VS Code's settings schema exposes the same field. The richer path picker/origin view and Gradle
 model import remain PLAT2c work. Resource fingerprints include contents and filesystem metadata;
 uncertain lexing/interpolations conservatively capture the resource trees. Modules with no possible
-path tokens avoid that scan. This is bounded input validation, not a persistent resource index.
+path tokens avoid that scan. This is conservative filesystem validation, not a persistent resource index. Large resource trees
+can make snapshot capture expensive; measuring this and narrowing the observed read set remain
+part of L67 performance work.
 Workspace resource events and external-root subscriptions refresh affected consumers, and resource
 inputs also participate in delayed-watcher/stale-result checks. New tests cover conventional/custom
 roots, unchanged reuse, same-size/same-timestamp edits, creation/deletion, explicit-empty roots,
-configuration ownership and delayed watcher registrations. Combined validation remains pending.
+configuration ownership and delayed watcher registrations. See the combined receipt below.
+
+**Combined validation receipt (2026-09-29):** the forced batch exercised 878 compiler/backend,
+70 packaged-stdio and 51 IntelliJ unit tests. It found one semantic regression (nullable type
+navigation also offered the `Nullable` marker), one obsolete unsupported-boundary expectation,
+and two new-test setup errors (canonical temporary paths and pull-diagnostic negotiation).
+Nullable navigation now explicitly unwraps the marker; the negative cursor test still rejects a
+mid-token call name, while completed prefixes are covered positively. The focused recheck passes
+all 113 affected backend tests and the new packaged resource test, with zero failures/errors/skips.
+The other 875 backend, 69 stdio and all 51 IntelliJ tests passed in the initial batch. Root/lang
+Spotless checks and six VS Code configuration tests pass. The Java run passed 511 and skipped 40
+fixture-dependent tests; the 39 directly affected parser/partial/cursor/source tests had no skips.
+No native IDE run was performed for this batch. Gradle XML for the two rerun tasks now contains
+only the focused recheck; this receipt distinguishes that from the original broader run.
+
+Future extraction map for this batch:
+
+| Commit | PR scope and dependency |
+| --- | --- |
+| `db328f8a1` | General compiler source-accessor correction plus parsed-tree regression; the adapter diagnostic regression travels with the embedding/LSP integration. |
+| `7bce2da9b` | Resource input model, server invalidation/watchers, both editor configuration stores and regression coverage; depends on the existing source-graph/diagnostic foundation. |
+| `b9b153298` | Platform presentation/recovery fixes. Parser/partial validation and its Java regression form the compiler slice; semantic-model/hover/signature code and adapter tests form the dependent LSP slice. Includes the PLAT2 fixture's canonical-path correction. |
 
 #### Resource configuration and build-model integration (PLAT2 / L67)
 
@@ -639,6 +677,9 @@ also supports unmanaged folders with a classpath configuration UI
   plugins and Provider-based configuration; never infer arbitrary build behavior by parsing script
   text. The build model is authoritative by default. Offer **Open build file** and **Refresh build
   configuration** from the paths view; do not silently rewrite a build script.
+  Include task-produced roots and resource processing (copy/filter/rename), with an explicit
+  refresh/build-generated-resources action and a clear missing-output state. Merely importing
+  `srcDirs` is insufficient when the compiler consumes transformed task outputs.
 - **Unmanaged projects:** no build file is required. Discover ordinary source/layout defaults,
   allow explicit per-module source/resource paths and dependencies, and persist project/workspace
   settings. An explicit override also remains available in a build-managed project, labelled as an
@@ -663,10 +704,10 @@ also supports unmanaged folders with a classpath configuration UI
 
 Implementation sequence and acceptance:
 
-- [ ] **PLAT2a (current bug-fix batch):** explicit ordered resource roots in the host/server
+- [x] **PLAT2a (current bug-fix batch):** explicit ordered resource roots in the host/server
   configuration, compiler layout fallback, resource-aware cache/watch behavior, and conventional
   plus custom-directory regressions. Exercise create/edit/delete and unchanged reuse.
-- [ ] **PLAT2b (current bug-fix batch):** editable IntelliJ project paths and equivalent VS Code
+- [x] **PLAT2b (current bug-fix batch):** editable IntelliJ project paths and equivalent VS Code
   configuration schema; retain custom roots through Apply/Reset and module rename/Undo. Add shared
   manual steps and focused settings/protocol tests.
 - [ ] **PLAT2c / L67 (follow-up):** evaluated Gradle/XTC project-model bridge and origin-aware
@@ -674,9 +715,14 @@ Implementation sequence and acceptance:
   imported IDE model where complete; determine the portable XTC/Gradle model contract for VS Code.
   Test custom and generated resource roots, no-build-file projects, reimport and explicit overrides.
   Manual paths are an interim supported route, not evidence this bridge already exists.
-- [ ] **PLAT2d (acceptance):** run the full platform main graph with conventional resources, plus
+- [x] **PLAT2d (acceptance):** run the full platform main graph with conventional resources, plus
   a fixture whose build config selects a different directory. Verify missing/generated roots and
   resource-only changes without recompiling unrelated consumers or returning stale diagnostics.
+- [ ] **PLAT2e (native acceptance follow-up):** add shared scenarios for the resource-root column
+  and externally watched roots in both drivers, including Apply/Reset, resource repair and
+  rename/Undo preservation. Add the precise PLAT3 call-prefix/hover/narrowed-type variants. The
+  current backend/settings/protocol regressions and manual instructions do not count as native
+  editor evidence.
 
 **Checked alternatives for the demo:** auth+githubCLI workspace diagnostics have no errors;
 `OAuthProvider` has five source subtypes and property implementations; `sendRequest` has six

@@ -84,6 +84,7 @@ class XdkStdioTest {
         val resource = root.resolve("data.txt").apply { writeText("template") }
         Session(packagedJar(), directory).use { session ->
             session.initialize(
+                pullDiagnostics = true,
                 sourceModules =
                     listOf(
                         mapOf(
@@ -91,7 +92,7 @@ class XdkStdioTest {
                             "uri" to source.toURI().toString(),
                             "resourceRoots" to listOf(root.toURI().toString()),
                         )
-                    )
+                    ),
             )
             val params = DocumentDiagnosticParams(TextDocumentIdentifier(source.toURI().toString()))
             fun pull() = session.await(session.server.textDocumentService.diagnostic(params)).left
