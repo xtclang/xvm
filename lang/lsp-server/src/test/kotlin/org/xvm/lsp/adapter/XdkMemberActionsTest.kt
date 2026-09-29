@@ -37,7 +37,7 @@ class XdkMemberActionsTest {
     fun `override inherited concrete source method without changing unrelated bindings`() {
         val text = "module App { class Base { Int read(Int value) = value; } class Box extends Base { String keep = \"ok\"; } }"
         workspace(text) { adapter, uri ->
-            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") && it.title.contains(" read(") }
             assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
             assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
         }
@@ -57,7 +57,8 @@ class XdkMemberActionsTest {
 
     @Test
     fun `all required overloads repair an instantiated class atomically`() {
-        val text = """
+        val text =
+            """
             module App {
                 interface Api { Int read(Int value); String read(String value); }
                 class Box implements Api {}
@@ -65,7 +66,7 @@ class XdkMemberActionsTest {
                 Box make() = new Box();
                 String use(Child child) = child.read(value = "text");
             }
-        """.trimIndent()
+            """.trimIndent()
         workspace(text, initiallyValid = false) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Implement all required members (2)" }
             val edit = requireNotNull(action.edit)
@@ -80,20 +81,33 @@ class XdkMemberActionsTest {
 
     @Test
     fun `bulk generation preserves existing implementations and property bindings`() {
-        val text = """
+        val text =
+            """
             module App {
                 interface Api { Int first(); String second(); void third(); }
                 class Box implements Api { @Override Int first() = 7; String label = "keep"; }
                 Box make() = new Box();
                 String use(Box box) = box.second() + box.label;
             }
-        """.trimIndent()
+            """.trimIndent()
         workspace(text, initiallyValid = false) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Implement all required members (2)" }
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
             assertThat(changed).contains("@Override Int first() = 7; String label = \"keep\";")
             assertThat(changed.split("first()")).hasSize(3)
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `all required action refuses an unsupported remainder on an implicitly abstract class`() {
+        val text =
+            "module App { interface Api { void first(); void second(); List<Int> read(List<Int> value = []); } " +
+                "class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val offered = actions(adapter, uri, text)
+            assertThat(offered.map { it.title }).contains("Implement void first()", "Implement void second()")
+            assertThat(offered).noneMatch { it.title.startsWith("Implement all") }
         }
     }
 
@@ -143,14 +157,15 @@ class XdkMemberActionsTest {
     @ValueSource(strings = ["List<Int> read(List<Int> value = []);"])
     fun `unrenderable types and nonliteral defaults remain refusals`(signature: String) {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
-        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
+        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text).filter { it.title.contains(" read(") }).isEmpty() }
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["Int read(Int value = -2);", "String read(String value = \"text\");", "Char read(Char value = 'x');"])
     fun `fresh declaration repair retains literal defaults`(signature: String) {
-        val text = "module App { interface Api { $signature } class Box implements Api {} " +
-            "Box make() = new Box(); void use(Box box) { box.read(); } }"
+        val text =
+            "module App { interface Api { $signature } class Box implements Api {} " +
+                "Box make() = new Box(); void use(Box box) { box.read(); } }"
         workspace(text, initiallyValid = false) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
@@ -192,7 +207,7 @@ class XdkMemberActionsTest {
     fun `existing call intentionally selects the generated override`() {
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} Int use(Box box) = box.read(); }"
         workspace(text) { adapter, uri ->
-            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") && it.title.contains(" read(") }
             assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
         }
     }
@@ -215,7 +230,9 @@ class XdkMemberActionsTest {
     fun `foreign signature types add qualified imports without shadowing existing names`() {
         val library = "module Library { class Value {} interface Api { Value read(Value value); } }"
         val file = directory.resolve("Library.x").toFile().apply { writeText(library) }
-        val text = "module App { package lib import Library; class Box implements lib.Api { Int library = 1; } }"
+        val text =
+            "module App { package lib import Library; class Box implements lib.Api { Int library = 1; } " +
+                "Int keep(Box box) = box.library; }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Implement library1.Value read(library1.Value value)" }
             val edit = requireNotNull(action.edit)
@@ -247,17 +264,19 @@ class XdkMemberActionsTest {
     fun `binary contracts generate only user source edits with or without indexed sources`(indexed: Boolean) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
-        val library = EmbeddingSupport.instance().compileModule(
-            Source("module Library { interface Api { String read(String value); } }", "file:///Library.x"),
-            null,
-            errors,
-        )
+        val library =
+            EmbeddingSupport.instance().compileModule(
+                Source("module Library { interface Api { String read(String value); } }", "file:///Library.x"),
+                null,
+                errors,
+            )
         assertThat(library.succeeded()).describedAs(errors.errors.toString()).isTrue()
         val indexedDependency = library.toDependency()
         val dependency = if (indexed) indexedDependency else XdkDependency.fromBinary(indexedDependency.bytes())
         val original = dependency.bytes()
-        val text = "module App { package lib import Library; class Box implements lib.Api {} " +
-            "Box make() = new Box(); String use(Box box) = box.read(value = \"text\"); }"
+        val text =
+            "module App { package lib import Library; class Box implements lib.Api {} " +
+                "Box make() = new Box(); String use(Box box) = box.read(value = \"text\"); }"
         workspace(text, initiallyValid = false, dependencies = listOf(dependency)) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Implement String read(String value)" }
             val edit = requireNotNull(action.edit)
@@ -280,8 +299,9 @@ class XdkMemberActionsTest {
 
     @Test
     fun `bundled concrete method override preserves descendant and selected call bindings`() {
-        val text = "module App { class Box implements Iterator<String> { @Override conditional String next() = False; } " +
-            "class Child extends Box {} String use(Child child) = child.take(); }"
+        val text =
+            "module App { class Box implements Iterator<String> { @Override conditional String next() = False; } " +
+                "class Child extends Box {} String use(Child child) = child.take(); }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Override String take()" }
             assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
@@ -292,7 +312,7 @@ class XdkMemberActionsTest {
     fun `descendants inherit the generated override in compiler dispatch order`() {
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} class Child extends Box {} }"
         workspace(text) { adapter, uri ->
-            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") && it.title.contains(" read(") }
             assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
         }
     }
@@ -315,7 +335,7 @@ class XdkMemberActionsTest {
             }
             """.trimIndent()
         workspace(text) { adapter, uri ->
-            val actions = actions(adapter, uri, text).filter { it.title.startsWith("Override ") }
+            val actions = actions(adapter, uri, text).filter { it.title.startsWith("Override ") && it.title.contains(" read(") }
             assertThat(actions).hasSize(2)
             actions.forEach { action ->
                 val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
@@ -348,7 +368,7 @@ class XdkMemberActionsTest {
         val file = directory.resolve("Consumer.x").toFile().apply { writeText(consumer) }
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} }"
         workspace(text) { adapter, uri ->
-            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") && it.title.contains(" read(") }
             val edit = requireNotNull(action.edit)
             assertThat(edit.changes.keys).containsExactly(uri)
             assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics).isEmpty()
