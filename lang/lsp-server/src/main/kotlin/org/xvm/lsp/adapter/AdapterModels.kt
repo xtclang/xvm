@@ -43,6 +43,7 @@ data class CompletionItem(
         VARIABLE,
         KEYWORD,
         MODULE,
+        VALUE,
     }
 }
 

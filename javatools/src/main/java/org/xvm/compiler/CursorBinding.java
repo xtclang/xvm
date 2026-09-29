@@ -20,7 +20,8 @@ import org.xvm.compiler.ast.partial.IncompleteStatement;
 public record CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
-                            List<Property> argumentProperties, List<Formal> formals) {
+                            List<Property> argumentProperties, List<Formal> formals,
+                            List<String> argumentLiterals) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
@@ -29,6 +30,16 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         argumentValues = List.copyOf(argumentValues);
         argumentProperties = List.copyOf(argumentProperties);
         formals = List.copyOf(formals);
+        argumentLiterals = List.copyOf(argumentLiterals);
+    }
+
+    /** Retain callers predating literal insertion proposals. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues,
+                         List<Property> argumentProperties, List<Formal> formals) {
+        this(variables, thisType, instance, types, candidates, callsInspected, functions,
+                argumentValues, argumentProperties, formals, List.of());
     }
 
     /** Retain the original complete constructor for existing embedding consumers. */
@@ -58,7 +69,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     public CursorBinding withFormals(List<Formal> formals) {
         return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected,
-                functions, argumentValues, argumentProperties, formals);
+                functions, argumentValues, argumentProperties, formals, argumentLiterals);
     }
 
     /** Retain variable-completion callers. Record patterns must also include argument properties. */
@@ -89,12 +100,12 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                          List<NamedType> types, CallFacts calls) {
         this(variables, thisType, instance, types, calls.candidates(), calls.inspected(),
-                calls.functions(), calls.argumentValues(), calls.argumentProperties());
+                calls.functions(), calls.argumentValues(), calls.argumentProperties(), List.of(), calls.argumentLiterals());
     }
 
     /** A grouped immutable view; no context, mutable operation or AST child is introduced. */
     public CallFacts callFacts() {
-        return new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties);
+        return new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, argumentLiterals);
     }
 
     private CursorBinding withCallFacts(CallFacts calls) {
@@ -123,6 +134,11 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         return withCallFacts(callFacts().withArgumentProperties(properties));
     }
 
+    /** Literal source spellings whose insertion fits and validates a complete argument list. */
+    public CursorBinding withArgumentLiterals(List<String> literals) {
+        return withCallFacts(new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, literals));
+    }
+
     /**
      * Call inspection and insertion facts, separate from visible scope and syntax selection.
      * An inspected empty candidate list means rejection, not absence of inspection. Updating
@@ -131,28 +147,35 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
      */
     public record CallFacts(List<Candidate> candidates, boolean inspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
-                            List<Property> argumentProperties) {
+                            List<Property> argumentProperties, List<String> argumentLiterals) {
         public CallFacts {
             candidates = List.copyOf(candidates);
             functions = List.copyOf(functions);
             argumentValues = List.copyOf(argumentValues);
             argumentProperties = List.copyOf(argumentProperties);
+            argumentLiterals = List.copyOf(argumentLiterals);
+        }
+
+        public CallFacts(List<Candidate> candidates, boolean inspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues,
+                         List<Property> argumentProperties) {
+            this(candidates, inspected, functions, argumentValues, argumentProperties, List.of());
         }
 
         public CallFacts withCandidates(List<Candidate> candidates) {
-            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties);
+            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties, argumentLiterals);
         }
 
         public CallFacts withFunctions(List<FunctionCandidate> functions) {
-            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties);
+            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties, argumentLiterals);
         }
 
         public CallFacts withArgumentValues(List<Variable> values) {
-            return new CallFacts(candidates, inspected, functions, values, argumentProperties);
+            return new CallFacts(candidates, inspected, functions, values, argumentProperties, argumentLiterals);
         }
 
         public CallFacts withArgumentProperties(List<Property> properties) {
-            return new CallFacts(candidates, inspected, functions, argumentValues, properties);
+            return new CallFacts(candidates, inspected, functions, argumentValues, properties, argumentLiterals);
         }
     }
 
