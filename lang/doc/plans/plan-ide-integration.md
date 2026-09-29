@@ -223,7 +223,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Protocol gaps and pending acceptance | What exists today | Task |
 |---|---|---|
 | Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports and proven implement/override | L62–L63 |
-| Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. The later real-platform source-location crash is tracked as PLAT1. | L68 implemented; PLAT1 robustness follow-up |
+| Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Full-document tokens | L69 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | Eager results for the currently supported facts | L70 |
 | File-operation pre-edit requests; explicit create/delete notifications | Watched-file refresh and `didRenameFiles` lifecycle handling | L71 |
@@ -257,8 +257,17 @@ not additional LSP capabilities or a completed L81 progress/trace-controls imple
 Dynamic watcher registration now waits for `initialized` and negotiated support. The remaining
 capability negotiation and refresh work still belongs to the L80/L81 audit.
 
-**Implementation and validation are separate.** The shared playbook now has 127 cases with
-assertions in both drivers. X119–X121 pass in selected runs in both editors, alongside X57/X118 and configuration controls;
+**Implementation and validation are separate.** The shared playbook now has 128 cases with
+assertions in both drivers. The [current IntelliJ demo record](../../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
+tracks resumed execution and focused corrections; it does not replace the historical full-run receipt.
+All 128 cases have passing receipts across resumed runs. The final X105/X122/X123 native recheck
+passes after the client carries diagnostic result IDs across automatic pulls of the same editor
+snapshot, preserving lazy quick fixes on unchanged reports. VS Code `run-b59XBq` passes all 128 cases
+in one complete run after the X60 source/resource invalidation correction and shared expectation
+sorting. The accompanying 1,413 backend and 70 protocol tests pass; three existing Tree-sitter
+placeholders remain disabled. IntelliJ `run-5742519770640114134` passes START and
+X60/X77/X78/X105/X122/X123 on the final code with zero IDE errors.
+X119–X121 pass in selected runs in both editors, alongside X57/X118 and configuration controls;
 see the [batch receipts](../../../docs/errs-integration-plan.md#checkpoint-and-validation-map). The ten L62 additions, X109–X118, pass in selected editor runs; see the
 [rename receipts](../../../docs/errs-integration-plan.md#shared-rename-and-native-settings-validation).
 The preceding 113-case suite includes the 50 completed parity cases and X20/X81/X82 assertion
