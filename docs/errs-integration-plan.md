@@ -5784,7 +5784,7 @@ Implement four separate checkpoints before testing them together:
 1. [x] Atomic “Implement all required members”, with complete graph and per-family dispatch proof.
 2. [x] Bundled XDK and binary contracts with read-only dependency identities (implementation checkpoint; batch validation pending).
 3. [x] Qualified cross-module and compound type spellings, including required imports (implementation checkpoint; batch validation pending).
-4. [ ] Defaults during fresh declaration repair; audit computed defaults before supporting them.
+4. [x] Defaults during fresh declaration repair; audit computed defaults before supporting them (implementation checkpoint; batch validation pending).
 
 Checkpoint 1 groups all renderable required methods in one class edit. The proof checks each
 new method against its own original family, reconstructs all original chains after removing the
@@ -5805,3 +5805,13 @@ bodies form one versioned edit; bulk repairs deduplicate imports. The proof tran
 positions through both insertions and still requires unchanged unrelated bindings and dispatch.
 Annotated and otherwise unsupported spellings remain refusals. Added cases cover nullable/union,
 immutable/nested signatures, foreign-type collisions and shared imports in an atomic repair.
+
+Checkpoint 4 audits default ownership: the normal compiler validates parameter defaults during
+code generation, after declaration analysis has stopped. Fresh repair therefore reads only the
+existing parser-owned String/Char/integer literal tokens through existing structural getters; it
+does not evaluate or transplant arbitrary initializer expressions. Full proposed compilation must
+validate both declarations. No new Java/AST API, mutable field or failed-compiler resumption is needed.
+Already validated primitive constants can be emitted safely even when originally computed (`1 + 2`
+becomes `3`); this corrects the earlier blanket statement that every computed default was refused.
+Validated Boolean/Null singleton defaults use explicit XDK identities to avoid scope shadowing.
+Unvalidated computed/named defaults and unsupported constant kinds remain deliberate refusals.
