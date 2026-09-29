@@ -598,6 +598,20 @@ fixing next; the following tasks are deliberately still open.
 
 **PLAT1 checkpoint:** `db328f8a1`; focused parsed-tree and closed-diagnostic regressions pass.
 
+**PLAT2 checkpoint:** `7bce2da9b`; server and both plugins compile. The three resource-input
+regressions pass after normalizing the test's macOS temporary-directory alias; resource-only
+watched deletion/repair and delayed registration tests also pass. Six VS Code configuration tests
+pass. Broader validation and packaged resource acceptance remain pending.
+
+**PLAT3 implementation checkpoint:** hover selects the resolved occurrence and substituted call
+signature; whitespace before written arguments keeps their compiler parameter mapping. Inferred
+nominal types now intern declaration targets before immutable fact tables are frozen. Parser
+recovery retains a member prefix before existing call parentheses and keeps the written arguments;
+the existing partial semantic bridge validates its original callee. Four minimized platform
+regressions and all 25 parser recovery tests pass. Combined/platform validation remains pending.
+The accompanying Java run executed 511 tests and skipped 40 unrelated fixture-dependent tests;
+the affected parser, partial syntax, cursor-binding and composition-source classes had no skips.
+
 **PLAT2 implementation checkpoint (validation pending):** `resourceRoots` is an optional ordered
 list on each source module, carried through server configuration and native rename round trips.
 Explicit roots replace defaults, `[]` disables resources, and omitted/null uses the compiler's

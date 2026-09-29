@@ -1138,19 +1138,15 @@ internal constructor(
         column: Int,
     ): SymbolInfo? = XdkSymbols.at(analysis(uri)?.symbols ?: emptyList(), line, column)
 
-    /**
-     * The declaration the cursor is in, and - where the compiler validated the expression under
-     * it - what that expression's type turned out to be. The type is the half no grammar can
-     * supply, and the half an author actually wants from a hover.
-     */
+    /** The resolved occurrence and its inferred type, including flow-sensitive narrowing. */
     override fun getHoverInfo(
         uri: String,
         line: Int,
         column: Int,
     ): String? {
-        val declared = super.getHoverInfo(uri, line, column)
-        val type = analysis(uri)?.semantics?.typeAt(line, column)?.displayName
-        if (type == null && analysis(uri)?.semantics?.status != SemanticModel.Status.COMPLETE) {
+        val model = analysis(uri)?.semantics
+        val hover = model?.let { XdkPresentation.hover(it, line, column) }
+        if (hover == null && model?.status != SemanticModel.Status.COMPLETE) {
             val partial = analyzeAtAsync(uri, Position(line, column + 1)).join()
             val site = partial?.sites?.singleOrNull()
             val prefix = site?.memberPrefix
@@ -1169,11 +1165,7 @@ internal constructor(
                     }
             }
         }
-        return when {
-            type == null -> declared
-            declared == null -> "```xtc\n$type\n```"
-            else -> "$declared\n\n```xtc\n$type\n```"
-        }
+        return hover
     }
 
     /** Highlight only occurrences of the resolved target, including its declaration when known. */
