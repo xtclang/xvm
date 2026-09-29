@@ -127,7 +127,7 @@ internal object XdkRename {
         return actualDispatch.containsAll(knownDispatch)
     }
 
-    /** Permit exactly the selected owner/contract chain to acquire one written implementation. */
+    /** Allow one written implementation and its inherited dispatch effects; preserve every other binding. */
     fun preservesMemberAddition(
         before: CompilerRenameFacts,
         after: CompilerRenameFacts,
@@ -135,40 +135,91 @@ internal object XdkRename {
         candidate: XdkMemberActions.Candidate,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected = edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { source, offset ->
-            plan.map(source, offset)
-        } ?: return false
-        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
-        if (expected.any { (site, target) -> actual[site] != target }) return false
-        val oldDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val source = candidate.owner.sourceName ?: return false
+        val insertion = plan.edits[source]?.singleOrNull() ?: return false
+        if (plan.edits.size != 1 || insertion.start != insertion.end) return false
+        val oldDispatch = dispatch(before, plan.original) { path, offset -> plan.map(path, offset) } ?: return false
         val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
-        val removed = (oldDispatch - newDispatch).singleOrNull() ?: return false
-        val added = (newDispatch - oldDispatch).singleOrNull() ?: return false
 
         fun matches(
             target: Target,
             location: SemanticModel.SourceLocation,
         ): Boolean {
             val declaration = target as? Target.Declaration ?: return false
-            val source = location.sourceName ?: return false
-            val text = plan.original[source] ?: return false
-            val start = offset(text, location.range.start)?.let { plan.map(source, it) } ?: return false
-            val end = offset(text, location.range.end)?.let { plan.map(source, it) } ?: return false
-            return declaration.site == Site(source, start, end)
+            val path = location.sourceName ?: return false
+            val text = plan.original[path] ?: return false
+            val start = offset(text, location.range.start)?.let { plan.map(path, it) } ?: return false
+            val end = offset(text, location.range.end)?.let { plan.map(path, it) } ?: return false
+            return declaration.site == Site(path, start, end)
         }
-        if (!removed.supported || !added.supported || removed.owner != added.owner ||
-            !matches(removed.owner, candidate.owner) || removed.members.none { matches(it, candidate.contract) }
+        val removed = (oldDispatch - newDispatch).singleOrNull { chain ->
+            matches(chain.owner, candidate.owner) && chain.members.any { matches(it, candidate.contract) }
+        } ?: return false
+        val added = (newDispatch - oldDispatch).singleOrNull { it.owner == removed.owner } ?: return false
+        val member = (added.members - removed.members.toSet()).singleOrNull() as? Target.Declaration ?: return false
+        if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
+            member.site.start < insertion.start || member.site.end > insertion.start + insertion.text.length
         ) {
             return false
         }
-        val member = (added.members - removed.members.toSet()).singleOrNull() as? Target.Declaration ?: return false
-        val source = candidate.owner.sourceName ?: return false
-        val insertion = plan.edits[source]?.singleOrNull() ?: return false
-        return plan.edits.size == 1 && insertion.start == insertion.end &&
-            member.kind == SemanticModel.SymbolKind.METHOD && member.site.source == source &&
-            member.site.start >= insertion.start && member.site.end <= insertion.start + insertion.text.length &&
-            added.members.filterNot { it == member } == removed.members
+        // TypeInfo supplies the descendant chains. Removing only the new written method must
+        // reconstruct the entire old dispatch graph, in order, including properties and overloads.
+        val changed = newDispatch - oldDispatch
+        if (changed.any { chain ->
+                !chain.supported || chain.members.count { it == member } != 1 ||
+                    chain.members.none { matches(it, candidate.contract) } ||
+                    chain.copy(members = chain.members.filterNot { it == member }) !in oldDispatch
+            }
+        ) {
+            return false
+        }
+        if (newDispatch.mapTo(linkedSetOf()) { chain ->
+                if (chain in changed) chain.copy(members = chain.members.filterNot { it == member }) else chain
+            } != oldDispatch
+        ) {
+            return false
+        }
+        val expected = edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { path, offset ->
+            plan.map(path, offset)
+        } ?: return false
+        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
+        val oldParameters = memberParameterSlots(before, plan.original) { path, offset -> plan.map(path, offset) }
+        val newParameters = memberParameterSlots(after, plan.proposed) { _, offset -> offset }
+
+        fun declarationSite(target: Target): Site? = when (target) {
+            is Target.Declaration -> target.site
+            is Target.SourceProof -> target.site
+            else -> null
+        }
+        fun selectedRebinding(old: Target, new: Target): Boolean =
+            declarationSite(new) == member.site && declarationSite(old) != null &&
+                removed.members.any { declarationSite(it) == declarationSite(old) }
+
+        return expected.all { (site, target) ->
+            val replacement = actual[site] ?: return@all false
+            if (target == replacement || selectedRebinding(target, replacement)) return@all true
+            // Named arguments may now identify the new override's parameter. Only the same
+            // compiler-proven slot on the selected method family is allowed to change owner.
+            val oldSlot = oldParameters[target] ?: target as? Target.Parameter ?: return@all false
+            val newSlot = newParameters[replacement] ?: replacement as? Target.Parameter ?: return@all false
+            oldSlot.index == newSlot.index && selectedRebinding(oldSlot.method, newSlot.method)
+        }
     }
+
+    private fun memberParameterSlots(
+        facts: CompilerRenameFacts,
+        texts: Map<String, String>,
+        translate: (String, Int) -> Int?,
+    ): Map<Target, Target.Parameter> = facts.models.flatMap { it.symbols }.mapNotNull { symbol ->
+        val identity = facts.constants[symbol.id] as? ProofIdentity.Parameter ?: return@mapNotNull null
+        val source = symbol.declarationSource ?: return@mapNotNull null
+        val text = texts[source] ?: return@mapNotNull null
+        val range = symbol.declaration ?: return@mapNotNull null
+        val start = offset(text, range.start)?.let { translate(source, it) } ?: return@mapNotNull null
+        val end = offset(text, range.end)?.let { translate(source, it) } ?: return@mapNotNull null
+        val slot = composedTarget(identity, texts, { it }, translate) as? Target.Parameter ?: return@mapNotNull null
+        Target.Declaration(Site(source, start, end), symbol.kind) to slot
+    }.toMap()
 
     private data class Dispatch(
         val owner: Target,
