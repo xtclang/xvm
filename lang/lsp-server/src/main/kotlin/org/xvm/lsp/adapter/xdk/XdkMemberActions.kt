@@ -6,7 +6,7 @@ import org.xvm.lsp.adapter.Range
 internal object XdkMemberActions {
     data class Candidate(
         val owner: SemanticModel.SourceLocation,
-        val contract: SemanticModel.SourceLocation,
+        val contract: ProofIdentity,
         val insertion: SemanticModel.Position,
         val declaration: String,
         val implementation: Boolean,
@@ -61,6 +61,6 @@ internal object XdkMemberActions {
             .filter { it.size > 1 }.map { Action(it.sortedBy(Candidate::declaration)) }
         // A combined repair must contain all available required members, even when individual
         // actions exceed the query limit. Complete compilation rejects any unsupported remainder.
-        return (combined + selected.map { Action(listOf(it)) }).take(32)
+        return (combined + selected.sortedByDescending { it.implementation }.map { Action(listOf(it)) }).take(32)
     }
 }
