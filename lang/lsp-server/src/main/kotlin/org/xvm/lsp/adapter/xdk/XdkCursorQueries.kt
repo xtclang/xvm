@@ -73,7 +73,19 @@ internal object XdkCursorQueries {
                         TextEdit(range, formal.name),
                     )
                 }
-        return ordinary + formals
+        val literals =
+            site.argumentLiterals
+                .filter { it.startsWith(prefix.text) }
+                .map { text ->
+                    CompletionItem(
+                        text,
+                        CompletionKind.VALUE,
+                        "Literal fitting this argument",
+                        text,
+                        TextEdit(range, text),
+                    )
+                }
+        return ordinary.filterNot { it.label in site.argumentLiterals } + formals + literals
     }
 
     fun formalDetail(

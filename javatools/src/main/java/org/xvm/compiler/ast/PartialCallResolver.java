@@ -31,6 +31,8 @@ import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 import org.xvm.compiler.ast.partial.PartialSyntax.ArgumentCursor;
 
+import org.xvm.util.PackedInteger;
+
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
 
@@ -147,8 +149,7 @@ final class PartialCallResolver {
             return scope;
         }
         String prefix = cursor.getCompletionPrefix();
-        Predicate<String> fitsName = name -> {
-            Expression value = proposedName(cursor, name);
+        Predicate<Expression> fitsValue = value -> {
             if (nested.isPresent()) {
                 return fits.test(PartialArgument.proposed(site, nested.orElseThrow(), value));
             }
@@ -160,11 +161,16 @@ final class PartialCallResolver {
             arguments.add(argument);
             return fits.test(arguments);
         };
+        Predicate<String> fitsName = name -> fitsValue.test(proposedName(cursor, name));
         var variables = scope.variables().stream().filter(variable -> !qualified && variable.readable())
                 .filter(variable -> variable.name().startsWith(prefix))
                 .takeWhile(variable -> !errs.isAbortDesired())
                 .filter(variable -> fitsName.test(variable.name())).toList();
-        var result = scope.withArgumentValues(variables);
+        var literals = qualified ? List.<String>of() : List.of("False", "True", "Null", "0", "\"\"").stream()
+                .filter(text -> text.startsWith(prefix))
+                .takeWhile(text -> !errs.isAbortDesired())
+                .filter(text -> fitsValue.test(proposedLiteral(cursor, text))).toList();
+        var result = scope.withArgumentValues(variables).withArgumentLiterals(literals);
         if (errs.isAbortDesired()) {
             return result;
         }
@@ -193,6 +199,15 @@ final class PartialCallResolver {
                 .filter(property -> fitsName.test(property.name()))
                 .toList();
         return result.withArgumentProperties(properties);
+    }
+
+    private static Expression proposedLiteral(IncompleteStatement site, String text) {
+        long cursor = site.getEndPosition();
+        return switch (text) {
+            case "0" -> new LiteralExpression(new Token(cursor, cursor, Id.LIT_INT, PackedInteger.ZERO));
+            case "\"\"" -> new LiteralExpression(new Token(cursor, cursor, Id.LIT_STRING, ""));
+            default -> proposedName(site, text);
+        };
     }
 
     /** Normal read validation supplies identity, narrowing and receiver-specific type substitution. */
