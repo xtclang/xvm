@@ -10,6 +10,7 @@ import com.intellij.driver.sdk.ProblemsViewToolWindowUtils
 import com.intellij.driver.sdk.findFile
 import com.intellij.driver.sdk.getPlugin
 import com.intellij.driver.sdk.getProblemsViewProblems
+import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.isPluginLoaded
 import com.intellij.driver.sdk.selectProblemsViewTab
@@ -130,6 +131,10 @@ class CompilerPlaybook(
                 return@with
             }
             configure(shared.graph)
+            withContext(OnDispatcher.EDT) {
+                getToolWindow("Language Servers").show()
+                getToolWindow("Language Servers").hide()
+            }
             case(
                 shared.dependencyNavigation.id,
                 "Initial compiler configuration and cross-module definition",
@@ -1305,6 +1310,15 @@ class CompilerPlaybook(
                     .also(onResult)
             progress(id, "passed")
         } catch (failure: Throwable) {
+            runCatching {
+                    ClientTrace(this)
+                        .capture(
+                            Path.of(singleProject().getBasePath())
+                                .parent
+                                .resolve("client-trace-$id.log")
+                        )
+                }
+                .onFailure(failure::addSuppressed)
             completed +=
                 Result(
                         id,
@@ -1596,6 +1610,11 @@ class CompilerPlaybook(
             val settings = new(LspServerSettings::class)
             settings.setConfigurationContent(content)
             service<LspSettings>().updateSettings("xtcLanguageServer", settings)
+            val traceSettings =
+                new(LspServerSettings::class)
+                    .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
+            service<ProjectLspSettings>(singleProject())
+                .updateSettings("xtcLanguageServer", traceSettings)
         }
 
     private fun Driver.open(file: String): JEditorUiComponent {
