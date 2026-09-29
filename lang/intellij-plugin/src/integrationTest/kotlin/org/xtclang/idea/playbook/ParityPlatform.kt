@@ -11,89 +11,10 @@ import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.platformCases() {
-    case("X129") { data ->
-        val root = with(driver) { Path.of(singleProject().getBasePath()) }
-        val report = root.resolve(".gradle/xtc/lsp-model.json")
-        val model =
-            JsonParser.parseString(
-                    data["model"]
-                        .toString()
-                        .replace("\${workspace}", directory.toUri().toString().trimEnd('/'))
-                )
-                .asJsonObject
-        val inputs = model["sourceSets"].asJsonArray[0].asJsonObject
-        val resources = inputs["resourceRoots"].deepCopy()
-        fun refresh() =
-            with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    utility(CompilerSettingsPage::class).refreshBuildModel(singleProject())
-                }
-            }
-        fun writeModel() {
-            Files.createDirectories(report.parent)
-            Files.writeString(report, model.toString())
-            refresh()
-        }
-        fun automatic() =
-            with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    check(
-                        utility(CompilerSettingsPage::class)
-                            .useBuildModel(singleProject())
-                            .contains("Gradle model")
-                    )
-                }
-            }
-        try {
-            write(data.string("file"), data.string("source"))
-            write(data.string("resource"), data.string("contents"))
-            writeModel()
-            automatic()
-            val document = open(data.string("file"))
-            clean(document)
-            inputs.add("resourceRoots", Gson().toJsonTree(emptyList<String>()))
-            writeModel()
-            errors(document)
-            inputs.add("resourceRoots", resources)
-            writeModel()
-            clean(document)
-            Files.writeString(report, "{")
-            refresh()
-            clean(document)
-            with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
-                }
-            }
-            configure(
-                listOf(
-                    SharedScenarios.SourceModule(
-                        "GradleAssets",
-                        document.uri,
-                        emptyList(),
-                        emptyList(),
-                    )
-                )
-            )
-            errors(document)
-            writeModel()
-            errors(document)
-            automatic()
-            clean(document)
-        } finally {
-            Files.deleteIfExists(report)
-            with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
-                }
-            }
-            refresh()
-        }
-    }
-
     case("X124") { data ->
-        val external = Files.createTempDirectory("xtc-playbook-resources-")
+        val external = Files.createTempDirectory("xtc-playbook-resources-").toRealPath()
         try {
+            with(driver) { utility(FileTreeOperations::class).loadDirectory(external.toString()) }
             write(data.string("file"), data.string("text"))
             val roots = listOf(external.toUri().toString())
             configure(
@@ -116,10 +37,13 @@ internal fun ParityScenarios.platformCases() {
             errors(document)
             val resource = external.resolve(data.string("resource"))
             Files.writeString(resource, data.string("contents"))
+            refresh(resource)
             clean(document)
             Files.delete(resource)
+            refresh(external)
             errors(document)
             Files.writeString(resource, data.string("contents"))
+            refresh(resource)
             clean(document)
         } finally {
             with(driver) {
@@ -250,6 +174,10 @@ internal fun ParityScenarios.platformCases() {
             )
     }
     case("X127") { data ->
+        write(data.string("file"), data.string("source"))
+        configure(
+            listOf(SharedScenarios.SourceModule("Resolve", uri(data.string("file")), emptyList()))
+        )
         val document = open(data.string("file"), data.string("source"))
         val action =
             query(
@@ -302,9 +230,10 @@ internal fun ParityScenarios.platformCases() {
                         .rename(
                             singleProject(),
                             directory.resolve(variant.string("from")).toString(),
-                            variant.string("newName"),
                         )
                 }
+                chooseXtcFileRename()
+                fillRenameDialog(variant.string("newName"))
                 awaitUi("native file rename updates references", 45.seconds) {
                     document.text == variant.string("expected")
                 }
@@ -313,9 +242,91 @@ internal fun ParityScenarios.platformCases() {
             clean(document)
         }
     }
+
+    case("X129") { data ->
+        val root = with(driver) { Path.of(singleProject().getBasePath()) }
+        val report = root.resolve(".gradle/xtc/lsp-model.json")
+        val model =
+            JsonParser.parseString(
+                    data["model"]
+                        .toString()
+                        .replace("\${workspace}", directory.toUri().toString().trimEnd('/'))
+                )
+                .asJsonObject
+        val inputs = model["sourceSets"].asJsonArray[0].asJsonObject
+        val resources = inputs["resourceRoots"].deepCopy()
+        fun refresh() =
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(CompilerSettingsPage::class).refreshBuildModel(singleProject())
+                }
+            }
+        fun writeModel() {
+            Files.createDirectories(report.parent)
+            Files.writeString(report, model.toString())
+            refresh()
+        }
+        fun automatic() =
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    check(
+                        utility(CompilerSettingsPage::class)
+                            .useBuildModel(singleProject())
+                            .contains("Gradle model")
+                    )
+                }
+            }
+        try {
+            write(data.string("file"), data.string("source"))
+            write(data.string("resource"), data.string("contents"))
+            writeModel()
+            automatic()
+            val document = open(data.string("file"))
+            clean(document)
+            inputs.add("resourceRoots", Gson().toJsonTree(emptyList<String>()))
+            writeModel()
+            errors(document)
+            inputs.add("resourceRoots", resources)
+            writeModel()
+            clean(document)
+            Files.writeString(report, "{")
+            refresh()
+            clean(document)
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
+                }
+            }
+            configure(
+                listOf(
+                    SharedScenarios.SourceModule(
+                        "GradleAssets",
+                        document.uri,
+                        emptyList(),
+                        emptyList(),
+                    )
+                )
+            )
+            errors(document)
+            writeModel()
+            errors(document)
+            automatic()
+            clean(document)
+        } finally {
+            Files.deleteIfExists(report)
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
+                }
+            }
+            refresh()
+        }
+    }
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
 interface FileTreeOperations {
-    fun rename(project: Project, path: String, newName: String)
+    fun rename(project: Project, path: String)
+
+    fun loadDirectory(path: String)
 }
