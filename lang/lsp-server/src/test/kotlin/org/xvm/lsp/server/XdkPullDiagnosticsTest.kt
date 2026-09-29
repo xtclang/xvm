@@ -17,6 +17,7 @@ import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.InitializeParams
@@ -43,6 +44,57 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 
 class XdkPullDiagnosticsTest {
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `opening closed rename consumers and editing their dependency keeps analyses available`() {
+        val sources =
+            mapOf(
+                "Contracts" to "module Contracts { interface Mapper<T> { T map(T value); } }",
+                "Uses" to
+                    "module Uses { package api import Contracts; class Mapper implements api.Mapper<String> { @Override String map(String value) = value; } String run(api.Mapper<String> mapper) = mapper.map(\"a\"); }",
+                "Dormant" to
+                    "module Dormant { package api import Contracts; String run(api.Mapper<String> mapper) = mapper.map(\"b\"); }",
+            )
+        val uris = sources.mapValues { (name, source) ->
+            directory
+                .resolve("$name.x")
+                .toFile()
+                .apply { writeText(source) }
+                .toPath()
+                .toUri()
+                .toString()
+        }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                uris.map { (name, uri) ->
+                    XdkSourceModule(
+                        name,
+                        uri,
+                        if (name == "Contracts") emptySet() else setOf("Contracts"),
+                    )
+                }
+            )
+            session.open(uris.getValue("Contracts"), sources.getValue("Contracts"), 1)
+            assertThat(session.pull(uris.getValue("Contracts")).left.items).isEmpty()
+            sources
+                .filterKeys { it != "Contracts" }
+                .forEach { (name, source) ->
+                    session.open(uris.getValue(name), source, 1)
+                }
+            sources.forEach { (name, source) ->
+                session.change(uris.getValue(name), source.replace("map(", "convert("), 2)
+            }
+            uris.values.forEach { uri ->
+                assertThat(session.pull(uri).left.items).isEmpty()
+                assertThat(
+                        session.server.textDocumentService
+                            .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                            .get(10, SECONDS)
+                    )
+                    .isNotEmpty()
+            }
+        }
+    }
 
     @Test
     fun `pull negotiates one channel and unchanged reports become full after repair`() {
