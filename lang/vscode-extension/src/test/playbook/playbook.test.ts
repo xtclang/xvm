@@ -6,6 +6,7 @@ import { completionCases } from './completion';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
 import { liveWorkspaceCases } from './liveWorkspace';
+import { memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { propertyCases } from './properties';
@@ -40,6 +41,7 @@ suite('XdkAdapter playbook', function () {
     liveWorkspaceCases();
     typeHeaderCases(['X106', 'X107', 'X108']);
     renameFamilyCases();
+    memberActionCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
