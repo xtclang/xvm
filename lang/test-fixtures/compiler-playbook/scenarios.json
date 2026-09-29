@@ -3724,6 +3724,30 @@
             "expected": "module Actions { class Base { String read(String value) = value; } class Box extends Base {\n    @Override\n    String read(String value) {\n        TODO();\n    }\n} }"
           },
           {
+            "source": "module Actions { interface Api { String read(String value); } class Box implements Api {} Box make() = new Box(); }",
+            "title": "Implement String read(String value)",
+            "expected": "module Actions { interface Api { String read(String value); } class Box implements Api {\n    @Override\n    String read(String value) {\n        TODO();\n    }\n} Box make() = new Box(); }",
+            "initiallyValid": false
+          },
+          {
+            "source": "module Actions { interface Api { conditional (String, List<Int>) read(Int value = 1); } class Box implements Api {} }",
+            "title": "Implement conditional (String, List<Int64>) read(Int64 value = 1)",
+            "expected": "module Actions { interface Api { conditional (String, List<Int>) read(Int value = 1); } class Box implements Api {\n    @Override\n    conditional (String, List<Int64>) read(Int64 value = 1) {\n        TODO();\n    }\n} }",
+            "initiallyValid": true
+          },
+          {
+            "source": "module Actions { interface Api { <T extends String> T read(T value); } class Box implements Api {} }",
+            "title": "Implement <T extends String> T read(T value)",
+            "expected": "module Actions { interface Api { <T extends String> T read(T value); } class Box implements Api {\n    @Override\n    <T extends String> T read(T value) {\n        TODO();\n    }\n} }",
+            "initiallyValid": true
+          },
+          {
+            "source": "module Actions { class Base { String read(String value) = value; } class Box extends Base {} class Child extends Box {} String use(Child child) = child.read(value = \"text\"); }",
+            "title": "Override String read(String value)",
+            "expected": "module Actions { class Base { String read(String value) = value; } class Box extends Base {\n    @Override\n    String read(String value) {\n        TODO();\n    }\n} class Child extends Box {} String use(Child child) = child.read(value = \"text\"); }",
+            "initiallyValid": true
+          },
+          {
             "source": "module Actions { interface Api { String read(String value); } class Box implements Api { @Override String read(String value) = value; } }",
             "title": "",
             "expected": "module Actions { interface Api { String read(String value); } class Box implements Api { @Override String read(String value) = value; } }"
