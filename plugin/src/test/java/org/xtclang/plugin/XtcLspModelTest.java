@@ -27,6 +27,7 @@ class XtcLspModelTest {
 
     @Test
     void evaluatedPathsFollowProvidersAndProcessedResourcesOnCacheReuse() throws IOException {
+        directory = directory.toRealPath();
         write("settings.gradle.kts", "rootProject.name = \"model-test\"\n");
         write("build.gradle.kts", """
             plugins { id("org.xtclang.xtc-plugin") }
