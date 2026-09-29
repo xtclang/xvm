@@ -115,6 +115,26 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 ./gradlew :vscode-extension:build
 ```
 
+## Kotlin Formatting
+
+Spotless runs ktfmt's four-space Kotlin style over Kotlin sources, tests, IntelliJ integration tests
+and the `lang` Gradle scripts. Versions are pinned in the shared version catalog. Generated build
+outputs are excluded. From the repository root:
+
+```bash
+# Format all lang Kotlin sources and Gradle scripts
+./gradlew :lang:spotlessApply -PincludeBuildLang=true -PincludeBuildAttachLang=true
+
+# Verify without modifying files
+./gradlew :lang:spotlessCheck -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+For one module, use a task such as `:lang:lsp-server:spotlessCheck`. Local Kotlin compilation
+formats that module's sources before compiling, and local `check` also applies formatting first.
+When `CI` is set, compilation and checks only verify formatting. Explicit `spotlessCheck` is always
+read-only. ktfmt replaces ktlint's formatting rules; it does not enforce ktlint-specific naming or
+other lint rules. A formatter change can produce a substantial one-time formatting diff.
+
 ## Native Library Build (Tree-sitter)
 
 The LSP server uses tree-sitter for fast, incremental parsing. This requires a native shared library
