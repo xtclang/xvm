@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
+import org.xvm.asm.MethodStructure
 import org.xvm.asm.Component.Format
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorList
@@ -11,6 +12,9 @@ import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.LiteralExpression
+import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
@@ -28,8 +32,16 @@ internal data class CompilerMemberAction(
 internal fun compilerMemberActions(
     nodes: List<AstNode>,
     errors: ErrorListener,
-): List<CompilerMemberAction> =
-    nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
+): List<CompilerMemberAction> {
+    val literalDefaults = nodes.filterIsInstance<MethodDeclarationStatement>().mapNotNull { method ->
+        val identity = (method.component as? MethodStructure)?.identityConstant ?: return@mapNotNull null
+        identity to method.childNodes().filterIsInstance<Parameter>().mapNotNull { parameter ->
+            val value = parameter.value as? LiteralExpression ?: return@mapNotNull null
+            if (value.literal.id !in setOf(Token.Id.LIT_STRING, Token.Id.LIT_CHAR, Token.Id.LIT_INT)) return@mapNotNull null
+            parameter.name to value.literal.toString()
+        }.toMap()
+    }.toMap()
+    return nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
         val structure = node.component as? ClassStructure ?: return@flatMap emptyList()
         if (structure.format != Format.CLASS || structure.isSynthetic || errors.isAbortDesired) return@flatMap emptyList()
         val info =
@@ -69,7 +81,7 @@ internal fun compilerMemberActions(
                 ) {
                     return@mapNotNull null
                 }
-                val signature = memberSignature(method.signature, declaration, structure.identityConstant, aliases) ?: return@mapNotNull null
+                val signature = memberSignature(method.signature, declaration, structure.identityConstant, aliases, literalDefaults[declaration.identityConstant].orEmpty()) ?: return@mapNotNull null
                 val access = if (method.access == Access.PROTECTED) "protected " else ""
                 CompilerMemberAction(
                     structure.identityConstant,
@@ -85,3 +97,4 @@ internal fun compilerMemberActions(
                 )
             }.distinct()
     }
+}
