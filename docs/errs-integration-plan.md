@@ -562,9 +562,12 @@ fixing next; the following tasks are deliberately still open.
   visited node for its source, including non-declarations. `CompositionNode.getSource` assumes
   a type exists when neither a parent source nor condition supplies one. `CompositionNode.Default`
   legitimately has no type; common's `model.x` contains `enum ModuleKind default(Generic)`.
-  That is a candidate minimal trigger, not yet a proven isolated reproduction. Minimize it on
-  detached/partially compiled trees before deciding whether the compiler accessor, adapter
-  traversal or both need correction. Audit `rootsBySource`, folding/selection and error-location
+  `CompositionSourceTest` now reproduces the same NPE on the unadopted parsed enum. The accessor
+  now returns no source when neither a parent nor child can supply one, and returns the original
+  source after adoption. No field, cloning responsibility or LSP-specific API is added. A closed
+  diagnostic regression combines the enum with a missing embedded template, checks the ordinary
+  `PARSER-24` report, and verifies repair. Both focused tests pass; broader/platform validation
+  remains pending. Audit `rootsBySource`, folding/selection and error-location
   callers for the same assumption. Add regression coverage that returns ordinary compiler
   diagnostics after an early failure, then re-run real common/full-platform pulls. Do not hide
   the exception by dropping all diagnostics or disabling related reports.
@@ -592,6 +595,59 @@ fixing next; the following tasks are deliberately still open.
 
   Do not label every empty result a compiler defect before inspecting its semantic contract.
   Add focused regressions for confirmed bugs and update the demo's expected results afterward.
+
+#### Resource configuration and build-model integration (PLAT2 / L67)
+
+The accepted direction is one compiler input model shared by both hosts, with visible ownership.
+IntelliJ treats imported Gradle configuration as authoritative and directs users to edit the build
+file ([content roots](https://www.jetbrains.com/help/idea/content-roots.html),
+[Gradle import](https://www.jetbrains.com/help/idea/work-with-gradle-projects.html)). VS Code Java
+also supports unmanaged folders with a classpath configuration UI
+([Java project management](https://code.visualstudio.com/docs/java/java-project)). For XTC:
+
+- **Build-managed projects:** import evaluated source sets, resource roots, source dependencies
+  and generated inputs from the build model. This must handle both `.gradle` and `.gradle.kts`,
+  plugins and Provider-based configuration; never infer arbitrary build behavior by parsing script
+  text. The build model is authoritative by default. Offer **Open build file** and **Refresh build
+  configuration** from the paths view; do not silently rewrite a build script.
+- **Unmanaged projects:** no build file is required. Discover ordinary source/layout defaults,
+  allow explicit per-module source/resource paths and dependencies, and persist project/workspace
+  settings. An explicit override also remains available in a build-managed project, labelled as an
+  override which can diverge from the build. Reimport must not silently overwrite that choice.
+- **Effective configuration:** show each path, its module/source-set owner and its origin
+  (build model, explicit project setting or convention). Unset resource roots mean use the
+  available model/default; an explicit empty list means none. Preserve order/precedence, distinguish
+  main/test/generated roots, allow paths outside the workspace, and validate missing/duplicate
+  paths without turning a temporary generated-output absence into an IDE startup crash.
+- **IntelliJ:** extend the existing **Languages & Frameworks > Ecstasy Compiler** page, with
+  resource-root editing for explicit configuration. The eventual build-managed view should explain
+  ownership and offer refresh/reset-to-build controls. Use Community APIs only; no separate
+  proprietary project service or duplicate LSP configuration store.
+- **VS Code:** expose the same schema in workspace/folder settings and provide an **XTC: Configure
+  Compiler Paths** command using native picker/input controls. Show effective roots and origins
+  through a small read-only view/output until a richer view is justified; a custom webview is not
+  required. Multi-root workspaces must retain folder ownership rather than relying on process cwd.
+- **Compiler boundary:** send resolved immutable inputs to the LSP/embedding layer. That layer
+  must not execute Gradle itself, depend on either IDE, or copy resources into source directories.
+  Resource contents/membership and root configuration participate in cache identities, stale
+  result rejection, watched-file invalidation and rename configuration round trips.
+
+Implementation sequence and acceptance:
+
+- [ ] **PLAT2a (current bug-fix batch):** explicit ordered resource roots in the host/server
+  configuration, compiler layout fallback, resource-aware cache/watch behavior, and conventional
+  plus custom-directory regressions. Exercise create/edit/delete and unchanged reuse.
+- [ ] **PLAT2b (current bug-fix batch):** editable IntelliJ project paths and equivalent VS Code
+  configuration schema; retain custom roots through Apply/Reset and module rename/Undo. Add shared
+  manual steps and focused settings/protocol tests.
+- [ ] **PLAT2c / L67 (follow-up):** evaluated Gradle/XTC project-model bridge and origin-aware
+  effective configuration UI in both hosts, including the VS Code command. Reuse an existing
+  imported IDE model where complete; determine the portable XTC/Gradle model contract for VS Code.
+  Test custom and generated resource roots, no-build-file projects, reimport and explicit overrides.
+  Manual paths are an interim supported route, not evidence this bridge already exists.
+- [ ] **PLAT2d (acceptance):** run the full platform main graph with conventional resources, plus
+  a fixture whose build config selects a different directory. Verify missing/generated roots and
+  resource-only changes without recompiling unrelated consumers or returning stale diagnostics.
 
 **Checked alternatives for the demo:** auth+githubCLI workspace diagnostics have no errors;
 `OAuthProvider` has five source subtypes and property implementations; `sendRequest` has six
