@@ -5,7 +5,6 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.command.undo.UnexpectedUndoException
 import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
-import com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings
 import java.nio.file.Path
 
 /** LSP4IJ server settings join the same global command as source edits and resource moves. */
@@ -61,11 +60,11 @@ private constructor(
         val serverId: String,
         val content: String?,
     ) {
-        private val settings
-            get() = GlobalLanguageServerSettings.getInstance()
+        private val settings = CompilerSettings.store(project, serverId)
 
         fun isCurrent(): Boolean =
             !project.isDisposed &&
+                CompilerSettings.store(project, serverId) === settings &&
                 settings.getLanguageServerSettings(serverId)?.configurationContent == content
 
         fun replacement(graph: SourceGraphReplacement): SourceGraphEdit {
@@ -85,11 +84,20 @@ private constructor(
             next: List<SourceModuleConfiguration>,
         ): String =
             SourceGraphConfiguration.replace(
-                requireNotNull(settings.getLanguageServerSettings(serverId)?.configurationContent),
+                requireSameStore(),
                 expected,
                 next,
                 Path.of(requireNotNull(project.basePath)).toUri(),
             )
+
+        private fun requireSameStore(): String {
+            require(CompilerSettings.store(project, serverId) === settings) {
+                "Compiler configuration ownership changed; rename history was not applied"
+            }
+            return requireNotNull(
+                settings.getLanguageServerSettings(serverId)?.configurationContent
+            )
+        }
 
         fun install(content: String?) {
             val current = requireNotNull(settings.getLanguageServerSettings(serverId))
@@ -107,7 +115,7 @@ private constructor(
             Snapshot(
                 project,
                 serverId,
-                GlobalLanguageServerSettings.getInstance()
+                CompilerSettings.store(project, serverId)
                     .getLanguageServerSettings(serverId)
                     ?.configurationContent,
             )
