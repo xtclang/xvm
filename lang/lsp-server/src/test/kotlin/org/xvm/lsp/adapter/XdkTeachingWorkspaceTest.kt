@@ -34,26 +34,50 @@ class XdkTeachingWorkspaceTest {
         }
     }
 
-    @Test
-    fun `unproven bindings still reject rename when they occur in a transitive consumer`() {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `transitive consumers allow proven annotations but reject an incomplete graph`(
+        broken: Boolean
+    ) {
         val library = "module Library { class Box { Int number = 1; } }"
+        val unrelated =
+            "annotation Tracked<T> into Var<T> { @Override T get() = super(); } class State { @Tracked Int value = 1; } "
+        val use = if (broken) "box.number + missing" else "box.number"
         val consumer =
-            "module Consumer { package lib import Library; " +
-                "annotation Tracked<T> into Var<T> { @Override T get() = super(); } " +
-                "class State { @Tracked Int value = 1; } Int use(lib.Box box) = box.number; }"
-        directory.resolve("Library.x").toFile().writeText(library)
-        directory.resolve("Consumer.x").toFile().writeText(consumer)
+            "module Consumer { package lib import Library; $unrelated Int use(lib.Box box) = $use; }"
+        val libraryFile = directory.resolve("Library.x").toFile().apply { writeText(library) }
+        val consumerFile = directory.resolve("Consumer.x").toFile().apply { writeText(consumer) }
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            val uri = directory.resolve("Library.x").toFile().canonicalFile.toURI().toString()
+            val uri = libraryFile.canonicalFile.toURI().toString()
+            val consumerUri = consumerFile.toURI().toString()
             assertThat(adapter.compile(uri, library).diagnostics).isEmpty()
-            assertThat(
-                    adapter
-                        .compile(directory.resolve("Consumer.x").toUri().toString(), consumer)
-                        .diagnostics
-                )
-                .isEmpty()
-            assertThat(adapter.rename(uri, 0, library.indexOf("number"), "amount")).isNull()
+            assertThat(adapter.compile(consumerUri, consumer).success).isEqualTo(!broken)
+            val edit = adapter.rename(uri, 0, library.indexOf("number"), "amount")
+            if (broken) {
+                assertThat(edit).isNull()
+            } else {
+                val changes = requireNotNull(edit).changes
+                assertThat(changes.values).allMatch { it.size == 1 }
+                assertThat(changes).hasSize(2)
+                changes.forEach { (document, edits) ->
+                    val before = if (document.endsWith("/Library.x")) library else consumer
+                    val change = edits.single()
+                    assertThat(before.substring(change.range.start.column, change.range.end.column))
+                        .isEqualTo("number")
+                    assertThat(change.newText).isEqualTo("amount")
+                }
+                assertThat(adapter.compile(uri, library.replace("number", "amount")).diagnostics)
+                    .isEmpty()
+                assertThat(
+                        adapter
+                            .compile(consumerUri, consumer.replace("box.number", "box.amount"))
+                            .diagnostics
+                    )
+                    .isEmpty()
+            }
+            assertThat(libraryFile.readText()).isEqualTo(library)
+            assertThat(consumerFile.readText()).isEqualTo(consumer)
         }
     }
 
