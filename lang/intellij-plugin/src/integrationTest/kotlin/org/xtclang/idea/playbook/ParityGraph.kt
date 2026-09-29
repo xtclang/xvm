@@ -10,19 +10,28 @@ internal fun ParityScenarios.graphCases() {
         check(result.size == data.int("referenceCount"))
         check(
             result.map { it.string("uri") }.sorted() ==
-                data.strings("modules").map { uri(SharedScenarios.text(data.string("moduleFile"), it)) }.sorted(),
+                data
+                    .strings("modules")
+                    .map { uri(SharedScenarios.text(data.string("moduleFile"), it)) }
+                    .sorted()
         )
         check(
             protocol.server().getOpenedDocuments().none {
                 it.getFile().getPath() ==
                     directory.resolve(data.string("closedConsumer")).toString()
-            },
+            }
         )
     }
     case("X60") { data ->
         val document = graph()
-        val proposed = proposedRename(document, document.at(data.string("anchor")), data.string("replaceWith")).asJsonObject
-        check(proposed["changes"].let { it == null || it.isJsonNull || it.asJsonObject.size() == 0 }) { proposed.toString() }
+        val proposed =
+            proposedRename(document, document.at(data.string("anchor")), data.string("replaceWith"))
+                .asJsonObject
+        check(
+            proposed["changes"].let { it == null || it.isJsonNull || it.asJsonObject.size() == 0 }
+        ) {
+            proposed.toString()
+        }
         val changes = proposed["documentChanges"].rows()
         check(changes.size == data.int("moduleCount"))
         val currentVersion = version(document)
@@ -39,13 +48,21 @@ internal fun ParityScenarios.graphCases() {
             val file = SharedScenarios.text(data.string("file"), name)
             val changed = open(file)
             clean(changed)
-            check(changed.text == fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith")))
-            check(Files.readString(directory.resolve(file)) == fixture(file)) { "Rename unexpectedly saved $file" }
+            check(
+                changed.text ==
+                    fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+            )
+            check(Files.readString(directory.resolve(file)) == fixture(file)) {
+                "Rename unexpectedly saved $file"
+            }
         }
     }
     case("X61") { data ->
         val document = graph()
-        check(proposedRename(document, document.at(data.string("anchor")), data.string("newName")).isJsonNull)
+        check(
+            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
+                .isJsonNull
+        )
         check(document.text == fixture(data.string("file")))
         clean(document)
     }
@@ -61,23 +78,49 @@ internal fun ParityScenarios.graphCases() {
                         data.pattern("searchArgumentType").containsMatchIn(it.label)
                 }
             }
-            nativeHover(document, document.at(data.string("descriptionCall")), data.pattern("descriptionType"))
+            nativeHover(
+                document,
+                document.at(data.string("descriptionCall")),
+                data.pattern("descriptionType"),
+            )
         }
         check(proposedRename(document, document.at(search), data.string("searchRename")).isJsonNull)
-        check(proposedRename(document, document.at(data.string("descriptionCall")), data.string("descriptionRename")).isJsonNull)
+        check(
+            proposedRename(
+                    document,
+                    document.at(data.string("descriptionCall")),
+                    data.string("descriptionRename"),
+                )
+                .isJsonNull
+        )
     }
     case("X63") { data ->
         val document = graph()
         val consumer = open(data.string("file"))
-        replace(consumer, fixture(consumer.file).replace(data.string("replaceFrom"), data.string("addedReference")))
-        check(graphReferences(document).count { it.string("uri") == consumer.uri } == data.int("consumerReferenceCount"))
-        val edit = proposedRename(document, document.at(data.string("anchor")), data.string("newName")).asJsonObject
-        val change = edit["documentChanges"].rows().single { it["textDocument"].asJsonObject.string("uri") == consumer.uri }
+        replace(
+            consumer,
+            fixture(consumer.file)
+                .replace(data.string("replaceFrom"), data.string("addedReference")),
+        )
+        check(
+            graphReferences(document).count { it.string("uri") == consumer.uri } ==
+                data.int("consumerReferenceCount")
+        )
+        val edit =
+            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
+                .asJsonObject
+        val change =
+            edit["documentChanges"].rows().single {
+                it["textDocument"].asJsonObject.string("uri") == consumer.uri
+            }
         check(change["textDocument"].asJsonObject.int("version") == version(consumer))
         replace(consumer, data.string("replaceWith"))
         errors(consumer)
         check(graphReferences(document).isEmpty())
-        check(proposedRename(document, document.at(data.string("anchor")), data.string("newName")).isJsonNull)
+        check(
+            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
+                .isJsonNull
+        )
         clean(document)
         replace(consumer, fixture(consumer.file))
         clean(consumer)
@@ -94,8 +137,9 @@ private fun ParityWorkspace.graph(): ParityWorkspace.Document {
 
 private fun ParityWorkspace.graphReferences(document: ParityWorkspace.Document): List<JsonObject> =
     query(
-        "textDocument/references",
-        document,
-        document.at(common["graph"].asJsonObject.string("referenceAnchor")),
-        mapOf("context" to mapOf("includeDeclaration" to true)),
-    ).rows()
+            "textDocument/references",
+            document,
+            document.at(common["graph"].asJsonObject.string("referenceAnchor")),
+            mapOf("context" to mapOf("includeDeclaration" to true)),
+        )
+        .rows()

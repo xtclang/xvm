@@ -14,11 +14,11 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
 /**
  * Turning parsed source into symbols.
  *
- * Symbols have to come from the AST rather than from the compiled structures, which is not
- * obvious: a `ClassStructure` knows its name, its kind, its members and its type, and knows
- * nothing whatever about the text it was written in. It carries no source position. An editor
- * cannot use a symbol it cannot point at, so the structures - the richer, resolved side of the
- * compiler - are the wrong source for this, and the AST is the right one.
+ * Symbols have to come from the AST rather than from the compiled structures, which is not obvious:
+ * a `ClassStructure` knows its name, its kind, its members and its type, and knows nothing whatever
+ * about the text it was written in. It carries no source position. An editor cannot use a symbol it
+ * cannot point at, so the structures - the richer, resolved side of the compiler - are the wrong
+ * source for this, and the AST is the right one.
  *
  * What that costs: an AST node knows what was written, not what it resolved to. Names here are as
  * they appear in the source, not qualified or resolved, and nothing below a declaration is
@@ -27,9 +27,8 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
  */
 internal object XdkSymbols {
     /**
-     * @param uri  the document the AST was parsed from
+     * @param uri the document the AST was parsed from
      * @param root the parsed source, or null if it did not parse
-     *
      * @return the declarations it contains, nested as they are nested in the source
      */
     fun of(
@@ -46,9 +45,11 @@ internal object XdkSymbols {
         line: Int,
         column: Int,
     ): SymbolInfo? =
-        symbols.firstOrNull { contains(it.location, line, column) }?.let { outer ->
-            at(outer.children, line, column) ?: outer
-        }
+        symbols
+            .firstOrNull { contains(it.location, line, column) }
+            ?.let { outer ->
+                at(outer.children, line, column) ?: outer
+            }
 
     private fun contains(
         where: Location,
@@ -73,20 +74,19 @@ internal object XdkSymbols {
         uri: String,
         node: AstNode,
         source: Source?,
-    ): List<SymbolInfo> =
-        buildList {
-            node.childNodes().forEach { child ->
-                // Recovered syntax has no compilation parentage yet; an absent source inherits the
-                // enclosing syntax tree's source. An explicitly different source is a module member.
-                if (child.source != null && child.source !== source) return@forEach
-                val symbol = symbolOf(uri, child)
-                if (symbol == null) {
-                    addAll(declarationsIn(uri, child, source))
-                } else {
-                    add(symbol.withChildren(declarationsIn(uri, child, source)))
-                }
+    ): List<SymbolInfo> = buildList {
+        node.childNodes().forEach { child ->
+            // Recovered syntax has no compilation parentage yet; an absent source inherits the
+            // enclosing syntax tree's source. An explicitly different source is a module member.
+            if (child.source != null && child.source !== source) return@forEach
+            val symbol = symbolOf(uri, child)
+            if (symbol == null) {
+                addAll(declarationsIn(uri, child, source))
+            } else {
+                add(symbol.withChildren(declarationsIn(uri, child, source)))
             }
         }
+    }
 
     private fun symbolOf(
         uri: String,
@@ -107,7 +107,10 @@ internal object XdkSymbols {
 
             is IncompleteDeclarationStatement -> {
                 node.nameToken.orElse(null)?.let {
-                    val kind = if (node.kind == IncompleteDeclarationStatement.Kind.METHOD) SymbolKind.METHOD else SymbolKind.PROPERTY
+                    val kind =
+                        if (node.kind == IncompleteDeclarationStatement.Kind.METHOD)
+                            SymbolKind.METHOD
+                        else SymbolKind.PROPERTY
                     SymbolInfo.of(it.valueText, kind, rangeOf(uri, node))
                 }
             }
@@ -118,15 +121,16 @@ internal object XdkSymbols {
         }
 
     /**
-     * The category token is what the author wrote - `class`, `mixin`, `service` - so it is what
-     * the outline should say.
+     * The category token is what the author wrote - `class`, `mixin`, `service` - so it is what the
+     * outline should say.
      */
     private fun kindOf(node: TypeCompositionStatement): SymbolKind =
         when (node.category.id) {
             Token.Id.MODULE -> SymbolKind.MODULE
             Token.Id.PACKAGE -> SymbolKind.PACKAGE
             Token.Id.INTERFACE -> SymbolKind.INTERFACE
-            Token.Id.MIXIN, Token.Id.ANNOTATION -> SymbolKind.MIXIN
+            Token.Id.MIXIN,
+            Token.Id.ANNOTATION -> SymbolKind.MIXIN
             Token.Id.SERVICE -> SymbolKind.SERVICE
             Token.Id.CONST -> SymbolKind.CONST
             Token.Id.ENUM -> SymbolKind.ENUM

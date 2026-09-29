@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import com.google.gson.JsonObject
+import java.util.concurrent.CompletableFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
@@ -26,11 +27,9 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
-import java.util.concurrent.CompletableFuture
 
 /**
  * Round-trip test for formatting config flow:
- *
  * ```
  * IntelliJ Code Style → XtcLanguageClient.configuration()
  *     → workspace/configuration response
@@ -41,9 +40,9 @@ import java.util.concurrent.CompletableFuture
  * ```
  *
  * This test creates a real [XtcLanguageServer] with [TreeSitterAdapter], wires a mock
- * [LanguageClient] that responds to `workspace/configuration` with custom indent settings,
- * and verifies that `textDocument/onTypeFormatting` produces indentation matching the
- * client-provided config rather than the XTC defaults.
+ * [LanguageClient] that responds to `workspace/configuration` with custom indent settings, and
+ * verifies that `textDocument/onTypeFormatting` produces indentation matching the client-provided
+ * config rather than the XTC defaults.
  */
 @DisplayName("FormattingConfigRoundTrip")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -68,37 +67,49 @@ class FormattingConfigRoundTripTest {
     }
 
     /**
-     * Create a mock [LanguageClient] that responds to `workspace/configuration` requests
-     * with the given formatting settings map.
+     * Create a mock [LanguageClient] that responds to `workspace/configuration` requests with the
+     * given formatting settings map.
      */
     private fun mockClientWithConfig(config: Map<String, Any>): LanguageClient {
         val client = mock(LanguageClient::class.java)
-        `when`(client.configuration(org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)))
+        `when`(
+                client.configuration(
+                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
+                )
+            )
             .thenReturn(CompletableFuture.completedFuture(listOf(config)))
         return client
     }
 
     private fun mockClientWithJsonConfig(config: JsonObject): LanguageClient {
         val client = mock(LanguageClient::class.java)
-        `when`(client.configuration(org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)))
+        `when`(
+                client.configuration(
+                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
+                )
+            )
             .thenReturn(CompletableFuture.completedFuture(listOf(config)))
         return client
     }
 
     /**
-     * Create a mock client that returns null/empty for `workspace/configuration`,
-     * simulating a client that doesn't support the XTC config section.
+     * Create a mock client that returns null/empty for `workspace/configuration`, simulating a
+     * client that doesn't support the XTC config section.
      */
     private fun mockClientWithoutConfig(): LanguageClient {
         val client = mock(LanguageClient::class.java)
-        `when`(client.configuration(org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)))
+        `when`(
+                client.configuration(
+                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
+                )
+            )
             .thenReturn(CompletableFuture.completedFuture(listOf(null)))
         return client
     }
 
     /**
-     * Full server lifecycle: initialize → initialized → didOpen → onTypeFormatting.
-     * Returns the indent size from the first TextEdit, or -1 if no edits.
+     * Full server lifecycle: initialize → initialized → didOpen → onTypeFormatting. Returns the
+     * indent size from the first TextEdit, or -1 if no edits.
      */
     private fun formatWithServer(
         server: XtcLanguageServer,
@@ -111,7 +122,7 @@ class FormattingConfigRoundTripTest {
 
         // Open the document
         server.textDocumentService.didOpen(
-            DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
+            DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
         )
 
         // Request on-type formatting
@@ -126,11 +137,7 @@ class FormattingConfigRoundTripTest {
         return if (edits.isNullOrEmpty()) {
             -1
         } else {
-            edits
-                .first()
-                .newText
-                .substringBefore('\n')
-                .length
+            edits.first().newText.substringBefore('\n').length
         }
     }
 
@@ -336,9 +343,10 @@ class FormattingConfigRoundTripTest {
                   void foo() {
                       }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
             )
 
             val params =
@@ -377,9 +385,10 @@ class FormattingConfigRoundTripTest {
                 module myapp {
                   void foo() {}
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
             )
 
             val params =
@@ -415,7 +424,11 @@ class FormattingConfigRoundTripTest {
                 )
             var callCount = 0
             val client = mock(LanguageClient::class.java)
-            `when`(client.configuration(org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)))
+            `when`(
+                    client.configuration(
+                        org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
+                    )
+                )
                 .thenAnswer {
                     val idx = callCount.coerceAtMost(configs.size - 1)
                     callCount++
@@ -433,13 +446,15 @@ class FormattingConfigRoundTripTest {
 
             // Send didChangeConfiguration — server re-requests config, gets second answer
             server.workspaceService.didChangeConfiguration(
-                org.eclipse.lsp4j.DidChangeConfigurationParams(com.google.gson.JsonObject()),
+                org.eclipse.lsp4j.DidChangeConfigurationParams(com.google.gson.JsonObject())
             )
 
             Thread.sleep(100)
 
             // Verify the server re-requested and stored the updated config
-            assertThat(callCount).describedAs("configuration() should have been called twice").isEqualTo(2)
+            assertThat(callCount)
+                .describedAs("configuration() should have been called twice")
+                .isEqualTo(2)
             assertThat(server.editorFormattingConfig!!.indentSize).isEqualTo(6)
             assertThat(server.editorFormattingConfig!!.continuationIndentSize).isEqualTo(12)
         }

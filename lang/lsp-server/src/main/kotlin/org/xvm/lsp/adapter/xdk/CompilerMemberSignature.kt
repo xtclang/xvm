@@ -18,7 +18,9 @@ import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.UnionTypeConstant
 
-/** Render compiler-selected types, never a diagnostic display string or copied source expression. */
+/**
+ * Render compiler-selected types, never a diagnostic display string or copied source expression.
+ */
 internal fun memberSignature(
     signature: SignatureConstant,
     declaration: MethodStructure,
@@ -26,7 +28,11 @@ internal fun memberSignature(
     modules: Map<String, String>,
     literalDefaults: Map<String, String>,
 ): String? {
-    if (signature.paramCount != declaration.params.size || declaration.params.any { it.annotations.isNotEmpty() }) return null
+    if (
+        signature.paramCount != declaration.params.size ||
+            declaration.params.any { it.annotations.isNotEmpty() }
+    )
+        return null
     val formals =
         declaration.params.take(declaration.typeParamCount).associate { parameter ->
             val name = parameter.name?.takeIf(XdkRename::identifier) ?: return null
@@ -37,16 +43,20 @@ internal fun memberSignature(
     val typeParameters =
         signature.params.take(declaration.typeParamCount).zip(formals.values).map { (type, name) ->
             val constraint = type.paramTypes.singleOrNull() ?: return null
-            if (constraint == constraint.constantPool.typeObject()) name else "$name extends ${render(constraint) ?: return null}"
+            if (constraint == constraint.constantPool.typeObject()) name
+            else "$name extends ${render(constraint) ?: return null}"
         }
     val parameters =
-        signature.params.zip(declaration.params).drop(declaration.typeParamCount).map { (type, parameter) ->
+        signature.params.zip(declaration.params).drop(declaration.typeParamCount).map {
+            (type, parameter) ->
             val name = parameter.name?.takeIf(XdkRename::identifier) ?: return null
             val rendered = render(type) ?: return null
             val default =
                 if (parameter.hasDefaultValue()) {
-                    // Validated primitive constants are independent of their original expression/scope.
-                    // Fresh declaration repair accepts only parser-owned literal tokens; the complete
+                    // Validated primitive constants are independent of their original
+                    // expression/scope.
+                    // Fresh declaration repair accepts only parser-owned literal tokens; the
+                    // complete
                     // proposed compilation must validate both the original and generated defaults.
                     val value =
                         when (val constant = parameter.defaultValue) {
@@ -85,7 +95,10 @@ internal fun memberSignature(
                 }
             "$rendered $name$default"
         }
-    val returns = signature.returns.drop(if (declaration.isConditionalReturn) 1 else 0).map { render(it) ?: return null }
+    val returns =
+        signature.returns.drop(if (declaration.isConditionalReturn) 1 else 0).map {
+            render(it) ?: return null
+        }
     val result =
         when (returns.size) {
             0 -> "void"
@@ -97,7 +110,10 @@ internal fun memberSignature(
     return "$generic$conditional$result ${signature.name}(${parameters.joinToString(", ")})"
 }
 
-/** Recursive named types and this method's own formals; other source spellings remain explicit refusals. */
+/**
+ * Recursive named types and this method's own formals; other source spellings remain explicit
+ * refusals.
+ */
 private fun TypeConstant.memberSourceType(
     owner: IdentityConstant,
     formals: Map<TypeParameterConstant, String>,
@@ -106,7 +122,9 @@ private fun TypeConstant.memberSourceType(
     return when (this) {
         is ParameterizedTypeConstant -> {
             val base = underlyingType.memberSourceType(owner, formals, modules) ?: return null
-            val arguments = paramTypes.map { it.memberSourceType(owner, formals, modules) ?: return null }
+            val arguments = paramTypes.map {
+                it.memberSourceType(owner, formals, modules) ?: return null
+            }
             arguments.joinToString(", ", "$base<", ">")
         }
 
@@ -135,13 +153,15 @@ private fun TypeConstant.memberSourceType(
 
                 is ClassConstant -> {
                     when {
-                        constantPool.getImplicitlyImportedIdentity(identity.name) == identity -> identity.name
+                        constantPool.getImplicitlyImportedIdentity(identity.name) == identity ->
+                            identity.name
 
                         identity.moduleConstant == owner.moduleConstant -> identity.pathString
 
-                        XdkAutoImports.target(
-                            identity,
-                        ) != null -> modules[identity.moduleConstant.name]?.let { "$it.${identity.pathString}" }
+                        XdkAutoImports.target(identity) != null ->
+                            modules[identity.moduleConstant.name]?.let {
+                                "$it.${identity.pathString}"
+                            }
 
                         else -> null
                     }
@@ -162,8 +182,10 @@ private fun TypeConstant.memberSourceType(
 /** Inspect only type structures whose source spelling the renderer understands. */
 internal fun TypeConstant.memberClasses(): List<ClassConstant> =
     when (this) {
-        is ParameterizedTypeConstant -> underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
-        is RelationalTypeConstant -> underlyingType.memberClasses() + underlyingType2.memberClasses()
+        is ParameterizedTypeConstant ->
+            underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
+        is RelationalTypeConstant ->
+            underlyingType.memberClasses() + underlyingType2.memberClasses()
         is ImmutableTypeConstant -> underlyingType.memberClasses()
         is TerminalTypeConstant -> listOfNotNull(definingConstant as? ClassConstant)
         else -> emptyList()

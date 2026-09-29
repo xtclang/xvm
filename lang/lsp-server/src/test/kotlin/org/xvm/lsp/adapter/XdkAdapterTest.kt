@@ -1,17 +1,17 @@
 package org.xvm.lsp.adapter
 
+import java.util.concurrent.CancellationException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
-import java.util.concurrent.CancellationException
 
 /**
  * What an editor is told when the XTC compiler itself analyses a document.
  *
- * Gradle supplies compiled XDK modules as declared test inputs. Missing libraries fail the
- * suite instead of silently skipping compiler coverage.
+ * Gradle supplies compiled XDK modules as declared test inputs. Missing libraries fail the suite
+ * instead of silently skipping compiler coverage.
  */
 class XdkAdapterTest {
     private fun adapter(): XdkAdapter {
@@ -56,8 +56,9 @@ class XdkAdapterTest {
             val result = xdk.compile("file:///Semantic.x", UNRESOLVABLE_NAME)
 
             assertThat(result.diagnostics).isNotEmpty()
-            assertThat(result.diagnostics.map { it.message })
-                .anySatisfy { assertThat(it).contains("NoSuchTypeAnywhere") }
+            assertThat(result.diagnostics.map { it.message }).anySatisfy {
+                assertThat(it).contains("NoSuchTypeAnywhere")
+            }
         }
     }
 
@@ -80,8 +81,8 @@ class XdkAdapterTest {
     }
 
     /**
-     * Compilations are serialised, so concurrent requests are answered correctly rather than
-     * racing through a compiler that was never built for two at once.
+     * Compilations are serialised, so concurrent requests are answered correctly rather than racing
+     * through a compiler that was never built for two at once.
      */
     @Test
     fun `concurrent requests are answered one at a time`() {
@@ -92,7 +93,8 @@ class XdkAdapterTest {
                     .parallelStream()
                     .map { n ->
                         xdk.compile("file:///Doc$n.x", MISSING_SEMICOLON)
-                    }.toList()
+                    }
+                    .toList()
 
             assertThat(results).hasSize(8)
             results.forEachIndexed { i, r ->
@@ -122,7 +124,8 @@ class XdkAdapterTest {
                         } catch (_: CancellationException) {
                             null
                         }
-                    }.toList()
+                    }
+                    .toList()
 
             assertThat(results).hasSize(6)
             assertThat(results.filterNotNull()).isNotEmpty().allSatisfy { r ->
@@ -134,8 +137,8 @@ class XdkAdapterTest {
 
     /**
      * The outline an editor draws. Symbols have to come from the AST rather than the compiled
-     * structures, because a ClassStructure knows its name, kind and members and nothing about
-     * where it was written - and a symbol you cannot point at is no use to an editor.
+     * structures, because a ClassStructure knows its name, kind and members and nothing about where
+     * it was written - and a symbol you cannot point at is no use to an editor.
      */
     @Test
     fun `declarations are reported with the place they were written`() {
@@ -152,7 +155,9 @@ class XdkAdapterTest {
             val point = module.children.single { it.name == "Point" }
             assertThat(point.kind).isEqualTo(SymbolInfo.SymbolKind.CONST)
             assertThat(point.location.uri).isEqualTo("file:///Outline.x")
-            assertThat(point.location.startLine).`as`("Point is declared on the second line").isEqualTo(1)
+            assertThat(point.location.startLine)
+                .`as`("Point is declared on the second line")
+                .isEqualTo(1)
             assertThat(point.children.map { it.name }).contains("distance")
         }
     }
@@ -178,9 +183,7 @@ class XdkAdapterTest {
         }
     }
 
-    /**
-     * A request that should not recompile gets the last analysis instead.
-     */
+    /** A request that should not recompile gets the last analysis instead. */
     @Test
     fun `the cached analysis is handed back without recompiling`() {
         adapter().use { xdk ->
@@ -195,10 +198,10 @@ class XdkAdapterTest {
     }
 
     /**
-     * A warning about a type is produced when the type is laid out and again whenever a later
-     * stage asks for that type, so the same warning reaches the listener more than once. An
-     * editor must not show it twice, which is why the adapter collects through the same
-     * ErrorList the compiler's own front end uses rather than keeping everything it hears.
+     * A warning about a type is produced when the type is laid out and again whenever a later stage
+     * asks for that type, so the same warning reaches the listener more than once. An editor must
+     * not show it twice, which is why the adapter collects through the same ErrorList the
+     * compiler's own front end uses rather than keeping everything it hears.
      */
     @Test
     fun `a warning heard twice is shown once`() {
@@ -210,16 +213,16 @@ class XdkAdapterTest {
             assertThat(warnings.single().severity).isEqualTo(Diagnostic.Severity.WARNING)
             assertThat(warnings.single().message).contains("Atomic", "duplicates")
             assertThat(warnings.single().location.startLine).isEqualTo(5)
-            assertThat(warnings.single().location.startColumn).isEqualTo(DUPLICATE_ANNOTATION.lines()[5].indexOf("x ="))
-            assertThat(warnings.single().location.endColumn).isEqualTo(warnings.single().location.startColumn + 1)
+            assertThat(warnings.single().location.startColumn)
+                .isEqualTo(DUPLICATE_ANNOTATION.lines()[5].indexOf("x ="))
+            assertThat(warnings.single().location.endColumn)
+                .isEqualTo(warnings.single().location.startColumn + 1)
         }
     }
 
     // ----- what the tree can answer, without knowing what anything means ----------------------
 
-    /**
-     * Folding is pure shape: a block that spans more than one line can be collapsed.
-     */
+    /** Folding is pure shape: a block that spans more than one line can be collapsed. */
     @Test
     fun `blocks and declarations spanning more than a line can be folded`() {
         adapter().use { xdk ->
@@ -259,9 +262,7 @@ class XdkAdapterTest {
         }
     }
 
-    /**
-     * Highlight the declaration and both uses of the resolved local.
-     */
+    /** Highlight the declaration and both uses of the resolved local. */
     @Test
     fun `the other places the same name is written are highlighted`() {
         adapter().use { xdk ->
@@ -280,8 +281,8 @@ class XdkAdapterTest {
     }
 
     /**
-     * The half of hover that no grammar can supply: what the compiler decided the expression
-     * under the cursor is.
+     * The half of hover that no grammar can supply: what the compiler decided the expression under
+     * the cursor is.
      */
     @Test
     fun `hover says what the expression under the cursor resolved to`() {
@@ -295,8 +296,8 @@ class XdkAdapterTest {
     }
 
     /**
-     * Across the documents this server has compiled - which is the ones that have been opened,
-     * not the whole project.
+     * Across the documents this server has compiled - which is the ones that have been opened, not
+     * the whole project.
      */
     @Test
     fun `symbols can be searched across compiled documents`() {
@@ -314,9 +315,7 @@ class XdkAdapterTest {
 
     // ----- what a name resolved to ------------------------------------------------------------
 
-    /**
-     * Narrowed uses share the original register with the source declaration.
-     */
+    /** Narrowed uses share the original register with the source declaration. */
     @Test
     fun `a local variable's declaration is found from a use of it`() {
         adapter().use { xdk ->
@@ -330,9 +329,8 @@ class XdkAdapterTest {
     }
 
     /**
-     * A class declared in this document. Nothing is written as a name where a class is declared,
-     * so this goes through the declaration's component identity rather than through an
-     * occurrence.
+     * A class declared in this document. Nothing is written as a name where a class is declared, so
+     * this goes through the declaration's component identity rather than through an occurrence.
      */
     @Test
     fun `a type's declaration is found from a use of it`() {
@@ -363,9 +361,9 @@ class XdkAdapterTest {
     }
 
     /**
-     * A method call. The name in one resolves to nothing by itself - which method `sum` is
-     * depends on what it is called on and with what - so this goes through the invocation, which
-     * is where the compiler decided it.
+     * A method call. The name in one resolves to nothing by itself - which method `sum` is depends
+     * on what it is called on and with what - so this goes through the invocation, which is where
+     * the compiler decided it.
      */
     @Test
     fun `a method's declaration is found from a call to it`() {
@@ -379,16 +377,20 @@ class XdkAdapterTest {
     }
 
     /**
-     * Declared in the core library, which this document has no place to point at. Saying nothing
-     * is the honest answer; jumping to another mention of Int in the same file would not be.
+     * Declared in the core library, which this document has no place to point at. Saying nothing is
+     * the honest answer; jumping to another mention of Int in the same file would not be.
      */
     @Test
     fun `a name declared in another module has nothing here to point at`() {
         adapter().use { xdk ->
             xdk.compile("file:///Resolve.x", RESOLVE)
 
-            assertThat(xdk.findDefinition("file:///Resolve.x", 13, 8)).`as`("bundled Int source").isNotNull()
-            assertThat(xdk.findDefinition("file:///Resolve.x", 0, 0)).`as`("not on anything").isNull()
+            assertThat(xdk.findDefinition("file:///Resolve.x", 13, 8))
+                .`as`("bundled Int source")
+                .isNotNull()
+            assertThat(xdk.findDefinition("file:///Resolve.x", 0, 0))
+                .`as`("not on anything")
+                .isNull()
         }
     }
 
@@ -401,7 +403,8 @@ class XdkAdapterTest {
                 }
                 void helper() {}
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         val CLEAN =
             """
@@ -411,7 +414,8 @@ class XdkAdapterTest {
                     console.print("hello");
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         val MISSING_SEMICOLON =
             """
@@ -421,7 +425,8 @@ class XdkAdapterTest {
                     console.print("no semicolon above");
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         val UNRESOLVABLE_NAME =
             """
@@ -430,7 +435,8 @@ class XdkAdapterTest {
                     NoSuchTypeAnywhere x = 1;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         /** `count` is written twice on the fourth line, both times as a use. */
         val USES =
@@ -441,11 +447,12 @@ class XdkAdapterTest {
                     Int total = count + count;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         /**
-         * Two properties called `x` on different classes, a local used twice, and a type used
-         * where it is not declared. Line numbers are asserted, so the shape matters.
+         * Two properties called `x` on different classes, a local used twice, and a type used where
+         * it is not declared. Line numbers are asserted, so the shape matters.
          */
         val RESOLVE =
             """
@@ -468,7 +475,8 @@ class XdkAdapterTest {
                     Int s = p.sum();
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         /** Redeclares an annotation the base property already has: VERIFY-75, a warning. */
         val DUPLICATE_ANNOTATION =
@@ -481,6 +489,7 @@ class XdkAdapterTest {
                     @Atomic @Override Int x = 2;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
     }
 }

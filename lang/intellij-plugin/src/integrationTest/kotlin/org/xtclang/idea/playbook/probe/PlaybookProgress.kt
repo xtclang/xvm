@@ -17,7 +17,9 @@ object PlaybookProgress {
     fun install(project: Project) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val windows = WindowManager.getInstance()
-        windows.getStatusBar(project)?.addWidget(Widget(windows.getFrame(project)), "before Position", project)
+        windows
+            .getStatusBar(project)
+            ?.addWidget(Widget(windows.getFrame(project)), "before Position", project)
     }
 
     @JvmStatic
@@ -41,11 +43,10 @@ object PlaybookProgress {
     }
 
     @JvmStatic
-    fun text(project: Project): String = (WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget).label.text
+    fun text(project: Project): String =
+        (WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget).label.text
 
-    private class Widget(
-        private val frame: JFrame?,
-    ) : CustomStatusBarWidget {
+    private class Widget(private val frame: JFrame?) : CustomStatusBarWidget {
         val label = JLabel("XTC playbook: starting")
         private val originalTitle = frame?.title
         private val titleListener = PropertyChangeListener { updateTitle() }

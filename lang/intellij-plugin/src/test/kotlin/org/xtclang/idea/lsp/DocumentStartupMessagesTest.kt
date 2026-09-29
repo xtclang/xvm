@@ -20,7 +20,8 @@ import org.junit.jupiter.api.Test
 
 class DocumentStartupMessagesTest {
     private val uri = "file:///Startup.x"
-    private val buffers = mutableMapOf(uri to DocumentStartupMessages.Snapshot(Any(), 1, "module Startup {}"))
+    private val buffers =
+        mutableMapOf(uri to DocumentStartupMessages.Snapshot(Any(), 1, "module Startup {}"))
     private val sent = mutableListOf<Message>()
     private val received = mutableListOf<Message>()
     private val guard = DocumentStartupMessages(buffers::get)
@@ -37,13 +38,18 @@ class DocumentStartupMessagesTest {
         assertThat(params.textDocument.version).isEqualTo(3)
         assertThat(params.textDocument.text).isEqualTo("module Startup {}")
         change(4, "module Startup { Int value = 1; }")
-        assertThat((sent.last() as NotificationMessage).params).isInstanceOf(DidChangeTextDocumentParams::class.java)
+        assertThat((sent.last() as NotificationMessage).params)
+            .isInstanceOf(DidChangeTextDocumentParams::class.java)
     }
 
     @Test
     fun `edits before listener attachment replace the old initial snapshot`() {
         open("old text captured before server initialized")
-        assertThat(((sent.single() as NotificationMessage).params as DidOpenTextDocumentParams).textDocument.text)
+        assertThat(
+                ((sent.single() as NotificationMessage).params as DidOpenTextDocumentParams)
+                    .textDocument
+                    .text
+            )
             .isEqualTo(buffers.getValue(uri).text)
     }
 
@@ -51,7 +57,12 @@ class DocumentStartupMessagesTest {
     fun `close before open cannot resurrect a closed document`() {
         change(2, "intermediate text")
         buffers.clear()
-        outgoing.consume(notification("textDocument/didClose", DidCloseTextDocumentParams(TextDocumentIdentifier(uri))))
+        outgoing.consume(
+            notification(
+                "textDocument/didClose",
+                DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
+            )
+        )
         open("late initial text")
         assertThat(sent).isEmpty()
     }
@@ -61,25 +72,48 @@ class DocumentStartupMessagesTest {
         open("initial text")
         buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 1, "module Reopened {}")
         open("reopened")
-        outgoing.consume(notification("textDocument/didClose", DidCloseTextDocumentParams(TextDocumentIdentifier(uri))))
+        outgoing.consume(
+            notification(
+                "textDocument/didClose",
+                DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
+            )
+        )
         assertThat(sent.map { (it as NotificationMessage).method })
-            .containsExactly("textDocument/didOpen", "textDocument/didClose", "textDocument/didOpen")
-        assertThat(((sent.last() as NotificationMessage).params as DidOpenTextDocumentParams).textDocument.text)
+            .containsExactly(
+                "textDocument/didOpen",
+                "textDocument/didClose",
+                "textDocument/didOpen",
+            )
+        assertThat(
+                ((sent.last() as NotificationMessage).params as DidOpenTextDocumentParams)
+                    .textDocument
+                    .text
+            )
             .isEqualTo("module Reopened {}")
     }
 
     @Test
     fun `late close preserves changes queued for the reopened incarnation`() {
         open("initial text")
-        buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 2, "module Reopened { Int value = 1; }")
+        buffers[uri] =
+            DocumentStartupMessages.Snapshot(Any(), 2, "module Reopened { Int value = 1; }")
         change(2, buffers.getValue(uri).text)
-        outgoing.consume(notification("textDocument/didClose", DidCloseTextDocumentParams(TextDocumentIdentifier(uri))))
+        outgoing.consume(
+            notification(
+                "textDocument/didClose",
+                DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
+            )
+        )
         open("reopened snapshot before edit")
         val params = (sent.last() as NotificationMessage).params as DidOpenTextDocumentParams
         assertThat(params.textDocument.version).isEqualTo(2)
         assertThat(params.textDocument.text).isEqualTo(buffers.getValue(uri).text)
         assertThat(sent.map { (it as NotificationMessage).method })
-            .containsExactly("textDocument/didOpen", "textDocument/didClose", "textDocument/didOpen")
+            .containsExactly(
+                "textDocument/didOpen",
+                "textDocument/didClose",
+                "textDocument/didOpen",
+            )
     }
 
     @Test
@@ -87,7 +121,8 @@ class DocumentStartupMessagesTest {
         requestFolds()
         buffers[uri] = buffers.getValue(uri).copy(stamp = 2, text = "")
         respondFolds()
-        assertThat((received.single() as ResponseMessage).error.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+        assertThat((received.single() as ResponseMessage).error.code)
+            .isEqualTo(ResponseErrorCode.ContentModified.value)
         assertThat((received.single() as ResponseMessage).result).isNull()
     }
 
@@ -96,7 +131,8 @@ class DocumentStartupMessagesTest {
         requestFolds()
         buffers[uri] = buffers.getValue(uri).copy(owner = Any())
         respondFolds()
-        assertThat((received.single() as ResponseMessage).error.code).isEqualTo(ResponseErrorCode.ContentModified.value)
+        assertThat((received.single() as ResponseMessage).error.code)
+            .isEqualTo(ResponseErrorCode.ContentModified.value)
     }
 
     @Test
@@ -115,7 +151,7 @@ class DocumentStartupMessagesTest {
                 id = "fold"
                 method = "textDocument/foldingRange"
                 params = FoldingRangeRequestParams(TextDocumentIdentifier(uri))
-            },
+            }
         )
 
     private fun respondFolds(): ResponseMessage =
@@ -123,29 +159,37 @@ class DocumentStartupMessagesTest {
             .apply {
                 id = "fold"
                 result = listOf(FoldingRange(0, 10))
-            }.also(incoming::consume)
+            }
+            .also(incoming::consume)
 
     private fun open(text: String) =
-        outgoing.consume(notification("textDocument/didOpen", DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text))))
+        outgoing.consume(
+            notification(
+                "textDocument/didOpen",
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)),
+            )
+        )
 
     private fun change(
         version: Int,
         text: String,
-    ) = outgoing.consume(
-        notification(
-            "textDocument/didChange",
-            DidChangeTextDocumentParams(
-                VersionedTextDocumentIdentifier(uri, version),
-                listOf(TextDocumentContentChangeEvent(text)),
-            ),
-        ),
-    )
+    ) =
+        outgoing.consume(
+            notification(
+                "textDocument/didChange",
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(uri, version),
+                    listOf(TextDocumentContentChangeEvent(text)),
+                ),
+            )
+        )
 
     private fun notification(
         method: String,
         params: Any,
-    ) = NotificationMessage().apply {
-        this.method = method
-        this.params = params
-    }
+    ) =
+        NotificationMessage().apply {
+            this.method = method
+            this.params = params
+        }
 }

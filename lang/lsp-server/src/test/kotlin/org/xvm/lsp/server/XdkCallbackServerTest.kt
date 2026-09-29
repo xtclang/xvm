@@ -1,5 +1,9 @@
 package org.xvm.lsp.server
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.CompletionParams
@@ -18,13 +22,12 @@ import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.CompilationResult
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkCallbackServerTest {
-    enum class Callback { ANALYSIS, QUERY }
+    enum class Callback {
+        ANALYSIS,
+        QUERY,
+    }
 
     @Test
     fun `transport cancellation returns while a navigation request holds the document lock`() {
@@ -55,10 +58,15 @@ class XdkCallbackServerTest {
         val documents = server.textDocumentService
         val document = TextDocumentIdentifier("file:///Healthy.x")
         try {
-            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(document.uri, "xtc", 1, "module Healthy {}")))
+            documents.didOpen(
+                DidOpenTextDocumentParams(
+                    TextDocumentItem(document.uri, "xtc", 1, "module Healthy {}")
+                )
+            )
             val response = documents.completion(CompletionParams(document, Position(0, 0)))
             await().atMost(10, SECONDS).until { pending.numberOfDependents > 0 }
-            val navigation = documents.prepareTypeHierarchy(TypeHierarchyPrepareParams(document, Position(0, 0)))
+            val navigation =
+                documents.prepareTypeHierarchy(TypeHierarchyPrepareParams(document, Position(0, 0)))
             assertThat(navigationEntered.await(10, SECONDS)).isTrue()
             // LSP4J cancels while holding its request-map lock. Completion of a different
             // response can need that lock, so cancellation must return without waiting here.
@@ -75,7 +83,9 @@ class XdkCallbackServerTest {
 
     @ParameterizedTest
     @EnumSource(Callback::class)
-    fun `compiler completion releases its worker before publishing under the document lock`(callback: Callback) {
+    fun `compiler completion releases its worker before publishing under the document lock`(
+        callback: Callback
+    ) {
         val release = CountDownLatch(1)
         val navigationEntered = CountDownLatch(1)
         val callbackQueued = CompletableFuture<CompletableFuture<*>>()
@@ -90,11 +100,13 @@ class XdkCallbackServerTest {
                         content: String,
                     ): CompletableFuture<CompilationResult> =
                         if (uri.endsWith("Neighbor.x")) {
-                            CompletableFuture
-                                .supplyAsync({
-                                    check(release.await(10, SECONDS))
-                                    delegate.compile(uri, content)
-                                }, worker)
+                            CompletableFuture.supplyAsync(
+                                    {
+                                        check(release.await(10, SECONDS))
+                                        delegate.compile(uri, content)
+                                    },
+                                    worker,
+                                )
                                 .also { callbackQueued.complete(it) }
                         } else {
                             CompletableFuture.completedFuture(delegate.compile(uri, content))
@@ -106,11 +118,13 @@ class XdkCallbackServerTest {
                         column: Int,
                         triggerCharacter: String?,
                     ): CompletableFuture<List<CompletionItem>> =
-                        CompletableFuture
-                            .supplyAsync({
-                                check(release.await(10, SECONDS))
-                                emptyList<CompletionItem>()
-                            }, worker)
+                        CompletableFuture.supplyAsync(
+                                {
+                                    check(release.await(10, SECONDS))
+                                    emptyList<CompletionItem>()
+                                },
+                                worker,
+                            )
                             .also { callbackQueued.complete(it) }
 
                     override fun prepareTypeHierarchy(
@@ -120,22 +134,33 @@ class XdkCallbackServerTest {
                     ): List<TypeHierarchyItem> {
                         navigationEntered.countDown()
                         // Model the compiler adapter's synchronous bridge onto its serial worker.
-                        // The bound also releases the lock if this regression reintroduces the cycle.
-                        return worker.submit<List<TypeHierarchyItem>> { emptyList() }.get(5, SECONDS)
+                        // The bound also releases the lock if this regression reintroduces the
+                        // cycle.
+                        return worker
+                            .submit<List<TypeHierarchyItem>> { emptyList() }
+                            .get(5, SECONDS)
                     }
                 }
             val server = XtcLanguageServer(backend)
             server.connect(mock(LanguageClient::class.java))
             val documents = server.textDocumentService
             try {
-                documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
+                documents.didOpen(
+                    DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
+                )
                 when (callback) {
                     Callback.ANALYSIS -> {
-                        documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem("file:///Neighbor.x", "xtc", 1, source)))
+                        documents.didOpen(
+                            DidOpenTextDocumentParams(
+                                TextDocumentItem("file:///Neighbor.x", "xtc", 1, source)
+                            )
+                        )
                     }
 
                     Callback.QUERY -> {
-                        documents.completion(CompletionParams(TextDocumentIdentifier(uri), Position(0, 0)))
+                        documents.completion(
+                            CompletionParams(TextDocumentIdentifier(uri), Position(0, 0))
+                        )
                     }
                 }
                 val pending = callbackQueued.get(10, SECONDS)
@@ -143,7 +168,10 @@ class XdkCallbackServerTest {
                 // A barrier behind the pending work proves that its callback precedes navigation.
                 val queued = CountDownLatch(1)
                 worker.execute { queued.countDown() }
-                val result = documents.prepareTypeHierarchy(TypeHierarchyPrepareParams(TextDocumentIdentifier(uri), Position(0, 0)))
+                val result =
+                    documents.prepareTypeHierarchy(
+                        TypeHierarchyPrepareParams(TextDocumentIdentifier(uri), Position(0, 0))
+                    )
                 assertThat(navigationEntered.await(10, SECONDS)).isTrue()
                 release.countDown()
                 assertThat(queued.await(3, SECONDS)).isTrue()

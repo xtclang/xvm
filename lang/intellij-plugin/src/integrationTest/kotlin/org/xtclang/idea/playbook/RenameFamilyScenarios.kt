@@ -26,11 +26,15 @@ fun Driver.renameFamily(
     val files = data.rows("files")
 
     fun graphContains(name: String): Boolean =
-        service<LspSettings>().getLanguageServerSettings("xtcLanguageServer")?.getConfigurationContent()?.contains(name) == true
+        service<LspSettings>()
+            .getLanguageServerSettings("xtcLanguageServer")
+            ?.getConfigurationContent()
+            ?.contains(name) == true
 
     fun contents(file: String): String {
         val path = root.resolve(file)
-        val source = utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
+        val source =
+            utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
         return source?.let {
             withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
                 service<ParityDocuments>().getDocument(it)?.getText()
@@ -42,15 +46,23 @@ fun Driver.renameFamily(
     clean(editor)
     val request = files.single { "$id/${it["file"].asString}" == data.text("file") }
     withContext(OnDispatcher.EDT) {
-        val opened = service<FileEditorManager>(singleProject()).getAllEditors().map { it.getFile().getPath() }.toSet()
-        files.filter { it !== request }.forEach { check(root.resolve(it["file"].asString).toString() !in opened) }
+        val opened =
+            service<FileEditorManager>(singleProject())
+                .getAllEditors()
+                .map { it.getFile().getPath() }
+                .toSet()
+        files
+            .filter { it !== request }
+            .forEach { check(root.resolve(it["file"].asString).toString() !in opened) }
     }
     rename(editor, editor.text.indexOf(data.text("anchor")), data.text("replacement"))
     awaitUi("$id source and resource edits applied", 45.seconds) {
         files.all { file ->
             val destination = file["destination"].asString
-            Files.exists(root.resolve(destination)) && contents(destination) == file["expected"].asString &&
-                (destination == file["file"].asString || !Files.exists(root.resolve(file["file"].asString)))
+            Files.exists(root.resolve(destination)) &&
+                contents(destination) == file["expected"].asString &&
+                (destination == file["file"].asString ||
+                    !Files.exists(root.resolve(file["file"].asString)))
         }
     }
     val renamed = open("$id/${request["destination"].asString}")
@@ -63,12 +75,16 @@ fun Driver.renameFamily(
     awaitUi("$id one Undo restores every source and path", 45.seconds) {
         val confirmation = ui.dialog(title = "Undo")
         if (confirmation.present()) {
-            withContext(OnDispatcher.EDT) { cast(confirmation.button("Undo").component, NativeButton::class).doClick() }
+            withContext(OnDispatcher.EDT) {
+                cast(confirmation.button("Undo").component, NativeButton::class).doClick()
+            }
         }
         files.all { file ->
             val original = file["file"].asString
-            Files.exists(root.resolve(original)) && contents(original) == file["source"].asString &&
-                (original == file["destination"].asString || !Files.exists(root.resolve(file["destination"].asString)))
+            Files.exists(root.resolve(original)) &&
+                contents(original) == file["source"].asString &&
+                (original == file["destination"].asString ||
+                    !Files.exists(root.resolve(file["destination"].asString)))
         }
     }
     clean(open(data.text("file")))
@@ -78,7 +94,8 @@ fun Driver.renameFamily(
         focusEditor(restored)
         invokeAction("\$Redo", now = false, component = restored.component)
         awaitUi("$id Redo restores graph, sources and paths", 45.seconds) {
-            graphContains("Renamed.example.org") && !graphContains("Library.example.org") &&
+            graphContains("Renamed.example.org") &&
+                !graphContains("Library.example.org") &&
                 files.all { file ->
                     Files.exists(root.resolve(file["destination"].asString)) &&
                         contents(file["destination"].asString) == file["expected"].asString
@@ -91,11 +108,15 @@ fun Driver.renameFamily(
         awaitUi("$id second Undo restores the original graph and sources", 45.seconds) {
             val confirmation = ui.dialog(title = "Undo")
             if (confirmation.present()) {
-                withContext(OnDispatcher.EDT) { cast(confirmation.button("Undo").component, NativeButton::class).doClick() }
+                withContext(OnDispatcher.EDT) {
+                    cast(confirmation.button("Undo").component, NativeButton::class).doClick()
+                }
             }
-            graphContains("Library.example.org") && !graphContains("Renamed.example.org") &&
+            graphContains("Library.example.org") &&
+                !graphContains("Renamed.example.org") &&
                 files.all { file ->
-                    Files.exists(root.resolve(file["file"].asString)) && contents(file["file"].asString) == file["source"].asString
+                    Files.exists(root.resolve(file["file"].asString)) &&
+                        contents(file["file"].asString) == file["source"].asString
                 }
         }
         clean(open(data.text("file")))

@@ -1,5 +1,10 @@
 package org.xvm.lsp.adapter
 
+import java.net.URI
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -13,15 +18,9 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.PartialSemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.tool.ModuleInfo
-import java.net.URI
-import java.nio.file.Path
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkCursorRequestTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     private class PausedCursor {
         val started = CountDownLatch(1)
@@ -47,7 +46,13 @@ class XdkCursorRequestTest {
             return if (sources == null) {
                 support.analyzeIncomplete(source, cursor, null, listener)
             } else {
-                support.analyzeIncomplete(sources, Path.of(URI(source.fileName)).toFile(), cursor, null, listener)
+                support.analyzeIncomplete(
+                    sources,
+                    Path.of(URI(source.fileName)).toFile(),
+                    cursor,
+                    null,
+                    listener,
+                )
             }
         }
 
@@ -133,9 +138,12 @@ class XdkCursorRequestTest {
         val prefix =
             when (kind) {
                 "member" -> prefix("String")
-                "empty" -> "module Editing { void take(String value) {} void run(String text) { take("
-                "property" -> "module Editing { String text = \"x\"; void take(String value) {} void run() { take(te"
-                else -> "module Editing { void take(String value) {} void run(String text) { take(te"
+                "empty" ->
+                    "module Editing { void take(String value) {} void run(String text) { take("
+                "property" ->
+                    "module Editing { String text = \"x\"; void take(String value) {} void run() { take(te"
+                else ->
+                    "module Editing { void take(String value) {} void run(String text) { take(te"
             }
         val source = "$prefix } }"
         compiler.adapter().use { adapter ->
@@ -147,15 +155,14 @@ class XdkCursorRequestTest {
                 compiler.release.countDown()
                 adapter.compileAsync("untitled:Barrier.x", text("String")).get(10, SECONDS)
                 assertThat(running.isCancelled).isTrue()
-                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains(
-                    if (kind ==
-                        "member"
-                    ) {
-                        "size"
-                    } else {
-                        "text"
-                    },
-                )
+                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                    .contains(
+                        if (kind == "member") {
+                            "size"
+                        } else {
+                            "text"
+                        }
+                    )
             } finally {
                 compiler.release.countDown()
             }
@@ -172,11 +179,17 @@ class XdkCursorRequestTest {
                 compiler.awaitStart()
                 adapter.closeDocument(URI)
                 assertThat(old.isCancelled).isTrue()
-                assertThat(adapter.analyzeAtAsync(URI, position("String")).get(10, SECONDS)).isNull()
+                assertThat(adapter.analyzeAtAsync(URI, position("String")).get(10, SECONDS))
+                    .isNull()
                 val reopened = adapter.compileAsync(URI, text("Int"))
                 compiler.release.countDown()
                 reopened.get(10, SECONDS)
-                assertThat(receiverType(adapter.analyzeAtAsync(URI, position("Int")).get(10, SECONDS)!!)).contains("Int")
+                assertThat(
+                        receiverType(
+                            adapter.analyzeAtAsync(URI, position("Int")).get(10, SECONDS)!!
+                        )
+                    )
+                    .contains("Int")
             } finally {
                 compiler.release.countDown()
             }
@@ -200,7 +213,8 @@ class XdkCursorRequestTest {
             assertThat(compilation.isCancelled).isTrue()
             assertThat(queued.isCancelled).isTrue()
             assertThat(compiler.threads).hasSize(1)
-            assertThat(adapter.analyzeAtAsync(URI, position("String")).isCompletedExceptionally).isTrue()
+            assertThat(adapter.analyzeAtAsync(URI, position("String")).isCompletedExceptionally)
+                .isTrue()
         } finally {
             compiler.release.countDown()
             adapter.close()
@@ -216,11 +230,15 @@ class XdkCursorRequestTest {
         val prefix = "class Child extends Base { Int run() { return value."
         member.writeText("$prefix } }")
         XdkAdapter().use { adapter ->
-            adapter.compile(root.toURI().toString(), "module Editing { class Base { String value = \"overlay\"; } }")
+            adapter.compile(
+                root.toURI().toString(),
+                "module Editing { class Base { String value = \"overlay\"; } }",
+            )
             val uri = member.toURI().toString()
             adapter.compile(uri, member.readText())
             val cached = adapter.getCachedResult(uri)
-            val snapshot = adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(10, SECONDS)!!
+            val snapshot =
+                adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(10, SECONDS)!!
             assertThat(receiverType(snapshot)).contains("String")
             assertThat(snapshot.semantics.sourceName).isEqualTo(member.path)
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
@@ -242,7 +260,10 @@ class XdkCursorRequestTest {
         val uri = member.toURI().toString()
         val compiler = PausedCursor()
         compiler.adapter().use { adapter ->
-            adapter.compile(rootUri, "module Editing { class Base { String value = \"overlay\"; } }")
+            adapter.compile(
+                rootUri,
+                "module Editing { class Base { String value = \"overlay\"; } }",
+            )
             adapter.compile(uri, member.readText())
             val old = adapter.analyzeAtAsync(uri, Position(0, prefix.length))
             try {
@@ -251,7 +272,8 @@ class XdkCursorRequestTest {
                 assertThat(old.isCancelled).isTrue()
                 compiler.release.countDown()
                 edited.get(10, SECONDS)
-                val latest = adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(10, SECONDS)!!
+                val latest =
+                    adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(10, SECONDS)!!
                 assertThat(receiverType(latest)).contains("Int")
                 assertThat(compiler.threads).hasSize(2).containsOnly("xtc-compile")
             } finally {
@@ -266,31 +288,26 @@ class XdkCursorRequestTest {
         val text = "module Editing {\r\n$prefix }\r\n}"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, text)
-            val snapshot = adapter.analyzeAtAsync(URI, Position(1, prefix.length)).get(10, SECONDS)!!
+            val snapshot =
+                adapter.analyzeAtAsync(URI, Position(1, prefix.length)).get(10, SECONDS)!!
             assertThat(receiverType(snapshot)).contains("String")
-            assertThat(
-                snapshot.sites
-                    .single()
-                    .range.end.line,
-            ).isEqualTo(1)
-            assertThat(
-                snapshot.sites
-                    .single()
-                    .range.end.column,
-            ).isEqualTo(prefix.length)
+            assertThat(snapshot.sites.single().range.end.line).isEqualTo(1)
+            assertThat(snapshot.sites.single().range.end.column).isEqualTo(prefix.length)
             listOf(Position(-1, 0), Position(0, -1), Position(1, prefix.length + 100)).forEach {
                 assertThat(adapter.analyzeAtAsync(URI, it).get(10, SECONDS)).isNull()
             }
         }
     }
 
-    private fun prefix(type: String): String = "module Editing { Int run($type value) { return value."
+    private fun prefix(type: String): String =
+        "module Editing { Int run($type value) { return value."
 
     private fun text(type: String): String = prefix(type) + " } }"
 
     private fun position(type: String): Position = Position(0, prefix(type).length)
 
-    private fun receiverType(model: PartialSemanticModel): String = model.semantics.type(model.sites.single().receiverType!!)!!.displayName
+    private fun receiverType(model: PartialSemanticModel): String =
+        model.semantics.type(model.sites.single().receiverType!!)!!.displayName
 
     private companion object {
         const val URI = "untitled:Editing.x"

@@ -1,14 +1,13 @@
 package org.xvm.lsp.adapter
 
+import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.nio.file.Path
 
 class XdkScopeCompletionTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @Test
     fun `an empty statement cursor offers parameters without changing the source`() {
@@ -17,24 +16,29 @@ class XdkScopeCompletionTest {
             val original = adapter.compile(URI, "$prefix} }")
             assertThat(original.diagnostics).isEmpty()
             val item = adapter.getCompletions(URI, 0, prefix.length).single { it.label == "item" }
-            assertThat(item.textEdit!!.range).isEqualTo(Range(Position(0, prefix.length), Position(0, prefix.length)))
+            assertThat(item.textEdit!!.range)
+                .isEqualTo(Range(Position(0, prefix.length), Position(0, prefix.length)))
             assertThat(adapter.getCachedResult(URI)).isEqualTo(original)
         }
     }
 
     @Test
     fun `bare names expose visible parameters and preceding assigned locals`() {
-        val prefix = "module Editing { void run(String itemParameter) { Int itemLocal = 1; Int itemUnassigned; item"
+        val prefix =
+            "module Editing { void run(String itemParameter) { Int itemLocal = 1; Int itemUnassigned; item"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; Int itemLater = 2; } }")
             val cached = adapter.getCachedResult(URI)
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            assertThat(items.map { it.label }).containsExactlyInAnyOrder("itemParameter", "itemLocal")
-            assertThat(items.single { it.label == "itemParameter" }.detail).isEqualTo("String itemParameter")
+            assertThat(items.map { it.label })
+                .containsExactlyInAnyOrder("itemParameter", "itemLocal")
+            assertThat(items.single { it.label == "itemParameter" }.detail)
+                .isEqualTo("String itemParameter")
             assertThat(items.single { it.label == "itemLocal" }.detail).isEqualTo("Int itemLocal")
             assertThat(items).allSatisfy {
                 assertThat(it.kind).isEqualTo(CompletionItem.CompletionKind.VARIABLE)
-                assertThat(it.textEdit!!.range).isEqualTo(Range(Position(0, prefix.length - 4), Position(0, prefix.length)))
+                assertThat(it.textEdit!!.range)
+                    .isEqualTo(Range(Position(0, prefix.length - 4), Position(0, prefix.length)))
             }
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
         }
@@ -45,13 +49,20 @@ class XdkScopeCompletionTest {
         val prefix = "module Editing { void run(Object item) { if (item.is(String)) { ite"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; } } }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).single { it.label == "item" }.detail).isEqualTo("String item")
+            assertThat(
+                    adapter
+                        .getCompletions(URI, 0, prefix.length)
+                        .single { it.label == "item" }
+                        .detail
+                )
+                .isEqualTo("String item")
         }
     }
 
     @Test
     fun `locals from a closed block are absent and local declarations shadow properties`() {
-        val prefix = "module Editing { String item = \"outer\"; void run() { { Int itemClosed = 1; } Int item = 2; ite"
+        val prefix =
+            "module Editing { String item = \"outer\"; void run() { { Int itemClosed = 1; } Int item = 2; ite"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; } }")
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -79,7 +90,8 @@ class XdkScopeCompletionTest {
 
     @Test
     fun `implicit members preserve generic substitution and local shadowing`() {
-        val prefix = "module Editing { class Box<T> { T item; private T itemMethod() = item; void run(T itemLocal) { ite"
+        val prefix =
+            "module Editing { class Box<T> { T item; private T itemMethod() = item; void run(T itemLocal) { ite"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; } } }")
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -100,7 +112,8 @@ class XdkScopeCompletionTest {
             assertThat(items.map { it.label })
                 .contains("itemFunction", "itemConstant", "itemType")
                 .doesNotContain("itemProperty", "itemMethod", "itemHidden", "itemPrivate")
-            assertThat(items.single { it.label == "itemType" }.kind).isEqualTo(CompletionItem.CompletionKind.CLASS)
+            assertThat(items.single { it.label == "itemType" }.kind)
+                .isEqualTo(CompletionItem.CompletionKind.CLASS)
         }
     }
 
@@ -112,20 +125,24 @@ class XdkScopeCompletionTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; } } }")
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            assertThat(items.map { it.label }).contains("itemFunction").doesNotContain("itemProperty", "itemMethod")
+            assertThat(items.map { it.label })
+                .contains("itemFunction")
+                .doesNotContain("itemProperty", "itemMethod")
         }
     }
 
     @Test
     fun `type names come from contextual lookup including imports and enclosing types`() {
         XdkAdapter().use { adapter ->
-            for ((setup, name) in listOf(
-                "" to "String",
-                "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
-                "import ecstasy.text.*;" to "StringBuffer",
-                "class ItemType {}" to "ItemType",
-            )) {
-                val prefix = "module Editing { $setup class Nested { void run() { ${name.dropLast(1)}"
+            for ((setup, name) in
+                listOf(
+                    "" to "String",
+                    "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
+                    "import ecstasy.text.*;" to "StringBuffer",
+                    "class ItemType {}" to "ItemType",
+                )) {
+                val prefix =
+                    "module Editing { $setup class Nested { void run() { ${name.dropLast(1)}"
                 adapter.compile(URI, "$prefix; } } }")
                 val items = adapter.getCompletions(URI, 0, prefix.length)
                 assertThat(items.map { it.label }).describedAs(setup).contains(name)
@@ -146,9 +163,21 @@ class XdkScopeCompletionTest {
             val childUri = child.toURI().toString()
             adapter.compile(rootUri, "module Editing { class Base { String item = \"overlay\"; } }")
             adapter.compile(childUri, child.readText())
-            assertThat(adapter.getCompletions(childUri, 0, prefix.length).single { it.label == "item" }.detail).isEqualTo("String item")
+            assertThat(
+                    adapter
+                        .getCompletions(childUri, 0, prefix.length)
+                        .single { it.label == "item" }
+                        .detail
+                )
+                .isEqualTo("String item")
             adapter.compile(rootUri, root.readText())
-            assertThat(adapter.getCompletions(childUri, 0, prefix.length).single { it.label == "item" }.detail).isEqualTo("Int item")
+            assertThat(
+                    adapter
+                        .getCompletions(childUri, 0, prefix.length)
+                        .single { it.label == "item" }
+                        .detail
+                )
+                .isEqualTo("Int item")
             assertThat(root.readText()).contains("Int item")
         }
     }

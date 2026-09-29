@@ -22,11 +22,17 @@ import kotlin.time.Duration.Companion.seconds
 
 internal fun Driver.semanticSupport(editor: JEditorUiComponent): NativeSemanticSupport =
     withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-        val file = requireNotNull(service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()))
+        val file =
+            requireNotNull(
+                service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+            )
         cast(utility(LspFileSupport::class).getSupport(file), NativeSemanticSupport::class)
     }
 
-/** Follow every native chooser entry and verify its file/caret, even if navigation retires its cache. */
+/**
+ * Follow every native chooser entry and verify its file/caret, even if navigation retires its
+ * cache.
+ */
 internal fun Driver.nativeLocations(
     document: ParityWorkspace.Document,
     at: Int,
@@ -60,19 +66,21 @@ internal fun Driver.nativeLocations(
         invoke()
         awaitUi("native $kind receives no targets", 45.seconds) {
             val future = feature.getValidLSPFuture()
-            future != null && future.isDone() && !future.isCompletedExceptionally() && future.get().isEmpty()
+            future != null &&
+                future.isDone() &&
+                !future.isCompletedExceptionally() &&
+                future.get().isEmpty()
         }
         dismissPopups()
         return
     }
-    val expectedPoints =
-        expected.map { target ->
-            Triple(
-                Path.of(URI(target.string("uri"))).toString(),
-                target.getAsJsonObject("range").getAsJsonObject("start").int("line"),
-                target.getAsJsonObject("range").getAsJsonObject("start").int("character"),
-            )
-        }
+    val expectedPoints = expected.map { target ->
+        Triple(
+            Path.of(URI(target.string("uri"))).toString(),
+            target.getAsJsonObject("range").getAsJsonObject("start").int("line"),
+            target.getAsJsonObject("range").getAsJsonObject("start").int("character"),
+        )
+    }
     val opened =
         expected.indices.map { index ->
             val inspection = PopupInspection(this, document.editor, ::invoke)
@@ -85,7 +93,8 @@ internal fun Driver.nativeLocations(
                     table.present() && table.content().size == expected.size
                 }
                 withContext(OnDispatcher.EDT) {
-                    cast(table.component, NativeTableSelection::class).setRowSelectionInterval(index, index)
+                    cast(table.component, NativeTableSelection::class)
+                        .setRowSelectionInterval(index, index)
                 }
                 popup.keyboard { enter() }
             }
@@ -94,19 +103,32 @@ internal fun Driver.nativeLocations(
                 timeout = 30.seconds,
                 getter = {
                     withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-                        service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
-                            val position = ParityWorkspace.position(selected.getDocument().getText(), selected.getCaretModel().getOffset())
-                            Triple(selected.getVirtualFile().getPath(), position.getValue("line"), position.getValue("character"))
+                        service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let {
+                            selected ->
+                            val position =
+                                ParityWorkspace.position(
+                                    selected.getDocument().getText(),
+                                    selected.getCaretModel().getOffset(),
+                                )
+                            Triple(
+                                selected.getVirtualFile().getPath(),
+                                position.getValue("line"),
+                                position.getValue("character"),
+                            )
                         }
                     }
                 },
                 checker = { it in expectedPoints },
             )
         }
-    check(opened.toSet() == expectedPoints.toSet()) { "Expected $expectedPoints; native destinations: $opened" }
+    check(opened.toSet() == expectedPoints.toSet()) {
+        "Expected $expectedPoints; native destinations: $opened"
+    }
 }
 
-/** Exercise Quick Documentation; read the native request's hover instead of issuing another hover. */
+/**
+ * Exercise Quick Documentation; read the native request's hover instead of issuing another hover.
+ */
 internal fun Driver.nativeHover(
     document: ParityWorkspace.Document,
     at: Int,
@@ -115,9 +137,7 @@ internal fun Driver.nativeHover(
     dismissPopups()
     focusEditor(document.editor)
     withContext(OnDispatcher.EDT) {
-        document.editor.editor
-            .getCaretModel()
-            .moveToOffset(at)
+        document.editor.editor.getCaretModel().moveToOffset(at)
     }
     val support = semanticSupport(document.editor).getHoverSupport()
     document.editor.scrollToCaretNow()
@@ -125,7 +145,9 @@ internal fun Driver.nativeHover(
     val protocol = ClientProtocol(this)
     awaitUi("native documentation contains $pattern", 45.seconds) {
         val future = support.getValidLSPFuture()
-        future != null && future.isDone() && !future.isCompletedExceptionally() &&
+        future != null &&
+            future.isDone() &&
+            !future.isCompletedExceptionally() &&
             future.get().any { pattern.containsMatchIn(protocol.copy(it.hover()).toString()) } &&
             ui.x("//div[@class='DocumentationPopupPane']").present()
     }
@@ -140,12 +162,13 @@ internal fun Driver.nativeHierarchy(
 ) {
     focusEditor(document.editor)
     withContext(OnDispatcher.EDT) {
-        document.editor.editor
-            .getCaretModel()
-            .moveToOffset(at)
+        document.editor.editor.getCaretModel().moveToOffset(at)
     }
     document.editor.scrollToCaretNow()
-    invokeAction(if (kind == "type") "TypeHierarchy" else "CallHierarchy", component = document.editor.component)
+    invokeAction(
+        if (kind == "type") "TypeHierarchy" else "CallHierarchy",
+        component = document.editor.component,
+    )
     val className = if (kind == "type") "LSPTypeHierarchyBrowser" else "LSPCallHierarchyBrowser"
     val browser = ui.x("//div[@class='$className']")
     awaitUi("native $kind hierarchy contains $names", 45.seconds) {
@@ -159,14 +182,14 @@ internal fun Driver.nativeHierarchy(
 internal fun targetNames(
     locations: List<JsonObject>,
     openText: (String) -> String?,
-): List<String> =
-    locations.map { location ->
-        val uri = location.string("uri")
-        val text = openText(uri) ?: Files.readString(Path.of(URI(uri)))
-        val at = ParityWorkspace.offset(text, location.getAsJsonObject("range").getAsJsonObject("start"))
-        Regex("[\\p{L}_$][\\p{L}\\p{N}_$]*").find(text, at)?.takeIf { it.range.first == at }?.value
-            ?: error("Target does not select a declaration: $location")
-    }
+): List<String> = locations.map { location ->
+    val uri = location.string("uri")
+    val text = openText(uri) ?: Files.readString(Path.of(URI(uri)))
+    val at =
+        ParityWorkspace.offset(text, location.getAsJsonObject("range").getAsJsonObject("start"))
+    Regex("[\\p{L}_$][\\p{L}\\p{N}_$]*").find(text, at)?.takeIf { it.range.first == at }?.value
+        ?: error("Target does not select a declaration: $location")
+}
 
 @Remote("com.redhat.devtools.lsp4ij.LSPFileSupport", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeSemanticSupport {
@@ -183,7 +206,10 @@ interface NativeSemanticSupport {
     fun getInlayHintsSupport(): NativeInlaysSupport
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.AbstractLSPDocumentFeatureSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.AbstractLSPDocumentFeatureSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeLocationsSupport {
     fun getValidLSPFuture(): NativeLocationsFuture?
 }
@@ -198,7 +224,10 @@ interface NativeLocation {
     fun location(): ClientValue
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.documentation.LSPHoverSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.documentation.LSPHoverSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeHoverSupport {
     fun getValidLSPFuture(): NativeHoverFuture?
 }
@@ -208,12 +237,18 @@ interface NativeHoverFuture : ClientFuture {
     fun get(): List<NativeHover>
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.documentation.HoverData", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.documentation.HoverData",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeHover {
     fun hover(): ClientValue
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.semanticTokens.LSPSemanticTokensSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.semanticTokens.LSPSemanticTokensSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeTokensSupport {
     fun getValidLSPFuture(): NativeTokensFuture?
 }
@@ -223,12 +258,18 @@ interface NativeTokensFuture : ClientFuture {
     fun get(): NativeTokens?
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensData", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensData",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeTokens {
     fun getSemanticTokens(): ClientValue
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.inlayhint.LSPInlayHintsSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.inlayhint.LSPInlayHintsSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeInlaysSupport {
     fun getValidLSPFuture(): NativeInlaysFuture?
 }
@@ -238,7 +279,10 @@ interface NativeInlaysFuture : ClientFuture {
     fun get(): List<NativeInlayData>
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.inlayhint.InlayHintData", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.inlayhint.InlayHintData",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface NativeInlayData {
     fun inlayHint(): ClientValue
 }

@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter
 
+import java.nio.file.Path
+import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -13,20 +15,23 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
-import java.nio.file.Path
-import java.util.concurrent.Executors
 
 class XdkPropertyArgumentCompletionTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @CsvSource(
         delimiter = '|',
-        value = [
-            "take(|valueNumber", "take(va|valueNumber", "take(value = va|valueNumber",
-            "widen(va|valueNumber", "box.take(va|valueText", "new Box<String>(va|valueText", "fn(va|valueText",
-        ],
+        value =
+            [
+                "take(|valueNumber",
+                "take(va|valueNumber",
+                "take(value = va|valueNumber",
+                "widen(va|valueNumber",
+                "box.take(va|valueText",
+                "new Box<String>(va|valueText",
+                "fn(va|valueText",
+            ],
     )
     fun `property argument values use compiler fitting and exact edits`(
         call: String,
@@ -47,13 +52,30 @@ class XdkPropertyArgumentCompletionTest {
             assertThat(items.map { it.label }).describedAs(call).containsExactly(expected)
             val item = items.single()
             assertThat(item.kind).isEqualTo(CompletionItem.CompletionKind.PROPERTY)
-            assertThat(item.textEdit).isEqualTo(
-                TextEdit(Range(Position(0, prefix.length - typed.length), Position(0, prefix.length)), expected),
-            )
+            assertThat(item.textEdit)
+                .isEqualTo(
+                    TextEdit(
+                        Range(
+                            Position(0, prefix.length - typed.length),
+                            Position(0, prefix.length),
+                        ),
+                        expected,
+                    )
+                )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(
-                adapter.compile(URI, original.replaceRange(prefix.length - typed.length, prefix.length, expected)).diagnostics,
-            ).isEmpty()
+                    adapter
+                        .compile(
+                            URI,
+                            original.replaceRange(
+                                prefix.length - typed.length,
+                                prefix.length,
+                                expected,
+                            ),
+                        )
+                        .diagnostics
+                )
+                .isEmpty()
         }
     }
 
@@ -68,10 +90,20 @@ class XdkPropertyArgumentCompletionTest {
             val text = "$prefix); } } }"
             adapter.compile(URI, text)
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            val expected = if (modifier.isEmpty()) listOf("valueConstant", "valueOwn", "valueProtected") else listOf("valueConstant")
+            val expected =
+                if (modifier.isEmpty()) listOf("valueConstant", "valueOwn", "valueProtected")
+                else listOf("valueConstant")
             assertThat(items.map { it.label }).containsExactlyInAnyOrderElementsOf(expected)
             for (item in items) {
-                assertThat(adapter.compile(URI, text.replaceRange(prefix.length - 2, prefix.length, item.label)).diagnostics).isEmpty()
+                assertThat(
+                        adapter
+                            .compile(
+                                URI,
+                                text.replaceRange(prefix.length - 2, prefix.length, item.label),
+                            )
+                            .diagnostics
+                    )
+                    .isEmpty()
             }
         }
     }
@@ -79,7 +111,8 @@ class XdkPropertyArgumentCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["Int value;", "String value = \"x\";", "Int value = 2;"])
     fun `unreadable or incompatible locals still shadow properties`(local: String) {
-        val prefix = "module Editing { Int value = 1; void take(Int input) {} void run() { $local take(va"
+        val prefix =
+            "module Editing { Int value = 1; void take(Int input) {} void run() { $local take(va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
             val items = adapter.getCompletions(URI, 0, prefix.length)
@@ -95,10 +128,16 @@ class XdkPropertyArgumentCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["", "if (value.is(String)) { "])
     fun `property completion does not invent local variable narrowing`(guard: String) {
-        val prefix = "module Editing { Object value = \"x\"; void take(String text) {} void run() { $guard take(va"
+        val prefix =
+            "module Editing { Object value = \"x\"; void take(String text) {} void run() { $guard take(va"
         val suffix = if (guard.isEmpty()) "); } }" else "); } } }"
         XdkAdapter().use { adapter ->
-            assertThat(adapter.compile(URI, "${prefix.dropLast(2)}value$suffix").diagnostics.map { it.code }).contains("COMPILER-150")
+            assertThat(
+                    adapter.compile(URI, "${prefix.dropLast(2)}value$suffix").diagnostics.map {
+                        it.code
+                    }
+                )
+                .contains("COMPILER-150")
             adapter.compile(URI, "$prefix$suffix")
             assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()
         }
@@ -114,7 +153,8 @@ class XdkPropertyArgumentCompletionTest {
             val items = adapter.getCompletions(URI, 0, prefix.length)
             assertThat(items.map { it.label }).containsExactly("value")
             assertThat(items.single().detail).contains("String")
-            assertThat(adapter.compile(URI, "${prefix.dropLast(2)}value); } } }").diagnostics).isEmpty()
+            assertThat(adapter.compile(URI, "${prefix.dropLast(2)}value); } } }").diagnostics)
+                .isEmpty()
         }
     }
 
@@ -125,21 +165,24 @@ class XdkPropertyArgumentCompletionTest {
                 "void choose(Int value) {} void choose(String value) {} void run() { choose(va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).containsExactlyInAnyOrder("valueNumber", "valueText")
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .containsExactlyInAnyOrder("valueNumber", "valueText")
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(2)
         }
     }
 
     @Test
     fun `formal type properties retain their semantic kind as argument values`() {
-        val prefix = "module Editing { class Box<Value> { void take(Type value) {} void run() { take(Va"
+        val prefix =
+            "module Editing { class Box<Value> { void take(Type value) {} void run() { take(Va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } } }")
             val item = adapter.getCompletions(URI, 0, prefix.length).single()
             assertThat(item.label).isEqualTo("Value")
             assertThat(item.kind).isEqualTo(CompletionItem.CompletionKind.CLASS)
             assertThat(item.detail).contains("Type")
-            assertThat(adapter.compile(URI, "${prefix.dropLast(2)}Value); } } }").diagnostics).isEmpty()
+            assertThat(adapter.compile(URI, "${prefix.dropLast(2)}Value); } } }").diagnostics)
+                .isEmpty()
         }
     }
 
@@ -157,11 +200,16 @@ class XdkPropertyArgumentCompletionTest {
             adapter.compile(rootUri, root.readText())
             adapter.compile(uri, member.readText())
             assertThat(adapter.getCompletions(uri, 0, prefix.length)).isEmpty()
-            adapter.compile(rootUri, root.readText().replace("Int value = 1", "String value = \"x\""))
+            adapter.compile(
+                rootUri,
+                root.readText().replace("Int value = 1", "String value = \"x\""),
+            )
             val cached = adapter.getCachedResult(uri)
-            assertThat(adapter.getCompletions(uri, 0, prefix.length).single().detail).contains("String")
+            assertThat(adapter.getCompletions(uri, 0, prefix.length).single().detail)
+                .contains("String")
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
-            assertThat(adapter.compile(uri, "${prefix.dropLast(2)}value); } }").diagnostics).isEmpty()
+            assertThat(adapter.compile(uri, "${prefix.dropLast(2)}value); } }").diagnostics)
+                .isEmpty()
             assertThat(adapter.findDefinition(uri, 0, prefix.length - 1)!!.uri).isEqualTo(rootUri)
             adapter.compile(rootUri, root.readText())
             adapter.compile(uri, member.readText())
@@ -173,7 +221,8 @@ class XdkPropertyArgumentCompletionTest {
     @Test
     fun `accepted property facts are immutable detached and do not change syntax or diagnostics`() {
         CompilerTestSupport.configure()
-        val prefix = "module Editing { String value = \"x\"; void take(String text) {} void run() { take(va"
+        val prefix =
+            "module Editing { String value = \"x\"; void take(String text) {} void run() { take(va"
         val text = "$prefix); } }"
         val source = Source(text)
         val cursor = Source(text).apply { repeat(prefix.length) { next() } }.position
@@ -183,15 +232,17 @@ class XdkPropertyArgumentCompletionTest {
         val binding = analysis.cursorBindings()[site]!!
         assertThat(binding.argumentValues()).isEmpty()
         assertThat(binding.argumentProperties().map { it.name() }).containsExactly("value")
-        assertThatThrownBy { (binding.argumentProperties() as MutableList).clear() }.isInstanceOf(UnsupportedOperationException::class.java)
+        assertThatThrownBy { (binding.argumentProperties() as MutableList).clear() }
+            .isInstanceOf(UnsupportedOperationException::class.java)
         assertThat(
-            binding
-                .withTypes(emptyList())
-                .withCandidates(emptyList())
-                .withFunctions(emptyList())
-                .withArgumentValues(emptyList())
-                .argumentProperties(),
-        ).isEqualTo(binding.argumentProperties())
+                binding
+                    .withTypes(emptyList())
+                    .withCandidates(emptyList())
+                    .withFunctions(emptyList())
+                    .withArgumentValues(emptyList())
+                    .argumentProperties()
+            )
+            .isEqualTo(binding.argumentProperties())
         assertThat(site.arguments).isEmpty()
         assertThat(source.toRawString()).isEqualTo(text)
         val snapshot = analysis.semanticSnapshot(errors)
@@ -200,14 +251,13 @@ class XdkPropertyArgumentCompletionTest {
         XdkAdapter().use { adapter -> adapter.compile("untitled:Other.x", "module Other {}") }
         Executors.newSingleThreadExecutor().use { executor ->
             assertThat(
-                executor
-                    .submit<List<String>> {
-                        snapshot.sites
-                            .single()
-                            .argumentValues
-                            .map { it.name }
-                    }.get(),
-            ).containsExactly("value")
+                    executor
+                        .submit<List<String>> {
+                            snapshot.sites.single().argumentValues.map { it.name }
+                        }
+                        .get()
+                )
+                .containsExactly("value")
         }
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }

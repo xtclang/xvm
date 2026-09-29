@@ -14,19 +14,20 @@ import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
 /** Protocol assertions use the installed client's existing connection, never a second server. */
-class ClientProtocol(
-    private val driver: Driver,
-) {
+class ClientProtocol(private val driver: Driver) {
     private val gson = Gson()
 
     fun server(): StartedLanguageServer =
         with(driver) {
             awaitUi(
-                message = "installed language client is started",
-                timeout = 45.seconds,
-                getter = { service<LanguageClients>(singleProject()).getStartedServers().toList() },
-                checker = { it.size == 1 },
-            ).single()
+                    message = "installed language client is started",
+                    timeout = 45.seconds,
+                    getter = {
+                        service<LanguageClients>(singleProject()).getStartedServers().toList()
+                    },
+                    checker = { it.size == 1 },
+                )
+                .single()
         }
 
     fun capabilities(): JsonElement = copy(server().getServerCapabilitiesSync())
@@ -36,13 +37,18 @@ class ClientProtocol(
         params: Any,
     ): ClientFuture =
         with(driver) {
-            cast(server().getLanguageServer(), ClientEndpoint::class).request(method, remoteJson(params))
+            cast(server().getLanguageServer(), ClientEndpoint::class)
+                .request(method, remoteJson(params))
         }
 
     fun notify(
         method: String,
         params: Any,
-    ) = with(driver) { cast(server().getLanguageServer(), ClientEndpoint::class).notify(method, remoteJson(params)) }
+    ) =
+        with(driver) {
+            cast(server().getLanguageServer(), ClientEndpoint::class)
+                .notify(method, remoteJson(params))
+        }
 
     fun query(
         method: String,
@@ -61,7 +67,10 @@ class ClientProtocol(
                 // Driver's JMX transport would hide the actual protocol failure.
                 val failure = generateSequence(future.exceptionNow()) { it.getCause() }.last()
                 val code =
-                    if ((failure as RefWrapper).getRef().className == "org.eclipse.lsp4j.jsonrpc.ResponseErrorException") {
+                    if (
+                        (failure as RefWrapper).getRef().className ==
+                            "org.eclipse.lsp4j.jsonrpc.ResponseErrorException"
+                    ) {
                         cast(failure, ClientResponseFailure::class).getResponseError().getCode()
                     } else {
                         null
@@ -87,7 +96,10 @@ class ClientProtocol(
         }
 
     private fun remoteJson(value: Any): ClientJson =
-        with(driver) { utility(ClientJsonParser::class).parseString(if (value is JsonElement) value.toString() else gson.toJson(value)) }
+        with(driver) {
+            utility(ClientJsonParser::class)
+                .parseString(if (value is JsonElement) value.toString() else gson.toJson(value))
+        }
 
     private companion object {
         // Driver transports Java collection returns as reference lists; object/Either returns are
@@ -171,11 +183,9 @@ interface ClientListFuture : ClientFuture {
     fun get(): List<ClientValue>?
 }
 
-@Remote("java.lang.Object")
-interface ClientValue
+@Remote("java.lang.Object") interface ClientValue
 
-@Remote("com.google.gson.JsonElement", plugin = "com.redhat.devtools.lsp4ij")
-interface ClientJson
+@Remote("com.google.gson.JsonElement", plugin = "com.redhat.devtools.lsp4ij") interface ClientJson
 
 @Remote("com.google.gson.JsonParser", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientJsonParser {
