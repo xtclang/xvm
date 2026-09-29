@@ -4036,6 +4036,18 @@
         "limitations": []
       }
     },
+    "X126": {
+      "title": "semantic token result IDs, range and delta negotiation survive edit and close",
+      "manual": [],
+      "values": {
+        "file": "Tokens.x",
+        "source": "module Tokens { Int value = 1; Int run() = value; }"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

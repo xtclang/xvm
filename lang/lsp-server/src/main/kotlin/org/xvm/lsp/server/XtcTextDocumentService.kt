@@ -65,7 +65,10 @@ import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.SelectionRange
 import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SemanticTokens
+import org.eclipse.lsp4j.SemanticTokensDelta
+import org.eclipse.lsp4j.SemanticTokensDeltaParams
 import org.eclipse.lsp4j.SemanticTokensParams
+import org.eclipse.lsp4j.SemanticTokensRangeParams
 import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformation
@@ -132,6 +135,7 @@ class XtcTextDocumentService(
     private val openDocuments = ConcurrentHashMap<String, Document>()
     private var closed = false
     private val diagnosticReports = DiagnosticReports()
+    private val semanticTokenReports = SemanticTokenReports()
     private var diagnosticRevision = 0L
     private val publishedByScope = mutableMapOf<String, Set<String>>()
     private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
@@ -420,6 +424,7 @@ class XtcTextDocumentService(
             server.publishDiagnostics(uri, diagnostics, openDocuments[uri]?.version)
         }
         server.refreshDiagnostics()
+        server.refreshSemanticTokens()
         // Root discovery can change after file creation/removal; release publications of old
         // scopes.
         val inactive =
@@ -444,6 +449,7 @@ class XtcTextDocumentService(
             logger.info("textDocument/didClose: {}", uri)
             diagnosticRevision++
             val affected = adapter.affectedAnalysisScopes(uri)
+            semanticTokenReports.retire(uri)
             val document = openDocuments.remove(uri)
             invalidateQueries(setOf(uri))
             document?.analysis?.cancel(false)
@@ -458,6 +464,7 @@ class XtcTextDocumentService(
             diagnosticReports.record(uri, emptyList())
             server.publishDiagnostics(uri, emptyList(), document?.version)
             server.refreshDiagnostics()
+            server.refreshSemanticTokens()
             refreshScopes(affected + retired)
             if (openDocuments.values.none { it.scope == document?.scope }) {
                 clearUnowned(publishedByScope.remove(document?.scope).orEmpty() - uri)
@@ -474,6 +481,7 @@ class XtcTextDocumentService(
             if (closed || openDocuments.containsKey(uri)) return
             diagnosticRevision++
             server.refreshDiagnostics()
+            server.refreshSemanticTokens()
             refreshScopes(
                 adapter.affectedAnalysisScopes(uri) +
                     publishedByScope.filterValues { uri in it }.keys
@@ -488,6 +496,7 @@ class XtcTextDocumentService(
             diagnosticRevision++
             refreshScopes(replace())
             server.refreshDiagnostics()
+            server.refreshSemanticTokens()
         }
     }
 
@@ -499,6 +508,7 @@ class XtcTextDocumentService(
             invalidateQueries(pendingQueries.values.toSet())
             publishedByScope.clear()
             diagnosticReports.clear()
+            semanticTokenReports.clear()
             documents.forEach { (uri, document) ->
                 document.analysis.cancel(false)
                 adapter.closeDocument(uri)
@@ -1095,10 +1105,39 @@ class XtcTextDocumentService(
             uri = params.textDocument.uri,
         ) {
             adapter.getSemanticTokens(params.textDocument.uri)?.let { tokens ->
-                SemanticTokens().apply {
-                    data = tokens.data
-                }
+                semanticTokenReports.full(params.textDocument.uri, tokens.data)
             }
+        }
+
+    override fun semanticTokensFullDelta(
+        params: SemanticTokensDeltaParams
+    ): CompletableFuture<Either<SemanticTokens, SemanticTokensDelta>?> =
+        supplyAsync(
+            "textDocument/semanticTokens/full/delta",
+            params.textDocument.uri,
+            uri = params.textDocument.uri,
+        ) {
+            server.requireSemanticTokenRequest(delta = true)
+            semanticTokenReports.delta(
+                params.textDocument.uri,
+                params.previousResultId,
+                adapter.getSemanticTokens(params.textDocument.uri)?.data.orEmpty(),
+            )
+        }
+
+    override fun semanticTokensRange(
+        params: SemanticTokensRangeParams
+    ): CompletableFuture<SemanticTokens?> =
+        supplyAsync(
+            "textDocument/semanticTokens/range",
+            params.textDocument.uri,
+            uri = params.textDocument.uri,
+        ) {
+            server.requireSemanticTokenRequest(delta = false)
+            SemanticTokenReports.range(
+                adapter.getSemanticTokens(params.textDocument.uri)?.data.orEmpty(),
+                params.range,
+            )
         }
 
     /**
