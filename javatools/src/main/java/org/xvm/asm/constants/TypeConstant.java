@@ -690,6 +690,70 @@ public abstract class TypeConstant
     }
 
     /**
+     * Determine if this type is a canonical type as defined by {@link #getCanonicalType()}, without
+     * strictly guaranteeing that "this" type is itself the type that would be returned by
+     * {@link #getCanonicalType()}. In other words, this test indicates that the type is either
+     * unspecialized or matches a layer one specialization, but in the case of layer one
+     * specialization, this type may lack the type parameter normalization (etc.) that would be
+     * provided by {@link #getCanonicalType()}.
+     *
+     * @return true iff this type could be returned as (or be equivalent to) a canonical type
+     *
+     * @see #getCanonicalType()
+     */
+    public boolean isCanonicalType() {
+        return getUnderlyingType().isCanonicalType();
+    }
+
+    /**
+     * Obtain the canonical type for this type. This method may be used by the linker and runtime,
+     * but should not be used within the Ecstasy compiler, because this method requires the type
+     * system to be fully resolved.
+     * <p/>
+     * For a class that has type parameters and uses the "incorporates conditional" feature, there
+     * exists more than one canonical type, because the class composition is specialized for each
+     * conditional incorporation being incorporated vs not-incorporated. (For context, this
+     * specialization is referred to as "layer one specialization".) By way of example, the Range
+     * class implies two specializations: (0) when Element is NOT Sequential ("Range<Orderable>"),
+     * and (1) when Element IS Sequential ("Range<Sequential>"). Another example is ListMap, which
+     * has four specializations: (00) when Key is NOT immutable Hashable and Value is NOT Shareable
+     * ("ListMap<Object, Object>"), (01) when Key is NOT immutable Hashable but Key IS immutable
+     * Object and Value IS Shareable  ("ListMap<immutable Object, Shareable>"), (10) when Key IS
+     * immutable Hashable and Value is NOT Shareable ("ListMap<immutable Hashable, Object>"), and
+     * (11) when Key IS immutable Hashable and Value IS Shareable ("ListMap<immutable Hashable,
+     * Shareable>").
+     * <p/>
+     * A class with no reachable conditional incorporations has only one canonical type, with no
+     * type parameters specified; for example, "KeyBasedMap" is used as the canonical form, rather
+     * than the normalized "KeyBasedMap<Object, Object>".
+     * <p/>
+     * With virtual child relationships, this is additionally complicated by the ability of a child
+     * class to (i) specify "incorporates conditional" clauses that reference a formal type
+     * parameter from a parent class, and (ii) specify formal type parameter constraints that are
+     * defined using a formal type parameter from a parent class. In these cases, the parent class
+     * canonical types must reflect the specializations of the virtual child classes (and their
+     * virtual child classes, and so on).
+     * <p/>
+     * The "true" canonical type for a given type is the simplest form of the type that represents
+     * the compositional shape of that type. For a type to be canonicalizable, it must correspond to
+     * a single underlying class (including interfaces). Access and immutability modifiers would be
+     * stripped away. However, this method does not attempt to provide the "true" canonical type in
+     * that sense, because so many types (such as relational types) do not have a true canonical
+     * type, but still require an answer to this question. Instead, this method provides a "usable"
+     * canonical type. Access and immutability modifiers (etc.) are not removed, and relational
+     * types simply have their underlying types canonicalized.
+     *
+     * @return the canonical form of this type
+     */
+    public TypeConstant getCanonicalType() {
+        TypeConstant typeOriginal  = getUnderlyingType();
+        TypeConstant typeCanonical = typeOriginal.getCanonicalType();
+        return typeCanonical == typeOriginal
+                ? this
+                : cloneSingle(getConstantPool(), typeCanonical);
+    }
+
+    /**
      * @return true iff this TypeConstant is a "const" type
      */
     public boolean isConst() {
@@ -861,7 +925,8 @@ public abstract class TypeConstant
         }
 
         // There are two scenarios of non-combinable types:
-        // - class types (not interfaces or annotations or mixins) in which one doesn't extend the other
+        // - class types (not interfaces or annotations or mixins) in which one doesn't extend the
+        //   other
         // - one is a class type that is "final" (Null, True, package/module etc.) and known to not
         //   be the other type
         return !typeThis.isA(typeThat) && !typeThat.isA(typeThis) &&
@@ -1000,7 +1065,7 @@ public abstract class TypeConstant
                 return null;
             }
 
-            TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
+            TypeConstant[] atype2 = clz2.getNormalizedType().getParamTypesArray();
             boolean        fClone = false;
             for (int i = 0, c = Math.min(atype1.length, atype2.length); i < c; i++) {
                 TypeConstant te1 = atype1[i];
@@ -2134,7 +2199,7 @@ public abstract class TypeConstant
             ModuleStructure module = pkg.getImportedModule();
             module = module.isFingerprint() ? module.getFingerprintOrigin() : module;
 
-            return pool.ensureAccessTypeConstant(module.getCanonicalType(), Access.PRIVATE).
+            return pool.ensureAccessTypeConstant(module.getNormalizedType(), Access.PRIVATE).
                     buildTypeInfoImpl(errs);
         }
 
@@ -7244,7 +7309,7 @@ public abstract class TypeConstant
         // the class is parameterized; it must be generic for this question to make any sense
         assert containsGenericType(true);
 
-        for (TypeConstant typeConstraint : clz.getCanonicalType().getParamTypes()) {
+        for (TypeConstant typeConstraint : clz.getNormalizedType().getParamTypes()) {
             for (TypeConstant typePrimitive : getConstantPool().getJitPrimitiveTypes()) {
                 if (typePrimitive.isA(typeConstraint)) {
                     return true;
@@ -7265,7 +7330,7 @@ public abstract class TypeConstant
         ClassStructure classStruct = (ClassStructure)
                 jitType.getSingleUnderlyingClass(true).getComponent();
 
-        return jitType.isParamsSpecified() && !jitType.equals(classStruct.getCanonicalType());
+        return jitType.isParamsSpecified() && !jitType.equals(classStruct.getNormalizedType());
     }
 
     /**

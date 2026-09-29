@@ -60,7 +60,7 @@ public class MethodInfoTest {
             SignatureConstant sig,
             MethodInfo        method) {
         return new TypeInfoReal(
-                struct.getCanonicalType(), 0, struct, 0, false,
+                struct.getNormalizedType(), 0, struct, 0, false,
                 Collections.emptyMap(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 null, null, null, Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                 Collections.emptyMap(), Map.of(id, method), Collections.emptyMap(),

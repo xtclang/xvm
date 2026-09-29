@@ -521,7 +521,7 @@ public class TypeSystem {
     public Artifact deduceArtifact(ModuleStructure module, String prefix, String suffix) {
         String className = prefix + suffix;
         if (suffix.equals(MODULE)) {
-            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl, className);
+            return new Artifact(module.getNormalizedType(), module, ClassfileShape.Impl, className);
         }
 
         ClassfileShape shape    = ClassfileShape.Impl;

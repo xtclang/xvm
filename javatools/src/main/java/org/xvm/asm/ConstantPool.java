@@ -1684,11 +1684,11 @@ public class ConstantPool
         boolean      fCheckAuto;
         if (clzBase.equals(clzParent) || clzBase.hasContribution(idParent)) {
             // we've reached the "top"
-            typeParent = fFormal ? clzBase.getFormalType() : clzBase.getCanonicalType();
+            typeParent = fFormal ? clzBase.getFormalType() : clzBase.getNormalizedType();
             fCheckAuto = true;
         } else if (!clzParent.isVirtualChild()) {
             // we've reached the "virtual top"
-            typeParent = fFormal ? clzParent.getFormalType() : clzParent.getCanonicalType();
+            typeParent = fFormal ? clzParent.getFormalType() : clzParent.getNormalizedType();
             fCheckAuto = true;
         } else {
             // as we recurse, always parameterize the parent, which is never auto-narrowing
@@ -1711,7 +1711,7 @@ public class ConstantPool
         if (fParameterize && clzChild.getTypeParamCount() > 0) {
             TypeConstant[] atypeParams = fFormal
                     ? clzChild.getFormalType().getParamTypesArray()
-                    : clzChild.getCanonicalType().getParamTypesArray();
+                    : clzChild.getNormalizedType().getParamTypesArray();
 
             typeTarget = ensureParameterizedTypeConstant(typeTarget, atypeParams);
         }

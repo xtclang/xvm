@@ -183,7 +183,7 @@ public class ClassStructure
                 TypeConstant type = contrib.getTypeConstant();
 
                 if (type.isExplicitClassIdentity(false) &&
-                    type.getSingleUnderlyingClass(false).equals(idAnno)) {
+                        type.getSingleUnderlyingClass(false).equals(idAnno)) {
                     return true;
                 }
             }
@@ -345,7 +345,7 @@ public class ClassStructure
      */
     public boolean isDescendant(IdentityConstant idParent) {
         return getIdentityConstant().equals(idParent) ||
-            getParent() instanceof ClassStructure parent && parent.isDescendant(idParent);
+                getParent() instanceof ClassStructure parent && parent.isDescendant(idParent);
     }
 
     /**
@@ -402,7 +402,7 @@ public class ClassStructure
 
             default:
                 throw new IllegalStateException(
-                    parent.getIdentityConstant() + " format=" + parent.getFormat());
+                        parent.getIdentityConstant() + " format=" + parent.getFormat());
             }
         }
     }
@@ -441,7 +441,7 @@ public class ClassStructure
                 return true;
             }
         }
-            // fall through
+        // fall through
         case CLASS, INTERFACE:
             for (Contribution contrib : getContributionsAsList()) {
                 if (contrib.getComposition() == Composition.Implements) {
@@ -488,7 +488,7 @@ public class ClassStructure
 
             // TODO: allow intersection types to be traversed as well
             if (   typeContrib.containsUnresolved()
-               || !typeContrib.isExplicitClassIdentity(true)) { // disregard relational type contributions
+                    || !typeContrib.isExplicitClassIdentity(true)) { // disregard relational type contributions
                 continue;
             }
 
@@ -594,7 +594,7 @@ public class ClassStructure
         // each type parameter also has a synthetic property of the same name,
         // whose type is of type "Type<constraint-type>"
         TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
-            pool.clzType(), null, typeConstraint);
+                pool.clzType(), null, typeConstraint);
 
         // create the property and mark it as a type parameter
         PropertyStructure prop = createProperty(false, Access.PUBLIC, Access.PUBLIC, typeConstraintType, sName);
@@ -602,7 +602,7 @@ public class ClassStructure
         markModified();
 
         // invalidate cached types
-        m_typeCanonical = null;
+        m_typeNormalized = null;
         m_typeFormal    = null;
         return prop;
     }
@@ -633,7 +633,7 @@ public class ClassStructure
         ConstantPool pool = getConstantPool();
 
         TypeConstant typeConstraintType = pool.ensureClassTypeConstant(
-            pool.clzType(), null, typeConstraint);
+                pool.clzType(), null, typeConstraint);
 
         map.put(pool.ensureStringConstant(sName), typeConstraint);
 
@@ -655,7 +655,7 @@ public class ClassStructure
      */
     public boolean isParameterizedDeep() {
         return isParameterized() ||
-               isVirtualChild() && getOuter().isParameterized();
+                isVirtualChild() && getOuter().isParameterized();
     }
 
     /**
@@ -673,7 +673,7 @@ public class ClassStructure
                 // for anonymous inner class the constraints are the formal types
                 if (isParameterized()) {
                     typeFormal = pool.ensureParameterizedTypeConstant(typeFormal,
-                        m_mapParams.values().toArray(TypeConstant.NO_TYPES));
+                            m_mapParams.values().toArray(TypeConstant.NO_TYPES));
                 }
             } else {
                 if (isVirtualChild()) {
@@ -682,7 +682,7 @@ public class ClassStructure
                 } else if (isInnerChild()) {
                     TypeConstant typeParent = getOuter().getFormalType();
                     typeFormal = pool.ensureInnerChildTypeConstant(typeParent,
-                                        (ClassConstant) getIdentityConstant());
+                            (ClassConstant) getIdentityConstant());
                 } else {
                     typeFormal = constantClz.getType();
                 }
@@ -721,27 +721,27 @@ public class ClassStructure
     }
 
     /**
-     * @return the canonical type (e.g. Map<Object, Object>)
+     * @return the normalized canonical type (e.g. Map<Object, Object>)
      */
-    public TypeConstant getCanonicalType() {
-        TypeConstant typeCanonical = m_typeCanonical;
-        if (typeCanonical == null) {
+    public TypeConstant getNormalizedType() {
+        TypeConstant typeNormalized = m_typeNormalized;
+        if (typeNormalized == null) {
             ConstantPool     pool     = getConstantPool();
             IdentityConstant constClz = getIdentityConstant();
 
             if (constClz.equals(pool.clzTuple())) {
                 // canonical Tuple
-                return m_typeCanonical = pool.typeTuple0();
+                return m_typeNormalized = pool.typeTuple0();
             }
 
             if (isVirtualChild()) {
-                TypeConstant typeParent = ((ClassStructure) getParent()).getCanonicalType();
-                typeCanonical = pool.ensureVirtualChildTypeConstant(typeParent, getName());
+                TypeConstant typeParent = ((ClassStructure) getParent()).getNormalizedType();
+                typeNormalized = pool.ensureVirtualChildTypeConstant(typeParent, getName());
             } else if (isInnerChild()) {
-                TypeConstant typeParent = getOuter().getCanonicalType();
-                typeCanonical = pool.ensureInnerChildTypeConstant(typeParent, (ClassConstant) constClz);
+                TypeConstant typeParent = getOuter().getNormalizedType();
+                typeNormalized = pool.ensureInnerChildTypeConstant(typeParent, (ClassConstant) constClz);
             } else {
-                typeCanonical = constClz.getType();
+                typeNormalized = constClz.getType();
             }
 
             if (isParameterized()) {
@@ -754,12 +754,12 @@ public class ClassStructure
                             ? pool.typeTuple0()
                             : typeParam.resolveGenerics(pool, resolver);
                 }
-                typeCanonical = pool.ensureParameterizedTypeConstant(typeCanonical, atypeParam);
+                typeNormalized = pool.ensureParameterizedTypeConstant(typeNormalized, atypeParam);
             }
 
-            m_typeCanonical = typeCanonical;
+            m_typeNormalized = typeNormalized;
         }
-        return typeCanonical;
+        return typeNormalized;
     }
 
     /**
@@ -775,8 +775,8 @@ public class ClassStructure
      */
     public TypeConstant resolveType(ConstantPool pool, List<TypeConstant> listActual) {
         return listActual.isEmpty() && !isParameterized()
-            ? getCanonicalType()
-            : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
+                ? getNormalizedType()
+                : getFormalType().resolveGenerics(pool, new SimpleTypeResolver(pool, listActual));
     }
 
     /**
@@ -793,8 +793,8 @@ public class ClassStructure
         int cFormal = getTypeParamCount();
 
         return cActual == cFormal
-            ? listActual
-            : resolveType(pool, listActual).getParamTypes();
+                ? listActual
+                : resolveType(pool, listActual).getParamTypes();
     }
 
     /**
@@ -811,8 +811,8 @@ public class ClassStructure
         int cFormal = getTypeParamCount();
 
         return cActual == cFormal
-            ? atypeActual
-            : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray();
+                ? atypeActual
+                : resolveType(pool, Arrays.asList(atypeActual)).getParamTypesArray();
     }
 
     /**
@@ -832,8 +832,8 @@ public class ClassStructure
                     String          sOldPath   = mapModulePaths.get(idDep);
                     String          sLocalPath = pkg.getIdentityConstant().getPathString();
                     String          sNewPath   = sModulePath.isEmpty()
-                                               ? sLocalPath
-                                               : sModulePath + '.' + sLocalPath;
+                            ? sLocalPath
+                            : sModulePath + '.' + sLocalPath;
                     if (sOldPath == null) {
                         mapModulePaths.put(idDep, sNewPath);
                         moduleDep.collectDependencies(sNewPath, mapModulePaths);
@@ -913,7 +913,7 @@ public class ClassStructure
         for (Contribution contrib : getContributionsAsList()) {
             if (contrib.getComposition() == Composition.Into) {
                 TypeConstant typeContrib = contrib.resolveGenerics(pool,
-                                                new SimpleTypeResolver(pool, listParams));
+                        new SimpleTypeResolver(pool, listParams));
                 if (typeContrib != null && typeContrib.isTuple()) {
                     return typeContrib.getTupleParamTypes();
                 }
@@ -1052,7 +1052,7 @@ public class ClassStructure
                     // the super will always be a class (because a Module and a Package cannot be
                     // extended)
                     ClassConstant constSuper = (ClassConstant)
-                        contrib.getTypeConstant().getSingleUnderlyingClass(false);
+                            contrib.getTypeConstant().getSingleUnderlyingClass(false);
                     if (idClass.equals(constSuper)) {
                         return true;
                     }
@@ -1094,7 +1094,7 @@ public class ClassStructure
         TypeConstant typeInto = typeAnno.getExplicitClassInto();
 
         return typeInto.isIntoClassType() &&
-               !typeInto.isComposedOfAny(Collections.singleton(getIdentityConstant()));
+                !typeInto.isComposedOfAny(Collections.singleton(getIdentityConstant()));
     }
 
     /**
@@ -1192,8 +1192,8 @@ public class ClassStructure
             } else if (typeContrib instanceof IntersectionTypeConstant typeIntersection) {
                 // the only relational type contributions we can process further are the
                 // intersection types
-                contribMatch =
-                    checkIntersectionContribution(contrib, typeIntersection, idContrib, setVisited);
+                contribMatch = checkIntersectionContribution(contrib, typeIntersection, idContrib,
+                        setVisited);
             }
 
             if (contribMatch != null) {
@@ -1311,7 +1311,7 @@ public class ClassStructure
         if (contribExtends != null) {
             TypeConstant typeExtends = contribExtends.getTypeConstant();
             if (typeExtends.isExplicitClassIdentity(true) &&
-                typeExtends.isSingleUnderlyingClass(false)) {
+                    typeExtends.isSingleUnderlyingClass(false)) {
                 return (ClassStructure) typeExtends.getSingleUnderlyingClass(false).getComponent();
             }
         }
@@ -1913,7 +1913,7 @@ public class ClassStructure
                 case Implements: {
                     if (typeContrib.isExplicitClassIdentity(true)) {
                         ClassStructure clzContrib = (ClassStructure)
-                            typeContrib.getSingleUnderlyingClass(true).getComponent();
+                                typeContrib.getSingleUnderlyingClass(true).getComponent();
                         if (clzContrib == null) {
                             // this method could be used before the pool is "connected"
                             break;
@@ -1944,7 +1944,7 @@ public class ClassStructure
         MethodStructure method = findMethod("construct", types.length, types);
         if (method == null) {
             throw new IllegalStateException(
-                "no such constructor for " + types.length + " params on " + this);
+                    "no such constructor for " + types.length + " params on " + this);
         }
         return method;
     }
@@ -2013,7 +2013,7 @@ public class ClassStructure
                 case Implements: {
                     if (typeContrib.isExplicitClassIdentity(true)) {
                         ClassStructure clzContrib = (ClassStructure)
-                            typeContrib.getSingleUnderlyingClass(true).getComponent();
+                                typeContrib.getSingleUnderlyingClass(true).getComponent();
                         if (clzContrib == null) {
                             // this method could be used before the pool is "connected"
                             break;
@@ -2062,7 +2062,7 @@ public class ClassStructure
         // virtual children implement an implicit "Inner" interface, and are contained inside a
         // container class that implements an implicit "Outer" interface
         if (containsVirtualChild() && typeLeft.equals(pool.typeOuter()) ||
-            isVirtualChild()       && typeLeft.equals(pool.typeInner())) {
+                isVirtualChild()       && typeLeft.equals(pool.typeInner())) {
             return Relation.IS_A;
         }
 
@@ -2125,13 +2125,13 @@ public class ClassStructure
 
                 if (typeParentRight.isA(typeParentLeft)) {
                     return calculateAssignability(pool, typeLeft.getParamTypes(),
-                                typeLeft.getAccess(), typeRight.getParamTypes());
+                            typeLeft.getAccess(), typeRight.getParamTypes());
                 }
 
                 if (typeRight.containsAutoNarrowing(true) && typeParentLeft.isA(typeParentRight)) {
                     return ((ClassStructure) idClzLeft.getComponent()).
                             calculateAssignability(pool, typeLeft.getParamTypes(),
-                                typeLeft.getAccess(), typeRight.getParamTypes());
+                                    typeLeft.getAccess(), typeRight.getParamTypes());
                 }
 
                 return Relation.INCOMPATIBLE;
@@ -2140,11 +2140,11 @@ public class ClassStructure
             TypeConstant typeRebase = getRebaseType();
             if (typeRebase != null) {
                 ClassStructure clzRebase = (ClassStructure)
-                    typeRebase.getSingleUnderlyingClass(true).getComponent();
+                        typeRebase.getSingleUnderlyingClass(true).getComponent();
 
                 // rebase types are never parameterized and therefore cannot be "weak"
                 if (clzRebase.calculateRelationImpl(pool, typeLeft,
-                        clzRebase.getCanonicalType(), fAllowInto) == Relation.IS_A) {
+                        clzRebase.getNormalizedType(), fAllowInto) == Relation.IS_A) {
                     return Relation.IS_A;
                 }
             }
@@ -2246,13 +2246,13 @@ public class ClassStructure
                     if (typeParent.isA(typeContrib.getParentType())) {
                         // see the doc for "ensureVirtualParent" for the explanation
                         typeContrib = typeContrib.ensureVirtualParent(typeParent,
-                                            !getName().equals(clzBase.getName()));
+                                !getName().equals(clzBase.getName()));
                         clzBase = (ClassStructure) typeContrib.getSingleUnderlyingClass(true).
-                                            getComponent();
+                                getComponent();
                     }
                 }
                 relation = relation.bestOf(
-                                clzBase.calculateRelationImpl(pool, typeLeft, typeContrib, fAllowInto));
+                        clzBase.calculateRelationImpl(pool, typeLeft, typeContrib, fAllowInto));
                 if (relation == Relation.IS_A) {
                     return Relation.IS_A;
                 }
@@ -2268,7 +2268,7 @@ public class ClassStructure
                 ModuleStructure  clzModule = (ModuleStructure) idContrib.getComponent();
                 if (!clzModule.getContributionsAsList().isEmpty()) {
                     relation = relation.bestOf(
-                        clzModule.calculateRelationImpl(pool, typeLeft, typeContrib, false));
+                            clzModule.calculateRelationImpl(pool, typeLeft, typeContrib, false));
                     if (relation == Relation.IS_A) {
                         return Relation.IS_A;
                     }
@@ -2320,7 +2320,7 @@ public class ClassStructure
             case Into:
             case Implements:
                 typeContrib = typeContrib.resolveGenerics(pool,
-                                    new SimpleTypeResolver(pool, listRight));
+                        new SimpleTypeResolver(pool, listRight));
                 if (typeContrib != null) {
                     if (typeContrib.equals(pool.typeObject())) {
                         return Relation.INCOMPATIBLE;
@@ -2435,11 +2435,11 @@ public class ClassStructure
                 }
 
                 ClassStructure clzContrib = (ClassStructure)
-                    typeContrib.getSingleUnderlyingClass(true).getComponent();
+                        typeContrib.getSingleUnderlyingClass(true).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
-                    pool, typeContrib.getParamTypes());
+                        pool, typeContrib.getParamTypes());
                 List<TypeConstant> listContribActual = typeResolved.getParamTypes();
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
@@ -2449,12 +2449,9 @@ public class ClassStructure
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
-                    if (constParam.producesFormalType(sName, access)
-                            && clzContrib.consumesFormalTypeImpl(
+                    if (constParam.producesFormalType(sName, access) && clzContrib.consumesFormalTypeImpl(
                                     pool, sFormal, access, listContribActual, fAllowInto)
-                        ||
-                        constParam.consumesFormalType(sName, access)
-                            && clzContrib.producesFormalTypeImpl(
+                            || constParam.consumesFormalType(sName, access) && clzContrib.producesFormalTypeImpl(
                                     pool, sFormal, access, listContribActual, fAllowInto)) {
                         return true;
                     }
@@ -2561,11 +2558,11 @@ public class ClassStructure
                 }
 
                 ClassStructure clzContrib = (ClassStructure)
-                    typeContrib.getSingleUnderlyingClass(true).getComponent();
+                        typeContrib.getSingleUnderlyingClass(true).getComponent();
 
                 Map<StringConstant, TypeConstant> mapFormal = clzContrib.getTypeParams();
                 List<TypeConstant> listContribParams = clzContrib.normalizeParameters(
-                    pool, typeContrib.getParamTypes());
+                        pool, typeContrib.getParamTypes());
                 List<TypeConstant> listContribActual = typeResolved.getParamTypes();
 
                 Iterator<TypeConstant> iterParams = listContribParams.iterator();
@@ -2575,12 +2572,9 @@ public class ClassStructure
                     TypeConstant constParam = iterParams.next();
                     String sFormal = iterNames.next().getValue();
 
-                    if (constParam.producesFormalType(sName, access)
-                            && clzContrib.producesFormalTypeImpl(
+                    if (constParam.producesFormalType(sName, access) && clzContrib.producesFormalTypeImpl(
                                     pool, sFormal, access, listContribActual, fAllowInto)
-                        ||
-                        constParam.consumesFormalType(sName, access)
-                            && clzContrib.consumesFormalTypeImpl(
+                            || constParam.consumesFormalType(sName, access) && clzContrib.consumesFormalTypeImpl(
                                     pool, sFormal, access, listContribActual, fAllowInto)) {
                         return true;
                     }
@@ -2686,7 +2680,7 @@ public class ClassStructure
                 }
 
                 ClassStructure clzSuper = (ClassStructure)
-                    typeResolved.getSingleUnderlyingClass(true).getComponent();
+                        typeResolved.getSingleUnderlyingClass(true).getComponent();
 
                 assert clzSuper.getFormat() == Component.Format.INTERFACE;
 
@@ -2790,7 +2784,7 @@ public class ClassStructure
                 TypeConstant typeResolved = contrib.resolveType(pool, this, listParams);
                 if (typeResolved != null) {
                     ClassStructure clzContrib = (ClassStructure)
-                        typeResolved.getSingleUnderlyingClass(true).getComponent();
+                            typeResolved.getSingleUnderlyingClass(true).getComponent();
 
                     if (clzContrib.containsSubstitutableMethodImpl(pool, signature, access, fFunction,
                             typeResolved.getParamTypes(), idClass, fAllowInto)) {
@@ -2954,12 +2948,10 @@ public class ClassStructure
             if ("get".equals(sigAccessor.getName())) {
                 fGet     = true;
                 aParams  = Parameter.NO_PARAMS;
-                aReturns = new Parameter[] {new Parameter(pool, typeProp,
-                                null, null, true, 0, false)};
+                aReturns = new Parameter[] {new Parameter(pool, typeProp, null, null, true, 0, false)};
             } else {
                 fGet     = false;
-                aParams  = new Parameter[] {new Parameter(pool, typeProp,
-                                prop.getName(), null, false, 0, false)};
+                aParams  = new Parameter[] {new Parameter(pool, typeProp, prop.getName(), null, false, 0, false)};
                 aReturns = Parameter.NO_PARAMS;
             }
 
@@ -3178,17 +3170,17 @@ public class ClassStructure
      */
     private void synthesizeConstFunction(String sName, int cParams, TypeConstant typeReturn) {
         Predicate<MethodStructure> test = method -> {
-            if (    method.getTypeParamCount() != 1
-                 || method.getParamCount()     != 1  + cParams
-                 || !method.getParam(0).isTypeParameter()
-                 || method.getReturnCount()    != 1
-                 || !method.getReturn(0).getType().equals(typeReturn)) {
+            if (       method.getTypeParamCount() != 1
+                    || method.getParamCount()     != 1  + cParams
+                    || !method.getParam(0).isTypeParameter()
+                    || method.getReturnCount()    != 1
+                    || !method.getReturn(0).getType().equals(typeReturn)) {
                 return false;
             }
 
             // abstract or synthesized functions don't count and neither do the Object methods
             return method.hasCode() && !method.isTransient() &&
-                !method.getIdentityConstant().getNamespace().equals(getConstantPool().clzObject());
+                    !method.getIdentityConstant().getNamespace().equals(getConstantPool().clzObject());
         };
 
         MethodStructure fnThis = findMethod(sName, test);
@@ -3218,7 +3210,7 @@ public class ClassStructure
             }
 
             Parameter[] aReturn = new Parameter[] {
-                new Parameter(pool, typeReturn, null, null, true, 0, false)
+                    new Parameter(pool, typeReturn, null, null, true, 0, false)
             };
 
             // 2) create the method structure and [yet unresolved] identity
@@ -3252,18 +3244,18 @@ public class ClassStructure
         if (methToString != null && !methToString.usesSuper()) {
             ConstantPool pool         = getConstantPool();
             TypeConstant typeAppender = pool.ensureParameterizedTypeConstant(
-                pool.ensureEcstasyTypeConstant("Appender"), pool.typeChar());
+                    pool.ensureEcstasyTypeConstant("Appender"), pool.typeChar());
 
             MethodStructure methAppendTo = findMethod("appendTo", 1, typeAppender);
             if (methAppendTo == null) {
                 Parameter[] aRet = new Parameter[] {
-                    new Parameter(pool, typeAppender, null, null, true, 0, false)
+                        new Parameter(pool, typeAppender, null, null, true, 0, false)
                 };
                 Parameter[] aParam = new Parameter[] {
-                    new Parameter(pool, typeAppender, "appender", null, false, 0, false)
+                        new Parameter(pool, typeAppender, "appender", null, false, 0, false)
                 };
                 Annotation[] aAnno = new Annotation[] {
-                    pool.ensureAnnotation(pool.clzOverride())
+                        pool.ensureAnnotation(pool.clzOverride())
                 };
 
                 methAppendTo = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
@@ -3302,7 +3294,7 @@ public class ClassStructure
                 MethodStructure methEstimate = findMethod("estimateStringLength", 0);
                 if (methEstimate == null) {
                     Parameter[] aReturn = new Parameter[] {
-                        new Parameter(pool, pool.typeInt64(), null, null, true, 0, false)
+                            new Parameter(pool, pool.typeInt64(), null, null, true, 0, false)
                     };
                     methEstimate = createMethod(/*function*/ false, Constants.Access.PUBLIC, aAnno,
                             aReturn, "estimateStringLength", Parameter.NO_PARAMS,
@@ -3355,7 +3347,7 @@ public class ClassStructure
     @Override
     public void synthesizeChildren() {
         switch (getFormat()) {
-            case CONST, ENUM -> synthesizeConstInterface(true);
+        case CONST, ENUM -> synthesizeConstInterface(true);
         }
 
         super.synthesizeChildren();
@@ -3370,7 +3362,7 @@ public class ClassStructure
         m_constPath = pool.register(m_constPath);
 
         // invalidate cached types
-        m_typeCanonical = null;
+        m_typeNormalized = null;
         m_typeFormal    = null;
     }
 
@@ -3400,7 +3392,7 @@ public class ClassStructure
     public String getDescription() {
         StringBuilder sb = new StringBuilder();
         sb.append(super.getDescription())
-          .append(", type-params=");
+                .append(", type-params=");
 
         final ListMap<StringConstant, TypeConstant> map = m_mapParams;
         if (map == null || map.isEmpty()) {
@@ -3448,7 +3440,7 @@ public class ClassStructure
      *                      DataInput stream, or if there is invalid data in the stream
      */
     protected ListMap<StringConstant, TypeConstant> disassembleTypeParams(DataInput in)
-        throws IOException {
+            throws IOException {
         int c = readMagnitude(in);
         if (c <= 0) {
             assert c == 0;
@@ -3520,7 +3512,7 @@ public class ClassStructure
      *                      stream
      */
     protected void assembleTypeParams(ListMap<StringConstant, TypeConstant> map, DataOutput out)
-        throws IOException {
+            throws IOException {
         int c = map == null ? 0 : map.size();
         writePackedLong(out, c);
 
@@ -3587,7 +3579,7 @@ public class ClassStructure
                 aReturn[i] = new Parameter(pool, atypeReturn[i], null, null, true, i, false);
             }
             method = createMethod(/*function*/ false, Access.PUBLIC, null, aReturn,
-                            sig.getName(), aParam, /*hasCode*/ false, /*usesSuper*/ false);
+                    sig.getName(), aParam, /*hasCode*/ false, /*usesSuper*/ false);
             method.setSynthetic(true);
         }
         return method;
@@ -3630,8 +3622,8 @@ public class ClassStructure
         int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
 
         return cThisParams == cThatParams
-            && (cThisParams == 0 || mapThisParams.equals(mapThatParams))
-            && Handy.equals(this.m_constPath, that.m_constPath);
+                && (cThisParams == 0 || mapThisParams.equals(mapThatParams))
+                && Handy.equals(this.m_constPath, that.m_constPath);
     }
 
     /**
@@ -3706,8 +3698,10 @@ public class ClassStructure
                 } else if (!typeOld.equals(typeConstraint)) {
                     // {0} type parameter {1} must be of type {2}, but has been specified as {3} by {4}
                     log(errs, Severity.ERROR, VE_TYPE_PARAM_INCOMPATIBLE_TYPE,
-                        getName(), typeOld.getValueString(),
-                        typeConstraint.getValueString(), contrib.getTypeConstant().getValueString());
+                            getName(),
+                            typeOld.getValueString(),
+                            typeConstraint.getValueString(),
+                            contrib.getTypeConstant().getValueString());
                     return;
                 }
             }
@@ -3719,7 +3713,7 @@ public class ClassStructure
         if (mapTypeParams != null) {
             for (Map.Entry<String, TypeConstant> entry : mapTypeParams.entrySet()) {
                 addTypeParam(entry.getKey(), entry.getValue())
-                         .setSynthetic(true);
+                        .setSynthetic(true);
             }
         }
     }
@@ -3761,12 +3755,12 @@ public class ClassStructure
                             // prime them accordingly
                             for (int i = cActual; i < cFormal; i++) {
                                 listActual.add(pool.ensureAccessTypeConstant(typePublic,
-                                    switch (i) {
-                                        case 1  -> Access.PROTECTED;
-                                        case 2  -> Access.PRIVATE;
-                                        case 3  -> Access.STRUCT;
-                                        default -> throw new IllegalStateException();
-                                    }));
+                                        switch (i) {
+                                            case 1  -> Access.PROTECTED;
+                                            case 2  -> Access.PRIVATE;
+                                            case 3  -> Access.STRUCT;
+                                            default -> throw new IllegalStateException();
+                                        }));
                             }
                             return;
                         }
@@ -3783,12 +3777,13 @@ public class ClassStructure
                     for (int i = cActual; i < cFormal; i++) {
                         // the constraint type itself could be formal, depending on another parameter
                         TypeConstant typeConstraint = entries.get(i).getValue();
-                        listActual.set(i,  typeConstraint.containsUnresolved()   ||
-                                          !typeConstraint.containsFormalType(true)
+                        boolean      fUnresolved    = typeConstraint.containsUnresolved() ||
+                                !typeConstraint.containsFormalType(true);
+                        listActual.set(i, fUnresolved
                                 ? typeConstraint
                                 : typeConstraint.isFormalTypeSequence()
-                                    ? pool.typeTuple0()
-                                    : typeConstraint.resolveGenerics(pool, this));
+                                        ? pool.typeTuple0()
+                                        : typeConstraint.resolveGenerics(pool, this));
                     }
                 }
             }
@@ -3829,7 +3824,7 @@ public class ClassStructure
     /**
      * Cached canonical type.
      */
-    private transient TypeConstant m_typeCanonical;
+    private transient TypeConstant m_typeNormalized;
 
     /**
      * Cached information about this class concurrency.

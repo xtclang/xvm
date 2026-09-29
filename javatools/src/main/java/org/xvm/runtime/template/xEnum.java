@@ -59,7 +59,7 @@ public class xEnum
             int iOrdinal = 0;
             for (Component child : listAll) {
                 if (child.getFormat() == Format.ENUMVALUE) {
-                    TypeConstant type   = ((ClassStructure) child).getCanonicalType();
+                    TypeConstant type   = ((ClassStructure) child).getNormalizedType();
                     EnumHandle   hValue = makeEnumHandle(ensureClass(f_container, type, type), iOrdinal++);
 
                     listNames.add(child.getName());

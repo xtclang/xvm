@@ -98,6 +98,18 @@ public class PendingTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        // invalid question
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        // invalid question
+        throw new IllegalStateException();
+    }
+
+    @Override
     public boolean isTypeOfType() {
         return false;
     }
