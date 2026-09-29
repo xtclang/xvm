@@ -1,5 +1,7 @@
 package org.xtclang.idea.playbook.probe
 
+import com.intellij.notification.Notification
+import com.intellij.notification.NotificationsManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
@@ -66,6 +68,33 @@ object CompilerSettingsPage {
                 .getLanguageServerSettings(SERVER)
                 ?.configurationContent != null
         )
+    }
+
+    @JvmStatic
+    fun dismissExpectedConfigurationError(project: Project) {
+        NotificationsManager.getNotificationsManager()
+            .getNotificationsOfType(Notification::class.java, project)
+            .filter { it.content.contains("Cyclic source dependencies:") }
+            .forEach(Notification::expire)
+    }
+
+    @JvmStatic
+    fun resourceRootsRoundTrip(project: Project, roots: String) {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        val page = CompilerProjectConfigurable(project)
+        fun descendants(component: Component): Sequence<Component> = sequence {
+            yield(component)
+            if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
+        }
+        val table = descendants(page.createComponent()).filterIsInstance<JTable>().single()
+        val original = table.model.getValueAt(0, 3)
+        table.model.setValueAt("[]", 0, 3)
+        page.reset()
+        check(table.model.getValueAt(0, 3) == original && !page.isModified())
+        table.model.setValueAt(roots, 0, 3)
+        page.apply()
+        page.reset()
+        check(table.model.getValueAt(0, 3) == roots && !page.isModified())
     }
 
     @JvmStatic
