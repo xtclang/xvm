@@ -1,6 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 128 scenarios. The
+The current catalog has 130 scenarios. X124–X125 are added for the next combined validation;
+the receipts below cover the preceding 128-case catalog. The
 [2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the full selection, resumed cases, failures and focused corrections separately. Historical
 113-case full-run receipts below are preserved as historical evidence. All 128 scenarios plus START
@@ -2128,6 +2129,8 @@ module Advanced {
 | X122 | At Box in each shared Actions variant, apply Implement or Override, then Undo/Redo/Undo. Cover ordinary signatures, a missing implementation diagnosed at construction, a conditional multiple return with a parameterized type/default, a generic method, an existing named call through a descendant, atomic implementation of all required members, a bundled Iterator contract, a compound return and fresh literal-default repair. Finish with an already implemented contract. | Both editors discover the action, compare the complete generated source and compile it. Native history restores exact source; the construction diagnostic returns after Undo and clears after Redo. No duplicate implementation is offered. |
 
 | X123 | Replace Navigation.x with the shared broken source, observe Problems, pull diagnostics twice with the returned result ID, repair the source, and pull using the old ID. Restore the fixture. | Both editors display and clear the compiler error. The installed connection returns full, unchanged, then empty full reports with a new result ID. |
+| X124 | Configure an external resource directory for Assets.x; test Reset and Apply in IntelliJ, explicit empty roots and restoration in VS Code; create, delete and recreate data.txt outside the workspace. | Missing-resource diagnostics clear and return through native file watchers; settings preserve the selected roots. |
+| X125 | Hover a generic echo call; request signature help before an existing positional/named argument; complete direct and chained `.tr()`; navigate the narrowed JsonObject variable's type. | Hover identifies echo, active parameters are 1/0, completion offers trim, and type definition opens bundled Map.x. |
 
 **Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
 scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.

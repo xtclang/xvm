@@ -19,6 +19,7 @@ class ParityScenarios(
         dependencyCases()
         renameCases()
         graphCases()
+        platformCases()
     }
 
     internal fun case(
