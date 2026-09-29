@@ -162,7 +162,7 @@ support for every XTC construct, optional LSP extension or native editor present
 | Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets and single-dimensional bracket slots fit the size parameter |
 | Rename (same file) | Text | AST | **Partial** - locals/lambda/private ordinary-method parameters, captures and named labels; positional method-value escapes; graph-backed public/explicit-constructor parameter slots, types, static members, method/property families and explicit aliases; client versioned-edit support required. The L62 extension has backend and selected shared acceptance in both editors |
 | Rename (cross-file) | - | - | **Partial** - types/packages and companion directories, qualified discovery-managed modules, implicit package directories, static members and source method/property families, including supported mixin/delegate/annotation routes; public parameter slots join override declarations and named callers; primary-header properties join generated constructor labels and property uses. Full graph compilation and binding/dispatch proof remain mandatory. Explicit graph changes have guarded native client persistence/Undo through xtc/rename (X118 passes in both editors; VS Code edited-file moves require files.refactoring.autoSave); standard LSP clients still refuse them. Project proposals include a scope receipt; registered absolute roots can include external consumers. The explicit graph is a declared proof boundary: omitted consumers, even inside workspace roots, remain unknown and are not automatically refused |
-| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; bounded implement/override ordinary inherited source methods at a class name; complete compilation and binding/dispatch proof, versioned edits |
+| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; source-contract implement/override at a class name, including generic/conditional signatures and literal defaults; fresh declaration analysis for missing implementations; complete compilation and binding/dispatch proof, versioned edits |
 | Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | **Partial** - Java-lexer brace/parenthesis/bracket indentation and outer whitespace; all token spellings preserved; no expression wrapping |
 | Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
 | On-type formatting | - | Structural formatting on trigger characters | **Partial** - current-line indentation/whitespace on configured trigger characters |
@@ -197,7 +197,7 @@ local or import-alias declarations and inherited written member contracts, prese
 
 | Entirely absent feature or extension | What exists today | Task |
 |---|---|---|
-| Extract/inline/safe-delete refactorings, implement/override generation and general semantic quick fixes | Bounded proven rename, import cleanup and public-type imports | L62–L63 |
+| Extract/inline/safe-delete refactorings, implement/override generation and general semantic quick fixes | Bounded proven rename, import cleanup, public-type imports and source-contract implement/override | L62–L63 |
 | Pull document/workspace diagnostics | Versioned push diagnostics and Problems updates | L68 |
 | Semantic-token range/delta requests | Full-document tokens | L69 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | Eager results for the currently supported facts | L70 |
@@ -581,8 +581,8 @@ Full tree-sitter support for fast, incremental parsing:
    - Organize imports is implemented in Tree-sitter and bounded by compiler proof in XdkAdapter
    - Auto-import is implemented in Tree-sitter; XdkAdapter offers proven unresolved public-type imports
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
-   - XdkAdapter generates ordinary inherited source methods at a class name, using compiler-selected contracts and a proven single-chain addition; generated bodies use `TODO()`
-   - Conditional/multiple returns, method type parameters, defaults, complex type spelling, binary contracts and existing-call/descendant rebinding remain withheld; failed compilations are not queried for new TypeInfo
+   - XdkAdapter generates inherited source methods at a class name, using compiler-selected generic/conditional signatures and validated literal defaults; whole-graph proof permits the intended call/descendant changes and preserves other bindings; generated bodies use `TODO()`. Both actions use `refactor.rewrite`, so they appear as class intentions without requiring a diagnostic at that location
+   - Computed/unvalidated defaults, relational/annotated or unresolvable cross-module type spellings and binary contracts remain withheld; missing implementations use fresh declaration analysis, never failed-compilation TypeInfo
    - Broader semantic fixes, doc generation and extract/inline/safe-delete remain unimplemented (L63)
 
 9. **Debugging (DAP)**
