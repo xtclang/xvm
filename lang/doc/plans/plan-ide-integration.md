@@ -211,10 +211,10 @@ themselves violate LSP; an inherited empty method does not count as an implement
 L61 declaration lookup passes combined backend/protocol checks and X4 in both editors. It returns
 local or import-alias declarations and inherited written member contracts, preserving multiple targets.
 
-| Entirely absent feature or extension | What exists today | Task |
+| Protocol gaps and pending acceptance | What exists today | Task |
 |---|---|---|
 | Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports and proven implement/override | L62–L63 |
-| Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 await acceptance; push remains for other clients. | L68, validation pending |
+| Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. The later real-platform source-location crash is tracked as PLAT1. | L68 implemented; PLAT1 robustness follow-up |
 | Semantic-token range/delta requests | Full-document tokens | L69 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | Eager results for the currently supported facts | L70 |
 | File-operation pre-edit requests; explicit create/delete notifications | Watched-file refresh and `didRenameFiles` lifecycle handling | L71 |
