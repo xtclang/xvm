@@ -445,7 +445,7 @@ Implement four checkpoints before combined validation:
 1. [x] Preserve written recursive formal constraints in incomplete declarations. Known, visible
    class type arguments may guard recursion; direct/sibling cycles, unknown names and unresolved
    formal-member lookup remain refused. Syntax-only constraints have no fabricated type identity.
-2. [ ] Offer literal argument values only after ordinary compiler fitting and full argument validation.
+2. [x] Offer literal argument values only after ordinary compiler fitting and full argument validation.
 3. [ ] Copy candidate documentation, provide deterministic completion ordering and improve
    overload/active-argument presentation without claiming an incomplete overload was selected.
 4. [ ] Extend shared scenarios and both drivers, then run combined backend/protocol checks and
@@ -458,6 +458,14 @@ completion/hover. This is display/name completion only, not a bound for member l
 No AST field, invented formal declaration, parser mode or retained Context is added. Unrelated
 parse errors and unclosed outer bodies away from the cursor remain separate recovery limitations.
 Validation is pending until all four checkpoints are implemented.
+
+Checkpoint 2 proposes `True`, `False`, `Null`, `0` and the empty string through the same compiler
+trial-argument path as source variables. Every proposal must fit and validate the whole argument,
+including operators, named slots and other written arguments. Qualified member slots exclude
+literals. `CursorBinding`/`CallFacts` add immutable literal-spelling lists while retaining previous
+constructors; record-pattern consumers must include the new component. The detached model copies
+only strings, and the LSP exposes them as Value completions with the existing exact token edit.
+This covers argument slots, not arbitrary expressions, collection synthesis or snippets.
 
 ### Implement the missing protocol operations
 
