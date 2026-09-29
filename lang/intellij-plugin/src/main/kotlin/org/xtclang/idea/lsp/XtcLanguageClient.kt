@@ -11,15 +11,15 @@ import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.xtclang.idea.XtcIntelliJLanguage
 
 /**
- * Refreshes compiler semantic caches and bridges Ecstasy Code Style settings.
- * Compiler source modules use LSP4IJ's server Configuration settings under `xtc.compiler`;
- * the base client owns section lookup, change notifications and listener disposal.
+ * Refreshes compiler semantic caches and bridges Ecstasy Code Style settings. Compiler source
+ * modules use LSP4IJ's server Configuration settings under `xtc.compiler`; the base client owns
+ * section lookup, change notifications and listener disposal.
  *
  * When the LSP server sends a `workspace/configuration` request for section `"xtc.formatting"`,
- * this client reads the current IntelliJ Code Style settings for the Ecstasy language and
- * returns them as a JSON-compatible map. This implements Phase 3 of the formatting plan:
- * IntelliJ Code Style settings flow to the LSP server as a fallback when no `xtc-format.toml`
- * config file is present.
+ * this client reads the current IntelliJ Code Style settings for the Ecstasy language and returns
+ * them as a JSON-compatible map. This implements Phase 3 of the formatting plan: IntelliJ Code
+ * Style settings flow to the LSP server as a fallback when no `xtc-format.toml` config file is
+ * present.
  *
  * Resolution chain (highest priority first):
  * 1. `xtc-format.toml` in the project tree (not yet implemented)
@@ -27,9 +27,7 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
  * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
  */
-class XtcLanguageClient(
-    project: Project,
-) : LanguageClientImpl(project) {
+class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     override fun publishDiagnostics(params: PublishDiagnosticsParams) {
         if (isDisposed || project.isDisposed) return
         val file = clientFeatures.findFileByUri(params.uri)
@@ -45,28 +43,29 @@ class XtcLanguageClient(
                 // compiler queue and retain their normal cancellation/version checks.
                 with(support) {
                     listOf(
-                        completionSupport,
-                        definitionSupport,
-                        typeDefinitionSupport,
-                        implementationSupport,
-                        referenceSupport,
-                        hoverSupport,
-                        signatureHelpSupport,
-                        highlightSupport,
-                        prepareRenameSupport,
-                        renameSupport,
-                        intentionCodeActionSupport,
-                        codeLensSupport,
-                        documentSymbolSupport,
-                        semanticTokensSupport,
-                        inlayHintsSupport,
-                        prepareTypeHierarchySupport,
-                        typeHierarchySupertypesSupport,
-                        typeHierarchySubtypesSupport,
-                        prepareCallHierarchySupport,
-                        callHierarchyIncomingCallsSupport,
-                        callHierarchyOutgoingCallsSupport,
-                    ).forEach { feature -> if (feature.future?.isDone == true) feature.cancel() }
+                            completionSupport,
+                            definitionSupport,
+                            typeDefinitionSupport,
+                            implementationSupport,
+                            referenceSupport,
+                            hoverSupport,
+                            signatureHelpSupport,
+                            highlightSupport,
+                            prepareRenameSupport,
+                            renameSupport,
+                            intentionCodeActionSupport,
+                            codeLensSupport,
+                            documentSymbolSupport,
+                            semanticTokensSupport,
+                            inlayHintsSupport,
+                            prepareTypeHierarchySupport,
+                            typeHierarchySupertypesSupport,
+                            typeHierarchySubtypesSupport,
+                            prepareCallHierarchySupport,
+                            callHierarchyIncomingCallsSupport,
+                            callHierarchyOutgoingCallsSupport,
+                        )
+                        .forEach { feature -> if (feature.future?.isDone == true) feature.cancel() }
                 }
             }
         }

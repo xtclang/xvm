@@ -1,16 +1,15 @@
 package org.xvm.lsp.adapter
 
+import java.net.URI
+import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Location
-import java.net.URI
-import java.nio.file.Path
 
 class XdkDeclarationTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @Test
     fun `overrides expose all written contracts rather than selecting an implementation`() {
@@ -22,7 +21,8 @@ class XdkDeclarationTest {
             val at = text.indexOf("/*use*/") + "/*use*/".length
             assertThat(adapter.findDeclarations(uri, 0, at).map { it.startColumn })
                 .containsExactlyInAnyOrder(offset(text, "a"), offset(text, "b"))
-            assertThat(adapter.findDefinition(uri, 0, at)?.startColumn).isEqualTo(offset(text, "body"))
+            assertThat(adapter.findDefinition(uri, 0, at)?.startColumn)
+                .isEqualTo(offset(text, "body"))
             assertThat(adapter.findDeclaration(uri, 0, at)).isNull()
         }
     }
@@ -47,10 +47,13 @@ class XdkDeclarationTest {
                 "buffer.append(/*localUse*/text); return buffer; } }"
         withSource(text) { adapter, uri ->
             mapOf("aliasUse" to "alias", "localUse" to "local").forEach { (use, declaration) ->
-                assertThat(adapter.findDeclarations(uri, 0, offset(text, use)).map { it.startColumn })
+                assertThat(
+                        adapter.findDeclarations(uri, 0, offset(text, use)).map { it.startColumn }
+                    )
                     .containsExactly(offset(text, declaration))
             }
-            val library = adapter.findDeclarations(uri, 0, text.indexOf("String /*local*/")).single()
+            val library =
+                adapter.findDeclarations(uri, 0, text.indexOf("String /*local*/")).single()
             assertThat(written(library)).isEqualTo("String")
             adapter.closeDocument(uri)
             assertThat(adapter.findDeclarations(uri, 0, offset(text, "localUse"))).isEmpty()
@@ -60,12 +63,18 @@ class XdkDeclarationTest {
     @Test
     fun `closed consumer declarations resolve across the discovered graph`() {
         val library = "module Library { interface Api { Int /*contract*/read(); } }"
-        val consumer = "module Consumer { package lib import Library; Int use(lib.Api api) = api.read(); }"
+        val consumer =
+            "module Consumer { package lib import Library; Int use(lib.Api api) = api.read(); }"
         directory.resolve("Library.x").toFile().writeText(library)
         val file = directory.resolve("Consumer.x").toFile().apply { writeText(consumer) }
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            val targets = adapter.findDeclarations(file.canonicalFile.toURI().toString(), 0, consumer.indexOf("read"))
+            val targets =
+                adapter.findDeclarations(
+                    file.canonicalFile.toURI().toString(),
+                    0,
+                    consumer.indexOf("read"),
+                )
             assertThat(targets).hasSize(1)
             assertThat(targets.single().startColumn).isEqualTo(offset(library, "contract"))
             assertThat(written(targets.single())).isEqualTo("read")
@@ -86,13 +95,7 @@ class XdkDeclarationTest {
         text: String,
         action: (XdkAdapter, String) -> Unit,
     ) {
-        val uri =
-            directory
-                .resolve("Declarations.x")
-                .toFile()
-                .canonicalFile
-                .toURI()
-                .toString()
+        val uri = directory.resolve("Declarations.x").toFile().canonicalFile.toURI().toString()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             action(adapter, uri)
@@ -105,8 +108,7 @@ class XdkDeclarationTest {
     ): Int = text.indexOf("/*$marker*/") + marker.length + 4
 
     private fun written(location: Location): String =
-        Path
-            .of(URI(location.uri))
+        Path.of(URI(location.uri))
             .toFile()
             .readLines()[location.startLine]
             .substring(location.startColumn, location.endColumn)

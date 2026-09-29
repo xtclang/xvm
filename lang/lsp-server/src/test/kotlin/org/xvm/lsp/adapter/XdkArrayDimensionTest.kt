@@ -14,8 +14,13 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class XdkArrayDimensionTest {
     @ParameterizedTest
-    @ValueSource(strings = ["new Int[nu|]", "new Int[nu|", "Int[] result = new Int[nu|]", "new String[nu|](\"x\")"])
-    fun `dimension prefixes fit the size parameter and replace only the original token`(expression: String) {
+    @ValueSource(
+        strings =
+            ["new Int[nu|]", "new Int[nu|", "Int[] result = new Int[nu|]", "new String[nu|](\"x\")"]
+    )
+    fun `dimension prefixes fit the size parameter and replace only the original token`(
+        expression: String
+    ) {
         val prefix = HEADER + expression.substringBefore('|')
         val suffix = expression.substringAfter('|') + "; } }"
         XdkAdapter().use { adapter ->
@@ -26,12 +31,21 @@ class XdkArrayDimensionTest {
             assertThat(help.signatures.map { it.parameters.first().label }).containsOnly("Int size")
             val items = adapter.getCompletions(URI, 0, prefix.length)
             assertThat(items.map { it.label }).describedAs(expression).containsExactly("number")
-            assertThat(
-                items.single().textEdit,
-            ).isEqualTo(TextEdit(Range(Position(0, prefix.length - 2), Position(0, prefix.length)), "number"))
+            assertThat(items.single().textEdit)
+                .isEqualTo(
+                    TextEdit(
+                        Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
+                        "number",
+                    )
+                )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             val correctedSuffix = if (']' in suffix) suffix else "]$suffix"
-            assertThat(adapter.compile(URI, prefix.dropLast(2) + "number" + correctedSuffix).diagnostics).isEmpty()
+            assertThat(
+                    adapter
+                        .compile(URI, prefix.dropLast(2) + "number" + correctedSuffix)
+                        .diagnostics
+                )
+                .isEmpty()
         }
     }
 
@@ -42,13 +56,7 @@ class XdkArrayDimensionTest {
             adapter.compile(URI, "$prefix]; } }")
             val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
             assertThat(help.signatures).hasSize(1)
-            assertThat(
-                help.signatures
-                    .single()
-                    .parameters
-                    .first()
-                    .label,
-            ).isEqualTo("Int size")
+            assertThat(help.signatures.single().parameters.first().label).isEqualTo("Int size")
             assertThat(help.signatures.single().activeParameter).isZero()
             val names = adapter.getCompletions(URI, 0, prefix.length).map { it.label }
             assertThat(names).contains("number").doesNotContain("numberText", "numberArray")
@@ -61,8 +69,12 @@ class XdkArrayDimensionTest {
         val prefix = HEADER + expression.substringBefore('|')
         XdkAdapter().use { adapter ->
             adapter.compile(URI, prefix + expression.substringAfter('|') + "; } }")
-            assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).describedAs(expression).isNull()
-            assertThat(adapter.getCompletions(URI, 0, prefix.length)).describedAs(expression).isEmpty()
+            assertThat(adapter.getSignatureHelp(URI, 0, prefix.length))
+                .describedAs(expression)
+                .isNull()
+            assertThat(adapter.getCompletions(URI, 0, prefix.length))
+                .describedAs(expression)
+                .isEmpty()
         }
     }
 
@@ -87,7 +99,10 @@ class XdkArrayDimensionTest {
             adapter.compile(URI, "$prefix]; } } }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .containsExactlyInAnyOrder("countMaybe", "countParameter", "countProperty")
-            val changed = prefix.replace("Int countProperty", "String countProperty").replace("= 2;", "= \"two\";")
+            val changed =
+                prefix
+                    .replace("Int countProperty", "String countProperty")
+                    .replace("= 2;", "= \"two\";")
             adapter.compile(URI, "$changed]; } } }")
             assertThat(adapter.getCompletions(URI, 0, changed.length).map { it.label })
                 .containsExactlyInAnyOrder("countMaybe", "countParameter")
@@ -97,10 +112,12 @@ class XdkArrayDimensionTest {
     @ParameterizedTest
     @ValueSource(strings = ["new Int[word.si|]", "new Int[word.si|"])
     fun `member cursor inside a dimension retains its own receiver`(expression: String) {
-        val prefix = "module Dimensions { void run(String word) { " + expression.substringBefore('|')
+        val prefix =
+            "module Dimensions { void run(String word) { " + expression.substringBefore('|')
         XdkAdapter().use { adapter ->
             adapter.compile(URI, prefix + expression.substringAfter('|') + "; } }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains("size")
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .contains("size")
         }
     }
 
@@ -110,12 +127,13 @@ class XdkArrayDimensionTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix]; } }")
             assertThat(
-                adapter
-                    .getSignatureHelp(URI, 0, prefix.length)!!
-                    .signatures
-                    .single()
-                    .activeParameter,
-            ).isZero()
+                    adapter
+                        .getSignatureHelp(URI, 0, prefix.length)!!
+                        .signatures
+                        .single()
+                        .activeParameter
+                )
+                .isZero()
         }
     }
 
@@ -138,10 +156,16 @@ class XdkArrayDimensionTest {
         assertThat(site.target.parent).isSameAs(site)
         assertThat(site.leadingArguments).isEmpty()
         assertThat(analysis.cursorBindings()[site]!!.candidates()).hasSize(1)
-        assertThat(analysis.cursorBindings()[site]!!.argumentValues().map { it.name() }).containsExactly("number")
-        for (listener in listOf(ErrorList(ErrorList.FIRST_ERROR), ErrorListener.cancellable(ErrorList()) { true })) {
+        assertThat(analysis.cursorBindings()[site]!!.argumentValues().map { it.name() })
+            .containsExactly("number")
+        for (listener in
+            listOf(
+                ErrorList(ErrorList.FIRST_ERROR),
+                ErrorListener.cancellable(ErrorList()) { true },
+            )) {
             source.reset()
-            val stopped = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
+            val stopped =
+                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
             assertThat(stopped.pool()).isEmpty()
             assertThat(stopped.cursorBindings()).isEmpty()
         }
@@ -149,6 +173,7 @@ class XdkArrayDimensionTest {
 
     private companion object {
         const val URI = "untitled:Dimensions.x"
-        const val HEADER = "module Dimensions { void run(Int number, String numberText, String[] numberArray) { "
+        const val HEADER =
+            "module Dimensions { void run(Int number, String numberText, String[] numberArray) { "
     }
 }

@@ -98,7 +98,10 @@ fun Diagnostic.toLsp(publicationUri: String = location.uri): org.eclipse.lsp4j.D
         result.relatedInformation = listOf(DiagnosticRelatedInformation(location.toLsp(), message))
     }
     result.severity = severity.toLsp()
-    result.message = Either.forLeft(if (location.uri == publicationUri) message else "In ${location.uri}: $message")
+    result.message =
+        Either.forLeft(
+            if (location.uri == publicationUri) message else "In ${location.uri}: $message"
+        )
     result.source = source
     if (code != null) {
         result.code = Either.forLeft(code)
@@ -115,8 +118,7 @@ fun SymbolInfo.SymbolKind.toLsp(): SymbolKind =
 
         SymbolInfo.SymbolKind.CLASS,
         SymbolInfo.SymbolKind.MIXIN,
-        SymbolInfo.SymbolKind.SERVICE,
-        -> SymbolKind.Class
+        SymbolInfo.SymbolKind.SERVICE -> SymbolKind.Class
 
         SymbolInfo.SymbolKind.INTERFACE -> SymbolKind.Interface
 

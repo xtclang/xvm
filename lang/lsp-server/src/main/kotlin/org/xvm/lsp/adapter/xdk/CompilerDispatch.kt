@@ -24,16 +24,26 @@ internal fun TypeInfo.dispatch(
     visited: List<Pair<TypeConstant, MethodInfo>> = emptyList(),
 ): CompilerDispatch {
     val key = type to method
-    if (errors.isAbortDesired || visited.any { it.first == type && it.second === method } || visited.size >= 64) {
+    if (
+        errors.isAbortDesired ||
+            visited.any { it.first == type && it.second === method } ||
+            visited.size >= 64
+    ) {
         return CompilerDispatch(listOf(method.identity), supported = false)
     }
     val seen = visited + key
     val bodies =
         method.chain.map { body ->
             when (body.implementation) {
-                Implementation.Explicit, Implementation.Default, Implementation.Declared, Implementation.Abstract -> {
+                Implementation.Explicit,
+                Implementation.Default,
+                Implementation.Declared,
+                Implementation.Abstract -> {
                     val declaration = body.methodStructure
-                    CompilerDispatch(listOf(declaration?.identityConstant ?: body.identity), supported = declaration?.isSynthetic == false)
+                    CompilerDispatch(
+                        listOf(declaration?.identityConstant ?: body.identity),
+                        supported = declaration?.isSynthetic == false,
+                    )
                 }
 
                 Implementation.FromInto -> {
@@ -49,12 +59,11 @@ internal fun TypeInfo.dispatch(
                 Implementation.Delegating -> {
                     val receiver = body.propertyConstant
                     val receiverType = receiver?.let { findProperty(it)?.type }
-                    val delegate =
-                        receiverType?.let {
-                            ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-delegate)") {
-                                it.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
-                            }
+                    val delegate = receiverType?.let {
+                        ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-delegate)") {
+                            it.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
                         }
+                    }
                     val selected = delegate?.getMethodBySignature(body.signature)
                     if (selected == null) {
                         CompilerDispatch(listOf(body.identity), supported = false)
@@ -64,11 +73,14 @@ internal fun TypeInfo.dispatch(
                     }
                 }
 
-                Implementation.Implicit, Implementation.Union, Implementation.SansCode,
-                Implementation.Field, Implementation.Native,
-                -> {
+                Implementation.Implicit,
+                Implementation.Union,
+                Implementation.SansCode,
+                Implementation.Field,
+                Implementation.Native -> {
                     // These bodies do not independently identify a written callable contract:
-                    // assumed/multi-target dispatch, generated accessors or runtime implementations.
+                    // assumed/multi-target dispatch, generated accessors or runtime
+                    // implementations.
                     CompilerDispatch(listOf(body.identity), supported = false)
                 }
 

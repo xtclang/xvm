@@ -1,5 +1,9 @@
 package org.xvm.lsp.server
 
+import java.io.File
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.DefinitionParams
@@ -32,14 +36,9 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
-import java.io.File
-import java.nio.file.Path
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkProjectServerTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @Test
     fun `unsaved dependency edits recompile an unchanged consumer and closing restores disk`() {
@@ -59,8 +58,12 @@ class XdkProjectServerTest {
             val target =
                 session.documents
                     .definition(
-                        DefinitionParams(TextDocumentIdentifier(consumer.toURI().toString()), Position(0, CONSUMER.indexOf("value"))),
-                    ).get(20, SECONDS)
+                        DefinitionParams(
+                            TextDocumentIdentifier(consumer.toURI().toString()),
+                            Position(0, CONSUMER.indexOf("value")),
+                        )
+                    )
+                    .get(20, SECONDS)
                     .left
                     .single()
             assertThat(target.uri).isEqualTo(library.toURI().toString())
@@ -87,7 +90,14 @@ class XdkProjectServerTest {
             session.open(library, "module Library { MissingType broken; }", 2)
             session.expect(library, mark, 2, true)
             session.expect(consumer, mark, 7, true, "DEPENDENCY-FAILED")
-            assertThat(session.adapter.findDefinition(consumer.toURI().toString(), 0, CONSUMER.indexOf("value"))).isNull()
+            assertThat(
+                    session.adapter.findDefinition(
+                        consumer.toURI().toString(),
+                        0,
+                        CONSUMER.indexOf("value"),
+                    )
+                )
+                .isNull()
             mark = session.published.size
             session.change(library, LIBRARY, 3)
             session.expect(consumer, mark, 7, false)
@@ -152,7 +162,11 @@ class XdkProjectServerTest {
     @Test
     fun `transitive source changes rebuild consumers while an unrelated session stays available`() {
         val library = file("Library", LIBRARY)
-        val bridge = file("Bridge", "module Bridge { package lib import Library; static Int value() = lib.value(); }")
+        val bridge =
+            file(
+                "Bridge",
+                "module Bridge { package lib import Library; static Int value() = lib.value(); }",
+            )
         val consumer = file("Consumer", CONSUMER.replace("import Library", "import Bridge"))
         val unrelated = file("Unrelated", "module Unrelated { Int value = 1; }")
         Session(library, consumer, bridge).use { session ->
@@ -165,8 +179,11 @@ class XdkProjectServerTest {
             session.open(library, INCOMPATIBLE, 2)
             session.expect(bridge, mark, null, true)
             session.expect(consumer, mark, 7, true, "DEPENDENCY-FAILED")
-            assertThat(session.adapter.getCachedResult(unrelated.toURI().toString())).isEqualTo(cached)
-            assertThat(session.published.drop(mark)).noneMatch { it.uri == unrelated.toURI().toString() }
+            assertThat(session.adapter.getCachedResult(unrelated.toURI().toString()))
+                .isEqualTo(cached)
+            assertThat(session.published.drop(mark)).noneMatch {
+                it.uri == unrelated.toURI().toString()
+            }
             mark = session.published.size
             session.change(library, LIBRARY, 3)
             session.expect(consumer, mark, 7, false)
@@ -179,16 +196,25 @@ class XdkProjectServerTest {
         CompilerTestSupport.configure()
 
         fun artifact(type: String) =
-            EmbeddingSupport
-                .instance()
+            EmbeddingSupport.instance()
                 .compileModule(
-                    Source("module Binary { static $type value() =" + (if (type == "Int") "1" else "\"text\"") + "; }", "file:///Binary.x"),
+                    Source(
+                        "module Binary { static $type value() =" +
+                            (if (type == "Int") "1" else "\"text\"") +
+                            "; }",
+                        "file:///Binary.x",
+                    ),
                     null,
                     ErrorList(),
-                ).toDependency()
+                )
+                .toDependency()
         val first = artifact("Int")
         val incompatible = artifact("String")
-        val library = file("Library", "module Library { package base import Binary; static Int value() = base.value(); }")
+        val library =
+            file(
+                "Library",
+                "module Library { package base import Binary; static Int value() = base.value(); }",
+            )
         val consumer = file("Consumer", CONSUMER)
         Session(library, consumer).use { session ->
             session.server.replaceCompilerDependencies(listOf(first))
@@ -218,7 +244,7 @@ class XdkProjectServerTest {
                     XdkSourceModule("Library", library.toURI().toString()),
                     XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
                     XdkSourceModule("Other", other.toURI().toString(), setOf("Library")),
-                ),
+                )
             )
             session.open(consumer, consumer.readText(), 7)
             session.expect(consumer, 0, 7, true)
@@ -226,18 +252,15 @@ class XdkProjectServerTest {
             session.expect(other, 0, 1, true)
             val mark = session.published.size
             session.closeDocument(consumer)
-            assertThat(session.published.drop(mark)).noneMatch { it.uri == library.toURI().toString() && it.diagnostics.isEmpty() }
+            assertThat(session.published.drop(mark)).noneMatch {
+                it.uri == library.toURI().toString() && it.diagnostics.isEmpty()
+            }
         }
     }
 
     @Test
     fun `live discovered edges propagate unsaved edits and folder notifications refresh diagnostics`() {
-        val first =
-            directory
-                .toRealPath()
-                .resolve("first")
-                .toFile()
-                .also { it.mkdirs() }
+        val first = directory.toRealPath().resolve("first").toFile().also { it.mkdirs() }
         val library = first.resolve("Library.x").also { it.writeText(LIBRARY) }
         val consumer = first.resolve("Consumer.x").also { it.writeText("module Consumer {}") }
         Session(library, consumer, automatic = true).use { session ->
@@ -253,18 +276,25 @@ class XdkProjectServerTest {
             session.expect(consumer, mark, 8, false)
 
             val second = directory.resolve("second").toFile().also { it.mkdirs() }
-            val external = second.resolve("External.x").also { it.writeText("module External { static Int value() = 1; }") }
+            val external =
+                second.resolve("External.x").also {
+                    it.writeText("module External { static Int value() = 1; }")
+                }
             val folder = WorkspaceFolder(second.toURI().toString(), "second")
             // The second folder is outside the original folder's automatic scan.
             session.server.workspaceService.didChangeWorkspaceFolders(
-                DidChangeWorkspaceFoldersParams(WorkspaceFoldersChangeEvent(listOf(folder), emptyList())),
+                DidChangeWorkspaceFoldersParams(
+                    WorkspaceFoldersChangeEvent(listOf(folder), emptyList())
+                )
             )
             mark = session.published.size
             session.change(consumer, CONSUMER.replace("Library", "External"), 9)
             session.expect(consumer, mark, 9, false)
             mark = session.published.size
             session.server.workspaceService.didChangeWorkspaceFolders(
-                DidChangeWorkspaceFoldersParams(WorkspaceFoldersChangeEvent(emptyList(), listOf(folder))),
+                DidChangeWorkspaceFoldersParams(
+                    WorkspaceFoldersChangeEvent(emptyList(), listOf(folder))
+                )
             )
             session.expect(consumer, mark, 9, true)
             assertThat(external.isFile).isTrue()
@@ -293,24 +323,41 @@ class XdkProjectServerTest {
         init {
             val client = mock(LanguageClient::class.java)
             doAnswer { call ->
-                published.add(call.getArgument(0))
-                null
-            }.`when`(client).publishDiagnostics(any())
+                    published.add(call.getArgument(0))
+                    null
+                }
+                .`when`(client)
+                .publishDiagnostics(any())
             server.connect(client)
             if (automatic) {
                 server
                     .initialize(
                         InitializeParams().apply {
-                            workspaceFolders = listOf(WorkspaceFolder(consumer.parentFile.toURI().toString(), "workspace"))
-                        },
-                    ).get(30, SECONDS)
+                            workspaceFolders =
+                                listOf(
+                                    WorkspaceFolder(
+                                        consumer.parentFile.toURI().toString(),
+                                        "workspace",
+                                    )
+                                )
+                        }
+                    )
+                    .get(30, SECONDS)
             } else {
                 server.replaceCompilerSourceModules(
                     buildList {
                         add(XdkSourceModule("Library", library.toURI().toString()))
-                        bridge?.let { add(XdkSourceModule("Bridge", it.toURI().toString(), setOf("Library"))) }
-                        add(XdkSourceModule("Consumer", consumer.toURI().toString(), setOf(if (bridge == null) "Library" else "Bridge")))
-                    },
+                        bridge?.let {
+                            add(XdkSourceModule("Bridge", it.toURI().toString(), setOf("Library")))
+                        }
+                        add(
+                            XdkSourceModule(
+                                "Consumer",
+                                consumer.toURI().toString(),
+                                setOf(if (bridge == null) "Library" else "Bridge"),
+                            )
+                        )
+                    }
                 )
             }
         }
@@ -319,29 +366,37 @@ class XdkProjectServerTest {
             file: File,
             text: String,
             version: Int,
-        ) = documents.didOpen(
-            DidOpenTextDocumentParams(TextDocumentItem(file.toURI().toString(), "xtc", version, text)),
-        )
+        ) =
+            documents.didOpen(
+                DidOpenTextDocumentParams(
+                    TextDocumentItem(file.toURI().toString(), "xtc", version, text)
+                )
+            )
 
         fun change(
             file: File,
             text: String,
             version: Int,
-        ) = documents.didChange(
-            DidChangeTextDocumentParams(
-                VersionedTextDocumentIdentifier(file.toURI().toString(), version),
-                listOf(TextDocumentContentChangeEvent(text)),
-            ),
-        )
+        ) =
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(file.toURI().toString(), version),
+                    listOf(TextDocumentContentChangeEvent(text)),
+                )
+            )
 
-        fun closeDocument(file: File) = documents.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString())))
+        fun closeDocument(file: File) =
+            documents.didClose(
+                DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString()))
+            )
 
         fun watched(
             file: File,
             kind: FileChangeType,
-        ) = server.workspaceService.didChangeWatchedFiles(
-            DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), kind))),
-        )
+        ) =
+            server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), kind)))
+            )
 
         fun expect(
             file: File,
@@ -351,10 +406,17 @@ class XdkProjectServerTest {
             code: String? = null,
         ) {
             await().atMost(30, SECONDS).untilAsserted {
-                val last = published.drop(after).lastOrNull { it.uri == file.toURI().toString() && it.version == version }
+                val last =
+                    published.drop(after).lastOrNull {
+                        it.uri == file.toURI().toString() && it.version == version
+                    }
                 assertThat(last).describedAs(published.drop(after).toString()).isNotNull()
-                assertThat(last!!.diagnostics.isNotEmpty()).describedAs(last.toString()).isEqualTo(errors)
-                assertThat(last.diagnostics).noneMatch { it.code?.left in setOf("ANALYSIS-FAILED", "EMB-5") }
+                assertThat(last!!.diagnostics.isNotEmpty())
+                    .describedAs(last.toString())
+                    .isEqualTo(errors)
+                assertThat(last.diagnostics).noneMatch {
+                    it.code?.left in setOf("ANALYSIS-FAILED", "EMB-5")
+                }
                 if (code != null) assertThat(last.diagnostics).anyMatch { it.code?.left == code }
             }
         }
@@ -367,6 +429,7 @@ class XdkProjectServerTest {
     private companion object {
         const val LIBRARY = "module Library { static Int value() = 1; }"
         const val INCOMPATIBLE = "module Library { static String value() = \"text\"; }"
-        const val CONSUMER = "module Consumer { package lib import Library; Int run() = lib.value(); }"
+        const val CONSUMER =
+            "module Consumer { package lib import Library; Int run() = lib.value(); }"
     }
 }

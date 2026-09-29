@@ -9,33 +9,25 @@ import org.xvm.lsp.model.SymbolInfo
 // from the internal compiler types.
 // ============================================================================
 
-/**
- * A position in a text document (0-based line and column).
- */
+/** A position in a text document (0-based line and column). */
 data class Position(
     val line: Int,
     val column: Int,
 )
 
-/**
- * A range in a text document.
- */
+/** A range in a text document. */
 data class Range(
     val start: Position,
     val end: Position,
 )
 
-/**
- * A text edit to apply to a document.
- */
+/** A text edit to apply to a document. */
 data class TextEdit(
     val range: Range,
     val newText: String,
 )
 
-/**
- * Completion item for code completion.
- */
+/** Completion item for code completion. */
 data class CompletionItem(
     val label: String,
     val kind: CompletionKind,
@@ -54,9 +46,7 @@ data class CompletionItem(
     }
 }
 
-/**
- * Document highlight for symbol highlighting.
- */
+/** Document highlight for symbol highlighting. */
 data class DocumentHighlight(
     val range: Range,
     val kind: HighlightKind,
@@ -68,17 +58,13 @@ data class DocumentHighlight(
     }
 }
 
-/**
- * Selection range with optional parent for nested selections.
- */
+/** Selection range with optional parent for nested selections. */
 data class SelectionRange(
     val range: Range,
     val parent: SelectionRange? = null,
 )
 
-/**
- * Folding range for code folding.
- */
+/** Folding range for code folding. */
 data class FoldingRange(
     val startLine: Int,
     val endLine: Int,
@@ -93,27 +79,21 @@ data class FoldingRange(
     }
 }
 
-/**
- * Document link for clickable paths.
- */
+/** Document link for clickable paths. */
 data class DocumentLink(
     val range: Range,
     val target: String?,
     val tooltip: String? = null,
 )
 
-/**
- * Signature help for function calls.
- */
+/** Signature help for function calls. */
 data class SignatureHelp(
     val signatures: List<SignatureInfo>,
     val activeSignature: Int = 0,
     val activeParameter: Int = 0,
 )
 
-/**
- * Information about a function signature.
- */
+/** Information about a function signature. */
 data class SignatureInfo(
     val label: String,
     val documentation: String? = null,
@@ -121,25 +101,19 @@ data class SignatureInfo(
     val activeParameter: Int? = null,
 )
 
-/**
- * Information about a function parameter.
- */
+/** Information about a function parameter. */
 data class ParameterInfo(
     val label: String,
     val documentation: String? = null,
 )
 
-/**
- * Result of prepare rename operation.
- */
+/** Result of prepare rename operation. */
 data class PrepareRenameResult(
     val range: Range,
     val placeholder: String,
 )
 
-/**
- * Workspace edit containing changes to multiple documents.
- */
+/** Workspace edit containing changes to multiple documents. */
 data class WorkspaceEdit(
     val changes: Map<String, List<TextEdit>>,
     /** Require protocol document versions; hosts must not fall back to unversioned changes. */
@@ -152,9 +126,7 @@ data class WorkspaceEdit(
     }
 }
 
-/**
- * Code action (quick fix or refactoring).
- */
+/** Code action (quick fix or refactoring). */
 data class CodeAction(
     val title: String,
     val kind: CodeActionKind,
@@ -173,16 +145,10 @@ data class CodeAction(
     }
 }
 
-/**
- * Semantic tokens for enhanced syntax highlighting.
- */
-data class SemanticTokens(
-    val data: List<Int>,
-)
+/** Semantic tokens for enhanced syntax highlighting. */
+data class SemanticTokens(val data: List<Int>)
 
-/**
- * Inlay hint for inline annotations.
- */
+/** Inlay hint for inline annotations. */
 data class InlayHint(
     val position: Position,
     val label: String,
@@ -199,8 +165,8 @@ data class InlayHint(
 /**
  * Formatting options from client.
  *
- * Defaults are XTC conventions (trim trailing whitespace, insert final newline).
- * The editor can override these via LSP `FormattingOptions` properties.
+ * Defaults are XTC conventions (trim trailing whitespace, insert final newline). The editor can
+ * override these via LSP `FormattingOptions` properties.
  */
 data class FormattingOptions(
     val tabSize: Int,
@@ -246,7 +212,7 @@ data class CallHierarchyItem(
 /**
  * An incoming call to a call hierarchy item (who calls it).
  *
- * @param from       the calling function/method
+ * @param from the calling function/method
  * @param fromRanges the specific call-site ranges within the caller
  */
 data class CallHierarchyIncomingCall(
@@ -257,7 +223,7 @@ data class CallHierarchyIncomingCall(
 /**
  * An outgoing call from a call hierarchy item (what it calls).
  *
- * @param to         the called function/method
+ * @param to the called function/method
  * @param fromRanges the specific call-site ranges within the caller
  */
 data class CallHierarchyOutgoingCall(
@@ -268,7 +234,7 @@ data class CallHierarchyOutgoingCall(
 /**
  * A code lens (actionable inline annotation above a declaration).
  *
- * @param range   the range this code lens applies to
+ * @param range the range this code lens applies to
  * @param command the command to execute when clicked (null until resolved)
  */
 data class CodeLens(
@@ -279,8 +245,8 @@ data class CodeLens(
 /**
  * A command associated with a code lens.
  *
- * @param title     display text (e.g., "3 references", "Run Test")
- * @param command   the command identifier to execute
+ * @param title display text (e.g., "3 references", "Run Test")
+ * @param command the command identifier to execute
  * @param arguments optional arguments to the command
  */
 data class CodeLensCommand(
@@ -292,7 +258,7 @@ data class CodeLensCommand(
 /**
  * Linked editing ranges -- ranges that should be edited simultaneously.
  *
- * @param ranges      the ranges that are linked
+ * @param ranges the ranges that are linked
  * @param wordPattern optional regex pattern that the new text must match
  */
 data class LinkedEditingRanges(

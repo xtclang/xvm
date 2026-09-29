@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter
 
+import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -12,43 +13,62 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.IncompleteDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.nio.file.Path
 
 class XdkDeclarationHeaderTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @ParameterizedTest
-    @ValueSource(strings = ["void damaged(Int value, Str) {}", "void damaged(Int ) {}", "void damaged(Int value {}"])
-    fun `unfinished parameter headers preserve their written name and following declarations`(declaration: String) {
+    @ValueSource(
+        strings =
+            [
+                "void damaged(Int value, Str) {}",
+                "void damaged(Int ) {}",
+                "void damaged(Int value {}",
+            ]
+    )
+    fun `unfinished parameter headers preserve their written name and following declarations`(
+        declaration: String
+    ) {
         XdkAdapter().use { adapter ->
             val result = adapter.compile(URI, "module Headers { $declaration Int later = 1; }")
             assertThat(result.diagnostics).isNotEmpty()
-            assertThat(
-                result.symbols
-                    .single()
-                    .children
-                    .map { it.name },
-            ).containsExactly("damaged", "later")
+            assertThat(result.symbols.single().children.map { it.name })
+                .containsExactly("damaged", "later")
         }
     }
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["void damaged(Str| value) {}", "void damaged(Int first, Str| second) {}", "Str| property;", "Str| damaged() = \"x\";"],
+        strings =
+            [
+                "void damaged(Str| value) {}",
+                "void damaged(Int first, Str| second) {}",
+                "Str| property;",
+                "Str| damaged() = \"x\";",
+            ]
     )
     fun `header type prefixes expose compiler types with exact edits`(declaration: String) {
-        val prefix = "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('|')
+        val prefix =
+            "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('|')
         val suffix = declaration.substringAfter('|') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, prefix + suffix)
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            assertThat(items.map { it.label }).describedAs(declaration).contains("String").doesNotContain("StringValue")
+            assertThat(items.map { it.label })
+                .describedAs(declaration)
+                .contains("String")
+                .doesNotContain("StringValue")
             assertThat(items.single { it.label == "String" }.textEdit)
-                .isEqualTo(TextEdit(Range(Position(0, prefix.length - 3), Position(0, prefix.length)), "String"))
+                .isEqualTo(
+                    TextEdit(
+                        Range(Position(0, prefix.length - 3), Position(0, prefix.length)),
+                        "String",
+                    )
+                )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
-            assertThat(adapter.compile(URI, prefix.dropLast(3) + "String" + suffix).diagnostics).isEmpty()
+            assertThat(adapter.compile(URI, prefix.dropLast(3) + "String" + suffix).diagnostics)
+                .isEmpty()
         }
     }
 
@@ -58,7 +78,8 @@ class XdkDeclarationHeaderTest {
         val prefix = "module Headers { void damaged($parameters"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix) {} Int later = 1; }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains("String")
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .contains("String")
         }
     }
 
@@ -69,27 +90,34 @@ class XdkDeclarationHeaderTest {
         val suffix = declaration.substringAfter('|') + " }"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, prefix + suffix)
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).contains("String")
-            assertThat(adapter.compile(URI, prefix.dropLast(3) + "String" + suffix).diagnostics).isNotEmpty()
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .contains("String")
+            assertThat(adapter.compile(URI, prefix.dropLast(3) + "String" + suffix).diagnostics)
+                .isNotEmpty()
         }
     }
 
     @Test
     fun `header types use enclosing names imports aliases and compiler shadowing`() {
         XdkAdapter().use { adapter ->
-            for ((setup, name) in listOf(
-                "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
-                "import ecstasy.text.*;" to "StringBuffer",
-                "class ItemType {}" to "ItemType",
-                "typedef String as Text;" to "Text",
-            )) {
-                val prefix = "module Headers { $setup class Nested { void damaged(${name.dropLast(1)}"
+            for ((setup, name) in
+                listOf(
+                    "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
+                    "import ecstasy.text.*;" to "StringBuffer",
+                    "class ItemType {}" to "ItemType",
+                    "typedef String as Text;" to "Text",
+                )) {
+                val prefix =
+                    "module Headers { $setup class Nested { void damaged(${name.dropLast(1)}"
                 adapter.compile(URI, "$prefix value) {} } }")
-                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).describedAs(setup).contains(name)
+                assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                    .describedAs(setup)
+                    .contains(name)
             }
             val prefix = "module Headers { Int String = 1; void damaged(Str"
             adapter.compile(URI, "$prefix value) {} }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).doesNotContain("String")
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .doesNotContain("String")
         }
     }
 
@@ -99,7 +127,9 @@ class XdkDeclarationHeaderTest {
         val prefix = "module Headers { " + declaration.substringBefore('|')
         XdkAdapter().use { adapter ->
             adapter.compile(URI, prefix + declaration.substringAfter('|') + " }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length)).describedAs(declaration).isEmpty()
+            assertThat(adapter.getCompletions(URI, 0, prefix.length))
+                .describedAs(declaration)
+                .isEmpty()
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
         }
     }
@@ -117,13 +147,13 @@ class XdkDeclarationHeaderTest {
             val childUri = child.toURI().toString()
             adapter.compile(rootUri, "module Headers { class ItemOverlay {} }")
             adapter.compile(childUri, child.readText())
-            assertThat(
-                adapter.getCompletions(childUri, 0, prefix.length).map { it.label },
-            ).contains("ItemOverlay").doesNotContain("ItemDisk")
+            assertThat(adapter.getCompletions(childUri, 0, prefix.length).map { it.label })
+                .contains("ItemOverlay")
+                .doesNotContain("ItemDisk")
             adapter.compile(rootUri, root.readText())
-            assertThat(
-                adapter.getCompletions(childUri, 0, prefix.length).map { it.label },
-            ).contains("ItemDisk").doesNotContain("ItemOverlay")
+            assertThat(adapter.getCompletions(childUri, 0, prefix.length).map { it.label })
+                .contains("ItemDisk")
+                .doesNotContain("ItemOverlay")
             assertThat(root.readText()).contains("ItemDisk")
         }
     }
@@ -131,7 +161,8 @@ class XdkDeclarationHeaderTest {
     @Test
     fun `broken headers keep source folds and outline but discard old semantics`() {
         val valid = "module Headers { void damaged(Int value) {} Int later = 1; }"
-        val text = "module Headers {\r\n void damaged(Int) {\r\n Int hidden = 1;\r\n }\r\n Int later = 1; }"
+        val text =
+            "module Headers {\r\n void damaged(Int) {\r\n Int hidden = 1;\r\n }\r\n Int later = 1; }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, valid).success).isTrue()
             assertThat(adapter.compile(URI, text).success).isFalse()
@@ -169,9 +200,14 @@ class XdkDeclarationHeaderTest {
         assertThat(declaration.component.getChild("damaged")).isNull()
         assertThat(declaration.component.getChild("hidden")).isNull()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() }).contains("String")
-        for (listener in listOf(ErrorList(ErrorList.FIRST_ERROR), ErrorListener.cancellable(ErrorList()) { true })) {
+        for (listener in
+            listOf(
+                ErrorList(ErrorList.FIRST_ERROR),
+                ErrorListener.cancellable(ErrorList()) { true },
+            )) {
             source.reset()
-            val stopped = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
+            val stopped =
+                EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
             assertThat(stopped.pool()).isEmpty()
             assertThat(stopped.cursorBindings()).isEmpty()
         }

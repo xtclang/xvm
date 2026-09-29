@@ -11,11 +11,8 @@ package org.xtclang.tooling.scanner
  * - Tree-sitter specific patterns (token emission, lexer operations)
  */
 
-/**
- * Marker annotation for DSL scope control.
- */
-@DslMarker
-annotation class CCodeDsl
+/** Marker annotation for DSL scope control. */
+@DslMarker annotation class CCodeDsl
 
 /**
  * Builder for C code blocks with automatic indentation.
@@ -24,9 +21,7 @@ annotation class CCodeDsl
  */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
-class CCodeBuilder(
-    private val indentLevel: Int = 0,
-) {
+class CCodeBuilder(private val indentLevel: Int = 0) {
     private val lines = mutableListOf<String>()
     private val indent = "    ".repeat(indentLevel)
 
@@ -343,25 +338,24 @@ class CFunctionBuilder(
         body = init
     }
 
-    fun build(): String =
-        buildString {
-            val modifiers =
-                buildList {
-                    if (isStatic) add("static")
-                    if (isInline) add("inline")
-                }.joinToString(" ")
-
-            val prefix = if (modifiers.isNotEmpty()) "$modifiers " else ""
-            val paramList = params.joinToString(", ")
-
-            appendLine("$prefix$returnType $name($paramList) {")
-            body?.let {
-                val bodyBuilder = CCodeBuilder(1)
-                bodyBuilder.it()
-                appendLine(bodyBuilder.build())
-            }
-            append("}")
+    fun build(): String = buildString {
+        val modifiers = buildList {
+            if (isStatic) add("static")
+            if (isInline) add("inline")
         }
+            .joinToString(" ")
+
+        val prefix = if (modifiers.isNotEmpty()) "$modifiers " else ""
+        val paramList = params.joinToString(", ")
+
+        appendLine("$prefix$returnType $name($paramList) {")
+        body?.let {
+            val bodyBuilder = CCodeBuilder(1)
+            bodyBuilder.it()
+            appendLine(bodyBuilder.build())
+        }
+        append("}")
+    }
 }
 
 fun cFunction(
@@ -374,14 +368,10 @@ fun cFunction(
     return builder.build()
 }
 
-/**
- * Builder for C enums.
- */
+/** Builder for C enums. */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
-class CEnumBuilder(
-    private val name: String,
-) {
+class CEnumBuilder(private val name: String) {
     private val entries = mutableListOf<String>()
     private var enumComment: String? = null
 
@@ -397,16 +387,15 @@ class CEnumBuilder(
         entries.addAll(names)
     }
 
-    fun build(): String =
-        buildString {
-            enumComment?.let { appendLine("// $it") }
-            appendLine("enum $name {")
-            entries.forEachIndexed { index, entryName ->
-                val comma = if (index < entries.size - 1) "," else ""
-                appendLine("    $entryName$comma")
-            }
-            append("};")
+    fun build(): String = buildString {
+        enumComment?.let { appendLine("// $it") }
+        appendLine("enum $name {")
+        entries.forEachIndexed { index, entryName ->
+            val comma = if (index < entries.size - 1) "," else ""
+            appendLine("    $entryName$comma")
         }
+        append("};")
+    }
 }
 
 fun cEnum(
@@ -418,14 +407,10 @@ fun cEnum(
     return builder.build()
 }
 
-/**
- * Builder for C struct definitions.
- */
+/** Builder for C struct definitions. */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
-class CStructBuilder(
-    private val name: String,
-) {
+class CStructBuilder(private val name: String) {
     private val fields = mutableListOf<Pair<String, String>>()
 
     fun field(
@@ -435,14 +420,13 @@ class CStructBuilder(
         fields.add(type to fieldName)
     }
 
-    fun build(): String =
-        buildString {
-            appendLine("typedef struct {")
-            fields.forEach { (type, fieldName) ->
-                appendLine("    $type $fieldName;")
-            }
-            append("} $name;")
+    fun build(): String = buildString {
+        appendLine("typedef struct {")
+        fields.forEach { (type, fieldName) ->
+            appendLine("    $type $fieldName;")
         }
+        append("} $name;")
+    }
 }
 
 fun cStruct(
@@ -516,7 +500,8 @@ class CFileBuilder {
             // ${"=".repeat(77)}
             // $title
             // ${"=".repeat(77)}
-            """.trimIndent()
+            """
+                .trimIndent()
         sections.add(sectionComment)
         sections.addAll(nested.sections)
     }

@@ -33,7 +33,8 @@ class ConfigurationJsonTest {
                 method = "textDocument/publishDiagnostics"
                 params = PublishDiagnosticsParams("file:///source.x", emptyList())
             }
-        assertThat(json.serialize(message)).isEqualTo(MessageJsonHandler(emptyMap()).serialize(message))
+        assertThat(json.serialize(message))
+            .isEqualTo(MessageJsonHandler(emptyMap()).serialize(message))
         assertThat(json.serialize(message)).doesNotContain("version")
     }
 
@@ -41,7 +42,12 @@ class ConfigurationJsonTest {
         MessageJsonHandler(
             mapOf(
                 "workspace/didChangeConfiguration" to
-                    JsonRpcMethod.notification("workspace/didChangeConfiguration", DidChangeConfigurationParams::class.java),
-            ),
-        ) { it.registerTypeAdapterFactory(ConfigurationJson) }
+                    JsonRpcMethod.notification(
+                        "workspace/didChangeConfiguration",
+                        DidChangeConfigurationParams::class.java,
+                    )
+            )
+        ) {
+            it.registerTypeAdapterFactory(ConfigurationJson)
+        }
 }

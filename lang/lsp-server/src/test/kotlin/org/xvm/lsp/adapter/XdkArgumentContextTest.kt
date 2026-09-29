@@ -8,14 +8,25 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 class XdkArgumentContextTest {
     @ParameterizedTest
     @ValueSource(
-        strings = [
-            "pair(nu§, \"x\")", "pair((nu§), \"x\")", "pair(((nu§)), \"x\")",
-            "pair(§, \"x\")", "pair(number = nu§, text = \"x\")", "pair(number = §, text = \"x\")",
-            "pair(box.nu§, \"x\")", "pair((box.nu§), \"x\")", "pair(number = box.nu§, text = \"x\")",
-            "fn(nu§, \"x\")", "fn((nu§), \"x\")", "new Pair(nu§, \"x\")",
-        ],
+        strings =
+            [
+                "pair(nu§, \"x\")",
+                "pair((nu§), \"x\")",
+                "pair(((nu§)), \"x\")",
+                "pair(§, \"x\")",
+                "pair(number = nu§, text = \"x\")",
+                "pair(number = §, text = \"x\")",
+                "pair(box.nu§, \"x\")",
+                "pair((box.nu§), \"x\")",
+                "pair(number = box.nu§, text = \"x\")",
+                "fn(nu§, \"x\")",
+                "fn((nu§), \"x\")",
+                "new Pair(nu§, \"x\")",
+            ]
     )
-    fun `argument candidates fit the entire written call and preserve surrounding syntax`(call: String) {
+    fun `argument candidates fit the entire written call and preserve surrounding syntax`(
+        call: String
+    ) {
         val marked = HEADER + call + "; } }"
         val at = marked.indexOf('§')
         val text = marked.replace("§", "")
@@ -23,16 +34,31 @@ class XdkArgumentContextTest {
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, text)
             val items = adapter.getCompletions(URI, 0, at)
-            assertThat(items.map { it.label }).describedAs(call).contains("number").doesNotContain("numberText", "numberHidden")
+            assertThat(items.map { it.label })
+                .describedAs(call)
+                .contains("number")
+                .doesNotContain("numberText", "numberHidden")
             val edit = items.single { it.label == "number" }.textEdit
-            assertThat(edit).isEqualTo(TextEdit(Range(Position(0, at - typed), Position(0, at)), "number"))
+            assertThat(edit)
+                .isEqualTo(TextEdit(Range(Position(0, at - typed), Position(0, at)), "number"))
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
-            assertThat(adapter.compile(URI, text.replaceRange(at - typed, at, "number")).diagnostics).isEmpty()
+            assertThat(
+                    adapter.compile(URI, text.replaceRange(at - typed, at, "number")).diagnostics
+                )
+                .isEmpty()
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["pair(nu§, True)", "pair((nu§), True)", "pair(box.nu§, True)", "pair(number = nu§, unknown = 1)"])
+    @ValueSource(
+        strings =
+            [
+                "pair(nu§, True)",
+                "pair((nu§), True)",
+                "pair(box.nu§, True)",
+                "pair(number = nu§, unknown = 1)",
+            ]
+    )
     fun `later incompatible arguments cannot produce a fitting suggestion`(call: String) {
         val marked = HEADER + call + "; } }"
         XdkAdapter().use { adapter ->

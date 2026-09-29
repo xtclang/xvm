@@ -12,12 +12,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
-/** Read the installed client's verbose console. In particular, do not confuse an absent VFS
+/**
+ * Read the installed client's verbose console. In particular, do not confuse an absent VFS
  * diagnostic with an empty server publication: LSP4IJ drops publications for nonexistent files.
  */
-class ClientTrace(
-    private val driver: Driver,
-) {
+class ClientTrace(private val driver: Driver) {
     fun notifications(
         method: String,
         received: Boolean = true,
@@ -32,7 +31,9 @@ class ClientTrace(
                             if (!entry.contains(prefix)) return@mapNotNull null
                             val json = entry.substringAfter(prefix).substringBefore("\n\n\n").trim()
                             try {
-                                JsonParser.parseString(json).takeIf { it.isJsonObject }?.asJsonObject
+                                JsonParser.parseString(json)
+                                    .takeIf { it.isJsonObject }
+                                    ?.asJsonObject
                             } catch (_: JsonSyntaxException) {
                                 // Console output can be sampled before the final chunk is flushed.
                                 null
@@ -80,11 +81,15 @@ class ClientTrace(
                     val protocol = ClientProtocol(driver)
                     val dump =
                         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-                            utility(
-                                TraceEditors::class,
-                            ).getInstance().getAllEditors().joinToString("\n--- EDITOR ---\n") { it.getDocument().getText() }
+                            utility(TraceEditors::class).getInstance().getAllEditors().joinToString(
+                                "\n--- EDITOR ---\n"
+                            ) {
+                                it.getDocument().getText()
+                            }
                         }
-                    val path = Path.of(System.getProperty("xtc.playbook.reports")).resolve("trace-debug.txt")
+                    val path =
+                        Path.of(System.getProperty("xtc.playbook.reports"))
+                            .resolve("trace-debug.txt")
                     Files.writeString(
                         path,
                         "level=${protocol.server().getServerTrace().name()}\nexpected=$text\n$dump\nqueued=" +
@@ -94,18 +99,14 @@ class ClientTrace(
                 },
                 timeout = 15.seconds,
                 getter = {
-                    (
-                        notifications("textDocument/didOpen", received = false)
-                            .filter { it["textDocument"].asJsonObject.string("text") == text } +
-                            notifications("textDocument/didChange", received = false)
-                                .filter {
-                                    it["contentChanges"]
-                                        .rows()
-                                        .lastOrNull()
-                                        ?.get("text")
-                                        ?.asString == text
-                                }
-                    ).map { it["textDocument"].asJsonObject }
+                    (notifications("textDocument/didOpen", received = false).filter {
+                            it["textDocument"].asJsonObject.string("text") == text
+                        } +
+                            notifications("textDocument/didChange", received = false).filter {
+                                it["contentChanges"].rows().lastOrNull()?.get("text")?.asString ==
+                                    text
+                            })
+                        .map { it["textDocument"].asJsonObject }
                         .filter { sameUri(it.string("uri"), uri) }
                         .maxOfOrNull { it.int("version") }
                 },

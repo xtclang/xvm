@@ -1,7 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.lsp.adapter.WorkspaceEdit
 import java.util.List.copyOf as immutableList
+import org.xvm.lsp.adapter.WorkspaceEdit
 
 /**
  * A proven edit plus any replacement for a host-owned source graph. A host must persist the graph
@@ -9,7 +9,8 @@ import java.util.List.copyOf as immutableList
  * never changes the adapter configuration or the filesystem. Ordinary LSP rename cannot persist
  * arbitrary client settings, so it declines proposals requiring this additional host operation.
  */
-class XdkRenameProposal internal constructor(
+class XdkRenameProposal
+internal constructor(
     val edit: WorkspaceEdit,
     sourceModules: List<XdkSourceModule>? = null,
     previousSourceModules: List<XdkSourceModule>? = null,
@@ -22,17 +23,21 @@ class XdkRenameProposal internal constructor(
 /**
  * The source boundary actually checked by a project rename. Absolute roots may be outside IDE
  * workspace folders. Hosts must register every intended consumer; this is not a promise about
- * unregistered repositories, binaries or reflective string references. Null proposal scope means
- * a local module proof, not an empty or globally complete graph. This receipt describes the input
+ * unregistered repositories, binaries or reflective string references. Null proposal scope means a
+ * local module proof, not an empty or globally complete graph. This receipt describes the input
  * snapshot; it is not authorization to apply an edit after its document versions become stale.
  */
-class XdkRenameScope internal constructor(
+class XdkRenameScope
+internal constructor(
     val boundary: Boundary,
     modules: List<XdkSourceModule>,
     sourceUris: List<String>,
     val revision: String,
 ) {
-    enum class Boundary { CONFIGURED_GRAPH, DISCOVERED_GRAPH }
+    enum class Boundary {
+        CONFIGURED_GRAPH,
+        DISCOVERED_GRAPH,
+    }
 
     val modules: List<XdkSourceModule> = immutableList(modules)
     val sourceUris: List<String> = immutableList(sourceUris)

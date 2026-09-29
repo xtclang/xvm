@@ -94,6 +94,7 @@ class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider()
                     }
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
     }
 }

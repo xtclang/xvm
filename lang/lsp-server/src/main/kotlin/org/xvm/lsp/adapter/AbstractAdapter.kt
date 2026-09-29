@@ -2,25 +2,7 @@ package org.xvm.lsp.adapter
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import org.xvm.lsp.adapter.CallHierarchyItem
-import org.xvm.lsp.adapter.CodeAction
-import org.xvm.lsp.adapter.CodeLens
-import org.xvm.lsp.adapter.DocumentHighlight
-import org.xvm.lsp.adapter.DocumentLink
-import org.xvm.lsp.adapter.FoldingRange
-import org.xvm.lsp.adapter.FormattingConfig
-import org.xvm.lsp.adapter.FormattingOptions
-import org.xvm.lsp.adapter.InlayHint
 import org.xvm.lsp.adapter.LanguageConstants.toHoverMarkdown
-import org.xvm.lsp.adapter.LinkedEditingRanges
-import org.xvm.lsp.adapter.Position
-import org.xvm.lsp.adapter.PrepareRenameResult
-import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.adapter.SelectionRange
-import org.xvm.lsp.adapter.SemanticTokens
-import org.xvm.lsp.adapter.SignatureHelp
-import org.xvm.lsp.adapter.TypeHierarchyItem
-import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -35,10 +17,9 @@ import org.xvm.lsp.model.SymbolInfo
  * - Utility method for position-in-range checking
  * - No-op [java.io.Closeable] implementation (override in subclasses that need cleanup)
  *
- * Concrete adapters override only the methods they actually implement.
- * All unimplemented methods log the full input parameters and return null/empty,
- * so the log trace shows exactly what the IDE requested even when the feature
- * is not yet available.
+ * Concrete adapters override only the methods they actually implement. All unimplemented methods
+ * log the full input parameters and return null/empty, so the log trace shows exactly what the IDE
+ * requested even when the feature is not yet available.
  *
  * Concrete implementations live in subpackages:
  * - `adapter.mock.MockAdapter` — regex-based testing adapter
@@ -48,8 +29,8 @@ import org.xvm.lsp.model.SymbolInfo
 @Suppress("LoggingSimilarMessage")
 abstract class AbstractAdapter : Adapter {
     /**
-     * Logger instance for this adapter, using the concrete class name.
-     * Lazily initialized to use the actual subclass type.
+     * Logger instance for this adapter, using the concrete class name. Lazily initialized to use
+     * the actual subclass type.
      */
     protected val logger: Logger by lazy {
         LoggerFactory.getLogger(this::class.java)
@@ -110,7 +91,12 @@ abstract class AbstractAdapter : Adapter {
         line: Int,
         column: Int,
     ): List<DocumentHighlight> {
-        logger.warn("[NOT IMPLEMENTED] getDocumentHighlights: uri={}, line={}, column={}", uri, line, column)
+        logger.warn(
+            "[NOT IMPLEMENTED] getDocumentHighlights: uri={}, line={}, column={}",
+            uri,
+            line,
+            column,
+        )
         return emptyList()
     }
 
@@ -131,7 +117,11 @@ abstract class AbstractAdapter : Adapter {
         uri: String,
         content: String,
     ): List<DocumentLink> {
-        logger.warn("[NOT IMPLEMENTED] getDocumentLinks: uri={}, content={} bytes", uri, content.length)
+        logger.warn(
+            "[NOT IMPLEMENTED] getDocumentLinks: uri={}, content={} bytes",
+            uri,
+            content.length,
+        )
         return emptyList()
     }
 
@@ -144,7 +134,12 @@ abstract class AbstractAdapter : Adapter {
         line: Int,
         column: Int,
     ): SignatureHelp? {
-        logger.warn("[NOT IMPLEMENTED] getSignatureHelp: uri={}, line={}, column={}", uri, line, column)
+        logger.warn(
+            "[NOT IMPLEMENTED] getSignatureHelp: uri={}, line={}, column={}",
+            uri,
+            line,
+            column,
+        )
         return null
     }
 
@@ -153,7 +148,12 @@ abstract class AbstractAdapter : Adapter {
         line: Int,
         column: Int,
     ): PrepareRenameResult? {
-        logger.warn("[NOT IMPLEMENTED] prepareRename: uri={}, line={}, column={}", uri, line, column)
+        logger.warn(
+            "[NOT IMPLEMENTED] prepareRename: uri={}, line={}, column={}",
+            uri,
+            line,
+            column,
+        )
         return null
     }
 
@@ -224,56 +224,61 @@ abstract class AbstractAdapter : Adapter {
     ): List<TextEdit> = formatContent(content, options, range)
 
     /**
-     * Basic formatting: trailing whitespace removal and final newline insertion.
-     * If [range] is non-null, only lines within that range are formatted.
+     * Basic formatting: trailing whitespace removal and final newline insertion. If [range] is
+     * non-null, only lines within that range are formatted.
      *
-     * Shared by all adapters -- override [formatDocument]/[formatRange] in subclasses
-     * that need different formatting logic.
+     * Shared by all adapters -- override [formatDocument]/[formatRange] in subclasses that need
+     * different formatting logic.
      */
     private fun formatContent(
         content: String,
         options: FormattingOptions,
         range: Range?,
-    ): List<TextEdit> =
-        buildList {
-            val lines = content.split("\n")
-            val startLine = range?.start?.line ?: 0
-            val endLine = range?.end?.line ?: (lines.size - 1)
+    ): List<TextEdit> = buildList {
+        val lines = content.split("\n")
+        val startLine = range?.start?.line ?: 0
+        val endLine = range?.end?.line ?: (lines.size - 1)
 
-            // Trailing whitespace removal
-            for (i in startLine..minOf(endLine, lines.size - 1)) {
-                val line = lines[i]
-                val trimmed = line.trimEnd()
-                if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
-                    add(
-                        TextEdit(
-                            range =
-                                Range(
-                                    start = Position(i, trimmed.length),
-                                    end = Position(i, line.length),
-                                ),
-                            newText = "",
-                        ),
-                    )
-                }
-            }
-
-            // Insert final newline if requested and missing (only for full-document format)
-            if (range == null && options.insertFinalNewline && content.isNotEmpty() && !content.endsWith("\n")) {
-                val lastLine = lines.size - 1
-                val lastCol = lines[lastLine].length
+        // Trailing whitespace removal
+        for (i in startLine..minOf(endLine, lines.size - 1)) {
+            val line = lines[i]
+            val trimmed = line.trimEnd()
+            if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
                 add(
                     TextEdit(
                         range =
                             Range(
-                                start = Position(lastLine, lastCol),
-                                end = Position(lastLine, lastCol),
+                                start = Position(i, trimmed.length),
+                                end = Position(i, line.length),
                             ),
-                        newText = "\n",
-                    ),
+                        newText = "",
+                    )
                 )
             }
-        }.also {
+        }
+
+        // Insert final newline if requested and missing (only for full-document format)
+        if (
+            range == null &&
+                options.insertFinalNewline &&
+                content.isNotEmpty() &&
+                !content.endsWith("\n")
+        ) {
+            val lastLine = lines.size - 1
+            val lastCol = lines[lastLine].length
+            add(
+                TextEdit(
+                    range =
+                        Range(
+                            start = Position(lastLine, lastCol),
+                            end = Position(lastLine, lastCol),
+                        ),
+                    newText = "\n",
+                )
+            )
+        }
+    }
+        .also {
             logger.info("format -> {} edits", it.size)
         }
 
@@ -291,7 +296,12 @@ abstract class AbstractAdapter : Adapter {
         line: Int,
         column: Int,
     ): Location? {
-        logger.warn("[NOT IMPLEMENTED] findDeclaration: uri={}, line={}, column={}", uri, line, column)
+        logger.warn(
+            "[NOT IMPLEMENTED] findDeclaration: uri={}, line={}, column={}",
+            uri,
+            line,
+            column,
+        )
         return null
     }
 
@@ -300,7 +310,12 @@ abstract class AbstractAdapter : Adapter {
         line: Int,
         column: Int,
     ): Location? {
-        logger.warn("[NOT IMPLEMENTED] findTypeDefinition: uri={}, line={}, column={}", uri, line, column)
+        logger.warn(
+            "[NOT IMPLEMENTED] findTypeDefinition: uri={}, line={}, column={}",
+            uri,
+            line,
+            column,
+        )
         return null
     }
 
@@ -389,7 +404,13 @@ abstract class AbstractAdapter : Adapter {
         ch: String,
         options: FormattingOptions,
     ): List<TextEdit> {
-        logger.warn("[NOT IMPLEMENTED] onTypeFormatting: uri={}, line={}, column={}, ch='{}'", uri, line, column, ch)
+        logger.warn(
+            "[NOT IMPLEMENTED] onTypeFormatting: uri={}, line={}, column={}, ch='{}'",
+            uri,
+            line,
+            column,
+            ch,
+        )
         return emptyList()
     }
 
@@ -398,7 +419,12 @@ abstract class AbstractAdapter : Adapter {
         line: Int,
         column: Int,
     ): LinkedEditingRanges? {
-        logger.warn("[NOT IMPLEMENTED] getLinkedEditingRanges: uri={}, line={}, column={}", uri, line, column)
+        logger.warn(
+            "[NOT IMPLEMENTED] getLinkedEditingRanges: uri={}, line={}, column={}",
+            uri,
+            line,
+            column,
+        )
         return null
     }
 

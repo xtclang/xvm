@@ -22,31 +22,40 @@ class XdkPresentationTest {
                     return box.value;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         withSource(source) { adapter ->
             val tokens = decode(adapter.getSemanticTokens(URI)!!)
 
-            fun token(marker: String): List<Int> = tokens.single { it.take(2) == at(source, marker).let { listOf(it.line, it.column) } }
+            fun token(marker: String): List<Int> = tokens.single {
+                it.take(2) == at(source, marker).let { listOf(it.line, it.column) }
+            }
             assertThat(SemanticTokenLegend.tokenTypes[token("api")[3]]).isEqualTo("interface")
             assertThat(SemanticTokenLegend.tokenTypes[token("parameter")[3]]).isEqualTo("parameter")
             assertThat(SemanticTokenLegend.tokenTypes[token("local")[3]]).isEqualTo("variable")
-            assertThat(token("method")[4] and SemanticTokenLegend.modifierBitmask("static", "declaration"))
+            assertThat(
+                    token("method")[4] and
+                        SemanticTokenLegend.modifierBitmask("static", "declaration")
+                )
                 .isEqualTo(SemanticTokenLegend.modifierBitmask("static", "declaration"))
             listOf("write", "compound", "increment", "field").forEach {
-                assertThat(token(it)[4] and SemanticTokenLegend.modifierBitmask("modification")).isNotZero()
+                assertThat(token(it)[4] and SemanticTokenLegend.modifierBitmask("modification"))
+                    .isNotZero()
             }
             listOf("receiver", "read").forEach {
-                assertThat(token(it)[4] and SemanticTokenLegend.modifierBitmask("modification")).isZero()
+                assertThat(token(it)[4] and SemanticTokenLegend.modifierBitmask("modification"))
+                    .isZero()
             }
             val local = at(source, "local")
             val highlights = adapter.getDocumentHighlights(URI, local.line, local.column)
-            assertThat(highlights.map { it.kind }).containsExactly(
-                DocumentHighlight.HighlightKind.TEXT,
-                DocumentHighlight.HighlightKind.WRITE,
-                DocumentHighlight.HighlightKind.WRITE,
-                DocumentHighlight.HighlightKind.WRITE,
-                DocumentHighlight.HighlightKind.READ,
-            )
+            assertThat(highlights.map { it.kind })
+                .containsExactly(
+                    DocumentHighlight.HighlightKind.TEXT,
+                    DocumentHighlight.HighlightKind.WRITE,
+                    DocumentHighlight.HighlightKind.WRITE,
+                    DocumentHighlight.HighlightKind.WRITE,
+                    DocumentHighlight.HighlightKind.READ,
+                )
         }
     }
 
@@ -64,17 +73,24 @@ class XdkPresentationTest {
                     return number + explicit + label.size;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         withSource(source) { adapter ->
             val hints = adapter.getInlayHints(URI, ALL)
-            assertThat(hints.map { it.label }).containsExactly(": Int", "first:", ": String", "text:")
-            assertThat(hints.map { it.position }).containsExactly(
-                at(source, "inferred").let { it.copy(column = it.column + "number".length) },
-                at(source, "positional"),
-                at(source, "text").let { it.copy(column = it.column + "label".length) },
-                at(source, "string"),
-            )
-            assertThat(adapter.getInlayHints(URI, Range(Position(5, 0), Position(6, 0))).map { it.label })
+            assertThat(hints.map { it.label })
+                .containsExactly(": Int", "first:", ": String", "text:")
+            assertThat(hints.map { it.position })
+                .containsExactly(
+                    at(source, "inferred").let { it.copy(column = it.column + "number".length) },
+                    at(source, "positional"),
+                    at(source, "text").let { it.copy(column = it.column + "label".length) },
+                    at(source, "string"),
+                )
+            assertThat(
+                    adapter.getInlayHints(URI, Range(Position(5, 0), Position(6, 0))).map {
+                        it.label
+                    }
+                )
                 .containsExactly(": String", "text:")
             val readonly =
                 decode(adapter.getSemanticTokens(URI)!!).single {
@@ -95,11 +111,13 @@ class XdkPresentationTest {
                     return fn() + other(1);
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         withSource(source) { adapter ->
             val outer = at(source, "outer")
             val highlights = adapter.getDocumentHighlights(URI, outer.line, outer.column)
-            assertThat(highlights.map { it.range.start }).containsExactly(outer, at(source, "capture"))
+            assertThat(highlights.map { it.range.start })
+                .containsExactly(outer, at(source, "capture"))
             val capture =
                 decode(adapter.getSemanticTokens(URI)!!).single {
                     it.take(2) == at(source, "capture").let { listOf(it.line, it.column) }
@@ -127,14 +145,10 @@ class XdkPresentationTest {
             assertThat(adapter.getInlayHints(URI, ALL)).hasSize(1)
             assertThat(adapter.compile(URI, "module Presentation {").success).isFalse()
             assertThat(adapter.getInlayHints(URI, ALL)).isEmpty()
-            // Current lexical keywords remain; no previous resolved names may leak into the failed replacement.
-            assertThat(
-                adapter
-                    .getSemanticTokens(URI)
-                    ?.let(::decode)
-                    .orEmpty()
-                    .map { it.take(2) },
-            ).doesNotContain(listOf(0, source.indexOf("count")))
+            // Current lexical keywords remain; no previous resolved names may leak into the failed
+            // replacement.
+            assertThat(adapter.getSemanticTokens(URI)?.let(::decode).orEmpty().map { it.take(2) })
+                .doesNotContain(listOf(0, source.indexOf("count")))
             adapter.closeDocument(URI)
             assertThat(adapter.getSemanticTokens(URI)).isNull()
         }
@@ -157,15 +171,22 @@ class XdkPresentationTest {
     ): Position {
         val token = "/*$marker*/"
         val offset = source.indexOf(token).also { check(it >= 0) } + token.length
-        return Position(source.take(offset).count { it == '\n' }, offset - source.lastIndexOf('\n', offset - 1) - 1)
+        return Position(
+            source.take(offset).count { it == '\n' },
+            offset - source.lastIndexOf('\n', offset - 1) - 1,
+        )
     }
 
     private fun decode(tokens: SemanticTokens): List<List<Int>> =
         tokens.data
             .chunked(5)
             .runningFold(listOf(0, 0, 0, 0, 0)) { previous, delta ->
-                listOf(previous[0] + delta[0], if (delta[0] == 0) previous[1] + delta[1] else delta[1]) + delta.drop(2)
-            }.drop(1)
+                listOf(
+                    previous[0] + delta[0],
+                    if (delta[0] == 0) previous[1] + delta[1] else delta[1],
+                ) + delta.drop(2)
+            }
+            .drop(1)
 
     private companion object {
         const val URI = "file:///Presentation.x"

@@ -1,12 +1,16 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
+import org.xvm.lsp.util.ExecutionTrace
 
 /** Observes the existing worker; no compiler work or future completion runs under this lock. */
 internal class CompilerQueueTrace {
-    private enum class Phase { DEBOUNCING, QUEUED, RUNNING }
+    private enum class Phase {
+        DEBOUNCING,
+        QUEUED,
+        RUNNING,
+    }
 
     private data class Job(
         val span: ExecutionTrace.Span,
@@ -29,7 +33,8 @@ internal class CompilerQueueTrace {
         action: () -> Unit,
     ): Work = Work(kind, uri, result, action)
 
-    inner class Work internal constructor(
+    inner class Work
+    internal constructor(
         kind: String,
         uri: String,
         private val result: CompletableFuture<*>,
@@ -51,10 +56,15 @@ internal class CompilerQueueTrace {
                         log(
                             span,
                             "removed",
-                            mapOf("outcome" to if (result.isCancelled) "cancelled-before-start" else "completed-before-start"),
+                            mapOf(
+                                "outcome" to
+                                    if (result.isCancelled) "cancelled-before-start"
+                                    else "completed-before-start"
+                            ),
                         )
                     } else if (failure != null) {
-                        // Cancellation signals do not prove that cooperative compiler work has returned.
+                        // Cancellation signals do not prove that cooperative compiler work has
+                        // returned.
                         log(span, "cancel-or-failure-signalled")
                     }
                 }
@@ -62,14 +72,13 @@ internal class CompilerQueueTrace {
         }
 
         /** Called at the existing executor submission, after any debounce interval. */
-        fun ready(): Work =
-            apply {
-                synchronized(lock) {
-                    jobs[span.id]?.let { jobs[span.id] = it.copy(phase = Phase.QUEUED) }
-                    if (span.id in jobs) readyOrder += span.id
-                    log(span, "queued", mapOf("enqueueOrder" to enqueued.incrementAndGet()))
-                }
+        fun ready(): Work = apply {
+            synchronized(lock) {
+                jobs[span.id]?.let { jobs[span.id] = it.copy(phase = Phase.QUEUED) }
+                if (span.id in jobs) readyOrder += span.id
+                log(span, "queued", mapOf("enqueueOrder" to enqueued.incrementAndGet()))
             }
+        }
 
         override fun run() {
             val tracked =
@@ -83,7 +92,10 @@ internal class CompilerQueueTrace {
                         log(
                             span,
                             "start",
-                            mapOf("executionOrder" to started.incrementAndGet(), "waitMs" to ExecutionTrace.elapsed(span.created)),
+                            mapOf(
+                                "executionOrder" to started.incrementAndGet(),
+                                "waitMs" to ExecutionTrace.elapsed(span.created),
+                            ),
                         )
                         true
                     }
@@ -106,7 +118,11 @@ internal class CompilerQueueTrace {
                             result.isDone -> "completed"
                             else -> "incomplete"
                         }
-                    log(span, "end", mapOf("outcome" to outcome, "runMs" to ExecutionTrace.elapsed(begin)))
+                    log(
+                        span,
+                        "end",
+                        mapOf("outcome" to outcome, "runMs" to ExecutionTrace.elapsed(begin)),
+                    )
                 }
             }
         }

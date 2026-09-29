@@ -10,8 +10,7 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Inlay hint tests for [TreeSitterAdapter].
  *
- * Exercises inlay hint generation (currently disabled, pending compiler
- * type inference support).
+ * Exercises inlay hint generation (currently disabled, pending compiler type inference support).
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -26,9 +25,9 @@ class InlayHintTest : TreeSitterTestBase() {
     @DisplayName("getInlayHints() -- future")
     inner class InlayHintTests {
         /**
-         * TODO: Inlay hints show inferred type annotations inline (e.g., `val x` displays
-         *   `: Int` after the variable). This requires the compiler's type inference engine;
-         *   tree-sitter alone cannot determine types.
+         * TODO: Inlay hints show inferred type annotations inline (e.g., `val x` displays `: Int`
+         *   after the variable). This requires the compiler's type inference engine; tree-sitter
+         *   alone cannot determine types.
          */
         @Test
         @Disabled("Inlay hints not yet implemented -- requires compiler type inference")
@@ -45,7 +44,8 @@ class InlayHintTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
 
             val range =
@@ -55,7 +55,8 @@ class InlayHintTest : TreeSitterTestBase() {
                 )
             val hints = ts.getInlayHints(uri, range)
 
-            // TODO: Once implemented, assert a TYPE hint appears after "val x" with label ": Int" or similar.
+            // TODO: Once implemented, assert a TYPE hint appears after "val x" with label ": Int"
+            // or similar.
             assertThat(hints).isNotEmpty
         }
     }
