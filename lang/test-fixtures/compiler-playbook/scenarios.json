@@ -749,13 +749,13 @@
       "values": {
         "file": "Navigation.x",
         "unsupportedCapabilities": [
-          "declarationProvider",
           "colorProvider",
           "monikerProvider",
           "inlineValueProvider"
         ],
         "tabSize": 4,
         "supportedCapabilities": [
+          "declarationProvider",
           "documentFormattingProvider",
           "documentRangeFormattingProvider",
           "codeActionProvider",
@@ -1808,6 +1808,7 @@
         ],
         "replaceWith": "${0})",
         "labels": [
+          "\"\"",
           "qualifiedName",
           "simpleName",
           "text"
@@ -1832,6 +1833,8 @@
         "anchor": "choose();",
         "offset": 7,
         "labels": [
+          "\"\"",
+          "0",
           "number",
           "qualifiedName",
           "simpleName",
