@@ -71,10 +71,13 @@ public abstract class CompositionNode
     @Override
     public Source getSource() {
         Source source = super.getSource();
-        if (source == null) {
-            source = condition == null ? type.getSource() : condition.getSource();
+        if (source != null) {
+            return source;
         }
-        return source;
+
+        // Parsed trees may not have parents yet, and a default composition has no type.
+        AstNode child = condition == null ? type : condition;
+        return child == null ? null : child.getSource();
     }
 
     @Override
