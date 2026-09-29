@@ -3,7 +3,6 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -215,14 +214,7 @@ public class NewExpression
             return Map.of();
         }
 
-        var origins = new HashMap<PropertyConstant, Register>();
-        m_captureBindings.registers().forEach((name, register) -> {
-            if (anon.getComponent().getChild(name) instanceof PropertyStructure property &&
-                    property.isSynthetic()) {
-                origins.put(property.getIdentityConstant(), register.getOriginalRegister());
-            }
-        });
-        return Map.copyOf(origins);
+        return m_captureBindings.propertyOrigins(anon.getComponent());
     }
 
     // ----- compilation (Expression) --------------------------------------------------------------

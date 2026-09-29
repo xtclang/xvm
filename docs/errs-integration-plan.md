@@ -1212,13 +1212,15 @@ not belong there simply because the LSP consumes them.
   explicit internal-access tradeoff, not a mechanical package move. Test named/default/generic and
   converting candidates, cancellation and cloned-argument isolation. Keep the small existing hook
   if extraction makes the call contract harder to understand.
-- [ ] **AST3 — Consolidate anonymous capture projection in its existing helper.**
-  `NewExpression.getCaptureOrigins()` currently projects generated synthetic properties to enclosing
-  registers. Move the map-building part to `AnonymousClassBindings`, passing the existing class
-  component; retain validation/owner checks and the passive getter on `NewExpression`. This helper
-  already owns capture registers, so no new state, getter or public mutation API is needed. Validate
-  anonymous captures, clone rejection, shadowing and rename/reference provenance. Keep the public
-  result shape unchanged. Do not relocate both binding helpers merely to increase package contents.
+- [x] **AST3 — Consolidate anonymous capture projection in its existing helper.**
+  `NewExpression.getCaptureOrigins()` now delegates map construction to package-private
+  `AnonymousClassBindings.propertyOrigins(Component)`, passing the existing anonymous-class
+  component. The node retains all validation, component-existence and expression-owner checks.
+  Only synthetic properties map to original enclosing registers; the result remains immutable.
+  The helper already owns capture registers, so this adds no state, getter or public mutation API.
+  Anonymous captures, clone rejection, shadowing and rename/reference provenance pass the combined
+  regression batch. The public result shape is unchanged. Keep this extraction with anonymous
+  capture provenance when splitting PRs; these complete-program facts remain in the root package.
 - [ ] **AST4 — Audit a unified declaration-provenance result before migrating fields.**
   `Parameter.m_arg` and `NameResolver.m_resolvedNames` are branch-added semantic state. A future
   attempt-owned collector could publish declaration/qualified-segment facts alongside call facts
