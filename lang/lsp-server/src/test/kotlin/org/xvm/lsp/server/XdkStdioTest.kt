@@ -75,6 +75,35 @@ class XdkStdioTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `configured resource roots and resource-only changes round trip through packaged diagnostics`() {
+        val source =
+            directory.resolve("Assets.x").toFile().apply {
+                writeText("module Assets { static String text() = $./data.txt; }")
+            }
+        val root = directory.resolve("custom-resources").toFile().apply { mkdirs() }
+        val resource = root.resolve("data.txt").apply { writeText("template") }
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(
+                sourceModules =
+                    listOf(
+                        mapOf(
+                            "name" to "Assets",
+                            "uri" to source.toURI().toString(),
+                            "resourceRoots" to listOf(root.toURI().toString()),
+                        )
+                    )
+            )
+            val params = DocumentDiagnosticParams(TextDocumentIdentifier(source.toURI().toString()))
+            fun pull() = session.await(session.server.textDocumentService.diagnostic(params)).left
+            assertThat(pull().items).isEmpty()
+            Files.delete(resource.toPath())
+            assertThat(pull().items.map { it.code.left }).contains("PARSER-24")
+            resource.writeText("repaired")
+            assertThat(pull().items).isEmpty()
+        }
+    }
+
+    @Test
     fun `packaged server records queue contents compiler calls and reply latency`() {
         val traceDirectory =
             Session(packagedJar(), directory).use { session ->
@@ -1337,11 +1366,19 @@ class XdkStdioTest {
         private val listening = launcher.startListening()
         val server = launcher.remoteProxy
 
-        fun initialize(versionedEdits: Boolean = false, pullDiagnostics: Boolean = false) {
+        fun initialize(
+            versionedEdits: Boolean = false,
+            pullDiagnostics: Boolean = false,
+            sourceModules: List<Map<String, Any>>? = null,
+        ) {
             val initialized =
                 await(
                     server.initialize(
                         InitializeParams().apply {
+                            sourceModules?.let {
+                                initializationOptions =
+                                    mapOf("xtcCompiler" to mapOf("sourceModules" to it))
+                            }
                             capabilities =
                                 ClientCapabilities().apply {
                                     if (pullDiagnostics)

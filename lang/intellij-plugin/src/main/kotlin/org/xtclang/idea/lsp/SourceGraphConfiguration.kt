@@ -27,6 +27,7 @@ internal object SourceGraphConfiguration {
                 stringValue(entry["name"]),
                 stringValue(entry["uri"]),
                 dependencies?.asJsonArray?.map(::stringValue).orEmpty(),
+                resourceRoots(entry),
             )
         }
     }
@@ -38,7 +39,8 @@ internal object SourceGraphConfiguration {
                 require(
                     module.name.isNotBlank() &&
                         module.uri.isNotBlank() &&
-                        module.dependencies.all(String::isNotBlank)
+                        module.dependencies.all(String::isNotBlank) &&
+                        module.resourceRoots.orEmpty().all(String::isNotBlank)
                 ) {
                     "Source module names, roots and dependencies must be non-blank strings"
                 }
@@ -94,6 +96,7 @@ internal object SourceGraphConfiguration {
                     stringValue(entry["name"]),
                     stringValue(entry["uri"]),
                     dependencies,
+                    resourceRoots(entry),
                 )
             }
         require(canonical(current, base) == canonical(expected, base)) {
@@ -119,17 +122,47 @@ internal object SourceGraphConfiguration {
         return value.asString
     }
 
+    private fun resourceRoots(entry: JsonObject): List<String>? =
+        entry["resourceRoots"]
+            ?.takeUnless { it.isJsonNull }
+            ?.let { values ->
+                require(values.isJsonArray) { "Resource roots must be an array" }
+                values.asJsonArray.map(::stringValue)
+            }
+
+    private data class CanonicalModule(
+        val name: String,
+        val uri: URI,
+        val dependencies: Set<String>,
+        val resources: List<URI>?,
+    )
+
     private fun canonical(
         modules: List<SourceModuleConfiguration>,
         base: URI,
-    ): Set<Triple<String, URI, Set<String>>> {
+    ): Set<CanonicalModule> {
         require(modules.map { it.name }.distinct().size == modules.size) {
             "Duplicate source module names"
         }
         val result = modules.map {
-            Triple(it.name, base.resolve(it.uri).normalize(), it.dependencies.orEmpty().toSet())
+            val resources =
+                it.resourceRoots?.map { path ->
+                    URI.create(base.resolve(path).normalize().toString().trimEnd('/') + "/")
+                }
+            require(resources == null || resources.distinct().size == resources.size) {
+                "Duplicate resource roots"
+            }
+            require(resources.orEmpty().all { uri -> uri.scheme == "file" }) {
+                "Resource roots must use file URIs"
+            }
+            CanonicalModule(
+                it.name,
+                base.resolve(it.uri).normalize(),
+                it.dependencies.orEmpty().toSet(),
+                resources,
+            )
         }
-        require(result.map { it.second }.distinct().size == modules.size) {
+        require(result.map { it.uri }.distinct().size == modules.size) {
             "Duplicate source module roots"
         }
         return result.toSet()

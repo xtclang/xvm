@@ -43,7 +43,9 @@ internal class XdkProjectQueries(
     private val captured =
         project.buildOrder().associateWith { module ->
             try {
-                Result.success(XdkSources.capture(module.root, overlays, cancelled))
+                Result.success(
+                    XdkSources.capture(module.root, overlays, module.resourceFiles, cancelled)
+                )
             } catch (failure: IOException) {
                 Result.failure(failure)
             }
@@ -206,6 +208,7 @@ internal class XdkProjectQueries(
                             value(module.name)
                             value(module.uri)
                             value(module.dependencies.sorted().joinToString("\u0000"))
+                            value(sources[module]?.inputs?.resources?.revision.orEmpty())
                         }
                         uris.toSortedMap().forEach { (source, uri) ->
                             value(source)
@@ -382,6 +385,7 @@ internal class XdkProjectQueries(
                             module.dependencies.mapTo(linkedSetOf()) {
                                 if (it == renamedModule.name) requireNotNull(moduleName) else it
                             },
+                            module.resourceRoots,
                         )
                     }
                 )
@@ -541,6 +545,7 @@ internal class XdkProjectQueries(
                                                 it.name,
                                                 it.uri,
                                                 it.dependencies + target.module,
+                                                it.resourceRoots,
                                             )
                                         else it
                                     }
@@ -778,7 +783,13 @@ internal class XdkProjectQueries(
                 .all { (module, original) ->
                     val current =
                         try {
-                            XdkSources.capture(module.root, overlays, cancelled).inputs
+                            XdkSources.capture(
+                                    module.root,
+                                    overlays,
+                                    module.resourceFiles,
+                                    cancelled,
+                                )
+                                .inputs
                         } catch (_: IOException) {
                             null
                         }
