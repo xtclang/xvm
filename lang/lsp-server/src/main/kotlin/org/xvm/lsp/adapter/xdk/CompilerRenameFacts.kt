@@ -263,8 +263,11 @@ internal fun captureRenameFacts(
         memberActions =
             members.mapNotNull { member ->
                 val owner = identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
-                val contract = identity(member.contract) as? ProofIdentity.Source ?: return@mapNotNull null
-                XdkMemberActions.Candidate(owner.location, contract.location, member.insertion, member.declaration, member.implementation)
+                val contract = identity(member.contract)
+                if (contract !is ProofIdentity.Source && contract !is ProofIdentity.Binary &&
+                    !(contract is ProofIdentity.Method && contract.parent is ProofIdentity.Binary)
+                ) return@mapNotNull null
+                XdkMemberActions.Candidate(owner.location, contract, member.insertion, member.declaration, member.implementation)
             },
     )
 }

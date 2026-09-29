@@ -156,10 +156,18 @@ internal object XdkRename {
             val end = offset(text, location.range.end)?.let { plan.map(path, it) } ?: return false
             return declaration.site == Site(path, start, end)
         }
+        fun matchesContract(target: Target, contract: ProofIdentity): Boolean = when (contract) {
+            is ProofIdentity.Source -> {
+                if (contract.location.sourceName in plan.original) matches(target, contract.location)
+                else target == Target.External(contract)
+            }
+            is ProofIdentity.Binary, is ProofIdentity.Method -> target == Target.External(contract)
+            else -> false
+        }
         val changed = newDispatch - oldDispatch
         val additions = candidates.map { candidate ->
             val removed = (oldDispatch - newDispatch).singleOrNull { chain ->
-                matches(chain.owner, owner) && chain.members.any { matches(it, candidate.contract) }
+                matches(chain.owner, owner) && chain.members.any { matchesContract(it, candidate.contract) }
             } ?: return false
             val added = changed.singleOrNull { chain ->
                 chain.owner == removed.owner && chain.members.containsAll(removed.members) &&
@@ -204,15 +212,17 @@ internal object XdkRename {
             when (target) {
                 is Target.Declaration -> target.site
                 is Target.SourceProof -> target.site
-                is Target.Composed -> memberBridge(target, chains)?.firstOrNull()?.site
+                is Target.Composed -> (memberBridge(target, chains)?.firstOrNull() as? Target.Declaration)?.site
                 else -> null
             }
 
         fun selectedRebinding(old: Target, new: Target): Boolean {
-            val oldSite = declarationSite(old, oldDispatch) ?: return false
+            val oldSite = declarationSite(old, oldDispatch)
             val newSite = declarationSite(new, newDispatch) ?: return false
             return additions.any { (member, original) ->
-                member.site == newSite && original.members.any { declarationSite(it, oldDispatch) == oldSite }
+                member.site == newSite && original.members.any {
+                    it == old || (oldSite != null && declarationSite(it, oldDispatch) == oldSite)
+                }
             }
         }
 
@@ -231,14 +241,22 @@ internal object XdkRename {
     private fun memberBridge(
         target: Target.Composed,
         chains: Set<Dispatch>,
-    ): List<Target.Declaration>? {
+    ): List<Target>? {
         val owner = (target.owner as? Target.SourceProof)?.site ?: return null
         if (target.delegates.isNotEmpty()) return null
         val written =
             target.members.map {
-                val source = it as? Target.SourceProof ?: return null
-                if (source.format != Constant.Format.Method) return null
-                Target.Declaration(source.site, SemanticModel.SymbolKind.METHOD)
+                when (it) {
+                    is Target.SourceProof -> {
+                        if (it.format != Constant.Format.Method) return null
+                        Target.Declaration(it.site, SemanticModel.SymbolKind.METHOD)
+                    }
+                    is Target.External -> {
+                        if (it.constant !is ProofIdentity.Binary && it.constant !is ProofIdentity.Method) return null
+                        it
+                    }
+                    else -> return null
+                }
             }
         return written.takeIf {
             chains.any { chain -> chain.supported && (chain.owner as? Target.Declaration)?.site == owner && chain.members == written }

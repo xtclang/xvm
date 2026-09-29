@@ -5782,7 +5782,7 @@ missing-declaration fixes remain separate L63 tasks.
 Implement four separate checkpoints before testing them together:
 
 1. [x] Atomic “Implement all required members”, with complete graph and per-family dispatch proof.
-2. [ ] Bundled XDK and binary contracts with read-only dependency identities.
+2. [x] Bundled XDK and binary contracts with read-only dependency identities (implementation checkpoint; batch validation pending).
 3. [ ] Qualified cross-module and compound type spellings, including required imports.
 4. [ ] Defaults during fresh declaration repair; audit computed defaults before supporting them.
 
@@ -5792,3 +5792,9 @@ insertions and preserves unrelated bindings. Full compilation refuses any unsupp
 Tests cover multiple missing overloads, an instantiated class, descendants, named calls and an
 existing implementation. Shared X122 adds the atomic diagnostic-repair variant. Validation waits
 until all four implementation commits are present.
+
+Checkpoint 2 copies artifact/revision identities for bundled and binary contracts instead of requiring
+a writable source declaration. The member proof permits only the selected family to rebind to its
+new user-source override; dependency bytes and declarations remain read-only. Added regressions
+cover indexed and binary-only inputs, bundled Iterator implementation and inherited concrete calls.
+Testing remains deferred until all four implementation checkpoints are present.
