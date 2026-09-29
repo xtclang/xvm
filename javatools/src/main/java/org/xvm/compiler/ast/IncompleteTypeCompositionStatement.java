@@ -4,11 +4,9 @@ import java.lang.reflect.Field;
 
 import java.util.List;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -90,9 +88,6 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         }
     }
 
-    List<Parameter> formalParameters() {
-        return formals;
-    }
 
     @Override
     public void validateContent(StageMgr mgr, ErrorListener errs) {
@@ -100,11 +95,9 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         var bindings = mgr.getCursorBindings();
         cursors.forEach(site -> {
             bindings.begin(site);
-            if (bindings.isEnabled() && !errs.isAbortDesired()
-                    && CursorScope.declarationScope(site).getComponent() instanceof ClassStructure owner) {
-                bindings.record(site, new CursorBinding(List.of(), owner.getFormalType(), false)
-                        .withTypes(CursorScope.declarationTypes(site, errs))
-                        .withFormals(CursorScope.declarationFormals(site, errs)));
+            if (bindings.isEnabled() && !errs.isAbortDesired()) {
+                PartialQueries.declarationBinding(site, isComponentNode() ? this : getParent(), formals, errs)
+                        .ifPresent(binding -> bindings.record(site, binding));
             }
             errs.error(Parser.INCOMPLETE_EXPRESSION, in(getSource(), site.getEndPosition(), site.getEndPosition()));
         });
