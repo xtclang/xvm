@@ -27,7 +27,7 @@ import static org.xvm.asm.ErrorListener.silent;
 final class PartialConstructionResolver {
     static CursorBinding inspect(IncompleteStatement site, NewExpression creation, Context ctx,
                                  TypeConstant required, ErrorListener errs) {
-        var scope = ctx.cursorBinding().withCandidates(List.of());
+        var scope = CursorScope.capture(ctx).withCandidates(List.of());
         if (errs.isAbortDesired()) {
             return scope;
         }

@@ -1194,14 +1194,15 @@ not belong there simply because the LSP consumes them.
   source slots. The shared result is `PartialSyntax.ArgumentCursor`; no wrapper record, retained
   state or additional AST parenting API is introduced. Combined validation is recorded below.
 
-- [ ] **AST1 — Move cursor-scope collection out of `Context`.** `Context.cursorBinding()` has only
-  three callers: `PartialQueries`, `PartialCallResolver` and `PartialConstructionResolver`. Move its
-  implementation to package-private `CursorScope.capture(Context)` and update those callers.
-  `getNameMap` and `collectVariables` remain protected; same-package access suffices. Preserve lazy
-  parameter-register initialization, flow readability, reserved-name filtering and receiver/function
-  scope. Remove the branch-added public convenience method only after confirming no external API
-  commitment; no current lang consumer uses it. Validate unassigned locals, parameters, lambdas,
-  nested scopes and repeated cursor queries. This is a small, useful extraction with no new API.
+- [x] **AST1 — Move cursor-scope collection out of `Context`.** Package-private
+  `CursorScope.capture(Context)` now serves the only three callers: `PartialQueries`,
+  `PartialCallResolver` and `PartialConstructionResolver`. `getNameMap` and `collectVariables`
+  remain protected; same-package access suffices. Lazy parameter-register initialization still
+  precedes collection, preserving flow readability, sorted names, reserved-name filtering and
+  receiver/function scope. The branch-added public `Context.cursorBinding()` convenience method
+  is removed from the unpublished API; no lang consumer used it. No state or visibility is added.
+  Focused regressions cover unassigned locals, parameters, lambdas, nested scopes and repeated
+  cursor queries. Keep this extraction with the cursor-scope implementation when splitting PRs.
 - [ ] **AST2 — Separate candidate-result copying from ordinary argument fitting.** The branch-added
   `AstNode.probeCallCandidate` builds immutable `CursorBinding.Candidate` results after the ordinary
   fitter chooses an ordering and inferred signature. Move that query orchestration to the existing
