@@ -27,6 +27,8 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightParams
@@ -76,6 +78,8 @@ import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -127,6 +131,8 @@ class XtcTextDocumentService(
     private val lifecycle = Any()
     private val openDocuments = ConcurrentHashMap<String, Document>()
     private var closed = false
+    private val diagnosticReports = DiagnosticReports()
+    private var diagnosticRevision = 0L
     private val publishedByScope = mutableMapOf<String, Set<String>>()
     private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
 
@@ -197,7 +203,12 @@ class XtcTextDocumentService(
                 (System.nanoTime() - started).nanoseconds,
             )
         }
-        val ready = document?.analysis ?: CompletableFuture.completedFuture(null)
+        val ready =
+            if (documents != null)
+                CompletableFuture.allOf(
+                    *documents.values.map { it.analysis }.distinct().toTypedArray()
+                )
+            else document?.analysis ?: CompletableFuture.completedFuture(null)
         ready
             .handle { _, _ -> Unit }
             .thenRunAsync {
@@ -308,6 +319,7 @@ class XtcTextDocumentService(
         content: String,
         version: Int,
     ) {
+        diagnosticRevision++
         val changedGraph = (adapter as? XdkAdapter)?.updateDocument(uri, content).orEmpty()
         analyseOne(uri, content, version)
         refreshScopes(
@@ -401,8 +413,10 @@ class XtcTextDocumentService(
                     it.location.uri == uri ||
                         (uri == result.uri && it.location.uri !in result.documentUris)
                 }
+            diagnosticReports.record(uri, diagnostics)
             server.publishDiagnostics(uri, diagnostics, openDocuments[uri]?.version)
         }
+        server.refreshDiagnostics()
         // Root discovery can change after file creation/removal; release publications of old
         // scopes.
         val inactive =
@@ -416,6 +430,7 @@ class XtcTextDocumentService(
         uris
             .filter { uri -> publishedByScope.values.none { uri in it } }
             .forEach {
+                diagnosticReports.record(it, emptyList())
                 server.publishDiagnostics(it, emptyList(), openDocuments[it]?.version)
             }
     }
@@ -424,6 +439,7 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             val uri = params.textDocument.uri
             logger.info("textDocument/didClose: {}", uri)
+            diagnosticRevision++
             val affected = adapter.affectedAnalysisScopes(uri)
             val document = openDocuments.remove(uri)
             invalidateQueries(setOf(uri))
@@ -436,7 +452,9 @@ class XtcTextDocumentService(
                     emptySet()
                 }
             if (closed) return
+            diagnosticReports.record(uri, emptyList())
             server.publishDiagnostics(uri, emptyList(), document?.version)
+            server.refreshDiagnostics()
             refreshScopes(affected + retired)
             if (openDocuments.values.none { it.scope == document?.scope }) {
                 clearUnowned(publishedByScope.remove(document?.scope).orEmpty() - uri)
@@ -451,6 +469,8 @@ class XtcTextDocumentService(
             // deleted. Recompiling identical overlays here cancels otherwise current queries.
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
+            diagnosticRevision++
+            server.refreshDiagnostics()
             refreshScopes(
                 adapter.affectedAnalysisScopes(uri) +
                     publishedByScope.filterValues { uri in it }.keys
@@ -462,7 +482,9 @@ class XtcTextDocumentService(
     internal fun refreshDependencies(replace: () -> Set<String>) {
         synchronized(lifecycle) {
             if (closed) return
+            diagnosticRevision++
             refreshScopes(replace())
+            server.refreshDiagnostics()
         }
     }
 
@@ -473,6 +495,7 @@ class XtcTextDocumentService(
             openDocuments.clear()
             invalidateQueries(pendingQueries.values.toSet())
             publishedByScope.clear()
+            diagnosticReports.clear()
             documents.forEach { (uri, document) ->
                 document.analysis.cancel(false)
                 adapter.closeDocument(uri)
@@ -488,6 +511,84 @@ class XtcTextDocumentService(
     override fun didSave(params: DidSaveTextDocumentParams) {
         logger.info("textDocument/didSave: {}", params.textDocument.uri)
         refreshForFile(params.textDocument.uri)
+    }
+
+    override fun diagnostic(
+        params: DocumentDiagnosticParams
+    ): CompletableFuture<DocumentDiagnosticReport> =
+        pullDiagnostics(
+            "textDocument/diagnostic",
+            params.textDocument.uri,
+            params.identifier,
+            workspace = false,
+        ) { results ->
+            val current = diagnosticReports.record(results)
+            // Unknown or removed documents have an empty report, never an old cached error.
+            if (params.textDocument.uri !in current)
+                diagnosticReports.record(params.textDocument.uri, emptyList())
+            diagnosticReports.document(
+                params.textDocument.uri,
+                params.previousResultId,
+                if (server.supportsRelatedDiagnostics) current else emptySet(),
+            )
+        }
+
+    internal fun workspaceDiagnostics(
+        params: WorkspaceDiagnosticParams
+    ): CompletableFuture<WorkspaceDiagnosticReport> =
+        pullDiagnostics("workspace/diagnostic", "", params.identifier, workspace = true) { results
+            ->
+            val current = diagnosticReports.record(results)
+            diagnosticReports.workspace(
+                current,
+                params.previousResultIds.orEmpty().associate { it.uri to it.value },
+                openDocuments.mapValues { it.value.version },
+            )
+        }
+
+    private fun <T> pullDiagnostics(
+        method: String,
+        uri: String,
+        identifier: String?,
+        workspace: Boolean,
+        convert: (List<CompilationResult>) -> T,
+    ): CompletableFuture<T> {
+        if (!server.usesPullDiagnostics || (identifier != null && identifier != "xtc")) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.InvalidParams,
+                        "Compiler pull diagnostics were not negotiated for this provider",
+                        null,
+                    )
+                )
+            )
+        }
+        val revision = synchronized(lifecycle) { diagnosticRevision }
+        return queryAsync(
+            method,
+            uri,
+            request = {
+                val open = openDocuments[uri]
+                if (!workspace && open != null)
+                    CompletableFuture.completedFuture(listOf(open.analysis.join()))
+                else (adapter as XdkAdapter).workspaceDiagnosticsAsync()
+            },
+            convert = { results ->
+                if (revision != diagnosticRevision) throw contentModified()
+                val owned = results.flatMap { it.documentUris }.toSet()
+                val all =
+                    if (workspace)
+                        results +
+                            openDocuments
+                                .filterKeys { it !in owned }
+                                .values
+                                .map { it.analysis.join() }
+                    else results
+                convert(all)
+            },
+            workspace = true,
+        )
     }
 
     /**

@@ -23,9 +23,11 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DefinitionParams
+import org.eclipse.lsp4j.DiagnosticCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
@@ -46,6 +48,7 @@ import org.eclipse.lsp4j.SelectionRangeParams
 import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.SignatureHelpParams
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -1239,6 +1242,30 @@ class XdkStdioTest {
         return jar
     }
 
+    @Test
+    fun `pull reports round trip full unchanged and repaired over packaged stdio`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(pullDiagnostics = true)
+            session.open(BROKEN)
+            val params = DocumentDiagnosticParams(TextDocumentIdentifier(URI))
+            val first = session.await(session.server.textDocumentService.diagnostic(params)).left
+            assertThat(first.items).isNotEmpty()
+            params.previousResultId = first.resultId
+            assertThat(
+                    session
+                        .await(session.server.textDocumentService.diagnostic(params))
+                        .right
+                        .resultId
+                )
+                .isEqualTo(first.resultId)
+            session.change(VALID, 2)
+            val fixed = session.await(session.server.textDocumentService.diagnostic(params)).left
+            assertThat(fixed.items).isEmpty()
+            assertThat(fixed.resultId).isNotEqualTo(first.resultId)
+            session.shutdownAndExit()
+        }
+    }
+
     private class Session(
         jar: Path,
         directory: Path,
@@ -1310,13 +1337,18 @@ class XdkStdioTest {
         private val listening = launcher.startListening()
         val server = launcher.remoteProxy
 
-        fun initialize(versionedEdits: Boolean = false) {
+        fun initialize(versionedEdits: Boolean = false, pullDiagnostics: Boolean = false) {
             val initialized =
                 await(
                     server.initialize(
                         InitializeParams().apply {
                             capabilities =
                                 ClientCapabilities().apply {
+                                    if (pullDiagnostics)
+                                        textDocument =
+                                            TextDocumentClientCapabilities().apply {
+                                                diagnostic = DiagnosticCapabilities()
+                                            }
                                     workspace =
                                         WorkspaceClientCapabilities().apply {
                                             workspaceEdit =
