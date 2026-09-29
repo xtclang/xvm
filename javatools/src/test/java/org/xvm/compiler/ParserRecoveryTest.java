@@ -14,9 +14,6 @@ import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.compiler.ast.AstNode;
-import org.xvm.compiler.ast.IncompleteDeclarationStatement;
-import org.xvm.compiler.ast.IncompleteStatement;
-import org.xvm.compiler.ast.IncompleteTypeCompositionStatement;
 import org.xvm.compiler.ast.MethodDeclarationStatement;
 import org.xvm.compiler.ast.NamedTypeExpression;
 import org.xvm.compiler.ast.NewExpression;
@@ -24,7 +21,9 @@ import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.VariableDeclarationStatement;
-
+import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

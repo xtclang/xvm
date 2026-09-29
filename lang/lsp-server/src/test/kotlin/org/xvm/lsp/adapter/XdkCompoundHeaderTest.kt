@@ -9,8 +9,8 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
-import org.xvm.compiler.ast.IncompleteDeclarationStatement
 import org.xvm.compiler.ast.NamedTypeExpression
+import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class XdkCompoundHeaderTest {

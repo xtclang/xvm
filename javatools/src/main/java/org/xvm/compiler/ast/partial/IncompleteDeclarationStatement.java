@@ -1,4 +1,4 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.lang.reflect.Field;
 
@@ -10,6 +10,11 @@ import org.xvm.asm.MethodStructure.Code;
 
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.Parameter;
+import org.xvm.compiler.ast.PartialQueries;
+import org.xvm.compiler.ast.StageMgr;
+import org.xvm.compiler.ast.Statement;
 
 import static org.xvm.asm.ErrorListener.in;
 
@@ -116,13 +121,13 @@ public final class IncompleteDeclarationStatement extends Statement {
     }
 
     // Only real syntax children use the AST's ordinary adoption and clone mechanism.
-    protected final List<IncompleteStatement> cursors;
+    private final List<IncompleteStatement> cursors;
 
     private final Kind        kind;
     private final Token       name;
     private final long        start;
     private final long        end;
-    protected final List<Parameter> formals;
+    private final List<Parameter> formals;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteDeclarationStatement.class, "cursors", "formals");
 }

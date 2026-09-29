@@ -46,14 +46,13 @@ import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token.Id;
-
 import org.xvm.compiler.ast.AstNode;
-import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
