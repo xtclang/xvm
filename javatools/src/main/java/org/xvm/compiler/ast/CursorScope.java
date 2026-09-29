@@ -164,7 +164,9 @@ final class CursorScope {
             return writtenBound(parameter.getType(), scope, parameters, active, depth, errs);
         }
         var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
-        var target = new NameResolver(scope, Arrays.asList(named.getNames()).iterator()).forceResolve(probe);
+        var reference = new NamedTypeExpression(null, named.names, named.access, null, null, named.getEndPosition());
+        reference.setParent(scope);
+        var target = new NameResolver(reference, Arrays.asList(named.getNames()).iterator()).forceResolve(probe);
         if (!(target instanceof IdentityConstant identity) || !isTypeIdentity(identity)
                 || !visible(identity, scope.getComponent().getIdentityConstant())
                 || probe.hasSeriousErrors() || probe.isAbortDesired()) {
@@ -180,7 +182,11 @@ final class CursorScope {
         COMPLETE, RECURSIVE, INVALID;
 
         BoundSyntax combine(BoundSyntax other) {
-            return ordinal() >= other.ordinal() ? this : other;
+            return switch (this) {
+                case INVALID -> INVALID;
+                case RECURSIVE -> other == INVALID ? INVALID : RECURSIVE;
+                case COMPLETE -> other;
+            };
         }
     }
 

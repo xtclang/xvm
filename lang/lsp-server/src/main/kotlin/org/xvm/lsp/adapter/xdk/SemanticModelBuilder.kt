@@ -439,6 +439,11 @@ private class SemanticModelBuilder(
 
                 is MethodDeclarationStatement -> {
                     declare(node.nameToken, identity(node), SymbolKind.METHOD, node.source)
+                    identity(node)?.let(constants::get)?.let { id ->
+                        symbols[id]?.let {
+                            symbols[id] = it.copy(documentation = node.documentation?.trim())
+                        }
+                    }
                 }
 
                 is PropertyDeclarationStatement -> {

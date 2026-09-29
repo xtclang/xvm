@@ -1,5 +1,14 @@
 # Failures with nowhere to go
 
+**L64 validation:** the first combined run exposed the required literal record-pattern
+update, old exact-completion expectations and optional TypeScript metadata. New regressions exposed
+an invalid type-goal resolver owner and missing mid-token value recovery; fixes reuse real lexical
+scope and existing parser recovery boundaries. Method documentation needs a passive accessor to
+the existing AST comment because method components do not copy it today. No diagnostic suppression
+or AST cache was added. See the [batch record](errs-integration-plan.md#l64-completion-and-signature-batch-2026-09-29)
+for the corrected 337-test passing receipt and selected editor results. Initial development commits
+are not independently green extraction units; their validation corrections must accompany extraction.
+
 **Repair identity comparison:** an unresolved method signature can still expose a written parameter
 before the compiler has a resolved method slot. After a public-type auto-import, the same parameter
 has both identities. Comparing source-declaration identity with slot identity falsely rejected the
