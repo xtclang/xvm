@@ -13,7 +13,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.api.EmbeddingSupport
@@ -1046,8 +1045,6 @@ internal constructor(
                 EmbeddingSupport.instance().footprint(compilation)
             }
         logger.info("compile: scope={} [{}]", request.scope, footprint)
-        if (compiled.incrementAndGet() == 1L)
-            logger.info("compile: first compilation in this server completed (cold)")
         val roots = buildMap {
             compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
         }
@@ -1849,7 +1846,6 @@ internal constructor(
             .mapCancellable { it?.let { model -> XdkCursorQueries.signatureHelp(model, position) } }
     }
 
-    private val compiled = AtomicLong()
     private val queueTrace = CompilerQueueTrace()
     private val lifecycle = Any()
     private var closed = false
