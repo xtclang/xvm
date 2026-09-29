@@ -7,11 +7,15 @@ EmbeddingSupport/lib_runner and creates fresh application containers. R1–R8 co
 DAP work. Compiler ASTs/pools stay worker-owned, compile-only paths never start the VM, and source
 revisions remain paired with emitted artifacts for reruns and future breakpoint mapping.
 
-**L63 member actions:** the compiler adapter now offers ordinary source-contract implement/override
-stubs at a class name. TypeInfo chooses the inherited signature; a private whole-graph compilation
-must preserve existing bindings and prove exactly one selected dispatch-chain addition. Bodies use
-`TODO()`. Unsupported signature forms and changes to existing call/descendant bindings remain
-withheld. This uses existing compiler APIs and adds no Java AST state. The requested `ast.partial`
+**L63 member actions:** the compiler adapter offers source-contract implement/override stubs at a
+class name, including parameterized types, conditional/multiple returns, generic methods and
+validated literal defaults. TypeInfo chooses the signature; private whole-graph compilation proves
+the inserted method and its intended inherited call/descendant dispatch changes. Other bindings
+stay fixed. Missing implementations can use a fresh declaration-only embedding analysis; a failed
+compiler attempt is never resumed. Bodies use `TODO()`. Unsupported type spellings, computed
+defaults and binary contracts remain withheld. This adds no Java AST state. The batch passes 85 LSP and 15 compiler API/listener tests, plus all
+seven X122 variants in both editors; see the [commit map and receipts](errs-integration-plan.md#l63-batch-extraction-map-and-validation).
+The requested `ast.partial`
 organization has an [access-boundary audit](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax):
 a direct move needs substantial internal access and reflective traversal changes, so it is deferred
 until a small compiler-owned service boundary is designed.
