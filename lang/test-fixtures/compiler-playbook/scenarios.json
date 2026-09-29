@@ -4060,6 +4060,42 @@
         "limitations": []
       }
     },
+    "X128": {
+      "title": "native file and package-folder rename apply compiler-proven reference edits",
+      "manual": [],
+      "values": {
+        "variants": [
+          {
+            "root": "file/App.x",
+            "source": "module App { Box make() = new Box(); }",
+            "member": "file/App/Box.x",
+            "memberSource": "class Box {}",
+            "from": "file/App/Box.x",
+            "to": "file/App/Crate.x",
+            "newName": "Crate.x",
+            "expected": "module App { Crate make() = new Crate(); }",
+            "target": "file/App/Crate.x",
+            "targetSource": "class Crate {}"
+          },
+          {
+            "root": "folder/App.x",
+            "source": "module App { tools.Box make() = new tools.Box(); }",
+            "member": "folder/App/tools/Box.x",
+            "memberSource": "class Box {}",
+            "from": "folder/App/tools",
+            "to": "folder/App/util",
+            "newName": "util",
+            "expected": "module App { util.Box make() = new util.Box(); }",
+            "target": "folder/App/util/Box.x",
+            "targetSource": "class Box {}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
