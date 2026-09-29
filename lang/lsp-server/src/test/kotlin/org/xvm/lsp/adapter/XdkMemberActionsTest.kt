@@ -124,6 +124,8 @@ class XdkMemberActionsTest {
             "conditional Int read();", "(Int, Int) read();", "Int read(Int value = 1);",
             "List<Int> read();", "<T> T read(T value);", "<T extends String> T read(T value);",
             "conditional (Int, String) read();", "Map<String, List<Int>> read();",
+            "(Int | String) read();", "String? read(String? value);",
+            "immutable List<Int> read();", "List<(Int | String)> read();",
             "String read(String value = \"line\\n\\\"quoted\\\"\");",
         ],
     )
@@ -138,7 +140,7 @@ class XdkMemberActionsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["(Int | String) read();", "List<Int> read(List<Int> value = []);"])
+    @ValueSource(strings = ["List<Int> read(List<Int> value = []);"])
     fun `unrenderable types and nonliteral defaults remain refusals`(signature: String) {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
         workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
@@ -164,6 +166,37 @@ class XdkMemberActionsTest {
             assertThat(edit.changes.keys).containsExactly(uri)
             assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics).isEmpty()
             assertThat(file.readText()).isEqualTo(library)
+        }
+    }
+
+    @Test
+    fun `foreign signature types add qualified imports without shadowing existing names`() {
+        val library = "module Library { class Value {} interface Api { Value read(Value value); } }"
+        val file = directory.resolve("Library.x").toFile().apply { writeText(library) }
+        val text = "module App { package lib import Library; class Box implements lib.Api { Int library = 1; } }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement library1.Value read(library1.Value value)" }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(edit.changes.getValue(uri)).hasSize(2)
+            val changed = apply(text, edit.changes.getValue(uri))
+            assertThat(changed).contains("package library1 import Library;", "Int library = 1;")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(file.readText()).isEqualTo(library)
+        }
+    }
+
+    @Test
+    fun `bulk foreign signatures share one import while repairing construction`() {
+        directory.resolve("Library.x").toFile().writeText(
+            "module Library { class Value {} interface Api { Value read(); void write(Value value); } }",
+        )
+        val text = "module App { package lib import Library; class Box implements lib.Api {} Box make() = new Box(); }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement all required members (2)" }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed.split("package library import Library;")).hasSize(2)
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
     }
 
