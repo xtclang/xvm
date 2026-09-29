@@ -5,11 +5,9 @@ import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 
-import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
 
@@ -36,11 +34,6 @@ public final class IncompleteDeclarationStatement extends Statement {
         this.end = end;
         this.cursors = List.copyOf(cursors);
         this.formals = List.copyOf(formals);
-    }
-
-    /** Original formal parameter syntax; constraints are resolved only on disposable query copies. */
-    List<Parameter> formalParameters() {
-        return formals;
     }
 
     public Kind getKind() {
@@ -91,11 +84,9 @@ public final class IncompleteDeclarationStatement extends Statement {
         var bindings = mgr.getCursorBindings();
         cursors.forEach(site -> {
             bindings.begin(site);
-            if (bindings.isEnabled() && !errs.isAbortDesired()
-                    && getComponent() instanceof ClassStructure owner) {
-                bindings.record(site, new CursorBinding(List.of(), owner.getFormalType(), false)
-                        .withTypes(CursorScope.declarationTypes(site, errs))
-                        .withFormals(CursorScope.declarationFormals(site, errs)));
+            if (bindings.isEnabled() && !errs.isAbortDesired()) {
+                PartialQueries.declarationBinding(site, site, formals, errs)
+                        .ifPresent(binding -> bindings.record(site, binding));
             }
             errs.error(Parser.INCOMPLETE_EXPRESSION, in(getSource(), site.getEndPosition(), site.getEndPosition()));
         });
