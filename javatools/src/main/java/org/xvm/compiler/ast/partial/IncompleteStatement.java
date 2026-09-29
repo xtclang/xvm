@@ -1,4 +1,4 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.lang.reflect.Field;
 
@@ -13,6 +13,13 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.Expression;
+import org.xvm.compiler.ast.NameExpression;
+import org.xvm.compiler.ast.NamedTypeExpression;
+import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.PartialQueries;
+import org.xvm.compiler.ast.Statement;
 
 import static org.xvm.asm.ErrorListener.in;
 
@@ -212,8 +219,8 @@ public final class IncompleteStatement extends Statement {
         return syntax + " <incomplete>";
     }
 
-    protected Expression       target;
-    protected List<Expression> arguments;
+    private Expression       target;
+    private List<Expression> arguments;
 
     private final Token       operator;
     private final List<Token> separators;
