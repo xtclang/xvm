@@ -320,10 +320,13 @@ class XtcTextDocumentService(
         version: Int,
     ) {
         diagnosticRevision++
-        val changedGraph = (adapter as? XdkAdapter)?.updateDocument(uri, content).orEmpty()
+        val compiler = adapter as? XdkAdapter
+        val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
         analyseOne(uri, content, version)
         refreshScopes(
-            (changedGraph + adapter.affectedAnalysisScopes(uri)) - adapter.analysisScope(uri)
+            (changedGraph +
+                (compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri))) -
+                adapter.analysisScope(uri)
         )
     }
 
