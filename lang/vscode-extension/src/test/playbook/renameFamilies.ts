@@ -48,7 +48,16 @@ async function configurationGuards(document: vscode.TextDocument, at: vscode.Pos
         }
     });
     try {
-        await assert.rejects(() => renameWithConfiguration(delayedClient, document, at, replacement, token), /changed while converting Rename/);
+        const outcome = await eventually(async () => {
+            try {
+                const edit = await renameWithConfiguration(delayedClient, document, at, replacement, token);
+                return edit ? { edit } : undefined;
+            } catch (error) {
+                return { error };
+            }
+        }, value => value !== undefined, 'Rename proposal survives fixture watcher delivery');
+        assert.ok(outcome && 'error' in outcome, 'Conversion must refuse the intervening settings edit');
+        assert.match(String(outcome.error), /changed while converting Rename/);
     } finally {
         const restore = new vscode.WorkspaceEdit();
         restore.replace(settings.uri, new vscode.Range(settings.positionAt(0), settings.positionAt(settings.getText().length)), original);
