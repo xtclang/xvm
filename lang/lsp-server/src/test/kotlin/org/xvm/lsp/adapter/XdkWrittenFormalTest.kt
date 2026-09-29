@@ -88,6 +88,59 @@ class XdkWrittenFormalTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "<Element extends Chain<Element>> void damaged(Ele§ value) {}",
+                "class Damaged<Element extends Chain<Element>>(Ele§ value) {}",
+                "<Element extends Chain<Other>, Other extends Element> void damaged(Ele§ value) {}",
+                "<Element extends Chain<Element>> void damaged(List<Ele§> value) {}",
+            ]
+    )
+    fun `recursive written constraints preserve names without inventing types`(header: String) {
+        val marked = "module Formals { interface Chain<T> {} $header }"
+        val at = marked.indexOf('§')
+        val source = marked.replace("§", "")
+        XdkAdapter().use { adapter ->
+            val baseline = adapter.compile(uri, source)
+            val item = adapter.getCompletions(uri, 0, at).single { it.label == "Element" }
+            assertThat(item.detail).contains("extends Chain<", "(written constraint)")
+            assertThat(item.textEdit)
+                .isEqualTo(TextEdit(Range(Position(0, at - 3), Position(0, at)), "Element"))
+            val formal =
+                adapter
+                    .analyzeAtAsync(uri, Position(0, at))
+                    .join()!!
+                    .sites
+                    .single()
+                    .formals
+                    .single { it.name == "Element" }
+            assertThat(formal.constraint).isNull()
+            assertThat(formal.writtenConstraint).startsWith("Chain<")
+            assertThat(adapter.getCachedResult(uri)).isEqualTo(baseline)
+            assertThat(adapter.compile(uri, source.replaceRange(at - 3, at, "Element")).diagnostics)
+                .isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings =
+            [
+                "<Element extends Missing<Element>> void damaged(Ele§ value) {}",
+                "<Element extends Chain<Other>, Other extends Other> void damaged(Ele§ value) {}",
+                "<Element extends Chain<Element>> void damaged(Element.It§ value) {}",
+            ]
+    )
+    fun `syntax-only recursion cannot authorize unknown bounds or member lookup`(header: String) {
+        val marked = "module Formals { interface Chain<T> {} class Element {} $header }"
+        XdkAdapter().use { adapter ->
+            adapter.compile(uri, marked.replace("§", ""))
+            assertThat(adapter.getCompletions(uri, 0, marked.indexOf('§'))).isEmpty()
+        }
+    }
+
     @Test
     fun `formal qualifier uses the resolved parameterized constraint`() {
         val marked =

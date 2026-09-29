@@ -22,11 +22,12 @@ internal constructor(
         CALL,
     }
 
-    /** Written declaration plus resolved upper bound; this is not a registered type identity. */
+    /** A resolved upper bound or explicitly written recursive constraint, never a new identity. */
     data class Formal(
         val name: String,
-        val constraint: TypeId,
+        val constraint: TypeId?,
         val declaration: Range,
+        val writtenConstraint: String? = null,
     )
 
     @ConsistentCopyVisibility
