@@ -46,6 +46,28 @@ fun Driver.focusRecovery(
         }
         check(editor.text == accepted)
 
+        // A recovered argument popup must not become a second invocation with untyped words.
+        editor.text =
+            accepted.replace(
+                "pair(1, \"x\");",
+                "String text = \"x\"; Int textNumber = 1; pair(1, te);",
+            )
+        workspace.errors(document)
+        val argumentAt = editor.text.indexOf("pair(1, te)") + "pair(1, te".length
+        fun argumentCompletion() =
+            lookup(editor, argumentAt) { items ->
+                items.map { it.getLookupString() } == listOf("text")
+            }
+        val argumentInspection = PopupInspection(this, editor, ::argumentCompletion)
+        argumentCompletion()
+        interruptFocus(editor) { argumentInspection.recover() }
+        check(editor.text.contains("pair(1, te);")) {
+            "Recovering argument completion applied an edit"
+        }
+        dismissPopups()
+        editor.text = accepted
+        workspace.clean(document)
+
         val call = document.at("pair(1") + "pair(".length
 
         fun parameters() =
