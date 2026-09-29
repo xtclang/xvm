@@ -577,14 +577,18 @@ class XtcTextDocumentService(
             convert = { results ->
                 if (revision != diagnosticRevision) throw contentModified()
                 val owned = results.flatMap { it.documentUris }.toSet()
+                // A closed member can belong to an open standalone module, outside the
+                // configured graph. Preserve that module's current analysis for document pulls
+                // too, without including unrelated standalone modules in the report.
                 val all =
-                    if (workspace)
-                        results +
-                            openDocuments
-                                .filterKeys { it !in owned }
-                                .values
-                                .map { it.analysis.join() }
-                    else results
+                    results +
+                        openDocuments
+                            .filterKeys { !diagnosticReports.includes(owned, it) }
+                            .values
+                            .map { it.analysis.join() }
+                            .filter {
+                                workspace || diagnosticReports.includes(it.documentUris, uri)
+                            }
                 convert(all)
             },
             workspace = true,
