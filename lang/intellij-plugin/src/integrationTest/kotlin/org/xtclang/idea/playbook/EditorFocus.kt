@@ -137,6 +137,10 @@ internal interface NativeEditorUi {
 
     fun focusState(editor: Editor): String
 
+    fun renameState(editor: Editor): String
+
+    fun renameAvailable(editor: Editor): Boolean
+
     fun interruptFocus(): Window
 
     fun closeCompletion(editor: Editor)
