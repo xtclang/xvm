@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter.xdk
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -425,6 +426,7 @@ internal constructor(
         val uri: String,
         val kind: ProjectQueryKind,
         val range: Range? = null,
+        val requestId: UUID? = null,
     )
 
     private class ProjectRequest<T>(
@@ -835,7 +837,7 @@ internal constructor(
                 renames.clear()
                 projectQueries.clear()
                 navigationCache.set(emptyMap())
-                diagnosticCache.set(emptyMap())
+                diagnosticCache.clear()
                 overlays.clear()
                 scopes.clear()
                 completed.clear()
@@ -1332,7 +1334,10 @@ internal constructor(
         val root =
             synchronized(lifecycle) { project.buildOrder().firstOrNull()?.uri }
                 ?: return CompletableFuture.completedFuture(emptyList())
-        return projectQuery(ProjectQueryKey(root, ProjectQueryKind.DIAGNOSTICS), emptyList()) {
+        return projectQuery(
+            ProjectQueryKey(root, ProjectQueryKind.DIAGNOSTICS, requestId = UUID.randomUUID()),
+            emptyList(),
+        ) {
             it.diagnostics()
         }
     }
@@ -1870,7 +1875,7 @@ internal constructor(
     private val cursors = ConcurrentHashMap<CursorKey, CursorRequest>()
     private val renames = ConcurrentHashMap<String, RenameRequest>()
     private val projectQueries = ConcurrentHashMap<ProjectQueryKey, ProjectRequest<*>>()
-    private val diagnosticCache = AtomicReference<Map<String, List<CompilationResult>>>(emptyMap())
+    private val diagnosticCache = XdkDiagnosticIndex()
     private val navigationCache = AtomicReference<Map<String, XdkWorkspaceNavigation>>(emptyMap())
 
     /**
