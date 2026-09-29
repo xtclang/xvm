@@ -3973,9 +3973,9 @@
       "title": "pull diagnostics report full, unchanged and repaired results through the installed client",
       "manual": [],
       "values": {
-        "file": "Diagnostics.x",
-        "broken": "module Diagnostics { Int run() = missing; }",
-        "repaired": "module Diagnostics { Int run() = 1; }"
+        "file": "Navigation.x",
+        "broken": "module Navigation { Int run() = missing; }",
+        "repaired": "module Navigation { Int run() = 1; }"
       },
       "intellij": {
         "coverage": "full",
