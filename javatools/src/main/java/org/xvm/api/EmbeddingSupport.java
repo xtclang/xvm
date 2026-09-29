@@ -490,6 +490,71 @@ public class EmbeddingSupport {
     }
 
     /**
+     * A successfully resolved declaration graph, before expression validation and code generation.
+     * It contains no executable artifact. The calling worker exclusively owns these structures and
+     * may inspect TypeInfo with its listener; ordinary compilation still validates every body.
+     */
+    public record DeclarationAnalysis(FileStructure file, StatementBlock ast,
+                                      List<StatementBlock> sourceTrees) {
+        public DeclarationAnalysis {
+            requireNonNull(file, "file");
+            requireNonNull(ast, "ast");
+            sourceTrees = List.copyOf(sourceTrees);
+        }
+
+        public ConstantPool pool() {
+            return file.getConstantPool();
+        }
+    }
+
+    /**
+     * Resolve one source's declarations in a fresh attempt. Body errors are outside this operation's
+     * scope; syntax, linkage, declaration errors and cancellation prevent a result.
+     *
+     * @param source  the source to parse
+     * @param input   optional compiled dependencies
+     * @param errs    the host listener
+     * @return resolved declarations, never a compiled module
+     */
+    public Optional<DeclarationAnalysis> analyzeDeclarations(Source source, ModuleRepository input,
+                                                             @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return analyzeDeclarations(listener -> {
+            StatementBlock tree = new Parser(source, listener).parseSource();
+            return new ParsedSources(listener.hasSeriousErrors() ? null : tree, List.of(tree));
+        }, input, errs);
+    }
+
+    /**
+     * Resolve a module tree's declarations using the same source/resource overlay contract as
+     * {@link #compileModule(ModuleInfo, ModuleRepository, ErrorListener)}. Use a fresh ModuleInfo.
+     *
+     * @param sources  the module's source tree
+     * @param input    optional compiled dependencies
+     * @param errs     the host listener
+     * @return resolved declarations, empty after any declaration failure or cancellation
+     */
+    public Optional<DeclarationAnalysis> analyzeDeclarations(ModuleInfo sources, ModuleRepository input,
+                                                             @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        return analyzeDeclarations(listener -> {
+            Node root = sources.getSourceTree(listener);
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
+                    sources.getParsedSources());
+        }, input, errs);
+    }
+
+    private Optional<DeclarationAnalysis> analyzeDeclarations(Function<ErrorListener, ParsedSources> parse,
+                                                              ModuleRepository input, ErrorListener errs) {
+        CompilerAttempt attempt = runCompiler(parse, input, errs, CursorBinding.Collector.NONE,
+                CompilationGoal.DECLARATIONS);
+        EmbeddingCompiler compiler = attempt.compiler();
+        return attempt.succeeded()
+                ? Optional.of(new DeclarationAnalysis(compiler.file, compiler.ast, compiler.sourceTrees))
+                : Optional.empty();
+    }
+
+    /**
      * Facts retained by an explicit incomplete-source analysis, never a compiled module.
      *
      * The available source syntax and sites may be unvalidated. A child expression supplies a
@@ -710,13 +775,22 @@ public class EmbeddingSupport {
 
     private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
                                       ModuleRepository input, ErrorListener errs, CursorBinding.Collector cursors) {
+        return runCompiler(parse, input, errs, cursors, CompilationGoal.MODULE).compiler().result();
+    }
+
+    private enum CompilationGoal { DECLARATIONS, MODULE }
+
+    private record CompilerAttempt(EmbeddingCompiler compiler, boolean succeeded) {}
+
+    private CompilerAttempt runCompiler(Function<ErrorListener, ParsedSources> parse,
+                                        ModuleRepository input, ErrorListener errs,
+                                        CursorBinding.Collector cursors, CompilationGoal goal) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs, cursors);
+        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs, cursors, goal);
         try {
-            if (!errs.isAbortDesired()) {
-                compiler.process();
-            }
+            return new CompilerAttempt(compiler, !errs.isAbortDesired() && compiler.process() == 0
+                    && !errs.hasSeriousErrors() && !errs.isAbortDesired());
         } catch (LauncherException e) {
             // Expected aborts already have diagnostics or a cancellation request.
             if (!errs.hasSeriousErrors() && !errs.isAbortDesired()) {
@@ -726,7 +800,7 @@ public class EmbeddingSupport {
             // An earlier source error must not hide an unexpected compiler failure.
             errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
         }
-        return compiler.result();
+        return new CompilerAttempt(compiler, false);
     }
 
     /**
@@ -775,6 +849,7 @@ public class EmbeddingSupport {
         private final Function<ErrorListener, ParsedSources> parse;
         private final InvocationBinding.Collector bindings = new InvocationBinding.Collector();
         private final CursorBinding.Collector cursors;
+        private final CompilationGoal goal;
 
         private final ModuleRepository     inRepo;
         private final ModuleRepository     coreRepo;
@@ -816,11 +891,12 @@ public class EmbeddingSupport {
 
         protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
                                     ModuleRepository input, ModuleRepository core, ErrorListener errs,
-                                    CursorBinding.Collector cursors) {
+                                    CursorBinding.Collector cursors, CompilationGoal goal) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.parse    = parse;
             this.cursors  = cursors;
+            this.goal     = goal;
             this.inRepo   = input;
             this.coreRepo = core;
         }
@@ -877,6 +953,11 @@ public class EmbeddingSupport {
             } catch (IOException e) {
                 log(ERROR, e, "I/O exception storing module: {}", struct.getModule().getName());
                 return 1;
+            }
+
+            if (goal == CompilationGoal.DECLARATIONS) {
+                resolveDeclarations(List.of(compiler), repoLib);
+                return hasSeriousErrors() || isAbortDesired() ? 1 : 0;
             }
 
             int result = super.compile(List.of(compiler), repoLib);
