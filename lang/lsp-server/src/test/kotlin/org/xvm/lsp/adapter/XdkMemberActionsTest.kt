@@ -97,9 +97,12 @@ class XdkMemberActionsTest {
     }
 
     @Test
-    fun `existing call rebinding requires broader proof and is withheld`() {
+    fun `existing call intentionally selects the generated override`() {
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} Int use(Box box) = box.read(); }"
-        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
+        }
     }
 
     @Test
@@ -117,9 +120,53 @@ class XdkMemberActionsTest {
     }
 
     @Test
-    fun `descendant dispatch changes require broader proof and are withheld`() {
+    fun `descendants inherit the generated override in compiler dispatch order`() {
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} class Child extends Box {} }"
-        workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `named arguments and descendant overrides preserve overload and property bindings`() {
+        val text = """
+            module App {
+                class Base {
+                    Int read(Int value) = value;
+                    String read(String value) = value;
+                    String label = "keep";
+                }
+                class Box extends Base {}
+                class Child extends Box { @Override Int read(Int value) = super(value); }
+                Int use(Box box) = box.read(value = 1);
+                Int child(Child child) = child.read(value = 2);
+                String other(Box box) = box.read(value = "text") + box.label;
+            }
+        """.trimIndent()
+        workspace(text) { adapter, uri ->
+            val actions = actions(adapter, uri, text).filter { it.title.startsWith("Override ") }
+            assertThat(actions).hasSize(2)
+            actions.forEach { action ->
+                val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+                assertThat(changed).contains("child.read(value = 2)", "box.read(value = \"text\") + box.label")
+                assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `closed dependent module follows the new override without receiving edits`() {
+        val consumer = "module Consumer { package app import App; class Child extends app.Box {} Int use(Child child) = child.read(); }"
+        val file = directory.resolve("Consumer.x").toFile().apply { writeText(consumer) }
+        val text = "module App { class Base { Int read() = 1; } class Box extends Base {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override ") }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics).isEmpty()
+            assertThat(file.readText()).isEqualTo(consumer)
+        }
     }
 
     @Test
