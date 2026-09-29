@@ -30,6 +30,7 @@ import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement;
 import org.xvm.compiler.ast.partial.IncompleteExpression;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.tool.ResourceDir;
 
@@ -5661,10 +5662,7 @@ public class Parser {
 
     /** Query syntax ownership rather than caching cursor state on ordinary AST nodes. */
     private boolean containsCursorHole(AstNode node) {
-        return f_cursor != NO_CURSOR && node != null
-                && (node instanceof IncompleteStatement site && site.getEndPosition() == f_cursor
-                        || StreamSupport.stream(node.children().spliterator(), false)
-                                .anyMatch(this::containsCursorHole));
+        return f_cursor != NO_CURSOR && PartialSyntax.containsAt(node, f_cursor);
     }
 
     private IncompleteSyntax incomplete(Expression target, Token operator,

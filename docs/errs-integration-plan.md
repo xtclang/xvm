@@ -1128,8 +1128,10 @@ an LSP dependency inside the compiler.
 
 `PartialQueries` deliberately remains in the parent `ast` package. Java subpackages do not share
 package access, and protected access does not let the moved nodes validate arbitrary receiver or
-argument expressions. Its three public static operations form the compiler-internal boundary;
-ordinary inference helpers, construction preparation and type representation remain non-public.
+argument expressions. At P4 its three public static operations formed the compiler-internal
+boundary; AST5 below moves the read-only operation into `PartialSyntax`, leaving `inspect` and
+`declarationBinding`. Ordinary inference helpers, construction preparation and type representation
+remain non-public.
 Moving this service too would require additional public bridges back to the same package.
 
 The four nodes' own child fields are private. Explicit registration grants access only for AST
@@ -1174,7 +1176,7 @@ A second semantic library, Kotlin inside javatools, or a generic public AST-inte
 unnecessary. `partial` names incomplete syntax; complete-program capture and invocation facts do
 not belong there simply because the LSP consumes them.
 
-- [ ] **AST5 — Extract shared partial-syntax queries into `ast.partial` first.** The class-level
+- [x] **AST5 — Extract shared partial-syntax queries into `ast.partial`.** The class-level
   decision to retain `PartialArgument` hid a useful method-level boundary: its `of`/`cursor` selection
   uses only public syntax APIs; its trial replacement uses protected `setParent`/`introduceParentage`.
   Group the read-only argument-slot selection, `PartialQueries.argumentCall`,
@@ -1187,9 +1189,10 @@ not belong there simply because the LSP consumes them.
   parenting public. Prefer one selection result used directly by the resolver over duplicate wrapper
   records. Preserve the distinct queries: any partial descendant, a descendant at an exact cursor,
   and a direct argument slot that must not cross lambda/ordinary call/construction boundaries.
-  Cover labeled/grouped/compound arguments, nested call boundaries, array dimensions, exact cursor
-  offsets, original/clone ownership and unchanged speculative bindings. This is a worthwhile small
-  extraction; it does not justify moving validation or inference helpers wholesale.
+  Nine dedicated regressions cover labeled/grouped/compound arguments, nested call boundaries,
+  array dimensions, exact cursor offsets, original/clone ownership and unchanged speculative
+  source slots. The shared result is `PartialSyntax.ArgumentCursor`; no wrapper record, retained
+  state or additional AST parenting API is introduced. Combined validation is recorded below.
 
 - [ ] **AST1 — Move cursor-scope collection out of `Context`.** `Context.cursorBinding()` has only
   three callers: `PartialQueries`, `PartialCallResolver` and `PartialConstructionResolver`. Move its
@@ -1240,7 +1243,49 @@ The following stay in their current owners:
   these fix ordinary compilation and are independent compiler/error-listener extraction PRs.
 - Parser cursor selection, delimiter recovery and speculative rollback: they share the token stream,
   grammar and listener branches. Moving them to an LSP parser would duplicate language rules. A pure
-  syntax helper may be extracted when a concrete group needs neither parser state nor public internals.
+  syntax helper is appropriate when a concrete group needs neither parser state nor private internals;
+  AST5 extracts the cursor-containment query on that basis.
+
+### Shared partial-syntax implementation (AST5)
+
+`ast.partial.PartialSyntax` now owns five read-only entry points: `contains`, `containsAt`,
+`argument`, `valueCursor` and `argumentCall`. Its immutable `ArgumentCursor` result identifies
+an existing site and its written slot; it is not a detached snapshot of mutable compiler syntax.
+Parser retains its explicit-cursor, recovery, cancellation and speculation policy. Its containment
+check delegates to the exact-position search, while property initialization asks whether any
+partial descendant exists. Both searches can cross call/scope boundaries.
+
+Argument selection deliberately has a different traversal boundary: ordinary calls, construction
+and lambdas own their own arguments/scopes; array dimensions are excluded from positional call
+slots. The original selection behavior is preserved. An incomplete call nested in a value belongs
+to that inner call, not its enclosing argument. Labels, groups and compound values retain the
+selected inner cursor and original slot.
+
+`PartialArgument` remains package-private in `ast`, now as a stateless trial-construction utility.
+It consumes the shared selection directly, clones the replaced syntax, and uses existing protected
+parenting operations to attach a speculative expression to its lexical scope without installing it
+in the source argument list. Later arguments and original source bindings remain unchanged.
+`PartialQueries` now exposes only semantic inspection and declaration binding. Its former
+`argumentCall` method is removed from this unpublished branch API; `IncompleteStatement` retains
+its existing accessor and delegates inside its own package. No classic AST visibility is widened.
+
+Validation on 2026-09-29 passes **258 tests**, with zero failures, errors or skips:
+
+- **37 Java tests**: nine new `PartialSyntaxTest` cases, all 24 `ParserRecoveryTest` cases and
+  four binding-identity publication cases. The parser suite includes cancellation, budgets,
+  speculation rollback and ordinary parsing without partial markers.
+- **221 LSP tests**: partial analysis; argument completion/context/property initializers; missing
+  delimiters; incomplete method/function/constructor calls; specialized and anonymous constructors.
+- Root and lang `spotlessCheck` pass; Java and Kotlin main/test sources compile. Test tasks used
+  `--rerun --no-build-cache`, and XML counts confirm zero skips. The initial combined command
+  completed the LSP suite but failed Java test compilation because one new assertion called an
+  expression-only method on a statement. The assertion now checks the containing expression;
+  the corrected Java suites and formatting checks pass in the follow-up run. Production source
+  was unchanged between those two runs. No native IDE execution was requested or performed.
+
+This checkpoint belongs with P1–P4 when extracting the partial-query/compiler-recovery PR. It
+changes neither advertised capabilities nor playbook scenarios. Native editor reruns are unnecessary
+for this extraction; the selected backend regressions exercise its behavior directly.
 
 ## Composition audit follow-up
 
