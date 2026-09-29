@@ -7,6 +7,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
+import com.intellij.util.concurrency.SequentialTaskExecutor
 import com.redhat.devtools.lsp4ij.LSPFileSupport
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import java.util.concurrent.CompletableFuture
@@ -31,6 +32,12 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
  */
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
+    // Rename/file-operation listeners can hold the IDE write lock while awaiting an LSP reply.
+    // Never acquire a read lock on the transport thread. Use the shared application pool and
+    // preserve notification order without creating a dedicated thread per connection.
+    private val semanticUpdates =
+        SequentialTaskExecutor.createSequentialApplicationPoolExecutor("XTC semantic updates")
+
     // LSP4IJ already subscribes/disposes listeners for both stores, but its default
     // createSettings reads only the global store. Project settings take precedence here.
     override fun createSettings(): Any? =
@@ -42,18 +49,30 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
         )
 
     override fun publishDiagnostics(params: PublishDiagnosticsParams) {
-        if (isDisposed || project.isDisposed) return
-        val file = clientFeatures.findFileByUri(params.uri)
-        file?.let(::invalidateSemanticFacts)
-        super.publishDiagnostics(params)
+        semanticUpdate {
+            clientFeatures.findFileByUri(params.uri)?.let(::invalidateSemanticFacts)
+            super.publishDiagnostics(params)
+        }
+            .exceptionally { failure ->
+                if (!isDisposed && !project.isDisposed)
+                    logger.warn("Failed to publish XTC diagnostics", failure)
+                null
+            }
     }
 
-    override fun refreshDiagnostics(): CompletableFuture<Void> {
-        if (!isDisposed && !project.isDisposed) {
-            FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
-        }
-        return super.refreshDiagnostics()
+    override fun refreshDiagnostics(): CompletableFuture<Void> = semanticUpdate {
+        FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
     }
+        .thenCompose {
+            if (isDisposed || project.isDisposed) CompletableFuture.completedFuture(null)
+            else super.refreshDiagnostics()
+        }
+
+    private fun semanticUpdate(update: () -> Unit): CompletableFuture<Void> =
+        CompletableFuture.runAsync(
+            { if (!isDisposed && !project.isDisposed) update() },
+            semanticUpdates,
+        )
 
     private fun invalidateSemanticFacts(file: VirtualFile) {
         ReadAction.runBlocking<RuntimeException> {
