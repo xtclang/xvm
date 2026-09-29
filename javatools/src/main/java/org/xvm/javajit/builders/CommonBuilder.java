@@ -567,7 +567,7 @@ public class CommonBuilder
 
         if (isInterface && isSpecialized) {
             // make the specialized interface to extend the canonical interface
-            interfaces.add(ensureClassDesc(classStruct.getCanonicalType()));
+            interfaces.add(ensureClassDesc(classStruct.getNormalizedType()));
         }
 
         for (Contribution contrib : typeInfo.getContributionList()) {

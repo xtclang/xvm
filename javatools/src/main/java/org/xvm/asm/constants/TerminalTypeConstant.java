@@ -432,6 +432,74 @@ public class TerminalTypeConstant
                 : constId;
     }
 
+    @Override
+    public boolean isCanonicalType() {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat()) {
+        case Property:
+        case Module:
+        case Package:
+        case Class:
+            // note: this answer does not imply that getCanonicalType() would return "this"
+            return true;
+
+        case Typedef:
+            return ((TypedefConstant) constant).getReferredToType().isCanonicalType();
+
+        case IsConst:
+        case IsEnum:
+        case IsModule:
+        case IsPackage:
+        case IsClass:
+        case NativeClass:
+        case TypeParameter:
+        case FormalTypeChild:
+        case DynamicFormal:
+        case ThisClass:
+        case ParentClass:
+        case ChildClass:
+            // TODO GG are these even possible here?
+        case UnresolvedName:
+        default:
+            throw new IllegalStateException("unexpected defining constant: " + constant);
+        }
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        Constant constant = getDefiningConstant();
+        switch (constant.getFormat()) {
+        case Property:
+        case Module:
+        case Package:
+            return this;
+
+        case Class:
+            ClassStructure clz = (ClassStructure) ((IdentityConstant) constant).getComponent();
+            return clz.isParameterized() ? new TypeCanonicalizer(this).canonicalize(this) : this;
+
+        case Typedef:
+            return ((TypedefConstant) constant).getReferredToType().getCanonicalType();
+
+        case IsConst:
+        case IsEnum:
+        case IsModule:
+        case IsPackage:
+        case IsClass:
+        case NativeClass:
+        case TypeParameter:
+        case FormalTypeChild:
+        case DynamicFormal:
+        case ThisClass:
+        case ParentClass:
+        case ChildClass:
+            // TODO
+        case UnresolvedName:
+        default:
+            throw new IllegalStateException("unexpected defining constant: " + constant);
+        }
+    }
+
     /**
      * @return the underlying constant, resolving it if it is still unresolved and can be resolved
      *         at this point

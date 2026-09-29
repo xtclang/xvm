@@ -67,7 +67,7 @@ public abstract class AbstractDependantTypeConstant
 
     @Override
     public boolean isShared(ConstantPool poolOther) {
-        return m_typeParent.isShared(poolOther);
+        return getParentType().isShared(poolOther);
     }
 
     @Override
@@ -107,7 +107,7 @@ public abstract class AbstractDependantTypeConstant
 
     @Override
     public int getTypeDepth() {
-        return 1 + m_typeParent.getTypeDepth();
+        return 1 + getParentType().getTypeDepth();
     }
 
     @Override
@@ -131,8 +131,22 @@ public abstract class AbstractDependantTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        return getParentType().isCanonicalType();
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        TypeConstant typeOriginal = getParentType();
+        TypeConstant typeResolved = typeOriginal.getCanonicalType();
+        return typeOriginal == typeResolved
+                ? this
+                : cloneSingle(getConstantPool(), typeResolved);
+    }
+
+    @Override
     public TypeConstant resolveTypedefs() {
-        TypeConstant typeOriginal = m_typeParent;
+        TypeConstant typeOriginal = getParentType();
         TypeConstant typeResolved = typeOriginal.resolveTypedefs();
         return typeOriginal == typeResolved
                 ? this
@@ -141,7 +155,7 @@ public abstract class AbstractDependantTypeConstant
 
     @Override
     public TypeConstant resolveGenerics(ConstantPool pool, GenericTypeResolver resolver) {
-        TypeConstant typeOriginal = m_typeParent;
+        TypeConstant typeOriginal = getParentType();
         TypeConstant typeResolved = typeOriginal.resolveGenerics(pool, resolver);
         return typeOriginal == typeResolved
                 ? this

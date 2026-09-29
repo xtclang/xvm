@@ -511,7 +511,7 @@ public abstract class OpCallable extends Op {
             typeTarget = structChild.isInnerChild()
                     ? pool.ensureInnerChildTypeConstant(typeParent,
                         (ClassConstant) structChild.getIdentityConstant())
-                    : structChild.getCanonicalType();
+                    : structChild.getNormalizedType();
         } else {
             typeTarget = typeChild;
         }
@@ -662,7 +662,7 @@ public abstract class OpCallable extends Op {
         ClassStructure  structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
         TypeConstant    typeChild   = structChild.isVirtualChild()
                 ? pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName())
-                : structChild.getCanonicalType();
+                : structChild.getNormalizedType();
 
         bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeChild);
     }

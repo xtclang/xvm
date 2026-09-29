@@ -127,6 +127,20 @@ public class AnnotatedTypeConstant
         return m_annotation;
     }
 
+    @Override
+    public boolean isCanonicalType() {
+        return isSingleUnderlyingClass(true)
+                ? TypeCanonicalizer.isCanonical(this)
+                : super.isCanonicalType();
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        return isSingleUnderlyingClass(true)
+                ? new TypeCanonicalizer(this).canonicalize(this)
+                : super.getCanonicalType();
+    }
+
     /**
      * Return the annotation type with any type parameters resolved that overlap with the
      * underlying TypeConstant.
@@ -143,7 +157,7 @@ public class AnnotatedTypeConstant
 
         ClassStructure anno = (ClassStructure) getAnnotationClass().getComponent();
         if (!anno.isParameterizedDeep()) {
-            return anno.getCanonicalType();
+            return anno.getNormalizedType();
         }
 
         // here we assume that the type parameters for the annotations are structurally and

@@ -182,6 +182,16 @@ public class ParameterizedTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        return TypeCanonicalizer.isCanonical(this);
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        return new TypeCanonicalizer(this).canonicalize(this);
+    }
+
+    @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
         switch (constFormal.getFormat()) {
         case Property:

@@ -768,8 +768,8 @@ public class ModuleStructure
 
     @Override
     protected void markModified() {
-        super.markModified();
         m_abDigest = null;
+        super.markModified();
     }
 
     // ----- XvmStructure methods ------------------------------------------------------------------
