@@ -17,6 +17,23 @@ import kotlin.time.Duration.Companion.seconds
  * diagnostic with an empty server publication: LSP4IJ drops publications for nonexistent files.
  */
 class ClientTrace(private val driver: Driver) {
+    /** Preserve native requests and replies before failure cleanup disposes the IDE console. */
+    fun capture(path: Path) =
+        with(driver) {
+            val printed =
+                withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                    utility(TraceEditors::class).getInstance().getAllEditors().joinToString("\n") {
+                        it.getDocument().getText()
+                    }
+                }
+            val protocol = ClientProtocol(driver)
+            val queued =
+                protocol.server().getTraces().joinToString("\n") {
+                    protocol.copy(it.message()).toString()
+                }
+            Files.writeString(path, "$printed\n$queued\n")
+        }
+
     fun notifications(
         method: String,
         received: Boolean = true,
