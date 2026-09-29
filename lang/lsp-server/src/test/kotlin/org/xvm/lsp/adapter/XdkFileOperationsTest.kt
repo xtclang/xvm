@@ -76,13 +76,20 @@ class XdkFileOperationsTest {
 
     @Test
     fun `moving a module container without changing names preserves the discovered graph`() {
-        write("old/App.x", "module App { Box make() = new Box(); }")
+        write(
+            "old/App.x",
+            "module App { Box make() = new Box(); static String text() = $./data.txt; }",
+        )
         write("old/App/Box.x", "class Box {}")
+        write("old/data.txt", "resource survives the proposed move")
         session { adapter ->
             val moves = mapOf(uri("old") to uri("moved"))
             val edit = requireNotNull(adapter.renameFilesAsync(moves).get(30, SECONDS))
             assertThat(edit.changes).isEmpty()
+            assertThat(directory.resolve("moved")).doesNotExist()
             apply(edit, moves)
+            assertThat(Files.readString(directory.resolve("moved/data.txt")))
+                .isEqualTo("resource survives the proposed move")
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
         }
