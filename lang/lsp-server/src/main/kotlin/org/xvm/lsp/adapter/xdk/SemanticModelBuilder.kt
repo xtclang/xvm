@@ -1331,6 +1331,10 @@ private class SemanticModelBuilder(
                 declarationSource = location?.sourceName,
                 modifiers = modifiers(target),
                 dependency = dependency?.key,
+                documentation =
+                    (target as? IdentityConstant)?.component?.documentation?.trim()?.takeIf {
+                        it.isNotEmpty()
+                    },
             )
         return symbol
     }
