@@ -27,8 +27,10 @@ Registered child fields support traversal across the package boundary without pu
 module-opening flags. See the [implementation and validation map](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
 and the [broader separation inventory](#broader-ast-placement-inventory). P1–P4 validation passes 107 Java
 and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST5 adds shared read-only
-syntax queries in `partial` and passes another focused 258-test batch. AST1–AST4 record further
-follow-ups; moving every compiler fix into a tooling package would misrepresent their ownership.
+syntax queries in `partial` and passes another focused 258-test batch. AST1 and AST3 move scope
+collection and capture projection into their existing helpers; their combined 200-test batch and
+root/lang Spotless checks pass. AST2 and AST4 remain conditional follow-ups; moving every compiler
+fix into a tooling package would misrepresent its ownership.
 
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
 startup/cancellation race. Both have isolated fixes and process regressions; see
@@ -1645,9 +1647,9 @@ the placement decision covers the whole file while future PRs still separate unr
 | Files | Placement and further separation decision |
 | --- | --- |
 | `partial.IncompleteStatement`, `partial.IncompleteExpression`, `partial.IncompleteDeclarationStatement`, `partial.IncompleteTypeCompositionStatement` | Incomplete syntax, original ranges, child ownership, failure diagnostics and non-emission. Moved. Their own child fields are private; final header lists still clone by fresh construction. |
-| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the semantic boundary is public; helpers retain package access to validation, inference and type representation. AST1/AST2 can consolidate semantic queries here; AST5 has extracted their shared read-only syntax operations into `partial`. |
-| `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moves the remaining anonymous-property projection into its current owner; AST4 investigates a future common lifetime. |
-| `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. Extract cursor-specific scope collection and candidate-result preparation where useful (AST1/AST2); preserve real compiler phase hooks. |
+| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the semantic boundary is public; helpers retain package access to validation, inference and type representation. AST1 moved scope collection here; AST2 remains conditional. AST5 extracted shared read-only syntax operations into `partial`. |
+| `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moved anonymous-property projection into its current owner; AST4 investigates a future common lifetime. |
+| `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. AST1 removed cursor-specific scope collection from `Context`; candidate-result preparation remains conditional (AST2). Preserve real compiler phase hooks. |
 | `InvocationExpression`, `LambdaExpression`, `NewExpression` | Passive syntax/selected-method access and capture/call publication at the point the compiler establishes the facts. Required hooks remain; no additional query cache. Ordinary constructor preparation is shared by real validation and probes, not duplicated. |
 | `MethodDeclarationStatement`, `PropertyDeclarationStatement`, `TypeCompositionStatement` | Declaration tokens, parameter association, collector propagation and source-owned initializer/header staging. These changes require the actual declaration and stage; small passive getters remain appropriate. |
 | `Parameter`, `NameResolver`, `NamedTypeExpression` | Parameters and qualified source segments retain actual compiler bindings; `getNameBindings()` is also used by compiler-side visibility checks, not just Kotlin. External reconstruction would expose private resolver state or redo lookup. AST4 audits collector alternatives before changing lifetime. |
@@ -1678,6 +1680,15 @@ This adds no node field, cache, clone override or public mutation API. Nine dedi
 cover selection boundaries and source/trial/clone ownership. The AST5 batch passes 37 Java and
 221 LSP tests, with zero failures/errors/skips, plus root/lang Spotless. See the
 [implementation and validation record](errs-integration-plan.md#shared-partial-syntax-implementation-ast5).
+
+**AST1/AST3 helper follow-ups:** `CursorScope.capture(Context)` now owns variable snapshot
+collection for all three partial-query consumers; protected compiler access is unchanged.
+`AnonymousClassBindings.propertyOrigins(Component)` now builds the immutable synthetic-property
+map. `NewExpression` retains its validated/component/owner guards, so clones cannot expose the
+original expression's captures. These moves introduce no fields, caches or clone rules and do not
+change editor capabilities. The combined batch passes 4 Java and 196 LSP tests with zero
+failures/errors/skips, plus root/lang Spotless. See the
+[commit map and receipt](errs-integration-plan.md#scope-and-capture-helper-follow-ups-ast1-and-ast3).
 
 **Constructor/declaration recovery follow-up (2026-09-25):**
 
@@ -2038,7 +2049,9 @@ capture analysis happens after parsing. A final `Lazy.Bound` on the node would b
 shallow clone and bound to the wrong owner; this representation avoids that problem. The temporary
 capture-analysis context is discarded before consumers see the final tree. `NewExpression` exposes
 these bindings and a copied map from generated capture properties to their existing enclosing
-registers. The helper checks its owning expression, so cloning cannot expose the original's map.
+registers. AST3 places that projection in `AnonymousClassBindings`; the node retains the checks
+for validation, the anonymous component and the helper's expression owner, so cloning cannot
+expose the original's map.
 The node's existing capture maps remain compiler implementation data; no second name resolver or
 register allocator is added for the editor.
 
