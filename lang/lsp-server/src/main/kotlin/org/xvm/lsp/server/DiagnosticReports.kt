@@ -1,5 +1,7 @@
 package org.xvm.lsp.server
 
+import java.io.File
+import java.net.URI
 import java.util.UUID
 import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.FullDocumentDiagnosticReport
@@ -22,9 +24,12 @@ internal class DiagnosticReports {
     private val entries = mutableMapOf<String, Entry>()
 
     fun record(uri: String, diagnostics: List<Diagnostic>) {
-        if (entries[uri]?.diagnostics != diagnostics) {
-            entries[uri] = Entry(UUID.randomUUID().toString(), diagnostics.toList())
+        val key = identity(uri)
+        val items = diagnostics.map {
+            it.copy(location = it.location.copy(uri = identity(it.location.uri)))
         }
+        if (entries[key]?.diagnostics != items)
+            entries[key] = Entry(UUID.randomUUID().toString(), items)
     }
 
     fun record(results: List<CompilationResult>): Set<String> {
@@ -47,17 +52,19 @@ internal class DiagnosticReports {
 
     fun document(uri: String, previous: String?, related: Set<String>): DocumentDiagnosticReport {
         recordIfAbsent(uri)
-        val entry = entries.getValue(uri)
+        val entry = entries.getValue(identity(uri))
         val others =
             related
                 .filter { it != uri }
                 .associateWith { other ->
                     Either.forLeft<FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport>(
                         FullDocumentDiagnosticReport(
-                                entries.getValue(other).diagnostics.map { it.toLsp(other) }
+                                entries.getValue(identity(other)).diagnostics.map {
+                                    it.present(other)
+                                }
                             )
                             .apply {
-                                resultId = entries.getValue(other).id
+                                resultId = entries.getValue(identity(other)).id
                             }
                     )
                 }
@@ -70,10 +77,11 @@ internal class DiagnosticReports {
             )
         } else {
             DocumentDiagnosticReport(
-                RelatedFullDocumentDiagnosticReport(entry.diagnostics.map { it.toLsp(uri) }).apply {
-                    resultId = entry.id
-                    relatedDocuments = others
-                }
+                RelatedFullDocumentDiagnosticReport(entry.diagnostics.map { it.present(uri) })
+                    .apply {
+                        resultId = entry.id
+                        relatedDocuments = others
+                    }
             )
         }
     }
@@ -85,35 +93,58 @@ internal class DiagnosticReports {
     ): WorkspaceDiagnosticReport {
         // A removed root/file must explicitly clear the client's previous report. Do not retain
         // tombstones indefinitely: an unknown old ID simply receives another empty full report.
-        (previous.keys - current).forEach { record(it, emptyList()) }
+        val currentUris = current.associateBy(::identity)
+        val oldUris = previous.keys.associateBy(::identity)
+        val previousIds = previous.mapKeys { identity(it.key) }
+        val documentVersions = versions.mapKeys { identity(it.key) }
+        (oldUris - currentUris.keys).values.forEach { record(it, emptyList()) }
         val result =
             WorkspaceDiagnosticReport(
-                (current + previous.keys).sorted().map { uri ->
+                (oldUris + currentUris).values.sorted().map { uri ->
                     recordIfAbsent(uri)
-                    val entry = entries.getValue(uri)
-                    if (previous[uri] == entry.id) {
+                    val entry = entries.getValue(identity(uri))
+                    if (previousIds[identity(uri)] == entry.id) {
                         WorkspaceDocumentDiagnosticReport(
-                            WorkspaceUnchangedDocumentDiagnosticReport(entry.id, uri, versions[uri])
+                            WorkspaceUnchangedDocumentDiagnosticReport(
+                                entry.id,
+                                uri,
+                                documentVersions[identity(uri)],
+                            )
                         )
                     } else {
                         WorkspaceDocumentDiagnosticReport(
                             WorkspaceFullDocumentDiagnosticReport(
-                                    entry.diagnostics.map { it.toLsp(uri) },
+                                    entry.diagnostics.map { it.present(uri) },
                                     uri,
-                                    versions[uri],
+                                    documentVersions[identity(uri)],
                                 )
                                 .apply { resultId = entry.id }
                         )
                     }
                 }
             )
-        entries.keys.retainAll(current)
+        entries.keys.retainAll(currentUris.keys)
         return result
     }
 
     private fun recordIfAbsent(uri: String) {
-        if (uri !in entries) record(uri, emptyList())
+        if (identity(uri) !in entries) record(uri, emptyList())
     }
+
+    fun includes(uris: Set<String>, uri: String): Boolean = uris.any {
+        identity(it) == identity(uri)
+    }
+
+    private fun Diagnostic.present(uri: String) =
+        (if (location.uri == identity(uri)) copy(location = location.copy(uri = uri)) else this)
+            .toLsp(uri)
+
+    private fun identity(uri: String): String = runCatching {
+        val parsed = URI(uri).normalize()
+        if (parsed.scheme == "file") File(parsed).canonicalFile.toURI().toString()
+        else parsed.toString()
+    }
+        .getOrDefault(uri)
 
     fun clear() = entries.clear()
 }
