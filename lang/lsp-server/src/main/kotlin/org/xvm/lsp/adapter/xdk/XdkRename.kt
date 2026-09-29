@@ -127,15 +127,17 @@ internal object XdkRename {
         return actualDispatch.containsAll(knownDispatch)
     }
 
-    /** Allow one written implementation and its inherited dispatch effects; preserve every other binding. */
-    fun preservesMemberAddition(
+    /** Allow exactly the selected implementations and their inherited effects; preserve other bindings. */
+    fun preservesMemberAdditions(
         before: CompilerRenameFacts,
         after: CompilerRenameFacts,
         plan: Plan,
-        candidate: XdkMemberActions.Candidate,
+        candidates: List<XdkMemberActions.Candidate>,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val source = candidate.owner.sourceName ?: return false
+        val owner = candidates.firstOrNull()?.owner ?: return false
+        if (candidates.any { it.owner != owner }) return false
+        val source = owner.sourceName ?: return false
         val insertion = plan.edits[source]?.singleOrNull() ?: return false
         if (plan.edits.size != 1 || insertion.start != insertion.end) return false
         val oldDispatch =
@@ -154,30 +156,35 @@ internal object XdkRename {
             val end = offset(text, location.range.end)?.let { plan.map(path, it) } ?: return false
             return declaration.site == Site(path, start, end)
         }
-        val removed =
-            (oldDispatch - newDispatch).singleOrNull { chain ->
-                matches(chain.owner, candidate.owner) && chain.members.any { matches(it, candidate.contract) }
-            } ?: return false
-        val added = (newDispatch - oldDispatch).singleOrNull { it.owner == removed.owner } ?: return false
-        val member = (added.members - removed.members.toSet()).singleOrNull() as? Target.Declaration ?: return false
-        if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
-            member.site.start < insertion.start || member.site.end > insertion.start + insertion.text.length
-        ) {
-            return false
-        }
-        // TypeInfo supplies the descendant chains. Removing only the new written method must
-        // reconstruct the entire old dispatch graph, in order, including properties and overloads.
         val changed = newDispatch - oldDispatch
+        val additions = candidates.map { candidate ->
+            val removed = (oldDispatch - newDispatch).singleOrNull { chain ->
+                matches(chain.owner, owner) && chain.members.any { matches(it, candidate.contract) }
+            } ?: return false
+            val added = changed.singleOrNull { chain ->
+                chain.owner == removed.owner && chain.members.containsAll(removed.members) &&
+                    (chain.members - removed.members.toSet()).size == 1
+            } ?: return false
+            val member = (added.members - removed.members.toSet()).single() as? Target.Declaration ?: return false
+            if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
+                member.site.start < insertion.start || member.site.end > insertion.start + insertion.text.length
+            ) {
+                return false
+            }
+            member to removed
+        }.toMap()
+        if (additions.size != candidates.size) return false
+        // Removing exactly these new methods must reconstruct every original chain in order,
+        // including descendants, overloads and properties. Each method belongs to its own family.
         if (changed.any { chain ->
-                !chain.supported || chain.members.count { it == member } != 1 ||
-                    chain.members.none { matches(it, candidate.contract) } ||
-                    chain.copy(members = chain.members.filterNot { it == member }) !in oldDispatch
+                !chain.supported || chain.members.count { it in additions } != 1 ||
+                    chain.copy(members = chain.members.filterNot(additions::containsKey)) !in oldDispatch
             }
         ) {
             return false
         }
         if (newDispatch.mapTo(linkedSetOf()) { chain ->
-                if (chain in changed) chain.copy(members = chain.members.filterNot { it == member }) else chain
+                if (chain in changed) chain.copy(members = chain.members.filterNot(additions::containsKey)) else chain
             } != oldDispatch
         ) {
             return false
@@ -201,12 +208,13 @@ internal object XdkRename {
                 else -> null
             }
 
-        fun selectedRebinding(
-            old: Target,
-            new: Target,
-        ): Boolean =
-            declarationSite(new, newDispatch) == member.site && declarationSite(old, oldDispatch) != null &&
-                removed.members.any { declarationSite(it, oldDispatch) == declarationSite(old, oldDispatch) }
+        fun selectedRebinding(old: Target, new: Target): Boolean {
+            val oldSite = declarationSite(old, oldDispatch) ?: return false
+            val newSite = declarationSite(new, newDispatch) ?: return false
+            return additions.any { (member, original) ->
+                member.site == newSite && original.members.any { declarationSite(it, oldDispatch) == oldSite }
+            }
+        }
 
         return expected.all { (site, target) ->
             val replacement = actual[site] ?: return@all false
