@@ -8,6 +8,8 @@ import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -27,6 +29,10 @@ class XtcWorkspaceService(
     companion object {
         private val logger = LoggerFactory.getLogger(XtcWorkspaceService::class.java)
     }
+
+    override fun diagnostic(
+        params: WorkspaceDiagnosticParams
+    ): CompletableFuture<WorkspaceDiagnosticReport> = server.workspaceDiagnostics(params)
 
     private fun <R> supplyAsync(
         method: String,
