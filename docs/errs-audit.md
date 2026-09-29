@@ -9,8 +9,9 @@ proof. The existing bundled-import regression exposes this mismatch.
 
 **Partial AST packaging:** the all-eight-class subpackage move would cross construction preparation,
 protected expression validation, type-syntax fields and reflective child traversal. The exact
-blockers and service-boundary prerequisite are in the integration plan; no broad visibility changes
-or relocation have been made. Real dispatch fixtures cover Explicit/Default, Delegating and Union;
+blockers and the concrete four-node migration design are in the integration plan. Keep semantic
+helpers package-private beside ordinary validation; the plan avoids a wholesale traversal rewrite.
+No broad visibility changes or relocation have been made. Real dispatch fixtures cover Explicit/Default, Delegating and Union;
 the generated/native/conditional route inventory is still incomplete.
 
 **Orphan server JVMs:** [the process-lifecycle audit](errs-lsp-process-lifecycle.md) documents
