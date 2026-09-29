@@ -440,33 +440,45 @@ VS Code receipts above.
 
 ### L12, project settings and L62–L68 hardening batch (2026-09-29)
 
-Implementation checkpoints are committed separately; the combined validation receipt follows
-when the batch completes. Earlier receipts do not validate these new changes.
+Implementation checkpoints are committed separately. The combined receipt below validates this
+bounded batch; broader family gaps and the real-platform blockers remain open.
 
 - **L12:** reproduced the X76 overlap with an anonymous `new Packet<String>(...) { ... }`.
   Its generated class name borrowed the entire parameterized type span and was copied as a
   source declaration alongside the real `Packet` and `String` references. Semantic copying now
   retains the anonymous identity without assigning it a fabricated declaration. A regression
   covers complete source and unrelated missing nested call delimiters. No AST API changed.
-  Validation is pending the batch run.
+  Backend and selected X76 acceptance now pass in both editors.
 - **L16/L27:** added Settings > Languages & Frameworks > Ecstasy Compiler for discovery or
   explicit module roots/dependencies. It saves through LSP4IJ's project store and notifies the
   existing client listener. Global JSON remains the fallback. Configuration requests and rename
   history select the same owner; a newly installed project override invalidates old global rename
   history. Pure settings tests cover discovery versus an empty graph, unrelated setting retention,
-  duplicate roots and blank fields. Native settings/rename validation is pending.
+  duplicate roots and blank fields. Native settings/rename/Undo/Redo acceptance passes in X118.
 - **L68:** compiler clients advertising diagnostic pull negotiate one channel. Document/workspace
   requests share version guards, per-document result IDs, related reports, empty removal reports
   and refresh support. Closed roots compile on the existing serialized worker without installing
   overlays or ASTs. A bounded detached cache compares complete source membership/text, graph and
   artifact revisions. Push-only clients retain the existing path. Tests cover IDs, repairs, close,
-  closed roots, cancellation, stale requests and packaged stdio. Native acceptance remains pending;
-  the active checklist is not yet closed.
+  closed roots, cancellation, stale requests and packaged stdio. Selected native acceptance passes
+  in both editors; real-platform failures discovered afterward are tracked separately below.
+- **L68 IntelliJ decoding correction:** LSP4J 1.0.0's method adapter selects the outer
+  diagnostic report, but its nested `relatedDocuments` map uses an ambiguous generic Either
+  decoder. A valid full/unchanged related report terminated the client reader with
+  `JsonParseException: Ambiguous Either type`; subsequent output backed up in LSP4IJ's pipes.
+  Rename then waited for an unread reply (the measured server preparation was 3.2 ms), and
+  later requests triggered restarts/startup errors. The IntelliJ launcher now registers a narrow
+  adapter for that exact nested report type, reusing LSP4J's discriminator predicates. Regression
+  tests use the real method/response metadata, reproduce the pinned decoder failure, and cover
+  full/unchanged outer and related reports, round-trip serialization and unknown-kind rejection.
+  No related-diagnostics capability is disabled, and no action replay is used to hide the failure.
 - **Shared editor coverage:** X76 now asserts ordered, positive, non-overlapping semantic token
   ranges in complete and incomplete source. X118 exercises the real IntelliJ project settings
-  component's Reset/Apply before native rename/Undo/Redo (VS Code asserts workspace persistence).
-  New X123 checks native error/clear rendering plus full/unchanged/repaired diagnostic responses
-  on each installed connection. Both drivers are implemented; execution receipts are pending.
+  component's Reset/Apply, blank-cell refusal and relative-root editing before native
+  rename/Undo/Redo (VS Code asserts workspace persistence). Explicit graph cases keep the actual
+  project root; discovery cases alone temporarily move the server workspace into their fixture.
+  New X123 checks installed editor error/clear delivery plus full/unchanged/repaired diagnostic responses
+  on each installed connection. Both selected drivers pass with the receipts below.
   The catalog is now 128 cases, not a claim that all 128 have passed.
 - **L67 diagnostic indexing:** per-root cached results now include source membership/text and
   dependency artifact revisions. Unchanged roots reuse detached diagnostics/artifacts; a changed
@@ -474,6 +486,121 @@ when the batch completes. Earlier receipts do not validate these new changes.
   workspace pulls own separate queue requests. Tests measure a 21-root graph's cold/warm compile
   counts, changed-closure recompilation, removed-root eviction and cancellation isolation. This is
   bounded in-memory reuse; persistent indexing and the broader navigation index remain open.
+
+#### Checkpoint/extraction map
+
+| Commit | Scope | Extraction dependency |
+|---|---|---|
+| `2edbe2015` | L12 anonymous declaration copying and regression | Existing semantic snapshot/anonymous constructor support |
+| `dc742c93f` | L16/L27 project settings UI and shared configuration ownership | Existing IntelliJ graph rename/Undo implementation |
+| `73c21f2e6` | L68 negotiated pull diagnostics and closed-root queries | Existing compiler worker, source graph and versioned request lifecycle |
+| `1670455bc` | Shared X76/X118/X123 coverage, plus initial test corrections | The preceding three scopes and existing editor drivers |
+| `bab36f378` | L67 per-root diagnostic reuse and independent pull cancellation | L68; keeps in-memory inputs/artifacts only |
+| `7665d91e9` | Catalog order/fixture corrections and safe proposal retry | Shared playbook checkpoint; no retry of accepted edits |
+| `9f1f1dc75` | L62 transitive rename regression distinguishes proven annotations from an incomplete graph | Existing annotation dispatch and rename proof; no new production rename scope |
+| `98f8de56e` | L64 packaged completion expectations include validated empty-string literals | Earlier L64 literal support; all three stdio argument variants |
+| `f5476d305` | L68 equivalent file URIs retain diagnostic ranges and result IDs | Pull reports and workspace root identity |
+| `2d43692fe` | Remove misleading first-editor cold-compilation marker | L67/pull compilation may precede editor compilation; API timings remain in the trace |
+| `fa2c81cd7` | L68 IntelliJ nested diagnostic decoding and protocol regression | Negotiated related pull reports; preserves LSP4IJ compatibility adapters |
+| `4553f43af` | Stronger native project-settings acceptance and rename readiness | Shared X118; invokes accepted actions once and preserves the actual explicit-graph project root |
+
+#### Combined validation receipt
+
+At `4553f43af`, the following command completed successfully:
+
+```bash
+./gradlew :lang:lsp-server:test --tests '*Xdk*' --tests '*SemanticModelTest' --rerun \
+  :lang:intellij-plugin:test --rerun \
+  :lang:lsp-server:compilerStdioTest --tests '*XdkStdioTest' --rerun \
+  spotlessCheck :lang:spotlessCheck -Plsp.adapter=compiler \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache --continue --quiet
+```
+
+JUnit XML totals: **861 compiler/backend + 54 stdio + 50 IntelliJ unit tests = 965**;
+zero failures, errors or skips. Root/lang Spotless also pass. No Java production change was
+made in this batch. Installed editor acceptance uses shared scenario SHA-256
+`959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`:
+
+- VS Code: `lang/vscode-extension/build/reports/compiler-playbook/run-S6wn4Y/results.json`;
+  X76, X118 and X123 pass.
+- IntelliJ: `lang/intellij-plugin/build/reports/compiler-playbook/run-5250369345097873268/results.json`;
+  START and X76/X118/X123 pass with zero IDE failures. X118 completes in 4.54 seconds.
+
+This is selected current-catalog coverage. Keep the earlier failed decoder receipts as failure
+evidence; do not relabel them. The first shared playbook checkpoint needs its follow-up fixture,
+URI, decoding and native-readiness corrections during extraction.
+
+The broader family boundaries remain explicit: L62 still excludes unproven dispatch/binary and
+external-consumer routes; L63 has no extract/inline/safe-delete/missing-declaration implementation;
+L64's last batch covers its recorded literal/formal/presentation forms; L65 still cannot enumerate
+runtime-selected targets; L66 still lacks import links and comprehensive wrapping; L67 adds
+in-memory diagnostic reuse, not a persistent or universal incremental semantic index. These are
+implementation gaps, not scenarios that an editor driver can truthfully mark implemented.
+
+### Platform demo blockers (2026-09-29)
+
+**Next bug-fix pass, before claiming full-platform acceptance.** These were found while preparing
+[root `demo.md`](../demo.md), using packaged server code at `4553f43af` and sibling platform
+`b8be627b7`. No platform files or production code were changed. The preceding 965-test receipt
+and selected native passes do not cover this workload. The user requested tracking first and
+fixing next; the following tasks are deliberately still open.
+
+- [ ] **PLAT1 — Source-location collection crashes on the common module.** Initialize compiler
+  mode with workspace root `platform` and explicit roots `auth.xqiz.it` at
+  `auth/src/main/x/auth.x`, plus `common.xqiz.it` at `common/src/main/x/common.x` depending on
+  auth. Call `workspace/diagnostic` with `previousResultIds: []` (no open documents required).
+  Both this two-root graph and the full eleven-main-module graph return JSON-RPC InternalError:
+
+  ```text
+  NullPointerException: Cannot invoke TypeExpression.getSource() because this.type is null
+    CompositionNode.getSource(CompositionNode.java:75)
+    XdkAst.declarationLocations$visit(XdkAst.kt:43)
+    XdkProjectQueries.diagnostics(XdkProjectQueries.kt:113)
+  ```
+
+  This is a failed request, not observed JVM termination. `declarationLocations` asks every
+  visited node for its source, including non-declarations. `CompositionNode.getSource` assumes
+  a type exists when neither a parent source nor condition supplies one. `CompositionNode.Default`
+  legitimately has no type; common's `model.x` contains `enum ModuleKind default(Generic)`.
+  That is a candidate minimal trigger, not yet a proven isolated reproduction. Minimize it on
+  detached/partially compiled trees before deciding whether the compiler accessor, adapter
+  traversal or both need correction. Audit `rootsBySource`, folding/selection and error-location
+  callers for the same assumption. Add regression coverage that returns ordinary compiler
+  diagnostics after an early failure, then re-run real common/full-platform pulls. Do not hide
+  the exception by dropping all diagnostics or disabling related reports.
+- [ ] **PLAT2 — Gradle resource roots are absent from the source model.** A separate one-root
+  workspace pull for `stub.xqiz.it` at `stub/src/main/x/stub.x` returns
+  `PARSER-24: Invalid path: "./not-deployed.html".` The file exists at
+  `stub/src/main/resources/not-deployed.html`. This is an ordinary compilation diagnostic,
+  not a crash. `XdkSources` constructs `ModuleInfo(root, false)` and the configured source graph
+  currently carries root/dependencies, without resource roots. Investigate the existing embedding
+  resource API and Gradle source-set mapping; support resource inputs and their invalidation
+  through the same ownership model rather than copying assets into source directories. Add a
+  minimal source/resource fixture and packaged diagnostic regression. Then audit common's
+  `_webModule.txt` / `_createAuthenticator.txt` and kernel's `/cfg.json` resources; their outcomes
+  remain unverified because PLAT1 interrupts the common-dependent graph first.
+- [ ] **PLAT3 — Real-source presentation/recovery discrepancies.** The explicit auth+githubCLI
+  graph compiles cleanly (seven document reports). With these sources open, packaged requests
+  expose the following non-crashing cases to minimize after PLAT1/PLAT2:
+
+  | Request and source anchor | Observed result | Next check |
+  |---|---|---|
+  | Hover on `sendRequest` in `Repositories.listRepositories` | Displays `method listRepositories`, although definition correctly finds `GithubGateway.sendRequest` | Occurrence/symbol versus enclosing-declaration selection |
+  | Signature help after `GET, ` in that completed `sendRequest` call | Correct full signature text, empty `parameters`, active index 0 | Selected multi-file call facts and parameter mapping; incomplete `createRequest(method, gr, path, content)` correctly has four parameters and active index 1 |
+  | Replace `console.readLine(prompt).trim()` with `.tr()` at the end of `tr` | Empty completion list | Chained call receiver recovery; the same module's `response.st` correctly offers `status` |
+  | Type definition on `repo` after `assert repo.is(JsonObject)` | No locations | Determine expected alias/relational-type targets; simple `response` correctly opens bundled `ResponseIn.x` |
+
+  Do not label every empty result a compiler defect before inspecting its semantic contract.
+  Add focused regressions for confirmed bugs and update the demo's expected results afterward.
+
+**Checked alternatives for the demo:** auth+githubCLI workspace diagnostics have no errors;
+`OAuthProvider` has five source subtypes and property implementations; `sendRequest` has six
+cross-file callers; bundled `ResponseIn` type navigation works. Scope/value and incomplete-call
+completion return `group` and other String-compatible values with correct replacement ranges;
+`response.st` offers `status`, and the `Str defaultValue` header offers `String`. Source files
+were read-only throughout the probes; edits used LSP buffer overlays. These are packaged protocol
+observations, not a new native IntelliJ playbook receipt. The full main-module configuration and
+manual targets are in `demo.md`; do not remove its blocker notice until that configuration passes.
 
 ### L64 completion and signature batch (2026-09-29)
 
@@ -575,14 +702,14 @@ lookup. L62/L63/L65–L67 and the explicit earlier-checkpoint follow-ups retain 
 
 These historical records must not disappear behind the newer L62–L82 feature scopes:
 
-- [ ] **L12 semantic-token overlap:** reproduce the reported X76 warning at `Advanced.x`, line 43,
-  column 13, fix the cause if still present, and add a non-overlap assertion. Earlier passing editor
-  runs did not verify this. Track semantic-classification breadth separately under L65.
-- [ ] **L16/L27 IntelliJ configuration UI:** a dedicated project source-graph settings UI is absent;
-  configuration currently uses LSP4IJ JSON settings. This is editor usability work, not a missing
-  standard LSP handler. Graph persistence/undo remains implemented and tested under L62.
+- [x] **L12 semantic-token overlap acceptance:** the generated anonymous class declaration overlap
+  is fixed; a backend regression and strengthened shared X76 now cover it. Selected X76 passes
+  in both VS Code and IntelliJ. Track classification breadth separately under L65.
+- [x] **L16/L27 IntelliJ configuration UI acceptance:** a project source-graph page is implemented,
+  sharing LSP4IJ storage with configuration requests and rename history. Reset/Apply, validation and
+  native graph Undo/Redo pass in X118. Global JSON remains a fallback.
 - [ ] **L60 current-catalog acceptance:** the recorded full pass covered 113 cases. The later
-  127-case catalog has selected acceptance receipts for additions, not a full current-catalog run.
+  current 128-case catalog has selected receipts for older additions, not a full current-catalog run.
   Repeat both complete playbooks at a release checkpoint; do not relabel the historical pass.
 
 Earlier feature milestones remain complete only within their recorded scope. Their language and
@@ -605,7 +732,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | Scope | Investigation already recorded | Next investigation before implementation |
 |---|---|---|
 | L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
-| L68 pull diagnostics | Diagnostics currently publish versioned push results. | Define push/pull negotiation, result-ID ownership, related/closed documents and invalidation so the same error is neither duplicated nor retained after repair. |
+| L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. | Fix the real-platform source-location crash below; retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Full tokens exist; range/delta operations do not. | Define snapshot/result-ID lifetime, delta computation and fallback after edits, close or restart; measure whether caching is beneficial. |
 | L70 lazy resolve | Supported response data is currently eager. | Measure expensive fields per provider, choose supported resolve properties, and design detached handles that reject stale documents and dependency revisions. |
 | L71 file operations | Watchers and didRenameFiles refresh state; pre-edit participation is absent. | Reuse the rename graph proof for file-tree operations; define create/delete semantics, folder filters, explicit graph persistence and duplicate-notification handling in both hosts. |
@@ -626,10 +753,11 @@ An exclusion must state its reason and keep the corresponding capability unadver
 L64–L67 separately track gaps inside already implemented feature families; R1–R8 track execution
 and debugging. Neither feature counts nor a selected passing playbook establish total completeness.
 
-- [ ] **L68 — Pull diagnostics.** Implement `textDocument/diagnostic`, `workspace/diagnostic`
+- [x] **L68 — Pull diagnostics.** Implemented `textDocument/diagnostic`, `workspace/diagnostic`
   and `workspace/diagnostic/refresh`, result IDs/unchanged reports, related documents,
-  cancellation and closed-file reporting. Negotiate push/pull behavior without duplicate or
-  stale Problems entries. Existing diagnostics use `publishDiagnostics`.
+  cancellation and closed-file reporting. Negotiation preserves push for other clients. The
+  combined batch and selected X123 pass in both editors, including the nested-report decoding
+  correction. Real-platform diagnostic robustness remains open under PLAT1 below.
 - [ ] **L69 — Semantic token range/delta.** Add `textDocument/semanticTokens/range` and
   `textDocument/semanticTokens/full/delta`, result-ID lifetime and capability-aware refresh.
   Existing requests return full-document tokens only.

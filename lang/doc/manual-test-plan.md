@@ -510,7 +510,7 @@ is observable under mock or tree-sitter.
 |---|------|-------|-----------------|
 | 7a.1 | No external XDK | Unset `XDK_HOME`, restart the server, open a complete module | Real compiler diagnostics; correcting the source clears them |
 | 7a.2 | Invalid external XDK | Set `XDK_HOME` to a nonexistent directory, restart and edit the file | The bundled libraries still supply compiler analysis |
-| 7a.3 | Cold start | Watch the log on the first `.x` file opened in a session | `first compilation in this server took ... (cold)`, around a second. Slow once is expected; slow every time is not |
+| 7a.3 | Cold start | Watch the log on the first `.x` file opened in a session | Compare the first and subsequent `EmbeddingSupport.compileModule` durations in the server trace, including queue wait separately. Workspace diagnostics may compile before the first editor request; a first editor compile is not necessarily cold |
 | 7a.4 | Steady state | Edit the same file ten times, watching `compiled in` | Settles to tens of milliseconds. A number that keeps climbing means something is accumulating - compare `footprint` across the run |
 | 7a.5 | Queue depth and contents | Type quickly across two or three open files | In the execution trace, inspect `queueSize` and FIFO `queuedJobs`, plus `debouncingJobs` and `runningJobs`. Job IDs, operation names and URIs show what is waiting and running; `waitMs` and `runMs` separate delay from execution. |
 | 7a.6 | Superseded edit | Type continuously for several seconds without pausing | Log shows `superseded before it started, skipped` or `superseded after ..., abandoned`. No diagnostics are published for text that has already been replaced - a squiggle under an identifier you have finished typing is the failure this prevents |
@@ -1825,12 +1825,14 @@ roots may be outside workspace folders. A scope receipt does not authorize apply
   before any edits: VS Code cannot reliably restore that unsaved resource history. Text-only
   renames and moves of unedited companions remain available. The harness checks both refusal
   and the enabled-policy transaction; it uses refactoring metadata like the native action.
-- **IntelliJ:** use the existing LSP4IJ XTC server Configuration JSON under `xtc.compiler`.
-  LSP4IJ 0.21 reads this from its global server settings. Rename replaces only the source graph
-  in that persistent store and joins its undo actions to the native global Rename command.
-  Other projects using the same configured graph receive the usual configuration notification.
-  Changes made to settings while the proof runs invalidate the proposal; Undo/Redo also reject
-  an independently changed graph instead of overwriting it.
+- **IntelliJ:** open **Settings > Languages & Frameworks > Ecstasy Compiler**. Select automatic
+  discovery, or disable it and add module names, root URIs/relative paths and comma-separated
+  dependencies. **Apply** saves through LSP4IJ's project settings and refreshes the running server.
+  Blank fields and duplicate roots are refused. **Reset** discards pending edits. The legacy LSP4IJ
+  Configuration JSON remains the fallback until a project override exists. Rename and native
+  Undo/Redo update that same effective store; a changed graph or changed settings owner refuses
+  stale history. Project settings do not change other projects' global configuration.
+
 
 X118 checks persistence, root/edge replacement, Undo, Redo and second Undo in both drivers.
 The VS Code driver also changes the real settings document during reply conversion and expects
@@ -2106,7 +2108,12 @@ module Advanced {
 
 | X123 | Replace Navigation.x with the shared broken source, observe Problems, pull diagnostics twice with the returned result ID, repair the source, and pull using the old ID. Restore the fixture. | Both editors display and clear the compiler error. The installed connection returns full, unchanged, then empty full reports with a new result ID. |
 
-**Current hardening batch:** X76/X118 have new assertions and X123 is new. Their execution is pending; historical receipts below do not cover these additions.
+**Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
+scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
+Receipts: VS Code `run-S6wn4Y/results.json`; IntelliJ `run-5250369345097873268/results.json`
+under each editor's `build/reports/compiler-playbook/`. IntelliJ also passes START and reports
+zero IDE failures. This does not establish a full pass of the current 128-case catalog.
+See the [platform demo](../../demo.md) for a real-code tour and its current blockers.
 
 X122 has eleven shared variants, all passing in VS Code `run-IsPGqC` and IntelliJ
 `run-658720962975078754`. The IntelliJ run also passes X105, which shares the native intention
