@@ -5783,7 +5783,7 @@ Implement four separate checkpoints before testing them together:
 
 1. [x] Atomic “Implement all required members”, with complete graph and per-family dispatch proof.
 2. [x] Bundled XDK and binary contracts with read-only dependency identities (implementation checkpoint; batch validation pending).
-3. [ ] Qualified cross-module and compound type spellings, including required imports.
+3. [x] Qualified cross-module and compound type spellings, including required imports (implementation checkpoint; batch validation pending).
 4. [ ] Defaults during fresh declaration repair; audit computed defaults before supporting them.
 
 Checkpoint 1 groups all renderable required methods in one class edit. The proof checks each
@@ -5798,3 +5798,10 @@ a writable source declaration. The member proof permits only the selected family
 new user-source override; dependency bytes and declarations remain read-only. Added regressions
 cover indexed and binary-only inputs, bundled Iterator implementation and inherited concrete calls.
 Testing remains deferred until all four implementation checkpoints are present.
+
+Checkpoint 3 renders compiler-selected relational/nullable and immutable types recursively and
+uses collision-avoiding module qualifiers for foreign classes. Generated package imports and method
+bodies form one versioned edit; bulk repairs deduplicate imports. The proof translates old source
+positions through both insertions and still requires unchanged unrelated bindings and dispatch.
+Annotated and otherwise unsupported spellings remain refusals. Added cases cover nullable/union,
+immutable/nested signatures, foreign-type collisions and shared imports in an atomic repair.
