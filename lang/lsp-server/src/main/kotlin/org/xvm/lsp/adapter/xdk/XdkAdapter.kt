@@ -277,6 +277,10 @@ internal constructor(
             }
         }
 
+    /** Unsaved source buffers do not change the resource files read from disk. */
+    internal fun affectedSourceScopes(uri: String): Set<String> =
+        synchronized(lifecycle) { project.affected(analysisScope(uri)) }
+
     override fun affectedAnalysisScopes(uri: String): Set<String> =
         synchronized(lifecycle) {
             val sources = project.affected(analysisScope(uri))
@@ -294,7 +298,7 @@ internal constructor(
                             inputs.resources.entries.isNotEmpty()
                     }
                     .flatMapTo(linkedSetOf(), project::affected)
-            sources + resources
+            project.orderedScopes(sources + resources)
         }
 
     fun resourceWatchRoots(): Set<File> = synchronized(lifecycle) { project.resourceWatchRoots() }
