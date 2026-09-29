@@ -804,14 +804,36 @@ class CompilerPlaybook(
                     if (variant["initiallyValid"]?.asBoolean == true)
                         editor.awaitDiagnostics(emptyList())
                     else editor.awaitError()
-                    signature(editor, at) {
-                        if (data.values["callContext"]?.asBoolean == true) it.isNotEmpty()
-                        else it.isEmpty()
+                    signature(
+                        editor,
+                        at,
+                        inspectDocumentation = variant["signatureDocumentationContains"] != null,
+                    ) { signatures ->
+                        (if (data.values["callContext"]?.asBoolean == true) signatures.isNotEmpty()
+                        else signatures.isEmpty()) &&
+                            (variant["activeParameter"] == null ||
+                                signatures.all {
+                                    it.activeParameter == variant["activeParameter"].asInt
+                                }) &&
+                            (variant["signatureDocumentationContains"] == null ||
+                                signatures.any {
+                                    it.documentation?.contains(
+                                        variant["signatureDocumentationContains"].asString
+                                    ) == true
+                                })
                     }
                     lookup(editor, at) { items ->
                         val names = items.map { it.getLookupString() }
                         names.containsAll(variant["include"].asJsonArray.map { it.asString }) &&
-                            data.strings("exclude").none { it in names }
+                            (variant["exclude"]?.asJsonArray?.map { it.asString }
+                                    ?: data.strings("exclude"))
+                                .none { it in names } &&
+                            (variant["metadata"] == null ||
+                                hasCompletionMetadata(
+                                    items,
+                                    variant["selected"].asString,
+                                    variant["metadata"].asJsonObject,
+                                ))
                     }
                     dismissPopups()
                     accept(

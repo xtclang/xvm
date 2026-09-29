@@ -2594,7 +2594,7 @@
       "values": {
         "file": "Editing.x",
         "marker": "\u00a7",
-        "source": "module Editing { class Pair(Int number, String text) {} class Box { Int number = 1; String numberText = \"x\"; private Int numberHidden = 2; } void pair(Int number, String text) {} void run(Int number, String numberText, Box box, function void(Int, String) fn) { ${0}; } }",
+        "source": "module Editing { class Pair(Int number, String text) {} class Box { Int number = 1; String numberText = \"x\"; private Int numberHidden = 2; } /** Accepts a number and text. */ void pair(Int number, String text) {} void flag(Boolean value) {} void nullable(String? value) {} void run(Int number, String numberText, Box box, function void(Int, String) fn) { ${0}; } }",
         "variants": [
           {
             "declaration": "pair(nu\u00a7, \"x\")",
@@ -2787,6 +2787,157 @@
             "initiallyValid": false,
             "validAfterAcceptance": true,
             "repairedDeclaration": "new Pair(1 + number, \"x\")"
+          },
+          {
+            "declaration": "pair(\u00a7, \"x\")",
+            "selected": "0",
+            "include": [
+              "0"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(0, \"x\")",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0,
+            "signatureDocumentationContains": "Accepts a number and text."
+          },
+          {
+            "declaration": "pair(number = \u00a7, text = \"x\")",
+            "selected": "0",
+            "include": [
+              "0"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(number = 0, text = \"x\")",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0,
+            "signatureDocumentationContains": "Accepts a number and text."
+          },
+          {
+            "declaration": "pair(1 + \u00a7, \"x\")",
+            "selected": "0",
+            "include": [
+              "0"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(1 + 0, \"x\")",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0,
+            "signatureDocumentationContains": "Accepts a number and text."
+          },
+          {
+            "declaration": "fn(\u00a7, \"x\")",
+            "selected": "0",
+            "include": [
+              "0"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "fn(0, \"x\")",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0
+          },
+          {
+            "declaration": "new Pair(\u00a7, \"x\")",
+            "selected": "0",
+            "include": [
+              "0"
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "new Pair(0, \"x\")",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0
+          },
+          {
+            "declaration": "pair(1, \u00a7)",
+            "selected": "\"\"",
+            "include": [
+              "\"\""
+            ],
+            "prefixLength": 0,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "pair(1, \"\")",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 1,
+            "signatureDocumentationContains": "Accepts a number and text.",
+            "exclude": [
+              "numberHidden"
+            ]
+          },
+          {
+            "declaration": "flag(Tr\u00a7)",
+            "selected": "True",
+            "include": [
+              "True"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "flag(True)",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0
+          },
+          {
+            "declaration": "nullable(Nu\u00a7)",
+            "selected": "Null",
+            "include": [
+              "Null"
+            ],
+            "prefixLength": 2,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "nullable(Null)",
+            "metadata": {
+              "kind": 12,
+              "detailContains": "Literal fitting",
+              "sorted": true
+            },
+            "activeParameter": 0
           }
         ],
         "prefixLength": 2,
@@ -3339,6 +3490,38 @@
             "initiallyValid": false,
             "validAfterAcceptance": true,
             "repairedDeclaration": "<String> void damaged(String value) {}"
+          },
+          {
+            "declaration": "interface Chain<T> {} <Element extends Chain<Element>> void damaged(Ele\u00a7 value) {}",
+            "selected": "Element",
+            "include": [
+              "Element"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "interface Chain<T> {} <Element extends Chain<Element>> void damaged(Element value) {}",
+            "metadata": {
+              "detailContains": "(written constraint)",
+              "sorted": true
+            }
+          },
+          {
+            "declaration": "interface Chain<T> {} class Damaged<Element extends Chain<Element>>(Ele\u00a7 value) {}",
+            "selected": "Element",
+            "include": [
+              "Element"
+            ],
+            "prefixLength": 3,
+            "suffixLength": 0,
+            "initiallyValid": false,
+            "validAfterAcceptance": true,
+            "repairedDeclaration": "interface Chain<T> {} class Damaged<Element extends Chain<Element>>(Element value) {}",
+            "metadata": {
+              "detailContains": "(written constraint)",
+              "sorted": true
+            }
           }
         ]
       },
