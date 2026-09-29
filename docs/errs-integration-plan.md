@@ -1290,6 +1290,38 @@ This checkpoint belongs with P1–P4 when extracting the partial-query/compiler-
 changes neither advertised capabilities nor playbook scenarios. Native editor reruns are unnecessary
 for this extraction; the selected backend regressions exercise its behavior directly.
 
+### Scope and capture helper follow-ups (AST1 and AST3)
+
+Both extractions are complete and were validated together after implementation. They remove query
+orchestration from ordinary compiler classes without new fields, caches, clone rules or widened
+access. `CursorScope` still needs protected context APIs in `ast`; `AnonymousClassBindings` owns
+complete-program capture provenance, not partial syntax. Moving either into `partial` would weaken
+those boundaries rather than improve them.
+
+| Step | Commit | Future PR placement |
+| --- | --- | --- |
+| AST5 shared partial syntax | `b16fdd52c` | Include with P1–P4 partial-query/compiler recovery. |
+| AST1 cursor-scope capture | `d271be86e` | Include with cursor-scope collection and its three query consumers; omit the intermediate public `Context.cursorBinding()` API from extracted PRs. |
+| AST3 anonymous-property projection | `bb5bd9e95` | Include with anonymous capture provenance and its passive AST getters. Independent of the partial-node package move. |
+
+Validation on 2026-09-29 passes **200 tests**, with zero failures, errors or skips:
+
+- **4 Java tests** in `BindingIdentitySnapshotTest`.
+- **196 LSP tests** across `XdkScopeCompletionTest`, `XdkPartialAnalysisTest`,
+  `XdkArgumentCompletionTest`, `XdkIncompleteCallTest`, `XdkIncompleteFunctionTest`,
+  `XdkIncompleteConstructorTest`, `XdkAnonymousConstructorTest`, `SemanticModelTest`,
+  `XdkNavigationTest`, `XdkRenameTest` and `CompilerRenameRequirementsTest`.
+- Existing regressions cover lazy parameter allocation, unassigned and narrowed locals, nested
+  scopes, static/instance visibility, repeated queries, anonymous and mutable captures, shadowing,
+  clone rejection, source identities, references and rename proofs. Both test tasks were forced
+  with `--rerun --no-build-cache`; counts come from the fresh JUnit XML results.
+- Root and lang `spotlessCheck` pass. Java/Kotlin main and test compilation pass. No new native
+  editor run or playbook scenario change is claimed for these internal extractions.
+
+AST2 remains conditional on a simpler internal fitting contract; AST4 remains a lifecycle
+investigation. Neither is required to submit the bounded package/provenance changes, and neither
+is recorded as implemented. Independent extracted PRs must still run their own validation.
+
 ## Composition audit follow-up
 
 `CompilerDispatchRoutesTest` inspects real TypeInfo chains for written/default overrides,
