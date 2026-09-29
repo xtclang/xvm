@@ -1118,6 +1118,11 @@ class CompilerPlaybook(
                 check(!Files.exists(root.resolve(data.text("companionDestination"))))
             }
         }
+        scenario("X122") {
+            discovered("X122") { data ->
+                memberActions(data, open(data.text("file"))) { it.awaitDiagnostics(emptyList()) }
+            }
+        }
         scenario("X105") {
             discovered("X105") { data ->
                 val editor = open(data.text("file"))
