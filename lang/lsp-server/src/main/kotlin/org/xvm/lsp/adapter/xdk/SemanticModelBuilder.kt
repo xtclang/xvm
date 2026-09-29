@@ -125,6 +125,17 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
         }
     }
 
+/** Inspect only a fresh, successfully resolved declaration attempt; never resume a failed compiler. */
+internal fun EmbeddingSupport.DeclarationAnalysis.memberActionFacts(
+    dependencies: XdkDependencies.Open,
+    errors: ErrorListener,
+): CompilerRenameFacts = ExecutionTrace.api("DeclarationAnalysis.memberActionFacts") {
+    ConstantPool.withPool(pool()).use {
+        val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file().moduleId })
+        builder.declarationFacts(this, dependencies, errors)
+    }
+}
+
 /** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
 fun EmbeddingSupport.Compilation.toDependency(): XdkDependency =
     ExecutionTrace.api("Compilation.toDependency") {
@@ -181,6 +192,20 @@ private class SemanticModelBuilder(
     private val callableNodes = IdentityHashMap<AstNode, SymbolId>()
     private val parameters = mutableMapOf<Pair<MethodConstant, Int>, SymbolId>()
     private val supers = mutableMapOf<SymbolId, MethodConstant>()
+
+    fun declarationFacts(
+        analysis: EmbeddingSupport.DeclarationAnalysis,
+        dependencies: XdkDependencies.Open,
+        errors: ErrorListener,
+    ): CompilerRenameFacts {
+        val nodes = nodesIn(analysis.ast())
+        collect(nodes, emptyMap(), emptyMap(), analysis.pool())
+        return captureRenameFacts(
+            finish(nodes, false, emptyMap(), emptyMap()), constantBindings(), dependencies,
+            compilerMethodRelations(nodes, errors), compilerPropertyRelations(nodes, errors), errors,
+            members = compilerMemberActions(nodes, errors),
+        )
+    }
 
     fun constantBindings(): Map<SymbolId, Constant> = constants.entries.associate { (constant, id) -> id to constant }
 
