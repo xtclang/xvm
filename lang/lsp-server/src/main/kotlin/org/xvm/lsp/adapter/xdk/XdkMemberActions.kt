@@ -4,12 +4,19 @@ import org.xvm.lsp.adapter.Range
 
 /** Immutable contracts and atomic class-member edits. */
 internal object XdkMemberActions {
+    data class Import(val position: SemanticModel.Position, val declaration: String)
+
+    data class Edits(val member: XdkRename.Edit, val imports: List<XdkRename.Edit>) {
+        val all: List<XdkRename.Edit> get() = imports + member
+    }
+
     data class Candidate(
         val owner: SemanticModel.SourceLocation,
         val contract: ProofIdentity,
         val insertion: SemanticModel.Position,
         val declaration: String,
         val implementation: Boolean,
+        val imports: List<Import>,
     ) {
         val title: String get() = "${if (implementation) "Implement" else "Override"} $declaration"
 
@@ -32,7 +39,7 @@ internal object XdkMemberActions {
 
         val title: String get() = members.singleOrNull()?.title ?: "Implement all required members (${members.size})"
 
-        fun edit(text: String): XdkRename.Edit? {
+        fun edit(text: String): Edits? {
             val owner = members.first().owner
             val at = XdkRename.offset(text, members.first().insertion) ?: return null
             if (text.getOrNull(at) != '}') return null
@@ -47,11 +54,18 @@ internal object XdkMemberActions {
                 "$memberIndent@Override$newline$memberIndent${member.declaration} {$newline" +
                     "$memberIndent    TODO();$newline$memberIndent}$newline"
             }
-            return if (ownLine) {
+            val memberEdit = if (ownLine) {
                 XdkRename.Edit(lineStart, lineStart, body)
             } else {
                 XdkRename.Edit(at, at, "$newline$body$indent")
             }
+            val imports = members.flatMap { it.imports }.distinct().groupBy { it.position }.map { (position, declarations) ->
+                val offset = XdkRename.offset(text, position) ?: return null
+                if (offset != 0 && text.getOrNull(offset - 1) != '{') return null
+                val block = declarations.joinToString(newline, postfix = newline) { it.declaration }
+                XdkRename.Edit(offset, offset, if (offset == 0) block else "$newline$block")
+            }
+            return Edits(memberEdit, imports)
         }
     }
 
