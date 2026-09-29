@@ -40,6 +40,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
@@ -416,7 +417,7 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
-                    if (mgr.getCursorBindings().isEnabled() && PartialQueries.isWithin(value)) {
+                    if (mgr.getCursorBindings().isEnabled() && PartialSyntax.contains(value)) {
                         // A cursor hole cannot become a constant. Validate the source-owned
                         // initializer so its facts survive; disposable clones are never published.
                         initializer = createAstNodeFor(createInitializer());

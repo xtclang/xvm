@@ -130,7 +130,7 @@ public final class IncompleteStatement extends Statement {
 
     /** The real containing call for a direct, labeled or parenthesized argument cursor. */
     public Optional<IncompleteStatement> getArgumentCall() {
-        return PartialQueries.argumentCall(this);
+        return PartialSyntax.argumentCall(this);
     }
 
     /** Complete written arguments; excludes the missing value or cursor-selected argument prefix. */
