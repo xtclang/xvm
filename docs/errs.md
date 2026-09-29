@@ -8,6 +8,12 @@ editors; IntelliJ reports zero IDE failures. This is selected acceptance, not a 
 catalog run. See the [batch receipt](errs-integration-plan.md#l12-project-settings-and-l62l68-hardening-batch-2026-09-29)
 and the newly found [real-platform blockers](errs-integration-plan.md#platform-demo-blockers-2026-09-29).
 
+**PLAT1 AST correction:** `CompositionNode.getSource()` now handles a typeless `default(...)`
+composition before parser parent adoption. It returns null until a real source is available and
+uses the ordinary parent source afterward. This is the existing general AST source contract,
+not partial/LSP-only behavior; no state or clone work was added. The parsed-enum reproduction and
+closed-diagnostic repair regression pass; real-platform revalidation belongs to the active batch.
+
 **L64 completion batch:** guarded recursive formal names can now retain explicitly written
 constraints without invented type identities. Literal argument proposals reuse normal compiler
 fitting and validation. Detached completion/signature results carry documentation and deterministic
