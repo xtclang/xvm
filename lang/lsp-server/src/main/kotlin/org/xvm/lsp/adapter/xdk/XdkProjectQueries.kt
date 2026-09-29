@@ -12,9 +12,12 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
+import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
+import org.xvm.lsp.model.CompilationResult
+import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.util.ExecutionTrace
@@ -35,6 +38,8 @@ internal class XdkProjectQueries(
     private val cache: AtomicReference<Map<String, XdkWorkspaceNavigation>> =
         AtomicReference(emptyMap()),
     private val discoverImports: Boolean = false,
+    private val diagnosticCache: AtomicReference<Map<String, List<CompilationResult>>> =
+        AtomicReference(emptyMap()),
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -49,6 +54,89 @@ internal class XdkProjectQueries(
     private val texts =
         sources.values.flatMap { it.inputs.text.entries }.associate { it.key.path to it.value }
     private val uris = sources.values.flatMap { it.sourceUris.entries }.associate { it.toPair() }
+
+    /** Read-only graph compilation, with no live AST installation or artificial open buffers. */
+    fun diagnostics(): List<CompilationResult> {
+        val revision = revision()
+        diagnosticCache.get()[revision]?.let { cached ->
+            if (isCurrent()) return cached
+        }
+        val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
+        val results =
+            project.buildOrder().map { module ->
+                checkCurrent()
+                val source = sources[module]
+                val missing =
+                    module.dependencies.filter {
+                        it !in artifacts && it !in XdkLibraries.moduleNames
+                    }
+                if (source == null || missing.isNotEmpty()) {
+                    CompilationResult.withDiagnostics(
+                        module.uri,
+                        listOf(
+                            Diagnostic(
+                                location = Location(module.uri, 0, 0, 0, 0),
+                                severity = Diagnostic.Severity.ERROR,
+                                message =
+                                    if (source == null) "Cannot read source for ${module.name}"
+                                    else "Dependencies unavailable: ${missing.joinToString()}",
+                                code =
+                                    if (source == null) "SOURCE-UNAVAILABLE"
+                                    else "DEPENDENCY-FAILED",
+                                source = "xtc",
+                            )
+                        ),
+                        emptyList(),
+                        source?.documentUris ?: setOf(module.uri),
+                    )
+                } else {
+                    val sourceDependencies =
+                        project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+                    val inputs = artifacts.filterKeys {
+                        it !in project.modules || it in sourceDependencies
+                    }
+                    val open = XdkDependencies(inputs.values.toList()).open()
+                    val heard = ErrorList()
+                    val errors = ErrorListener.cancellable(heard, cancelled)
+                    val compilation = compileTree(source, open.repository, errors)
+                    checkCurrent()
+                    val declarations =
+                        XdkAst.declarationLocations(compilation.sourceTrees(), source.sourceUris)
+                    val fallback = Source("", source.uri(module.root))
+                    val diagnostics =
+                        heard.errors.map {
+                            it.toDiagnostic(fallback, source.sourceUris, declarations)
+                        }
+                    if (compilation.succeeded() && !heard.hasSeriousErrors()) {
+                        val artifact = compilation.toDependency()
+                        if (artifact.module == module.name) artifacts[module.name] = artifact
+                        else
+                            return@map CompilationResult.failure(
+                                module.uri,
+                                listOf(
+                                    Diagnostic(
+                                        location = Location(module.uri, 0, 0, 0, 0),
+                                        severity = Diagnostic.Severity.ERROR,
+                                        message =
+                                            "Expected module ${module.name}, found ${artifact.module}",
+                                        code = "PROJECT-MODULE",
+                                        source = "xtc",
+                                    )
+                                ),
+                            )
+                    }
+                    CompilationResult.withDiagnostics(
+                        module.uri,
+                        diagnostics,
+                        emptyList(),
+                        source.documentUris,
+                    )
+                }
+            }
+        if (!isCurrent()) throw CancellationException()
+        diagnosticCache.set(mapOf(revision to results))
+        return results
+    }
 
     fun navigation(): XdkWorkspaceNavigation? {
         val revision = revision()
