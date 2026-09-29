@@ -287,6 +287,7 @@ class ParityWorkspace(
                         module.string("name"),
                         uri(module.string("uri")),
                         module.strings("dependencies"),
+                        module["resourceRoots"]?.asJsonArray?.map { uri(it.asString) },
                     )
                 }
             }

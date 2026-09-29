@@ -1,5 +1,7 @@
 import com.github.gradle.node.npm.task.NpmTask
 import com.github.gradle.node.task.NodeTask
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 
 plugins {
     base
@@ -36,14 +38,32 @@ val copyTextMateGrammar =
         into(layout.projectDirectory.dir("syntaxes"))
     }
 
-// Copy language configuration
+// These files live beside build.gradle.kts. A Copy task declares the entire destination
+// directory as output, incorrectly making formatting consume generated task output.
+abstract class CopyExtensionFile : DefaultTask() {
+    @get:InputFile @get:PathSensitive(PathSensitivity.NONE) abstract val source: RegularFileProperty
+
+    @get:OutputFile abstract val destination: RegularFileProperty
+
+    @TaskAction
+    fun copy() {
+        val target = destination.get().asFile.toPath()
+        Files.createDirectories(target.parent)
+        Files.copy(source.get().asFile.toPath(), target, StandardCopyOption.REPLACE_EXISTING)
+    }
+}
+
 val copyLanguageConfig =
-    tasks.register<Copy>("copyLanguageConfig") {
+    tasks.register<CopyExtensionFile>("copyLanguageConfig") {
         description = "Copy language configuration from generated output"
-        from(textMateGrammar) {
-            include("language-configuration.json")
-        }
-        into(layout.projectDirectory)
+        source.set(
+            layout.file(
+                textMateGrammar.elements.map { files ->
+                    files.single { it.asFile.name == "language-configuration.json" }.asFile
+                }
+            )
+        )
+        destination.set(layout.projectDirectory.file("language-configuration.json"))
     }
 
 // Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
@@ -70,11 +90,11 @@ val copyDapServer =
 
 // Copy LICENSE from repository root
 val copyLicense =
-    tasks.register<Copy>("copyLicense") {
+    tasks.register<CopyExtensionFile>("copyLicense") {
         description = "Copy LICENSE from repository root"
         val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
-        from(File(compositeRoot, "LICENSE.md"))
-        into(layout.projectDirectory)
+        source.set(File(compositeRoot, "LICENSE.md"))
+        destination.set(layout.projectDirectory.file("LICENSE.md"))
     }
 
 // Generate the marketplace icon (xtc.png, 256x256) and the language file icon

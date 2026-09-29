@@ -788,3 +788,6 @@ composite root's `gradle.properties` at settings time).
 - **[idea-specific.md](./idea-specific.md)** - IntelliJ-specific roadmap beyond standard LSP behavior
 - **[vscode-specific.md](./vscode-specific.md)** - VS Code-specific roadmap beyond standard LSP behavior
 - *Internal documentation* - Comprehensive architecture analysis and compiler modification plans
+
+The next acceptance batch adds shared X124 external-resource configuration/repair and X125 precise
+platform regressions in both editors. Validation is pending; prior 128-case receipts do not cover them.
