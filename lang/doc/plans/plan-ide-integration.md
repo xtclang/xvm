@@ -12,7 +12,12 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-09-29 (member generation, explicit missing-feature investigations and partial AST migration design)
+> **Last Updated**: 2026-09-29 (member generation, explicit missing-feature investigations and partial AST package implementation)
+
+The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
+`org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
+capability or default adapter. Backend validation and the broader AST separation follow-ups are
+recorded in the [integration plan](../../../docs/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
