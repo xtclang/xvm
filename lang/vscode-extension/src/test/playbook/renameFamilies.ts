@@ -122,6 +122,7 @@ export function renameFamilyCases(): void {
                 await noErrors(renamed.uri);
                 if ('sourceModules' in data) {
                     assert.ok(JSON.stringify(compilerSourceModules()).includes('Renamed.example.org'));
+                    assert.ok(JSON.stringify(compilerSourceModules()).includes('assets') && JSON.stringify(compilerSourceModules()).includes('fallback'));
                     assert.ok(!JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
                     assert.ok(await vscode.workspace.saveAll());
                 }
@@ -138,6 +139,7 @@ export function renameFamilyCases(): void {
                 await noErrors(restored.uri);
                 if ('sourceModules' in data) {
                     assert.ok(JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
+                    assert.ok(JSON.stringify(compilerSourceModules()).includes('assets') && JSON.stringify(compilerSourceModules()).includes('fallback'));
                     assert.ok(!JSON.stringify(compilerSourceModules()).includes('Renamed.example.org'));
                     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand('redo');

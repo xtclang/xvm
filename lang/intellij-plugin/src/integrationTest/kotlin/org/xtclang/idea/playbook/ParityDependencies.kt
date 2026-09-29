@@ -1,5 +1,7 @@
 package org.xtclang.idea.playbook
 
+import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.singleProject
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.dependencyCases() {
@@ -124,6 +126,12 @@ internal fun ParityScenarios.dependencyCases() {
             }
         }
         linked(consumer)
+        with(driver) {
+            withContext(OnDispatcher.EDT) {
+                utility(CompilerSettingsPage::class)
+                    .dismissExpectedConfigurationError(singleProject())
+            }
+        }
     }
     case("CFG3") {
         val consumer = dependencies()
