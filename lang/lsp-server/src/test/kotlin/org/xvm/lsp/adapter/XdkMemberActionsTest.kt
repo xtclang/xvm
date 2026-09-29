@@ -18,6 +18,7 @@ class XdkMemberActionsTest {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
             val edit = requireNotNull(action.edit)
             assertThat(edit.versioned).isTrue()
             val changed = apply(text, edit.changes.getValue(uri))
@@ -130,7 +131,8 @@ class XdkMemberActionsTest {
 
     @Test
     fun `named arguments and descendant overrides preserve overload and property bindings`() {
-        val text = """
+        val text =
+            """
             module App {
                 class Base {
                     Int read(Int value) = value;
@@ -143,7 +145,7 @@ class XdkMemberActionsTest {
                 Int child(Child child) = child.read(value = 2);
                 String other(Box box) = box.read(value = "text") + box.label;
             }
-        """.trimIndent()
+            """.trimIndent()
         workspace(text) { adapter, uri ->
             val actions = actions(adapter, uri, text).filter { it.title.startsWith("Override ") }
             assertThat(actions).hasSize(2)
@@ -152,6 +154,23 @@ class XdkMemberActionsTest {
                 assertThat(changed).contains("child.read(value = 2)", "box.read(value = \"text\") + box.label")
                 assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             }
+        }
+    }
+
+    @Test
+    fun `generic override supports inferred calls and descendant dispatch`() {
+        val text =
+            """
+            module App {
+                class Base { <T> T read(T value) = value; }
+                class Box extends Base {}
+                class Child extends Box {}
+                String use(Child child) = child.read(value = "text");
+            }
+            """.trimIndent()
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Override <T>") }
+            assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
         }
     }
 

@@ -129,12 +129,13 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
 internal fun EmbeddingSupport.DeclarationAnalysis.memberActionFacts(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
-): CompilerRenameFacts = ExecutionTrace.api("DeclarationAnalysis.memberActionFacts") {
-    ConstantPool.withPool(pool()).use {
-        val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file().moduleId })
-        builder.declarationFacts(this, dependencies, errors)
+): CompilerRenameFacts =
+    ExecutionTrace.api("DeclarationAnalysis.memberActionFacts") {
+        ConstantPool.withPool(pool()).use {
+            val builder = SemanticModelBuilder(dependencies.declarations.filterKeys { it.moduleConstant != file().moduleId })
+            builder.declarationFacts(this, dependencies, errors)
+        }
     }
-}
 
 /** Export only successful attempts, atomically pairing emitted bytes with their own source spans. */
 fun EmbeddingSupport.Compilation.toDependency(): XdkDependency =
@@ -201,8 +202,12 @@ private class SemanticModelBuilder(
         val nodes = nodesIn(analysis.ast())
         collect(nodes, emptyMap(), emptyMap(), analysis.pool())
         return captureRenameFacts(
-            finish(nodes, false, emptyMap(), emptyMap()), constantBindings(), dependencies,
-            compilerMethodRelations(nodes, errors), compilerPropertyRelations(nodes, errors), errors,
+            finish(nodes, false, emptyMap(), emptyMap()),
+            constantBindings(),
+            dependencies,
+            compilerMethodRelations(nodes, errors),
+            compilerPropertyRelations(nodes, errors),
+            errors,
             members = compilerMemberActions(nodes, errors),
         )
     }
