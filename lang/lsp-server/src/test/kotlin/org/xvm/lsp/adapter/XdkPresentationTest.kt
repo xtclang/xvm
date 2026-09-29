@@ -23,9 +23,11 @@ class XdkPresentationTest {
         XdkAdapter().use { adapter ->
             listOf(source, source.replace("return 1 + word.size;", "return pair((pair(1, ;"))
                 .forEach { text ->
-                    adapter.compile(URI, text)
-                    val tokens = decode(adapter.getSemanticTokens(URI)!!)
-                    assertThat(tokens).isNotEmpty()
+                    val compilation = adapter.compile(URI, text)
+                    assertThat(compilation.success).isEqualTo(text == source)
+                    val tokens = adapter.getSemanticTokens(URI)?.let(::decode).orEmpty()
+                    // Parser recovery may produce no AST. It must not retain stale tokens.
+                    if (text == source) assertThat(tokens).isNotEmpty()
                     tokens.zipWithNext().forEach { (previous, next) ->
                         assertThat(previous[0] < next[0] || previous[1] + previous[2] <= next[1])
                             .describedAs("overlapping tokens: %s then %s", previous, next)
