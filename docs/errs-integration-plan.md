@@ -1124,7 +1124,7 @@ an LSP dependency inside the compiler.
 | P1 semantic boundary | `829eb41de` | Introduces stateless `PartialQueries`, explicit scope/formal arguments and the read-only constructor-argument snapshot. |
 | P2 registered fields | `29e8a64d4` | Same-module cross-package access and three real AST regressions; retain existing malformed-field tests. This is a prerequisite for P3. |
 | P3 syntax package | `42ca7f932` | Moves the four classes and all Java/Kotlin consumers. Include P4's correction restoring the two protected expression-validation overrides. |
-| P4 verification and ownership audit | This checkpoint | Combined validation and documentation below; the preceding implementation checkpoints were deliberately committed before testing. |
+| P4 verification and ownership audit | `a1857b8df` | Combined validation and documentation below; the preceding implementation checkpoints were deliberately committed before testing. |
 
 `PartialQueries` deliberately remains in the parent `ast` package. Java subpackages do not share
 package access, and protected access does not let the moved nodes validate arbitrary receiver or
@@ -1173,6 +1173,23 @@ The natural next steps are bounded extractions from existing nodes into existing
 A second semantic library, Kotlin inside javatools, or a generic public AST-internals facade is
 unnecessary. `partial` names incomplete syntax; complete-program capture and invocation facts do
 not belong there simply because the LSP consumes them.
+
+- [ ] **AST5 — Extract shared partial-syntax queries into `ast.partial` first.** The class-level
+  decision to retain `PartialArgument` hid a useful method-level boundary: its `of`/`cursor` selection
+  uses only public syntax APIs; its trial replacement uses protected `setParent`/`introduceParentage`.
+  Group the read-only argument-slot selection, `PartialQueries.argumentCall`,
+  `PartialQueries.isWithin` and Parser's cursor-position tree walk in a small `partial.PartialSyntax`
+  helper. Parser retains its explicit-cursor/mode/rollback guards. Property validation and the root
+  semantic helpers call the syntax helper; `IncompleteStatement.getArgumentCall()` delegates within
+  its own package, removing that operation from the public semantic bridge. An immutable selected
+  argument result (cursor node plus index) can cross the package boundary without exposing compiler
+  internals. Keep speculative argument construction/adoption in the root helper; do not make AST
+  parenting public. Prefer one selection result used directly by the resolver over duplicate wrapper
+  records. Preserve the distinct queries: any partial descendant, a descendant at an exact cursor,
+  and a direct argument slot that must not cross lambda/ordinary call/construction boundaries.
+  Cover labeled/grouped/compound arguments, nested call boundaries, array dimensions, exact cursor
+  offsets, original/clone ownership and unchanged speculative bindings. This is a worthwhile small
+  extraction; it does not justify moving validation or inference helpers wholesale.
 
 - [ ] **AST1 — Move cursor-scope collection out of `Context`.** `Context.cursorBinding()` has only
   three callers: `PartialQueries`, `PartialCallResolver` and `PartialConstructionResolver`. Move its
