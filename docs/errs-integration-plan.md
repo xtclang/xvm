@@ -438,6 +438,27 @@ VS Code receipts above.
   unsaved import edges and workspace-folder refresh are already implemented. Complete-graph
   references/refactorings must retain their proof requirements beside broken neighbors.
 
+### L64 completion and signature batch (2026-09-29)
+
+Implement four checkpoints before combined validation:
+
+1. [x] Preserve written recursive formal constraints in incomplete declarations. Known, visible
+   class type arguments may guard recursion; direct/sibling cycles, unknown names and unresolved
+   formal-member lookup remain refused. Syntax-only constraints have no fabricated type identity.
+2. [ ] Offer literal argument values only after ordinary compiler fitting and full argument validation.
+3. [ ] Copy candidate documentation, provide deterministic completion ordering and improve
+   overload/active-argument presentation without claiming an incomplete overload was selected.
+4. [ ] Extend shared scenarios and both drivers, then run combined backend/protocol checks and
+   selected native cases. Do not infer full-catalog coverage from selected runs.
+
+Checkpoint 1 extends `CursorBinding.Formal` with optional written-constraint text. Its existing
+two-argument constructor remains; record-pattern users need the new component. A recursive written
+constraint has no `TypeConstant`, and the detached Kotlin model preserves that distinction in
+completion/hover. This is display/name completion only, not a bound for member lookup or fitting.
+No AST field, invented formal declaration, parser mode or retained Context is added. Unrelated
+parse errors and unclosed outer bodies away from the cursor remain separate recovery limitations.
+Validation is pending until all four checkpoints are implemented.
+
 ### Implement the missing protocol operations
 
 These are absent operations or optional extensions to working base features. They are not

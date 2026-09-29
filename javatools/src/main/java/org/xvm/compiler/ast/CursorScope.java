@@ -127,8 +127,61 @@ final class CursorScope {
                 (first, second) -> first));
         return parameters.stream().takeWhile(parameter -> !errs.isAbortDesired()).map(parameter -> {
             TypeConstant bound = formalBound(parameter, scope, byName, Set.of(), errs);
-            return bound == null ? null : new CursorBinding.Formal(parameter.getNameToken(), bound);
+            if (bound != null) {
+                return new CursorBinding.Formal(parameter.getNameToken(), bound);
+            }
+            return writtenBound(parameter.getType(), scope, byName, Map.of(parameter.getName(), 0), 0, errs)
+                    == BoundSyntax.RECURSIVE
+                    ? new CursorBinding.Formal(parameter.getNameToken(), null, parameter.getType().toString()) : null;
         }).filter(Objects::nonNull).toList();
+    }
+
+    /**
+     * Recognize guarded written recursion without assigning it a type. A cycle must cross a real
+     * class's type-argument boundary; aliases and direct/sibling cycles cannot establish one.
+     * Unknown or inaccessible names still reject the constraint. Qualified formal members need a
+     * resolved bound and deliberately do not use this syntax-only fallback.
+     */
+    private static BoundSyntax writtenBound(TypeExpression type, AstNode scope,
+            Map<String, Parameter> parameters, Map<String, Integer> resolving, int depth, ErrorListener errs) {
+        if (errs.isAbortDesired() || !(type instanceof NamedTypeExpression named) || named.left != null) {
+            return BoundSyntax.INVALID;
+        }
+        String name = named.getNames()[0];
+        if (parameters.containsKey(name)) {
+            if (named.getNames().length != 1 || named.paramTypes != null) {
+                return BoundSyntax.INVALID;
+            }
+            if (resolving.containsKey(name)) {
+                return depth > resolving.get(name) ? BoundSyntax.RECURSIVE : BoundSyntax.INVALID;
+            }
+            var parameter = parameters.get(name);
+            if (parameter.getType() == null) {
+                return BoundSyntax.COMPLETE;
+            }
+            var active = Stream.concat(resolving.entrySet().stream(), Stream.of(Map.entry(name, depth)))
+                    .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+            return writtenBound(parameter.getType(), scope, parameters, active, depth, errs);
+        }
+        var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
+        var target = new NameResolver(scope, Arrays.asList(named.getNames()).iterator()).forceResolve(probe);
+        if (!(target instanceof IdentityConstant identity) || !isTypeIdentity(identity)
+                || !visible(identity, scope.getComponent().getIdentityConstant())
+                || probe.hasSeriousErrors() || probe.isAbortDesired()) {
+            return BoundSyntax.INVALID;
+        }
+        int nested = depth + (identity.getComponent() instanceof ClassStructure ? 1 : 0);
+        return named.paramTypes == null ? BoundSyntax.COMPLETE : named.paramTypes.stream()
+                .map(argument -> writtenBound(argument, scope, parameters, resolving, nested, errs))
+                .reduce(BoundSyntax.COMPLETE, BoundSyntax::combine);
+    }
+
+    private enum BoundSyntax {
+        COMPLETE, RECURSIVE, INVALID;
+
+        BoundSyntax combine(BoundSyntax other) {
+            return ordinal() >= other.ordinal() ? this : other;
+        }
     }
 
     private static TypeConstant formalBound(Parameter parameter, AstNode scope, Map<String, Parameter> parameters,
