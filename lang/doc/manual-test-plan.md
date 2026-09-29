@@ -1828,6 +1828,12 @@ roots may be outside workspace folders. A scope receipt does not authorize apply
 - **IntelliJ:** open **Settings > Languages & Frameworks > Ecstasy Compiler**. Select automatic
   discovery, or disable it and add module names, root URIs/relative paths and comma-separated
   dependencies. **Apply** saves through LSP4IJ's project settings and refreshes the running server.
+  The resource-root column accepts a JSON array such as `["assets/templates", "shared/resources"]`.
+  Leave it blank for compiler layout deduction; `[]` explicitly disables resources. Relative paths
+  use the project root. Custom build-defined paths must currently be entered explicitly; automatic
+  Gradle model import remains planned. In VS Code, use the same `resourceRoots` array within
+  `xtc.compiler.sourceModules`. Change/delete/recreate a referenced resource on disk and check
+  dependency diagnostics refresh; a resource file is not an extra XTC source root.
   Blank fields and duplicate roots are refused. **Reset** discards pending edits. The legacy LSP4IJ
   Configuration JSON remains the fallback until a project override exists. Rename and native
   Undo/Redo update that same effective store; a changed graph or changed settings owner refuses

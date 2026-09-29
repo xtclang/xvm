@@ -57,6 +57,7 @@ import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.treesitter.SemanticTokenLegend
@@ -95,9 +96,12 @@ class XtcLanguageServer(
         val versioned: Boolean = false,
         val renameFiles: Boolean = false,
         val fileWatchers: Boolean = false,
+        val relativeWatchPatterns: Boolean = false,
+        val resourceWatchers: Boolean = false,
     )
 
     private val editCapabilities = AtomicReference(EditCapabilities())
+    private val resourceFileWatchers = ResourceFileWatchers()
     internal val supportsVersionedEdits: Boolean
         get() = editCapabilities.get().versioned
 
@@ -256,6 +260,8 @@ class XtcLanguageServer(
                 workspaceEdits?.documentChanges == true,
                 workspaceEdits?.resourceOperations?.contains("rename") == true,
                 params.capabilities?.workspace?.didChangeWatchedFiles?.dynamicRegistration == true,
+                params.capabilities?.workspace?.didChangeWatchedFiles?.relativePatternSupport ==
+                    true,
             )
         )
 
@@ -303,8 +309,19 @@ class XtcLanguageServer(
      */
     override fun initialized(params: InitializedParams?) {
         logger.info("initialized: handshake complete, requesting editor configuration")
-        if (editCapabilities.getAndUpdate { it.copy(fileWatchers = false) }.fileWatchers)
+        if (
+            editCapabilities
+                .getAndUpdate {
+                    it.copy(
+                        fileWatchers = false,
+                        resourceWatchers = it.resourceWatchers || it.fileWatchers,
+                    )
+                }
+                .fileWatchers
+        ) {
             registerFileWatcher()
+            updateResourceWatchers()
+        }
         requestFormattingConfig()
         requestCompilerConfig()
     }
@@ -359,6 +376,7 @@ class XtcLanguageServer(
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).discoverSourceModules()
                     }
+                    updateResourceWatchers()
                 } else {
                     CompilerConfiguration.modules(raw, settings.folders)
                         ?.let(::replaceCompilerSourceModules)
@@ -744,6 +762,7 @@ class XtcLanguageServer(
             }
         if (alreadyClosed) return
         initialized = false
+        editCapabilities.set(EditCapabilities())
         try {
             textDocumentService.close()
         } finally {
@@ -830,9 +849,9 @@ class XtcLanguageServer(
         }
 
     /**
-     * Register a file watcher for `**&#47;*.x` files via dynamic capability registration. This
-     * enables the client to notify us when XTC files are created, changed, or deleted on disk
-     * (outside of the editor), which we use to keep the workspace index up to date.
+     * Register source file watchers (and workspace resource changes in compiler mode). This enables
+     * the client to notify us when XTC files are created, changed, or deleted on disk (outside of
+     * the editor), which we use to keep the workspace index up to date.
      */
     private fun registerFileWatcher() {
         val currentClient = client ?: return
@@ -840,7 +859,7 @@ class XtcLanguageServer(
             DidChangeWatchedFilesRegistrationOptions(
                 listOf(
                     FileSystemWatcher(
-                        Either.forLeft("**/*.x"),
+                        Either.forLeft(if (adapter is XdkAdapter) "**/*" else "**/*.x"),
                         WatchKind.Create + WatchKind.Change + WatchKind.Delete,
                     )
                 )
@@ -883,6 +902,7 @@ class XtcLanguageServer(
             textDocumentService.refreshDependencies {
                 compiler.changeWorkspaceFolders(added, removed)
             }
+            updateResourceWatchers()
         } catch (failure: IllegalArgumentException) {
             reportCompilerConfigError(failure)
         } catch (failure: IOException) {
@@ -894,11 +914,31 @@ class XtcLanguageServer(
         val compiler = adapter as? XdkAdapter ?: return
         try {
             textDocumentService.refreshDependencies { compiler.refreshDiscoveredSources() }
+            updateResourceWatchers()
         } catch (failure: IllegalArgumentException) {
             reportCompilerConfigError(failure)
         } catch (failure: IOException) {
             logger.warn("Source discovery failed; keeping previous graph: {}", failure.message)
         }
+    }
+
+    private fun updateResourceWatchers() {
+        val compiler = adapter as? XdkAdapter ?: return
+        val currentClient = client ?: return
+        if (!editCapabilities.get().resourceWatchers) return
+        val folders = compilerSettings.get().folders.mapNotNull { XdkSources.file(it)?.toPath() }
+        val external =
+            compiler
+                .resourceWatchRoots()
+                .filter { root ->
+                    folders.none { root.toPath().startsWith(it) }
+                }
+                .mapTo(linkedSetOf()) { it.toURI().toString() }
+        resourceFileWatchers.update(
+            currentClient,
+            external,
+            editCapabilities.get().relativeWatchPatterns,
+        )
     }
 
     fun refreshForFile(uri: String) = textDocumentService.refreshForFile(uri)
@@ -915,6 +955,7 @@ class XtcLanguageServer(
     fun replaceCompilerSourceModules(modules: List<XdkSourceModule>) {
         val compiler = adapter as? XdkAdapter ?: error("Compiler source modules require XdkAdapter")
         textDocumentService.refreshDependencies { compiler.replaceSourceModules(modules) }
+        updateResourceWatchers()
     }
 
     fun publishDiagnostics(
