@@ -18,6 +18,8 @@ import org.gradle.testkit.runner.TaskOutcome;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Exercises real plugin tasks through configuration-cache storage and reuse.
@@ -28,8 +30,9 @@ class ConfigurationCacheCompatibilityTest {
     @TempDir
     Path testProjectDir;
 
-    @Test
-    void resourcesFollowLateConfigurationAndChangesOnCacheReuse() throws IOException {
+    @ParameterizedTest
+    @ValueSource(strings = {"xtc/main/resources", "custom-resources"})
+    void resourcesFollowLateConfigurationAndChangesOnCacheReuse(final String resourceDestination) throws IOException {
         Files.writeString(testProjectDir.resolve("settings.gradle.kts"), "rootProject.name = \"cache-test\"\n");
         Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
             import org.xtclang.plugin.tasks.XtcCompileTask
@@ -39,6 +42,7 @@ class ConfigurationCacheCompatibilityTest {
             }
             version = "1.0"
             tasks.named<Copy>("processXtcResources") {
+                into(layout.buildDirectory.dir("%s"))
                 filter { it.uppercase() }
             }.get()
             tasks.named<XtcCompileTask>("compileXtc") {
@@ -58,13 +62,13 @@ class ConfigurationCacheCompatibilityTest {
                 resources.setSrcDirs(listOf("extra-resources"))
                 resources.exclude("excluded.txt")
             }
-            """);
+            """.formatted(resourceDestination));
         final var resources = Files.createDirectory(testProjectDir.resolve("extra-resources"));
         final var input = Files.writeString(resources.resolve("included.txt"), "first");
         Files.writeString(resources.resolve("excluded.txt"), "excluded");
         final var sources = Files.createDirectories(testProjectDir.resolve("src/main/x"));
         Files.writeString(sources.resolve("Example.x"), "module Example {}");
-        final var destination = testProjectDir.resolve("relocated-build/xtc/main/resources");
+        final var destination = testProjectDir.resolve("relocated-build").resolve(resourceDestination);
         final var compiled = testProjectDir.resolve("relocated-build/xtc/main/lib/resource.txt");
 
         final var first = runBuild("compileXtc");
