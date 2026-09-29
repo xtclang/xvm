@@ -15,6 +15,7 @@ import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTr
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
+import { registerCompilerPaths } from './compiler-paths';
 import { compilerSettingsLocation } from './rename-proposal';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
@@ -106,6 +107,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     registerCommands(context, outputChannel);
+    registerCompilerPaths(context);
 
     // Setup LSP server
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));

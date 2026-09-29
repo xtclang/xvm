@@ -3,6 +3,7 @@ package org.xvm.lsp.server
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import java.net.URI
+import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 
 /**
@@ -19,6 +20,23 @@ internal object CompilerConfiguration {
         objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
 
     fun automatic(raw: Any?): Boolean = objectValue(raw)?.get("sourceModules")?.isJsonNull == true
+
+    fun buildModel(raw: Any?): XdkBuildModel? {
+        val config = objectValue(raw) ?: return null
+        if (config["sourceModules"]?.let { !it.isJsonNull } == true) return null
+        val models = config["buildModels"]?.takeUnless { it.isJsonNull } ?: return null
+        require(models.isJsonArray) { "buildModels must be an array" }
+        return models.asJsonArray
+            .takeIf { !it.isEmpty }
+            ?.let {
+                XdkBuildModel.read(
+                    it.map { model ->
+                        require(model.isJsonObject) { "Build models must be objects" }
+                        model.asJsonObject
+                    }
+                )
+            }
+    }
 
     fun modules(
         raw: Any?,
