@@ -5,7 +5,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 
 class XdkMemberActionsTest {
@@ -162,6 +167,52 @@ class XdkMemberActionsTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `binary contracts generate only user source edits with or without indexed sources`(indexed: Boolean) {
+        CompilerTestSupport.configure()
+        val errors = ErrorList()
+        val library = EmbeddingSupport.instance().compileModule(
+            Source("module Library { interface Api { String read(String value); } }", "file:///Library.x"),
+            null,
+            errors,
+        )
+        assertThat(library.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        val indexedDependency = library.toDependency()
+        val dependency = if (indexed) indexedDependency else XdkDependency.fromBinary(indexedDependency.bytes())
+        val original = dependency.bytes()
+        val text = "module App { package lib import Library; class Box implements lib.Api {} " +
+            "Box make() = new Box(); String use(Box box) = box.read(value = \"text\"); }"
+        workspace(text, initiallyValid = false, dependencies = listOf(dependency)) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement String read(String value)" }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics).isEmpty()
+            assertThat(dependency.bytes()).isEqualTo(original)
+        }
+    }
+
+    @Test
+    fun `bundled Iterator contract repairs construction without editing the XDK`() {
+        val text = "module App { class Box implements Iterator<String> {} Box make() = new Box(); }"
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement conditional String next()" }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(adapter.compile(uri, apply(text, edit.changes.getValue(uri))).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `bundled concrete method override preserves descendant and selected call bindings`() {
+        val text = "module App { class Box implements Iterator<String> { @Override conditional String next() = False; } " +
+            "class Child extends Box {} String use(Child child) = child.take(); }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Override String take()" }
+            assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
+        }
+    }
+
     @Test
     fun `descendants inherit the generated override in compiler dispatch order`() {
         val text = "module App { class Base { Int read() = 1; } class Box extends Base {} class Child extends Box {} }"
@@ -299,10 +350,12 @@ class XdkMemberActionsTest {
     private fun workspace(
         text: String,
         initiallyValid: Boolean = true,
+        dependencies: List<XdkDependency> = emptyList(),
         check: (XdkAdapter, String) -> Unit,
     ) {
         val source = directory.resolve("App.x").toFile().apply { writeText(text) }
         XdkAdapter().use { adapter ->
+            adapter.replaceDependencies(dependencies)
             adapter.initializeWorkspace(listOf(directory.toString()))
             val uri = source.toURI().toString()
             assertThat(adapter.compile(uri, text).diagnostics.isEmpty()).describedAs(text).isEqualTo(initiallyValid)
