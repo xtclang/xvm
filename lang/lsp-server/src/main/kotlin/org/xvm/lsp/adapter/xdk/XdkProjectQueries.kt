@@ -9,6 +9,7 @@ import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.tool.ModuleInfo
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
@@ -278,12 +279,11 @@ internal class XdkProjectQueries(
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
         val before = compile(texts, Proof.REPAIR) ?: return emptyList()
-        if (before.models.any { it.status != SemanticModel.Status.COMPLETE } ||
-            project.modules.values.any { module -> before.models.none { it.sourceName == module.root.path } }
-        ) {
-            return autoImports(uri, source, text, range, before)
-        }
-        val actions =
+        val complete = before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
+            project.modules.values.all { module -> before.models.any { it.sourceName == module.root.path } }
+        val actions = if (!complete) {
+            autoImports(uri, source, text, range, before)
+        } else {
             XdkImports.candidates(text).mapNotNull { candidate ->
                 checkCurrent()
                 val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
@@ -295,6 +295,7 @@ internal class XdkProjectQueries(
                     edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                 )
             }
+        }
         val members =
             before.memberActions.filter { it.selected(source, range) }.take(32).mapNotNull { candidate ->
                 checkCurrent()
@@ -466,7 +467,22 @@ internal class XdkProjectQueries(
                     if (!compilation.succeeded() || heard.hasSeriousErrors() ||
                         compilation.file()?.module?.name != module.name
                     ) {
-                        if (proof == Proof.REPAIR) return@mapNotNull module.uri to compilation.renameFacts(open)
+                        if (proof == Proof.REPAIR) {
+                            val partial = compilation.renameFacts(open)
+                            val fresh = XdkDependencies(inputs.values.toList()).open()
+                            val declarationErrors = ErrorListener.cancellable(ErrorList(), cancelled)
+                            val declarations = ExecutionTrace.api("EmbeddingSupport.analyzeDeclarations(tree)", module.uri) {
+                                EmbeddingSupport.instance().analyzeDeclarations(
+                                    XdkSources.replay(originalRoot, source.inputs, text, moves), fresh.repository, declarationErrors,
+                                )
+                            }.orElse(null)
+                            checkCurrent()
+                            val headers = declarations?.memberActionFacts(fresh, declarationErrors)
+                            val repaired = if (headers != null && !declarationErrors.hasSeriousErrors() && !declarationErrors.isAbortDesired) {
+                                CompilerRenameFacts.merge(mapOf("headers" to headers, "partial" to partial))
+                            } else partial
+                            return@mapNotNull module.uri to repaired
+                        }
                         if (proof == Proof.NAVIGATION) return@mapNotNull null
                         return null
                     }

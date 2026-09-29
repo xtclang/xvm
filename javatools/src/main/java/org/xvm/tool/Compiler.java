@@ -297,14 +297,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @return 0 for success, non-zero for failure
      */
     protected int compile(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repoLib) {
-        linkModules(compilers, repoLib);
-        flushAndCheckErrors(compilers, "module linking");
-
-        resolveNames(compilers);
-        flushAndCheckErrors(compilers, "name resolution");
-
-        injectNativeTurtle(repoLib);
-        checkErrors("native turtle injection");
+        resolveDeclarations(compilers, repoLib);
 
         log(INFO, "Validating expressions");
         validateExpressions(compilers);
@@ -315,6 +308,25 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(compilers, "code generation");
 
         return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Run the normal declaration phases without validating bodies or generating code.
+     * Embedding hosts may stop here, but must not treat the resulting structures as artifacts.
+     *
+     * @param compilers  the fresh module compilers
+     * @param repoLib    the linked library repository
+     */
+    protected void resolveDeclarations(List<org.xvm.compiler.Compiler> compilers,
+                                       ModuleRepository repoLib) {
+        linkModules(compilers, repoLib);
+        flushAndCheckErrors(compilers, "module linking");
+
+        resolveNames(compilers);
+        flushAndCheckErrors(compilers, "name resolution");
+
+        injectNativeTurtle(repoLib);
+        checkErrors("native turtle injection");
     }
 
     /**

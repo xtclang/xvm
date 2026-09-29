@@ -693,3 +693,12 @@ listeners without publishing speculative diagnostics. Implementation extraction 
 explicit reporting inspection already used for single-module lookup. The full bundled XDK remains
 read-only to workspace operations; library names cannot be replaced with source or host artifacts.
 See the [five-area verification and extraction record](errs-integration-plan.md#five-area-functionality-batch).
+
+### Declaration-only embedding analysis
+
+`analyzeDeclarations` uses the same parsing, linking, name-resolution and turtle-injection phase
+prefix as normal compilation and the same host listener/cancellation checks. It returns no analysis
+after a declaration failure or cancellation, and reports unexpected failures through EMB-5 even
+when source diagnostics already exist. Expression validation and emission are outside this query;
+normal `compileModule` still runs both. LSP member repair opens a fresh repository/tree for this
+query after a failed compile, rather than suppressing errors and continuing its failed TypeInfo.
