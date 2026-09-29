@@ -38,6 +38,7 @@ class XdkResourceInputsTest {
     @Test
     fun `custom resource contents invalidate only their source consumer closure including same timestamp edits`() {
         CompilerTestSupport.configure()
+        directory = directory.toRealPath()
         val roots = directory.resolve("custom-assets").toFile().apply { mkdirs() }
         val resource = roots.resolve("data.txt").apply { writeText("first") }
         val library =

@@ -240,8 +240,7 @@ internal object XdkCursorQueries {
                     compareByDescending<SignatureSite> { it.range.start }.thenBy { it.range.end }
                 ) ?: return null
         val active =
-            call.arguments
-                .firstOrNull { position >= it.range.start && position <= it.range.end }
+            (call.arguments.firstOrNull { position <= it.range.end } ?: call.arguments.lastOrNull())
                 ?.parameterIndex
         return SignatureHelp(
             listOf(signature(model, call.name, call.signature, active, call.documentation)),
@@ -258,7 +257,7 @@ internal object XdkCursorQueries {
         val documentation: String? = null,
     )
 
-    private fun signature(
+    fun signature(
         model: SemanticModel,
         name: String,
         signature: Signature,

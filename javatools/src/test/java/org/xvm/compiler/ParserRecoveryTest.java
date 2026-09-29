@@ -37,6 +37,29 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Recovery retains real syntax without validating or inventing a replacement expression. */
 public class ParserRecoveryTest {
     @Test
+    public void memberCursorsBeforeWrittenCallsRetainTheirArgumentsAndFollowingStatements() {
+        List.of("text.tr§()", "text.trim().tr§()", "text.ind§(\"a,b\", 1)")
+                .forEach(expression -> {
+                    String marked = "module Recovery { void run(String text) { String value = "
+                            + expression + "; Int after = 1; } }";
+                    var source = new Source(marked.replace("§", ""));
+                    marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var errors = new ErrorList();
+                    var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    assertNotNull(tree);
+                    assertTrue(tree.toDumpString().contains("after"));
+                    var call = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                            .map(IncompleteStatement.class::cast).filter(IncompleteStatement::isCall)
+                            .findFirst().orElseThrow();
+                    assertEquals(expression.contains("ind") ? 2 : 0, call.getArguments().size());
+                    assertTrue(errors.getErrors().stream().allMatch(error ->
+                            error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
+                });
+    }
+
+    @Test
     public void malformedStatementRetainsItsMethodAndFollowingDeclarations() {
         ErrorList errs = new ErrorList();
         StatementBlock tree = parse("""
