@@ -546,6 +546,8 @@ class XtcTextDocumentService(
                     kind = toCompletionItemKind(c.kind)
                     detail = c.detail
                     insertText = c.insertText
+                    documentation = c.documentation?.let { Either.forLeft(it) }
+                    sortText = c.sortText
                     textEdit =
                         c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
                 }
