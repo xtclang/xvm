@@ -3264,8 +3264,13 @@ public class Parser {
                         }
                     }
                     if (noDeRef == null && name.getId() == Id.IDENTIFIER
-                            && name.getEndPosition() == f_cursor && canRetainIncomplete()) {
-                        throw incomplete(expr, dot, name);
+                            && name.getEndPosition() == f_cursor && canRetainIncompleteAt(f_cursor, true)) {
+                        var hole = incomplete(expr, dot, name);
+                        if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
+                            expr = new IncompleteExpression(hole.statement);
+                            break;
+                        }
+                        throw hole;
                     }
                     long                 lEndPos = name.getEndPosition();
                     List<TypeExpression> params  = null;
@@ -3630,8 +3635,12 @@ public class Parser {
                 }
 
                 left    = new NameExpression(left, nameNDR, name, null, lEndPos);
-                if (fNormal && nameNext.getEndPosition() == f_cursor && canRetainIncomplete()) {
-                    throw incomplete(left, dot, nameNext);
+                if (fNormal && nameNext.getEndPosition() == f_cursor && canRetainIncompleteAt(f_cursor, true)) {
+                    var hole = incomplete(left, dot, nameNext);
+                    if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
+                        return new IncompleteExpression(hole.statement);
+                    }
+                    throw hole;
                 }
                 nameNDR = null;                     // only gets applied once
                 name    = nameNext;
@@ -5602,7 +5611,7 @@ public class Parser {
         Token            open       = array || allowBindings && peek(Id.ASYNC_PAREN) ? current() : expect(Id.L_PAREN);
         List<Expression> args       = new ArrayList<>();
         List<Token>      separators = new ArrayList<>();
-        boolean          incomplete = false;
+        boolean          incomplete = containsCursorHole(callee);
         if (canRetainIncomplete() && !peek(Id.COMMA)) {
             match(close);
             throw incomplete(callee, open, args, separators);
@@ -5663,6 +5672,11 @@ public class Parser {
 
     /** A mid-token value cursor uses the same recovery boundary after its complete written token. */
     private boolean canRetainIncompleteAt(long cursor) {
+        return canRetainIncompleteAt(cursor, false);
+    }
+
+    /** A selected member name can precede a call whose arguments must still be parsed and owned. */
+    private boolean canRetainIncompleteAt(long cursor, boolean allowCall) {
         if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
             return false;
         }
@@ -5672,7 +5686,8 @@ public class Parser {
         return prev().getEndPosition() <= cursor
                 && cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
                 && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
-                        || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON) || peek(Id.L_CURLY));
+                        || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON) || peek(Id.L_CURLY)
+                        || allowCall && (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)));
     }
 
     /**

@@ -582,13 +582,22 @@ private class SemanticModelBuilder(
                     }
                 }
                 .toMap()
+        // Inferred/narrowed types can name a nominal type that never occurs in written source.
+        // Intern those declarations before freezing the tables. Their own declared types may
+        // introduce further IDs; process each once without iterating a map being mutated.
+        val definitionTargets = buildMap {
+            while (true) {
+                val pending = typeIds.filterValues { it !in this }
+                if (pending.isEmpty()) break
+                pending.forEach { (constant, id) -> put(id, typeDefinitions(constant)) }
+            }
+        }
         val facts =
             SemanticModel.Facts(
                 symbols = symbols,
                 types = types,
                 typeDeclarations = hierarchy,
-                typeDefinitions =
-                    typeIds.entries.associate { (constant, id) -> id to typeDefinitions(constant) },
+                typeDefinitions = definitionTargets,
                 implementations =
                     implementations.entries
                         .mapNotNull { (target, implementations) ->
@@ -1654,7 +1663,18 @@ private class SemanticModelBuilder(
             }
 
             else -> {
-                listOfNotNull(constants[normalized(constant)])
+                val target = normalized(constant)
+                listOfNotNull(
+                    constants[target]
+                        ?: (target as? IdentityConstant)?.let {
+                            symbol(
+                                it,
+                                it.name,
+                                if (constant.isFormalType) SymbolKind.TYPE_PARAMETER
+                                else SymbolKind.TYPE,
+                            )
+                        }
+                )
             }
         }.distinct()
     }

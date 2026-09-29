@@ -11,6 +11,26 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 
 /** Presentation of copied compiler facts; the shared protocol legend does not load a parser. */
 internal object XdkPresentation {
+    /** Hover describes the resolved occurrence, never the declaration enclosing its body. */
+    fun hover(model: SemanticModel, line: Int, column: Int): String? {
+        val symbol = model.symbolAt(line, column)
+        val type = model.typeAt(line, column)?.displayName
+        val position = SemanticModel.Position(line, column)
+        val signature =
+            model.calls.firstOrNull { it.method == symbol?.id && position in it.callee }?.signature
+                ?: symbol?.signature
+        val label =
+            when {
+                symbol != null && signature != null ->
+                    XdkCursorQueries.signature(model, symbol.name, signature).label
+                symbol != null ->
+                    listOfNotNull(type ?: symbol.kind.name.lowercase(), symbol.name)
+                        .joinToString(" ")
+                else -> type
+            } ?: return null
+        return "```xtc\n$label\n```" + symbol?.documentation?.let { "\n\n$it" }.orEmpty()
+    }
+
     fun tokens(
         model: SemanticModel,
         lexical: List<List<Int>> = emptyList(),
