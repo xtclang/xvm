@@ -662,6 +662,7 @@ Future extraction map for this batch:
 | `db328f8a1` | General compiler source-accessor correction plus parsed-tree regression; the adapter diagnostic regression travels with the embedding/LSP integration. |
 | `7bce2da9b` | Resource input model, server invalidation/watchers, both editor configuration stores and regression coverage; depends on the existing source-graph/diagnostic foundation. |
 | `b9b153298` | Platform presentation/recovery fixes. Parser/partial validation and its Java regression form the compiler slice; semantic-model/hover/signature code and adapter tests form the dependent LSP slice. Includes the PLAT2 fixture's canonical-path correction. |
+| `28e9e785c` | Required validation follow-up: nullable target unwrapping, corrected regression setup/expectations, clean platform receipt and generated-resource demo configuration. Carry the semantic correction with the PLAT3 LSP slice and the resource test setup with PLAT2. |
 
 #### Resource configuration and build-model integration (PLAT2 / L67)
 
