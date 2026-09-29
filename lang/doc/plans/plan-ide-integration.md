@@ -129,6 +129,15 @@ accepting or emitting the damaged expression. Compiler mode stays Java-only.
 The full matching XDK library set is bundled with the server and treated as read-only; no external
 installation is required. The three bootstrap checks are minimum health assertions, not a whitelist.
 
+Configured source modules also carry ordered resource roots. Conventional Gradle resources use
+compiler layout deduction; custom/unmanaged roots use explicit project settings in both hosts.
+Resource contents, creation/deletion and configuration participate in cache invalidation and
+diagnostic refresh. Evaluated Gradle import and a path-picker/origin view remain planned, not
+implemented; see [PLAT2](../../../docs/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67).
+Hover identifies resolved occurrences, completed calls retain parameter mapping between written
+arguments, and inferred/narrowed nominal types retain type-definition targets. Member completion
+can retain a prefix before existing call parentheses, including chained receivers.
+
 Navigation includes type-parameter declarations and anonymous-class captures. Module sessions
 combine disk sources with unsaved overlays, including new member files, and build per-source views
 in one identity domain. Matching bundled library declarations navigate to read-only source targets. Workspace

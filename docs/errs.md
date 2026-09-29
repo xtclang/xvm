@@ -12,7 +12,7 @@ and the newly found [real-platform blockers](errs-integration-plan.md#platform-d
 composition before parser parent adoption. It returns null until a real source is available and
 uses the ordinary parent source afterward. This is the existing general AST source contract,
 not partial/LSP-only behavior; no state or clone work was added. The parsed-enum reproduction and
-closed-diagnostic repair regression pass; real-platform revalidation belongs to the active batch.
+closed-diagnostic repair regression pass; the full-platform pull now returns 49 clean reports.
 
 **PLAT2/PLAT3 implementation:** source modules now carry optional ordered resource roots through
 both editors and the server. Compiler resource lookup, cache identities and resource watchers share
@@ -25,7 +25,10 @@ retains the original callee hole and written arguments; `PartialQueries` validat
 callee in its real context so the attempt's collector owns the correct source binding. These are
 parser/validation responsibilities, not editor logic. No field, public API, clone protocol or new
 partial node is introduced. Hover/type presentation stays in Kotlin. Focused platform regressions
-pass; combined and real-platform acceptance remain pending.
+pass, including preservation of nullable-type navigation to its underlying type. The combined
+batch exercised 878 backend, 70 stdio and 51 IntelliJ tests; after corrections, 113 affected
+backend tests and the new packaged resource test pass. The detailed receipt and remaining native
+coverage/build-import tasks are in the integration plan.
 
 **L64 completion batch:** guarded recursive formal names can now retain explicitly written
 constraints without invented type identities. Literal argument proposals reuse normal compiler
