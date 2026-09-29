@@ -462,6 +462,12 @@ when the batch completes. Earlier receipts do not validate these new changes.
   artifact revisions. Push-only clients retain the existing path. Tests cover IDs, repairs, close,
   closed roots, cancellation, stale requests and packaged stdio. Native acceptance remains pending;
   the active checklist is not yet closed.
+- **Shared editor coverage:** X76 now asserts ordered, positive, non-overlapping semantic token
+  ranges in complete and incomplete source. X118 exercises the real IntelliJ project settings
+  component's Reset/Apply before native rename/Undo/Redo (VS Code asserts workspace persistence).
+  New X123 checks native error/clear rendering plus full/unchanged/repaired diagnostic responses
+  on each installed connection. Both drivers are implemented; execution receipts are pending.
+  The catalog is now 128 cases, not a claim that all 128 have passed.
 
 ### L64 completion and signature batch (2026-09-29)
 

@@ -63,6 +63,10 @@ export function renameFamilyCases(): void {
             for (const file of data.files) await workspace.write(file.file, file.source);
             await discovered(workspace, async () => {
                 if ('sourceModules' in data) await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
+                if ('projectSettingsRoundTrip' in data && data.projectSettingsRoundTrip) {
+                    assert.ok(vscode.workspace.getConfiguration('xtc.compiler').inspect('sourceModules')?.workspaceValue,
+                        'The explicit graph must be persisted in workspace settings');
+                }
                 const document = await workspace.open(data.file);
                 await noErrors(document.uri);
                 for (const file of data.files.filter(file => file.file !== data.file)) {
