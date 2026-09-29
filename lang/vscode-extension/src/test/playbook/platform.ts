@@ -4,7 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { CodeAction } from 'vscode-languageclient/node';
-import { client, diagnostics, label, noErrors, playbook, targets } from './support';
+import { client, diagnostics, eventually, label, noErrors, playbook, targets } from './support';
 
 export function platformCases(): void {
     playbook('X124', async (workspace, data) => {
@@ -95,6 +95,23 @@ export function platformCases(): void {
             await workspace.replace(document, '\n' + data.source);
             await assert.rejects(client().sendRequest('codeAction/resolve', action), /expired or changed/);
         } else assert.ok(action.edit);
+    });
+
+    playbook('X128', async (workspace, data) => {
+        for (const variant of data.variants) {
+            await workspace.write(variant.root, variant.source);
+            await workspace.write(variant.member, variant.memberSource);
+            await workspace.configure([{ name: 'App', uri: workspace.uri(variant.root).toString() }]);
+            const document = await workspace.open(variant.root);
+            await noErrors(document.uri);
+            const edit = new vscode.WorkspaceEdit();
+            edit.renameFile(workspace.uri(variant.from), workspace.uri(variant.to), { overwrite: false });
+            assert.ok(await vscode.workspace.applyEdit(edit));
+            await eventually(async () => document.getText(), text => text === variant.expected, 'Native file rename updates references');
+            const target = await workspace.open(variant.target);
+            assert.strictEqual(target.getText(), variant.targetSource);
+            await noErrors(document.uri);
+        }
     });
 
 }
