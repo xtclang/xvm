@@ -319,11 +319,11 @@ internal class XdkProjectQueries(
         range: Range,
         before: CompilerRenameFacts,
     ): List<CodeAction> {
-        val model = before.models.singleOrNull { it.sourceName == source } ?: return emptyList()
+        val models = before.models.filter { it.sourceName == source }
         val start = SemanticModel.Position(range.start.line, range.start.column)
         val end = SemanticModel.Position(range.end.line, range.end.column)
         val names =
-            model.occurrences
+            models.flatMap { it.occurrences }
                 .filter { it.symbol == null && it.range.start <= end && it.range.end >= start }
                 .map { it.name }
                 .distinct()
