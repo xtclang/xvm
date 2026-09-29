@@ -30,6 +30,7 @@ import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
