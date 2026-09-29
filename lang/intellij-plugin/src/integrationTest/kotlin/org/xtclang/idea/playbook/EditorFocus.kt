@@ -87,17 +87,20 @@ internal class PopupInspection(
 
     fun recover() {
         if (driver.restorePopupFocus(nativeEditor)) {
-            check(document.getModificationStamp() == stamp) {
-                "Source changed during popup inspection; refusing to replay an action"
-            }
-            driver.withContext(OnDispatcher.EDT) { driver.utility(NativeEditorUi::class).closeCompletion(nativeEditor) }
-            driver.dismissPopups()
-            driver.focusEditor(editor)
-            // A focus switch can dismiss a popup even when the compiler response is cached.
-            // Opening its read-only inspection again is safe only while the source is unchanged.
-            reopen()
+            reopenUnapplied()
             println("IntelliJ playbook: reopened an unapplied popup after focus loss")
         }
+    }
+
+    /** A cold intention request may populate its cache without opening a menu. */
+    fun reopenUnapplied() {
+        check(document.getModificationStamp() == stamp) {
+            "Source changed during popup inspection; refusing to replay an action"
+        }
+        driver.withContext(OnDispatcher.EDT) { driver.utility(NativeEditorUi::class).closeCompletion(nativeEditor) }
+        driver.dismissPopups()
+        driver.focusEditor(editor)
+        reopen()
     }
 }
 

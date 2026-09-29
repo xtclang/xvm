@@ -4,19 +4,19 @@ import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.CharConstant
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.DifferenceTypeConstant
-import org.xvm.asm.constants.ImmutableTypeConstant
-import org.xvm.asm.constants.IntersectionTypeConstant
-import org.xvm.asm.constants.RelationalTypeConstant
-import org.xvm.asm.constants.UnionTypeConstant
 import org.xvm.asm.constants.IdentityConstant
+import org.xvm.asm.constants.ImmutableTypeConstant
 import org.xvm.asm.constants.IntConstant
+import org.xvm.asm.constants.IntersectionTypeConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
+import org.xvm.asm.constants.RelationalTypeConstant
 import org.xvm.asm.constants.SignatureConstant
 import org.xvm.asm.constants.SingletonConstant
 import org.xvm.asm.constants.StringConstant
 import org.xvm.asm.constants.TerminalTypeConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
+import org.xvm.asm.constants.UnionTypeConstant
 
 /** Render compiler-selected types, never a diagnostic display string or copied source expression. */
 internal fun memberSignature(
@@ -50,17 +50,34 @@ internal fun memberSignature(
                     // proposed compilation must validate both the original and generated defaults.
                     val value =
                         when (val constant = parameter.defaultValue) {
-                            is StringConstant -> constant.valueString
-                            is CharConstant -> constant.valueString
-                            is IntConstant -> constant.valueString
-                            is SingletonConstant -> when (constant) {
-                                constant.constantPool.valTrue() -> "ecstasy.Boolean.True"
-                                constant.constantPool.valFalse() -> "ecstasy.Boolean.False"
-                                constant.constantPool.valNull() -> "ecstasy.Nullable.Null"
-                                else -> return null
+                            is StringConstant -> {
+                                constant.valueString
                             }
-                            null -> literalDefaults[name] ?: return null
-                            else -> return null
+
+                            is CharConstant -> {
+                                constant.valueString
+                            }
+
+                            is IntConstant -> {
+                                constant.valueString
+                            }
+
+                            is SingletonConstant -> {
+                                when (constant) {
+                                    constant.constantPool.valTrue() -> "ecstasy.Boolean.True"
+                                    constant.constantPool.valFalse() -> "ecstasy.Boolean.False"
+                                    constant.constantPool.valNull() -> "ecstasy.Nullable.Null"
+                                    else -> return null
+                                }
+                            }
+
+                            null -> {
+                                literalDefaults[name] ?: return null
+                            }
+
+                            else -> {
+                                return null
+                            }
                         }
                     " = $value"
                 } else {
@@ -93,15 +110,18 @@ private fun TypeConstant.memberSourceType(
             arguments.joinToString(", ", "$base<", ">")
         }
 
-        is ImmutableTypeConstant -> underlyingType.memberSourceType(owner, formals, modules)?.let { "immutable $it" }
+        is ImmutableTypeConstant -> {
+            underlyingType.memberSourceType(owner, formals, modules)?.let { "immutable $it" }
+        }
 
         is RelationalTypeConstant -> {
-            val operator = when (this) {
-                is UnionTypeConstant -> "|"
-                is IntersectionTypeConstant -> "+"
-                is DifferenceTypeConstant -> "-"
-                else -> return null
-            }
+            val operator =
+                when (this) {
+                    is UnionTypeConstant -> "|"
+                    is IntersectionTypeConstant -> "+"
+                    is DifferenceTypeConstant -> "-"
+                    else -> return null
+                }
             val left = underlyingType.memberSourceType(owner, formals, modules) ?: return null
             val right = underlyingType2.memberSourceType(owner, formals, modules) ?: return null
             "($left $operator $right)"
@@ -116,8 +136,13 @@ private fun TypeConstant.memberSourceType(
                 is ClassConstant -> {
                     when {
                         constantPool.getImplicitlyImportedIdentity(identity.name) == identity -> identity.name
+
                         identity.moduleConstant == owner.moduleConstant -> identity.pathString
-                        XdkAutoImports.target(identity) != null -> modules[identity.moduleConstant.name]?.let { "$it.${identity.pathString}" }
+
+                        XdkAutoImports.target(
+                            identity,
+                        ) != null -> modules[identity.moduleConstant.name]?.let { "$it.${identity.pathString}" }
+
                         else -> null
                     }
                 }
@@ -135,10 +160,11 @@ private fun TypeConstant.memberSourceType(
 }
 
 /** Inspect only type structures whose source spelling the renderer understands. */
-internal fun TypeConstant.memberClasses(): List<ClassConstant> = when (this) {
-    is ParameterizedTypeConstant -> underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
-    is RelationalTypeConstant -> underlyingType.memberClasses() + underlyingType2.memberClasses()
-    is ImmutableTypeConstant -> underlyingType.memberClasses()
-    is TerminalTypeConstant -> listOfNotNull(definingConstant as? ClassConstant)
-    else -> emptyList()
-}
+internal fun TypeConstant.memberClasses(): List<ClassConstant> =
+    when (this) {
+        is ParameterizedTypeConstant -> underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
+        is RelationalTypeConstant -> underlyingType.memberClasses() + underlyingType2.memberClasses()
+        is ImmutableTypeConstant -> underlyingType.memberClasses()
+        is TerminalTypeConstant -> listOfNotNull(definingConstant as? ClassConstant)
+        else -> emptyList()
+    }
