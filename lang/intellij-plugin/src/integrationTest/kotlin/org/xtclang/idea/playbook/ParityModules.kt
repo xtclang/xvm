@@ -18,7 +18,9 @@ internal fun ParityScenarios.moduleCases() {
         with(driver) { accept(document.editor, at, data.string("label"), expected) }
         clean(document)
         save(document)
-        check(Files.readString(directory.resolve(document.file)) == expected.replace("\n", "\r\n"))
+        awaitUi("saved completion preserves emoji and CRLF", 10.seconds) {
+            Files.readString(directory.resolve(document.file)) == expected.replace("\n", "\r\n")
+        }
     }
     case("X23") { data ->
         val root = project()
