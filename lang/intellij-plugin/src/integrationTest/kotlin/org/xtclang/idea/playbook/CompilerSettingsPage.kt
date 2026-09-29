@@ -10,6 +10,10 @@ import com.intellij.driver.sdk.Project
 interface CompilerSettingsPage {
     fun installProjectGraph(project: Project)
 
+    fun dismissExpectedConfigurationError(project: Project)
+
+    fun resourceRootsRoundTrip(project: Project, roots: String)
+
     fun content(project: Project): String?
 
     fun clearProjectGraph(project: Project)
