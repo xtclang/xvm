@@ -58,6 +58,7 @@ internal object XdkCursorQueries {
                                 ?: "${member.type?.let { model.semantics.type(it)?.displayName } ?: "?"} ${member.name}",
                         insertText = member.name,
                         textEdit = TextEdit(range, member.name),
+                        documentation = model.semantics.symbol(member.symbol)?.documentation,
                     )
                 }
                 .distinctBy { it.label to it.detail }
@@ -85,7 +86,25 @@ internal object XdkCursorQueries {
                         TextEdit(range, text),
                     )
                 }
-        return ordinary.filterNot { it.label in site.argumentLiterals } + formals + literals
+        return (ordinary.filterNot { it.label in site.argumentLiterals } + formals + literals)
+            .map { item -> item.copy(sortText = completionOrder(item)) }
+            .sortedBy { it.sortText }
+    }
+
+    /** Stable client/server ordering; never imply that an incomplete overload was selected. */
+    private fun completionOrder(item: CompletionItem): String {
+        val priority =
+            when (item.kind) {
+                CompletionKind.VARIABLE -> 0
+                CompletionKind.PROPERTY -> 1
+                CompletionKind.METHOD -> 2
+                CompletionKind.CLASS,
+                CompletionKind.INTERFACE -> 3
+                CompletionKind.MODULE -> 4
+                CompletionKind.VALUE -> 5
+                CompletionKind.KEYWORD -> 6
+            }
+        return "$priority:${item.label.lowercase()}:${item.label}:${item.detail}"
     }
 
     fun formalDetail(
@@ -121,7 +140,22 @@ internal object XdkCursorQueries {
         site.callCandidates?.let { candidates ->
             val signatures =
                 candidates
-                    .sortedBy { it.converting }
+                    .sortedWith(
+                        compareBy<PartialSemanticModel.CallCandidate> { it.converting }
+                            .thenBy { candidate ->
+                                candidate.member.signature
+                                    ?.let {
+                                        signature(
+                                                model.semantics,
+                                                candidate.member.name,
+                                                it,
+                                                constructor = candidate.constructor,
+                                            )
+                                            .label
+                                    }
+                                    .orEmpty()
+                            }
+                    )
                     .mapNotNull { candidate ->
                         candidate.member.signature?.let {
                             signature(
@@ -130,7 +164,15 @@ internal object XdkCursorQueries {
                                 signature = it,
                                 active = site.parameterAt(candidate, position),
                                 documentation =
-                                    "Candidate signature; written arguments fit, overload not selected.",
+                                    listOfNotNull(
+                                            model.semantics
+                                                .symbol(candidate.member.symbol)
+                                                ?.documentation,
+                                            "Candidate signature; written arguments fit, overload not selected.",
+                                            "Argument conversion required."
+                                                .takeIf { candidate.converting },
+                                        )
+                                        .joinToString("\n\n"),
                                 constructor = candidate.constructor,
                             )
                         }
@@ -174,7 +216,14 @@ internal object XdkCursorQueries {
         val methods =
             model.calls.mapNotNull { call ->
                 model.symbol(call.method)?.let {
-                    SignatureSite(call.range, call.callee, it.name, call.signature, call.arguments)
+                    SignatureSite(
+                        call.range,
+                        call.callee,
+                        it.name,
+                        call.signature,
+                        call.arguments,
+                        it.documentation,
+                    )
                 }
             }
         val functions =
@@ -195,7 +244,7 @@ internal object XdkCursorQueries {
                 .firstOrNull { position >= it.range.start && position <= it.range.end }
                 ?.parameterIndex
         return SignatureHelp(
-            listOf(signature(model, call.name, call.signature, active)),
+            listOf(signature(model, call.name, call.signature, active, call.documentation)),
             activeParameter = active ?: 0,
         )
     }
@@ -206,6 +255,7 @@ internal object XdkCursorQueries {
         val name: String,
         val signature: Signature,
         val arguments: List<SemanticModel.CallArgument>,
+        val documentation: String? = null,
     )
 
     private fun signature(
@@ -217,10 +267,13 @@ internal object XdkCursorQueries {
         constructor: Boolean = false,
     ): SignatureInfo {
         val parameters =
-            signature.parameters.map { parameter ->
+            signature.parameters.mapIndexed { index, parameter ->
                 ParameterInfo(
                     "${model.type(parameter.type)?.displayName ?: "?"}${parameter.name?.let { " $it" }.orEmpty()}" +
-                        if (parameter.defaulted) " = …" else ""
+                        (if (parameter.defaulted) " = …" else ""),
+                    "Parameter ${index + 1}${parameter.name?.let { ": $it" }.orEmpty()}. " +
+                        if (parameter.defaulted) "Optional; a default value is declared."
+                        else "Required argument.",
                 )
             }
         // The compiler signature includes the conditional success flag; source syntax does not.
