@@ -4096,6 +4096,52 @@
         "limitations": []
       }
     },
+    "X129": {
+      "title": "evaluated Gradle model refresh and explicit override ownership",
+      "manual": [
+        "Running the real Gradle wrapper from the compiler paths UI; exporter tasks have TestKit coverage"
+      ],
+      "values": {
+        "file": "GradleAssets.x",
+        "source": "module GradleAssets { static String text() = $./data.txt; }",
+        "resource": "processed/data.txt",
+        "contents": "prepared resource",
+        "model": {
+          "schemaVersion": 1,
+          "sourceSets": [
+            {
+              "projectId": "${workspace}#:app",
+              "projectPath": ":app",
+              "projectDirectory": "${workspace}/",
+              "buildFile": "${workspace}/build.gradle.kts",
+              "sourceSet": "main",
+              "sourceRoots": [
+                "${workspace}/"
+              ],
+              "sourceFiles": [
+                "${workspace}/GradleAssets.x"
+              ],
+              "moduleRoots": [
+                "${workspace}/GradleAssets.x"
+              ],
+              "resourceSourceRoots": [
+                "${workspace}/raw/"
+              ],
+              "resourceRoots": [
+                "${workspace}/processed/"
+              ],
+              "resourceTask": ":app:processXtcResources",
+              "projectDependencies": [],
+              "modulePath": []
+            }
+          ]
+        }
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

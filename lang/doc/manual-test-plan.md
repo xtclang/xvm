@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 133 scenarios. X124–X128 are added for the next combined validation;
+The current catalog has 134 scenarios. X124–X129 are added for the next combined validation;
 the receipts below cover the preceding 128-case catalog. The
 [2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the full selection, resumed cases, failures and focused corrections separately. Historical
@@ -2134,6 +2134,19 @@ module Advanced {
 | X126 | Request full tokens, insert a leading newline, request a delta and a range when negotiated, then close/reopen and request using the old ID. | Applying edits reconstructs the full result; empty ranges are empty; retired IDs return full data. Unsupported client operations are refused explicitly. |
 | X127 | Request an unused-import action, resolve its edit when negotiated, edit the source, then try resolving the old handle. | Initial lazy actions omit edits; resolve returns versioned edits without changing the title; obsolete handles are refused. Eager-only clients retain complete actions. |
 | X128 | Rename Box.x to Crate.x and an implicit tools package folder to util through the IDE file API. | The installed file listener obtains compiler-proven declaration/reference edits before moving files; root and member diagnostics remain clear. |
+| X129 | Import an evaluated Gradle model with processed resources; refresh to empty roots and back; try a malformed report; enable an explicit empty-resource override and refresh again; reset to the build model. | Diagnostics follow the imported paths, malformed reports retain the last valid import, refresh preserves explicit settings, and resetting restores the model. Both drivers exercise the installed client configuration path. |
+
+For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
+root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources
+and export the model together. These tasks do not compile application modules; declared source
+generators may run to establish source membership. In IntelliJ, open **Languages & Frameworks >
+Ecstasy Compiler**; in VS Code, invoke **XTC: Configure Compiler Paths**. Inspect the model origin,
+main/test owner, source roots, processed resource roots and missing outputs. Use **Refresh Gradle
+model**, **Prepare generated resources**, **Open build file** and reset controls. An explicit
+source/resource override must survive refresh. Missing or malformed reports must not crash the
+server. Invoking the real Gradle wrapper from these controls is a manual check; X129 covers the
+import/settings lifecycle and TestKit covers the actual producer tasks. Automatic IntelliJ Gradle
+sync and nested/composite build aggregation are still follow-ups.
 
 **Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
 scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
