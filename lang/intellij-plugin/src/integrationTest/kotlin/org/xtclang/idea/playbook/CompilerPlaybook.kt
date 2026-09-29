@@ -77,6 +77,26 @@ class CompilerPlaybook(
                     )
                 }
 
+    private fun Driver.assertTokenRanges(editor: JEditorUiComponent) {
+        val uri = Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()
+        val response =
+            ClientProtocol(this)
+                .query(
+                    "textDocument/semanticTokens/full",
+                    mapOf("textDocument" to mapOf("uri" to uri)),
+                )
+        if (response.isJsonNull) return // A failed parse may produce no semantic report.
+        val data = response.asJsonObject["data"].asJsonArray.map { it.asInt }
+        data.chunked(5).runningFold(0 to 0) { (column, previousEnd), token ->
+            val next = if (token[0] == 0) column + token[1] else token[1]
+            check(token[0] > 0 || next >= previousEnd) {
+                "Overlapping semantic tokens at column $next"
+            }
+            check(token[2] > 0)
+            next to next + token[2]
+        }
+    }
+
     fun run(driver: Driver) =
         with(driver) {
             case("START", "Packaged XTC and pinned LSP4IJ load") {
@@ -1037,6 +1057,8 @@ class CompilerPlaybook(
         }
         scenario("X76") { data ->
             val editor = open(data.text("file"))
+            editor.awaitDiagnostics(emptyList())
+            if (data.values["tokensNonOverlapping"].asBoolean) assertTokenRanges(editor)
             val expression = data.text("expression")
             editor.text =
                 fixtures
@@ -1046,6 +1068,7 @@ class CompilerPlaybook(
                         SharedScenarios.text(data.text("replaceWith"), expression),
                     )
             editor.awaitError()
+            if (data.values["tokensNonOverlapping"].asBoolean) assertTokenRanges(editor)
             signature(editor, editor.text.indexOf(expression) + expression.length) {
                 it.firstOrNull()?.let { item ->
                     item.label == data.text("signature") &&
@@ -1345,7 +1368,21 @@ class CompilerPlaybook(
                         }
                         configure("""{"xtc":{"compiler":{"sourceModules":$modules}}}""")
                     }
-                    renameFamily(id, data, { open(it) }, { it.awaitDiagnostics(emptyList()) })
+                    val projectSettings = data.values["projectSettingsRoundTrip"]?.asBoolean == true
+                    try {
+                        if (projectSettings)
+                            withContext(OnDispatcher.EDT) {
+                                utility(CompilerSettingsPage::class)
+                                    .installProjectGraph(singleProject())
+                            }
+                        renameFamily(id, data, { open(it) }, { it.awaitDiagnostics(emptyList()) })
+                    } finally {
+                        if (projectSettings)
+                            withContext(OnDispatcher.EDT) {
+                                utility(CompilerSettingsPage::class)
+                                    .clearProjectGraph(singleProject())
+                            }
+                    }
                 }
             }
         }
@@ -1463,6 +1500,33 @@ class CompilerPlaybook(
                         data.text("companionSource")
                 )
                 check(!Files.exists(root.resolve(data.text("companionDestination"))))
+            }
+        }
+        scenario("X123") { data ->
+            val editor = open(data.text("file"))
+            val protocol = ClientProtocol(this)
+            check(protocol.capabilities().asJsonObject.has("diagnosticProvider"))
+            val uri = Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()
+            val params = mapOf("textDocument" to mapOf("uri" to uri), "identifier" to "xtc")
+            try {
+                editor.text = data.text("broken")
+                editor.awaitError()
+                val first = protocol.query("textDocument/diagnostic", params).asJsonObject
+                check(first["kind"].asString == "full" && first["items"].asJsonArray.size() > 0)
+                val previous = params + ("previousResultId" to first["resultId"].asString)
+                check(
+                    protocol
+                        .query("textDocument/diagnostic", previous)
+                        .asJsonObject["kind"]
+                        .asString == "unchanged"
+                )
+                editor.text = data.text("repaired")
+                editor.awaitDiagnostics(emptyList())
+                val repaired = protocol.query("textDocument/diagnostic", previous).asJsonObject
+                check(repaired["kind"].asString == "full" && repaired["items"].asJsonArray.isEmpty)
+                check(repaired["resultId"] != first["resultId"])
+            } finally {
+                restore(data.text("file"))
             }
         }
         scenario("X122") {
