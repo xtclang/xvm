@@ -4134,7 +4134,7 @@ public class CommonBuilder
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
-        int    baseIndex = bctx.className.lastIndexOf(TypeSystem.HASH);
+        int    baseIndex = TypeSystem.findJitSuffix(bctx.className);
         String className = baseIndex > 0
                 ? bctx.className.substring(0, baseIndex)
                 : bctx.className;

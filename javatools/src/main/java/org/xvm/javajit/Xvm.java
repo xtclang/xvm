@@ -645,7 +645,9 @@ public class Xvm {
             }
             buf.append(s);
         }
-        return buf.toString();
+        // package mode prevents the final segment from being treated as a class;
+        // without it, org.xtclang.ecstasy becomes org.xtclang.\ecstasy because 'e' is a class prefix
+        return TypeSystem.escapeJitName(buf.toString(), false);
     }
 
     /**
