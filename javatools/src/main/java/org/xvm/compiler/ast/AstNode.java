@@ -1908,7 +1908,8 @@ public abstract class AstNode
     }
 
     /**
-     * Collect fields by name.
+     * Collect fields by name. Nodes in another package of this compiler module grant access only
+     * to these explicitly registered child fields; their representation need not become public.
      *
      * @param clz    the class on which the fields exist
      * @param names  the field names
@@ -1934,6 +1935,14 @@ public abstract class AstNode
                         throw new IllegalStateException("unsupported field type "
                                 + clzField.getSimpleName() + " on field "
                                 + clzTry.getSimpleName() + '.' + names[i]);
+                    }
+                    if (!clzTry.getPackageName().equals(AstNode.class.getPackageName())
+                            && (!AstNode.class.isAssignableFrom(clz)
+                                || clz.getModule() != AstNode.class.getModule()
+                                || clzTry.getModule() != AstNode.class.getModule()
+                                || !field.trySetAccessible())) {
+                        throw new IllegalStateException("cannot access registered child field "
+                                + clzTry.getName() + '.' + names[i]);
                     }
                     fields[i] = field;
                     continue NextField;
