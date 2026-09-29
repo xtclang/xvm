@@ -197,7 +197,7 @@ local or import-alias declarations and inherited written member contracts, prese
 
 | Entirely absent feature or extension | What exists today | Task |
 |---|---|---|
-| Extract/inline/safe-delete refactorings, implement/override generation and general semantic quick fixes | Bounded proven rename, import cleanup, public-type imports and source-contract implement/override | L62–L63 |
+| Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports and source-contract implement/override | L62–L63 |
 | Pull document/workspace diagnostics | Versioned push diagnostics and Problems updates | L68 |
 | Semantic-token range/delta requests | Full-document tokens | L69 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | Eager results for the currently supported facts | L70 |
@@ -211,6 +211,12 @@ local or import-alias declarations and inherited written member contracts, prese
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
 | Application work-done progress/partial-result streaming and trace controls | Logging plus request cancellation; no complete progress/trace implementation | L81 |
+
+Every absent feature above has an explicit task and a
+[next investigation step](../../../docs/errs-integration-plan.md#investigation-status-and-next-decisions-2026-09-29).
+The inventory is complete for this list; detailed implementation designs are still pending for
+several operations. Optional language/product features require an explicit implementation or
+exclusion decision, not an assumption that every protocol extension is mandatory.
 
 The remaining limits within implemented features are tracked separately: malformed/header/value
 completion and signatures (L57/L58/L64), inferred displays (L59), rename proof and editable target
