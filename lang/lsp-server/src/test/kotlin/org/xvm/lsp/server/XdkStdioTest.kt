@@ -808,7 +808,7 @@ class XdkStdioTest {
             val items = session.await(service.completion(CompletionParams(document, cursor))).left
             assertThat(items.map { it.label })
                 .containsExactlyInAnyOrderElementsOf(
-                    if (typed == 0) listOf("text", "qualifiedName", "simpleName")
+                    if (typed == 0) listOf("text", "qualifiedName", "simpleName", "\"\"")
                     else listOf("text")
                 )
             val edit = items.single { it.label == "text" }.textEdit.left
