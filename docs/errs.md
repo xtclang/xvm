@@ -26,7 +26,7 @@ The four incomplete syntax nodes now live in `org.xvm.compiler.ast.partial`. The
 Registered child fields support traversal across the package boundary without public fields or
 module-opening flags. See the [implementation and validation map](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
 and the [broader separation inventory](#broader-ast-placement-inventory). Validation passes 107 Java
-and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST1–AST4 record concrete
+and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST1–AST5 record concrete
 follow-ups; moving every compiler fix into a tooling package would misrepresent their ownership.
 
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
@@ -1644,7 +1644,7 @@ the placement decision covers the whole file while future PRs still separate unr
 | Files | Placement and further separation decision |
 | --- | --- |
 | `partial.IncompleteStatement`, `partial.IncompleteExpression`, `partial.IncompleteDeclarationStatement`, `partial.IncompleteTypeCompositionStatement` | Incomplete syntax, original ranges, child ownership, failure diagnostics and non-emission. Moved. Their own child fields are private; final header lists still clone by fresh construction. |
-| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the three-operation boundary is public; helpers retain package access to validation, inference and type representation. AST1/AST2 can consolidate more query code here. |
+| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the three-operation boundary is public; helpers retain package access to validation, inference and type representation. AST1/AST2 can consolidate semantic queries here; AST5 extracts their shared read-only syntax operations into `partial`. |
 | `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moves the remaining anonymous-property projection into its current owner; AST4 investigates a future common lifetime. |
 | `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. Extract cursor-specific scope collection and candidate-result preparation where useful (AST1/AST2); preserve real compiler phase hooks. |
 | `InvocationExpression`, `LambdaExpression`, `NewExpression` | Passive syntax/selected-method access and capture/call publication at the point the compiler establishes the facts. Required hooks remain; no additional query cache. Ordinary constructor preparation is shared by real validation and probes, not duplicated. |
@@ -1665,7 +1665,7 @@ it does not copy their mutable nodes or promise thread-safe reads during compila
 
 The Kotlin adapter already owns detached semantic models, source indices, hierarchy/dispatch and
 rename proofs, editor ranges, scheduling and protocol features. None of the audited remaining node
-methods is an LSP response builder that can simply be moved there. The [AST1–AST4 plan](errs-integration-plan.md#broader-ast-separation-audit-and-follow-up-plan)
+methods is an LSP response builder that can simply be moved there. The [AST1–AST5 plan](errs-integration-plan.md#broader-ast-separation-audit-and-follow-up-plan)
 identifies concrete reductions and their acceptance tests; it explicitly rejects wider public
 internals or duplicate compiler semantics merely to increase the number of moved files.
 
