@@ -49,8 +49,12 @@ class XdkPropertyArgumentCompletionTest {
             val original = "$prefix); } }"
             val cached = adapter.compile(URI, original)
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            assertThat(items.map { it.label }).describedAs(call).containsExactly(expected)
-            val item = items.single()
+            assertThat(items.map { it.label })
+                .describedAs(call)
+                .containsExactlyElementsOf(
+                    listOf(expected) + if (typed.isEmpty()) listOf("0") else emptyList()
+                )
+            val item = items.single { it.label == expected }
             assertThat(item.kind).isEqualTo(CompletionItem.CompletionKind.PROPERTY)
             assertThat(item.textEdit)
                 .isEqualTo(
