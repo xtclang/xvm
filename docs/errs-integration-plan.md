@@ -5647,3 +5647,18 @@ C14/L26 extends those slots to direct final bare-name prefixes. C15/L28 adds com
 implicit property/constant values.
 Unexamined historical suppressions and the remaining documented syntax/API limits
 stay open; a green integrated run does not establish independent extracted-PR readiness.
+
+## L63 next implementation batch
+
+Implement as four separate checkpoints, then validate together:
+
+1. [x] Shared X122 implement/override action selection, exact generated text, native Undo/Redo,
+   and duplicate-implementation refusal in both drivers. This adds the 127th catalog scenario;
+   implementation is present, but the new native receipt is pending this batch.
+2. [ ] Fresh declaration-only analysis for member generation beside missing-implementation errors.
+3. [ ] Broader compiler-selected signatures: parameterized types, conditional/multiple returns,
+   default arguments and generic methods.
+4. [ ] Prove intentional dispatch changes for existing calls and derived classes.
+
+No tests are run between these implementation checkpoints. Each extracted PR still needs its own
+validation; the combined batch cannot establish independent mergeability.
