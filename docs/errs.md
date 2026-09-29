@@ -1939,14 +1939,15 @@ as an insertion anchor; it supplies no value or type and does not rewrite the so
 creates it only at supported boundaries and prevents duplicate sites inside recovered values.
 
 `IncompleteStatement.validateImpl` sends scope and candidate facts to an attempt-owned
-`CursorBinding.Collector`. The syntax node stores no facts, Context or callback. `Context.cursorBinding()`
+`CursorBinding.Collector`. The syntax node stores no facts, Context or callback. `CursorScope.capture(Context)`
 uses existing variable enumeration, assignment checks and branch-aware type lookup while that scope
-exists. `CursorScope` is a separate compiler helper: it enumerates type-name candidates and delegates
+exists. AST1 moved this collection out of `Context` without widening protected access. The same
+package-private helper enumerates type-name candidates and delegates
 their meaning to normal contextual lookup, preserving imports, shadowing and access rules.
 
 | Location | Scope/call change | Why it belongs there |
 |---|---|---|
-| `Context` / `StatementBlock.RootContext` | Copy visible variables and narrowed types; expose/forward the attempt collector. | Lexical scope and assignment state exist here during validation, not in a later AST walk. No additional AST semantic cache. |
+| `Context` / `StatementBlock.RootContext` / `CursorScope` | Contexts expose/forward the attempt collector; `CursorScope.capture` copies visible variables and narrowed types through existing context APIs. | Lexical scope and assignment state exist during validation, not in a later AST walk. Scope-query orchestration stays in the package-private helper, with no additional AST semantic cache. |
 | `Compiler` / `StageMgr` | Carry a final collector reference through stages; preserve old constructors with a disabled collector. | The compilation attempt owns facts and cleanup. No ambient thread local. |
 | `AstNode.catchUpChildren`, method/property/lambda/type declarations, `NewExpression` | Forward the collector through existing nested compilation paths. | Mechanical propagation, with no new fields on those AST nodes. |
 | `AstNode` argument-fit helper | Expose tentative matching signatures/mappings to `PartialCallResolver`; existing full-call selection keeps its behavior. | Argument fitting already lives here. The helper reuses its named ordering, conversions and inference, with trial argument clones and a child context. No new clone/reset rule. |
