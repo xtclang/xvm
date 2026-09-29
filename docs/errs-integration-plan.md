@@ -912,9 +912,9 @@ scope chooser and name dialog, then asserts both source/reference edits and the 
 All ten selected native cases therefore have passing receipts across two final runs; this is
 not a new full 134-case run. Both runs use the catalog hash recorded above. The plugin has 62
 passing unit tests, zero skips, including the two new capability regressions.
-The final IntelliJ unit rerun and read-only root/lang `spotlessCheck` tasks pass. All checkpoint
-commits remain local on `lagergren/errs`; this validation does not publish the branch or establish
-independently passing extracted PRs.
+The final IntelliJ unit rerun and read-only root/lang `spotlessCheck` tasks pass. These receipts
+validate the integrated `lagergren/errs` branch; each extracted PR still requires independent
+validation.
 
 X124 establishes external-resource reactions after native VFS refresh, with the fixture directory
 loaded first; it does not establish autonomous OS watching of arbitrary roots unknown to VFS.
