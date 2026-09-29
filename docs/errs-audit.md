@@ -17,12 +17,14 @@ protocol regressions reproduce the failure without it and pass with it. Native X
 pass, including Rename/Undo/Redo and error/clear delivery. This was a client decoding failure,
 not expensive rename proof.
 
-**Real-platform demo failures (open):** the common+auth graph currently fails workspace
-pull with a null-type dereference in `CompositionNode.getSource`, reached by the adapter's
-source-location collector. Separately, stub cannot resolve its existing Gradle resource file.
-The next bug-fix pass is explicitly tracked as [PLAT1–PLAT3](errs-integration-plan.md#platform-demo-blockers-2026-09-29),
-including minimal-reproduction work, source/resource ownership, real-code presentation gaps and
-required regressions. These findings are not fixed by the green synthetic/native batch above.
+**Real-platform demo fixes:** `CompositionNode.getSource` now handles a typeless default before
+parent adoption; module resource roots participate in lookup, cache identity and watching. The
+rebuilt packaged server returns 49 clean reports across eleven platform modules after explicitly
+configuring platformUI's build-defined `gui/dist` resources. Hover, signature parameter mapping,
+chained member completion and narrowed JSON-object type navigation also pass real-source rechecks.
+See [PLAT1–PLAT3](errs-integration-plan.md#platform-demo-blockers-2026-09-29) for commits, focused
+regressions and the combined validation receipt. Evaluated build-model import, richer paths/origins
+controls and new native acceptance remain tracked follow-ups.
 
 **L64 validation:** the first combined run exposed the required literal record-pattern
 update, old exact-completion expectations and optional TypeScript metadata. New regressions exposed
