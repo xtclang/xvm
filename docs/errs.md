@@ -25,8 +25,9 @@ The four incomplete syntax nodes now live in `org.xvm.compiler.ast.partial`. The
 `PartialQueries` boundary and package-private semantic helpers stay beside ordinary AST validation.
 Registered child fields support traversal across the package boundary without public fields or
 module-opening flags. See the [implementation and validation map](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
-and the [broader separation inventory](#broader-ast-placement-inventory). Validation passes 107 Java
-and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST1–AST5 record concrete
+and the [broader separation inventory](#broader-ast-placement-inventory). P1–P4 validation passes 107 Java
+and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST5 adds shared read-only
+syntax queries in `partial` and passes another focused 258-test batch. AST1–AST4 record further
 follow-ups; moving every compiler fix into a tooling package would misrepresent their ownership.
 
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
@@ -1644,7 +1645,7 @@ the placement decision covers the whole file while future PRs still separate unr
 | Files | Placement and further separation decision |
 | --- | --- |
 | `partial.IncompleteStatement`, `partial.IncompleteExpression`, `partial.IncompleteDeclarationStatement`, `partial.IncompleteTypeCompositionStatement` | Incomplete syntax, original ranges, child ownership, failure diagnostics and non-emission. Moved. Their own child fields are private; final header lists still clone by fresh construction. |
-| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the three-operation boundary is public; helpers retain package access to validation, inference and type representation. AST1/AST2 can consolidate semantic queries here; AST5 extracts their shared read-only syntax operations into `partial`. |
+| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the semantic boundary is public; helpers retain package access to validation, inference and type representation. AST1/AST2 can consolidate semantic queries here; AST5 has extracted their shared read-only syntax operations into `partial`. |
 | `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moves the remaining anonymous-property projection into its current owner; AST4 investigates a future common lifetime. |
 | `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. Extract cursor-specific scope collection and candidate-result preparation where useful (AST1/AST2); preserve real compiler phase hooks. |
 | `InvocationExpression`, `LambdaExpression`, `NewExpression` | Passive syntax/selected-method access and capture/call publication at the point the compiler establishes the facts. Required hooks remain; no additional query cache. Ordinary constructor preparation is shared by real validation and probes, not duplicated. |
@@ -1657,8 +1658,8 @@ the placement decision covers the whole file while future PRs still separate unr
 
 `PartialQueries` remains in `ast` because Java subpackages do not share package access. It needs
 ordinary validation on arbitrary expression children, not merely inherited protected access on its
-own instance. The three-operation bridge keeps that detail out of the partial nodes. Inspection
-reuses `replaceChild` for adoption, retains attempt-local contexts and leaves final incomplete-source
+own instance. After AST5 the two-operation semantic bridge keeps that detail out of the partial
+nodes. Inspection reuses `replaceChild` for adoption, retains attempt-local contexts and leaves final incomplete-source
 diagnostics in the syntax nodes. Explicit scope/formal inputs remove helper-only header getters.
 `NewExpression.getArguments()` exposes a defensive list snapshot of existing compiler-owned children;
 it does not copy their mutable nodes or promise thread-safe reads during compilation.
@@ -1668,6 +1669,15 @@ rename proofs, editor ranges, scheduling and protocol features. None of the audi
 methods is an LSP response builder that can simply be moved there. The [AST1–AST5 plan](errs-integration-plan.md#broader-ast-separation-audit-and-follow-up-plan)
 identifies concrete reductions and their acceptance tests; it explicitly rejects wider public
 internals or duplicate compiler semantics merely to increase the number of moved files.
+
+**AST5 syntax follow-up:** `partial.PartialSyntax` shares containment, exact cursor matching and
+argument/call selection between the parser, incomplete nodes and ordinary compiler helpers.
+`ArgumentCursor` is the only slot-selection record. Root-package `PartialArgument` now owns only
+trial construction and protected parenting; `PartialQueries` contains only semantic operations.
+This adds no node field, cache, clone override or public mutation API. Nine dedicated regressions
+cover selection boundaries and source/trial/clone ownership. The AST5 batch passes 37 Java and
+221 LSP tests, with zero failures/errors/skips, plus root/lang Spotless. See the
+[implementation and validation record](errs-integration-plan.md#shared-partial-syntax-implementation-ast5).
 
 **Constructor/declaration recovery follow-up (2026-09-25):**
 
@@ -1693,7 +1703,7 @@ internals or duplicate compiler semantics merely to increase the number of moved
 | `PartialConstructionResolver` | Constructor fitting and class inference need the live compiler Context and existing argument fitter. | Separate compiler helper, discarded child contexts and cloned arguments. Anonymous class components stay under their source-owned `anon` child; superclass candidates need no generated forwarding constructor. Immutable existing `CursorBinding.Candidate` results; no node caches or callbacks retained. |
 | `Statement.validate` overload, `IncompleteExpression` and `IncompleteStatement` | Carry an enclosing required type into constructor inspection while preserving Statement's validation/break bookkeeping. | A synchronous Supplier runs inside the existing context scope. Required type stays on the call stack, never in a field. |
 | `IncompleteStatement.getLeadingArguments()` | Array dimensions are real source arguments preceding the initializer's parenthesis. | Read-only view of existing NewExpression argument children; ordinary AST cloning already owns them. Kotlin copies ranges and an integer offset. |
-| `PartialQueries.isWithin` | Identify retained cursor syntax before a declaration's disposable constant probe. | Package-local recursive syntax query; no cached flag. |
+| `PartialSyntax.contains` (AST5; formerly `PartialQueries.isWithin`) | Identify retained cursor syntax before a declaration's disposable constant probe. | Shared read-only query in `ast.partial`; no cached flag or context. |
 | `PropertyDeclarationStatement.validateContent` | A property/default initializer's lexical context and synthetic method are compiler-owned. A cursor hole cannot become a constant; probing a discarded clone loses the source-owned facts. | In explicit cursor analysis only, use the existing real initializer field and collectors directly. Failed validation prevents emission. Normal compilation retains its constant probe. No new field or clone-remapping mechanism. |
 | `Parser` constructor/declaration/tuple/literal paths | The parser owns delimiter ambiguity, original source ranges and recovery boundaries. | Existing Incomplete nodes and zero-width closing markers. Anonymous bodies remain owned syntax so constructor probes resolve the retained declaration instead of treating it as a following block. No invented operands or declaration names/types. |
 
