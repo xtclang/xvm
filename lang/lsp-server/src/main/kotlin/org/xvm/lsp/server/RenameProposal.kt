@@ -20,10 +20,11 @@ data class SourceModuleConfiguration(
     val name: String,
     val uri: String,
     val dependencies: List<String>,
+    val resourceRoots: List<String>? = null,
 ) {
     internal constructor(
         module: XdkSourceModule
-    ) : this(module.name, module.uri, module.dependencies.sorted())
+    ) : this(module.name, module.uri, module.dependencies.sorted(), module.resourceRoots)
 }
 
 /** Input graph receipt; does not claim knowledge of consumers outside these source roots. */

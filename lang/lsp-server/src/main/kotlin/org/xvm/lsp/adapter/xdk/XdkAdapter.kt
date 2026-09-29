@@ -278,7 +278,26 @@ internal constructor(
         }
 
     override fun affectedAnalysisScopes(uri: String): Set<String> =
-        synchronized(lifecycle) { project.affected(analysisScope(uri)) }
+        synchronized(lifecycle) {
+            val sources = project.affected(analysisScope(uri))
+            val resources =
+                project
+                    .resourceScopes(uri)
+                    .filter { scope ->
+                        val root = project.modules.values.single { it.uri == scope }
+                        val inputs =
+                            completed[scope]?.sourceInputs
+                                ?: builds[root.name]?.key?.sources
+                                ?: diagnosticCache.snapshot().builds[scope]?.key?.sources
+                        requests[scope]?.result?.isDone == false ||
+                            inputs == null ||
+                            inputs.resources.entries.isNotEmpty()
+                    }
+                    .flatMapTo(linkedSetOf(), project::affected)
+            sources + resources
+        }
+
+    fun resourceWatchRoots(): Set<File> = synchronized(lifecycle) { project.resourceWatchRoots() }
 
     override fun compileAsync(
         uri: String,
@@ -865,7 +884,11 @@ internal constructor(
                     it != XdkSources.file(request.uri) ||
                     File(it.parentFile, it.nameWithoutExtension).isDirectory
             }
-            ?.let { XdkSources.capture(it, request.overlays, cancelled) }
+            ?.let { root ->
+                val resources =
+                    request.project.modules.values.firstOrNull { it.root == root }?.resourceFiles
+                XdkSources.capture(root, request.overlays, resources, cancelled)
+            }
 
     private data class BuildKey(
         val sources: XdkSources.Inputs,
@@ -899,7 +922,9 @@ internal constructor(
         val captured = order.associateWith { module ->
             try {
                 Result.success(
-                    XdkSources.capture(module.root, request.overlays) { isStale(request) }
+                    XdkSources.capture(module.root, request.overlays, module.resourceFiles) {
+                        isStale(request)
+                    }
                 )
             } catch (failure: IOException) {
                 Result.failure(failure)
@@ -1040,6 +1065,8 @@ internal constructor(
                 compiler.compileTree(sources, dependencies.repository, errs)
             }
         if (isStale(request)) throw CancellationException()
+        if (sources != null && !sources.resourcesCurrent { isStale(request) })
+            throw CancellationException()
         val footprint =
             ExecutionTrace.api("EmbeddingSupport.footprint", request.uri) {
                 EmbeddingSupport.instance().footprint(compilation)
