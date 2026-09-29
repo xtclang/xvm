@@ -17,12 +17,11 @@ import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-
-import org.xvm.compiler.ast.IncompleteStatement;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NameExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
