@@ -1,19 +1,26 @@
 package org.xvm.lsp.adapter.xdk
 
+import java.util.List.copyOf as immutableList
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
 import org.xvm.lsp.adapter.xdk.SemanticModel.Range
 import org.xvm.lsp.adapter.xdk.SemanticModel.Signature
 import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolId
 import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolKind
 import org.xvm.lsp.adapter.xdk.SemanticModel.TypeId
-import java.util.List.copyOf as immutableList
 
-/** Copied facts from one explicit partial-analysis attempt; retains no compiler or protocol objects. */
-class PartialSemanticModel internal constructor(
+/**
+ * Copied facts from one explicit partial-analysis attempt; retains no compiler or protocol objects.
+ */
+class PartialSemanticModel
+internal constructor(
     val semantics: SemanticModel,
     sites: List<Site>,
 ) {
-    enum class Kind { NAME, MEMBER_ACCESS, CALL }
+    enum class Kind {
+        NAME,
+        MEMBER_ACCESS,
+        CALL,
+    }
 
     /** Written declaration plus resolved upper bound; this is not a registered type identity. */
     data class Formal(
@@ -23,7 +30,8 @@ class PartialSemanticModel internal constructor(
     )
 
     @ConsistentCopyVisibility
-    data class Member internal constructor(
+    data class Member
+    internal constructor(
         val symbol: SymbolId,
         val name: String,
         val kind: SymbolKind,
@@ -44,7 +52,8 @@ class PartialSemanticModel internal constructor(
     )
 
     @ConsistentCopyVisibility
-    data class CallCandidate internal constructor(
+    data class CallCandidate
+    internal constructor(
         val member: Member,
         val arguments: List<SemanticModel.CallArgument>,
         val converting: Boolean,
@@ -52,14 +61,19 @@ class PartialSemanticModel internal constructor(
     )
 
     @ConsistentCopyVisibility
-    data class FunctionCandidate internal constructor(
+    data class FunctionCandidate
+    internal constructor(
         val signature: Signature,
         val arguments: List<SemanticModel.CallArgument>,
     )
 
-    /** Members describe accessible names; callCandidates separately records compiler argument fitting. */
+    /**
+     * Members describe accessible names; callCandidates separately records compiler argument
+     * fitting.
+     */
     @ConsistentCopyVisibility
-    data class Site internal constructor(
+    data class Site
+    internal constructor(
         val kind: Kind,
         val range: Range,
         val operator: Range,
@@ -78,7 +92,10 @@ class PartialSemanticModel internal constructor(
         val argumentOffset: Int = 0,
         val formals: List<Formal> = emptyList(),
     ) {
-        /** Source argument index only; no argument-to-parameter mapping exists for an incomplete call. */
+        /**
+         * Source argument index only; no argument-to-parameter mapping exists for an incomplete
+         * call.
+         */
         fun argumentIndexAt(position: Position): Int? =
             if (kind == Kind.CALL && position >= operator.end && position <= range.end) {
                 argumentOffset + separators.count { it < position }
@@ -119,10 +136,7 @@ class PartialSemanticModel internal constructor(
             position: Position,
         ): TypeId? =
             parameterAt(candidate, position)?.let {
-                candidate.member.signature
-                    ?.parameters
-                    ?.getOrNull(it)
-                    ?.type
+                candidate.member.signature?.parameters?.getOrNull(it)?.type
             }
 
         fun expectedTypeAt(
@@ -130,9 +144,7 @@ class PartialSemanticModel internal constructor(
             position: Position,
         ): TypeId? =
             parameterAt(candidate, position)?.let {
-                candidate.signature.parameters
-                    .getOrNull(it)
-                    ?.type
+                candidate.signature.parameters.getOrNull(it)?.type
             }
     }
 

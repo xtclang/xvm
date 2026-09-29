@@ -18,6 +18,10 @@
  */
 package org.xtclang.tooling
 
+import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.condition.EnabledIf
@@ -30,10 +34,6 @@ import org.xtclang.tooling.model.Cardinality
 import org.xtclang.tooling.model.KeywordCategory
 import org.xtclang.tooling.model.OperatorCategory
 import org.xtclang.tooling.model.language
-import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DslPowerShowcaseTest {
@@ -267,7 +267,7 @@ class DslPowerShowcaseTest {
 
         println(
             "AST hierarchy: ${model.concepts.size} concepts, " +
-                "${model.abstractConcepts.size} abstract, ${model.concreteConcepts.size} concrete",
+                "${model.abstractConcepts.size} abstract, ${model.concreteConcepts.size} concrete"
         )
     }
 
@@ -398,7 +398,10 @@ class DslPowerShowcaseTest {
         assertTrue(textMate.contains(testKeyword), "TextMate has '$testKeyword'")
         assertTrue(vim.contains(testKeyword), "Vim has '$testKeyword'")
         assertTrue(emacs.contains("\"$testKeyword\""), "Emacs has '$testKeyword'")
-        assertTrue(treeSitterHighlights.contains("\"$testKeyword\""), "Tree-sitter has '$testKeyword'")
+        assertTrue(
+            treeSitterHighlights.contains("\"$testKeyword\""),
+            "Tree-sitter has '$testKeyword'",
+        )
 
         // All contain built-in types
         val testType = "String"
@@ -455,20 +458,18 @@ class DslPowerShowcaseTest {
 
         // Find all declaration keywords used
         val declKeywords = model.keywordsByCategory(KeywordCategory.DECLARATION)
-        val foundDecls =
-            declKeywords.filter { kw ->
-                Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
-            }
+        val foundDecls = declKeywords.filter { kw ->
+            Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
+        }
 
         println("Declaration keywords found in ecstasy.x: $foundDecls")
         assertTrue(foundDecls.isNotEmpty(), "Should find declaration keywords")
 
         // Find type relation keywords
         val typeRelKeywords = model.keywordsByCategory(KeywordCategory.TYPE_RELATION)
-        val foundTypeRels =
-            typeRelKeywords.filter { kw ->
-                Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
-            }
+        val foundTypeRels = typeRelKeywords.filter { kw ->
+            Regex("\\b${Regex.escape(kw)}\\b").containsMatchIn(content)
+        }
 
         println("Type relation keywords found: $foundTypeRels")
     }

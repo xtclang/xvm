@@ -1,5 +1,11 @@
 package org.xvm.lsp.adapter.xdk
 
+import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.HexFormat
+import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
+import java.util.zip.ZipInputStream
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.ErrorList
 import org.xvm.asm.MethodStructure
@@ -15,14 +21,11 @@ import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
-import java.nio.file.Files
-import java.security.MessageDigest
-import java.util.HexFormat
-import java.util.Properties
-import java.util.concurrent.ConcurrentHashMap
-import java.util.zip.ZipInputStream
 
-/** Matching distribution sources. Parsed declaration ranges and text survive; compiler objects do not. */
+/**
+ * Matching distribution sources. Parsed declaration ranges and text survive; compiler objects do
+ * not.
+ */
 internal object XdkLibrarySources {
     private data class Entry(
         val text: String,
@@ -42,17 +45,26 @@ internal object XdkLibrarySources {
     )
 
     private val entries by lazy {
-        val archives = Properties().apply { resource("sources.properties").use { load(it) } }.getProperty("archives").split(',')
+        val archives =
+            Properties()
+                .apply { resource("sources.properties").use { load(it) } }
+                .getProperty("archives")
+                .split(',')
         buildMap<String, Entry> {
             archives.forEach { archive ->
                 val bytes = resource("sources/$archive").use { it.readBytes() }
-                val revision = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+                val revision =
+                    HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
                 ZipInputStream(bytes.inputStream()).use { zip ->
-                    generateSequence { zip.nextEntry }.filter { !it.isDirectory && it.name.endsWith(".x") }.forEach { entry ->
-                        val value = Entry(zip.readBytes().toString(Charsets.UTF_8), revision)
-                        val previous = put(entry.name, value)
-                        check(previous == null || previous.text == value.text) { "Conflicting bundled source ${entry.name}" }
-                    }
+                    generateSequence { zip.nextEntry }
+                        .filter { !it.isDirectory && it.name.endsWith(".x") }
+                        .forEach { entry ->
+                            val value = Entry(zip.readBytes().toString(Charsets.UTF_8), revision)
+                            val previous = put(entry.name, value)
+                            check(previous == null || previous.text == value.text) {
+                                "Conflicting bundled source ${entry.name}"
+                            }
+                        }
                 }
             }
         }
@@ -72,9 +84,12 @@ internal object XdkLibrarySources {
     fun declaration(identity: IdentityConstant): DependencyDeclaration? {
         val module = identity.moduleConstant.name
         if (module !in XdkLibraries.moduleNames) return null
-        val binary = XdkLibraries.module(module)?.constantPool?.getConstant(identity) as? IdentityConstant ?: return null
+        val binary =
+            XdkLibraries.module(module)?.constantPool?.getConstant(identity) as? IdentityConstant
+                ?: return null
         val component = binary.component ?: return null
-        val owner = component as? ClassStructure ?: component.getContainingClass(false) ?: return null
+        val owner =
+            component as? ClassStructure ?: component.getContainingClass(false) ?: return null
         val path = owner.sourcePath?.value ?: return null
         val entry = entries[path] ?: return null
         val source = sources.computeIfAbsent(path) { parse(path, entry.text) }
@@ -88,14 +103,22 @@ internal object XdkLibrarySources {
         val candidates = source.declarations.filter { it.path == namespace }
         val selected =
             if (component is MethodStructure && candidates.size > 1) {
-                // Debug source identifies the selected overload; absent/ambiguous spans provide no target.
-                candidates.singleOrNull { component.sourceText != null && component.sourceLineNumber in it.firstLine..it.lastLine }
+                // Debug source identifies the selected overload; absent/ambiguous spans provide no
+                // target.
+                candidates.singleOrNull {
+                    component.sourceText != null &&
+                        component.sourceLineNumber in it.firstLine..it.lastLine
+                }
             } else {
                 candidates.singleOrNull()
             }
         return selected?.let {
             DependencyDeclaration(
-                XdkDependency.SymbolKey(module, "${XdkLibraries.revision(module)}:${entry.revision}", binary.position),
+                XdkDependency.SymbolKey(
+                    module,
+                    "${XdkLibraries.revision(module)}:${entry.revision}",
+                    binary.position,
+                ),
                 SemanticModel.SourceLocation(source.uri, it.range),
             )
         }
@@ -113,48 +136,49 @@ internal object XdkLibrarySources {
         val errors = ErrorList()
         val root =
             try {
-                ExecutionTrace.api("Parser.parseSource(library-source)") { Parser(Source(text), errors).parseSource() }
+                ExecutionTrace.api("Parser.parseSource(library-source)") {
+                    Parser(Source(text), errors).parseSource()
+                }
             } catch (_: CompilerException) {
                 null
             }
-        val declarations =
-            buildList {
-                fun visit(
-                    node: AstNode,
-                    parents: List<String>,
-                ) {
-                    val token =
-                        when (node) {
-                            is TypeCompositionStatement -> node.nameToken
-                            is MethodDeclarationStatement -> node.nameToken
-                            is PropertyDeclarationStatement -> node.nameToken
-                            else -> null
-                        }
-                    val module = node is TypeCompositionStatement && node.category.id == Token.Id.MODULE
-                    val names = if (token == null || module) parents else parents + token.valueText
-                    if (token != null) {
-                        fun at(position: Long) = SemanticModel.Position(Source.calculateLine(position), Source.calculateOffset(position))
-                        add(
-                            Declaration(
-                                names,
-                                SemanticModel.Range(at(token.startPosition), at(token.endPosition)),
-                                Source.calculateLine(node.startPosition),
-                                Source.calculateLine(node.endPosition),
-                            ),
-                        )
+        val declarations = buildList {
+            fun visit(
+                node: AstNode,
+                parents: List<String>,
+            ) {
+                val token =
+                    when (node) {
+                        is TypeCompositionStatement -> node.nameToken
+                        is MethodDeclarationStatement -> node.nameToken
+                        is PropertyDeclarationStatement -> node.nameToken
+                        else -> null
                     }
-                    node.childNodes().forEach { visit(it, names) }
+                val module = node is TypeCompositionStatement && node.category.id == Token.Id.MODULE
+                val names = if (token == null || module) parents else parents + token.valueText
+                if (token != null) {
+                    fun at(position: Long) =
+                        SemanticModel.Position(
+                            Source.calculateLine(position),
+                            Source.calculateOffset(position),
+                        )
+                    add(
+                        Declaration(
+                            names,
+                            SemanticModel.Range(at(token.startPosition), at(token.endPosition)),
+                            Source.calculateLine(node.startPosition),
+                            Source.calculateLine(node.endPosition),
+                        )
+                    )
                 }
-                if (root != null && !errors.hasSeriousErrors()) {
-                    visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
-                }
+                node.childNodes().forEach { visit(it, names) }
             }
+            if (root != null && !errors.hasSeriousErrors()) {
+                visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
+            }
+        }
         return SourceFile(
-            file
-                .toFile()
-                .canonicalFile
-                .toURI()
-                .toString(),
+            file.toFile().canonicalFile.toURI().toString(),
             declarations,
         )
     }

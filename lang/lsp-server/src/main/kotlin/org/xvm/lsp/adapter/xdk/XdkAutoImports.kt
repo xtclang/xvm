@@ -27,12 +27,11 @@ internal object XdkAutoImports {
     private val bundled by lazy {
         XdkLibraries.moduleNames
             .flatMap { module ->
-                XdkLibraries
-                    .module(module)
-                    .constantPool.constants
-                    .mapNotNull(::target)
-                    .filter { it.module == module }
-            }.distinct()
+                XdkLibraries.module(module).constantPool.constants.mapNotNull(::target).filter {
+                    it.module == module
+                }
+            }
+            .distinct()
             .groupBy { it.name }
     }
 
@@ -40,18 +39,19 @@ internal object XdkAutoImports {
         name: String,
         facts: CompilerRenameFacts,
     ): List<Target> =
-        (
-            facts.imports
-                .filter { it.name == name } + bundled[name].orEmpty()
-        ).distinct()
+        (facts.imports.filter { it.name == name } + bundled[name].orEmpty())
+            .distinct()
             .sortedWith(compareBy(Target::module, Target::path))
 
     internal fun target(constant: Constant): Target? {
         if (constant !is ClassConstant && constant !is TypedefConstant) return null
         val identity = constant as IdentityConstant
-        if (identity.path.any {
-                (it !is ModuleConstant && it !is PackageConstant && it !is ClassConstant && it !is TypedefConstant) ||
-                    it.component?.access != Access.PUBLIC
+        if (
+            identity.path.any {
+                (it !is ModuleConstant &&
+                    it !is PackageConstant &&
+                    it !is ClassConstant &&
+                    it !is TypedefConstant) || it.component?.access != Access.PUBLIC
             }
         ) {
             return null
@@ -67,25 +67,38 @@ internal object XdkAutoImports {
         val errors = ErrorList()
         val root =
             try {
-                ExecutionTrace.api("Parser.parseSource(auto-imports)") { Parser(Source(text), errors).parseSource() }
+                ExecutionTrace.api("Parser.parseSource(auto-imports)") {
+                    Parser(Source(text), errors).parseSource()
+                }
             } catch (_: CompilerException) {
                 return null
             }
         if (errors.hasSeriousErrors()) return null
-        val tokens = ExecutionTrace.api("Lexer.lex(auto-imports)") { Lexer(Source(text), errors).asSequence().toList() }
+        val tokens =
+            ExecutionTrace.api("Lexer.lex(auto-imports)") {
+                Lexer(Source(text), errors).asSequence().toList()
+            }
         if (errors.hasSeriousErrors()) return null
-        val type = root.childNodes().filterIsInstance<TypeCompositionStatement>().singleOrNull() ?: return null
+        val type =
+            root.childNodes().filterIsInstance<TypeCompositionStatement>().singleOrNull()
+                ?: return null
         val newline = if ("\r\n" in text) "\r\n" else "\n"
         val insertion =
             if (type.category.id == Token.Id.MODULE) {
                 val position = type.ensureBody().startPosition
                 val at =
-                    XdkRename.offset(text, SemanticModel.Position(Source.calculateLine(position), Source.calculateOffset(position)))
-                        ?: return null
+                    XdkRename.offset(
+                        text,
+                        SemanticModel.Position(
+                            Source.calculateLine(position),
+                            Source.calculateOffset(position),
+                        ),
+                    ) ?: return null
                 if (text.getOrNull(at) != '{') return null
                 at + 1
             } else {
-                // A member file may declare imports before its class; the compiler owns their scope.
+                // A member file may declare imports before its class; the compiler owns their
+                // scope.
                 0
             }
         val prefix: String
@@ -113,6 +126,10 @@ internal object XdkAutoImports {
             }
         }
         val imports = declaration + "import $prefix${target.path};$newline"
-        return XdkRename.Edit(insertion, insertion, if (insertion == 0) imports else "$newline$imports")
+        return XdkRename.Edit(
+            insertion,
+            insertion,
+            if (insertion == 0) imports else "$newline$imports",
+        )
     }
 }

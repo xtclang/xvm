@@ -3,7 +3,9 @@ package org.xtclang.idea.playbook
 import com.google.gson.JsonObject
 import com.intellij.driver.client.Driver
 
-/** Shared expectations, native editor actions and explicitly identified client protocol assertions. */
+/**
+ * Shared expectations, native editor actions and explicitly identified client protocol assertions.
+ */
 class ParityScenarios(
     private val driver: Driver,
     private val fixtures: Map<String, String>,
@@ -24,7 +26,9 @@ class ParityScenarios(
         body: ParityWorkspace.(JsonObject) -> Unit,
     ) {
         execute(id) {
-            ParityWorkspace(driver, id, fixtures, shared).use { workspace -> workspace.body(shared.scenarios.getValue(id).values) }
+            ParityWorkspace(driver, id, fixtures, shared).use { workspace ->
+                workspace.body(shared.scenarios.getValue(id).values)
+            }
         }
     }
 }

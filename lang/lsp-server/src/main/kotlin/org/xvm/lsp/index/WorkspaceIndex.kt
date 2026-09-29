@@ -1,16 +1,16 @@
 package org.xvm.lsp.index
 
-import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
+import org.slf4j.LoggerFactory
 
 /**
  * Workspace-wide symbol index for cross-file lookup.
  *
- * Provides O(1) name-based lookup and fuzzy search across all indexed files.
- * Thread-safe: concurrent reads are allowed during writes via [ReentrantReadWriteLock].
+ * Provides O(1) name-based lookup and fuzzy search across all indexed files. Thread-safe:
+ * concurrent reads are allowed during writes via [ReentrantReadWriteLock].
  *
  * ## Search algorithm (4-tier priority)
  * 1. Exact match (case-insensitive)
@@ -36,14 +36,14 @@ class WorkspaceIndex {
     private val lock = ReentrantReadWriteLock()
 
     /** Total number of indexed symbols across all files. */
-    val symbolCount: Int get() = lock.read { byUri.values.sumOf { it.size } }
+    val symbolCount: Int
+        get() = lock.read { byUri.values.sumOf { it.size } }
 
     /** Number of indexed files. */
-    val fileCount: Int get() = byUri.size
+    val fileCount: Int
+        get() = byUri.size
 
-    /**
-     * Add symbols for a file. Replaces any previously indexed symbols for that URI.
-     */
+    /** Add symbols for a file. Replaces any previously indexed symbols for that URI. */
     fun addSymbols(
         uri: String,
         symbols: List<IndexedSymbol>,
@@ -66,9 +66,7 @@ class WorkspaceIndex {
         }
     }
 
-    /**
-     * Remove all symbols for a file URI.
-     */
+    /** Remove all symbols for a file URI. */
     fun removeSymbolsForUri(uri: String) {
         lock.write {
             val count = byUri[uri]?.size ?: 0
@@ -89,15 +87,12 @@ class WorkspaceIndex {
         }
     }
 
-    /**
-     * Exact name lookup (case-insensitive). Returns all symbols with the given name.
-     */
-    fun findByName(name: String): List<IndexedSymbol> =
-        lock.read {
-            val results = byName[name.lowercase()]?.toList() ?: emptyList()
-            logger.info("findByName '{}' -> {} results", name, results.size)
-            results
-        }
+    /** Exact name lookup (case-insensitive). Returns all symbols with the given name. */
+    fun findByName(name: String): List<IndexedSymbol> = lock.read {
+        val results = byName[name.lowercase()]?.toList() ?: emptyList()
+        logger.info("findByName '{}' -> {} results", name, results.size)
+        results
+    }
 
     /**
      * Fuzzy search across all indexed symbols.
@@ -122,7 +117,13 @@ class WorkspaceIndex {
         }
 
         val lowerQuery = query.lowercase()
-        logger.info("search: query='{}', limit={}, index has {} names across {} files", query, limit, byName.size, byUri.size)
+        logger.info(
+            "search: query='{}', limit={}, index has {} names across {} files",
+            query,
+            limit,
+            byName.size,
+            byUri.size,
+        )
 
         return lock.read {
             val exact = mutableListOf<IndexedSymbol>()
@@ -141,7 +142,8 @@ class WorkspaceIndex {
                     }
 
                     else -> {
-                        // Check representative symbol for camelCase/subsequence (all have same name)
+                        // Check representative symbol for camelCase/subsequence (all have same
+                        // name)
                         val name = symbols.firstOrNull()?.name ?: continue
                         if (matchesCamelCase(query, name)) {
                             camelCase.addAll(symbols)
@@ -173,9 +175,7 @@ class WorkspaceIndex {
         }
     }
 
-    /**
-     * Clear all indexed data.
-     */
+    /** Clear all indexed data. */
     fun clear() {
         lock.write {
             byName.clear()
@@ -187,22 +187,21 @@ class WorkspaceIndex {
 
     companion object {
         /**
-         * Check if query matches name via CamelCase initials.
-         * E.g., "HSM" matches "HashMap", "CCE" matches "ClassCastException".
+         * Check if query matches name via CamelCase initials. E.g., "HSM" matches "HashMap", "CCE"
+         * matches "ClassCastException".
          */
         internal fun matchesCamelCase(
             query: String,
             name: String,
         ): Boolean {
             if (query.isEmpty()) return false
-            val upperChars =
-                buildList {
-                    for (i in name.indices) {
-                        if (name[i].isUpperCase() || i == 0) {
-                            add(name[i])
-                        }
+            val upperChars = buildList {
+                for (i in name.indices) {
+                    if (name[i].isUpperCase() || i == 0) {
+                        add(name[i])
                     }
                 }
+            }
             if (upperChars.size < query.length) return false
 
             var qi = 0
@@ -215,8 +214,8 @@ class WorkspaceIndex {
         }
 
         /**
-         * Check if query is a subsequence of name (both lowercase).
-         * E.g., "hmap" is a subsequence of "hashmap".
+         * Check if query is a subsequence of name (both lowercase). E.g., "hmap" is a subsequence
+         * of "hashmap".
          */
         internal fun matchesSubsequence(
             query: String,

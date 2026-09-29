@@ -42,7 +42,8 @@ data class TemplateScannerToken(
     val endOffset: Int,
     val value: String? = null,
 ) {
-    val length: Int get() = endOffset - startOffset
+    val length: Int
+        get() = endOffset - startOffset
 
     companion object {
         fun templateStart(

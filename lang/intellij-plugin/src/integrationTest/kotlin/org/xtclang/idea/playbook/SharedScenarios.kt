@@ -42,11 +42,14 @@ class SharedScenarios(
         val values: JsonObject,
         val intellij: Coverage,
     ) {
-        fun text(key: String): String = requireNotNull(values[key]) { "Missing scenario value $key" }.asString
+        fun text(key: String): String =
+            requireNotNull(values[key]) { "Missing scenario value $key" }.asString
 
-        fun strings(key: String): List<String> = requireNotNull(values[key]).asJsonArray.map { it.asString }
+        fun strings(key: String): List<String> =
+            requireNotNull(values[key]).asJsonArray.map { it.asString }
 
-        fun rows(key: String): List<JsonObject> = requireNotNull(values[key]).asJsonArray.map { it.asJsonObject }
+        fun rows(key: String): List<JsonObject> =
+            requireNotNull(values[key]).asJsonArray.map { it.asJsonObject }
     }
 
     private inline fun <reified T> core(id: String): T {
@@ -145,12 +148,23 @@ class SharedScenarios(
         val edit: Edit,
     )
 
-    val ids: List<String> get() = scenarios.keys.toList()
-    val files: List<String> get() = common.fixtures.map { it.file }
-    val implementedIds: Set<String> get() = scenarios.filterValues { it.intellij.coverage != "not-implemented" }.keys
+    val ids: List<String>
+        get() = scenarios.keys.toList()
+
+    val files: List<String>
+        get() = common.fixtures.map { it.file }
+
+    val implementedIds: Set<String>
+        get() = scenarios.filterValues { it.intellij.coverage != "not-implemented" }.keys
 
     val graph: String
-        get() = Gson().toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to common.sourceModules))))
+        get() =
+            Gson()
+                .toJson(
+                    mapOf(
+                        "xtc" to mapOf("compiler" to mapOf("sourceModules" to common.sourceModules))
+                    )
+                )
 
     fun validate(fixtures: Map<String, String>) {
         diagnostics.errors.forEach { expected ->
@@ -165,7 +179,10 @@ class SharedScenarios(
         offset(incomplete, completion.cursor)
         completion.accepted.apply(incomplete)
         offset(fixtures.getValue(dependencyNavigation.file), dependencyNavigation.location.cursor)
-        offset(fixtures.getValue(dependencyNavigation.location.targetFile), dependencyNavigation.location.target)
+        offset(
+            fixtures.getValue(dependencyNavigation.location.targetFile),
+            dependencyNavigation.location.target,
+        )
         dependencyEdit.edit.apply(fixtures.getValue(dependencyEdit.file))
         offset(fixtures.getValue(warning.file), warning.declaration)
         warning.edit.apply(fixtures.getValue(warning.file))
@@ -175,7 +192,12 @@ class SharedScenarios(
     companion object {
         fun read(path: Path): SharedScenarios {
             val contents = Files.readString(path)
-            val hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(contents.toByteArray(Charsets.UTF_8)))
+            val hash =
+                HexFormat.of()
+                    .formatHex(
+                        MessageDigest.getInstance("SHA-256")
+                            .digest(contents.toByteArray(Charsets.UTF_8))
+                    )
             val json = JsonParser.parseString(contents).asJsonObject
             require(json["schemaVersion"].asInt == 2) { "Unsupported shared playbook schema" }
             val gson = Gson()
@@ -184,14 +206,25 @@ class SharedScenarios(
                     id to gson.fromJson(value, Scenario::class.java)
                 }
             val expected = (1..122).map { "X$it" } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
-            require(scenarios.keys.toList() == expected) { "The catalog must describe the complete playbook in order" }
-            scenarios.forEach { (id, scenario) ->
-                require(scenario.intellij.coverage in setOf("full", "partial", "not-implemented")) { "Missing IntelliJ coverage for $id" }
-                require(
-                    scenario.intellij.coverage == "full" || scenario.intellij.limitations.isNotEmpty(),
-                ) { "Explain the IntelliJ gap for $id" }
+            require(scenarios.keys.toList() == expected) {
+                "The catalog must describe the complete playbook in order"
             }
-            return SharedScenarios(hash, gson.fromJson(json["common"], Common::class.java), scenarios)
+            scenarios.forEach { (id, scenario) ->
+                require(scenario.intellij.coverage in setOf("full", "partial", "not-implemented")) {
+                    "Missing IntelliJ coverage for $id"
+                }
+                require(
+                    scenario.intellij.coverage == "full" ||
+                        scenario.intellij.limitations.isNotEmpty()
+                ) {
+                    "Explain the IntelliJ gap for $id"
+                }
+            }
+            return SharedScenarios(
+                hash,
+                gson.fromJson(json["common"], Common::class.java),
+                scenarios,
+            )
         }
 
         fun text(
@@ -200,7 +233,9 @@ class SharedScenarios(
         ): String {
             val slots = Regex("\\$\\{(\\d+)\\}")
             val indices = slots.findAll(template).map { it.groupValues[1].toInt() }.toSet()
-            require(indices == values.indices.toSet()) { "Template substitutions do not match: $template" }
+            require(indices == values.indices.toSet()) {
+                "Template substitutions do not match: $template"
+            }
             return slots.replace(template) { values[it.groupValues[1].toInt()] }
         }
 
@@ -218,7 +253,9 @@ class SharedScenarios(
         ): Int {
             require(anchor.isNotEmpty()) { "Empty shared playbook anchor" }
             val start = text.indexOf(anchor)
-            require(start >= 0 && text.indexOf(anchor, start + 1) < 0) { "Expected one shared playbook anchor: $anchor" }
+            require(start >= 0 && text.indexOf(anchor, start + 1) < 0) {
+                "Expected one shared playbook anchor: $anchor"
+            }
             return start
         }
     }

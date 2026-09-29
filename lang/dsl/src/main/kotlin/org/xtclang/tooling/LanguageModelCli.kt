@@ -9,6 +9,8 @@
  */
 package org.xtclang.tooling
 
+import java.io.File
+import java.lang.invoke.MethodHandles
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
@@ -20,16 +22,13 @@ import org.xtclang.tooling.generators.TreeSitterGenerator
 import org.xtclang.tooling.generators.VSCodeConfigGenerator
 import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.LanguageModel
-import java.io.File
-import java.lang.invoke.MethodHandles
 
 private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
-private val json =
-    Json {
-        prettyPrint = true
-        encodeDefaults = true
-    }
+private val json = Json {
+    prettyPrint = true
+    encodeDefaults = true
+}
 
 fun main(args: Array<String>) {
     val command = args.firstOrNull() ?: "stats"
@@ -299,13 +298,14 @@ private fun showHelp() {
         |  ./gradlew generateTreeSitter   Generate Tree-sitter grammar
         |  ./gradlew generateVSCodeConfig Generate VS Code config
         |  ./gradlew generateAllEditorSupport  Generate all editor support files
-        """.trimMargin(),
+        """
+            .trimMargin()
     )
 }
 
 /**
- * Data-driven statistics model for the language.
- * All statistics are computed once and stored in a structured format.
+ * Data-driven statistics model for the language. All statistics are computed once and stored in a
+ * structured format.
  */
 data class ModelStatistics(
     val name: String,
@@ -370,51 +370,50 @@ data class ModelStatistics(
 }
 
 /**
- * Renders statistics in a beautiful box-drawing format.
- * All widths are computed dynamically from the data.
+ * Renders statistics in a beautiful box-drawing format. All widths are computed dynamically from
+ * the data.
  */
 object StatsRenderer {
     private const val BOX_WIDTH = 64
 
-    fun render(stats: ModelStatistics): String =
-        buildString {
-            appendHeader("XTC (Ecstasy) Language Model Statistics")
-            appendSeparator()
+    fun render(stats: ModelStatistics): String = buildString {
+        appendHeader("XTC (Ecstasy) Language Model Statistics")
+        appendSeparator()
 
-            // Metadata section
-            appendRow("Language", stats.name)
-            appendRow("File Extensions", stats.fileExtensions.joinToString(", "))
-            appendRow("Scope Name", stats.scopeName)
-            appendSeparator()
+        // Metadata section
+        appendRow("Language", stats.name)
+        appendRow("File Extensions", stats.fileExtensions.joinToString(", "))
+        appendRow("Scope Name", stats.scopeName)
+        appendSeparator()
 
-            // Lexical elements section
-            appendSectionHeader("LEXICAL ELEMENTS")
-            stats.lexicalStats.forEach { (label, value) ->
-                appendRow(label, value.toString())
-            }
-            appendSeparator()
-
-            // Semantic elements section
-            appendSectionHeader("SEMANTIC ELEMENTS")
-            stats.semanticStats.forEach { (label, value) ->
-                appendRow(label, value.toString())
-            }
-            appendSeparator()
-
-            // Operator precedence section
-            appendSectionHeader("OPERATOR PRECEDENCE LEVELS")
-            stats.operatorsByPrecedence.forEach { (prec, ops) ->
-                val opsStr = ops.joinToString(" ")
-                appendRow("Level $prec", opsStr.take(45))
-            }
-            appendSeparator()
-
-            // Concept hierarchy section
-            appendSectionHeader("AST CONCEPT HIERARCHY")
-            renderConceptHierarchy(stats.conceptHierarchy, maxRoots = 10, maxChildren = 5)
-
-            appendFooter()
+        // Lexical elements section
+        appendSectionHeader("LEXICAL ELEMENTS")
+        stats.lexicalStats.forEach { (label, value) ->
+            appendRow(label, value.toString())
         }
+        appendSeparator()
+
+        // Semantic elements section
+        appendSectionHeader("SEMANTIC ELEMENTS")
+        stats.semanticStats.forEach { (label, value) ->
+            appendRow(label, value.toString())
+        }
+        appendSeparator()
+
+        // Operator precedence section
+        appendSectionHeader("OPERATOR PRECEDENCE LEVELS")
+        stats.operatorsByPrecedence.forEach { (prec, ops) ->
+            val opsStr = ops.joinToString(" ")
+            appendRow("Level $prec", opsStr.take(45))
+        }
+        appendSeparator()
+
+        // Concept hierarchy section
+        appendSectionHeader("AST CONCEPT HIERARCHY")
+        renderConceptHierarchy(stats.conceptHierarchy, maxRoots = 10, maxChildren = 5)
+
+        appendFooter()
+    }
 
     private fun StringBuilder.appendHeader(title: String) {
         appendLine("╔${"═".repeat(BOX_WIDTH - 2)}╗")
