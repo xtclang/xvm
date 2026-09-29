@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
     alias(libs.plugins.lang.kotlin.serialization)
-    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.spotless)
 }
 
 // JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
@@ -25,13 +25,6 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// Ensure ktlint runs during normal development (not just 'check')
-val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin =
-    tasks.named("compileKotlin") {
-        dependsOn(ktlintCheck)
-    }
-
 // =============================================================================
 // Editor Support Generation
 // =============================================================================
@@ -39,8 +32,8 @@ val compileKotlin =
 val generatedDir: Provider<Directory> = layout.buildDirectory.dir("generated")
 
 /**
- * Configure a generator task with common settings.
- * Each task declares its specific output file(s) to avoid overlapping output claims.
+ * Configure a generator task with common settings. Each task declares its specific output file(s)
+ * to avoid overlapping output claims.
  */
 fun JavaExec.configureGenerator(
     command: String,
@@ -66,20 +59,13 @@ fun JavaExec.configureGenerator(
 
     val outputPath =
         if (outputFileNames.isNotEmpty()) {
-            generatedDir
-                .get()
-                .file(outputFileNames.first())
-                .asFile.absolutePath
+            generatedDir.get().file(outputFileNames.first()).asFile.absolutePath
         } else {
             generatedDir.get().asFile.absolutePath
         }
     args(command, outputPath)
 
-    inputs.files(
-        sourceSets.main
-            .get()
-            .kotlin.sourceDirectories,
-    )
+    inputs.files(sourceSets.main.get().kotlin.sourceDirectories)
     // Declare specific output files to avoid overlapping claims
     outputFileNames.forEach { fileName ->
         outputs.file(generatedDir.map { it.file(fileName) })
@@ -138,16 +124,8 @@ val generateTreeSitter =
         inputs.property("generatorLogLevel", generatorLogLevel)
         // Tree-sitter expects a directory, not a file
         args("tree-sitter", generatedDir.get().asFile.absolutePath)
-        inputs.files(
-            sourceSets.main
-                .get()
-                .kotlin.sourceDirectories,
-        )
-        inputs.files(
-            sourceSets.main
-                .get()
-                .resources.sourceDirectories,
-        )
+        inputs.files(sourceSets.main.get().kotlin.sourceDirectories)
+        inputs.files(sourceSets.main.get().resources.sourceDirectories)
         outputs.files(
             generatedDir.map { it.file("grammar.js") },
             generatedDir.map { it.file("highlights.scm") },
@@ -173,17 +151,11 @@ val generateScannerC =
         args(
             generatedDir
                 .map {
-                    it
-                        .dir("src")
-                        .file("scanner.c")
-                        .asFile.absolutePath
-                }.get(),
-        )
-        inputs.files(
-            sourceSets.main
+                    it.dir("src").file("scanner.c").asFile.absolutePath
+                }
                 .get()
-                .kotlin.sourceDirectories,
         )
+        inputs.files(sourceSets.main.get().kotlin.sourceDirectories)
         outputs.file(generatedDir.map { it.dir("src").file("scanner.c") })
     }
 
@@ -222,8 +194,10 @@ val generateEditorSupport =
 // Consumable configuration for other projects
 // =============================================================================
 
-// TODO: Right now we only provide an export point for textMate, since IntelliJ and VS Code plugins use
-//   it until we have integrated semantic tokens in the LSP, which requires rewrite of at least the Lexer.t
+// TODO: Right now we only provide an export point for textMate, since IntelliJ and VS Code plugins
+// use
+//   it until we have integrated semantic tokens in the LSP, which requires rewrite of at least the
+// Lexer.t
 val textMateElements =
     configurations.register("textMateElements") {
         isCanBeConsumed = true

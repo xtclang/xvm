@@ -3,7 +3,7 @@ import java.time.Instant
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
-    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.spotless)
     `java-library`
 }
 
@@ -56,7 +56,8 @@ plugins {
 // Use 'mock' for basic regex-based functionality if tree-sitter has issues.
 // =============================================================================
 // Resolve via xdkProperties which reads from the composite root's gradle.properties
-// (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
+// (project.findProperty() only sees the included build's own gradle.properties, which doesn't
+// exist)
 val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "treesitter")
 val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
 
@@ -68,9 +69,12 @@ val logLevel: String =
         .stringValue(
             "log",
             System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
-        ).uppercase()
+        )
+        .uppercase()
 
-logger.info("[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel")
+logger.info(
+    "[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel"
+)
 
 // Generate build info for version verification and adapter selection
 val generateBuildInfo =
@@ -96,13 +100,16 @@ val generateBuildInfo =
                 lsp.version=$projectVersion
                 lsp.adapter=$adapter
                 lsp.semanticTokens=$semanticTokens
-                """.trimIndent() + "\n",
+                """
+                    .trimIndent() + "\n"
             )
         }
     }
 
 sourceSets.main {
-    resources.srcDir(generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") })
+    resources.srcDir(
+        generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") }
+    )
 }
 
 // JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
@@ -207,19 +214,31 @@ val compilerModuleIndex =
     tasks.register<WriteProperties>("compilerModuleIndex") {
         destinationFile.set(layout.buildDirectory.file("generated/compiler/modules.properties"))
         inputs.files(compilerModuleFiles).withPathSensitivity(PathSensitivity.NONE)
-        property("modules", compilerModuleFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+        property(
+            "modules",
+            compilerModuleFiles.elements.map { files ->
+                files.map { it.asFile.name }.sorted().joinToString(",")
+            },
+        )
     }
 
 val compilerSourceIndex =
     tasks.register<WriteProperties>("compilerSourceIndex") {
         destinationFile.set(layout.buildDirectory.file("generated/compiler/sources.properties"))
         inputs.files(compilerSources).withPathSensitivity(PathSensitivity.NONE)
-        property("archives", compilerSources.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+        property(
+            "archives",
+            compilerSources.elements.map { files ->
+                files.map { it.asFile.name }.sorted().joinToString(",")
+            },
+        )
     }
 
 // Add native library resources to source sets
 sourceSets.main {
-    resources.srcDir(copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") })
+    resources.srcDir(
+        copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") }
+    )
 }
 
 // Ensure native library is copied before processResources
@@ -236,34 +255,22 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
 }
 
-// =============================================================================
-// Ensure ktlint runs during normal development
-// =============================================================================
-// By default, ktlint only runs as part of 'check', not during compilation.
-// This means running 'runIde', 'jar', or 'assemble' skips ktlint entirely.
-// We fix this by making compileKotlin depend on ktlintCheck, so any build
-// that compiles code also verifies formatting.
-val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin =
-    tasks.named("compileKotlin") {
-        dependsOn(ktlintCheck)
-    }
 val classes = tasks.named("classes")
 
 tasks.withType<Test>().configureEach {
     systemProperty(
         "xtc.trace.directory",
-        layout.buildDirectory
-            .dir("reports/execution-trace")
-            .get()
-            .asFile.absolutePath,
+        layout.buildDirectory.dir("reports/execution-trace").get().asFile.absolutePath,
     )
 }
 
 tasks.test {
     // Prefer the real logger over javatools' shaded no-op provider, without setting a provider
     // property on Gradle's separate bootstrap classloader (which cannot see test dependencies).
-    classpath = configurations.testRuntimeClasspath.get().filter { it.name.startsWith("logback-classic-") } + classpath
+    classpath =
+        configurations.testRuntimeClasspath.get().filter {
+            it.name.startsWith("logback-classic-")
+        } + classpath
     useJUnitPlatform { excludeTags("compiler-stdio") }
     testLogging {
         events("failed")
@@ -291,9 +298,7 @@ tasks.test {
 
 tasks.jar {
     manifest {
-        attributes(
-            "Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt",
-        )
+        attributes("Main-Class" to "org.xvm.lsp.server.XtcLanguageServerLauncherKt")
     }
 }
 
@@ -308,7 +313,8 @@ val fatJar =
         archiveClassifier.set("all")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-        // Explicit dependency ensures resources (logback.xml, etc.) are processed before JAR creation
+        // Explicit dependency ensures resources (logback.xml, etc.) are processed before JAR
+        // creation
         dependsOn(classes)
 
         from(sourceSets.main.get().output)
@@ -345,15 +351,15 @@ val compilerStdioTest =
     tasks.register<Test>("compilerStdioTest") {
         group = "verification"
         description = "Test the packaged compiler LSP over stdio (requires -Plsp.adapter=compiler)"
-        testClassesDirs =
-            sourceSets.test
-                .get()
-                .output.classesDirs
+        testClassesDirs = sourceSets.test.get().output.classesDirs
         classpath = sourceSets.test.get().runtimeClasspath
         useJUnitPlatform { includeTags("compiler-stdio") }
 
         val serverJar = fatJar.flatMap { it.archiveFile }
-        inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
+        inputs
+            .file(serverJar)
+            .withPropertyName("serverJar")
+            .withPathSensitivity(PathSensitivity.NONE)
         dependsOn(fatJar)
         systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
         testLogging { events("failed") }
@@ -396,7 +402,13 @@ val lspVersionProperties =
             attribute(Usage.USAGE_ATTRIBUTE, objects.named("lsp-version-properties"))
         }
         outgoing {
-            artifact(generateBuildInfo.map { layout.buildDirectory.file("generated/resources/buildinfo/lsp-version.properties") }) {
+            artifact(
+                generateBuildInfo.map {
+                    layout.buildDirectory.file(
+                        "generated/resources/buildinfo/lsp-version.properties"
+                    )
+                }
+            ) {
                 builtBy(generateBuildInfo)
             }
         }

@@ -1,4 +1,6 @@
-import org.jlleitschuh.gradle.ktlint.KtlintExtension
+import com.diffplug.gradle.spotless.SpotlessCheck
+import com.diffplug.gradle.spotless.SpotlessExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 /**
  * Root project for XTC language tooling.
@@ -9,57 +11,54 @@ import org.jlleitschuh.gradle.ktlint.KtlintExtension
  * - intellij-plugin: IntelliJ IDEA plugin
  * - vscode-extension: VS Code extension
  */
-
 plugins {
     base
     alias(libs.plugins.lang.kotlin.jvm) apply false
     alias(libs.plugins.lang.kotlin.serialization) apply false
-    alias(libs.plugins.lang.ktlint) apply false
+    alias(libs.plugins.spotless)
 }
 
 // =============================================================================
-// ktlint configuration for all Kotlin subprojects
+// Kotlin formatting
 // =============================================================================
-// Centralized ktlint setup: pins the engine version and ensures auto-formatting
-// runs before checks, so developers never see formatting-only failures.
-// Rule configuration lives in lang/.editorconfig (picked up automatically).
+// Build scripts are owned by the lang root; each Kotlin subproject owns its sources,
+// including tests and integration tests. Generated and synced build outputs stay excluded.
+val ktfmtVersion = libs.versions.lang.ktfmt.get()
+val ci = providers.environmentVariable("CI").isPresent
 
-subprojects {
-    pluginManager.withPlugin("org.jlleitschuh.gradle.ktlint") {
-        configure<KtlintExtension> {
-            // Pin the ktlint engine version (from libs.versions.toml) to ensure
-            // consistent formatting across environments, independent of which
-            // Gradle plugin version is used.
-            version.set(libs.versions.lang.ktlint.engine)
+spotless {
+    kotlinGradle {
+        target("*.gradle.kts", "*/build.gradle.kts")
+        ktfmt(ktfmtVersion).kotlinlangStyle()
+    }
+}
 
-            // --- Uncomment to override defaults ---
-            // verbose.set(false)
-            // debug.set(false)
-            // android.set(false)
-            // outputToConsole.set(true)
-            // coloredOutput.set(true)
-            // outputColorName.set("")
-            // ignoreFailures.set(false)
-            // enableExperimentalRules.set(false)
-            // relative.set(false)
-            // baseline.set(file("config/ktlint/baseline.xml"))
-        }
-
-        // Auto-format before check: both lifecycle tasks (ktlint*Check) and their
-        // underlying worker tasks (runKtlintCheckOver*) must wait for formatting to
-        // complete. Without wiring the worker tasks, Gradle can schedule them before
-        // the format workers finish writing corrected files.
-        tasks.matching { it.name.startsWith("ktlint") && it.name.endsWith("Check") }.configureEach {
-            val formatTaskName = name.replace("Check", "Format")
-            dependsOn(tasks.named(formatTaskName))
-        }
-        tasks.matching { it.name.startsWith("runKtlintCheck") }.configureEach {
-            val formatTaskName = name.replace("runKtlintCheck", "runKtlintFormat")
-            dependsOn(tasks.named(formatTaskName))
+allprojects {
+    pluginManager.withPlugin("com.diffplug.spotless") {
+        if (!ci) {
+            val applyFormatting = tasks.named("spotlessApply")
+            tasks.named("check") { dependsOn(applyFormatting) }
+            tasks.withType<SpotlessCheck>().configureEach { mustRunAfter(applyFormatting) }
         }
     }
 }
 
+subprojects {
+    pluginManager.withPlugin("com.diffplug.spotless") {
+        configure<SpotlessExtension> {
+            kotlin {
+                target("src/**/*.kt", "src/**/*.kts")
+                ktfmt(ktfmtVersion).kotlinlangStyle()
+            }
+        }
+        val applyFormatting = tasks.named("spotlessApply")
+        val checkFormatting = tasks.named("spotlessCheck")
+        val formatting = if (ci) checkFormatting else applyFormatting
+        tasks.withType<KotlinCompile>().configureEach { dependsOn(formatting) }
+        rootProject.tasks.named("spotlessApply") { dependsOn(applyFormatting) }
+        rootProject.tasks.named("spotlessCheck") { dependsOn(checkFormatting) }
+    }
+}
 
 // =============================================================================
 // Update generated-examples directory
@@ -80,24 +79,25 @@ subprojects {
 // after modifying the language model or generators.
 // =============================================================================
 
-val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
-    group = "generation"
-    description = "Update the generated-examples directory with freshly generated files"
+val updateGeneratedExamples =
+    tasks.register<Copy>("updateGeneratedExamples") {
+        group = "generation"
+        description = "Update the generated-examples directory with freshly generated files"
 
-    dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
+        dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
 
-    from(project(":dsl").layout.buildDirectory.dir("generated")) {
-        include("xtc.tmLanguage.json")
-        include("language-configuration.json")
-        include("xtc.vim")
-        include("xtc-mode.el")
-        include("grammar.js")
-        include("highlights.scm")
-        include("xtc.sublime-syntax")
+        from(project(":dsl").layout.buildDirectory.dir("generated")) {
+            include("xtc.tmLanguage.json")
+            include("language-configuration.json")
+            include("xtc.vim")
+            include("xtc-mode.el")
+            include("grammar.js")
+            include("highlights.scm")
+            include("xtc.sublime-syntax")
+        }
+
+        into(layout.projectDirectory.dir("generated-examples"))
     }
-
-    into(layout.projectDirectory.dir("generated-examples"))
-}
 
 // =============================================================================
 // Aggregate subproject tasks
@@ -110,7 +110,8 @@ val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
 // is the part of lang that moves with the compiler - lsp-server depends on javatools, so it has
 // to be built when the compiler changes; the plugins do not.
 //
-// Turn one on with -PincludeBuildAttachIntellijPlugin=true or -PincludeBuildAttachVsCodeExtension=true,
+// Turn one on with -PincludeBuildAttachIntellijPlugin=true or
+// -PincludeBuildAttachVsCodeExtension=true,
 // or build it directly: ./gradlew :lang:intellij-plugin:buildPlugin
 val attachIntellijPlugin =
     providers.gradleProperty("includeBuildAttachIntellijPlugin").orElse("false").get().toBoolean()
@@ -130,15 +131,23 @@ val coreProjects =
 
 // clean is cheap and resolves nothing, so it always covers everything that can leave a build dir
 val allProjects =
-    listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
+    listOf(
+        ":dsl",
+        ":tree-sitter",
+        ":lsp-server",
+        ":dap-server",
+        ":intellij-plugin",
+        ":vscode-extension",
+    )
 
 // Map of aggregate task -> subproject task (null means same name)
-val taskMappings = mapOf(
-    "build" to mapOf(":intellij-plugin" to "buildPlugin"),  // intellij uses buildPlugin
-    "assemble" to emptyMap(),
-    "check" to emptyMap(),
-    "clean" to emptyMap()
-)
+val taskMappings =
+    mapOf(
+        "build" to mapOf(":intellij-plugin" to "buildPlugin"), // intellij uses buildPlugin
+        "assemble" to emptyMap(),
+        "check" to emptyMap(),
+        "clean" to emptyMap(),
+    )
 
 taskMappings.forEach { (aggregateTask, overrides) ->
     val projects = if (aggregateTask == "clean") allProjects else coreProjects
@@ -154,14 +163,16 @@ taskMappings.forEach { (aggregateTask, overrides) ->
 // IDE run tasks - convenience aliases for subproject tasks
 // =============================================================================
 
-val runIntellijPlugin = tasks.register("runIntellijPlugin") {
-    group = "run"
-    description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
-    dependsOn(project(":intellij-plugin").tasks.named("runIde"))
-}
+val runIntellijPlugin =
+    tasks.register("runIntellijPlugin") {
+        group = "run"
+        description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
+        dependsOn(project(":intellij-plugin").tasks.named("runIde"))
+    }
 
-val runVsCodeExtension = tasks.register("runVsCodeExtension") {
-    group = "run"
-    description = "Launch VS Code with the XTC extension loaded for testing"
-    dependsOn(project(":vscode-extension").tasks.named("runCode"))
-}
+val runVsCodeExtension =
+    tasks.register("runVsCodeExtension") {
+        group = "run"
+        description = "Launch VS Code with the XTC extension loaded for testing"
+        dependsOn(project(":vscode-extension").tasks.named("runCode"))
+    }

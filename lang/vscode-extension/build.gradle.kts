@@ -12,100 +12,113 @@ node {
 }
 
 // Configuration to consume TextMate grammar from root project
-val textMateGrammar = configurations.create("textMateGrammar") {
-    isCanBeConsumed = false
-    isCanBeResolved = true
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named("textmate-grammar"))
+val textMateGrammar =
+    configurations.create("textMateGrammar") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named("textmate-grammar"))
+        }
     }
-}
 
 dependencies {
     textMateGrammar(project(path = ":dsl", configuration = "textMateElements"))
 }
 
 // Copy TextMate grammar files
-val copyTextMateGrammar = tasks.register<Copy>("copyTextMateGrammar") {
-    description = "Copy TextMate grammar from generated output"
-    from(textMateGrammar) {
-        include("xtc.tmLanguage.json")
+val copyTextMateGrammar =
+    tasks.register<Copy>("copyTextMateGrammar") {
+        description = "Copy TextMate grammar from generated output"
+        from(textMateGrammar) {
+            include("xtc.tmLanguage.json")
+        }
+        into(layout.projectDirectory.dir("syntaxes"))
     }
-    into(layout.projectDirectory.dir("syntaxes"))
-}
 
 // Copy language configuration
-val copyLanguageConfig = tasks.register<Copy>("copyLanguageConfig") {
-    description = "Copy language configuration from generated output"
-    from(textMateGrammar) {
-        include("language-configuration.json")
+val copyLanguageConfig =
+    tasks.register<Copy>("copyLanguageConfig") {
+        description = "Copy language configuration from generated output"
+        from(textMateGrammar) {
+            include("language-configuration.json")
+        }
+        into(layout.projectDirectory)
     }
-    into(layout.projectDirectory)
-}
 
 // Copy LSP server fat JAR (self-contained with all dependencies: LSP4J, tree-sitter, Logback)
-val copyLspServer = tasks.register<Copy>("copyLspServer") {
-    description = "Copy LSP server fat JAR"
-    dependsOn(project(":lsp-server").tasks.named("fatJar"))
-    from(project(":lsp-server").tasks.named("fatJar"))
-    into(layout.projectDirectory.dir("server"))
-    rename { "lsp-server.jar" }
-}
+val copyLspServer =
+    tasks.register<Copy>("copyLspServer") {
+        description = "Copy LSP server fat JAR"
+        dependsOn(project(":lsp-server").tasks.named("fatJar"))
+        from(project(":lsp-server").tasks.named("fatJar"))
+        into(layout.projectDirectory.dir("server"))
+        rename { "lsp-server.jar" }
+    }
 
 // Copy DAP server JAR (bundled for debugging support)
-val copyDapServer = tasks.register<Copy>("copyDapServer") {
-    description = "Copy DAP server JAR"
-    dependsOn(project(":dap-server").tasks.named("jar"))
-    from(project(":dap-server").tasks.named("jar")) {
-        include("*.jar")
+val copyDapServer =
+    tasks.register<Copy>("copyDapServer") {
+        description = "Copy DAP server JAR"
+        dependsOn(project(":dap-server").tasks.named("jar"))
+        from(project(":dap-server").tasks.named("jar")) {
+            include("*.jar")
+        }
+        into(layout.projectDirectory.dir("server"))
+        rename { "dap-server.jar" }
     }
-    into(layout.projectDirectory.dir("server"))
-    rename { "dap-server.jar" }
-}
 
 // Copy LICENSE from repository root
-val copyLicense = tasks.register<Copy>("copyLicense") {
-    description = "Copy LICENSE from repository root"
-    val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
-    from(File(compositeRoot, "LICENSE.md"))
-    into(layout.projectDirectory)
-}
+val copyLicense =
+    tasks.register<Copy>("copyLicense") {
+        description = "Copy LICENSE from repository root"
+        val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
+        from(File(compositeRoot, "LICENSE.md"))
+        into(layout.projectDirectory)
+    }
 
 // Generate the marketplace icon (xtc.png, 256x256) and the language file icon
 // (xtc-file.png, 32x32) from doc/logo/x.jpg in the repository root. We derive
 // PNGs rather than checking them in so the single JPEG source of truth in
 // doc/logo/ stays canonical; the `sharp` devDependency handles the conversion.
-val generateIcons = tasks.register<NodeTask>("generateIcons") {
-    description = "Generate VS Code marketplace and file icons from doc/logo/x.jpg"
-    dependsOn(tasks.named("npmInstall"))
-    val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
-    val sourceLogo = File(compositeRoot, "doc/logo/x.jpg")
-    val outDir = layout.projectDirectory.dir("icons")
-    val scriptFile = layout.projectDirectory.file("scripts/generate-icons.cjs")
-    script.set(scriptFile.asFile)
-    args.set(listOf(sourceLogo.absolutePath, outDir.asFile.absolutePath))
-    inputs.file(sourceLogo)
-    inputs.file(scriptFile)
-    outputs.file(outDir.file("xtc.png"))
-    outputs.file(outDir.file("xtc-file.png"))
-}
+val generateIcons =
+    tasks.register<NodeTask>("generateIcons") {
+        description = "Generate VS Code marketplace and file icons from doc/logo/x.jpg"
+        dependsOn(tasks.named("npmInstall"))
+        val compositeRoot = XdkPropertiesService.compositeRootDirectory(projectDir)
+        val sourceLogo = File(compositeRoot, "doc/logo/x.jpg")
+        val outDir = layout.projectDirectory.dir("icons")
+        val scriptFile = layout.projectDirectory.file("scripts/generate-icons.cjs")
+        script.set(scriptFile.asFile)
+        args.set(listOf(sourceLogo.absolutePath, outDir.asFile.absolutePath))
+        inputs.file(sourceLogo)
+        inputs.file(scriptFile)
+        outputs.file(outDir.file("xtc.png"))
+        outputs.file(outDir.file("xtc-file.png"))
+    }
 
 // Configure the plugin-provided npmInstall task (runs `npm install` using the pinned Node)
-val npmInstall = tasks.named("npmInstall") {
-    mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyLicense)
-}
+val npmInstall =
+    tasks.named("npmInstall") {
+        mustRunAfter(copyLanguageConfig, copyTextMateGrammar, copyLicense)
+    }
 
 // Compile TypeScript
-val npmCompile = tasks.register<NpmTask>("npmCompile") {
-    description = "Compile TypeScript"
-    dependsOn(npmInstall)
-    args.set(listOf("run", "compile"))
+val npmCompile =
+    tasks.register<NpmTask>("npmCompile") {
+        description = "Compile TypeScript"
+        dependsOn(npmInstall)
+        args.set(listOf("run", "compile"))
 
-    inputs.dir(layout.projectDirectory.dir("src"))
-    inputs.file(layout.projectDirectory.file("tsconfig.json"))
-    inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
-    outputs.dir(layout.projectDirectory.dir("out"))
-}
+        inputs.dir(layout.projectDirectory.dir("src"))
+        inputs.file(layout.projectDirectory.file("tsconfig.json"))
+        inputs.file(
+            rootProject.layout.projectDirectory.file(
+                "test-fixtures/compiler-playbook/scenarios.json"
+            )
+        )
+        outputs.dir(layout.projectDirectory.dir("out"))
+    }
 
 // Optional version suffix for the VS Code extension only. Pass
 // `-Pvscode.version.suffix=alpha.20260523T120000` to package an extension
@@ -126,59 +139,76 @@ val npmCompile = tasks.register<NpmTask>("npmCompile") {
 // else in the repo.
 val vscodeVersionSuffix: Provider<String> = providers.gradleProperty("vscode.version.suffix")
 
-val stampVscodeVersion = tasks.register("stampVscodeVersion") {
-    description = "Apply -Pvscode.version.suffix to lang/vscode-extension/package.json (no-op when unset)"
-    val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
-    val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
-    val suffixProvider = vscodeVersionSuffix
-    onlyIf { suffixProvider.isPresent }
-    doFirst {
-        val suffix = suffixProvider.get()
-        val originalContent = pkgJsonFile.readText()
-        // Stash the original so finalizedBy can restore it; overwrite any
-        // stale backup left by a previous interrupted run.
-        backupFile.writeText(originalContent)
+val stampVscodeVersion =
+    tasks.register("stampVscodeVersion") {
+        description =
+            "Apply -Pvscode.version.suffix to lang/vscode-extension/package.json (no-op when unset)"
+        val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
+        val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
+        val suffixProvider = vscodeVersionSuffix
+        onlyIf { suffixProvider.isPresent }
+        doFirst {
+            val suffix = suffixProvider.get()
+            val originalContent = pkgJsonFile.readText()
+            // Stash the original so finalizedBy can restore it; overwrite any
+            // stale backup left by a previous interrupted run.
+            backupFile.writeText(originalContent)
 
-        val versionRegex = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
-        val match = versionRegex.find(originalContent)
-            ?: error("package.json is missing a \"version\" field")
-        val currentVersion = match.groupValues[1]
-        // Strip any existing pre-release tag before re-applying — keeps repeat
-        // invocations from compounding (e.g. 0.4.4-alpha.X-alpha.Y).
-        val baseVersion = currentVersion.substringBefore("-")
-        val stamped = "$baseVersion-$suffix"
-        val updated = originalContent.replace(match.value, "\"version\": \"$stamped\"")
-        pkgJsonFile.writeText(updated)
-        logger.lifecycle("[vscode-extension] Stamped package.json version: $currentVersion → $stamped")
+            val versionRegex = Regex("\"version\"\\s*:\\s*\"([^\"]+)\"")
+            val match =
+                versionRegex.find(originalContent)
+                    ?: error("package.json is missing a \"version\" field")
+            val currentVersion = match.groupValues[1]
+            // Strip any existing pre-release tag before re-applying — keeps repeat
+            // invocations from compounding (e.g. 0.4.4-alpha.X-alpha.Y).
+            val baseVersion = currentVersion.substringBefore("-")
+            val stamped = "$baseVersion-$suffix"
+            val updated = originalContent.replace(match.value, "\"version\": \"$stamped\"")
+            pkgJsonFile.writeText(updated)
+            logger.lifecycle(
+                "[vscode-extension] Stamped package.json version: $currentVersion → $stamped"
+            )
+        }
     }
-}
 
-val restoreVscodeVersion = tasks.register("restoreVscodeVersion") {
-    description = "Restore lang/vscode-extension/package.json from the backup written by stampVscodeVersion"
-    val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
-    val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
-    val suffixProvider = vscodeVersionSuffix
-    onlyIf { suffixProvider.isPresent && backupFile.exists() }
-    doLast {
-        pkgJsonFile.writeText(backupFile.readText())
-        backupFile.delete()
-        logger.lifecycle("[vscode-extension] Restored package.json from version-stamp backup")
+val restoreVscodeVersion =
+    tasks.register("restoreVscodeVersion") {
+        description =
+            "Restore lang/vscode-extension/package.json from the backup written by stampVscodeVersion"
+        val pkgJsonFile = layout.projectDirectory.file("package.json").asFile
+        val backupFile = layout.projectDirectory.file("package.json.version-backup").asFile
+        val suffixProvider = vscodeVersionSuffix
+        onlyIf { suffixProvider.isPresent && backupFile.exists() }
+        doLast {
+            pkgJsonFile.writeText(backupFile.readText())
+            backupFile.delete()
+            logger.lifecycle("[vscode-extension] Restored package.json from version-stamp backup")
+        }
     }
-}
 
 // Package the extension
-val packageExtension = tasks.register<NpmTask>("packageExtension") {
-    description = "Package VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons, stampVscodeVersion)
-    finalizedBy(restoreVscodeVersion)
-    args.set(listOf("run", "package"))
+val packageExtension =
+    tasks.register<NpmTask>("packageExtension") {
+        description = "Package VS Code extension"
+        dependsOn(
+            npmCompile,
+            copyTextMateGrammar,
+            copyLanguageConfig,
+            copyLspServer,
+            copyDapServer,
+            copyLicense,
+            generateIcons,
+            stampVscodeVersion,
+        )
+        finalizedBy(restoreVscodeVersion)
+        args.set(listOf("run", "package"))
 
-    // Declare the version suffix as an input so changing `-Pvscode.version.suffix`
-    // invalidates the task cache. Without this, switching the suffix would
-    // produce stale .vsix outputs because vsce package's only declared input
-    // (the source tree) hasn't changed.
-    inputs.property("vscodeVersionSuffix", vscodeVersionSuffix.orElse(""))
-}
+        // Declare the version suffix as an input so changing `-Pvscode.version.suffix`
+        // invalidates the task cache. Without this, switching the suffix would
+        // produce stale .vsix outputs because vsce package's only declared input
+        // (the source tree) hasn't changed.
+        inputs.property("vscodeVersionSuffix", vscodeVersionSuffix.orElse(""))
+    }
 
 // Headless integration test: launches VS Code via @vscode/test-electron with
 // the extension loaded from the build tree, opens src/test/fixtures/hello.x,
@@ -190,99 +220,130 @@ val packageExtension = tasks.register<NpmTask>("packageExtension") {
 // Not wired into `check` by default because on headless Linux runners this
 // needs `xvfb-run` (or a similar virtual display). The intent is that local
 // developers run it explicitly, and CI opt-in via xvfb if/when desired.
-val testVscodeExtension = tasks.register<NpmTask>("testVscodeExtension") {
-    group = "verification"
-    description = "Run headless integration tests for the VS Code extension"
-    dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
-    args.set(listOf("run", "test:vscode"))
-    // Cache directory used by @vscode/test-electron to keep the downloaded
-    // VS Code build across runs; declared as input so a corrupted cache
-    // can be cleared by `./gradlew :lang:vscode-extension:clean`.
-    inputs.dir(layout.projectDirectory.dir("src/test"))
-}
+val testVscodeExtension =
+    tasks.register<NpmTask>("testVscodeExtension") {
+        group = "verification"
+        description = "Run headless integration tests for the VS Code extension"
+        dependsOn(
+            npmCompile,
+            copyTextMateGrammar,
+            copyLanguageConfig,
+            copyLspServer,
+            copyDapServer,
+            copyLicense,
+            generateIcons,
+        )
+        args.set(listOf("run", "test:vscode"))
+        // Cache directory used by @vscode/test-electron to keep the downloaded
+        // VS Code build across runs; declared as input so a corrupted cache
+        // can be cleared by `./gradlew :lang:vscode-extension:clean`.
+        inputs.dir(layout.projectDirectory.dir("src/test"))
+    }
 
 // Runs the compiler playbook inside VS Code and the host/protocol checks referenced by it.
 tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
     description = "Run XdkAdapter playbook in VS Code (requires -Plsp.adapter=compiler)"
     val selectedCases = providers.gradleProperty("compilerPlaybookCases")
-    val multiRoot = providers.gradleProperty("compilerPlaybookMultiRoot").map(String::toBoolean).orElse(false)
+    val multiRoot =
+        providers.gradleProperty("compilerPlaybookMultiRoot").map(String::toBoolean).orElse(false)
     dependsOn("assemble")
     if (!selectedCases.isPresent) {
         dependsOn(":lsp-server:test", ":lsp-server:compilerStdioTest")
     }
-    args.set(selectedCases.orElse("").zip(multiRoot) { cases, multipleRoots ->
-        listOf("run", "test:playbook", "--") +
-            listOfNotNull(cases.takeIf(String::isNotEmpty)?.let { "--cases=$it" }, "--multi-root".takeIf { multipleRoots })
-    })
+    args.set(
+        selectedCases.orElse("").zip(multiRoot) { cases, multipleRoots ->
+            listOf("run", "test:playbook", "--") +
+                listOfNotNull(
+                    cases.takeIf(String::isNotEmpty)?.let { "--cases=$it" },
+                    "--multi-root".takeIf { multipleRoots },
+                )
+        }
+    )
     inputs.dir(layout.projectDirectory.dir("src/test"))
     inputs.file(layout.projectDirectory.file("../doc/manual-test-plan.md"))
-    inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
+    inputs.file(
+        rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
+    )
     // Test execution is intentional on every invocation; reports are retained per run.
 }
 
 // Main build task - configure the existing task from base plugin
-val build = tasks.named("build") {
-    dependsOn(packageExtension)
-}
+val build =
+    tasks.named("build") {
+        dependsOn(packageExtension)
+    }
 
 // Assemble prepares all resources without packaging
-val assemble = tasks.named("assemble") {
-    dependsOn(copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, npmCompile, generateIcons)
-}
+val assemble =
+    tasks.named("assemble") {
+        dependsOn(
+            copyTextMateGrammar,
+            copyLanguageConfig,
+            copyLspServer,
+            copyDapServer,
+            copyLicense,
+            npmCompile,
+            generateIcons,
+        )
+    }
 
 // Launch VS Code with extension loaded for testing
-val runCode = tasks.register<Exec>("runCode") {
-    group = "run"
-    description = "Launch VS Code with the extension loaded for testing"
-    dependsOn(assemble)
+val runCode =
+    tasks.register<Exec>("runCode") {
+        group = "run"
+        description = "Launch VS Code with the extension loaded for testing"
+        dependsOn(assemble)
 
-    val extensionPath = layout.projectDirectory.asFile.absolutePath
-    val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
-    // Capture PATH + OS at config time so the doFirst stays CC-safe (no
-    // System.getenv / System.getProperty calls inside the task action).
-    val pathEnv = providers.environmentVariable("PATH").orElse("").get()
-    val isWindows = providers.systemProperty("os.name").get().lowercase().contains("windows")
-    val candidateBinaries = if (isWindows) listOf("code.cmd", "code.exe") else listOf("code")
+        val extensionPath = layout.projectDirectory.asFile.absolutePath
+        val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
+        // Capture PATH + OS at config time so the doFirst stays CC-safe (no
+        // System.getenv / System.getProperty calls inside the task action).
+        val pathEnv = providers.environmentVariable("PATH").orElse("").get()
+        val isWindows = providers.systemProperty("os.name").get().lowercase().contains("windows")
+        val candidateBinaries = if (isWindows) listOf("code.cmd", "code.exe") else listOf("code")
 
-    commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
+        commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
 
-    // Preflight: fail fast with a useful message if `code` isn't on PATH,
-    // rather than letting Exec emit a cryptic `exit code 127`. The CLI is
-    // an optional VS Code install step ("Shell Command: Install 'code'
-    // command in PATH") that surprises developers who installed VS Code
-    // via the .app/.dmg without running that command palette action.
-    doFirst {
-        val found = pathEnv.split(File.pathSeparator).any { dir ->
-            candidateBinaries.any { name -> File(dir, name).canExecute() }
-        }
-        if (!found) {
-            throw GradleException(
-                """
-                |The `code` CLI is not on PATH, so this task cannot launch VS Code.
-                |
-                |How to fix: open VS Code, press Cmd+Shift+P (macOS) or Ctrl+Shift+P
-                |(Linux/Windows), and run "Shell Command: Install 'code' command in PATH".
-                |Open a new shell after it finishes so the updated PATH is picked up,
-                |then re-run this task.
-                |
-                |Alternative that needs no PATH change: open lang/vscode-extension/
-                |in VS Code and press F5 — that launches the Extension Development Host
-                |directly from the IDE, equivalent to what this task does from the CLI.
-                """.trimMargin(),
-            )
+        // Preflight: fail fast with a useful message if `code` isn't on PATH,
+        // rather than letting Exec emit a cryptic `exit code 127`. The CLI is
+        // an optional VS Code install step ("Shell Command: Install 'code'
+        // command in PATH") that surprises developers who installed VS Code
+        // via the .app/.dmg without running that command palette action.
+        doFirst {
+            val found =
+                pathEnv.split(File.pathSeparator).any { dir ->
+                    candidateBinaries.any { name -> File(dir, name).canExecute() }
+                }
+            if (!found) {
+                throw GradleException(
+                    """
+                    |The `code` CLI is not on PATH, so this task cannot launch VS Code.
+                    |
+                    |How to fix: open VS Code, press Cmd+Shift+P (macOS) or Ctrl+Shift+P
+                    |(Linux/Windows), and run "Shell Command: Install 'code' command in PATH".
+                    |Open a new shell after it finishes so the updated PATH is picked up,
+                    |then re-run this task.
+                    |
+                    |Alternative that needs no PATH change: open lang/vscode-extension/
+                    |in VS Code and press F5 — that launches the Extension Development Host
+                    |directly from the IDE, equivalent to what this task does from the CLI.
+                    """
+                        .trimMargin()
+                )
+            }
         }
     }
-}
 
-val clean = tasks.named<Delete>("clean") {
-    delete(layout.projectDirectory.dir("out"))
-    delete(layout.projectDirectory.dir("node_modules"))
-    delete(layout.projectDirectory.dir("server"))
-    delete(layout.projectDirectory.file("syntaxes/xtc.tmLanguage.json"))
-    delete(layout.projectDirectory.file("language-configuration.json"))
-    delete(layout.projectDirectory.file("icons/xtc.png"))
-    delete(layout.projectDirectory.file("icons/xtc-file.png"))
-    delete(layout.projectDirectory.dir(".vscode-test"))
-    delete(fileTree(layout.projectDirectory) { include("*.vsix") })
-}
+val clean =
+    tasks.named<Delete>("clean") {
+        delete(layout.projectDirectory.dir("out"))
+        delete(layout.projectDirectory.dir("node_modules"))
+        delete(layout.projectDirectory.dir("server"))
+        delete(layout.projectDirectory.file("syntaxes/xtc.tmLanguage.json"))
+        delete(layout.projectDirectory.file("language-configuration.json"))
+        delete(layout.projectDirectory.file("icons/xtc.png"))
+        delete(layout.projectDirectory.file("icons/xtc-file.png"))
+        delete(layout.projectDirectory.dir(".vscode-test"))
+        delete(fileTree(layout.projectDirectory) { include("*.vsix") })
+    }

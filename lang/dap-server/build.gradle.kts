@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
-    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.spotless)
     `java-library`
 }
 
@@ -26,17 +26,8 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
 }
 
-// Ensure ktlint runs during normal development
-val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin =
-    tasks.named("compileKotlin") {
-        dependsOn(ktlintCheck)
-    }
-
 tasks.jar {
     manifest {
-        attributes(
-            "Main-Class" to "org.xvm.debug.XtcDebugServerLauncherKt",
-        )
+        attributes("Main-Class" to "org.xvm.debug.XtcDebugServerLauncherKt")
     }
 }
