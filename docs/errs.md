@@ -1,5 +1,21 @@
 # Threading `errs` through the compiler
 
+**L64 completion batch:** guarded recursive formal names can now retain explicitly written
+constraints without invented type identities. Literal argument proposals reuse normal compiler
+fitting and validation. Detached completion/signature results carry documentation and deterministic
+ordering; shared X97/X108 exercise both editor drivers. The corrected batch passes 337 Java,
+adapter/server and packaged-stdio tests with zero failures/errors/skips. Both drivers compile;
+VS Code and IntelliJ pass all 37 selected variants, and IntelliJ also passes START with zero IDE
+errors. This bounded batch is complete; the wider L64 scope remains open. See the
+[active batch](errs-integration-plan.md#l64-completion-and-signature-batch-2026-09-29).
+
+The compiler API adds literal spellings to `CursorBinding`/`CallFacts` and written constraint text
+to `Formal`, retaining earlier constructors. Record-pattern consumers must migrate; a syntax-only
+recursive formal has no resolved constraint type. `MethodDeclarationStatement.getDocumentation()`
+decodes its existing comment token. This passive AST accessor adds no field, cache or cloning work;
+Kotlin owns documentation presentation. Parser value-prefix recovery reuses its existing boundary
+guards for mid-token cursors. No separate name/type resolver or Kotlin dependency enters javatools.
+
 **Execution architecture:** the accepted [embedded Run and debugging plan](../lang/doc/plans/plan-embedded-execution.md)
 keeps the compiler PR focused while defining how compilation artifacts feed reusable runtime
 sessions. Both IDEs will use the same build/run contract; a supervised execution worker reuses

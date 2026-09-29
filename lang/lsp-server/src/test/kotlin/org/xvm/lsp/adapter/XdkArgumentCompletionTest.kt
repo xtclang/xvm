@@ -44,7 +44,8 @@ class XdkArgumentCompletionTest {
             adapter.compile(URI, "$prefix); Int later = 1; } }")
             val cached = adapter.getCachedResult(URI)
             val items = adapter.getCompletions(URI, 0, prefix.length)
-            val names = listOf(expected) + if (expected == "text") MODULE_NAMES else emptyList()
+            val names =
+                listOf(expected) + if (expected == "text") MODULE_NAMES + "\"\"" else listOf("0")
             assertThat(items.map { it.label })
                 .describedAs(call)
                 .containsExactlyInAnyOrderElementsOf(names)
@@ -70,7 +71,9 @@ class XdkArgumentCompletionTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
-                .containsExactlyInAnyOrderElementsOf(listOf("text", "number") + MODULE_NAMES)
+                .containsExactlyInAnyOrderElementsOf(
+                    listOf("text", "number", "0", "\"\"") + MODULE_NAMES
+                )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(2)
         }
     }
@@ -193,6 +196,11 @@ class XdkArgumentCompletionTest {
                         "classes",
                         "modulesByPath",
                         "version",
+                        "True",
+                        "False",
+                        "Null",
+                        "0",
+                        "\"\"",
                     ) + MODULE_NAMES)
                     .filter { it.startsWith(typed) }
                     .filter { variable ->
@@ -202,7 +210,7 @@ class XdkArgumentCompletionTest {
                 .describedAs(call)
                 .isNotEmpty()
                 .containsExactlyInAnyOrderElementsOf(compilable)
-            if (call == "widen(") assertThat(offered).containsExactly("number")
+            if (call == "widen(") assertThat(offered).containsExactly("number", "0")
         }
     }
 
@@ -224,7 +232,7 @@ class XdkArgumentCompletionTest {
                 assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                     .describedAs(setup)
                     .containsExactlyInAnyOrderElementsOf(
-                        (expected + MODULE_NAMES).filter { it.startsWith(typed) }
+                        (expected + MODULE_NAMES + "\"\"").filter { it.startsWith(typed) }
                     )
             }
         }
@@ -294,11 +302,15 @@ class XdkArgumentCompletionTest {
             adapter.compile(uri, member.readText())
             val cached = adapter.getCachedResult(uri)
             assertThat(adapter.getCompletions(uri, 0, prefix.length).map { it.label })
-                .containsExactly("valueText")
+                .containsExactlyElementsOf(
+                    listOf("valueText") + if (typed.isEmpty()) listOf("\"\"") else emptyList()
+                )
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
             adapter.compile(rootUri, root.readText())
             assertThat(adapter.getCompletions(uri, 0, prefix.length).map { it.label })
-                .containsExactly("valueNumber")
+                .containsExactlyElementsOf(
+                    listOf("valueNumber") + if (typed.isEmpty()) listOf("0") else emptyList()
+                )
             assertThat(root.readText()).contains("Int value")
         }
     }
