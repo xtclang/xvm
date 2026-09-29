@@ -1120,6 +1120,7 @@ private class SemanticModelBuilder(
                                     .mapNotNull(::sourceProperty)
                         ),
                     argumentOffset = operation.leadingArguments.size,
+                    argumentLiterals = immutableList(callFacts?.argumentLiterals().orEmpty()),
                 )
             }
         return if (errors.isAbortDesired) {
