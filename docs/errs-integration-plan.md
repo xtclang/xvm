@@ -479,7 +479,8 @@ bounded batch; broader family gaps and the real-platform blockers remain open.
   project root; discovery cases alone temporarily move the server workspace into their fixture.
   New X123 checks installed editor error/clear delivery plus full/unchanged/repaired diagnostic responses
   on each installed connection. Both selected drivers pass with the receipts below.
-  The catalog is now 128 cases, not a claim that all 128 have passed.
+  Those selected receipts did not establish a complete 128-case pass; the later native-demo
+  continuation below records complete resumed IntelliJ coverage and a full VS Code pass.
 - **L67 diagnostic indexing:** per-root cached results now include source membership/text and
   dependency artifact revisions. Unchanged roots reuse detached diagnostics/artifacts; a changed
   library rebuilds its consumers. Removed roots drop their cache entries. Concurrent document and
@@ -664,6 +665,126 @@ Future extraction map for this batch:
 | `b9b153298` | Platform presentation/recovery fixes. Parser/partial validation and its Java regression form the compiler slice; semantic-model/hover/signature code and adapter tests form the dependent LSP slice. Includes the PLAT2 fixture's canonical-path correction. |
 | `28e9e785c` | Required validation follow-up: nullable target unwrapping, corrected regression setup/expectations, clean platform receipt and generated-resource demo configuration. Carry the semantic correction with the PLAT3 LSP slice and the resource test setup with PLAT2. |
 
+#### Native IntelliJ demo continuation (2026-09-29)
+
+The requested complete demo uses IDEA 2026.2.3, LSP4IJ 0.21.0 and the compiler adapter, with
+Ultimate disabled: 128 shared scenarios plus START. Resume selections retain earlier passing
+cases; they are not a claim of one uninterrupted green session. Reports are under
+`lang/intellij-plugin/build/reports/compiler-playbook/`.
+
+| Run | Result and interpretation |
+| --- | --- |
+| `run-11475125043251847668` | 47 passed including START; X77 failed; 81 unrun. X77's exact candidates omitted the newly supported empty-string literal. |
+| `run-5298967654461762165` | START and corrected X77 pass. X78's corresponding empty-slot expectation also now includes empty-string and zero literals. |
+| `run-4536966772905399493` | 48 passed including START; X79 failed; 80 unrun. Reopening completion after focus loss retained IDEA's completion phase and broadened it to second-invocation word suggestions. |
+| `run-246814967855164574` | START, X78 and X79 pass after the test probe resets completion state before reopening an unapplied popup. |
+| `run-17920019611681328192` | Separate focus-recovery regression passes, including exact argument candidates after deliberate focus loss and refusal to replay completed insertions/renames. |
+| `run-5817849844866938583` | 73 passed including START; X122's popup disappeared during inspection; 55 unrun. Desktop focus was interrupted; the successful server reply does not prove the precise UI race. |
+| `run-1469002789213532574` | START and X122 pass without changes. X105's bundled import passes, but its source-import menu does not appear; subsequent typing/backspaces change the fixture and correctly trip the replay guard. |
+| `run-8956398297835414472` | All 54 selected scenarios execute: 51 pass, X14/X27/X31 fail, plus START passes. Zero IDE failures. |
+| `run-12379175007830760477` | START and X123 pass after the diagnostic correction; X105's source-import menu still fails without fixture edits. |
+| `run-2139618945479802957`, `run-3818964206800652880` | X105 also reproduces with its initial bundled-import menu missing. Failure capture initially contains server timing logs only; native protocol tracing needs project settings and an instantiated console. |
+| `run-15219420768851272063` | START, X14, X27 and X31 pass; zero IDE failures. The focused Gradle task and lang Spotless check succeed. |
+| `run-4150656664524065941` | START passes; X105 fails. Captured native wire traffic proves a cancelled diagnostic quick-fix request and a successful import response on the separate intention path. Zero IDE failures. |
+| `run-12618281251279779358` | START, X105, X122 and X123 pass after the diagnostic result-ID correction; zero IDE failures. The focused Gradle task and lang Spotless check succeed. |
+| `run-5742519770640114134` | Final code: START and X60/X77/X78/X105/X122/X123 pass, with zero IDE failures. Rechecks the shared-server invalidation correction and the final sorted completion expectations after the full VS Code run. |
+
+The last batch found two harness issues and one production diagnostic bug:
+
+- **X14:** save returned before the disk bytes were visible to the test. The eventual file retained
+  the exact emoji/completion text and CRLF bytes. Wait for those same exact bytes with a bounded
+  deadline instead of asserting immediately after requesting save.
+- **X31:** move `declarationProvider` from unsupported to supported in the shared expectations;
+  declaration lookup was implemented in L61. Neither editor should assert the old capability set.
+- **X27:** a closed member of an open standalone module was missing from document pull diagnostics
+  when the source graph was empty. Include its current owning module analysis, as workspace pulls
+  already do, and exclude unrelated standalone modules. Nine pull-diagnostic tests pass, including
+  a new creation/repair/deletion and equivalent-URI regression. Push behavior is unchanged.
+
+**Result: all 128 shared scenarios have passing native receipts across these resumed runs, plus
+START. This is not one uninterrupted full-suite checkpoint.** Both X105 imports now pass through
+the installed client's native menu; X122 member generation and X123 pull diagnostics also pass
+with the client correction. X14/X27/X31 pass in their focused recheck.
+The harness now captures client console and queued protocol messages to `client-trace-<ID>.log`
+on a failure, before IDE cleanup, with verbose tracing in the disposable project settings.
+
+- [x] **X105 / LSP4IJ cancelled quick-fix recovery:** correct and regress the native diagnostic-action
+  lifecycle. In `run-4150656664524065941`, request 24 asks for the diagnostic's quick fixes and is
+  cancelled after document diagnostic response 25. Request 26 then receives the correct versioned
+  import edit in 489 ms, but it belongs to LSP4IJ's general intention path. Inspection of the pinned
+  0.21.0 classes confirms `LSPIntentionCodeActionSupport.isValidCodeAction` excludes `quickfix`,
+  while `LSPLazyCodeActions` retains its cancelled future instead of reloading it. Reopening the
+  menu cannot repair that state. Its automatic pulls omit `previousResultId`; repeated identical
+  full reports replace and cancel lazy quick fixes without refreshing the unchanged annotations.
+  `DiagnosticResultMessages` now carries result IDs across automatic pulls of the same editor
+  snapshot, allowing the server to return `unchanged`. The connection owns this cache; edits,
+  close/reopen, cancellation and errors cannot seed or reuse an obsolete result. Explicit callers
+  retain their own result-ID policy. Seven new transport tests and eight existing startup-message
+  tests pass, and the native X105/X122/X123 recheck passes. Native menus, quick-fix kinds and
+  cancellation of obsolete edits remain intact.
+- [ ] **Demo notification cleanup:** CFG2 intentionally rejects a cyclic graph and verifies the
+  previous valid configuration still works. After asserting rejection, dismiss only that expected
+  test notification so it does not linger over subsequent cases. Keep ordinary user configuration
+  errors visible; do not globally suppress server errors in the harness.
+- [ ] **Popup inspection race:** handle a popup disappearing between its presence check and row
+  read, while retaining the document-change guard and never replaying an accepted edit.
+
+This run does not add PLAT2e's missing resource-settings or precise PLAT3 native scenarios. The
+separate startup-editing test was not rerun; the full VS Code result is recorded below. The scenario/capability
+corrections belong with their feature's shared acceptance slice; completion/save synchronization
+belongs with the IntelliJ test driver. The closed-member fix and regression belong with L68;
+the result-ID transport correction and its tests belong with the dependent IntelliJ client slice.
+
+The first full VS Code follow-up, `run-tXQ7fz` on VS Code 1.139.1, ran all 128 cases:
+125 passed, with X60/X77/X78 failing. X77/X78 received the correct candidate sets, but their shared
+literal expectations were appended instead of sorted. The corrected data passes both cases in
+`run-kbQPh9`; assertions remain exact. X60 still fails in that focused run and in diagnostic captures
+`run-3I5wLj` and `run-vf5R2T`.
+
+X60 exposes a production invalidation bug introduced with the PLAT2 resource work: opening closed
+rename consumers and delivering their unsaved edits can classify a source buffer as a disk resource
+under the shared default resource root. Refreshing its dependency after the consumer cancels the
+consumer's new analysis without replacing it. Its outline remains empty, and automatic diagnostic
+pulls repeatedly receive cancellation. A direct server regression reproduces that cancellation.
+Source-buffer edits now use source dependency scopes; disk events retain resource invalidation,
+ordered before their consumers. All 22 focused pull-diagnostic, project-server and resource-input
+tests pass after the fix. Carry this correction and regression with PLAT2's resource-input slice.
+VS Code `run-GyEveY` passes X60/X77/X78; X60 completes in 2.355 seconds instead of timing out after
+30 seconds. The initial lifecycle capture is preserved in `run-vf5R2T/client-lifecycle.log`.
+The final full VS Code run, `run-b59XBq`, passes **all 128 scenarios in one uninterrupted run**,
+with no skipped cases, failures or extra suite errors. It uses VS Code 1.139.1 and shared-catalog
+SHA-256 `6771c98e25cec3043c64c2b0d74499a59891a1b3b7fefd627827fba712d63f45`.
+X60 completes in 1.992 seconds. IntelliJ `run-5742519770640114134` uses the same catalog hash and
+passes START plus X60/X77/X78/X105/X122/X123 on the final code, with zero IDE failures and zero
+JUnit failures/errors/skips. This completes the focused cross-editor recheck; the earlier native
+128-case coverage remains a collection of resumed receipts.
+
+- [ ] **Combined validation task wiring:** running `:lang:vscode-extension:testCompilerPlaybook`
+  with `:lang:spotlessCheck spotlessCheck` in one invocation is rejected before testing. Gradle
+  reports an undeclared dependency between `:lang:spotlessKotlinGradle` and the VS Code
+  `copyLicense` output under `lang`. Run those checks separately until their declared file
+  inputs/outputs or ordering are corrected; this failure is not a test result. Standalone
+  `:lang:spotlessCheck spotlessCheck` passes.
+
+The initial broad backend run passed 1,412 tests with zero failures/errors and three pre-existing
+disabled Tree-sitter placeholders (inlay types, cross-file rename and shadow-aware references).
+All 858 Xdk tests ran without skips. All 70 packaged protocol tests passed without skips. These
+receipts precede the X60 production correction. The final broad recheck now passes 1,413 backend
+tests (859 Xdk tests), with the same three disabled Tree-sitter placeholders and zero failures/errors.
+All 70 packaged protocol tests also pass again with zero skips.
+
+Future extraction map for this validation batch:
+
+| Commit | PR scope and dependency |
+| --- | --- |
+| `0659cbdf9` | L68 closed standalone-member pull diagnostics and creation/repair/deletion regression; depends on the pull-diagnostic lifecycle and URI identity support. |
+| `23701b9c5` | PLAT2 resource-input follow-up: separate buffer edits from disk-resource invalidation, preserve dependency ordering, and regress the cross-file rename cancellation. Carry with `7bce2da9b`. |
+| `b013606be` | IntelliJ pull-diagnostic compatibility: connection-scoped previous-result IDs, shared document snapshots, and transport regressions. Depends on the existing launcher/startup-message integration and server unchanged reports. |
+| `3e40589b7` | Editor acceptance: native focus/save synchronization, failure trace capture, and shared X31/X77/X78 expectations. Carry the expectations with their feature slices and the native helpers with the IntelliJ playbook driver. |
+
+The receipts above validate the final integrated tree. They do not establish independent green
+checkpoints for intermediate commits or extracted PRs; each extracted PR still needs its own checks.
+
 #### Resource configuration and build-model integration (PLAT2 / L67)
 
 The accepted direction is one compiler input model shared by both hosts, with visible ownership.
@@ -840,9 +961,11 @@ These historical records must not disappear behind the newer L62–L82 feature s
 - [x] **L16/L27 IntelliJ configuration UI acceptance:** a project source-graph page is implemented,
   sharing LSP4IJ storage with configuration requests and rename history. Reset/Apply, validation and
   native graph Undo/Redo pass in X118. Global JSON remains a fallback.
-- [ ] **L60 current-catalog acceptance:** the recorded full pass covered 113 cases. The later
-  current 128-case catalog has selected receipts for older additions, not a full current-catalog run.
-  Repeat both complete playbooks at a release checkpoint; do not relabel the historical pass.
+- [ ] **L60 current-catalog acceptance:** the historical clean full pass covered 113 cases. The
+  current 128-case IntelliJ demo has passing receipts for every case across resumed runs, including
+  the corrected native X105 quick-fix lifecycle. Repeat the complete IntelliJ playbook at a release
+  checkpoint; do not relabel resumed coverage as one uninterrupted pass. The current complete
+  VS Code catalog passes in `run-b59XBq`.
 
 Earlier feature milestones remain complete only within their recorded scope. Their language and
 scale extensions are tracked under L62–L67; they are not evidence of universally complete support.
@@ -889,7 +1012,8 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   and `workspace/diagnostic/refresh`, result IDs/unchanged reports, related documents,
   cancellation and closed-file reporting. Negotiation preserves push for other clients. The
   combined batch and selected X123 pass in both editors, including the nested-report decoding
-  correction. Real-platform diagnostic robustness remains open under PLAT1 below.
+  correction. PLAT1's real-platform source-location crash is fixed; the later native demo found
+  and corrected a standalone closed-member pull gap, recorded above.
 - [ ] **L69 — Semantic token range/delta.** Add `textDocument/semanticTokens/range` and
   `textDocument/semanticTokens/full/delta`, result-ID lifetime and capability-aware refresh.
   Existing requests return full-document tokens only.
@@ -990,8 +1114,9 @@ continue to avoid runtime startup. Existing `EmbeddingSupport` connector reuse a
 child containers are the foundation; existing IDE shell commands and the DAP stub do not satisfy
 this track. In particular, the stub's verified breakpoint response is not real breakpoint support.
 
-Current native automation inventory: **123 shared cases with driver assertions**, plus startup.
-The ten L62 additions have selected passing receipts below; no full 123-case run is claimed.
+Current native automation inventory: **128 shared cases with driver assertions**, plus startup.
+The [native demo continuation](#native-intellij-demo-continuation-2026-09-29) records the current
+execution and corrections; it does not claim an uninterrupted full-current-catalog pass.
 The previously missing 50 case bodies and X20/X81/X82 assertions are now written, compiled and
 included in the clean 113-case native checkpoint `run-6034631232732848040`. Completion still requires
 explicit evidence per feature; neither 24 capability flags nor a selected passing playbook
