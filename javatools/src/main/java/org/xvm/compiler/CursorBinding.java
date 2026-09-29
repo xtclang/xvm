@@ -134,7 +134,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         return withCallFacts(callFacts().withArgumentProperties(properties));
     }
 
-    /** Literal source spellings whose insertion fits and validates a complete argument list. */
+    /** Literal source spellings whose insertion fits and validates with the other written arguments. */
     public CursorBinding withArgumentLiterals(List<String> literals) {
         return withCallFacts(new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, literals));
     }
