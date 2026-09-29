@@ -60,6 +60,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
 import org.eclipse.lsp4j.RenameFileOptions
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.ResourceOperation
 import org.eclipse.lsp4j.SelectionRange
@@ -1062,6 +1063,24 @@ class XtcTextDocumentService(
                     )
                 }
             }
+        }
+    }
+
+    internal fun renameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> {
+        val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
+        val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
+        if (
+            !server.supportsVersionedEdits ||
+                params.files.map { it.oldUri }.distinct().size != params.files.size
+        )
+            return CompletableFuture.completedFuture(null)
+        return queryAsync(
+            "workspace/willRenameFiles",
+            first.oldUri,
+            { compiler.renameFilesAsync(params.files.associate { it.oldUri to it.newUri }) },
+            workspace = true,
+        ) {
+            it?.let(::protocolEdit)
         }
     }
 

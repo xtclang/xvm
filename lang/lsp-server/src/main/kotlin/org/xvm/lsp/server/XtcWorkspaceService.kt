@@ -1,6 +1,8 @@
 package org.xvm.lsp.server
 
 import java.util.concurrent.CompletableFuture
+import org.eclipse.lsp4j.CreateFilesParams
+import org.eclipse.lsp4j.DeleteFilesParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
@@ -10,6 +12,7 @@ import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.messages.Either
@@ -29,6 +32,8 @@ class XtcWorkspaceService(
     companion object {
         private val logger = LoggerFactory.getLogger(XtcWorkspaceService::class.java)
     }
+
+    private val fileChanges = FileChangeSnapshots()
 
     override fun diagnostic(
         params: WorkspaceDiagnosticParams
@@ -62,6 +67,23 @@ class XtcWorkspaceService(
         refreshFiles(params.changes)
     }
 
+    override fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> =
+        server.willRenameFiles(params)
+
+    // Creation/deletion do not justify rewriting references. Post-operation diagnostics reflect
+    // the new membership; a pre-operation hook must never modify files speculatively.
+    override fun willCreateFiles(params: CreateFilesParams): CompletableFuture<WorkspaceEdit?> =
+        CompletableFuture.completedFuture(null)
+
+    override fun willDeleteFiles(params: DeleteFilesParams): CompletableFuture<WorkspaceEdit?> =
+        CompletableFuture.completedFuture(null)
+
+    override fun didCreateFiles(params: CreateFilesParams) =
+        refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Created) })
+
+    override fun didDeleteFiles(params: DeleteFilesParams) =
+        refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Deleted) })
+
     /** File operations can arrive without watcher notifications, especially after a client edit. */
     override fun didRenameFiles(params: RenameFilesParams) {
         logger.info("workspace/didRenameFiles: {} renames", params.files.size)
@@ -75,15 +97,19 @@ class XtcWorkspaceService(
         )
     }
 
-    private fun refreshFiles(changes: List<FileEvent>) {
+    private fun refreshFiles(events: List<FileEvent>) {
+        val changes = fileChanges.changed(events)
+        if (changes.isEmpty()) return
         // Resource content changes cannot add/remove source modules. Membership events still
         // rediscover, including directory events that can contain several source files.
         if (changes.any { it.type != FileChangeType.Changed || it.uri.endsWith(".x") })
             server.refreshCompilerDiscovery()
-        changes.forEach { change ->
-            adapter.didChangeWatchedFile(change.uri, change.type.value)
-            server.refreshForFile(change.uri)
-        }
+        changes
+            .distinctBy { it.uri to it.type }
+            .forEach { change ->
+                adapter.didChangeWatchedFile(change.uri, change.type.value)
+                server.refreshForFile(change.uri)
+            }
     }
 
     override fun didChangeWorkspaceFolders(params: DidChangeWorkspaceFoldersParams) {
