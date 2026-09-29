@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
-import { advancedCases, typeHeaderCases } from './advanced';
+import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced';
 import { completionCases } from './completion';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
@@ -42,6 +42,7 @@ suite('XdkAdapter playbook', function () {
     typeHeaderCases(['X106', 'X107', 'X108']);
     renameFamilyCases();
     memberActionCases();
+    pullDiagnosticCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
