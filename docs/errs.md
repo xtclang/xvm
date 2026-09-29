@@ -2353,3 +2353,8 @@ editors; IntelliJ also passes START and its IDE-error gate. The integration plan
 initial failures, corrections, exact receipts and commit map. Native multi-root/settings-race
 acceptance and exhaustive unsupported-dispatch fixtures remain follow-ups. The next structural
 checkpoint evaluates `ast.partial` without broadening classic AST visibility unnecessarily.
+
+The L63 follow-up adds an explicit declaration-only embedding query, with single-Source and
+ModuleInfo entry points. It shares normal compiler linkage/name resolution and stops before
+body validation/emission. Only a successfully resolved fresh attempt exposes queryable TypeInfo;
+failed normal compilation is never resumed for member generation. This adds no AST state.
