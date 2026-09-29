@@ -65,16 +65,17 @@ internal class XdkProjectQueries(
             project.buildOrder().map { module ->
                 checkCurrent()
                 val source = sources[module]
+                val uri = source?.uri(module.root) ?: module.uri
                 val missing =
                     module.dependencies.filter {
                         it !in artifacts && it !in XdkLibraries.moduleNames
                     }
                 if (source == null || missing.isNotEmpty()) {
                     CompilationResult.withDiagnostics(
-                        module.uri,
+                        uri,
                         listOf(
                             Diagnostic(
-                                location = Location(module.uri, 0, 0, 0, 0),
+                                location = Location(uri, 0, 0, 0, 0),
                                 severity = Diagnostic.Severity.ERROR,
                                 message =
                                     if (source == null) "Cannot read source for ${module.name}"
@@ -126,7 +127,7 @@ internal class XdkProjectQueries(
                                     if (artifact != null && artifact.module != module.name)
                                         listOf(
                                             Diagnostic(
-                                                location = Location(module.uri, 0, 0, 0, 0),
+                                                location = Location(uri, 0, 0, 0, 0),
                                                 severity = Diagnostic.Severity.ERROR,
                                                 message =
                                                     "Expected module ${module.name}, found ${artifact.module}",
@@ -138,7 +139,7 @@ internal class XdkProjectQueries(
                                 XdkDiagnosticIndex.Build(
                                     key,
                                     CompilationResult.withDiagnostics(
-                                        module.uri,
+                                        uri,
                                         items,
                                         emptyList(),
                                         source.documentUris,
