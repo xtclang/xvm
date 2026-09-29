@@ -12,6 +12,7 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.IntConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
 import org.xvm.asm.constants.SignatureConstant
+import org.xvm.asm.constants.SingletonConstant
 import org.xvm.asm.constants.StringConstant
 import org.xvm.asm.constants.TerminalTypeConstant
 import org.xvm.asm.constants.TypeConstant
@@ -23,6 +24,7 @@ internal fun memberSignature(
     declaration: MethodStructure,
     owner: IdentityConstant,
     modules: Map<String, String>,
+    literalDefaults: Map<String, String>,
 ): String? {
     if (signature.paramCount != declaration.params.size || declaration.params.any { it.annotations.isNotEmpty() }) return null
     val formals =
@@ -43,12 +45,21 @@ internal fun memberSignature(
             val rendered = render(type) ?: return null
             val default =
                 if (parameter.hasDefaultValue()) {
-                    // A computed or not-yet-validated initializer cannot safely be transplanted to a new scope.
+                    // Validated primitive constants are independent of their original expression/scope.
+                    // Fresh declaration repair accepts only parser-owned literal tokens; the complete
+                    // proposed compilation must validate both the original and generated defaults.
                     val value =
                         when (val constant = parameter.defaultValue) {
                             is StringConstant -> constant.valueString
                             is CharConstant -> constant.valueString
                             is IntConstant -> constant.valueString
+                            is SingletonConstant -> when (constant) {
+                                constant.constantPool.valTrue() -> "ecstasy.Boolean.True"
+                                constant.constantPool.valFalse() -> "ecstasy.Boolean.False"
+                                constant.constantPool.valNull() -> "ecstasy.Nullable.Null"
+                                else -> return null
+                            }
+                            null -> literalDefaults[name] ?: return null
                             else -> return null
                         }
                     " = $value"
