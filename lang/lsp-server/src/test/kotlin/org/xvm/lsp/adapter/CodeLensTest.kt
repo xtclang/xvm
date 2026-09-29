@@ -6,9 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
-/**
- * Tests for `textDocument/codeLens` — inline Run actions on module declarations.
- */
+/** Tests for `textDocument/codeLens` — inline Run actions on module declarations. */
 @DisplayName("CodeLens")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CodeLensTest : TreeSitterTestBase() {
@@ -28,7 +26,8 @@ class CodeLensTest : TreeSitterTestBase() {
                         console.print("hello");
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             val lenses = ts.getCodeLenses(uri)
             assertThat(lenses).isNotEmpty
@@ -46,16 +45,13 @@ class CodeLensTest : TreeSitterTestBase() {
                 module myapp {
                     class Foo {}
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             val lenses = ts.getCodeLenses(uri)
             assertThat(lenses).isNotEmpty
             // Module declaration is on line 0
-            assertThat(
-                lenses
-                    .first()
-                    .range.start.line,
-            ).isEqualTo(0)
+            assertThat(lenses.first().range.start.line).isEqualTo(0)
         }
 
         @Test
@@ -70,7 +66,8 @@ class CodeLensTest : TreeSitterTestBase() {
                         void bar() {}
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             val lenses = ts.getCodeLenses(uri)
             // Only 1 lens for the module, none for class or method

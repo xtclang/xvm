@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter
 
+import java.nio.file.Path
+import java.util.concurrent.CancellationException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -7,12 +9,9 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
-import java.nio.file.Path
-import java.util.concurrent.CancellationException
 
 class XdkWorkspaceDiscoveryTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @Test
     fun `discovery reads module imports ignores generated and bundled sources and honors buffers`() {
@@ -22,7 +21,10 @@ class XdkWorkspaceDiscoveryTest {
         source("build/Generated.x", "module Generated {}")
         source("Xml.x", "module xml.xtclang.org {}")
         source("Comment.x", "// module Fake {}\nclass Ordinary {}")
-        val modules = XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) { false }
+        val modules =
+            XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), emptyList()) {
+                false
+            }
         assertThat(modules.map { it.name }).containsExactly("App", "Base")
         assertThat(modules.first().dependencies).containsExactly("Base")
         val edited =
@@ -30,9 +32,13 @@ class XdkWorkspaceDiscoveryTest {
                 listOf(directory.toFile()),
                 mapOf(app to "module App {}", base to "module Base { class Box {} }"),
                 modules,
-            ) { false }
+            ) {
+                false
+            }
         assertThat(edited.first().dependencies).isEmpty()
-        assertThatThrownBy { XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), modules) { true } }
+        assertThatThrownBy {
+                XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), modules) { true }
+            }
             .isInstanceOf(CancellationException::class.java)
     }
 
@@ -44,22 +50,14 @@ class XdkWorkspaceDiscoveryTest {
         source("Broken.x", "module Broken { Missing value; }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(
-                adapter
-                    .findWorkspaceSymbols("answer")
-                    .single()
-                    .location.uri,
-            ).isEqualTo(base)
+            assertThat(adapter.findWorkspaceSymbols("answer").single().location.uri).isEqualTo(base)
             assertThat(adapter.compile(app, appText).diagnostics).isEmpty()
-            assertThat(adapter.findDefinition(app, 0, appText.indexOf("answer"))!!.uri).isEqualTo(base)
+            assertThat(adapter.findDefinition(app, 0, appText.indexOf("answer"))!!.uri)
+                .isEqualTo(base)
             val added = source("Added.x", "module Added { class AddedType {} }")
             adapter.refreshDiscoveredSources()
-            assertThat(
-                adapter
-                    .findWorkspaceSymbols("AddedType")
-                    .single()
-                    .location.uri,
-            ).isEqualTo(added)
+            assertThat(adapter.findWorkspaceSymbols("AddedType").single().location.uri)
+                .isEqualTo(added)
             directory.resolve("Added.x").toFile().delete()
             adapter.refreshDiscoveredSources()
             assertThat(adapter.findWorkspaceSymbols("AddedType")).isEmpty()
@@ -76,12 +74,8 @@ class XdkWorkspaceDiscoveryTest {
                 .isInstanceOf(IllegalArgumentException::class.java)
             val other = source("Other.x", "module Other { class OtherBox {} }")
             adapter.refreshDiscoveredSources()
-            assertThat(
-                adapter
-                    .findWorkspaceSymbols("OtherBox")
-                    .single()
-                    .location.uri,
-            ).isEqualTo(other)
+            assertThat(adapter.findWorkspaceSymbols("OtherBox").single().location.uri)
+                .isEqualTo(other)
             adapter.replaceSourceModules(emptyList())
             adapter.refreshDiscoveredSources()
             assertThat(adapter.findWorkspaceSymbols("Box")).isEmpty()

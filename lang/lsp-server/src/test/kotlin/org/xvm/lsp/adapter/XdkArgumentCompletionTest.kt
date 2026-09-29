@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter
 
+import java.nio.file.Path
+import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -13,21 +15,25 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
-import java.nio.file.Path
-import java.util.concurrent.Executors
 
 class XdkArgumentCompletionTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @CsvSource(
         delimiter = '|',
         ignoreLeadingAndTrailingWhitespace = false,
-        value = [
-            "pair(|number", "pair(1, |text", "pair(second = |text", "pair(second = \"x\", first = |number",
-            "box.pair(|text", "new Box<String>(|text", "fn(|number", "fn(1, |text",
-        ],
+        value =
+            [
+                "pair(|number",
+                "pair(1, |text",
+                "pair(second = |text",
+                "pair(second = \"x\", first = |number",
+                "box.pair(|text",
+                "new Box<String>(|text",
+                "fn(|number",
+                "fn(1, |text",
+            ],
     )
     fun `missing positional and named values offer compatible visible variables`(
         call: String,
@@ -39,10 +45,16 @@ class XdkArgumentCompletionTest {
             val cached = adapter.getCachedResult(URI)
             val items = adapter.getCompletions(URI, 0, prefix.length)
             val names = listOf(expected) + if (expected == "text") MODULE_NAMES else emptyList()
-            assertThat(items.map { it.label }).describedAs(call).containsExactlyInAnyOrderElementsOf(names)
-            assertThat(items.single { it.label == expected }.textEdit).isEqualTo(
-                TextEdit(Range(Position(0, prefix.length), Position(0, prefix.length)), expected),
-            )
+            assertThat(items.map { it.label })
+                .describedAs(call)
+                .containsExactlyInAnyOrderElementsOf(names)
+            assertThat(items.single { it.label == expected }.textEdit)
+                .isEqualTo(
+                    TextEdit(
+                        Range(Position(0, prefix.length), Position(0, prefix.length)),
+                        expected,
+                    )
+                )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             // Inserting the offered source name produces a real compilable call when all slots
             // are supplied; the probe itself never claims that selection.
@@ -66,10 +78,18 @@ class XdkArgumentCompletionTest {
     @ParameterizedTest
     @CsvSource(
         delimiter = '|',
-        value = [
-            "pair(nu|number", "pair(1, te|text", "pair(second = te|text", "pair(second = \"x\", first = nu|number",
-            "box.pair(te|text", "new Box<String>(te|text", "new Box<String>(value = te|text", "fn(nu|number", "fn(1, te|text",
-        ],
+        value =
+            [
+                "pair(nu|number",
+                "pair(1, te|text",
+                "pair(second = te|text",
+                "pair(second = \"x\", first = nu|number",
+                "box.pair(te|text",
+                "new Box<String>(te|text",
+                "new Box<String>(value = te|text",
+                "fn(nu|number",
+                "fn(1, te|text",
+            ],
     )
     fun `typed argument prefixes offer fitting values and replace exactly their token`(
         call: String,
@@ -82,23 +102,37 @@ class XdkArgumentCompletionTest {
             val cached = adapter.getCachedResult(URI)
             val items = adapter.getCompletions(URI, 0, prefix.length)
             assertThat(items.map { it.label }).describedAs(call).containsExactly(expected)
-            assertThat(items.single().textEdit).isEqualTo(
-                TextEdit(Range(Position(0, prefix.length - 2), Position(0, prefix.length)), expected),
-            )
+            assertThat(items.single().textEdit)
+                .isEqualTo(
+                    TextEdit(
+                        Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
+                        expected,
+                    )
+                )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(1)
             if (call !in listOf("pair(nu", "pair(second = te", "fn(nu")) {
-                assertThat(adapter.compile(URI, original.replaceRange(prefix.length - 2, prefix.length, expected)).diagnostics).isEmpty()
+                assertThat(
+                        adapter
+                            .compile(
+                                URI,
+                                original.replaceRange(prefix.length - 2, prefix.length, expected),
+                            )
+                            .diagnostics
+                    )
+                    .isEmpty()
             }
         }
     }
 
     @Test
     fun `typed prefix preserves fitting overload alternatives and rejects other same prefix values`() {
-        val prefix = "$HEADER Int valueNumber = 1; String valueText = \"x\"; Boolean valueFlag = True; choose(va"
+        val prefix =
+            "$HEADER Int valueNumber = 1; String valueText = \"x\"; Boolean valueFlag = True; choose(va"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
-            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label }).containsExactlyInAnyOrder("valueNumber", "valueText")
+            assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
+                .containsExactlyInAnyOrder("valueNumber", "valueText")
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(2)
         }
     }
@@ -106,28 +140,41 @@ class XdkArgumentCompletionTest {
     @Test
     fun `no value is inserted into a completed unknown or incompatible argument slot`() {
         XdkAdapter().use { adapter ->
-            for (call in listOf(
-                "pair(1",
-                "pair(1, \"x\", ",
-                "pair(unknown =",
-                "pair(first = 1, first =",
-                "pair(True, ",
-                "missing(",
-                "pair(unknown = te",
-                "pair(first = 1, first = nu",
-                "pair(True, te",
-                "pair(1, missing",
-                "missing(te",
-            )) {
+            for (call in
+                listOf(
+                    "pair(1",
+                    "pair(1, \"x\", ",
+                    "pair(unknown =",
+                    "pair(first = 1, first =",
+                    "pair(True, ",
+                    "missing(",
+                    "pair(unknown = te",
+                    "pair(first = 1, first = nu",
+                    "pair(True, te",
+                    "pair(1, missing",
+                    "missing(te",
+                )) {
                 val prefix = "$HEADER $call"
                 adapter.compile(URI, "$prefix); } }")
-                assertThat(adapter.getCompletions(URI, 0, prefix.length)).describedAs(call).isEmpty()
+                assertThat(adapter.getCompletions(URI, 0, prefix.length))
+                    .describedAs(call)
+                    .isEmpty()
             }
         }
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["generic(", "genericPair(\"x\", ", "widen(", "generic(t", "genericPair(\"x\", t", "widen(n"])
+    @ValueSource(
+        strings =
+            [
+                "generic(",
+                "genericPair(\"x\", ",
+                "widen(",
+                "generic(t",
+                "genericPair(\"x\", t",
+                "widen(n",
+            ]
+    )
     fun `inference and conversions agree with compiling each proposed source value`(call: String) {
         val prefix = "$HEADER $call"
         val typed = call.substringAfterLast('(').substringAfterLast(',').trim()
@@ -136,10 +183,25 @@ class XdkArgumentCompletionTest {
             adapter.compile(URI, "$prefix); } }")
             val offered = adapter.getCompletions(URI, 0, prefix.length).map { it.label }
             val compilable =
-                (listOf("number", "text", "flag", "box", "fn", "classByName", "classes", "modulesByPath", "version") + MODULE_NAMES)
+                (listOf(
+                        "number",
+                        "text",
+                        "flag",
+                        "box",
+                        "fn",
+                        "classByName",
+                        "classes",
+                        "modulesByPath",
+                        "version",
+                    ) + MODULE_NAMES)
                     .filter { it.startsWith(typed) }
-                    .filter { variable -> adapter.compile(URI, "$before$variable); } }").diagnostics.isEmpty() }
-            assertThat(offered).describedAs(call).isNotEmpty().containsExactlyInAnyOrderElementsOf(compilable)
+                    .filter { variable ->
+                        adapter.compile(URI, "$before$variable); } }").diagnostics.isEmpty()
+                    }
+            assertThat(offered)
+                .describedAs(call)
+                .isNotEmpty()
+                .containsExactlyInAnyOrderElementsOf(compilable)
             if (call == "widen(") assertThat(offered).containsExactly("number")
         }
     }
@@ -148,25 +210,31 @@ class XdkArgumentCompletionTest {
     @ValueSource(strings = ["", "v", "t"])
     fun `argument values honor narrowing assignment state and lexical shadowing`(typed: String) {
         XdkAdapter().use { adapter ->
-            for ((setup, expected) in listOf(
-                "" to listOf("text"),
-                "if (value.is(String)) { " to listOf("text", "value"),
-                "Int text; " to emptyList(),
-                "{ String closed = \"x\"; } " to listOf("text"),
-            )) {
-                val prefix = "module Editing { void take(String value) {} void run(Object value, String text) { ${setup}take($typed"
+            for ((setup, expected) in
+                listOf(
+                    "" to listOf("text"),
+                    "if (value.is(String)) { " to listOf("text", "value"),
+                    "Int text; " to emptyList(),
+                    "{ String closed = \"x\"; } " to listOf("text"),
+                )) {
+                val prefix =
+                    "module Editing { void take(String value) {} void run(Object value, String text) { ${setup}take($typed"
                 val suffix = if (setup.startsWith("if")) "); } } }" else "); } }"
                 adapter.compile(URI, prefix + suffix)
                 assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                     .describedAs(setup)
-                    .containsExactlyInAnyOrderElementsOf((expected + MODULE_NAMES).filter { it.startsWith(typed) })
+                    .containsExactlyInAnyOrderElementsOf(
+                        (expected + MODULE_NAMES).filter { it.startsWith(typed) }
+                    )
             }
         }
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["", "te"])
-    fun `proposed values leave original arguments diagnostics and selected call facts untouched`(typed: String) {
+    fun `proposed values leave original arguments diagnostics and selected call facts untouched`(
+        typed: String
+    ) {
         CompilerTestSupport.configure()
         val prefix = "$HEADER pair(second = $typed"
         val text = "$prefix); } }"
@@ -183,7 +251,8 @@ class XdkArgumentCompletionTest {
         val binding = analysis.cursorBindings()[site]!!
         assertThat(binding.argumentValues().map { it.name() }).containsExactly("text")
         assertThat(binding.candidates()).hasSize(1)
-        assertThatThrownBy { (binding.argumentValues() as MutableList).clear() }.isInstanceOf(UnsupportedOperationException::class.java)
+        assertThatThrownBy { (binding.argumentValues() as MutableList).clear() }
+            .isInstanceOf(UnsupportedOperationException::class.java)
         val snapshot = analysis.semanticSnapshot(errors)
         val copied = snapshot.sites.single()
         assertThat(copied.memberPrefix!!.text).isEqualTo(typed)
@@ -195,14 +264,15 @@ class XdkArgumentCompletionTest {
         XdkAdapter().use { adapter -> adapter.compile("untitled:Other.x", "module Other {}") }
         Executors.newSingleThreadExecutor().use { executor ->
             assertThat(
-                executor
-                    .submit<List<String>> {
-                        snapshot.sites
-                            .single()
-                            .argumentValues
-                            .map { it.name }
-                    }.get(),
-            ).containsExactlyInAnyOrderElementsOf(listOf("text") + MODULE_NAMES.filter { it.startsWith(typed) })
+                    executor
+                        .submit<List<String>> {
+                            snapshot.sites.single().argumentValues.map { it.name }
+                        }
+                        .get()
+                )
+                .containsExactlyInAnyOrderElementsOf(
+                    listOf("text") + MODULE_NAMES.filter { it.startsWith(typed) }
+                )
         }
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }
@@ -214,7 +284,8 @@ class XdkArgumentCompletionTest {
         val member = directory.resolve("Editing/Child.x").toFile().canonicalFile
         member.parentFile.mkdirs()
         root.writeText("module Editing { class Base { void take(Int value) {} } }")
-        val prefix = "class Child extends Base { void run(Int valueNumber, String valueText) { take($typed"
+        val prefix =
+            "class Child extends Base { void run(Int valueNumber, String valueText) { take($typed"
         member.writeText("$prefix); } }")
         XdkAdapter().use { adapter ->
             val rootUri = root.toURI().toString()
@@ -222,10 +293,12 @@ class XdkArgumentCompletionTest {
             adapter.compile(rootUri, root.readText().replace("Int value", "String value"))
             adapter.compile(uri, member.readText())
             val cached = adapter.getCachedResult(uri)
-            assertThat(adapter.getCompletions(uri, 0, prefix.length).map { it.label }).containsExactly("valueText")
+            assertThat(adapter.getCompletions(uri, 0, prefix.length).map { it.label })
+                .containsExactly("valueText")
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
             adapter.compile(rootUri, root.readText())
-            assertThat(adapter.getCompletions(uri, 0, prefix.length).map { it.label }).containsExactly("valueNumber")
+            assertThat(adapter.getCompletions(uri, 0, prefix.length).map { it.label })
+                .containsExactly("valueNumber")
             assertThat(root.readText()).contains("Int value")
         }
     }
@@ -239,21 +312,33 @@ class XdkArgumentCompletionTest {
             val original = "$header$line); } }"
             val cached = adapter.compile(URI, original)
             val edit = adapter.getCompletions(URI, 2, line.length).single().textEdit!!
-            assertThat(edit).isEqualTo(TextEdit(Range(Position(2, line.length - typed.length), Position(2, line.length)), "text"))
+            assertThat(edit)
+                .isEqualTo(
+                    TextEdit(
+                        Range(Position(2, line.length - typed.length), Position(2, line.length)),
+                        "text",
+                    )
+                )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
-            assertThat(adapter.compile(URI, "$header${line.dropLast(typed.length)}${edit.newText}); } }").diagnostics).isEmpty()
+            assertThat(
+                    adapter
+                        .compile(URI, "$header${line.dropLast(typed.length)}${edit.newText}); } }")
+                        .diagnostics
+                )
+                .isEmpty()
         }
     }
 
     @Test
     fun `argument values fit their calls including compound operand prefixes`() {
         XdkAdapter().use { adapter ->
-            for ((call, suffix, expected) in listOf(
-                Triple("pair(nu", ", text)", "number"),
-                Triple("pair(1, (te", "))", "text"),
-                Triple("pair(1 + nu", ", text)", "number"),
-                Triple("pair(1, text.si", ")", null),
-            )) {
+            for ((call, suffix, expected) in
+                listOf(
+                    Triple("pair(nu", ", text)", "number"),
+                    Triple("pair(1, (te", "))", "text"),
+                    Triple("pair(1 + nu", ", text)", "number"),
+                    Triple("pair(1, text.si", ")", null),
+                )) {
                 val prefix = "$HEADER Int textNumber = 1; String numberText = \"x\"; $call"
                 adapter.compile(URI, "$prefix$suffix; } }")
                 val names = adapter.getCompletions(URI, 0, prefix.length).map { it.label }

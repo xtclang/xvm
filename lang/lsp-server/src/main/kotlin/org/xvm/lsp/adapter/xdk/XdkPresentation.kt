@@ -20,17 +20,21 @@ internal object XdkPresentation {
                 .mapNotNull { occurrence ->
                     val symbol = occurrence.symbol?.let(model::symbol) ?: return@mapNotNull null
                     val range = occurrence.range
-                    if (range.start.line != range.end.line || range.start == range.end) return@mapNotNull null
+                    if (range.start.line != range.end.line || range.start == range.end)
+                        return@mapNotNull null
                     val type =
                         when (symbol.kind) {
-                            SymbolKind.MODULE, SymbolKind.PACKAGE -> {
+                            SymbolKind.MODULE,
+                            SymbolKind.PACKAGE -> {
                                 "namespace"
                             }
 
                             SymbolKind.TYPE -> {
                                 when (model.typeDeclarations[symbol.id]?.category) {
-                                    "class", "service" -> "class"
-                                    "interface", "mixin" -> "interface"
+                                    "class",
+                                    "service" -> "class"
+                                    "interface",
+                                    "mixin" -> "interface"
                                     "const" -> "struct"
                                     "enum" -> "enum"
                                     else -> "type"
@@ -57,12 +61,12 @@ internal object XdkPresentation {
                                 "parameter"
                             }
                         }
-                    val modifiers =
-                        buildList {
-                            if (occurrence.role == Role.DECLARATION) add("declaration")
-                            addAll(symbol.modifiers.map { it.name.lowercase() })
-                            if (occurrence.usage == Usage.WRITE || occurrence.usage == Usage.READ_WRITE) add("modification")
-                        }
+                    val modifiers = buildList {
+                        if (occurrence.role == Role.DECLARATION) add("declaration")
+                        addAll(symbol.modifiers.map { it.name.lowercase() })
+                        if (occurrence.usage == Usage.WRITE || occurrence.usage == Usage.READ_WRITE)
+                            add("modification")
+                    }
                     listOf(
                         range.start.line,
                         range.start.column,
@@ -70,21 +74,25 @@ internal object XdkPresentation {
                         SemanticTokenLegend.typeIndex.getValue(type),
                         SemanticTokenLegend.modifierBitmask(*modifiers.toTypedArray()),
                     )
-                }.let { semantic ->
+                }
+                .let { semantic ->
                     semantic +
                         lexical.filter { token ->
                             semantic.none { name ->
-                                name[0] == token[0] && name[1] < token[1] + token[2] && token[1] < name[1] + name[2]
+                                name[0] == token[0] &&
+                                    name[1] < token[1] + token[2] &&
+                                    token[1] < name[1] + name[2]
                             }
                         }
-                }.sortedWith(compareBy({ it[0] }, { it[1] }))
+                }
+                .sortedWith(compareBy({ it[0] }, { it[1] }))
         return SemanticTokens(
             tokens.flatMapIndexed { index, token ->
                 val previous = tokens.getOrNull(index - 1)
                 val lineDelta = token[0] - (previous?.get(0) ?: 0)
                 val columnDelta = token[1] - if (lineDelta == 0) previous?.get(1) ?: 0 else 0
                 listOf(lineDelta, columnDelta, token[2], token[3], token[4])
-            },
+            }
         )
     }
 
@@ -96,20 +104,33 @@ internal object XdkPresentation {
             model.occurrences
                 .filter {
                     model.status == SemanticModel.Status.COMPLETE && it.role == Role.DECLARATION
-                }.mapNotNull { occurrence ->
-                    val symbol = occurrence.symbol?.let(model::symbol)?.takeIf { it.inferred } ?: return@mapNotNull null
+                }
+                .mapNotNull { occurrence ->
+                    val symbol =
+                        occurrence.symbol?.let(model::symbol)?.takeIf { it.inferred }
+                            ?: return@mapNotNull null
                     val type = symbol.type?.let(model::type) ?: return@mapNotNull null
-                    InlayHint(occurrence.range.end.toPosition(), ": ${type.displayName}", InlayHint.InlayHintKind.TYPE)
+                    InlayHint(
+                        occurrence.range.end.toPosition(),
+                        ": ${type.displayName}",
+                        InlayHint.InlayHintKind.TYPE,
+                    )
                 }
         val parameters =
             model.calls.flatMap { call ->
-                call.arguments.filterNot { it.named }.mapNotNull { argument ->
-                    val name =
-                        call.signature.parameters
-                            .getOrNull(argument.parameterIndex)
-                            ?.name ?: return@mapNotNull null
-                    InlayHint(argument.range.start.toPosition(), "$name:", InlayHint.InlayHintKind.PARAMETER, paddingRight = true)
-                }
+                call.arguments
+                    .filterNot { it.named }
+                    .mapNotNull { argument ->
+                        val name =
+                            call.signature.parameters.getOrNull(argument.parameterIndex)?.name
+                                ?: return@mapNotNull null
+                        InlayHint(
+                            argument.range.start.toPosition(),
+                            "$name:",
+                            InlayHint.InlayHintKind.PARAMETER,
+                            paddingRight = true,
+                        )
+                    }
             }
         val returns =
             model.lambdas.map { lambda ->
@@ -120,12 +141,21 @@ internal object XdkPresentation {
                         1 -> types.single()
                         else -> types.joinToString(", ", "(", ")")
                     }
-                InlayHint(lambda.arrow.start.toPosition(), ": $label", InlayHint.InlayHintKind.TYPE, paddingRight = true)
+                InlayHint(
+                    lambda.arrow.start.toPosition(),
+                    ": $label",
+                    InlayHint.InlayHintKind.TYPE,
+                    paddingRight = true,
+                )
             }
         val start = SemanticModel.Position(range.start.line, range.start.column)
         val end = SemanticModel.Position(range.end.line, range.end.column)
         return (types + parameters + returns)
-            .filter { SemanticModel.Position(it.position.line, it.position.column).let { at -> at >= start && at < end } }
+            .filter {
+                SemanticModel.Position(it.position.line, it.position.column).let { at ->
+                    at >= start && at < end
+                }
+            }
             .distinct()
             .sortedWith(compareBy({ it.position.line }, { it.position.column }))
     }

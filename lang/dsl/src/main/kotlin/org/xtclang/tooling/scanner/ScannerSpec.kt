@@ -89,23 +89,20 @@ enum class TokenType {
     TUPLE_ASSIGN_LPAREN,
 }
 
-/**
- * Scanner behavior rules and constants.
- */
+/** Scanner behavior rules and constants. */
 object TemplateScannerSpec {
     val tokens = TokenType.entries
 
     /**
      * Scanner logic - determined by which tokens are valid:
      *
-     * 1. If SINGLELINE_CONTENT or SINGLELINE_EXPR_START or SINGLELINE_END valid:
-     *    → In single-line template: scan until '{' or `"`, handle escapes
+     * 1. If SINGLELINE_CONTENT or SINGLELINE_EXPR_START or SINGLELINE_END valid: → In single-line
+     *    template: scan until '{' or `"`, handle escapes
      *
-     * 2. If MULTILINE_CONTENT or MULTILINE_EXPR_START or MULTILINE_END valid:
-     *    → In multiline template: scan until '{' or newline-without-continuation
+     * 2. If MULTILINE_CONTENT or MULTILINE_EXPR_START or MULTILINE_END valid: → In multiline
+     *    template: scan until '{' or newline-without-continuation
      *
-     * 3. If TEMPLATE_EXPR_END valid and see }:
-     *    → End of embedded expression
+     * 3. If TEMPLATE_EXPR_END valid and see }: → End of embedded expression
      */
     object Rules {
         const val EXPR_START_CHAR = '{'

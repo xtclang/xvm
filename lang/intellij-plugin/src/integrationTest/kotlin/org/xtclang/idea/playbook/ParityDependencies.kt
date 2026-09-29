@@ -7,9 +7,14 @@ internal fun ParityScenarios.dependencyCases() {
         val consumer = dependencies()
         val library = open(data.string("file"))
         replace(library, common["dependency"].asJsonObject.string("brokenLibrary"))
-        diagnostics(library) { items -> items.any { it.code?.startsWith(data.string("compilerCodePrefix")) == true } }
+        diagnostics(library) { items ->
+            items.any { it.code?.startsWith(data.string("compilerCodePrefix")) == true }
+        }
         blocked()
-        check(targets(consumer, "definition", consumer.at(data.string("anchor"), data.int("offset"))).isEmpty())
+        check(
+            targets(consumer, "definition", consumer.at(data.string("anchor"), data.int("offset")))
+                .isEmpty()
+        )
         replace(library, fixture(library.file))
         clean(library)
         linked(consumer)
@@ -27,7 +32,9 @@ internal fun ParityScenarios.dependencyCases() {
         val consumer = dependencies()
         val file = data.string("file")
         delete(file)
-        published(file) { items -> items.any { it.string("code") == data.string("diagnosticCode") } }
+        published(file) { items ->
+            items.any { it.string("code") == data.string("diagnosticCode") }
+        }
         blocked()
         write(file)
         linked(consumer)
@@ -57,16 +64,17 @@ internal fun ParityScenarios.dependencyCases() {
             (0 until 10).map { index ->
                 replace(
                     library,
-                    if (index % 2 ==
-                        1
-                    ) {
+                    if (index % 2 == 1) {
                         fixture(library.file)
                     } else {
                         common["dependency"].asJsonObject.string("brokenLibrary")
                     },
                     settle = false,
                 )
-                protocol.request("textDocument/definition", consumer.params(consumer.at(data.string("anchor"), data.int("offset"))))
+                protocol.request(
+                    "textDocument/definition",
+                    consumer.params(consumer.at(data.string("anchor"), data.int("offset"))),
+                )
             }
         pending.forEach { awaitRetired("textDocument/definition", it) }
         settle(library)
@@ -79,7 +87,8 @@ internal fun ParityScenarios.dependencyCases() {
         write(data.string("bridgeFile"), data.string("bridgeText"))
         write(
             data.string("consumerFile"),
-            fixture(data.string("consumerFile")).replace(data.string("replaceFrom"), data.string("bridgeImport")),
+            fixture(data.string("consumerFile"))
+                .replace(data.string("replaceFrom"), data.string("bridgeImport")),
         )
         configure(data["sourceModules"])
         val consumer = open(data.string("consumerFile"))
@@ -97,7 +106,11 @@ internal fun ParityScenarios.dependencyCases() {
         blocked()
         replace(bridge, data.string("bridgeText"))
         clean(consumer)
-        check(targets(consumer, "definition", consumer.at(data.string("anchor"), data.int("offset"))).single().string("uri") == bridge.uri)
+        check(
+            targets(consumer, "definition", consumer.at(data.string("anchor"), data.int("offset")))
+                .single()
+                .string("uri") == bridge.uri
+        )
     }
     case("CFG2") { data ->
         val consumer = dependencies()
@@ -105,7 +118,9 @@ internal fun ParityScenarios.dependencyCases() {
         configure(data["sourceModules"])
         with(driver) {
             awaitUi("client receives rejection of cyclic graph", 45.seconds) {
-                trace.notifications("window/showMessage").drop(before).any { data.pattern("pattern").containsMatchIn(it.string("message")) }
+                trace.notifications("window/showMessage").drop(before).any {
+                    data.pattern("pattern").containsMatchIn(it.string("message"))
+                }
             }
         }
         linked(consumer)
@@ -121,5 +136,7 @@ internal fun ParityScenarios.dependencyCases() {
 
 private fun ParityWorkspace.blocked() {
     val dependency = common["dependency"].asJsonObject
-    published(dependency.string("consumer")) { items -> items.any { it.string("code") == dependency.string("blockedCode") } }
+    published(dependency.string("consumer")) { items ->
+        items.any { it.string("code") == dependency.string("blockedCode") }
+    }
 }

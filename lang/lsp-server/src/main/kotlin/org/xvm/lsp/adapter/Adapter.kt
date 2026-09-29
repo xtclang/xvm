@@ -1,25 +1,24 @@
 package org.xvm.lsp.adapter
 
+import java.io.Closeable
+import java.util.concurrent.CompletableFuture
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
-import java.io.Closeable
-import java.util.concurrent.CompletableFuture
 
 /**
  * Interface for adapting XTC compiler operations into clean, immutable results.
  *
- * The adapter layer isolates the LSP server from the compiler's mutable internals.
- * All results are immutable and thread-safe.
+ * The adapter layer isolates the LSP server from the compiler's mutable internals. All results are
+ * immutable and thread-safe.
  *
  * ## Available Implementations (in subpackages)
- *
- * | Adapter | Package | Backend | Use Case |
- * |---------|---------|---------|----------|
- * | `MockAdapter` | `adapter.mock` | Regex | Testing and fallback |
- * | `TreeSitterAdapter` | `adapter.treesitter` | Tree-sitter | Syntax-aware (~80% LSP features) |
- * | `XdkAdapter` | `adapter.xdk` | XDK Compiler | (future) Full semantic features |
+ * | Adapter             | Package              | Backend      | Use Case                         |
+ * |---------------------|----------------------|--------------|----------------------------------|
+ * | `MockAdapter`       | `adapter.mock`       | Regex        | Testing and fallback             |
+ * | `TreeSitterAdapter` | `adapter.treesitter` | Tree-sitter  | Syntax-aware (~80% LSP features) |
+ * | `XdkAdapter`        | `adapter.xdk`        | XDK Compiler | (future) Full semantic features  |
  *
  * ## Backend Selection
  *
@@ -45,11 +44,12 @@ interface Adapter : Closeable {
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
                         )
-                }.toSet()
+                }
+                .toSet()
 
     /**
-     * Human-readable name of this adapter for display in logs and UI.
-     * Examples: "Mock", "TreeSitter", "Compiler"
+     * Human-readable name of this adapter for display in logs and UI. Examples: "Mock",
+     * "TreeSitter", "Compiler"
      */
     val displayName: String
         get() = this::class.simpleName ?: "Unknown"
@@ -57,23 +57,21 @@ interface Adapter : Closeable {
     /**
      * Perform a health check to verify the adapter is working correctly.
      *
-     * For adapters using native code (e.g., TreeSitterAdapter), this verifies
-     * that the native library is loaded and functional.
+     * For adapters using native code (e.g., TreeSitterAdapter), this verifies that the native
+     * library is loaded and functional.
      *
      * @return true if the adapter is healthy, false otherwise
      */
     fun healthCheck(): Boolean = true
 
     /**
-     * Editor-provided formatting configuration from `workspace/configuration`.
-     * Set by the language server after receiving config from the client.
-     * Used by [FormattingConfig.resolve] as a fallback before LSP options.
+     * Editor-provided formatting configuration from `workspace/configuration`. Set by the language
+     * server after receiving config from the client. Used by [FormattingConfig.resolve] as a
+     * fallback before LSP options.
      */
     var editorFormattingConfig: FormattingConfig?
         get() = null
-        set(
-            @Suppress("UNUSED_PARAMETER") value,
-        ) {}
+        set(@Suppress("UNUSED_PARAMETER") value) {}
 
     // ========================================================================
     // Core LSP Features (implemented by all adapters)
@@ -82,20 +80,22 @@ interface Adapter : Closeable {
     /**
      * Compile a source file and return the result.
      *
-     * **LSP capability:** Triggered by `textDocument/didOpen` and `textDocument/didChange`.
-     * The client sends the full document text; the server parses it and publishes diagnostics.
+     * **LSP capability:** Triggered by `textDocument/didOpen` and `textDocument/didChange`. The
+     * client sends the full document text; the server parses it and publishes diagnostics.
      *
      * **Editor activation:** Automatic -- triggered when a `.x` file is opened or edited.
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-scans for module/class/interface/method/property patterns and ERROR markers.
-     * - *TreeSitter:* Incremental native parse with error-tolerant grammar; extracts symbols via queries.
+     * - *TreeSitter:* Incremental native parse with error-tolerant grammar; extracts symbols via
+     *   queries.
      * - *Compiler:* Full semantic compilation with type resolution and cross-file analysis.
      *
-     * **Compiler upgrade path:** A compiler adapter would produce semantic diagnostics (type errors,
-     * unresolved references) and a richer symbol table with resolved types and cross-file links.
+     * **Compiler upgrade path:** A compiler adapter would produce semantic diagnostics (type
+     * errors, unresolved references) and a richer symbol table with resolved types and cross-file
+     * links.
      *
-     * @param uri     the document URI
+     * @param uri the document URI
      * @param content the source code content
      * @return compilation result with diagnostics and symbols
      */
@@ -127,10 +127,9 @@ interface Adapter : Closeable {
     /**
      * Get the cached compilation result for a document, if available.
      *
-     * Returns the result from the most recent [compile] call for this URI,
-     * or `null` if the document has not been compiled yet or has been closed.
-     * Used by the language server to avoid redundant re-compilation for requests
-     * like `documentSymbol` that can use the cached result.
+     * Returns the result from the most recent [compile] call for this URI, or `null` if the
+     * document has not been compiled yet or has been closed. Used by the language server to avoid
+     * redundant re-compilation for requests like `documentSymbol` that can use the cached result.
      */
     fun getCachedResult(uri: String): CompilationResult? = null
 
@@ -149,8 +148,8 @@ interface Adapter : Closeable {
      * **Compiler upgrade path:** Would return symbols with resolved types, cross-file qualified
      * names, and documentation extracted from doc comments.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return the symbol at that position, if any
      */
@@ -171,15 +170,15 @@ interface Adapter : Closeable {
      * - *VS Code:* Hover mouse over a symbol
      *
      * **Adapter implementations:**
-     * - *Mock/TreeSitter:* Default in [AbstractAdapter] -- calls [findSymbolAt] and
-     *   formats the symbol's kind, name, and type signature as Markdown.
+     * - *Mock/TreeSitter:* Default in [AbstractAdapter] -- calls [findSymbolAt] and formats the
+     *   symbol's kind, name, and type signature as Markdown.
      * - *Compiler:* Would add resolved types, inferred generics, and extracted doc comments.
      *
      * **Compiler upgrade path:** Full type signatures (e.g., `Person implements Hashable, Const`)
      * and rendered XDoc documentation.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return hover text (Markdown), if available
      */
@@ -201,16 +200,18 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Returns XTC keywords, built-in types, and symbols from the current document.
-     * - *TreeSitter:* Context-aware filtering: after `.` shows members, in type position shows
-     *   only types, after `@` shows annotations, in `import` shows qualified names.
-     * - *Compiler:* Type-aware completion with member access, method overloads, and import suggestions.
+     * - *TreeSitter:* Context-aware filtering: after `.` shows members, in type position shows only
+     *   types, after `@` shows annotations, in `import` shows qualified names.
+     * - *Compiler:* Type-aware completion with member access, method overloads, and import
+     *   suggestions.
      *
      * **Compiler upgrade path:** Full semantic type resolution for member access and overloads.
      *
-     * @param uri              the document URI
-     * @param line             0-based line number
-     * @param column           0-based column number
-     * @param triggerCharacter the character that triggered completion (e.g., `.`, `:`, `<`), or null
+     * @param uri the document URI
+     * @param line 0-based line number
+     * @param column 0-based column number
+     * @param triggerCharacter the character that triggered completion (e.g., `.`, `:`, `<`), or
+     *   null
      * @return list of completion items
      */
     fun getCompletions(
@@ -247,11 +248,11 @@ interface Adapter : Closeable {
      * - *TreeSitter:* Searches AST declarations for a matching name in the same file.
      * - *Compiler:* Cross-file resolution via import paths and fully-qualified names.
      *
-     * **Compiler upgrade path:** Cross-file go-to-definition, resolving imports, inherited
-     * members, and overloaded method signatures.
+     * **Compiler upgrade path:** Cross-file go-to-definition, resolving imports, inherited members,
+     * and overloaded method signatures.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return location of the definition, if found
      */
@@ -271,8 +272,8 @@ interface Adapter : Closeable {
      * - *VS Code:* Shift+F12, or right-click -> Find All References
      *
      * **Adapter implementations:**
-     * - *Mock:* Returns only the declaration itself (when `includeDeclaration` is true), no
-     *   actual usage search.
+     * - *Mock:* Returns only the declaration itself (when `includeDeclaration` is true), no actual
+     *   usage search.
      * - *TreeSitter:* Text-matches the identifier name across all AST nodes in the same file.
      *   Cannot distinguish shadowed locals or cross-file references.
      * - *Compiler:* Semantic reference search across the entire workspace.
@@ -280,9 +281,9 @@ interface Adapter : Closeable {
      * **Compiler upgrade path:** Cross-file references, distinguishing reads vs writes, and
      * filtering by scope (e.g., only references within the same module).
      *
-     * @param uri                the document URI
-     * @param line               0-based line number
-     * @param column             0-based column number
+     * @param uri the document URI
+     * @param line 0-based line number
+     * @param column 0-based column number
      * @param includeDeclaration whether to include the declaration itself
      * @return list of reference locations
      */
@@ -313,8 +314,8 @@ interface Adapter : Closeable {
     /**
      * Initialize the workspace after the server has started.
      *
-     * Called once during `initialize` with the workspace folder paths.
-     * Implementations can use this to start background indexing of all `*.x` files.
+     * Called once during `initialize` with the workspace folder paths. Implementations can use this
+     * to start background indexing of all `*.x` files.
      *
      * @param workspaceFolders list of workspace folder paths (file system paths, not URIs)
      * @param progressReporter optional callback for progress: (message, percentComplete)
@@ -327,8 +328,8 @@ interface Adapter : Closeable {
     /**
      * Notification that a watched file has changed on disk.
      *
-     * Called when the client reports file creation, modification, or deletion
-     * via `workspace/didChangeWatchedFiles`.
+     * Called when the client reports file creation, modification, or deletion via
+     * `workspace/didChangeWatchedFiles`.
      *
      * @param uri the file URI
      * @param changeType 1 = Created, 2 = Changed, 3 = Deleted (LSP FileChangeType values)
@@ -341,8 +342,8 @@ interface Adapter : Closeable {
     /**
      * Notification that a document has been closed by the editor.
      *
-     * Implementations should release any resources held for the document (parsed trees,
-     * cached compilation results, etc.) to prevent memory accumulation.
+     * Implementations should release any resources held for the document (parsed trees, cached
+     * compilation results, etc.) to prevent memory accumulation.
      *
      * @param uri the document URI
      */
@@ -369,8 +370,8 @@ interface Adapter : Closeable {
      * **Compiler upgrade path:** Distinguish read/write highlights, skip string literals and
      * comments, handle shadowed variables correctly.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return list of highlight locations with their kind
      */
@@ -392,14 +393,14 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Returns empty (requires AST structure for meaningful results).
-     * - *TreeSitter:* Walks up from the leaf node at the position to the root, building a chain
-     *   of progressively larger ranges (identifier -> expression -> statement -> block -> class).
+     * - *TreeSitter:* Walks up from the leaf node at the position to the root, building a chain of
+     *   progressively larger ranges (identifier -> expression -> statement -> block -> class).
      * - *Compiler:* Same as TreeSitter (AST-based; no semantic info needed).
      *
-     * **Compiler upgrade path:** Minimal -- tree-sitter already provides excellent selection ranges.
-     * A compiler adapter would use the same approach from its own AST.
+     * **Compiler upgrade path:** Minimal -- tree-sitter already provides excellent selection
+     * ranges. A compiler adapter would use the same approach from its own AST.
      *
-     * @param uri       the document URI
+     * @param uri the document URI
      * @param positions list of positions to get selection ranges for
      * @return list of selection ranges (one per input position)
      */
@@ -411,11 +412,12 @@ interface Adapter : Closeable {
     /**
      * Get folding ranges for a document.
      *
-     * **LSP capability:** `textDocument/foldingRange` -- provides collapsible regions in the
-     * editor gutter (classes, methods, imports, comments).
+     * **LSP capability:** `textDocument/foldingRange` -- provides collapsible regions in the editor
+     * gutter (classes, methods, imports, comments).
      *
      * **Editor activation:**
-     * - *IntelliJ:* Click fold arrows in gutter; Ctrl+Shift+Minus (fold all) / Ctrl+Shift+Plus (unfold all)
+     * - *IntelliJ:* Click fold arrows in gutter; Ctrl+Shift+Minus (fold all) / Ctrl+Shift+Plus
+     *   (unfold all)
      * - *VS Code:* Click fold arrows in gutter; Ctrl+Shift+[ (fold) / Ctrl+Shift+] (unfold)
      *
      * **Adapter implementations:**
@@ -424,8 +426,8 @@ interface Adapter : Closeable {
      *   More accurate than brace matching (handles string literals, comments correctly).
      * - *Compiler:* Same as TreeSitter (structural feature, no semantic info needed).
      *
-     * **Compiler upgrade path:** Minimal -- tree-sitter provides excellent folding ranges.
-     * A compiler adapter could add region markers from structured comments.
+     * **Compiler upgrade path:** Minimal -- tree-sitter provides excellent folding ranges. A
+     * compiler adapter could add region markers from structured comments.
      *
      * @param uri the document URI
      * @return list of folding ranges
@@ -442,14 +444,14 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Regex-matches `import` statements and returns the path portion as a link.
-     * - *TreeSitter:* Extracts import nodes from the AST and returns their locations.
-     *   Target is null (cannot resolve cross-file paths without compiler).
+     * - *TreeSitter:* Extracts import nodes from the AST and returns their locations. Target is
+     *   null (cannot resolve cross-file paths without compiler).
      * - *Compiler:* Resolves import paths to actual file URIs for clickable navigation.
      *
-     * **Compiler upgrade path:** Resolve `target` URIs so clicking an import opens the
-     * referenced module/package file.
+     * **Compiler upgrade path:** Resolve `target` URIs so clicking an import opens the referenced
+     * module/package file.
      *
-     * @param uri     the document URI
+     * @param uri the document URI
      * @param content the source code content
      * @return list of document links
      */
@@ -465,8 +467,8 @@ interface Adapter : Closeable {
     /**
      * Get signature help for a function call at a position.
      *
-     * **LSP capability:** `textDocument/signatureHelp` -- shows parameter hints when the user
-     * types `(` or `,` inside a function call. Highlights the active parameter.
+     * **LSP capability:** `textDocument/signatureHelp` -- shows parameter hints when the user types
+     * `(` or `,` inside a function call. Highlights the active parameter.
      *
      * **Editor activation:**
      * - *IntelliJ:* Type `(` after a method name, or Ctrl+P inside argument list
@@ -475,15 +477,15 @@ interface Adapter : Closeable {
      * **Adapter implementations:**
      * - *Mock:* Returns null (cannot extract method parameters from regex patterns).
      * - *TreeSitter:* Walks up to enclosing `call_expression`, finds the called method's
-     *   declaration in the same file, extracts parameter nodes, and counts commas to determine
-     *   the active parameter index.
+     *   declaration in the same file, extracts parameter nodes, and counts commas to determine the
+     *   active parameter index.
      * - *Compiler:* Resolves overloaded methods, cross-file signatures, and default values.
      *
-     * **Compiler upgrade path:** Cross-file method resolution, overload disambiguation,
-     * default parameter values, and documentation for each parameter.
+     * **Compiler upgrade path:** Cross-file method resolution, overload disambiguation, default
+     * parameter values, and documentation for each parameter.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return signature help info, if available
      */
@@ -521,8 +523,8 @@ interface Adapter : Closeable {
      * **Compiler upgrade path:** Reject renames of built-in types, warn about cross-file impact,
      * and validate the new name doesn't conflict with existing declarations.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return rename range and placeholder text, or null if rename not allowed
      */
@@ -550,12 +552,12 @@ interface Adapter : Closeable {
      *   captures and named labels. Recompiles proposed edits and compares bindings before returning
      *   versioned changes. Unsupported targets or incomplete binding coverage yield no edits.
      *
-     * **Compiler upgrade path:** Cross-file rename across the workspace, updating import paths,
-     * and handling constructor references and type aliases.
+     * **Compiler upgrade path:** Cross-file rename across the workspace, updating import paths, and
+     * handling constructor references and type aliases.
      *
-     * @param uri     the document URI
-     * @param line    0-based line number
-     * @param column  0-based column number
+     * @param uri the document URI
+     * @param line 0-based line number
+     * @param column 0-based column number
      * @param newName the new name for the symbol
      * @return workspace edit with all changes, or null if rename failed
      */
@@ -566,7 +568,10 @@ interface Adapter : Closeable {
         newName: String,
     ): WorkspaceEdit?
 
-    /** Cancellable compiler validation may run on the serialized worker rather than a request thread. */
+    /**
+     * Cancellable compiler validation may run on the serialized worker rather than a request
+     * thread.
+     */
     fun renameAsync(
         uri: String,
         line: Int,
@@ -582,8 +587,8 @@ interface Adapter : Closeable {
     /**
      * Get code actions for a range (quick fixes, refactorings).
      *
-     * **LSP capability:** `textDocument/codeAction` -- provides the lightbulb menu with quick
-     * fixes and refactoring suggestions. Actions can include workspace edits or commands.
+     * **LSP capability:** `textDocument/codeAction` -- provides the lightbulb menu with quick fixes
+     * and refactoring suggestions. Actions can include workspace edits or commands.
      *
      * **Editor activation:**
      * - *IntelliJ:* Alt+Enter (Intentions), or click lightbulb icon in gutter
@@ -591,16 +596,16 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Offers "Organize Imports" when import statements are detected and unsorted.
-     * - *TreeSitter:* Same as Mock -- detects unsorted import nodes from the AST and offers
-     *   a single edit to sort them.
+     * - *TreeSitter:* Same as Mock -- detects unsorted import nodes from the AST and offers a
+     *   single edit to sort them.
      * - *Compiler:* Quick fixes for diagnostics (add import, fix typo), refactorings (extract
      *   method, inline variable).
      *
-     * **Compiler upgrade path:** Diagnostic-driven quick fixes, extract/inline refactorings,
-     * and "add missing override" suggestions.
+     * **Compiler upgrade path:** Diagnostic-driven quick fixes, extract/inline refactorings, and
+     * "add missing override" suggestions.
      *
-     * @param uri         the document URI
-     * @param range       the range to get actions for
+     * @param uri the document URI
+     * @param range the range to get actions for
      * @param diagnostics diagnostics in the range
      * @return list of available code actions
      */
@@ -614,7 +619,8 @@ interface Adapter : Closeable {
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic>,
-    ): CompletableFuture<List<CodeAction>> = CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics))
+    ): CompletableFuture<List<CodeAction>> =
+        CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics))
 
     /**
      * Get semantic tokens for enhanced syntax highlighting.
@@ -642,8 +648,8 @@ interface Adapter : Closeable {
     /**
      * Get inlay hints (inline type annotations, parameter names).
      *
-     * **LSP capability:** `textDocument/inlayHint` -- shows inline annotations in the editor
-     * for inferred types and parameter names (e.g., `val x` shows `: Int` after the variable).
+     * **LSP capability:** `textDocument/inlayHint` -- shows inline annotations in the editor for
+     * inferred types and parameter names (e.g., `val x` shows `: Int` after the variable).
      *
      * **Editor activation:** Automatic -- hints appear inline when enabled.
      * - *IntelliJ:* Settings -> Editor -> Inlay Hints (toggle per category)
@@ -654,10 +660,10 @@ interface Adapter : Closeable {
      * - *TreeSitter:* Returns empty (requires type inference).
      * - *Compiler:* Provides inferred type annotations and parameter name hints.
      *
-     * **Compiler upgrade path:** Show inferred types for `val` declarations, parameter names
-     * at call sites, and return type hints for methods without explicit return types.
+     * **Compiler upgrade path:** Show inferred types for `val` declarations, parameter names at
+     * call sites, and return type hints for methods without explicit return types.
      *
-     * @param uri   the document URI
+     * @param uri the document URI
      * @param range the range to get hints for
      * @return list of inlay hints
      */
@@ -677,14 +683,14 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Removes trailing whitespace from all lines and inserts final newline if missing.
-     * - *TreeSitter:* Same as Mock (basic formatting; AST-aware indentation is possible but not
-     *   yet implemented).
+     * - *TreeSitter:* Same as Mock (basic formatting; AST-aware indentation is possible but not yet
+     *   implemented).
      * - *Compiler:* Full code formatting with XTC style rules, indentation, and alignment.
      *
      * **Compiler upgrade path:** AST-aware formatting with configurable style rules (brace
      * placement, indentation, blank lines between declarations).
      *
-     * @param uri     the document URI
+     * @param uri the document URI
      * @param content the source code content
      * @param options formatting options (tab size, etc.)
      * @return list of text edits to apply
@@ -705,17 +711,17 @@ interface Adapter : Closeable {
      * - *VS Code:* Select text, then Ctrl+K Ctrl+F (Format Selection)
      *
      * **Adapter implementations:**
-     * - *Mock:* Removes trailing whitespace only on lines within the specified range.
-     *   Does not insert final newline (that's a whole-document concern).
+     * - *Mock:* Removes trailing whitespace only on lines within the specified range. Does not
+     *   insert final newline (that's a whole-document concern).
      * - *TreeSitter:* Same as Mock (range-scoped trailing whitespace removal).
      * - *Compiler:* Full formatting within the range, re-indenting and aligning.
      *
-     * **Compiler upgrade path:** AST-aware range formatting that adjusts indentation relative
-     * to the surrounding context.
+     * **Compiler upgrade path:** AST-aware range formatting that adjusts indentation relative to
+     * the surrounding context.
      *
-     * @param uri     the document URI
+     * @param uri the document URI
      * @param content the source code content
-     * @param range   the range to format
+     * @param range the range to format
      * @param options formatting options
      * @return list of text edits to apply
      */
@@ -741,8 +747,8 @@ interface Adapter : Closeable {
      *   initialization. Supports fuzzy name matching across all indexed `.x` files.
      * - *Compiler:* Searches a workspace-wide symbol index with full semantic resolution.
      *
-     * **Compiler upgrade path:** Add type-aware filtering, ranking by relevance, and
-     * support for qualified name search.
+     * **Compiler upgrade path:** Add type-aware filtering, ranking by relevance, and support for
+     * qualified name search.
      *
      * @param query search query string
      * @return list of matching symbols
@@ -763,9 +769,9 @@ interface Adapter : Closeable {
     /**
      * Find the declaration of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/declaration` -- navigates to the declaration site
-     * (as opposed to the definition site). In XTC's single-file-per-type model, this is
-     * less important than in C/C++ where declaration and definition can be in separate files.
+     * **LSP capability:** `textDocument/declaration` -- navigates to the declaration site (as
+     * opposed to the definition site). In XTC's single-file-per-type model, this is less important
+     * than in C/C++ where declaration and definition can be in separate files.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+B on a symbol (if distinct from definition)
@@ -775,8 +781,8 @@ interface Adapter : Closeable {
      * - *Mock/TreeSitter:* Not implemented -- cannot distinguish declaration from definition.
      * - *Compiler:* Resolves declaration site from semantic analysis.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return location of the declaration, if found
      */
@@ -796,9 +802,9 @@ interface Adapter : Closeable {
     /**
      * Find the type definition of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/typeDefinition` -- navigates to the type of an
-     * expression or variable. E.g., from a variable `name` of type `String`, jumps to the
-     * `String` class definition.
+     * **LSP capability:** `textDocument/typeDefinition` -- navigates to the type of an expression
+     * or variable. E.g., from a variable `name` of type `String`, jumps to the `String` class
+     * definition.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Shift+B on a variable or expression
@@ -808,8 +814,8 @@ interface Adapter : Closeable {
      * - *Mock/TreeSitter:* Not implemented -- requires type inference.
      * - *Compiler:* Resolves the type of the expression and navigates to the type declaration.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return location of the type definition, if found
      */
@@ -819,7 +825,9 @@ interface Adapter : Closeable {
         column: Int,
     ): Location?
 
-    /** Multiple type targets, for example union operands; preserves the single-target adapter hook. */
+    /**
+     * Multiple type targets, for example union operands; preserves the single-target adapter hook.
+     */
     fun findTypeDefinitions(
         uri: String,
         line: Int,
@@ -829,8 +837,8 @@ interface Adapter : Closeable {
     /**
      * Find implementations of the interface or abstract method at a position.
      *
-     * **LSP capability:** `textDocument/implementation` -- finds all concrete implementations
-     * of an interface, abstract class, or abstract method.
+     * **LSP capability:** `textDocument/implementation` -- finds all concrete implementations of an
+     * interface, abstract class, or abstract method.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Alt+B on an interface/abstract method
@@ -840,8 +848,8 @@ interface Adapter : Closeable {
      * - *Mock/TreeSitter:* Not implemented -- requires type hierarchy and semantic analysis.
      * - *Compiler:* Walks the type hierarchy index to find all implementors.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return list of implementation locations
      */
@@ -864,12 +872,12 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Not implemented.
-     * - *TreeSitter:* Could extract the type declaration and its extends/implements clauses
-     *   from the AST (Phase 1 -- tree-sitter can parse these syntactically).
+     * - *TreeSitter:* Could extract the type declaration and its extends/implements clauses from
+     *   the AST (Phase 1 -- tree-sitter can parse these syntactically).
      * - *Compiler:* Full type resolution with generics and conditional mixins.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return list of type hierarchy items at the position
      */
@@ -882,8 +890,8 @@ interface Adapter : Closeable {
     /**
      * Get supertypes for a type hierarchy item.
      *
-     * **LSP capability:** `typeHierarchy/supertypes` -- returns the parents of a type
-     * (extends, implements, incorporates).
+     * **LSP capability:** `typeHierarchy/supertypes` -- returns the parents of a type (extends,
+     * implements, incorporates).
      *
      * @param item the type hierarchy item to get supertypes for
      * @return list of supertype items
@@ -893,8 +901,8 @@ interface Adapter : Closeable {
     /**
      * Get subtypes for a type hierarchy item.
      *
-     * **LSP capability:** `typeHierarchy/subtypes` -- returns all types that extend/implement
-     * the given type.
+     * **LSP capability:** `typeHierarchy/subtypes` -- returns all types that extend/implement the
+     * given type.
      *
      * @param item the type hierarchy item to get subtypes for
      * @return list of subtype items
@@ -904,8 +912,8 @@ interface Adapter : Closeable {
     /**
      * Prepare call hierarchy for the symbol at a position.
      *
-     * **LSP capability:** `callHierarchy/prepare` -- resolves the function/method at the cursor
-     * and returns it as a CallHierarchyItem. The client then calls [getIncomingCalls] and
+     * **LSP capability:** `callHierarchy/prepare` -- resolves the function/method at the cursor and
+     * returns it as a CallHierarchyItem. The client then calls [getIncomingCalls] and
      * [getOutgoingCalls] to navigate the call graph.
      *
      * **Editor activation:**
@@ -917,8 +925,8 @@ interface Adapter : Closeable {
      * - *TreeSitter:* Could syntactically identify the method at cursor (Phase 2).
      * - *Compiler:* Full semantic resolution with overload disambiguation.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return list of call hierarchy items at the position
      */
@@ -931,8 +939,8 @@ interface Adapter : Closeable {
     /**
      * Get incoming calls for a call hierarchy item (who calls this function).
      *
-     * **LSP capability:** `callHierarchy/incomingCalls` -- returns all call sites that invoke
-     * the given function/method.
+     * **LSP capability:** `callHierarchy/incomingCalls` -- returns all call sites that invoke the
+     * given function/method.
      *
      * @param item the call hierarchy item to find callers for
      * @return list of incoming calls with caller info and call-site ranges
@@ -942,8 +950,8 @@ interface Adapter : Closeable {
     /**
      * Get outgoing calls for a call hierarchy item (what does this function call).
      *
-     * **LSP capability:** `callHierarchy/outgoingCalls` -- returns all functions/methods that
-     * the given function calls.
+     * **LSP capability:** `callHierarchy/outgoingCalls` -- returns all functions/methods that the
+     * given function calls.
      *
      * @param item the call hierarchy item to find callees for
      * @return list of outgoing calls with callee info and call-site ranges
@@ -953,8 +961,8 @@ interface Adapter : Closeable {
     /**
      * Get code lenses for a document.
      *
-     * **LSP capability:** `textDocument/codeLens` -- provides actionable inline annotations
-     * above declarations: reference counts ("3 references"), "Run Test", "Debug", "Implement".
+     * **LSP capability:** `textDocument/codeLens` -- provides actionable inline annotations above
+     * declarations: reference counts ("3 references"), "Run Test", "Debug", "Implement".
      *
      * **Editor activation:** Automatic -- annotations appear above methods, classes, etc.
      *
@@ -982,8 +990,8 @@ interface Adapter : Closeable {
     /**
      * Format on type -- auto-format after typing a trigger character.
      *
-     * **LSP capability:** `textDocument/onTypeFormatting` -- auto-indent when pressing Enter,
-     * `}`, or `;`. Tree-sitter provides enough AST context to determine correct indentation.
+     * **LSP capability:** `textDocument/onTypeFormatting` -- auto-indent when pressing Enter, `}`,
+     * or `;`. Tree-sitter provides enough AST context to determine correct indentation.
      *
      * **Editor activation:** Automatic -- triggered after typing the trigger character.
      *
@@ -992,10 +1000,10 @@ interface Adapter : Closeable {
      * - *TreeSitter:* Could determine indentation level from AST context.
      * - *Compiler:* Full context-aware formatting.
      *
-     * @param uri     the document URI
-     * @param line    0-based line number where the character was typed
-     * @param column  0-based column number
-     * @param ch      the character that was typed (trigger character)
+     * @param uri the document URI
+     * @param line 0-based line number where the character was typed
+     * @param column 0-based column number
+     * @param ch the character that was typed (trigger character)
      * @param options formatting options
      * @return list of text edits to apply
      */
@@ -1010,19 +1018,19 @@ interface Adapter : Closeable {
     /**
      * Get linked editing ranges for the symbol at a position.
      *
-     * **LSP capability:** `textDocument/linkedEditingRange` -- when renaming an identifier,
-     * all related occurrences update simultaneously in real-time (before committing the rename).
+     * **LSP capability:** `textDocument/linkedEditingRange` -- when renaming an identifier, all
+     * related occurrences update simultaneously in real-time (before committing the rename).
      *
-     * **Editor activation:** Automatic -- start editing an identifier and linked ranges
-     * update in real-time.
+     * **Editor activation:** Automatic -- start editing an identifier and linked ranges update in
+     * real-time.
      *
      * **Adapter implementations:**
      * - *Mock:* Not implemented.
      * - *TreeSitter:* Could identify the declaration and its same-file usages.
      * - *Compiler:* Semantic linked editing with scope awareness.
      *
-     * @param uri    the document URI
-     * @param line   0-based line number
+     * @param uri the document URI
+     * @param line 0-based line number
      * @param column 0-based column number
      * @return linked editing ranges, if available
      */

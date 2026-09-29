@@ -15,49 +15,59 @@ import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
+import java.net.URI
+import java.nio.file.Path
+import java.util.Properties
+import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
-import java.net.URI
-import java.nio.file.Path
-import java.util.Properties
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Shared build properties loaded once at class initialization time.
- * This avoids concurrent getResourceAsStream() calls which can cause
- * "Inflater wants input" errors in IntelliJ's PluginClassLoader.
+ * Shared build properties loaded once at class initialization time. This avoids concurrent
+ * getResourceAsStream() calls which can cause "Inflater wants input" errors in IntelliJ's
+ * PluginClassLoader.
  */
 private object LspBuildProperties {
     private val logger = logger<LspBuildProperties>()
 
     val properties: Properties =
         Properties().apply {
-            LspBuildProperties::class.java.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
-                ?: logger.error("lsp-version.properties not found in plugin resources!")
+            LspBuildProperties::class.java.getResourceAsStream("/lsp-version.properties")?.use {
+                load(it)
+            } ?: logger.error("lsp-version.properties not found in plugin resources!")
         }
 
-    val version: String get() = properties.getProperty("lsp.version", "?")
-    val adapter: String get() = properties.getProperty("lsp.adapter", "mock")
-    val buildTime: String get() = properties.getProperty("lsp.build.time", "?")
-    val buildInfo: String get() = "v$version built $buildTime"
+    val version: String
+        get() = properties.getProperty("lsp.version", "?")
+
+    val adapter: String
+        get() = properties.getProperty("lsp.adapter", "mock")
+
+    val buildTime: String
+        get() = properties.getProperty("lsp.build.time", "?")
+
+    val buildInfo: String
+        get() = "v$version built $buildTime"
 }
 
 /**
  * Factory for creating Ecstasy Language Server connections.
  *
- * The server runs OUT-OF-PROCESS as a separate Java process for classloader isolation
- * (avoids lsp4j version conflicts with LSP4IJ) and crash/memory isolation. It uses
- * IntelliJ's own JBR 25 runtime via LSP4IJ's [JavaProcessCommandBuilder].
+ * The server runs OUT-OF-PROCESS as a separate Java process for classloader isolation (avoids lsp4j
+ * version conflicts with LSP4IJ) and crash/memory isolation. It uses IntelliJ's own JBR 25 runtime
+ * via LSP4IJ's [JavaProcessCommandBuilder].
  */
 class XtcLanguageServerFactory : LanguageServerFactory {
     private val logger = logger<XtcLanguageServerFactory>()
 
     override fun createConnectionProvider(project: Project) =
         XtcLspConnectionProvider(project).also {
-            logger.info("Creating XTC LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}")
+            logger.info(
+                "Creating XTC LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}"
+            )
         }
 
     override fun createLanguageClient(project: Project) = XtcLanguageClient(project)
@@ -70,32 +80,44 @@ class XtcLanguageServerFactory : LanguageServerFactory {
                 setRenameFeature(
                     object : LSPRenameFeature() {
                         override fun isRenameSupported(file: PsiFile): Boolean = false
-                    },
+                    }
                 )
             }
 
             override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
                 object : DefaultLauncherBuilder<S>(this) {
-                    private val documents =
-                        DocumentStartupMessages { uri ->
-                            if (project.isDisposed || serverWrapper.isDisposed) return@DocumentStartupMessages null
-                            val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return@DocumentStartupMessages null
-                            val document = opened.synchronizer?.document ?: return@DocumentStartupMessages null
+                        private val documents = DocumentStartupMessages { uri ->
+                            if (project.isDisposed || serverWrapper.isDisposed)
+                                return@DocumentStartupMessages null
+                            val opened =
+                                serverWrapper.getOpenedDocument(URI(uri))
+                                    ?: return@DocumentStartupMessages null
+                            val document =
+                                opened.synchronizer?.document ?: return@DocumentStartupMessages null
                             // File rename waits for didOpen while holding the IDE write lock.
                             // Transport hooks must use the document's lock-free immutable text;
                             // acquiring a read action here deadlocks that rename on the EDT.
-                            DocumentStartupMessages.Snapshot(opened, document.modificationStamp, document.immutableCharSequence.toString())
+                            DocumentStartupMessages.Snapshot(
+                                opened,
+                                document.modificationStamp,
+                                document.immutableCharSequence.toString(),
+                            )
                         }
 
-                    override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
-                        val wrapped = super.wrapMessageConsumer(consumer)
-                        return if (consumer is RemoteEndpoint) documents.incoming(wrapped) else documents.outgoing(wrapped)
+                        override fun wrapMessageConsumer(
+                            consumer: MessageConsumer
+                        ): MessageConsumer {
+                            val wrapped = super.wrapMessageConsumer(consumer)
+                            return if (consumer is RemoteEndpoint) documents.incoming(wrapped)
+                            else documents.outgoing(wrapped)
+                        }
                     }
-                }.configureGson {
-                    // configureGson replaces the base callback; retain LSP4IJ's compatibility adapters.
-                    JSONUtils.configureCompatibilityAdapters(it)
-                    it.registerTypeAdapterFactory(ConfigurationJson)
-                }
+                    .configureGson {
+                        // configureGson replaces the base callback; retain LSP4IJ's compatibility
+                        // adapters.
+                        JSONUtils.configureCompatibilityAdapters(it)
+                        it.registerTypeAdapterFactory(ConfigurationJson)
+                    }
         }
 
     override fun getServerInterface(): Class<out LanguageServer> = XtcLanguageServer::class.java
@@ -104,18 +126,16 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 /**
  * Out-of-process LSP server connection using LSP4IJ's [OSProcessStreamConnectionProvider].
  *
- * Uses [JavaProcessCommandBuilder] to resolve IntelliJ's JBR java binary and build
- * the server command line. We use [OSProcessStreamConnectionProvider] (not the simpler
- * [com.redhat.devtools.lsp4ij.server.ProcessStreamConnectionProvider]) because it
- * leverages IntelliJ's [com.intellij.execution.process.OSProcessHandler] for proper
- * process lifecycle management and stderr capture in LSP4IJ's Language Servers panel.
+ * Uses [JavaProcessCommandBuilder] to resolve IntelliJ's JBR java binary and build the server
+ * command line. We use [OSProcessStreamConnectionProvider] (not the simpler
+ * [com.redhat.devtools.lsp4ij.server.ProcessStreamConnectionProvider]) because it leverages
+ * IntelliJ's [com.intellij.execution.process.OSProcessHandler] for proper process lifecycle
+ * management and stderr capture in LSP4IJ's Language Servers panel.
  *
- * The server JAR is in `bin/` (not `lib/`) to avoid classloader conflicts with
- * LSP4IJ's bundled lsp4j.
+ * The server JAR is in `bin/` (not `lib/`) to avoid classloader conflicts with LSP4IJ's bundled
+ * lsp4j.
  */
-class XtcLspConnectionProvider(
-    private val project: Project,
-) : OSProcessStreamConnectionProvider() {
+class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamConnectionProvider() {
     private val logger = logger<XtcLspConnectionProvider>()
     private val lifetime = ConnectionLifetime({ super.start() }, { super.stop() })
 
@@ -129,10 +149,11 @@ class XtcLspConnectionProvider(
         private val startNotificationShown = AtomicBoolean(false)
 
         /**
-         * Resolve the LSP server JAR from a plugin directory.
-         * Returns the path to `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
+         * Resolve the LSP server JAR from a plugin directory. Returns the path to
+         * `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
          */
-        internal fun resolveServerJar(pluginDir: Path): Path? = PluginPaths.resolveInBin(pluginDir, LSP_SERVER_JAR)
+        internal fun resolveServerJar(pluginDir: Path): Path? =
+            PluginPaths.resolveInBin(pluginDir, LSP_SERVER_JAR)
     }
 
     init {
@@ -163,7 +184,9 @@ class XtcLspConnectionProvider(
                 "-Dapple.awt.UIElement=true", // macOS: no dock icon
                 "-Djava.awt.headless=true", // No GUI components
                 "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
-                "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens", // Keep semantic tokens opt-in until client rendering is stable
+                "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens", // Keep semantic tokens opt-in
+                // until client rendering is
+                // stable
             ) +
                 listOf("xtc.trace.directory", "xtc.trace.level").mapNotNull { key ->
                     System.getProperty(key)?.let { "-D$key=$it" }
@@ -181,7 +204,7 @@ class XtcLspConnectionProvider(
 
         logger.info(
             "XTC LSP command configured (v${LspBuildProperties.version}, " +
-                "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}",
+                "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}"
         )
     }
 
@@ -192,12 +215,15 @@ class XtcLspConnectionProvider(
         if (project.isDisposed) lifetime.stop()
         lifetime.start()
 
-        logger.info("XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)")
+        logger.info(
+            "XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)"
+        )
 
         if (startNotificationShown.compareAndSet(false, true)) {
             showNotification(
                 title = "Ecstasy Language Server Started",
-                content = "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
+                content =
+                    "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
                 type = NotificationType.INFORMATION,
             )
         }
@@ -217,17 +243,18 @@ class XtcLspConnectionProvider(
         type: NotificationType,
     ) {
         object : Notification("XTC Language Server", title, content, type) {
-            override fun setBalloon(balloon: Balloon) {
-                super.setBalloon(balloon)
-                // The IDE timer pauses during interaction and hides only the balloon, keeping
-                // the startup details in Notifications and the log for later inspection.
-                (balloon as? BalloonImpl)?.apply {
-                    startSmartFadeoutTimer(8_000)
-                    // Smart fadeout alone waits for input before starting its clock. Also
-                    // schedule it now so an untouched startup balloon disappears.
-                    startFadeoutTimer(8_000)
+                override fun setBalloon(balloon: Balloon) {
+                    super.setBalloon(balloon)
+                    // The IDE timer pauses during interaction and hides only the balloon, keeping
+                    // the startup details in Notifications and the log for later inspection.
+                    (balloon as? BalloonImpl)?.apply {
+                        startSmartFadeoutTimer(8_000)
+                        // Smart fadeout alone waits for input before starting its clock. Also
+                        // schedule it now so an untouched startup balloon disappears.
+                        startFadeoutTimer(8_000)
+                    }
                 }
             }
-        }.notify(project)
+            .notify(project)
     }
 }

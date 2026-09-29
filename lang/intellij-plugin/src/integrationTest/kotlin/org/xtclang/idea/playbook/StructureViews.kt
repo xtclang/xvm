@@ -14,7 +14,10 @@ import com.intellij.driver.sdk.ui.components.common.toolwindows.structureToolWin
 import com.intellij.driver.sdk.ui.ui
 import kotlin.time.Duration.Companion.seconds
 
-/** Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent declarations. */
+/**
+ * Inspect the actual Structure tree populated by LSP4IJ, including deliberately absent
+ * declarations.
+ */
 fun Driver.structure(
     editor: JEditorUiComponent,
     include: List<String>,
@@ -27,22 +30,32 @@ fun Driver.structure(
         tree.expandAll()
         val rows = tree.collectExpandedPaths().map { it.path.last() }
 
-        fun contains(name: String) = rows.any { Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it) }
+        fun contains(name: String) = rows.any {
+            Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it)
+        }
         include.all(::contains) && exclude.none(::contains)
     }
 }
 
-/** Lines of fold regions installed in the native editor, rather than a second direct LSP request. */
+/**
+ * Lines of fold regions installed in the native editor, rather than a second direct LSP request.
+ */
 fun Driver.folds(editor: JEditorUiComponent): List<IntRange> =
     withContext(OnDispatcher.EDT) {
         cast(editor.editor, FoldingEditor::class)
             .getFoldingModel()
             .getAllFoldRegions()
             .filter { it.isValid() }
-            .map { editor.document.getLineNumber(it.getStartOffset())..editor.document.getLineNumber(it.getEndOffset()) }
+            .map {
+                editor.document.getLineNumber(it.getStartOffset())..editor.document.getLineNumber(
+                        it.getEndOffset()
+                    )
+            }
     }
 
-/** Extend Selection must grow around the same caret position without moving or editing the document. */
+/**
+ * Extend Selection must grow around the same caret position without moving or editing the document.
+ */
 fun Driver.selectionParents(
     editor: JEditorUiComponent,
     at: Int,
@@ -52,24 +65,41 @@ fun Driver.selectionParents(
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             editor.editor.getSelectionModel().removeSelection()
             editor.editor.getCaretModel().moveToOffset(at)
-            val file = requireNotNull(service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()))
+            val file =
+                requireNotNull(
+                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+                )
             utility(LspFileSupport::class).getSupport(file).getSelectionRangeSupport()
         }
     val previous = support.getValidLSPFuture()
 
     fun selection() =
         withContext(OnDispatcher.EDT) {
-            cast(editor.editor.getSelectionModel(), SelectionOffsets::class).let { it.getSelectionStart()..it.getSelectionEnd() }
+            cast(editor.editor.getSelectionModel(), SelectionOffsets::class).let {
+                it.getSelectionStart()..it.getSelectionEnd()
+            }
         }
     invokeAction("EditorSelectWord", component = editor.component)
     awaitUi("native selection action receives compiler selection parents", 45.seconds) {
         val future = support.getValidLSPFuture()
-        if (future == null || future == previous || !future.isDone() || future.isCompletedExceptionally()) return@awaitUi false
+        if (
+            future == null ||
+                future == previous ||
+                !future.isDone() ||
+                future.isCompletedExceptionally()
+        )
+            return@awaitUi false
 
         fun offsets(range: SourceRange): IntRange =
             withContext(OnDispatcher.EDT) {
-                val start = range.getStart().let { editor.document.getLineStartOffset(it.getLine()) + it.getCharacter() }
-                val end = range.getEnd().let { editor.document.getLineStartOffset(it.getLine()) + it.getCharacter() }
+                val start =
+                    range.getStart().let {
+                        editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
+                    }
+                val end =
+                    range.getEnd().let {
+                        editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
+                    }
                 start until end
             }
         future.get().any { selected ->
@@ -80,7 +110,9 @@ fun Driver.selectionParents(
             } == true
         }
     }
-    awaitUi("first structural selection contains the cursor", 15.seconds) { selection().let { at in it && it.first < it.last } }
+    awaitUi("first structural selection contains the cursor", 15.seconds) {
+        selection().let { at in it && it.first < it.last }
+    }
     val first = selection()
     invokeAction("EditorSelectWord", component = editor.component)
     awaitUi("parent structural selection contains the first selection", 15.seconds) {
@@ -116,7 +148,10 @@ interface SelectionOffsets {
     fun getSelectionEnd(): Int
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.selectionRange.LSPSelectionRangeSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.selectionRange.LSPSelectionRangeSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface SelectionRangeSupport {
     fun getValidLSPFuture(): SelectionRangeFuture?
 }

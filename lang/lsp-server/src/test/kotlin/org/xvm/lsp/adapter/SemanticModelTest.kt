@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter
 
+import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -15,7 +16,6 @@ import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.NewExpression
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
-import java.util.concurrent.Executors
 
 /** Consumer contracts: all semantic answers survive independently of the compiler and its pool. */
 class SemanticModelTest {
@@ -33,16 +33,21 @@ class SemanticModelTest {
                     return value;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val model = compile(source).semanticSnapshot()
-        for ((declaration, uses) in listOf(
-            "classDecl" to listOf("classUse"),
-            "methodDecl" to listOf("methodUse", "valueUse"),
-            "abstractDecl" to listOf("abstractUse"),
-        )) {
+        for ((declaration, uses) in
+            listOf(
+                "classDecl" to listOf("classUse"),
+                "methodDecl" to listOf("methodUse", "valueUse"),
+                "abstractDecl" to listOf("abstractUse"),
+            )) {
             val declared = occurrence(model, source, declaration)
-            assertThat(model.symbol(declared.symbol!!)!!.kind).isEqualTo(SemanticModel.SymbolKind.TYPE_PARAMETER)
-            uses.forEach { assertThat(occurrence(model, source, it).symbol).isEqualTo(declared.symbol) }
+            assertThat(model.symbol(declared.symbol!!)!!.kind)
+                .isEqualTo(SemanticModel.SymbolKind.TYPE_PARAMETER)
+            uses.forEach {
+                assertThat(occurrence(model, source, it).symbol).isEqualTo(declared.symbol)
+            }
         }
     }
 
@@ -58,7 +63,8 @@ class SemanticModelTest {
                     return value.toString();
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val model = compile(source).semanticSnapshot()
         val declared = occurrence(model, source, "declaration")
         val captured = occurrence(model, source, "capture")
@@ -69,7 +75,9 @@ class SemanticModelTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `nested and mutable anonymous captures retain source identity`(mutable: Boolean) {
-        val declaration = if (mutable) "@Volatile Int /*declaration*/value = 1;" else "Int /*declaration*/value = 1;"
+        val declaration =
+            if (mutable) "@Volatile Int /*declaration*/value = 1;"
+            else "Int /*declaration*/value = 1;"
         val body =
             if (mutable) {
                 "return (++/*capture*/value).toString();"
@@ -88,18 +96,21 @@ class SemanticModelTest {
                     return object.toString();
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val compilation = compile(source)
         val model = compilation.semanticSnapshot()
-        assertThat(occurrence(model, source, "capture").symbol).isEqualTo(occurrence(model, source, "declaration").symbol)
-        assertThat(occurrence(model, source, "shadowUse").symbol).isEqualTo(occurrence(model, source, "shadowDecl").symbol)
-        assertThat(occurrence(model, source, "shadowUse").symbol).isNotEqualTo(occurrence(model, source, "declaration").symbol)
+        assertThat(occurrence(model, source, "capture").symbol)
+            .isEqualTo(occurrence(model, source, "declaration").symbol)
+        assertThat(occurrence(model, source, "shadowUse").symbol)
+            .isEqualTo(occurrence(model, source, "shadowDecl").symbol)
+        assertThat(occurrence(model, source, "shadowUse").symbol)
+            .isNotEqualTo(occurrence(model, source, "declaration").symbol)
 
-        fun nodes(node: AstNode): Sequence<AstNode> =
-            sequence {
-                yield(node)
-                for (child in node.children()) yieldAll(nodes(child))
-            }
+        fun nodes(node: AstNode): Sequence<AstNode> = sequence {
+            yield(node)
+            for (child in node.children()) yieldAll(nodes(child))
+        }
         val expression = nodes(compilation.parsed()).filterIsInstance<NewExpression>().single()
         val bindings = requireNotNull(expression.sourceBindings)
         val copy = expression.clone() as NewExpression
@@ -122,12 +133,16 @@ class SemanticModelTest {
                     String text = /*stringUse*/choose("ok");
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val model = compile(source).semanticSnapshot()
-        for ((declaration, use) in listOf("aliasDecl" to "aliasUse", "intDecl" to "intUse", "stringDecl" to "stringUse")) {
-            assertThat(occurrence(model, source, use).symbol).isEqualTo(occurrence(model, source, declaration).symbol)
+        for ((declaration, use) in
+            listOf("aliasDecl" to "aliasUse", "intDecl" to "intUse", "stringDecl" to "stringUse")) {
+            assertThat(occurrence(model, source, use).symbol)
+                .isEqualTo(occurrence(model, source, declaration).symbol)
         }
-        assertThat(occurrence(model, source, "intUse").symbol).isNotEqualTo(occurrence(model, source, "stringUse").symbol)
+        assertThat(occurrence(model, source, "intUse").symbol)
+            .isNotEqualTo(occurrence(model, source, "stringUse").symbol)
     }
 
     @Test
@@ -140,7 +155,8 @@ class SemanticModelTest {
                     return /*original*/value.toString();
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val model = compile(source).semanticSnapshot()
         val declaration = occurrence(model, source, "declaration")
         val narrowed = occurrence(model, source, "narrowed")
@@ -161,7 +177,8 @@ class SemanticModelTest {
                     return values;
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val model = compile(source).semanticSnapshot()
         val method = model.symbol(occurrence(model, source, "method").symbol!!)!!
         val signature = method.signature!!
@@ -176,7 +193,9 @@ class SemanticModelTest {
         assertThat(element.form).isEqualTo(SemanticModel.TypeForm.UNION)
         assertThat(element.underlying).hasSize(2)
         assertThat(model.types).allSatisfy { type ->
-            assertThat(type.arguments + type.underlying).allSatisfy { assertThat(model.type(it)).isNotNull() }
+            assertThat(type.arguments + type.underlying).allSatisfy {
+                assertThat(model.type(it)).isNotNull()
+            }
         }
     }
 
@@ -188,7 +207,8 @@ class SemanticModelTest {
                 Int /*good*/valid(Int value) { return value; }
                 Int broken() { return /*missing*/missing; }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
         val model = compile(source, succeeds = false).semanticSnapshot()
         assertThat(model.status).isEqualTo(SemanticModel.Status.PARTIAL)
         assertThat(occurrence(model, source, "good").symbol).isNotNull()
@@ -203,7 +223,8 @@ class SemanticModelTest {
 
     @Test
     fun `a resolved qualified prefix survives an unresolved final segment`() {
-        val source = "module PartialType { class Outer {} void use(/*prefix*/Outer. /*missing*/Absent value) {} }"
+        val source =
+            "module PartialType { class Outer {} void use(/*prefix*/Outer. /*missing*/Absent value) {} }"
         val model = compile(source, succeeds = false).semanticSnapshot()
         assertThat(occurrence(model, source, "prefix").symbol).isNotNull()
         assertThat(occurrence(model, source, "missing").symbol).isNull()
@@ -213,11 +234,12 @@ class SemanticModelTest {
     fun `cancellation before parsing yields an unavailable empty snapshot`() {
         CompilerTestSupport.configure()
         val compilation =
-            EmbeddingSupport.instance().compileModule(
-                Source("module Cancelled {}", URI),
-                null,
-                ErrorListener.cancellable(ErrorList()) { true },
-            )
+            EmbeddingSupport.instance()
+                .compileModule(
+                    Source("module Cancelled {}", URI),
+                    null,
+                    ErrorListener.cancellable(ErrorList()) { true },
+                )
         val model = compilation.semanticSnapshot()
         assertThat(model.status).isEqualTo(SemanticModel.Status.UNAVAILABLE)
         assertThat(model.symbols).isEmpty()
@@ -227,14 +249,17 @@ class SemanticModelTest {
 
     @Test
     fun `snapshot identities and nested collections cannot be reused or changed by a host`() {
-        val compilation = compile("module Immutable { Int value = 1; Int read() { return value; } }")
+        val compilation =
+            compile("module Immutable { Int value = 1; Int read() { return value; } }")
         val first = compilation.semanticSnapshot()
         val second = compilation.semanticSnapshot()
         assertThat(second.id).isNotEqualTo(first.id)
         assertThat(second.symbol(first.symbols.first().id)).isNull()
         assertThat(second.type(first.types.first().id)).isNull()
-        assertThatThrownBy { (first.symbols as MutableList).clear() }.isInstanceOf(UnsupportedOperationException::class.java)
-        assertThatThrownBy { (first.occurrences as MutableList).clear() }.isInstanceOf(UnsupportedOperationException::class.java)
+        assertThatThrownBy { (first.symbols as MutableList).clear() }
+            .isInstanceOf(UnsupportedOperationException::class.java)
+        assertThatThrownBy { (first.occurrences as MutableList).clear() }
+            .isInstanceOf(UnsupportedOperationException::class.java)
         val signature = requireNotNull(first.symbols.first { it.signature != null }.signature)
         assertThatThrownBy { (first.types.first().underlying as MutableList).clear() }
             .isInstanceOf(UnsupportedOperationException::class.java)
@@ -242,7 +267,8 @@ class SemanticModelTest {
 
     @Test
     fun `concurrent queries need no ambient pool and remain valid after another compilation`() {
-        val source = "module Concurrent { Int read(Int /*declaration*/value) { return /*use*/value; } }"
+        val source =
+            "module Concurrent { Int read(Int /*declaration*/value) { return /*use*/value; } }"
         val model = compile(source).semanticSnapshot()
         val at = position(source, "use")
         val expected = occurrence(model, source, "declaration").range
@@ -253,7 +279,8 @@ class SemanticModelTest {
                         assertThat(ConstantPool.getCurrentPool()).isNull()
                         repeat(25) {
                             assertThat(model.definitionAt(at.line, at.column)).isEqualTo(expected)
-                            assertThat(model.typeAt(at.line, at.column)!!.displayName).contains("Int")
+                            assertThat(model.typeAt(at.line, at.column)!!.displayName)
+                                .contains("Int")
                             assertThat(model.referencesAt(at.line, at.column, true)).hasSize(2)
                         }
                     }
@@ -266,13 +293,15 @@ class SemanticModelTest {
 
     @Test
     fun `cloning a validated lambda cannot expose its original context bindings`() {
-        val compilation = compile("module Cloned { Int read(Int value) { function Int() f = () -> value; return f(); } }")
+        val compilation =
+            compile(
+                "module Cloned { Int read(Int value) { function Int() f = () -> value; return f(); } }"
+            )
 
-        fun nodes(node: AstNode): Sequence<AstNode> =
-            sequence {
-                yield(node)
-                for (child in node.children()) yieldAll(nodes(child))
-            }
+        fun nodes(node: AstNode): Sequence<AstNode> = sequence {
+            yield(node)
+            for (child in node.children()) yieldAll(nodes(child))
+        }
         val lambda = nodes(compilation.parsed()).filterIsInstance<LambdaExpression>().single()
         val bindings = requireNotNull(lambda.sourceBindings)
         val origins = bindings.captureOrigins
@@ -289,8 +318,11 @@ class SemanticModelTest {
     ): EmbeddingSupport.Compilation {
         CompilerTestSupport.configure()
         val errors = ErrorList()
-        val compilation = EmbeddingSupport.instance().compileModule(Source(source, URI), null, errors)
-        assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isEqualTo(succeeds)
+        val compilation =
+            EmbeddingSupport.instance().compileModule(Source(source, URI), null, errors)
+        assertThat(compilation.succeeded())
+            .describedAs(errors.errors.toString())
+            .isEqualTo(succeeds)
         return compilation
     }
 
@@ -298,7 +330,8 @@ class SemanticModelTest {
         model: SemanticModel,
         source: String,
         marker: String,
-    ): SemanticModel.Occurrence = position(source, marker).let { model.occurrenceAt(it.line, it.column)!! }
+    ): SemanticModel.Occurrence =
+        position(source, marker).let { model.occurrenceAt(it.line, it.column)!! }
 
     private fun position(
         source: String,
@@ -308,7 +341,10 @@ class SemanticModelTest {
         val start = source.indexOf(comment)
         require(start >= 0)
         val offset = start + comment.length
-        return SemanticModel.Position(source.take(offset).count { it == '\n' }, offset - source.lastIndexOf('\n', offset) - 1)
+        return SemanticModel.Position(
+            source.take(offset).count { it == '\n' },
+            offset - source.lastIndexOf('\n', offset) - 1,
+        )
     }
 
     private companion object {

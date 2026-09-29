@@ -26,9 +26,12 @@ internal object XdkRename {
         val proposed =
             original.entries.associate { (source, text) ->
                 sourceAfter(source) to
-                    edits[source].orEmpty().sortedByDescending { it.start }.fold(text) { value, edit ->
-                        value.replaceRange(edit.start, edit.end, edit.text)
-                    }
+                    edits[source]
+                        .orEmpty()
+                        .sortedByDescending { it.start }
+                        .fold(text) { value, edit ->
+                            value.replaceRange(edit.start, edit.end, edit.text)
+                        }
             }
 
         fun sourceAfter(source: String): String = moves[source] ?: source
@@ -39,7 +42,8 @@ internal object XdkRename {
         ): Int? {
             val edits = edits[source].orEmpty()
             if (edits.any { offset > it.start && offset < it.end }) return null
-            return offset + edits.filter { it.end <= offset }.sumOf { it.text.length - (it.end - it.start) }
+            return offset +
+                edits.filter { it.end <= offset }.sumOf { it.text.length - (it.end - it.start) }
         }
 
         fun textEdits(source: String): List<TextEdit> =
@@ -58,15 +62,20 @@ internal object XdkRename {
         name: String,
         targets: Set<SemanticModel.SymbolId>? = null,
     ): Plan? {
-        if (!identifier(name) || facts.models.any { it.status != SemanticModel.Status.COMPLETE }) return null
+        if (!identifier(name) || facts.models.any { it.status != SemanticModel.Status.COMPLETE })
+            return null
         val model = facts.models.singleOrNull { it.sourceName == source } ?: return null
-        val target = model.symbolAt(line, column)?.takeIf { it.renameable || it.id in targets.orEmpty() } ?: return null
-        if (target.kind == SemanticModel.SymbolKind.MODULE && model.occurrenceAt(line, column)?.name != target.name) return null
+        val target =
+            model.symbolAt(line, column)?.takeIf { it.renameable || it.id in targets.orEmpty() }
+                ?: return null
+        if (
+            target.kind == SemanticModel.SymbolKind.MODULE &&
+                model.occurrenceAt(line, column)?.name != target.name
+        )
+            return null
         val selected = targets ?: setOf(target.id)
-        if (facts.models
-                .flatMap { it.symbols }
-                .filter { it.id in selected }
-                .all { it.name == name }
+        if (
+            facts.models.flatMap { it.symbols }.filter { it.id in selected }.all { it.name == name }
         ) {
             return Plan(texts, emptyMap())
         }
@@ -79,17 +88,22 @@ internal object XdkRename {
                     sourceName to
                         view.occurrences
                             .filter {
-                                it.symbol in selected && it.name != "super" &&
+                                it.symbol in selected &&
+                                    it.name != "super" &&
                                     // Package aliases resolve to the imported module identity too;
-                                    // renaming that module must leave the caller's local alias intact.
-                                    (target.kind != SemanticModel.SymbolKind.MODULE || it.name == target.name)
-                            }.map { occurrence ->
+                                    // renaming that module must leave the caller's local alias
+                                    // intact.
+                                    (target.kind != SemanticModel.SymbolKind.MODULE ||
+                                        it.name == target.name)
+                            }
+                            .map { occurrence ->
                                 val start = offset(text, occurrence.range.start) ?: return null
                                 val end = offset(text, occurrence.range.end) ?: return null
                                 if (text.substring(start, end) != occurrence.name) return null
                                 Edit(start, end, name)
                             }
-                }.filterValues { it.isNotEmpty() }
+                }
+                .filterValues { it.isNotEmpty() }
         return Plan(texts, edits)
     }
 
@@ -100,11 +114,16 @@ internal object XdkRename {
         plan: Plan,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected = edges(before, plan.original, plan::sourceAfter) { source, offset -> plan.map(source, offset) } ?: return false
+        val expected =
+            edges(before, plan.original, plan::sourceAfter) { source, offset ->
+                plan.map(source, offset)
+            } ?: return false
         val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
         if (expected != actual) return false
         val expectedDispatch =
-            dispatch(before, plan.original, plan::sourceAfter) { source, offset -> plan.map(source, offset) } ?: return false
+            dispatch(before, plan.original, plan::sourceAfter) { source, offset ->
+                plan.map(source, offset)
+            } ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
         return expectedDispatch == actualDispatch
     }
@@ -117,17 +136,26 @@ internal object XdkRename {
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
         val expected =
-            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { source, offset ->
+            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) {
+                source,
+                offset ->
                 plan.map(source, offset)
             } ?: return false
-        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
+        val actual =
+            edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset }
+                ?: return false
         if (expected.any { (site, target) -> actual[site] != target }) return false
-        val knownDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
+        val knownDispatch =
+            dispatch(before, plan.original) { source, offset -> plan.map(source, offset) }
+                ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
         return actualDispatch.containsAll(knownDispatch)
     }
 
-    /** Allow exactly the selected implementations and their inherited effects; preserve other bindings. */
+    /**
+     * Allow exactly the selected implementations and their inherited effects; preserve other
+     * bindings.
+     */
     fun preservesMemberAdditions(
         before: CompilerRenameFacts,
         after: CompilerRenameFacts,
@@ -140,16 +168,21 @@ internal object XdkRename {
         if (candidates.any { it.owner != owner }) return false
         val source = owner.sourceName ?: return false
         val edits = plan.edits[source] ?: return false
-        if (plan.edits.size != 1 || insertion !in edits || edits.any { it.start != it.end }) return false
-        val insertionStart = insertion.start + edits.filter { it.start < insertion.start }.sumOf { it.text.length }
+        if (plan.edits.size != 1 || insertion !in edits || edits.any { it.start != it.end })
+            return false
+        val insertionStart =
+            insertion.start + edits.filter { it.start < insertion.start }.sumOf { it.text.length }
         val oldDispatch =
             dispatch(before, plan.original) { path, offset -> plan.map(path, offset) }
                 ?.let(::memberDispatch) ?: return false
         val importRanges =
-            edits.filter { it != insertion }.map { edit ->
-                val start = edit.start + edits.filter { it.start < edit.start }.sumOf { it.text.length }
-                start until start + edit.text.length
-            }
+            edits
+                .filter { it != insertion }
+                .map { edit ->
+                    val start =
+                        edit.start + edits.filter { it.start < edit.start }.sumOf { it.text.length }
+                    start until start + edit.text.length
+                }
         // New package aliases have their own inherited dispatch chains. They have no previous
         // owner to preserve; only package declarations inside the generated import insertions
         // are excluded. All existing owners and every old reference still participate in proof.
@@ -158,9 +191,13 @@ internal object XdkRename {
                 ?.let(::memberDispatch)
                 ?.filterNot { chain ->
                     val declaration = chain.owner as? Target.Declaration
-                    declaration?.kind == SemanticModel.SymbolKind.PACKAGE && declaration.site.source == source &&
-                        importRanges.any { declaration.site.start in it && declaration.site.end - 1 in it }
-                }?.toSet() ?: return false
+                    declaration?.kind == SemanticModel.SymbolKind.PACKAGE &&
+                        declaration.site.source == source &&
+                        importRanges.any {
+                            declaration.site.start in it && declaration.site.end - 1 in it
+                        }
+                }
+                ?.toSet() ?: return false
 
         fun matches(
             target: Target,
@@ -169,7 +206,8 @@ internal object XdkRename {
             val declaration = target as? Target.Declaration ?: return false
             val path = location.sourceName ?: return false
             val text = plan.original[path] ?: return false
-            val start = offset(text, location.range.start)?.let { plan.map(path, it) } ?: return false
+            val start =
+                offset(text, location.range.start)?.let { plan.map(path, it) } ?: return false
             val end = offset(text, location.range.end)?.let { plan.map(path, it) } ?: return false
             return declaration.site == Site(path, start, end)
         }
@@ -187,7 +225,8 @@ internal object XdkRename {
                     }
                 }
 
-                is ProofIdentity.Binary, is ProofIdentity.Method -> {
+                is ProofIdentity.Binary,
+                is ProofIdentity.Method -> {
                     target == Target.External(contract)
                 }
 
@@ -201,43 +240,62 @@ internal object XdkRename {
                 .map { candidate ->
                     val removed =
                         (oldDispatch - newDispatch).singleOrNull { chain ->
-                            matches(chain.owner, owner) && chain.members.any { matchesContract(it, candidate.contract) }
+                            matches(chain.owner, owner) &&
+                                chain.members.any { matchesContract(it, candidate.contract) }
                         } ?: return false
                     val added =
                         changed.singleOrNull { chain ->
-                            chain.owner == removed.owner && chain.members.containsAll(removed.members) &&
+                            chain.owner == removed.owner &&
+                                chain.members.containsAll(removed.members) &&
                                 (chain.members - removed.members.toSet()).size == 1
                         } ?: return false
-                    val member = (added.members - removed.members.toSet()).single() as? Target.Declaration ?: return false
-                    if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
-                        member.site.start < insertionStart || member.site.end > insertionStart + insertion.text.length
+                    val member =
+                        (added.members - removed.members.toSet()).single() as? Target.Declaration
+                            ?: return false
+                    if (
+                        member.kind != SemanticModel.SymbolKind.METHOD ||
+                            member.site.source != source ||
+                            member.site.start < insertionStart ||
+                            member.site.end > insertionStart + insertion.text.length
                     ) {
                         return false
                     }
                     member to removed
-                }.toMap()
+                }
+                .toMap()
         if (additions.size != candidates.size) return false
         // Removing exactly these new methods must reconstruct every original chain in order,
         // including descendants, overloads and properties. Each method belongs to its own family.
-        if (changed.any { chain ->
-                !chain.supported || chain.members.count { it in additions } != 1 ||
-                    chain.copy(members = chain.members.filterNot(additions::containsKey)) !in oldDispatch
+        if (
+            changed.any { chain ->
+                !chain.supported ||
+                    chain.members.count { it in additions } != 1 ||
+                    chain.copy(members = chain.members.filterNot(additions::containsKey)) !in
+                        oldDispatch
             }
         ) {
             return false
         }
-        if (newDispatch.mapTo(linkedSetOf()) { chain ->
-                if (chain in changed) chain.copy(members = chain.members.filterNot(additions::containsKey)) else chain
+        if (
+            newDispatch.mapTo(linkedSetOf()) { chain ->
+                if (chain in changed)
+                    chain.copy(members = chain.members.filterNot(additions::containsKey))
+                else chain
             } != oldDispatch
         ) {
             return false
         }
         val expected =
-            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { path, offset ->
+            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) {
+                path,
+                offset ->
                 plan.map(path, offset)
             } ?: return false
-        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
-        val oldParameters = memberParameterSlots(before, plan.original) { path, offset -> plan.map(path, offset) }
+        val actual =
+            edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset }
+                ?: return false
+        val oldParameters =
+            memberParameterSlots(before, plan.original) { path, offset -> plan.map(path, offset) }
         val newParameters = memberParameterSlots(after, plan.proposed) { _, offset -> offset }
 
         fun declarationSite(
@@ -247,7 +305,8 @@ internal object XdkRename {
             when (target) {
                 is Target.Declaration -> target.site
                 is Target.SourceProof -> target.site
-                is Target.Composed -> (memberBridge(target, chains)?.firstOrNull() as? Target.Declaration)?.site
+                is Target.Composed ->
+                    (memberBridge(target, chains)?.firstOrNull() as? Target.Declaration)?.site
                 else -> null
             }
 
@@ -260,7 +319,8 @@ internal object XdkRename {
             return additions.any { (member, original) ->
                 member.site == newSite &&
                     original.members.any {
-                        it == old || (oldSite != null && declarationSite(it, oldDispatch) == oldSite)
+                        it == old ||
+                            (oldSite != null && declarationSite(it, oldDispatch) == oldSite)
                     }
             }
         }
@@ -271,12 +331,15 @@ internal object XdkRename {
             // Named arguments may now identify the new override's parameter. Only the same
             // compiler-proven slot on the selected method family is allowed to change owner.
             val oldSlot = oldParameters[target] ?: target as? Target.Parameter ?: return@all false
-            val newSlot = newParameters[replacement] ?: replacement as? Target.Parameter ?: return@all false
+            val newSlot =
+                newParameters[replacement] ?: replacement as? Target.Parameter ?: return@all false
             oldSlot.index == newSlot.index && selectedRebinding(oldSlot.method, newSlot.method)
         }
     }
 
-    /** A generic cap is equivalent only when the compiler also supplies that exact written chain. */
+    /**
+     * A generic cap is equivalent only when the compiler also supplies that exact written chain.
+     */
     private fun memberBridge(
         target: Target.Composed,
         chains: Set<Dispatch>,
@@ -292,7 +355,11 @@ internal object XdkRename {
                     }
 
                     is Target.External -> {
-                        if (it.constant !is ProofIdentity.Binary && it.constant !is ProofIdentity.Method) return null
+                        if (
+                            it.constant !is ProofIdentity.Binary &&
+                                it.constant !is ProofIdentity.Method
+                        )
+                            return null
                         it
                     }
 
@@ -302,7 +369,11 @@ internal object XdkRename {
                 }
             }
         return written.takeIf {
-            chains.any { chain -> chain.supported && (chain.owner as? Target.Declaration)?.site == owner && chain.members == written }
+            chains.any { chain ->
+                chain.supported &&
+                    (chain.owner as? Target.Declaration)?.site == owner &&
+                    chain.members == written
+            }
         }
     }
 
@@ -312,8 +383,11 @@ internal object XdkRename {
             val members =
                 chain.members
                     .flatMap { target ->
-                        if (target is Target.Composed) memberBridge(target, chains) ?: listOf(target) else listOf(target)
-                    }.distinct()
+                        if (target is Target.Composed)
+                            memberBridge(target, chains) ?: listOf(target)
+                        else listOf(target)
+                    }
+                    .distinct()
             // An inherited cap may belong to a base owner. Require the descendant's own explicit
             // chain too, so a bridge never invents a new dispatch relationship for that descendant.
             chain.copy(members = members).takeIf { it in chains } ?: chain
@@ -327,15 +401,22 @@ internal object XdkRename {
         facts.models
             .flatMap { it.symbols }
             .mapNotNull { symbol ->
-                val identity = facts.constants[symbol.id] as? ProofIdentity.Parameter ?: return@mapNotNull null
+                val identity =
+                    facts.constants[symbol.id] as? ProofIdentity.Parameter ?: return@mapNotNull null
                 val source = symbol.declarationSource ?: return@mapNotNull null
                 val text = texts[source] ?: return@mapNotNull null
                 val range = symbol.declaration ?: return@mapNotNull null
-                val start = offset(text, range.start)?.let { translate(source, it) } ?: return@mapNotNull null
-                val end = offset(text, range.end)?.let { translate(source, it) } ?: return@mapNotNull null
-                val slot = composedTarget(identity, texts, { it }, translate) as? Target.Parameter ?: return@mapNotNull null
+                val start =
+                    offset(text, range.start)?.let { translate(source, it) }
+                        ?: return@mapNotNull null
+                val end =
+                    offset(text, range.end)?.let { translate(source, it) } ?: return@mapNotNull null
+                val slot =
+                    composedTarget(identity, texts, { it }, translate) as? Target.Parameter
+                        ?: return@mapNotNull null
                 Target.Declaration(Site(source, start, end), symbol.kind) to slot
-            }.toMap()
+            }
+            .toMap()
 
     private data class Dispatch(
         val owner: Target,
@@ -359,7 +440,8 @@ internal object XdkRename {
 
         fun target(constant: ProofIdentity): Target? {
             if (constant is ProofIdentity.Directory) return Target.Directory(moved(constant.path))
-            if (constant is ProofIdentity.Composed) return composedTarget(constant, texts, moved, translate)
+            if (constant is ProofIdentity.Composed)
+                return composedTarget(constant, texts, moved, translate)
             val symbol = declarations[constant] ?: return Target.External(constant)
             val source = symbol.declarationSource ?: return Target.External(constant)
             val text = texts[source] ?: return Target.External(constant)
@@ -369,10 +451,18 @@ internal object XdkRename {
             return Target.Declaration(Site(moved(source), start, end), symbol.kind)
         }
         return facts.methods.chains.mapTo(linkedSetOf()) { chain ->
-            Dispatch(target(chain.owner) ?: return null, chain.members.map { target(it) ?: return null }, chain.supported)
+            Dispatch(
+                target(chain.owner) ?: return null,
+                chain.members.map { target(it) ?: return null },
+                chain.supported,
+            )
         } +
             facts.properties.chains.map { chain ->
-                Dispatch(target(chain.owner) ?: return null, chain.members.map { target(it) ?: return null }, chain.supported)
+                Dispatch(
+                    target(chain.owner) ?: return null,
+                    chain.members.map { target(it) ?: return null },
+                    chain.supported,
+                )
             }
     }
 
@@ -389,26 +479,18 @@ internal object XdkRename {
             val kind: SemanticModel.SymbolKind,
         ) : Target
 
-        data class External(
-            val constant: ProofIdentity,
-        ) : Target
+        data class External(val constant: ProofIdentity) : Target
 
-        data class Directory(
-            val path: String,
-        ) : Target
+        data class Directory(val path: String) : Target
 
         data class Parameter(
             val method: Target,
             val index: Int,
         ) : Target
 
-        data class PrimaryConstructor(
-            val owner: Target,
-        ) : Target
+        data class PrimaryConstructor(val owner: Target) : Target
 
-        data class Super(
-            val method: Target,
-        ) : Target
+        data class Super(val method: Target) : Target
 
         data class SourceProof(
             val site: Site,
@@ -430,11 +512,14 @@ internal object XdkRename {
     ): Target? {
         return when (identity) {
             is ProofIdentity.Parameter -> {
-                composedTarget(identity.method, texts, moved, translate)?.let { Target.Parameter(it, identity.index) }
+                composedTarget(identity.method, texts, moved, translate)?.let {
+                    Target.Parameter(it, identity.index)
+                }
             }
 
             is ProofIdentity.PrimaryConstructor -> {
-                composedTarget(identity.owner, texts, moved, translate)?.let(Target::PrimaryConstructor)
+                composedTarget(identity.owner, texts, moved, translate)
+                    ?.let(Target::PrimaryConstructor)
             }
 
             is ProofIdentity.Super -> {
@@ -443,16 +528,26 @@ internal object XdkRename {
 
             is ProofIdentity.Composed -> {
                 val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
-                val members = identity.members.map { composedTarget(it, texts, moved, translate) ?: return null }
-                val delegates = identity.delegates.map { composedTarget(it, texts, moved, translate) ?: return null }
+                val members =
+                    identity.members.map {
+                        composedTarget(it, texts, moved, translate) ?: return null
+                    }
+                val delegates =
+                    identity.delegates.map {
+                        composedTarget(it, texts, moved, translate) ?: return null
+                    }
                 Target.Composed(owner, members, delegates)
             }
 
             is ProofIdentity.Source -> {
                 val source = identity.location.sourceName ?: return null
                 val text = texts[source] ?: return Target.External(identity)
-                val start = offset(text, identity.location.range.start)?.let { translate(source, it) } ?: return null
-                val end = offset(text, identity.location.range.end)?.let { translate(source, it) } ?: return null
+                val start =
+                    offset(text, identity.location.range.start)?.let { translate(source, it) }
+                        ?: return null
+                val end =
+                    offset(text, identity.location.range.end)?.let { translate(source, it) }
+                        ?: return null
                 Target.SourceProof(Site(moved(source), start, end), identity.format)
             }
 
@@ -494,18 +589,28 @@ internal object XdkRename {
         ): Target? {
             val original = id?.let(model::symbol) ?: return null
             val identity = facts.constants[id]
-            val symbol = if (original.declaration == null) declarations[facts.constants[id]] ?: original else original
+            val symbol =
+                if (original.declaration == null) declarations[facts.constants[id]] ?: original
+                else original
             // Before repairing an unresolved signature, the compiler can identify its written
             // parameter but cannot assign a method slot yet. Compare the same source identity
             // after repair; generated/composed slots still require their normal dispatch proof.
-            if (sourceParameters && symbol.kind == SemanticModel.SymbolKind.PARAMETER &&
-                symbol.declarationSource in texts && symbol.declaration != null
+            if (
+                sourceParameters &&
+                    symbol.kind == SemanticModel.SymbolKind.PARAMETER &&
+                    symbol.declarationSource in texts &&
+                    symbol.declaration != null
             ) {
-                return site(requireNotNull(symbol.declarationSource), symbol.declaration)?.let { Target.Declaration(it, symbol.kind) }
+                return site(requireNotNull(symbol.declarationSource), symbol.declaration)?.let {
+                    Target.Declaration(it, symbol.kind)
+                }
             }
             if (identity is ProofIdentity.Directory) return Target.Directory(moved(identity.path))
-            if (identity is ProofIdentity.Composed ||
-                identity is ProofIdentity.Super || identity is ProofIdentity.PrimaryConstructor || identity is ProofIdentity.Parameter
+            if (
+                identity is ProofIdentity.Composed ||
+                    identity is ProofIdentity.Super ||
+                    identity is ProofIdentity.PrimaryConstructor ||
+                    identity is ProofIdentity.Parameter
             ) {
                 return composedTarget(identity, texts, moved, translate)
             }
@@ -518,17 +623,21 @@ internal object XdkRename {
             }
         }
         val result = linkedMapOf<Site, Target>()
-        facts.models.filter { it.sourceName != null }.forEach { model ->
-            val source = model.sourceName ?: return null
-            model.occurrences.forEach { occurrence ->
-                if (!allowUnresolved || occurrence.symbol != null) {
-                    result[site(source, occurrence.range) ?: return null] = target(model, occurrence.symbol) ?: return null
+        facts.models
+            .filter { it.sourceName != null }
+            .forEach { model ->
+                val source = model.sourceName ?: return null
+                model.occurrences.forEach { occurrence ->
+                    if (!allowUnresolved || occurrence.symbol != null) {
+                        result[site(source, occurrence.range) ?: return null] =
+                            target(model, occurrence.symbol) ?: return null
+                    }
+                }
+                model.calls.forEach { call ->
+                    result[site(source, call.callee, true) ?: return null] =
+                        target(model, call.method) ?: return null
                 }
             }
-            model.calls.forEach { call ->
-                result[site(source, call.callee, true) ?: return null] = target(model, call.method) ?: return null
-            }
-        }
         return result
     }
 
@@ -538,7 +647,10 @@ internal object XdkRename {
             val lexer = Lexer(Source(name), errors)
             if (!lexer.hasNext()) return@api false
             val token = lexer.next()
-            token.id == Token.Id.IDENTIFIER && token.valueText == name && !lexer.hasNext() && !errors.hasSeriousErrors()
+            token.id == Token.Id.IDENTIFIER &&
+                token.valueText == name &&
+                !lexer.hasNext() &&
+                !errors.hasSeriousErrors()
         }
 
     private val newlines = Regex("\\r\\n|\\r|\\n")
@@ -552,11 +664,7 @@ internal object XdkRename {
             if (position.line == 0) {
                 0
             } else {
-                breaks
-                    .getOrNull(position.line - 1)
-                    ?.range
-                    ?.last
-                    ?.plus(1) ?: return null
+                breaks.getOrNull(position.line - 1)?.range?.last?.plus(1) ?: return null
             }
         val end = breaks.getOrNull(position.line)?.range?.first ?: text.length
         return (start + position.column).takeIf { it <= end }
@@ -569,13 +677,7 @@ internal object XdkRename {
         val breaks = newlines.findAll(text).takeWhile { it.range.last < offset }.toList()
         return Position(
             breaks.size,
-            offset - (
-                breaks
-                    .lastOrNull()
-                    ?.range
-                    ?.last
-                    ?.plus(1) ?: 0
-            ),
+            offset - (breaks.lastOrNull()?.range?.last?.plus(1) ?: 0),
         )
     }
 }

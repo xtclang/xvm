@@ -4,35 +4,42 @@ import java.io.File
 import java.util.Map.copyOf as immutableMap
 import java.util.Set.copyOf as immutableSet
 
-/** Explicit host configuration; dependency names may identify source modules or binary artifacts. */
+/**
+ * Explicit host configuration; dependency names may identify source modules or binary artifacts.
+ */
 class XdkSourceModule(
     val name: String,
     uri: String,
     dependencies: Set<String> = emptySet(),
 ) {
-    internal val root: File = requireNotNull(XdkSources.file(uri)) { "A source module requires a file URI: $uri" }
+    internal val root: File =
+        requireNotNull(XdkSources.file(uri)) { "A source module requires a file URI: $uri" }
     val uri: String = root.toURI().toString()
     val dependencies: Set<String> = immutableSet(dependencies)
 
     init {
-        require(name.isNotBlank() && root.extension == "x") { "A source module requires a name and an .x root" }
+        require(name.isNotBlank() && root.extension == "x") {
+            "A source module requires a name and an .x root"
+        }
         require(name !in XdkLibraries.moduleNames) {
             "Project sources cannot replace bundled compiler libraries"
         }
     }
 }
 
-/** Immutable graph. Ordering and reverse edges are established before installing a configuration. */
-internal class XdkProject(
-    modules: List<XdkSourceModule>,
-) {
+/**
+ * Immutable graph. Ordering and reverse edges are established before installing a configuration.
+ */
+internal class XdkProject(modules: List<XdkSourceModule>) {
     val modules = immutableMap(modules.associateBy { it.name })
     private val configuration = modules.map { Triple(it.name, it.uri, it.dependencies) }.toSet()
     private val ordered: List<XdkSourceModule>
 
     init {
         require(this.modules.size == modules.size) { "Duplicate source module name" }
-        require(modules.map { it.root }.distinct().size == modules.size) { "Duplicate source module root" }
+        require(modules.map { it.root }.distinct().size == modules.size) {
+            "Duplicate source module root"
+        }
         modules.forEach { owner ->
             val members = File(owner.root.parentFile, owner.root.nameWithoutExtension).toPath()
             require(modules.none { it !== owner && it.root.toPath().startsWith(members) }) {
@@ -45,11 +52,10 @@ internal class XdkProject(
 
         fun visit(module: XdkSourceModule) {
             if (module.name in visited) return
-            require(visiting.add(module.name)) { "Cyclic source dependencies: ${visiting.joinToString(" -> ")} -> ${module.name}" }
-            module.dependencies
-                .sorted()
-                .mapNotNull(this.modules::get)
-                .forEach(::visit)
+            require(visiting.add(module.name)) {
+                "Cyclic source dependencies: ${visiting.joinToString(" -> ")} -> ${module.name}"
+            }
+            module.dependencies.sorted().mapNotNull(this.modules::get).forEach(::visit)
             visiting.remove(module.name)
             visited += module.name
             result += module
@@ -61,7 +67,12 @@ internal class XdkProject(
     fun scope(uri: String): String? {
         val file = XdkSources.file(uri) ?: return null
         return modules.values
-            .filter { file == it.root || file.toPath().startsWith(File(it.root.parentFile, it.root.nameWithoutExtension).toPath()) }
+            .filter {
+                file == it.root ||
+                    file
+                        .toPath()
+                        .startsWith(File(it.root.parentFile, it.root.nameWithoutExtension).toPath())
+            }
             .maxByOrNull { it.root.path.length }
             ?.uri
     }
@@ -76,7 +87,8 @@ internal class XdkProject(
         val names = mutableSetOf<String>()
 
         fun include(module: XdkSourceModule) {
-            if (names.add(module.name)) module.dependencies.mapNotNull(modules::get).forEach(::include)
+            if (names.add(module.name))
+                module.dependencies.mapNotNull(modules::get).forEach(::include)
         }
         include(target)
         return ordered.filter { it.name in names }

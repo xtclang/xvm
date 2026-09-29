@@ -19,13 +19,15 @@ fun Driver.focusRecovery(
                 void pair(Int number, String text) {}
                 void inspect() { pair(1, "x"); }
             }
-            """.trimIndent() + "\n",
+            """
+                .trimIndent() + "\n",
         )
         val document = workspace.open("Focus.x")
         val editor = document.editor
         val at = document.at("word.si") + "word.si".length
 
-        fun completion() = lookup(editor, at) { items -> items.any { it.getLookupString() == "size" } }
+        fun completion() =
+            lookup(editor, at) { items -> items.any { it.getLookupString() == "size" } }
         val inspection = PopupInspection(this, editor, ::completion)
         completion()
         interruptFocus(editor) { inspection.recover() }
@@ -35,7 +37,10 @@ fun Driver.focusRecovery(
         val accepted = editor.text
         interruptFocus(editor) {
             val failure = runCatching { inspection.recover() }.exceptionOrNull()
-            check(failure is IllegalStateException && failure.message.orEmpty().startsWith("Source changed")) {
+            check(
+                failure is IllegalStateException &&
+                    failure.message.orEmpty().startsWith("Source changed")
+            ) {
                 "A completed insertion was allowed into the replay path: $failure"
             }
         }
@@ -53,13 +58,17 @@ fun Driver.focusRecovery(
         dismissPopups()
 
         // Capture the same guard before a real rename, then prove it rejects any replay afterward.
-        val renameInspection = PopupInspection(this, editor) { error("A completed rename must never be replayed") }
+        val renameInspection =
+            PopupInspection(this, editor) { error("A completed rename must never be replayed") }
         rename(editor, document.at("word"), "text")
         val renamed = accepted.replace("word", "text")
         awaitUi("rename applied exactly once", 45.seconds) { editor.text == renamed }
         interruptFocus(editor) {
             val failure = runCatching { renameInspection.recover() }.exceptionOrNull()
-            check(failure is IllegalStateException && failure.message.orEmpty().startsWith("Source changed")) {
+            check(
+                failure is IllegalStateException &&
+                    failure.message.orEmpty().startsWith("Source changed")
+            ) {
                 "A completed rename was allowed into the replay path: $failure"
             }
         }
@@ -76,10 +85,14 @@ private fun Driver.interruptFocus(
     val other = withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).interruptFocus() }
     try {
         awaitUi("unowned test window interrupts IDE focus", 10.seconds) {
-            withContext(OnDispatcher.EDT) { other.isFocused() && !utility(NativeEditorUi::class).hasFocus(nativeEditor) }
+            withContext(OnDispatcher.EDT) {
+                other.isFocused() && !utility(NativeEditorUi::class).hasFocus(nativeEditor)
+            }
         }
         action()
-        check(withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(nativeEditor) })
+        check(
+            withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(nativeEditor) }
+        )
     } finally {
         withContext(OnDispatcher.EDT) { other.dispose() }
     }
