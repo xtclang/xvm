@@ -1,19 +1,44 @@
 package org.xtclang.idea.playbook.probe
 
 import com.intellij.codeInsight.lookup.LookupManager
+import com.intellij.ide.DataManager
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.AppIcon
+import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import java.awt.KeyboardFocusManager
 import java.awt.Window
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.SwingUtilities
+import org.xtclang.idea.lsp.XtcRenameHandler
 
 /** Small IDE-side observations avoid walking the entire Swing tree for every focus poll. */
 object EditorUi {
+    @JvmStatic
+    fun renameAvailable(editor: Editor): Boolean =
+        XtcRenameHandler()
+            .isAvailableOnDataContext(
+                DataManager.getInstance().getDataContext(editor.contentComponent)
+            )
+
+    @JvmStatic
+    fun renameState(editor: Editor): String {
+        val project = requireNotNull(editor.project)
+        val file = PsiDocumentManager.getInstance(project).getPsiFile(editor.document)
+        val available = renameAvailable(editor)
+        val servers =
+            LanguageServiceAccessor.getInstance(project).startedServers.map { wrapper ->
+                "pid=${wrapper.currentProcessId}, rename=${wrapper.serverCapabilitiesSync?.renameProvider}, " +
+                    "opened=${wrapper.openedDocuments.map { it.file.path }}, " +
+                    "enabled=${file?.let { wrapper.clientFeatures.renameFeature.isEnabled(it) }}, error=${wrapper.serverError}"
+            }
+        return "available=$available, file=$file, servers=$servers; ${focusState(editor)}"
+    }
+
     @JvmStatic
     fun focusEditor(editor: Editor) {
         ApplicationManager.getApplication().assertIsDispatchThread()

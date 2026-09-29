@@ -1576,13 +1576,18 @@ class CompilerPlaybook(
         // silently alter this scenario's graph or the scope of its refactoring proof.
         open(data.text("file"))
         val root = Path.of(singleProject().getBasePath())
-        changeWorkspaceFolders(root, root.resolve(id))
-        configure("""{"xtc":{"compiler":{"sourceModules":null}}}""")
+        val discovery = !data.values.has("sourceModules")
+        // Explicit graphs already isolate the case. Keep their project-relative roots anchored
+        // to the real project; moving the workspace folder would change their meaning.
+        if (discovery) {
+            changeWorkspaceFolders(root, root.resolve(id))
+            configure("""{"xtc":{"compiler":{"sourceModules":null}}}""")
+        }
         try {
             action(data)
         } finally {
             configure(shared.graph)
-            changeWorkspaceFolders(root.resolve(id), root)
+            if (discovery) changeWorkspaceFolders(root.resolve(id), root)
         }
     }
 
