@@ -80,7 +80,9 @@ internal object XdkCursorQueries {
         model: PartialSemanticModel,
         formal: PartialSemanticModel.Formal,
     ): String =
-        "type parameter ${formal.name} extends ${model.semantics.type(formal.constraint)?.displayName ?: "?"}"
+        "type parameter ${formal.name} extends " +
+            (formal.constraint?.let { model.semantics.type(it)?.displayName }
+                ?: "${formal.writtenConstraint} (written constraint)")
 
     fun signatureHelp(
         model: PartialSemanticModel,
