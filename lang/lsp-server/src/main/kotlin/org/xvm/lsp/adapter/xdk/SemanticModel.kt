@@ -164,6 +164,7 @@ internal constructor(
         val inferred: Boolean = false,
         val dependency: XdkDependency.SymbolKey? = null,
         val renameable: Boolean = false,
+        val documentation: String? = null,
     )
 
     /** A written name; a null symbol explicitly represents an unresolved occurrence. */

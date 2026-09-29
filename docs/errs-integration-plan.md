@@ -446,7 +446,7 @@ Implement four checkpoints before combined validation:
    class type arguments may guard recursion; direct/sibling cycles, unknown names and unresolved
    formal-member lookup remain refused. Syntax-only constraints have no fabricated type identity.
 2. [x] Offer literal argument values only after ordinary compiler fitting and full argument validation.
-3. [ ] Copy candidate documentation, provide deterministic completion ordering and improve
+3. [x] Copy candidate documentation, provide deterministic completion ordering and improve
    overload/active-argument presentation without claiming an incomplete overload was selected.
 4. [ ] Extend shared scenarios and both drivers, then run combined backend/protocol checks and
    selected native cases. Do not infer full-catalog coverage from selected runs.
@@ -466,6 +466,31 @@ literals. `CursorBinding`/`CallFacts` add immutable literal-spelling lists while
 constructors; record-pattern consumers must include the new component. The detached model copies
 only strings, and the LSP exposes them as Value completions with the existing exact token edit.
 This covers argument slots, not arbitrary expressions, collection synthesis or snippets.
+
+Checkpoint 3 copies existing compiler component documentation into detached symbols and carries
+it through completion and selected/candidate signatures. Completion ordering explicitly prefers
+locals, then properties, methods, types/modules and literal/keyword proposals; ties use source
+labels and rendered signatures, not snapshot IDs. Exact-fit signatures precede converting ones,
+with deterministic labels and an explicit conversion note. Candidate-specific named mappings and
+default/required parameter descriptions remain visible without claiming overload selection.
+Adapter and packaged-stdio tests cover the new metadata; execution remains pending.
+
+### Earlier checkpoint follow-ups still open
+
+These historical records must not disappear behind the newer L62–L82 feature scopes:
+
+- [ ] **L12 semantic-token overlap:** reproduce the reported X76 warning at `Advanced.x`, line 43,
+  column 13, fix the cause if still present, and add a non-overlap assertion. Earlier passing editor
+  runs did not verify this. Track semantic-classification breadth separately under L65.
+- [ ] **L16/L27 IntelliJ configuration UI:** a dedicated project source-graph settings UI is absent;
+  configuration currently uses LSP4IJ JSON settings. This is editor usability work, not a missing
+  standard LSP handler. Graph persistence/undo remains implemented and tested under L62.
+- [ ] **L60 current-catalog acceptance:** the recorded full pass covered 113 cases. The later
+  127-case catalog has selected acceptance receipts for additions, not a full current-catalog run.
+  Repeat both complete playbooks at a release checkpoint; do not relabel the historical pass.
+
+Earlier feature milestones remain complete only within their recorded scope. Their language and
+scale extensions are tracked under L62–L67; they are not evidence of universally complete support.
 
 ### Implement the missing protocol operations
 
