@@ -137,10 +137,15 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 113 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 128 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-Startup and all 113 scenarios have a complete passing checkpoint recorded below. Later feature
-changes use selected runs with separate receipts. Coverage includes native
+Startup and the preceding 113 scenarios have a complete passing checkpoint recorded below. The
+[current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
+tracks the 128-case selection and its resumed/focused runs separately: all 128 cases have passing
+receipts. The final X60/X77/X78/X105/X122/X123 recheck passes in `run-5742519770640114134` with
+zero IDE errors after correcting repeated diagnostic pulls, source/resource invalidation and
+shared completion expectations. VS Code also passes all 128 cases in one run, `run-b59XBq`.
+The IntelliJ coverage is not one uninterrupted full-suite checkpoint. Coverage includes native
 Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
 highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
 Parameter Info, argument-value fitting and declaration recovery through X108. Native checks include the X34 multi-target chooser, X99/X100
@@ -179,7 +184,7 @@ LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata f
 completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
 layout remain manual.
 
-Every report lists all 113 scenario IDs and distinguishes failed/unselected cases from passing
+Every report lists all 128 scenario IDs and distinguishes failed/unselected cases from passing
 ones. The [L60 checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60) keeps each
 new case open until it has a pass receipt and records client limitations found during validation.
 The new protocol checks use the installed language-client connection. Synthetic nonexistent-file
