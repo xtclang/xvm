@@ -135,8 +135,10 @@ internal object XdkRename {
         candidate: XdkMemberActions.Candidate,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected = edges(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
-        val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
+        val expected = edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { source, offset ->
+            plan.map(source, offset)
+        } ?: return false
+        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
         if (expected.any { (site, target) -> actual[site] != target }) return false
         val oldDispatch = dispatch(before, plan.original) { source, offset -> plan.map(source, offset) } ?: return false
         val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false

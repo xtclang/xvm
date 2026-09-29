@@ -5655,10 +5655,18 @@ Implement as four separate checkpoints, then validate together:
 1. [x] Shared X122 implement/override action selection, exact generated text, native Undo/Redo,
    and duplicate-implementation refusal in both drivers. This adds the 127th catalog scenario;
    implementation is present, but the new native receipt is pending this batch.
-2. [ ] Fresh declaration-only analysis for member generation beside missing-implementation errors.
+2. [x] Fresh declaration-only analysis for member generation beside missing-implementation errors.
 3. [ ] Broader compiler-selected signatures: parameterized types, conditional/multiple returns,
    default arguments and generic methods.
 4. [ ] Prove intentional dispatch changes for existing calls and derived classes.
 
 No tests are run between these implementation checkpoints. Each extracted PR still needs its own
 validation; the combined batch cannot establish independent mergeability.
+
+Checkpoint 2 adds `EmbeddingSupport.analyzeDeclarations(Source/ModuleInfo, repository, listener)`.
+It returns an Optional declaration-analysis record only after successful parsing/linking/name
+resolution/turtle injection. The existing compiler shares that exact phase prefix; body validation
+and code generation are unchanged. No new mutable AST fields are added, and no compiled artifact
+is returned by declaration analysis. The LSP uses a fresh source tree and repository after a failed
+normal attempt, retains its known bindings and adds header-derived member candidates. A proposed
+edit still requires complete graph compilation. Declaration errors and cancellation withhold facts.
