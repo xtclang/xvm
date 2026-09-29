@@ -2,27 +2,34 @@ package org.xtclang.idea.lsp
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.util.xmlb.XmlSerializerUtil
+import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import java.awt.BorderLayout
 import java.awt.FlowLayout
+import java.net.URI
 import java.nio.file.Path
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JTextArea
 import javax.swing.table.DefaultTableModel
 
 /** Project-local source roots, backed by the same LSP4IJ settings used by rename and Undo. */
 class CompilerProjectConfigurable(private val project: Project) : Configurable {
-    private val discovery = JBCheckBox("Discover source modules automatically")
+    private val discovery = JBCheckBox("Use Gradle model or automatic source discovery")
+    private val effective = JTextArea(8, 60).apply { isEditable = false }
     private val rows =
         DefaultTableModel(
             arrayOf(
@@ -70,15 +77,100 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
                 },
                 BorderLayout.NORTH,
             )
-            add(JBScrollPane(table), BorderLayout.CENTER)
+            add(
+                JPanel(BorderLayout(0, 8)).apply {
+                    add(JBScrollPane(table), BorderLayout.CENTER)
+                    add(JBScrollPane(effective), BorderLayout.SOUTH)
+                },
+                BorderLayout.CENTER,
+            )
             add(
                 JPanel(FlowLayout(FlowLayout.LEADING)).apply {
                     add(add)
                     add(remove)
+                    add(
+                        JButton("Refresh Gradle model").apply {
+                            addActionListener { refreshBuild(false) }
+                        }
+                    )
+                    add(
+                        JButton("Prepare generated resources").apply {
+                            addActionListener { refreshBuild(true) }
+                        }
+                    )
+                    add(
+                        JButton("Reset to build model").apply {
+                            addActionListener { discovery.isSelected = true }
+                        }
+                    )
+                    add(
+                        JButton("Open build file").apply {
+                            addActionListener {
+                                val selected = table.selectedRow
+                                val modules = runCatching { modules() }.getOrNull().orEmpty()
+                                val model = runCatching {
+                                    CompilerBuildModel.read(project)
+                                }
+                                    .getOrNull()
+                                val entries =
+                                    model
+                                        ?.get("sourceSets")
+                                        ?.asJsonArray
+                                        ?.map { it.asJsonObject }
+                                        .orEmpty()
+                                val root = modules.getOrNull(selected)?.uri
+                                val entry =
+                                    entries.firstOrNull { item ->
+                                        item["sourceFiles"].asJsonArray.any { it.asString == root }
+                                    } ?: entries.firstOrNull()
+                                entry?.get("buildFile")?.asString?.let { uri ->
+                                    LocalFileSystem.getInstance()
+                                        .refreshAndFindFileByNioFile(Path.of(URI(uri)))
+                                        ?.let {
+                                            FileEditorManager.getInstance(project)
+                                                .openFile(it, true)
+                                        }
+                                }
+                            }
+                        }
+                    )
                 },
                 BorderLayout.SOUTH,
             )
         }
+    }
+
+    private fun refreshBuild(prepare: Boolean) {
+        effective.text = "Reading evaluated Gradle inputs…"
+        CompilerBuildModel.refresh(project, prepare) { failure ->
+            if (failure != null) effective.text = failure else refreshEffectivePaths()
+        }
+    }
+
+    private fun refreshEffectivePaths() {
+        val description = runCatching {
+            CompilerBuildModel.describe(project)
+        }
+            .getOrElse { it.message.orEmpty() }
+        effective.text = description
+        LanguageServiceAccessor.getInstance(project)
+            .startedServers
+            .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
+            .forEach { wrapper ->
+                wrapper.initializedServer.thenAccept { server ->
+                    (server as? XtcLanguageServer)?.compilerSourceModules()?.thenAccept { modules ->
+                        ApplicationManager.getApplication().invokeLater {
+                            if (!project.isDisposed)
+                                effective.text =
+                                    description +
+                                        "\n\nEffective compiler modules:\n" +
+                                        modules.joinToString("\n") {
+                                            "${it.name}: ${it.uri}\n  Resources: ${it.resourceRoots.orEmpty().joinToString()}\n  Dependencies: ${it.dependencies.joinToString()}"
+                                        }
+                        }
+                    }
+                }
+            }
     }
 
     private fun modules(): List<SourceModuleConfiguration>? =
@@ -118,6 +210,7 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
 
     override fun reset() {
         table.cellEditor?.cancelCellEditing()
+        refreshEffectivePaths()
         original = SourceGraphConfiguration.read(CompilerSettings.content(project))
         discovery.isSelected = original == null
         table.isEnabled = !discovery.isSelected

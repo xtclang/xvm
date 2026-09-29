@@ -153,6 +153,7 @@ internal constructor(
     private data class Discovery(
         val folders: List<File> = emptyList(),
         val explicit: Boolean = false,
+        val buildModel: Boolean = false,
         val problem: String? = null,
         val catalog: XdkWorkspaceDiscovery.Catalog = XdkWorkspaceDiscovery.Catalog(),
     )
@@ -740,9 +741,22 @@ internal constructor(
                 check(!closed) { "XDK adapter is closed" }
                 if (!current()) return emptySet()
                 val recovered = explicit && discovery.get().problem != null
-                if (explicit) discovery.updateAndGet { it.copy(explicit = true, problem = null) }
-                if (!force && !recovered && project.sameConfiguration(replacement))
+                val clearBuildArtifacts = discovery.get().buildModel
+                discovery.updateAndGet {
+                    it.copy(
+                        explicit = explicit,
+                        buildModel = false,
+                        problem = if (explicit) null else it.problem,
+                    )
+                }
+                if (
+                    !force &&
+                        !recovered &&
+                        !clearBuildArtifacts &&
+                        project.sameConfiguration(replacement)
+                )
                     return emptySet()
+                if (clearBuildArtifacts) dependencies = XdkDependencies(emptyList())
                 project = replacement
                 builds.clear()
                 retireRequests(requests.keys.toSet())
@@ -778,6 +792,7 @@ internal constructor(
         val (retired, probes) =
             synchronized(lifecycle) {
                 check(!closed) { "XDK adapter is closed" }
+                discovery.updateAndGet { it.copy(buildModel = false) }
                 val changed =
                     (dependencies.modules.keys + replacement.modules.keys).filterTo(linkedSetOf()) {
                         dependencies.modules[it]?.revision != replacement.modules[it]?.revision
@@ -805,6 +820,34 @@ internal constructor(
         return synchronized(lifecycle) {
             project.orderedScopes(retired.mapTo(linkedSetOf()) { it.scope })
         }
+    }
+
+    /**
+     * Install one evaluated build snapshot; validation completes before either live input changes.
+     */
+    internal fun replaceBuildInputs(inputs: XdkBuildModel.Inputs): Set<String> {
+        val replacement = XdkProject(inputs.modules)
+        val artifacts = XdkDependencies(inputs.binaries)
+        val (retired, probes) =
+            synchronized(lifecycle) {
+                check(!closed) { "XDK adapter is closed" }
+                discovery.updateAndGet {
+                    it.copy(explicit = true, buildModel = true, problem = null)
+                }
+                if (
+                    project.sameConfiguration(replacement) &&
+                        dependencies.modules.mapValues { it.value.revision } ==
+                            artifacts.modules.mapValues { it.value.revision }
+                )
+                    return emptySet()
+                project = replacement
+                dependencies = artifacts
+                builds.clear()
+                retireRequests(requests.keys.toSet())
+            }
+        retired.forEach { it.result.cancel(false) }
+        probes.forEach { it.result.cancel(false) }
+        return replacement.orderedScopes(retired.mapTo(linkedSetOf()) { it.scope })
     }
 
     override fun closeDocument(uri: String) {
@@ -1534,6 +1577,21 @@ internal constructor(
             }
         } else {
             renameAsync(uri, line, column, newName).thenApply { it?.let(::XdkRenameProposal) }
+        }
+
+    /** Detached effective inputs for host settings views; never compiler-owned objects. */
+    internal fun effectiveSourceModules(): List<XdkSourceModule> =
+        synchronized(lifecycle) {
+            project.buildOrder().map { module ->
+                XdkSourceModule(
+                    module.name,
+                    module.uri,
+                    module.dependencies,
+                    XdkResources.roots(module.root, module.resourceFiles).map {
+                        it.toURI().toString()
+                    },
+                )
+            }
         }
 
     /**

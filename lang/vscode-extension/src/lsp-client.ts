@@ -12,6 +12,8 @@ import {
     TransportKind
 } from 'vscode-languageclient/node';
 
+import { compilerBuildModels } from './compiler-paths';
+import { BuildModel } from './build-model';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
@@ -25,8 +27,8 @@ export function getClient(): LanguageClient | undefined {
     return client;
 }
 
-function compilerConfiguration(): { sourceModules: unknown[] | null } {
-    return { sourceModules: compilerSourceModules() };
+function compilerConfiguration(): { sourceModules: unknown[] | null; buildModels: BuildModel[] } {
+    return { sourceModules: compilerSourceModules(), buildModels: compilerBuildModels() };
 }
 
 export async function updateCompilerConfiguration(): Promise<void> {

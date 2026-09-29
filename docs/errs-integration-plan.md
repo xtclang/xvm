@@ -808,9 +808,26 @@ Five separate implementation commits precede combined validation:
    Cross-package relocations needing rewritten qualification, collisions, overlapping operations,
    symlinks and explicit root/settings changes remain conservative refusals. `willRenameFiles`
    cannot veto the host's move: a null result means no safe automatic reference update.
-5. PLAT2c: evaluated Gradle inputs and origin-aware effective paths in both hosts.
+5. PLAT2c: evaluated Gradle inputs and origin-aware effective paths in both hosts are written.
+   `exportXtcLspModel` exports `.gradle/xtc/lsp-model.json`; `prepareXtcLspModel` also runs resource
+   processing. The model carries source-set/project ownership, generated sources, original and
+   processed resources, source dependencies and binary module paths. Both hosts import the same
+   schema and retain explicit overrides. IntelliJ's Community settings page and VS Code's native
+   commands show effective paths, missing outputs and origin, with refresh/prepare/open-build/reset
+   actions. Gradle runs only through an explicit host action, never inside the server. Build-script
+   parsing is not used. New TestKit, server, importer and shared X129 tests await batch validation.
+   Automatic IntelliJ Gradle-sync import and nested/composite build aggregation beyond each
+   exported root remain follow-ups; use explicit refresh or import each workspace-root report.
 
-The new catalog has 133 scenarios. The previous 128-case receipts remain historical evidence;
+Master fix extraction: early resource-root capture is already fixed by `5d88b64d4` (#651).
+The remaining Copy-destination mismatch is independently fixed in
+[`ee1792753`, PR #655](https://github.com/xtclang/xvm/pull/655), based on master `a96bb0f75`.
+Its three source-set regressions fail before the fix; all 57 plugin tests pass afterwards,
+including six configuration-cache TestKit cases, with zero skips. Spotless passes.
+Carry the corresponding provider wiring in this batch, but do not extract it again with the
+LSP model bridge once #655 is merged. These receipts validate the standalone fix, not this batch.
+
+The new catalog has 134 scenarios. The previous 128-case receipts remain historical evidence;
 new cases and changes are not validated by those receipts. X118 now carries ordered custom
 resource roots through native module rename and Undo in both hosts.
 
@@ -1017,9 +1034,9 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 |---|---|---|
 | L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. | Fix the real-platform source-location crash below; retain broader workload coverage rather than treating the selected fixtures as universal proof. |
-| L69 token range/delta | Full tokens exist; range/delta operations do not. | Define snapshot/result-ID lifetime, delta computation and fallback after edits, close or restart; measure whether caching is beneficial. |
-| L70 lazy resolve | Supported response data is currently eager. | Measure expensive fields per provider, choose supported resolve properties, and design detached handles that reject stale documents and dependency revisions. |
-| L71 file operations | Watchers and didRenameFiles refresh state; pre-edit participation is absent. | Reuse the rename graph proof for file-tree operations; define create/delete semantics, folder filters, explicit graph persistence and duplicate-notification handling in both hosts. |
+| L69 token range/delta | Negotiated range/delta and bounded result history are implemented; batch validation pending. | Validate X126 and protocol cases; measure representative workspace payload/cache costs. |
+| L70 lazy resolve | Completion documentation and action edits are implemented with stale-safe detached handles; validation pending. | Lens/link/inlay/workspace-symbol resolvers remain follow-ups. |
+| L71 file operations | Six negotiated pre/post hooks and proven file/package/container rename support are implemented; validation pending. | Validate X128 and operation ordering; cross-package qualification rewrites and explicit graph persistence remain unsupported. |
 | L72 save/sync/formatting | Full sync, didSave and single-range formatting work. | Separate save hooks, incremental patches and multiple-range formatting; define edit ordering, overlapping ranges and UTF-16/CRLF behavior without changing the existing Full-sync contract prematurely. |
 | L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
@@ -1048,15 +1065,15 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   one million integers), full fallback after eviction/foreign IDs/close/restart, and negotiated
   refresh on semantic changes. Range reports preserve UTF-16 coordinates. Unit, compiler-service,
   packaged transport and shared X126 coverage are written; this checkbox awaits the combined run.
-- [ ] **L70 — Lazy resolve operations.** Add capability-negotiated `completionItem/resolve`,
-  `codeAction/resolve`, `codeLens/resolve`, `documentLink/resolve`, `inlayHint/resolve` and
-  `workspaceSymbol/resolve`. Carry stable detached IDs, reject obsolete data and respect each
-  client's supported resolve properties. Current responses eagerly supply their supported data.
-- [ ] **L71 — File-operation participation.** Add `workspace/willCreateFiles`, `willRenameFiles`,
-  `willDeleteFiles`, `didCreateFiles` and `didDeleteFiles`, including folder operations and
-  proven import/reference updates for moves initiated in the IDE's file tree. Existing
-  `didRenameFiles` and watched-file notifications refresh sources; they do not compute those
-  pre-operation edits. Exercise operation ordering, cancellation and duplicate notifications.
+- [ ] **L70 — Lazy resolve operations (initial implementation; validation pending).** Negotiated
+  completion documentation and action edit resolution use bounded detached handles and reject
+  stale versions, dependencies and connections. Shared X127 is written. `codeLens/resolve`,
+  `documentLink/resolve`, `inlayHint/resolve` and `workspaceSymbol/resolve` remain follow-ups.
+- [ ] **L71 — File-operation participation (bounded implementation; validation pending).**
+  All six pre/post operations negotiate independently. Proven file/package and safe container moves
+  return pre-operation edits; create/delete hooks return no speculative edits and refresh membership
+  afterwards. Shared X128 drives native listeners. Cross-package qualification rewrites and moves
+  requiring explicit source-graph persistence remain unsupported; null replies cannot veto moves.
 - [ ] **L72 — Save hooks, incremental sync and multiple-range formatting.** Add negotiated
   `willSave`/`willSaveWaitUntil`, optional incremental `didChange` support and
   `textDocument/rangesFormatting`. Full document synchronization, didSave handling and
