@@ -31,10 +31,10 @@ class ParityWorkspace(
     val protocol = ClientProtocol(driver)
     val trace = ClientTrace(driver)
     val common =
-        JsonParser
-            .parseString(
-                Files.readString(Path.of(System.getProperty("xtc.playbook.scenarios"))),
-            ).asJsonObject["common"]
+        JsonParser.parseString(
+                Files.readString(Path.of(System.getProperty("xtc.playbook.scenarios")))
+            )
+            .asJsonObject["common"]
             .asJsonObject
     private val projectRoot = with(driver) { Path.of(singleProject().getBasePath()) }
     val directory: Path = projectRoot.resolve("parity/$id")
@@ -49,31 +49,44 @@ class ParityWorkspace(
                     requireNotNull(service<ParityDocuments>().getDocument(source))
                 }
             }
-        val text: String get() =
-            with(driver) {
-                withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) { buffer.getText() }
-            }
-        val uri: String get() = Path.of(source.getPath()).toUri().toString()
-        val editor: JEditorUiComponent get() =
-            with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    val manager = service<FileEditorManager>(singleProject())
-                    if (manager.getSelectedTextEditor()?.getVirtualFile()?.getPath() != source.getPath()) {
-                        manager.openFile(source, false, false)
+        val text: String
+            get() =
+                with(driver) {
+                    withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                        buffer.getText()
                     }
                 }
-                ideFrame().codeEditorForFile(Path.of(file).fileName.toString())
-            }
+
+        val uri: String
+            get() = Path.of(source.getPath()).toUri().toString()
+
+        val editor: JEditorUiComponent
+            get() =
+                with(driver) {
+                    withContext(OnDispatcher.EDT) {
+                        val manager = service<FileEditorManager>(singleProject())
+                        if (
+                            manager.getSelectedTextEditor()?.getVirtualFile()?.getPath() !=
+                                source.getPath()
+                        ) {
+                            manager.openFile(source, false, false)
+                        }
+                    }
+                    ideFrame().codeEditorForFile(Path.of(file).fileName.toString())
+                }
 
         fun at(
             anchor: String,
             offset: Int = 0,
             last: Boolean = false,
         ): Int =
-            (if (last) text.lastIndexOf(anchor) else text.indexOf(anchor)).also { check(it >= 0) { "Missing '$anchor' in $file" } } + offset
+            (if (last) text.lastIndexOf(anchor) else text.indexOf(anchor)).also {
+                check(it >= 0) { "Missing '$anchor' in $file" }
+            } + offset
 
         fun params(at: Int? = null): Map<String, Any> =
-            mapOf("textDocument" to mapOf("uri" to uri)) + if (at == null) emptyMap() else mapOf("position" to position(text, at))
+            mapOf("textDocument" to mapOf("uri" to uri)) +
+                if (at == null) emptyMap() else mapOf("position" to position(text, at))
     }
 
     init {
@@ -123,27 +136,35 @@ class ParityWorkspace(
     }
 
     private fun refresh(path: Path): VirtualFile? =
-        with(driver) { utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString()) }
+        with(driver) {
+            utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
+        }
 
     fun open(
         file: String,
         text: String? = null,
     ): Document =
         with(driver) {
-            if (text != null || !Files.exists(directory.resolve(file))) write(file, text ?: fixture(file))
+            if (text != null || !Files.exists(directory.resolve(file)))
+                write(file, text ?: fixture(file))
             val target = requireNotNull(refresh(directory.resolve(file)))
-            withContext(OnDispatcher.EDT) { service<FileEditorManager>(singleProject()).openFile(target, false, false) }
+            withContext(OnDispatcher.EDT) {
+                service<FileEditorManager>(singleProject()).openFile(target, false, false)
+            }
             val document = Document(file, target)
             awaitUi("LSP4IJ opens $id/$file", 45.seconds) {
-                clientDocument(document)?.getSynchronizer()?.getDidOpenFuture()?.let { it.isDone() && !it.isCompletedExceptionally() } ==
-                    true
+                clientDocument(document)?.getSynchronizer()?.getDidOpenFuture()?.let {
+                    it.isDone() && !it.isCompletedExceptionally()
+                } == true
             }
             settle(document)
             document
         }
 
     private fun clientDocument(document: Document): ClientDocument? =
-        protocol.server().getOpenedDocuments().singleOrNull { it.getFile().getPath() == Path.of(URI(document.uri)).toString() }
+        protocol.server().getOpenedDocuments().singleOrNull {
+            it.getFile().getPath() == Path.of(URI(document.uri)).toString()
+        }
 
     fun replace(
         document: Document,
@@ -155,8 +176,11 @@ class ParityWorkspace(
     }
 
     fun settle(document: Document) {
-        val pending = requireNotNull(clientDocument(document)).getSynchronizer().flushPendingChanges()
-        with(driver) { awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() } }
+        val pending =
+            requireNotNull(clientDocument(document)).getSynchronizer().flushPendingChanges()
+        with(driver) {
+            awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() }
+        }
         check(!pending.isCompletedExceptionally()) { "Document synchronization failed" }
         query("textDocument/documentSymbol", document)
     }
@@ -234,7 +258,9 @@ class ParityWorkspace(
 
     fun configure(modules: List<SharedScenarios.SourceModule>) =
         with(driver) {
-            val content = Gson().toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to modules))))
+            val content =
+                Gson()
+                    .toJson(mapOf("xtc" to mapOf("compiler" to mapOf("sourceModules" to modules))))
             withContext(OnDispatcher.EDT) {
                 val settings = new(LspServerSettings::class)
                 settings.setConfigurationContent(content)
@@ -242,7 +268,8 @@ class ParityWorkspace(
                 val traceSettings =
                     new(LspServerSettings::class)
                         .setServerTrace(utility(ClientTraceLevel::class).valueOf("verbose"))
-                service<ProjectLspSettings>(singleProject()).updateSettings("xtcLanguageServer", traceSettings)
+                service<ProjectLspSettings>(singleProject())
+                    .updateSettings("xtcLanguageServer", traceSettings)
             }
         }
 
@@ -256,16 +283,21 @@ class ParityWorkspace(
         configure(
             modules.asJsonArray.map {
                 it.asJsonObject.let { module ->
-                    SharedScenarios.SourceModule(module.string("name"), uri(module.string("uri")), module.strings("dependencies"))
+                    SharedScenarios.SourceModule(
+                        module.string("name"),
+                        uri(module.string("uri")),
+                        module.strings("dependencies"),
+                    )
                 }
-            },
+            }
         )
 
     fun linked(consumer: Document) {
         settle(consumer)
         clean(consumer)
         val location = shared.dependencyNavigation.location
-        val result = targets(consumer, "definition", SharedScenarios.offset(consumer.text, location.cursor))
+        val result =
+            targets(consumer, "definition", SharedScenarios.offset(consumer.text, location.cursor))
         check(result.single().string("uri") == uri(location.targetFile)) { result.toString() }
     }
 
@@ -280,7 +312,10 @@ class ParityWorkspace(
 
     fun editing(body: String): Pair<Document, Int> {
         val setup = shared.common.editing
-        return marked(setup.file, fixture(setup.file).replace(setup.run, setup.run.replace("{}", "{ $body }")))
+        return marked(
+            setup.file,
+            fixture(setup.file).replace(setup.run, setup.run.replace("{}", "{ $body }")),
+        )
     }
 
     fun virtual(
@@ -291,19 +326,31 @@ class ParityWorkspace(
     ) {
         protocol.notify(
             "textDocument/didOpen",
-            mapOf("textDocument" to mapOf("uri" to uri(file), "languageId" to "xtc", "version" to version, "text" to text)),
+            mapOf(
+                "textDocument" to
+                    mapOf(
+                        "uri" to uri(file),
+                        "languageId" to "xtc",
+                        "version" to version,
+                        "text" to text,
+                    )
+            ),
         )
         try {
             action()
         } finally {
-            protocol.notify("textDocument/didClose", mapOf("textDocument" to mapOf("uri" to uri(file))))
+            protocol.notify(
+                "textDocument/didClose",
+                mapOf("textDocument" to mapOf("uri" to uri(file))),
+            )
         }
     }
 
     fun save(document: Document) =
         with(driver) {
             withContext(OnDispatcher.EDT, semantics = LockSemantics.WRITE_ACTION) {
-                service<ParityDocuments>().saveDocument(cast(document.editor.document, ParityDocument::class))
+                service<ParityDocuments>()
+                    .saveDocument(cast(document.editor.document, ParityDocument::class))
             }
         }
 
@@ -311,10 +358,14 @@ class ParityWorkspace(
         with(driver) {
             // Revert via IntelliJ's file/document manager, preserving the disk line separator.
             withContext(OnDispatcher.EDT) {
-                service<ParityDocuments>().reloadFromDisk(cast(document.editor.document, ParityDocument::class))
-                service<FileEditorManager>(singleProject()).closeFile(document.editor.editor.getVirtualFile())
+                service<ParityDocuments>()
+                    .reloadFromDisk(cast(document.editor.document, ParityDocument::class))
+                service<FileEditorManager>(singleProject())
+                    .closeFile(document.editor.editor.getVirtualFile())
             }
-            awaitUi("client closes ${document.file}", 30.seconds) { clientDocument(document) == null }
+            awaitUi("client closes ${document.file}", 30.seconds) {
+                clientDocument(document) == null
+            }
         }
 
     override fun close() {
@@ -326,11 +377,16 @@ class ParityWorkspace(
                     .getAllEditors()
                     .map {
                         it.getFile()
-                    }.filter { it.getPath().startsWith(directory.toString() + "/") }
+                    }
+                    .filter { it.getPath().startsWith(directory.toString() + "/") }
                     .distinctBy { it.getPath() }
             withContext(OnDispatcher.EDT) { files.forEach(manager::closeFile) }
         }
-        configure(shared.common.sourceModules.map { it.copy(uri = projectRoot.resolve(it.uri).toUri().toString()) })
+        configure(
+            shared.common.sourceModules.map {
+                it.copy(uri = projectRoot.resolve(it.uri).toUri().toString())
+            }
+        )
     }
 
     companion object {
@@ -340,13 +396,18 @@ class ParityWorkspace(
         ): Map<String, Int> {
             check(offset in 0..text.length)
             val prefix = text.take(offset)
-            return mapOf("line" to prefix.count { it == '\n' }, "character" to offset - prefix.lastIndexOf('\n') - 1)
+            return mapOf(
+                "line" to prefix.count { it == '\n' },
+                "character" to offset - prefix.lastIndexOf('\n') - 1,
+            )
         }
 
         fun offset(
             text: String,
             position: JsonObject,
-        ): Int = text.splitToSequence('\n').take(position.int("line")).sumOf { it.length + 1 } + position.int("character")
+        ): Int =
+            text.splitToSequence('\n').take(position.int("line")).sumOf { it.length + 1 } +
+                position.int("character")
     }
 }
 
@@ -362,13 +423,18 @@ internal fun JsonObject.string(name: String): String =
 
 internal fun JsonObject.int(name: String): Int = get(name).asInt
 
-internal fun JsonObject.strings(name: String): List<String> = getAsJsonArray(name).map { it.asString }
+internal fun JsonObject.strings(name: String): List<String> =
+    getAsJsonArray(name).map { it.asString }
 
-internal fun JsonElement.rows(): List<JsonObject> = if (isJsonNull) emptyList() else asJsonArray.map { it.asJsonObject }
+internal fun JsonElement.rows(): List<JsonObject> =
+    if (isJsonNull) emptyList() else asJsonArray.map { it.asJsonObject }
 
 internal fun JsonObject.pattern(name: String): Regex =
     getAsJsonObject(name).let {
-        Regex(it.string("source"), if (it.string("flags").contains('i')) setOf(RegexOption.IGNORE_CASE) else emptySet())
+        Regex(
+            it.string("source"),
+            if (it.string("flags").contains('i')) setOf(RegexOption.IGNORE_CASE) else emptySet(),
+        )
     }
 
 @Remote("com.intellij.openapi.vfs.LocalFileSystem")

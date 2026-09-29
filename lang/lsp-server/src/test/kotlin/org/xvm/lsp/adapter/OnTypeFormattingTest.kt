@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter
 
+import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
@@ -10,15 +11,13 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Unit tests for on-type formatting (`textDocument/onTypeFormatting`) in [TreeSitterAdapter].
  *
  * Tests parse XTC snippets via the tree-sitter native parser, then call
- * [TreeSitterAdapter.onTypeFormatting] with a trigger character and cursor position,
- * asserting that the returned [TextEdit] list produces the correct
- * indentation.
+ * [TreeSitterAdapter.onTypeFormatting] with a trigger character and cursor position, asserting that
+ * the returned [TextEdit] list produces the correct indentation.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -28,7 +27,8 @@ class OnTypeFormattingTest {
     private var adapter: TreeSitterAdapter? = null
     private val uriCounter = AtomicInteger(0)
 
-    private val ts: TreeSitterAdapter get() = adapter!!
+    private val ts: TreeSitterAdapter
+        get() = adapter!!
 
     private fun freshUri(): String = "file:///fmt${uriCounter.incrementAndGet()}.x"
 
@@ -54,8 +54,8 @@ class OnTypeFormattingTest {
     }
 
     /**
-     * Helper: compile source, then call onTypeFormatting.
-     * Returns the desired indent (new text length) or -1 if no edit was returned.
+     * Helper: compile source, then call onTypeFormatting. Returns the desired indent (new text
+     * length) or -1 if no edit was returned.
      */
     private fun formatAfterTrigger(
         source: String,
@@ -69,17 +69,11 @@ class OnTypeFormattingTest {
         return if (edits.isEmpty()) {
             -1
         } else {
-            edits
-                .first()
-                .newText
-                .substringBefore('\n')
-                .length
+            edits.first().newText.substringBefore('\n').length
         }
     }
 
-    /**
-     * Helper: compile source, call onTypeFormatting, return the raw edit list.
-     */
+    /** Helper: compile source, call onTypeFormatting, return the raw edit list. */
     private fun formatEdits(
         source: String,
         line: Int,
@@ -117,7 +111,8 @@ class OnTypeFormattingTest {
 
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             // Line 2 is the blank line inside Person's body, after pressing Enter on line 1
             val indent = formatAfterTrigger(source, line = 2, column = 0, ch = "\n")
             assertThat(indent).isEqualTo(8)
@@ -133,13 +128,16 @@ class OnTypeFormattingTest {
 
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val indent = formatAfterTrigger(source, line = 2, column = 0, ch = "\n")
             assertThat(indent).isEqualTo(8)
         }
 
         @Test
-        @DisplayName("auto-closed method brace skeleton keeps blank body line and aligned closing brace")
+        @DisplayName(
+            "auto-closed method brace skeleton keeps blank body line and aligned closing brace"
+        )
         fun autoClosedMethodBraceSkeleton() {
             val source =
                 """
@@ -147,7 +145,8 @@ class OnTypeFormattingTest {
                     void foo() {
                             }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val edits = formatEdits(source, line = 2, column = 8, ch = "\n")
             assertThat(edits).hasSize(1)
             assertThat(edits.first().newText).isEqualTo("        \n    ")
@@ -161,7 +160,8 @@ class OnTypeFormattingTest {
                 module myapp {
                     void foo() {}
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val edits = formatEdits(source, line = 2, column = 8, ch = "\n")
             assertThat(edits).hasSize(1)
             assertThat(edits.first().newText).isEqualTo("        \n    ")
@@ -179,7 +179,8 @@ class OnTypeFormattingTest {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
             assertThat(indent).isEqualTo(12)
         }
@@ -195,7 +196,8 @@ class OnTypeFormattingTest {
 
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             // After "String name;" on line 2, cursor is on line 3
             val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
             assertThat(indent).isEqualTo(8)
@@ -211,7 +213,8 @@ class OnTypeFormattingTest {
                     }
 
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             // After "}" on line 2, cursor is on line 3
             val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
             assertThat(indent).isEqualTo(4)
@@ -228,7 +231,8 @@ class OnTypeFormattingTest {
 
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             // "implements Closeable {" is a continuation ending with '{'
             // Body should be at declaration indent (4) + indentSize (4) = 8
             val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
@@ -284,7 +288,8 @@ class OnTypeFormattingTest {
                     class Person {
                         }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             // '}' on line 2 has 8 spaces but should be at 4
             val indent = formatAfterTrigger(source, line = 2, column = 8, ch = "}")
             assertThat(indent).isEqualTo(4)
@@ -407,7 +412,8 @@ class OnTypeFormattingTest {
                         String name,
                             )
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             // ')' on line 3 is indented too much; should match line 1 (foo declaration)
             val indent = formatAfterTrigger(source, line = 3, column = 12, ch = ")")
             assertThat(indent)
@@ -425,7 +431,8 @@ class OnTypeFormattingTest {
                         String name,
                     )
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val edits = formatEdits(source, line = 3, column = 4, ch = ")")
             assertThat(edits).isEmpty()
         }
@@ -450,7 +457,8 @@ class OnTypeFormattingTest {
                         );
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val indent = formatAfterTrigger(source, line = 3, column = 0, ch = "\n")
             assertThat(indent)
                 .describedAs("body after '->' should indent +4 from arrow line")
@@ -473,7 +481,8 @@ class OnTypeFormattingTest {
                 module myapp {
                     Int x = 1;
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
             val edits = formatEdits(source, line = 1, column = 14, ch = ";")
             assertThat(edits).isEmpty()
         }
@@ -498,15 +507,10 @@ class OnTypeFormattingTest {
                     tabSize = 2,
                     insertSpaces = true,
                 )
-            val edits = ts.onTypeFormatting(uri, line = 1, column = 0, ch = "\n", options = customOptions)
+            val edits =
+                ts.onTypeFormatting(uri, line = 1, column = 0, ch = "\n", options = customOptions)
             assertThat(edits).isNotEmpty
-            assertThat(
-                edits
-                    .first()
-                    .newText
-                    .substringBefore('\n')
-                    .length,
-            ).isEqualTo(2)
+            assertThat(edits.first().newText.substringBefore('\n').length).isEqualTo(2)
         }
 
         @Test

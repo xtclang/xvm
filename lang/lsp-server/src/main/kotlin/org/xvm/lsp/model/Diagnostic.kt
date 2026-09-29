@@ -1,8 +1,6 @@
 package org.xvm.lsp.model
 
-/**
- * Immutable diagnostic (error, warning, hint).
- */
+/** Immutable diagnostic (error, warning, hint). */
 data class Diagnostic(
     val location: Location,
     val severity: Severity,
@@ -14,8 +12,7 @@ data class Diagnostic(
         ERROR,
         WARNING,
         INFORMATION,
-        HINT,
-        ;
+        HINT;
 
         companion object
     }

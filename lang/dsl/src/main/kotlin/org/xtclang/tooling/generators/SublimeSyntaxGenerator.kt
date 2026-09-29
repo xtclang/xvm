@@ -12,59 +12,56 @@ import org.xtclang.tooling.model.OperatorCategory
  * - bat (command-line cat clone with syntax highlighting)
  * - Any tool using the syntect library
  *
- * This format is more powerful than TextMate grammars and supports
- * context-based parsing with push/pop/set operations.
+ * This format is more powerful than TextMate grammars and supports context-based parsing with
+ * push/pop/set operations.
  */
-class SublimeSyntaxGenerator(
-    private val model: LanguageModel,
-) {
-    fun generate(): String =
-        buildString {
-            appendLine("%YAML 1.2")
-            appendLine("---")
-            appendLine("# ${model.name} language syntax for Sublime Text / bat")
-            appendLine("# Generated from Ecstasy language model DSL")
-            appendLine("name: ${model.name}")
-            appendLine("file_extensions:")
-            model.fileExtensions.forEach { ext ->
-                appendLine("  - $ext")
-            }
-            appendLine("scope: ${model.scopeName}")
-            appendLine()
-            appendLine("contexts:")
-
-            // Main context
-            appendLine("  main:")
-            appendLine("    - include: comments")
-            appendLine("    - include: strings")
-            appendLine("    - include: numbers")
-            appendLine("    - include: annotations")
-            appendLine("    - include: keywords")
-            appendLine("    - include: types")
-            appendLine("    - include: operators")
-            appendLine()
-
-            // Comments context
-            generateCommentsContext()
-
-            // Strings context
-            generateStringsContext()
-
-            // Numbers context
-            generateNumbersContext()
-
-            // Annotations context
-            generateAnnotationsContext()
-
-            // Keywords context
-            generateKeywordsContext()
-
-            // Types context
-            generateTypesContext()
-
-            // Operators context
-            generateOperatorsContext()
+class SublimeSyntaxGenerator(private val model: LanguageModel) {
+    fun generate(): String = buildString {
+        appendLine("%YAML 1.2")
+        appendLine("---")
+        appendLine("# ${model.name} language syntax for Sublime Text / bat")
+        appendLine("# Generated from Ecstasy language model DSL")
+        appendLine("name: ${model.name}")
+        appendLine("file_extensions:")
+        model.fileExtensions.forEach { ext ->
+            appendLine("  - $ext")
         }
+        appendLine("scope: ${model.scopeName}")
+        appendLine()
+        appendLine("contexts:")
+
+        // Main context
+        appendLine("  main:")
+        appendLine("    - include: comments")
+        appendLine("    - include: strings")
+        appendLine("    - include: numbers")
+        appendLine("    - include: annotations")
+        appendLine("    - include: keywords")
+        appendLine("    - include: types")
+        appendLine("    - include: operators")
+        appendLine()
+
+        // Comments context
+        generateCommentsContext()
+
+        // Strings context
+        generateStringsContext()
+
+        // Numbers context
+        generateNumbersContext()
+
+        // Annotations context
+        generateAnnotationsContext()
+
+        // Keywords context
+        generateKeywordsContext()
+
+        // Types context
+        generateTypesContext()
+
+        // Operators context
+        generateOperatorsContext()
+    }
 
     private fun StringBuilder.generateCommentsContext() {
         appendLine("  comments:")
@@ -251,7 +248,8 @@ class SublimeSyntaxGenerator(
                 OperatorCategory.BITWISE to "keyword.operator.bitwise.xtc",
                 OperatorCategory.ARITHMETIC to "keyword.operator.arithmetic.xtc",
                 OperatorCategory.MEMBER_ACCESS to "keyword.operator.access.xtc",
-                OperatorCategory.OTHER to "keyword.operator.other.xtc", // includes range, elvis, etc.
+                OperatorCategory.OTHER to
+                    "keyword.operator.other.xtc", // includes range, elvis, etc.
             )
 
         for ((category, scope) in categoryToScope) {

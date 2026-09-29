@@ -7,7 +7,10 @@ import com.intellij.driver.sdk.VirtualFile
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 
-/** Read what IntelliJ's language client already received; never issue a diagnostic request from the test. */
+/**
+ * Read what IntelliJ's language client already received; never issue a diagnostic request from the
+ * test.
+ */
 fun Driver.receivedDiagnostics(editor: JEditorUiComponent): List<ReceivedDiagnostic> {
     val path = editor.editor.getVirtualFile().getPath()
     return service<LanguageClients>(singleProject())
@@ -58,7 +61,10 @@ interface StartedLanguageServer {
     fun getServerTrace(): ClientTraceLevel
 }
 
-@Remote("com.redhat.devtools.lsp4ij.LanguageServerWrapper\$LSPTrace", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.LanguageServerWrapper\$LSPTrace",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface ClientTraceEntry {
     fun message(): ClientValue
 }
@@ -72,7 +78,10 @@ interface ClientDocument {
     fun getSynchronizer(): DocumentSynchronizer
 }
 
-@Remote("com.redhat.devtools.lsp4ij.DocumentContentSynchronizer", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.DocumentContentSynchronizer",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface DocumentSynchronizer {
     fun getDidOpenFuture(): DocumentOpenFuture
 

@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
@@ -29,8 +28,8 @@ object LanguageConstants {
     /**
      * Ecstasy language keywords for code completion.
      *
-     * Sourced from the Ecstasy language specification.
-     * See: javatools/src/main/java/org/xvm/compiler/Token.java
+     * Sourced from the Ecstasy language specification. See:
+     * javatools/src/main/java/org/xvm/compiler/Token.java
      */
     val KEYWORDS: List<String> =
         listOf(
@@ -195,44 +194,55 @@ object LanguageConstants {
         )
 
     /**
-     * Convert a symbol kind to a completion kind using the mapping.
-     * Falls back to VARIABLE for unmapped kinds.
+     * Convert a symbol kind to a completion kind using the mapping. Falls back to VARIABLE for
+     * unmapped kinds.
      */
-    fun toCompletionKind(kind: SymbolKind): CompletionKind = SYMBOL_TO_COMPLETION_KIND[kind] ?: CompletionKind.VARIABLE
+    fun toCompletionKind(kind: SymbolKind): CompletionKind =
+        SYMBOL_TO_COMPLETION_KIND[kind] ?: CompletionKind.VARIABLE
 
     /**
      * Generate completion items for all XTC keywords.
      *
      * @return list of completion items for keywords
      */
-    fun keywordCompletions(): List<CompletionItem> =
-        KEYWORDS.map { keyword ->
-            CompletionItem(
-                label = keyword,
-                kind = CompletionKind.KEYWORD,
-                detail = "keyword",
-                insertText = keyword,
-            )
-        }
+    fun keywordCompletions(): List<CompletionItem> = KEYWORDS.map { keyword ->
+        CompletionItem(
+            label = keyword,
+            kind = CompletionKind.KEYWORD,
+            detail = "keyword",
+            insertText = keyword,
+        )
+    }
 
     /**
      * Generate completion items for all XTC built-in types.
      *
      * @return list of completion items for built-in types
      */
-    fun builtInTypeCompletions(): List<CompletionItem> =
-        builtInTypes.map { type ->
-            CompletionItem(
-                label = type,
-                kind = CompletionKind.CLASS,
-                detail = "built-in type",
-                insertText = type,
-            )
-        }
+    fun builtInTypeCompletions(): List<CompletionItem> = builtInTypes.map { type ->
+        CompletionItem(
+            label = type,
+            kind = CompletionKind.CLASS,
+            detail = "built-in type",
+            insertText = type,
+        )
+    }
 
     fun declarationContextBuiltInTypeCompletions(): List<CompletionItem> =
         builtInTypes
-            .filterNot { it in setOf("Class", "Module", "Package", "Service", "Const", "Type", "Property", "Method") }
+            .filterNot {
+                it in
+                    setOf(
+                        "Class",
+                        "Module",
+                        "Package",
+                        "Service",
+                        "Const",
+                        "Type",
+                        "Property",
+                        "Method",
+                    )
+            }
             .map { type ->
                 CompletionItem(
                     label = type,
@@ -259,16 +269,15 @@ object LanguageConstants {
     /**
      * Format a symbol as Markdown hover text.
      *
-     * Produces a code block with the symbol's type signature (or kind + name),
-     * followed by documentation if available.
+     * Produces a code block with the symbol's type signature (or kind + name), followed by
+     * documentation if available.
      *
      * @return Markdown-formatted hover text
      */
-    fun SymbolInfo.toHoverMarkdown(): String =
-        buildString {
-            append("```xtc\n")
-            append(typeSignature ?: "${kind.name.lowercase()} $name")
-            append("\n```")
-            documentation?.let { append("\n\n$it") }
-        }
+    fun SymbolInfo.toHoverMarkdown(): String = buildString {
+        append("```xtc\n")
+        append(typeSignature ?: "${kind.name.lowercase()} $name")
+        append("\n```")
+        documentation?.let { append("\n\n$it") }
+    }
 }

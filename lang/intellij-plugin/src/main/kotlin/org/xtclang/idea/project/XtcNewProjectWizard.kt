@@ -6,12 +6,12 @@ import com.intellij.ide.wizard.NewProjectWizardBaseStep
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.ide.wizard.RootNewProjectWizardStep
-import org.xtclang.idea.XtcIconProvider
 import javax.swing.Icon
+import org.xtclang.idea.XtcIconProvider
 
 /**
- * Project generator for the New Project wizard in IntelliJ IDEA.
- * Creates XTC projects by invoking the `xtc init` CLI command.
+ * Project generator for the New Project wizard in IntelliJ IDEA. Creates XTC projects by invoking
+ * the `xtc init` CLI command.
  */
 class XtcNewProjectWizard : GeneratorNewProjectWizard {
     // `id` is the internal generator key used by IntelliJ to identify this wizard
@@ -19,7 +19,8 @@ class XtcNewProjectWizard : GeneratorNewProjectWizard {
     // label shown in the New Project wizard's generator list.
     override val id = "XTC"
     override val name = "Ecstasy"
-    override val icon: Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
+    override val icon: Icon =
+        XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
     override val ordinal = 1000
 
     override fun isEnabled() = true
