@@ -50,13 +50,14 @@ class CompilerDeclarationAnalysisTest {
     fun `module tree declaration analysis retains member source identity`() {
         CompilerTestSupport.configure()
         val root = directory.resolve("Headers.x").toFile().apply { writeText("module Headers {}") }
-        val member = directory.resolve("Headers/Box.x").toFile().apply {
-            parentFile.mkdirs()
-            writeText("class Box { String broken() = 1; }")
-        }
+        val member =
+            directory.resolve("Headers/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box { String broken() = 1; }")
+            }
         val errors = ErrorList()
         val headers = EmbeddingSupport.instance().analyzeDeclarations(ModuleInfo(root, false), null, errors).orElseThrow()
         assertThat(errors.hasSeriousErrors()).isFalse()
-        assertThat(headers.sourceTrees().map { it.source.fileName }).contains(member.path)
+        assertThat(headers.sourceTrees().map { it.source.fileName }).contains(member.canonicalPath)
     }
 }
