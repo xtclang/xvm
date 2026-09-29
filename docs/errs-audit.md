@@ -1,11 +1,28 @@
 # Failures with nowhere to go
 
-**Current hardening batch (validation pending):** L12 no longer copies the generated anonymous
-class name as a written declaration. L16/L27 add a project source-graph settings UI using LSP4IJ's
-existing store. L68 adds negotiated compiler pull diagnostics, including closed roots and result
-IDs. Shared X76/X118 are strengthened and new X123 covers pull reports in both editors. These are
-implemented checkpoints awaiting the combined backend/native receipt; the previous L64 pass does
-not validate them. See the [batch record](errs-integration-plan.md#l12-project-settings-and-l62l68-hardening-batch-2026-09-29).
+**Current hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
+add project source-graph settings; L68 adds negotiated pull diagnostics, including closed roots
+and result IDs. The combined run passes 861 compiler/backend, 54 packaged-stdio and 50 IntelliJ
+unit tests (965 total), with zero failures/errors/skips. Updated X76/X118 and new X123 pass in both
+editors; IntelliJ reports zero IDE failures. This is selected acceptance, not a full 128-case
+catalog run. See the [batch receipt](errs-integration-plan.md#l12-project-settings-and-l62l68-hardening-batch-2026-09-29)
+and the newly found [real-platform blockers](errs-integration-plan.md#platform-demo-blockers-2026-09-29).
+
+**Pull-diagnostics interop failure:** the first new IntelliJ acceptance run exposed an LSP4J
+1.0.0 decoder ambiguity in the nested `relatedDocuments` map. It terminated the JSON-RPC reader,
+leaving Rename waiting for an unread reply and causing subsequent restarts. Thread captures showed
+idle UI/compiler threads and full client pipes; the completed listener future supplied the actual
+`Ambiguous Either type` exception. The launcher now registers the missing report-kind distinction;
+protocol regressions reproduce the failure without it and pass with it. Native X76/X118/X123 now
+pass, including Rename/Undo/Redo and error/clear delivery. This was a client decoding failure,
+not expensive rename proof.
+
+**Real-platform demo failures (open):** the common+auth graph currently fails workspace
+pull with a null-type dereference in `CompositionNode.getSource`, reached by the adapter's
+source-location collector. Separately, stub cannot resolve its existing Gradle resource file.
+The next bug-fix pass is explicitly tracked as [PLAT1–PLAT3](errs-integration-plan.md#platform-demo-blockers-2026-09-29),
+including minimal-reproduction work, source/resource ownership, real-code presentation gaps and
+required regressions. These findings are not fixed by the green synthetic/native batch above.
 
 **L64 validation:** the first combined run exposed the required literal record-pattern
 update, old exact-completion expectations and optional TypeScript metadata. New regressions exposed
