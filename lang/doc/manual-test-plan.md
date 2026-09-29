@@ -2087,13 +2087,17 @@ module Advanced {
 | X119 | Rename the primary constructor property input in Library.Box with Consumer closed. | Header, constructor label and property access change together; Other.input stays unchanged. Undo restores every source. |
 | X120 | Rename a lambda input captured by a nested lambda. | Declaration and nested capture change; sibling lambda input stays unchanged. Undo restores the source. |
 | X121 | Rename a method input while a closed consumer stores its method value and also calls it by name. | Direct label and selected declaration change; positional function calls and Other.pick stay unchanged. Undo restores both files. |
-| X122 | At Box in each shared Actions variant, apply Implement or Override, then Undo/Redo/Undo. Cover ordinary signatures, a missing implementation diagnosed at construction, a conditional multiple return with a parameterized type/default, a generic method, and an existing named call through a descendant. Finish with an already implemented contract. | Both editors discover the action, compare the complete generated source and compile it. Native history restores exact source; the construction diagnostic returns after Undo and clears after Redo. No duplicate implementation is offered. |
+| X122 | At Box in each shared Actions variant, apply Implement or Override, then Undo/Redo/Undo. Cover ordinary signatures, a missing implementation diagnosed at construction, a conditional multiple return with a parameterized type/default, a generic method, an existing named call through a descendant, atomic implementation of all required members, a bundled Iterator contract, a compound return and fresh literal-default repair. Finish with an already implemented contract. | Both editors discover the action, compare the complete generated source and compile it. Native history restores exact source; the construction diagnostic returns after Undo and clears after Redo. No duplicate implementation is offered. |
 
-X122 has seven shared variants, all accepted in VS Code (`run-jWHRIT`) and IntelliJ
-(`run-17411706440244793137`). These selected receipts do not replace the full catalog run.
+X122 has eleven shared variants, all passing in VS Code `run-IsPGqC` and IntelliJ
+`run-658720962975078754`. The IntelliJ run also passes X105, which shares the native intention
+helper. Both compare complete source and use native Undo/Redo/Undo; neither receipt represents
+a full-catalog rerun. Details belong to the L63 library/complete-repair batch in the integration plan.
 Member generation uses `refactor.rewrite` so the class intention remains available without a
-diagnostic at the class name. Computed/unvalidated defaults, unsupported type spellings and
-binary contracts still produce no generation action.
+diagnostic at the class name. Library contracts stay read-only while implementations are inserted
+in user sources. Unvalidated computed defaults and unsupported type/constant spellings still refuse
+an action. The final variant checks that `read` is not offered again; other inherited overrides may
+legitimately remain available.
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
 Complete immediately after `Owner.Ite`, accept `ItemPublic`, then replace that type with
