@@ -1,7 +1,15 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 134 scenarios. X124–X129 are added for the next combined validation;
-the receipts below cover the preceding 128-case catalog. The
+The current catalog has 134 scenarios. The L69–L71/PLAT2c batch passes the ten selected cases
+CFG2/X105/X118/X122/X124–X129 in both hosts across focused runs. IntelliJ's final receipts are
+`run-8616709537315408794` (eight cases) and `run-431060674485649448` (X124/X128), both with zero
+IDE errors. VS Code's receipts are `run-KEzKf8` (six cases) and `run-AW9amt` (four cases).
+These are selected checks, not a new full 134-case run. See the
+[batch record](../../docs/errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29)
+for the rename deadlock fix, native file Rename preflight and eager action-edit compatibility.
+X124 explicitly loads and refreshes IntelliJ's external VFS fixture; automatic watching of roots
+never opened in the IDE remains a tracked follow-up. The older receipts below cover the preceding
+128-case catalog. The
 [2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the full selection, resumed cases, failures and focused corrections separately. Historical
 113-case full-run receipts below are preserved as historical evidence. All 128 scenarios plus START
@@ -2133,7 +2141,7 @@ module Advanced {
 | X125 | Hover a generic echo call; request signature help before an existing positional/named argument; complete direct and chained `.tr()`; navigate the narrowed JsonObject variable's type. | Hover identifies echo, active parameters are 1/0, completion offers trim, and type definition opens bundled Map.x. |
 | X126 | Request full tokens, insert a leading newline, request a delta and a range when negotiated, then close/reopen and request using the old ID. | Applying edits reconstructs the full result; empty ranges are empty; retired IDs return full data. Unsupported client operations are refused explicitly. |
 | X127 | Request an unused-import action, resolve its edit when negotiated, edit the source, then try resolving the old handle. | Initial lazy actions omit edits; resolve returns versioned edits without changing the title; obsolete handles are refused. Eager-only clients retain complete actions. |
-| X128 | Rename Box.x to Crate.x and an implicit tools package folder to util through the IDE file API. | The installed file listener obtains compiler-proven declaration/reference edits before moving files; root and member diagnostics remain clear. |
+| X128 | Rename Box.x to Crate.x and an implicit tools package folder to util using the IntelliJ project-tree Rename action (Shift+F6), or the VS Code file Rename action. | Compiler-proven declaration/reference edits and the move apply together; root and member diagnostics remain clear. IntelliJ invokes the registered handler and actual Rename dialog. Raw VFS moves occur too early for LSP4IJ's before-listener to obtain proof and are not equivalent coverage. |
 | X129 | Import an evaluated Gradle model with processed resources; refresh to empty roots and back; try a malformed report; enable an explicit empty-resource override and refresh again; reset to the build model. | Diagnostics follow the imported paths, malformed reports retain the last valid import, refresh preserves explicit settings, and resetting restores the model. Both drivers exercise the installed client configuration path. |
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
