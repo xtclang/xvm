@@ -38,8 +38,7 @@ internal class XdkProjectQueries(
     private val cache: AtomicReference<Map<String, XdkWorkspaceNavigation>> =
         AtomicReference(emptyMap()),
     private val discoverImports: Boolean = false,
-    private val diagnosticCache: AtomicReference<Map<String, List<CompilationResult>>> =
-        AtomicReference(emptyMap()),
+    private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -58,9 +57,9 @@ internal class XdkProjectQueries(
     /** Read-only graph compilation, with no live AST installation or artificial open buffers. */
     fun diagnostics(): List<CompilationResult> {
         val revision = revision()
-        diagnosticCache.get()[revision]?.let { cached ->
-            if (isCurrent()) return cached
-        }
+        val previous = diagnosticCache.snapshot()
+        if (previous.revision == revision && isCurrent()) return previous.results
+        val builds = linkedMapOf<String, XdkDiagnosticIndex.Build>()
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val results =
             project.buildOrder().map { module ->
@@ -95,46 +94,65 @@ internal class XdkProjectQueries(
                     val inputs = artifacts.filterKeys {
                         it !in project.modules || it in sourceDependencies
                     }
-                    val open = XdkDependencies(inputs.values.toList()).open()
-                    val heard = ErrorList()
-                    val errors = ErrorListener.cancellable(heard, cancelled)
-                    val compilation = compileTree(source, open.repository, errors)
-                    checkCurrent()
-                    val declarations =
-                        XdkAst.declarationLocations(compilation.sourceTrees(), source.sourceUris)
-                    val fallback = Source("", source.uri(module.root))
-                    val diagnostics =
-                        heard.errors.map {
-                            it.toDiagnostic(fallback, source.sourceUris, declarations)
-                        }
-                    if (compilation.succeeded() && !heard.hasSeriousErrors()) {
-                        val artifact = compilation.toDependency()
-                        if (artifact.module == module.name) artifacts[module.name] = artifact
-                        else
-                            return@map CompilationResult.failure(
-                                module.uri,
-                                listOf(
-                                    Diagnostic(
-                                        location = Location(module.uri, 0, 0, 0, 0),
-                                        severity = Diagnostic.Severity.ERROR,
-                                        message =
-                                            "Expected module ${module.name}, found ${artifact.module}",
-                                        code = "PROJECT-MODULE",
-                                        source = "xtc",
+                    val key =
+                        XdkDiagnosticIndex.Key(
+                            module.name,
+                            source.inputs,
+                            inputs.mapValues { it.value.revision },
+                        )
+                    val build =
+                        previous.builds[module.uri]?.takeIf { it.key == key }
+                            ?: run {
+                                val open = XdkDependencies(inputs.values.toList()).open()
+                                val heard = ErrorList()
+                                val errors = ErrorListener.cancellable(heard, cancelled)
+                                val compilation = compileTree(source, open.repository, errors)
+                                checkCurrent()
+                                val declarations =
+                                    XdkAst.declarationLocations(
+                                        compilation.sourceTrees(),
+                                        source.sourceUris,
                                     )
-                                ),
-                            )
-                    }
-                    CompilationResult.withDiagnostics(
-                        module.uri,
-                        diagnostics,
-                        emptyList(),
-                        source.documentUris,
-                    )
+                                val fallback = Source("", source.uri(module.root))
+                                val diagnostics =
+                                    heard.errors.map {
+                                        it.toDiagnostic(fallback, source.sourceUris, declarations)
+                                    }
+                                val artifact =
+                                    if (compilation.succeeded() && !heard.hasSeriousErrors())
+                                        compilation.toDependency()
+                                    else null
+                                val items =
+                                    if (artifact != null && artifact.module != module.name)
+                                        listOf(
+                                            Diagnostic(
+                                                location = Location(module.uri, 0, 0, 0, 0),
+                                                severity = Diagnostic.Severity.ERROR,
+                                                message =
+                                                    "Expected module ${module.name}, found ${artifact.module}",
+                                                code = "PROJECT-MODULE",
+                                                source = "xtc",
+                                            )
+                                        )
+                                    else diagnostics
+                                XdkDiagnosticIndex.Build(
+                                    key,
+                                    CompilationResult.withDiagnostics(
+                                        module.uri,
+                                        items,
+                                        emptyList(),
+                                        source.documentUris,
+                                    ),
+                                    artifact?.takeIf { it.module == module.name },
+                                )
+                            }
+                    builds[module.uri] = build
+                    build.artifact?.let { artifacts[module.name] = it }
+                    build.result
                 }
             }
         if (!isCurrent()) throw CancellationException()
-        diagnosticCache.set(mapOf(revision to results))
+        diagnosticCache.replace(XdkDiagnosticIndex.Snapshot(revision, results, builds.toMap()))
         return results
     }
 
