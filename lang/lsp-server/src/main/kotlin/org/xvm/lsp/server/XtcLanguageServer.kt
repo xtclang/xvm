@@ -12,6 +12,7 @@ import org.eclipse.lsp4j.CodeLensOptions
 import org.eclipse.lsp4j.CompletionOptions
 import org.eclipse.lsp4j.ConfigurationItem
 import org.eclipse.lsp4j.ConfigurationParams
+import org.eclipse.lsp4j.DiagnosticRegistrationOptions
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentOnTypeFormattingOptions
@@ -36,6 +37,8 @@ import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.WatchKind
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceFoldersOptions
 import org.eclipse.lsp4j.WorkspaceServerCapabilities
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -101,6 +104,36 @@ class XtcLanguageServer(
 
     internal val supportsFileRenames: Boolean
         get() = editCapabilities.get().renameFiles
+
+    private data class DiagnosticCapabilities(
+        val pull: Boolean = false,
+        val related: Boolean = false,
+        val refresh: Boolean = false,
+    )
+
+    private val diagnosticCapabilities = AtomicReference(DiagnosticCapabilities())
+    internal val usesPullDiagnostics: Boolean
+        get() = diagnosticCapabilities.get().pull
+
+    internal val supportsRelatedDiagnostics: Boolean
+        get() = diagnosticCapabilities.get().related
+
+    internal fun refreshDiagnostics() {
+        if (diagnosticCapabilities.get().refresh) {
+            // Never call transport code while holding the compiler/document publication lock.
+            CompletableFuture.runAsync {
+                client?.refreshDiagnostics()?.exceptionally { failure ->
+                    logger.debug("workspace/diagnostic/refresh failed", failure)
+                    null
+                }
+            }
+        }
+    }
+
+    internal fun workspaceDiagnostics(
+        params: WorkspaceDiagnosticParams
+    ): CompletableFuture<WorkspaceDiagnosticReport> =
+        textDocumentService.workspaceDiagnostics(params)
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
@@ -210,6 +243,15 @@ class XtcLanguageServer(
             }
         }
 
+        val pull = adapter is XdkAdapter && params.capabilities?.textDocument?.diagnostic != null
+        diagnosticCapabilities.set(
+            DiagnosticCapabilities(
+                pull,
+                pull &&
+                    params.capabilities?.textDocument?.diagnostic?.relatedDocumentSupport == true,
+                pull && params.capabilities?.workspace?.diagnostics?.refreshSupport == true,
+            )
+        )
         val workspaceEdits = params.capabilities?.workspace?.workspaceEdit
         editCapabilities.set(
             EditCapabilities(
@@ -524,6 +566,9 @@ class XtcLanguageServer(
     private fun buildServerCapabilities(): ServerCapabilities =
         ServerCapabilities().apply {
             experimental = mapOf("xtcRenameProposal" to 1)
+            if (usesPullDiagnostics)
+                diagnosticProvider =
+                    DiagnosticRegistrationOptions(true, true).apply { identifier = "xtc" }
             // Text document sync - Full means the client sends the entire document on each change.
             // Incremental sync (sending only deltas) is more efficient but requires diffing logic.
             textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
@@ -877,6 +922,7 @@ class XtcLanguageServer(
         diagnostics: List<Diagnostic>,
         version: Int? = null,
     ) {
+        if (usesPullDiagnostics) return
         val currentClient = client ?: return
         val lspDiagnostics = diagnostics.map { it.toLsp(uri) }
         currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics, version))
