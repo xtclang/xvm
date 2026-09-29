@@ -6,6 +6,8 @@ import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.partial.IncompleteExpression;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 /** A written argument cursor and its slot, derived from syntax rather than cached on an AST node. */
 record PartialArgument(IncompleteStatement cursor, int index) {
