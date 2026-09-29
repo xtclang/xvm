@@ -448,6 +448,7 @@ Implement four checkpoints before combined validation:
 | Literal arguments | `1c1052158` | Compiler argument probes, immutable literal facts and adapter/protocol Value support; include record-pattern and mid-token recovery corrections. |
 | Documentation and presentation | `65bfe5b3a` | Detached documentation, deterministic ordering and signature metadata; include passive method-comment accessor and source copying. |
 | Shared editor acceptance | `6e7932b61` | X97/X108 data and native metadata assertions in both drivers; include TypeScript optional-field corrections. |
+| Validation corrections and receipts | `fd54249f8` | Distribute resolver, parser, comment-accessor, compatibility and driver corrections into their preceding slices; retain the combined backend/native evidence. |
 
 These development commits require their validation corrections when extracted; no independent
 green result is claimed for an intermediate checkpoint.
