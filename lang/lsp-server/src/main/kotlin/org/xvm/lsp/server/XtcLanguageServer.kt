@@ -292,11 +292,15 @@ class XtcLanguageServer(
             synchronized(compilerSettings) {
                 compilerSettings.set(settings)
                 try {
-                    CompilerConfiguration.modules(
-                            CompilerConfiguration.initial(params.initializationOptions),
-                            folders,
-                        )
-                        ?.let(::replaceCompilerSourceModules)
+                    val raw = CompilerConfiguration.initial(params.initializationOptions)
+                    val model = CompilerConfiguration.buildModel(raw)
+                    if (model != null)
+                        textDocumentService.refreshDependencies {
+                            adapter.replaceBuildInputs(model.resolve())
+                        }
+                    else
+                        CompilerConfiguration.modules(raw, folders)
+                            ?.let(::replaceCompilerSourceModules)
                 } catch (e: IllegalArgumentException) {
                     return CompletableFuture.failedFuture(
                         ResponseErrorException(
@@ -464,7 +468,14 @@ class XtcLanguageServer(
         synchronized(compilerSettings) {
             if (settings.closed || compilerSettings.get() !== settings) return
             try {
-                if (CompilerConfiguration.automatic(raw)) {
+                val model = CompilerConfiguration.buildModel(raw)
+                if (model != null) {
+                    val inputs = model.resolve()
+                    textDocumentService.refreshDependencies {
+                        (adapter as XdkAdapter).replaceBuildInputs(inputs)
+                    }
+                    updateResourceWatchers()
+                } else if (CompilerConfiguration.automatic(raw)) {
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).discoverSourceModules()
                     }
@@ -919,6 +930,19 @@ class XtcLanguageServer(
     //   client.sendRequest("xtc/healthCheck")
     //
     // =========================================================================
+
+    /** Effective immutable inputs for host configuration views and explicit override creation. */
+    @JsonRequest("xtc/compilerSourceModules")
+    fun compilerSourceModules(): CompletableFuture<List<SourceModuleConfiguration>> =
+        supplyAsync(
+            "xtc/compilerSourceModules",
+            "effective inputs",
+        ) {
+            (adapter as? XdkAdapter)
+                ?.effectiveSourceModules()
+                ?.map(::SourceModuleConfiguration)
+                .orEmpty()
+        }
 
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
     @JsonRequest("xtc/rename")

@@ -70,6 +70,10 @@
             }
         ],
         "commands": [
+            { "command": "xtc.configureCompilerPaths", "title": "XTC: Configure Compiler Paths" },
+            { "command": "xtc.showCompilerPaths", "title": "XTC: Show Effective Compiler Paths" },
+            { "command": "xtc.refreshCompilerBuild", "title": "XTC: Refresh Gradle Compiler Model" },
+            { "command": "xtc.prepareCompilerInputs", "title": "XTC: Prepare Generated Compiler Resources" },
             {
                 "command": "xtc.createProject",
                 "title": "Ecstasy: Create New Project"
@@ -181,7 +185,7 @@
                             "name": { "type": "string", "minLength": 1, "description": "Declared Ecstasy module name." },
                             "uri": { "type": "string", "minLength": 1, "description": "Module .x root: a file URI or URI relative to the workspace folder." },
                             "dependencies": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "default": [], "description": "Names of source modules this module imports." },
-                            "resourceRoots": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1 }, "uniqueItems": true, "default": null, "description": "Ordered resource root file URIs or workspace-relative paths. Omitted/null uses compiler layout deduction; [] disables resources. Explicit roots replace the defaults. Custom Gradle source sets currently require these explicit paths." }
+                            "resourceRoots": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1 }, "uniqueItems": true, "default": null, "description": "Ordered resource root file URIs or workspace-relative paths. Omitted/null uses compiler layout deduction; [] disables resources. Explicit roots replace the defaults. Gradle model imports use evaluated processed resources unless an explicit graph overrides them." }
                         }
                     }
                 },

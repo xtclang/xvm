@@ -8,6 +8,10 @@ import com.intellij.driver.sdk.Project
     plugin = "org.xtclang.playbook.probe",
 )
 interface CompilerSettingsPage {
+    fun useBuildModel(project: Project): String
+
+    fun refreshBuildModel(project: Project)
+
     fun installProjectGraph(project: Project)
 
     fun dismissExpectedConfigurationError(project: Project)
