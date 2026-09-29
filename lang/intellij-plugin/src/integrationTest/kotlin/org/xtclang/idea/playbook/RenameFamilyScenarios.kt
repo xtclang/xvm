@@ -26,10 +26,7 @@ fun Driver.renameFamily(
     val files = data.rows("files")
 
     fun graphContains(name: String): Boolean =
-        service<LspSettings>()
-            .getLanguageServerSettings("xtcLanguageServer")
-            ?.getConfigurationContent()
-            ?.contains(name) == true
+        utility(CompilerSettingsPage::class).content(singleProject())?.contains(name) == true
 
     fun contents(file: String): String {
         val path = root.resolve(file)

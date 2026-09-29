@@ -80,7 +80,7 @@ class XdkPullDiagnosticsTest {
             )
             val first = session.workspace().items.single().left
             assertThat(first.items).isNotEmpty()
-            assertThat(first.version).isNull()
+            assertThat(first.version == null).isTrue()
             assertThat(session.adapter.getCachedResult(first.uri)).isNull()
             assertThat(
                     session
@@ -124,11 +124,20 @@ class XdkPullDiagnosticsTest {
             session.open(app.toURI().toString(), app.readText(), 7)
             val report = session.pull(app.toURI().toString()).left
             assertThat(report.items.map { it.code.left }).contains("DEPENDENCY-FAILED")
-            assertThat(report.relatedDocuments.getValue(lib.toURI().toString()).left.items)
+            assertThat(
+                    report.relatedDocuments
+                        .getValue(lib.canonicalFile.toURI().toString())
+                        .left
+                        .items
+                )
                 .isNotEmpty()
             val workspace = session.workspace().items.map { it.left }
             assertThat(workspace.single { it.uri == app.toURI().toString() }.version).isEqualTo(7)
-            assertThat(workspace.single { it.uri == lib.toURI().toString() }.version).isNull()
+            assertThat(
+                    workspace.single { it.uri == lib.canonicalFile.toURI().toString() }.version ==
+                        null
+                )
+                .isTrue()
         }
     }
 
@@ -154,7 +163,7 @@ class XdkPullDiagnosticsTest {
                     .single()
                     .left
             assertThat(removed.items).isEmpty()
-            assertThat(removed.version).isNull()
+            assertThat(removed.version == null).isTrue()
         }
     }
 

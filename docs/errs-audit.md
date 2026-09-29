@@ -1,5 +1,12 @@
 # Failures with nowhere to go
 
+**Current hardening batch (validation pending):** L12 no longer copies the generated anonymous
+class name as a written declaration. L16/L27 add a project source-graph settings UI using LSP4IJ's
+existing store. L68 adds negotiated compiler pull diagnostics, including closed roots and result
+IDs. Shared X76/X118 are strengthened and new X123 covers pull reports in both editors. These are
+implemented checkpoints awaiting the combined backend/native receipt; the previous L64 pass does
+not validate them. See the [batch record](errs-integration-plan.md#l12-project-settings-and-l62l68-hardening-batch-2026-09-29).
+
 **L64 validation:** the first combined run exposed the required literal record-pattern
 update, old exact-completion expectations and optional TypeScript metadata. New regressions exposed
 an invalid type-goal resolver owner and missing mid-token value recovery; fixes reuse real lexical
