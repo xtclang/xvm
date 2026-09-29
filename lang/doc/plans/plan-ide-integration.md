@@ -791,3 +791,7 @@ composite root's `gradle.properties` at settings time).
 
 The next acceptance batch adds shared X124 external-resource configuration/repair and X125 precise
 platform regressions in both editors. Validation is pending; prior 128-case receipts do not cover them.
+
+L69 range/delta is now implemented with negotiated capabilities, bounded detached token history,
+close/restart retirement and semantic refresh. Shared X126 and backend/transport regressions await
+the combined batch run. Full tokens remain available to clients without range/delta capabilities.

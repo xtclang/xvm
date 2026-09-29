@@ -792,12 +792,13 @@ Five separate implementation commits precede combined validation:
 1. Acceptance: correct single-file VS Code task outputs; expire CFG2's expected cyclic-graph
    notification after asserting rejection; add shared X124 external-resource Apply/Reset/repair
    and X125 exact platform regressions. Validation pending until all five checkpoints are ready.
-2. L69: negotiated semantic-token range/delta and bounded result lifetime.
+2. L69: negotiated semantic-token range/delta and bounded result lifetime; implementation and
+   regression tests written, validation pending.
 3. L70: versioned lazy completion/code-action resolution; other resolvers remain separate.
 4. L71: compiler-proven file-tree rename edits and create/delete lifecycle participation.
 5. PLAT2c: evaluated Gradle inputs and origin-aware effective paths in both hosts.
 
-The new catalog has 130 scenarios. The previous 128-case receipts remain historical evidence;
+The new catalog has 131 scenarios. The previous 128-case receipts remain historical evidence;
 new cases and changes are not validated by those receipts. X118 now carries ordered custom
 resource roots through native module rename and Undo in both hosts.
 
@@ -1030,9 +1031,11 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   combined batch and selected X123 pass in both editors, including the nested-report decoding
   correction. PLAT1's real-platform source-location crash is fixed; the later native demo found
   and corrected a standalone closed-member pull gap, recorded above.
-- [ ] **L69 — Semantic token range/delta.** Add `textDocument/semanticTokens/range` and
-  `textDocument/semanticTokens/full/delta`, result-ID lifetime and capability-aware refresh.
-  Existing requests return full-document tokens only.
+- [ ] **L69 — Semantic token range/delta (implemented; batch validation pending).** Negotiated
+  range/delta handlers use detached, connection-local result IDs, a bounded history (128 reports /
+  one million integers), full fallback after eviction/foreign IDs/close/restart, and negotiated
+  refresh on semantic changes. Range reports preserve UTF-16 coordinates. Unit, compiler-service,
+  packaged transport and shared X126 coverage are written; this checkbox awaits the combined run.
 - [ ] **L70 — Lazy resolve operations.** Add capability-negotiated `completionItem/resolve`,
   `codeAction/resolve`, `codeLens/resolve`, `documentLink/resolve`, `inlayHint/resolve` and
   `workspaceSymbol/resolve`. Carry stable detached IDs, reject obsolete data and respect each

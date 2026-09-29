@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SemanticTokensLegend
+import org.eclipse.lsp4j.SemanticTokensServerFull
 import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelpOptions
@@ -151,6 +152,36 @@ class XtcLanguageServer(
         val closed: Boolean = false,
     )
 
+    private data class TokenCapabilities(
+        val range: Boolean = false,
+        val delta: Boolean = false,
+        val refresh: Boolean = false,
+    )
+
+    private val tokenCapabilities = AtomicReference(TokenCapabilities())
+
+    internal fun requireSemanticTokenRequest(delta: Boolean) {
+        val options = tokenCapabilities.get()
+        if (!(if (delta) options.delta else options.range))
+            throw ResponseErrorException(
+                ResponseError(
+                    ResponseErrorCode.MethodNotFound,
+                    "Semantic token operation was not negotiated",
+                    null,
+                )
+            )
+    }
+
+    internal fun refreshSemanticTokens() {
+        if (tokenCapabilities.get().refresh)
+            CompletableFuture.runAsync {
+                client?.refreshSemanticTokens()?.exceptionally { failure ->
+                    logger.debug("workspace/semanticTokens/refresh failed", failure)
+                    null
+                }
+            }
+    }
+
     private val compilerSettings = AtomicReference(CompilerSettings())
 
     companion object {
@@ -262,6 +293,17 @@ class XtcLanguageServer(
                 params.capabilities?.workspace?.didChangeWatchedFiles?.dynamicRegistration == true,
                 params.capabilities?.workspace?.didChangeWatchedFiles?.relativePatternSupport ==
                     true,
+            )
+        )
+
+        val tokenRequests = params.capabilities?.textDocument?.semanticTokens?.requests
+        val tokens =
+            semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
+        tokenCapabilities.set(
+            TokenCapabilities(
+                tokens && tokenRequests?.range?.let { it.isRight || it.left == true } == true,
+                tokens && tokenRequests?.full?.right?.delta == true,
+                tokens && params.capabilities?.workspace?.semanticTokens?.refreshSupport == true,
             )
         )
 
@@ -650,7 +692,11 @@ class XtcLanguageServer(
                                 SemanticTokenLegend.tokenTypes,
                                 SemanticTokenLegend.tokenModifiers,
                             )
-                        full = Either.forLeft(true)
+                        full =
+                            if (tokenCapabilities.get().delta)
+                                Either.forRight(SemanticTokensServerFull(true))
+                            else Either.forLeft(true)
+                        if (tokenCapabilities.get().range) range = Either.forLeft(true)
                     }
             } else {
                 logger.warn(
