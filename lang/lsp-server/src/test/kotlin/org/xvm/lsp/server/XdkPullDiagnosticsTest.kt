@@ -134,6 +134,10 @@ class XdkPullDiagnosticsTest {
             val workspace = session.workspace().items.map { it.left }
             assertThat(workspace.single { it.uri == app.toURI().toString() }.version).isEqualTo(7)
             assertThat(
+                    workspace.single { it.uri == app.toURI().toString() }.items.map { it.code.left }
+                )
+                .contains("DEPENDENCY-FAILED")
+            assertThat(
                     workspace.single { it.uri == lib.canonicalFile.toURI().toString() }.version ==
                         null
                 )
@@ -213,6 +217,23 @@ class XdkPullDiagnosticsTest {
             }
         } finally {
             release.countDown()
+        }
+    }
+
+    @Test
+    fun `closed document pulls preserve error ranges across equivalent file URI spellings`() {
+        val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(XdkSourceModule("Pull", file.toURI().toString()))
+            )
+            val first = session.pull(file.toPath().toUri().toString()).left
+            assertThat(first.items).isNotEmpty()
+            assertThat(first.items.first().range.start.character)
+                .isEqualTo(BROKEN.indexOf("missing"))
+            assertThat(first.items.first().relatedInformation).isNull()
+            val second = session.pull(file.canonicalFile.toURI().toString(), first.resultId)
+            assertThat(second.right.resultId).isEqualTo(first.resultId)
         }
     }
 
