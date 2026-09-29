@@ -224,9 +224,9 @@ local or import-alias declarations and inherited written member contracts, prese
 |---|---|---|
 | Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports and proven implement/override | L62–L63 |
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
-| Semantic-token range/delta requests | Negotiated range/delta with bounded result history; validation pending | L69 / X126 |
-| Completion/action/lens/link/inlay/workspace-symbol resolve requests | Completion docs/action edits implemented with version guards; other four resolvers remain eager; validation pending | L70 / X127 |
-| File-operation pre-edit requests; explicit create/delete notifications | All six hooks; compiler-proven file/package/container moves; cross-package qualification and explicit graph replacement still refused; validation pending | L71 / X128 |
+| Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
+| Completion/action/lens/link/inlay/workspace-symbol resolve requests | Completion docs/action edits pass with version guards. IntelliJ keeps actions eager because LSP4IJ 0.21.0 loses Redo for resolved edits; other four resolvers remain eager. | L70 / X127 |
+| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Other IntelliJ move actions need preflight integration; cross-package qualification and explicit graph replacement remain refused. | L71 / X128 |
 | Save-time edits, incremental sync, multiple-range formatting | Full synchronization, didSave handling, whole/single-range/on-type formatting | L72 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Detached identities scoped to compiler snapshots/graphs | L74 |
@@ -789,26 +789,36 @@ composite root's `gradle.properties` at settings time).
 - **[vscode-specific.md](./vscode-specific.md)** - VS Code-specific roadmap beyond standard LSP behavior
 - *Internal documentation* - Comprehensive architecture analysis and compiler modification plans
 
-The next acceptance batch adds shared X124 external-resource configuration/repair and X125 precise
-platform regressions in both editors. Validation is pending; prior 128-case receipts do not cover them.
+The current acceptance batch adds shared X124 external-resource configuration/repair and X125 precise
+platform regressions in both editors. See the [current receipts](../../../docs/errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29);
+prior 128-case receipts do not cover these additions.
 
 L69 range/delta is now implemented with negotiated capabilities, bounded detached token history,
-close/restart retirement and semantic refresh. Shared X126 and backend/transport regressions await
-the combined batch run. Full tokens remain available to clients without range/delta capabilities.
+close/restart retirement and semantic refresh. Shared X126 and backend/transport regressions pass.
+Full tokens remain available to clients without range/delta capabilities.
 
 L70 now negotiates lazy completion documentation and code-action edits with bounded detached
 handles and stale-result rejection. Completion insertion/type details remain eager; compiler proof
-is still performed before offering an action. X127 plus service tests await batch validation.
+is still performed before offering an action. X127 and service tests pass. IntelliJ negotiates
+eager action edits to avoid LSP4IJ 0.21.0's undo-transparent resolve path; its completion
+documentation still resolves lazily. Native lazy-action application is an explicit follow-up.
 Code lens, link, inlay-hint and workspace-symbol resolve remain explicit follow-ups.
 
 L71 pre/post file-operation handlers are implemented, with compiler-proven member/package renames,
-combined batch proof and safe container moves. X128 drives the installed native file listeners;
-validation is pending. Cross-package qualification rewrites and explicit source-graph replacement
-are still refused. LSP pre-operation null replies cannot prevent the user from moving a file.
+combined batch proof and safe container moves. X128 drives each host's file Rename path;
+IntelliJ uses an XTC handler before disk mutation because its low-level VFS before-event occurs
+after the physical rename. Native X128 passes the scope/name dialogs and resulting edits. The handler refuses unproven moves;
+raw VFS operations still cannot promise reference updates. Native cross-directory/container
+actions need their own preflight integration. Cross-package qualification rewrites and explicit
+source-graph replacement are still refused. Ordinary LSP pre-operation null replies cannot
+prevent other host actions from moving a file.
 
 PLAT2c/L67 now imports the evaluated Gradle model in both hosts and exposes effective source/resource
 paths and origin. Explicit overrides survive refresh; invalid model files retain the last valid host
 import. Gradle export/prepare actions run in the host, never in LSP. Both `.gradle` and `.gradle.kts`
-are handled by Gradle itself. TestKit, importer/server tests and shared X129 await validation.
+are handled by Gradle itself. TestKit, importer/server tests and shared X129 pass.
 Automatic IntelliJ Gradle-sync refresh and aggregation of nested/composite build roots remain
 follow-ups; each exported root has an explicit refresh action.
+External-resource X124 passes create/delete/repair after explicit native VFS refresh and directory
+loading. Automatic IntelliJ watching of external roots that have never been opened remains a
+PLAT2/L67 follow-up; this acceptance does not prove that lifecycle.
