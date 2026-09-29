@@ -59,9 +59,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     // Configuration-time captured data to avoid Project references during execution
     //private final Provider<@NotNull Directory> projectDir;
     private final String sourceSetName;
-    private final Directory resourceDir;
+    private final Provider<Directory> resourceDir;
     private final Directory outputDir;
-    private final Set<File> sourceSetDirs;
+    private final FileCollection sourceSetDirs;
 
     // Source-set-specific module dependencies (avoids circular dependency with own output)
     private final ConfigurableFileCollection compileModuleDependencies;
@@ -91,9 +91,9 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
         // Capture source set data at configuration time to avoid Project references during execution
         this.sourceSetName = sourceSet.getName();
-        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet).get();
+        this.resourceDir = XtcProjectDelegate.getXtcResourceOutputDirectory(project, sourceSet);
         this.outputDir = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project, sourceSet).get();
-        this.sourceSetDirs = sourceSet.getAllSource().getSrcDirs();
+        this.sourceSetDirs = sourceSet.getAllSource().getSourceDirectories();
 
         // Build source-set-specific module dependencies for compilation
         // Main compile: only xtcModule (external deps)
@@ -154,7 +154,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @Internal
     public Directory getResourceDirectoryInternal() {
-        return resourceDir;
+        return resourceDir.get();
     }
 
     public String resolveXtcVersion() {
@@ -275,10 +275,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
 
     @InputFiles
     @PathSensitive(PathSensitivity.RELATIVE)
-    Provider<@NotNull Directory> getResourceDirectory() {
-        // TODO: This is wrong. The compile task should not be the one depending on resources src, but resources build.
-        //   But that is java behavior, so make sure at least we get the resource input dependency.
-        return objects.directoryProperty().value(getResourceDirectoryInternal());
+    public Provider<@NotNull Directory> getResourceDirectory() {
+        return resourceDir;
     }
 
     @OutputDirectory
@@ -375,7 +373,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> getSourceDirectoriesInternal() {
-        return sourceSetDirs;
+        return Set.copyOf(sourceSetDirs.getFiles());
     }
 
     private String resolveOutputFilename(final String from) {

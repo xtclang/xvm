@@ -401,7 +401,8 @@ public class XtcProjectDelegate {
     }
 
     public static Provider<@NotNull Directory> getXtcResourceOutputDirectory(final Project project, final SourceSet sourceSet) {
-        return project.getLayout().getBuildDirectory().dir(XTC_LANGUAGE_NAME + '/' + sourceSet.getName() + "/resources");
+        final var resources = project.getTasks().named(getProcessResourcesTaskName(sourceSet), Copy.class);
+        return project.getLayout().dir(resources.map(Copy::getDestinationDir));
     }
 
     public static String getCompileTaskName(final SourceSet sourceSet) {
@@ -442,7 +443,7 @@ public class XtcProjectDelegate {
         // set as a dependency to the compile task instead of to the classes task, which is the "assemble" for Java compilation.
         // Capture values at configuration time for configuration cache compatibility
         final var sourceSetName = sourceSet.getName();
-        final var resourceDirs = sourceSet.getResources().getSrcDirs();
+        final var resourceDirs = sourceSet.getResources();
         // Resolve output directory without capturing SourceSet reference
         final var outputDir = project.getLayout().getBuildDirectory().dir(XTC_LANGUAGE_NAME + '/' + sourceSetName + "/resources");
 
@@ -450,9 +451,10 @@ public class XtcProjectDelegate {
             task.setDescription("Processes XTC resources for the " + sourceSetName + " source set.");
             task.from(resourceDirs);
             task.into(outputDir);
-            task.doLast(_ -> task.getLogger().info("[plugin] Processed XTC resources for source set: {} (srcDirs: {}, destination: {})",
-                sourceSetName, resourceDirs, outputDir.get()));
         });
+
+        sourceSet.getOutput().dir(getXtcResourceOutputDirectory(project, sourceSet));
+        XtcLspModelIntegration.register(project, sourceSet, compileTask, processResourcesTask);
 
         // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
         // the compile task at all, is something we do if any of its inputs have changed, and that effectively means
@@ -816,12 +818,8 @@ public class XtcProjectDelegate {
             // Add output directories for modules (compile<sourceSetName>Xtc output) and resources
             // (sourceSet.output.resourcesDir) to the task, so that dependencies will work.
             final var outputModules = getXtcSourceSetOutputDirectory(project, sourceSet);
-            final var outputResources = getXtcResourceOutputDirectory(project, sourceSet);
             logger.info("[plugin] Configured sourceSets.{}.outputModules  : {}", sourceSetName, outputModules);
-            logger.info("[plugin] Configured sourceSets.{}.outputResources  : {}", sourceSetName, outputResources.get());
-            output.dir(outputResources); // TODO is this really correct? We have the resource dir as a special property in the sourceSetOutput already?
             output.dir(outputModules);
-            output.setResourcesDir(outputResources);
         }
     }
 
