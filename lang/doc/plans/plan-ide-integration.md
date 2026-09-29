@@ -28,7 +28,8 @@ This document describes the language tooling implemented in the `lang/` director
 
 The current L64 batch adds syntax-labelled recursive formal completion, compiler-validated argument
 literals, copied candidate documentation and stable completion/signature ordering. Shared X97/X108
-contain the corresponding editor assertions; combined and native execution are pending. This is a
+contain the corresponding editor assertions. The batch passes 337 backend/protocol tests and all
+37 selected variants in both editors; IntelliJ also passes START with zero IDE errors. This is a
 bounded extension, not closure of L64's remaining snippets, imports and callable/recovery contexts.
 
 The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
