@@ -7,6 +7,7 @@ import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
+import org.eclipse.lsp4j.CodeActionOptions
 import org.eclipse.lsp4j.CodeLensOptions
 import org.eclipse.lsp4j.CompletionOptions
 import org.eclipse.lsp4j.ConfigurationItem
@@ -152,6 +153,18 @@ class XtcLanguageServer(
         val closed: Boolean = false,
     )
 
+    private data class ResolveCapabilities(
+        val completionDocumentation: Boolean = false,
+        val actionEdit: Boolean = false,
+    )
+
+    private val resolveCapabilities = AtomicReference(ResolveCapabilities())
+    internal val resolvesCompletionDocumentation: Boolean
+        get() = resolveCapabilities.get().completionDocumentation
+
+    internal val resolvesCodeActionEdit: Boolean
+        get() = resolveCapabilities.get().actionEdit
+
     private data class TokenCapabilities(
         val range: Boolean = false,
         val delta: Boolean = false,
@@ -296,6 +309,20 @@ class XtcLanguageServer(
             )
         )
 
+        val textCapabilities = params.capabilities?.textDocument
+        resolveCapabilities.set(
+            ResolveCapabilities(
+                textCapabilities
+                    ?.completion
+                    ?.completionItem
+                    ?.resolveSupport
+                    ?.properties
+                    ?.contains("documentation") == true,
+                textCapabilities?.codeAction?.dataSupport == true &&
+                    textCapabilities.codeAction.resolveSupport?.properties?.contains("edit") ==
+                        true,
+            )
+        )
         val tokenRequests = params.capabilities?.textDocument?.semanticTokens?.requests
         val tokens =
             semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
@@ -636,7 +663,7 @@ class XtcLanguageServer(
             completionProvider =
                 CompletionOptions().apply {
                     triggerCharacters = listOf(".", ":", "<")
-                    resolveProvider = false
+                    resolveProvider = resolvesCompletionDocumentation
                 }
             definitionProvider = Either.forLeft(true)
             referencesProvider = Either.forLeft(true)
@@ -649,7 +676,10 @@ class XtcLanguageServer(
 
             // --- Editing features (treesitter) ---
             renameProvider = Either.forRight(RenameOptions().apply { prepareProvider = true })
-            codeActionProvider = Either.forLeft(true)
+            codeActionProvider =
+                if (resolvesCodeActionEdit)
+                    Either.forRight(CodeActionOptions().apply { resolveProvider = true })
+                else Either.forLeft(true)
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider = Either.forLeft(true)
             documentOnTypeFormattingProvider =
