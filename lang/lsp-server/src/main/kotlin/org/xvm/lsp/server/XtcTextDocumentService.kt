@@ -136,6 +136,8 @@ class XtcTextDocumentService(
     private var closed = false
     private val diagnosticReports = DiagnosticReports()
     private val semanticTokenReports = SemanticTokenReports()
+    private val completionReports = ResolveReports<String>()
+    private val actionReports = ResolveReports<AdapterWorkspaceEdit>()
     private var diagnosticRevision = 0L
     private val publishedByScope = mutableMapOf<String, Set<String>>()
     private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
@@ -324,6 +326,8 @@ class XtcTextDocumentService(
         version: Int,
     ) {
         diagnosticRevision++
+        completionReports.clear()
+        actionReports.clear()
         val compiler = adapter as? XdkAdapter
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
         analyseOne(uri, content, version)
@@ -448,6 +452,8 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             logger.info("textDocument/didClose: {}", uri)
             diagnosticRevision++
+            completionReports.clear()
+            actionReports.clear()
             val affected = adapter.affectedAnalysisScopes(uri)
             semanticTokenReports.retire(uri)
             val document = openDocuments.remove(uri)
@@ -480,6 +486,8 @@ class XtcTextDocumentService(
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
             diagnosticRevision++
+            completionReports.clear()
+            actionReports.clear()
             server.refreshDiagnostics()
             server.refreshSemanticTokens()
             refreshScopes(
@@ -494,6 +502,8 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             if (closed) return
             diagnosticRevision++
+            completionReports.clear()
+            actionReports.clear()
             refreshScopes(replace())
             server.refreshDiagnostics()
             server.refreshSemanticTokens()
@@ -509,6 +519,8 @@ class XtcTextDocumentService(
             publishedByScope.clear()
             diagnosticReports.clear()
             semanticTokenReports.clear()
+            completionReports.clear()
+            actionReports.clear()
             documents.forEach { (uri, document) ->
                 document.analysis.cancel(false)
                 adapter.closeDocument(uri)
@@ -664,13 +676,43 @@ class XtcTextDocumentService(
                     kind = toCompletionItemKind(c.kind)
                     detail = c.detail
                     insertText = c.insertText
-                    documentation = c.documentation?.let { Either.forLeft(it) }
+                    val handle =
+                        c.documentation
+                            ?.takeIf { server.resolvesCompletionDocumentation }
+                            ?.let {
+                                completionReports.remember(
+                                    diagnosticRevision,
+                                    c.label,
+                                    it,
+                                    it.length,
+                                )
+                            }
+                    if (handle == null) documentation = c.documentation?.let { Either.forLeft(it) }
+                    else data = handle
                     sortText = c.sortText
                     textEdit =
                         c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
                 }
             }
             Either.forLeft(items)
+        }
+
+    override fun resolveCompletionItem(item: CompletionItem): CompletableFuture<CompletionItem> =
+        supplyAsync("completionItem/resolve", item.label) {
+            if (!server.resolvesCompletionDocumentation)
+                throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.MethodNotFound,
+                        "Completion resolution was not negotiated",
+                        null,
+                    )
+                )
+            if (item.data != null) {
+                val documentation =
+                    completionReports.resolve(item.data, diagnosticRevision, item.label)
+                if (item.documentation == null) item.documentation = Either.forLeft(documentation)
+            }
+            item
         }
 
     private fun toCompletionItemKind(
@@ -1023,13 +1065,13 @@ class XtcTextDocumentService(
         }
     }
 
+    private fun canConvertEdit(edit: AdapterWorkspaceEdit): Boolean =
+        (!edit.versioned || server.supportsVersionedEdits) &&
+            (edit.renames.isEmpty() || server.supportsFileRenames)
+
     /** Called while the document lifecycle is locked, after the query's version checks. */
     private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
-        if (
-            (edit.versioned && !server.supportsVersionedEdits) ||
-                (edit.renames.isNotEmpty() && !server.supportsFileRenames)
-        )
-            return null
+        if (!canConvertEdit(edit)) return null
         val changes =
             edit.changes.mapValues { (_, edits) ->
                 edits.map { TextEdit(it.range.toLsp(), it.newText) }
@@ -1075,16 +1117,52 @@ class XtcTextDocumentService(
             workspace = true,
         ) { actions ->
             actions.mapNotNull { action ->
-                val proposed = action.edit?.let { protocolEdit(it) ?: return@mapNotNull null }
+                val kind = action.kind.toLsp()
+                if (params.context.only?.none { kind == it || kind.startsWith("$it.") } == true)
+                    return@mapNotNull null
+                val edit = action.edit
+                if (edit != null && !canConvertEdit(edit)) return@mapNotNull null
+                val handle =
+                    edit
+                        ?.takeIf { server.resolvesCodeActionEdit }
+                        ?.let {
+                            actionReports.remember(
+                                diagnosticRevision,
+                                action.title,
+                                it,
+                                it.changes.values.sumOf { edits ->
+                                    edits.sumOf { change -> change.newText.length + 64 }
+                                },
+                            )
+                        }
+                val proposed = if (handle == null) edit?.let(::protocolEdit) else null
                 Either.forRight<Command, CodeAction>(
                     CodeAction().apply {
                         title = action.title
                         kind = action.kind.toLsp()
                         isPreferred = action.isPreferred
-                        edit = proposed
+                        this.edit = proposed
+                        data = handle
                     }
                 )
             }
+        }
+
+    override fun resolveCodeAction(action: CodeAction): CompletableFuture<CodeAction> =
+        supplyAsync("codeAction/resolve", action.title) {
+            if (!server.resolvesCodeActionEdit)
+                throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.MethodNotFound,
+                        "Code action resolution was not negotiated",
+                        null,
+                    )
+                )
+            if (action.data != null) {
+                val edit = actionReports.resolve(action.data, diagnosticRevision, action.title)
+                if (action.edit == null) action.edit = protocolEdit(edit) ?: throw contentModified()
+            }
+            action
         }
 
     /**
