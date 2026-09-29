@@ -403,19 +403,21 @@ VS Code receipts above.
      disabling that policy refuses the proposal before changing sources or settings.
   L62 remains open for the conservative exclusions, additional composition routes, unknown
   external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
-- [ ] **L63 — Semantic quick fixes and refactorings.** Per-method implement/override actions
-  appear at a class name for inherited source contracts. TypeInfo supplies concrete generic class
-  substitutions, nested parameterized types, conditional/multiple returns, method type parameters
-  and constraints, and validated String/Char/integer defaults. Fresh declaration-only analysis
-  supplies candidates beside missing-implementation errors without resuming a failed compiler.
-  Every edit recompiles the graph, preserves unrelated bindings and proves the inserted method's
-  inherited call and descendant-chain effects. Bodies use `TODO()`. Computed/unvalidated defaults,
-  relational/annotated or unresolvable cross-module type spellings, and binary contracts remain
-  withheld. Shared X122 covers action discovery, exact source, compilation and native Undo/Redo;
-  both native drivers pass all seven variants, with execution receipts below. Missing declarations, extract local/method,
-  inline and safe delete remain unimplemented. Record supported XTC forms per action; code
-  generation/doc comments and reference/test lenses are separate subfeatures. Use the compiler
-  for semantic transformations and verify versioned multi-file edits.
+- [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
+  implement/override actions are implemented at a class name for inherited source and read-only
+  binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
+  parameterized, relational/nullable/immutable and qualified cross-module types with atomic imports.
+  Validated primitive defaults (including folded expressions) and Boolean/Null constants can be
+  rendered; fresh declaration repair accepts supported literal tokens and requires a complete
+  proposed compilation. Unvalidated computed/named defaults, unsupported constant kinds and
+  annotated/otherwise unrenderable types remain refusals. Every edit proves the inserted methods'
+  intended call/descendant changes while preserving unrelated bindings. Bodies use `TODO()`.
+  Shared X122 now has eleven variants; the latest implementation/validation status is recorded in
+  the [library and complete-repair batch](#l63-library-and-complete-repair-batch). Older seven-variant
+  receipts do not establish the new coverage. Missing declarations, extract local/method, inline
+  and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
+  generation and reference/test lenses are separate subfeatures. Semantic transformations require
+  compiler evidence and versioned multi-file edit validation.
 - [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover unfinished
   self-referential bounds, literal synthesis and arbitrary enclosing-instance enumeration, plus remaining
   declaration-name, keyword/snippet and callable contexts, candidate documentation/ranking,
@@ -531,9 +533,8 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 ### Protocol correctness and the completion gate
 
 - [ ] **L80 — Initialization and capability negotiation.** Audit against the 3.18 method
-  model and client capabilities. Move watcher registration out of `initialize` into the
-  post-`initialized` phase and honor dynamic-registration support; handle registration failure
-  and lifecycle cleanup. Audit workspace-folder fallback, UTF-16/default versus negotiated
+  model and client capabilities. Watcher registration now occurs after `initialized` and honors
+  dynamic-registration support; audit registration failure and lifecycle cleanup. Audit workspace-folder fallback, UTF-16/default versus negotiated
   encodings, markup/location-link support, diagnostic versions/tags/related information,
   symbol kinds/tags, code-action kinds/`context.only`, snippets/edit formats and workspace-edit
   resource/failure capabilities. Audit stale application in IntelliJ code actions, file-operation
@@ -1041,6 +1042,24 @@ and the newer 2.0.0-ALPHA-4 changes coordinates, APIs and formatting behavior. A
 should migrate the supported tool/plugin together and review formatting churn, rather than force
 an untested compiler version into ktlint's dependency graph. No warning suppression or dependency
 override is introduced in the rename batch.
+
+The September 29 follow-up reproduced the call directly with both cached compiler artifacts on
+Corretto JDK 25. Their `org.jetbrains.kotlin.com.intellij.util.containers.Unsafe` class files have
+identical SHA-256 hashes, and both emit the same warning when invoking `objectFieldOffset`.
+Upgrading just the embedded compiler to 2.4.20 therefore does not remove this dependency on Unsafe.
+The project compiler remains 2.4.20; 2.2.21 belongs only to ktlint's separate dependency graph.
+Compilation depends on ktlint checks, which explains the warning during native playbook builds.
+
+[ktlint's CLI launcher already supplies the JDK workaround](https://github.com/ktlint/ktlint/pull/3040),
+but [Gradle plugin 14.2.0 invokes the engine in its own worker](https://github.com/JLLeitschuh/ktlint-gradle/blob/v14.2.0/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/tasks/BaseKtLintCheckTask.kt),
+bypassing that launcher. Its public worker settings expose heap size, not arbitrary JVM arguments.
+A direct probe with `--sun-misc-unsafe-memory-access=allow` emits no warning. This is a scoped
+compatibility workaround, not removal of the deprecated API; an upstream parser fix is still needed.
+The practical alternative is to keep the same stable ktlint rules and replace the Gradle integration
+with declared-input/output CLI tasks that set the flag only for the formatter JVM. That migration
+must retain source-set coverage, format/check ordering, reports and configuration-cache reuse.
+It has not been implemented. Global JVM suppression and forced compiler overrides are unnecessary.
+The separate JNA `System.load` warning concerns native-access opt-in, not this Unsafe call.
 
 ## Next checkpoint: isolate partial AST syntax
 
@@ -5752,7 +5771,7 @@ VS Code X122 passes all seven shared variants in `run-CNyxJ0` and, after the act
 correction, `run-jWHRIT` (VS Code 1.139.1). Its provider
 acceptance and native history checks include diagnostic restoration. IntelliJ's initial native
 run `run-12998117592561284886` timed out opening the first intention menu following a stale
-source request. The driver now waits for the exact current action before opening the menu;
+source request. At that checkpoint the driver waited for the exact current action before opening the menu;
 the same timeout recurred in `run-16582387419624869264`. Inspecting pinned LSP4IJ 0.21.0's
 `LSPIntentionCodeActionSupport.isValidCodeAction` established the real blocker: it excludes
 `quickfix` from ordinary intentions. Implementing an inherited method is a class intention even
@@ -5772,32 +5791,34 @@ formatting with checkpoint 3; and generic bridge proof/test changes with checkpo
 `XdkProjectQueries` action-kind correction is required for native member-action acceptance.
 The earlier four implementation commits are review checkpoints, not independently green PRs.
 
-Remaining generation limits: binary contracts; computed/unvalidated defaults; annotated, relational
-or unresolvable cross-module type spellings; and composition routes without a complete dispatch
+Generation limits at that checkpoint (superseded by the following batch): binary contracts;
+computed/unvalidated defaults; annotated, relational or unresolvable cross-module type spellings; and composition routes without a complete dispatch
 proof. Generated bodies deliberately remain `TODO()`. Extract/inline/safe-delete and general
 missing-declaration fixes remain separate L63 tasks.
 
 ## L63 library and complete-repair batch
 
-Implement four separate checkpoints before testing them together:
+The four implementation checkpoints were committed separately and then tested together:
 
 1. [x] Atomic “Implement all required members”, with complete graph and per-family dispatch proof.
-2. [x] Bundled XDK and binary contracts with read-only dependency identities (implementation checkpoint; batch validation pending).
-3. [x] Qualified cross-module and compound type spellings, including required imports (implementation checkpoint; batch validation pending).
-4. [x] Defaults during fresh declaration repair; audit computed defaults before supporting them (implementation checkpoint; batch validation pending).
+2. [x] Bundled XDK and binary contracts with read-only dependency identities.
+3. [x] Qualified cross-module and compound type spellings, including required imports.
+4. [x] Defaults during fresh declaration repair; audit computed defaults before supporting them.
 
-Checkpoint 1 groups all renderable required methods in one class edit. The proof checks each
+Checkpoint 1 groups required methods in one class edit only when every required method is renderable. The proof checks each
 new method against its own original family, reconstructs all original chains after removing the
-insertions and preserves unrelated bindings. Full compilation refuses any unsupported remainder.
+insertions and preserves unrelated bindings. A compiler-derived required-method count prevents an
+unsupported remainder from being mislabeled “all”: compilation alone can accept an implicitly
+abstract class. A dedicated refusal regression covers that case without constructing the class.
 Tests cover multiple missing overloads, an instantiated class, descendants, named calls and an
-existing implementation. Shared X122 adds the atomic diagnostic-repair variant. Validation waits
-until all four implementation commits are present.
+existing implementation. Shared X122 adds the atomic diagnostic-repair variant. Testing began only
+after all four implementation commits were present.
 
 Checkpoint 2 copies artifact/revision identities for bundled and binary contracts instead of requiring
 a writable source declaration. The member proof permits only the selected family to rebind to its
 new user-source override; dependency bytes and declarations remain read-only. Added regressions
 cover indexed and binary-only inputs, bundled Iterator implementation and inherited concrete calls.
-Testing remains deferred until all four implementation checkpoints are present.
+The combined validation receipt follows below.
 
 Checkpoint 3 renders compiler-selected relational/nullable and immutable types recursively and
 uses collision-avoiding module qualifiers for foreign classes. Generated package imports and method
@@ -5815,3 +5836,52 @@ Already validated primitive constants can be emitted safely even when originally
 becomes `3`); this corrects the earlier blanket statement that every computed default was refused.
 Validated Boolean/Null singleton defaults use explicit XDK identities to avoid scope shadowing.
 Unvalidated computed/named defaults and unsupported constant kinds remain deliberate refusals.
+
+### L63 library/complete-repair validation and extraction
+
+The four implementation checkpoints were committed before the first test run, as requested:
+
+| Slice | Commit | Extraction boundary |
+|---|---|---|
+| Atomic all-required implementation | `4990aec90` | Multi-member dispatch/binding proof, one insertion, backend and shared bulk case; follows the earlier L63 generation/proof commits. |
+| Read-only XDK/binary contracts | `4091a1c47` | Artifact identities and permitted source rebinding; indexed/binary-only and real Iterator cases. Depends on the generalized member proof. |
+| Qualified/compound signatures | `778dd60d7` | Recursive type spelling, collision-avoiding module aliases, atomic imports and translated proof positions. |
+| Safe defaults in declaration repair | `ecde342f7` | Existing parser literal accessors and validated constant rendering; no new Java/AST API. Signed-literal correction must accompany this slice. |
+| Missing-feature/partial-package design | `327ef4f4e` | Tracking only; the ast.partial package move is not implemented. Independent of the member-generation code. |
+
+Apply the four code slices in order. Their validation corrections also belong in the extracted
+PRs: binary support legitimately adds inherited `toString` actions, so tests/refusal scenarios must
+select the intended member; fresh negative literals have a unary AST node; newly inserted package
+aliases contribute their own inherited dispatch chains. Only those new package owners inside the
+import insertion are excluded from the old-owner comparison. Every previous owner and reference
+still participates, including a property use whose name collides with the proposed module alias.
+The general auto-import query retains its single-edit plan; member imports use the new combined plan.
+
+**Validation correction commit: `3b8f7987b`.** Extract the required-method count and refusal test
+with slice 1; binary action selectors/refusals with slice 2; package-owner proof and the retained
+auto-import edit shape with slice 3; and signed literal handling with slice 4. Formatting accompanies
+each touched implementation file. The expanded shared X122 data and native driver corrections
+form the editor acceptance unit. These implementation checkpoints are not independently green PRs.
+
+The corrected combined run passes **114 LSP tests** (including 46 member-action and 11 dependency
+cases) and **15 compiler API/listener tests**, with zero failures/errors/skips. After the final
+all-required guard, **47 member-action tests** pass again, including the added refusal regression. Both editor drivers
+compile. Root Spotless, LSP/IntelliJ ktlint checks and changed TypeScript ESLint pass. The shared
+catalog remains 127 IDs, and its manual-plan row order agrees. X122 now contains eleven variants.
+VS Code `run-IsPGqC` passes the selected case, including all eleven variants and native Undo/Redo;
+126 unrelated cases were not selected. IntelliJ `run-658720962975078754` passes START, all eleven
+X122 variants and X105 auto-import acceptance, with zero IDE failures. Its one selected JUnit test
+has zero failures/errors/skips; 125 other catalog cases were not selected. IntelliJ 2026.2.3 runs
+with Ultimate disabled and LSP4IJ 0.21.0. Both editors consumed shared-scenario SHA-256
+`ff1e2349b61baaae016d91c34a70b732f14aef92428e704a607388796a307fa6`.
+This is not a full-catalog or independent-extracted-PR validation claim.
+
+The first IntelliJ attempts exposed two harness problems. The generic list reader did not expose
+the labels visibly rendered in the intention menu; the driver now reads the list's accessible names.
+The extra protocol readiness probe could also supersede the native intention's own code-action
+request. Trace evidence showed that cancellation followed by no fresh request when reopening the
+menu. Removing the competing probe lets the native menu own both the request and readiness check.
+Only the no-action refusal still queries the protocol directly, retrying canceled/stale responses.
+Missing menus may be reopened only while the captured document modification stamp is unchanged;
+selection is cleared before positioning the caret, and applied edits/renames are never replayed.
+X105 verifies the shared helper still handles auto-import intentions. No mouse movement is used.
