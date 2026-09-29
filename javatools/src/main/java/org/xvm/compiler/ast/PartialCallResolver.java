@@ -28,6 +28,8 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.PartialSyntax;
+import org.xvm.compiler.ast.partial.PartialSyntax.ArgumentCursor;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
@@ -136,8 +138,8 @@ final class PartialCallResolver {
     static CursorBinding argumentValues(IncompleteStatement site, Context ctx,
             CursorBinding scope, ErrorListener errs, Predicate<List<Expression>> fits) {
         var written = site.getArguments();
-        var nested = PartialArgument.of(site);
-        var cursor = nested.map(PartialArgument::cursor).orElse(site);
+        var nested = PartialSyntax.argument(site);
+        var cursor = nested.map(ArgumentCursor::cursor).orElse(site);
         boolean qualified = !cursor.isCall() && cursor.getReceiver().isPresent();
         if (nested.isEmpty() && site.getPendingArgumentName().isEmpty()
                 && (written.size() != site.getSeparators().size()
@@ -148,7 +150,7 @@ final class PartialCallResolver {
         Predicate<String> fitsName = name -> {
             Expression value = proposedName(cursor, name);
             if (nested.isPresent()) {
-                return fits.test(nested.orElseThrow().proposed(site, value));
+                return fits.test(PartialArgument.proposed(site, nested.orElseThrow(), value));
             }
             Expression argument = site.getPendingArgumentName()
                     .<Expression>map(label -> new LabeledExpression(label, value)).orElse(value);
@@ -233,7 +235,7 @@ final class PartialCallResolver {
             IncompleteStatement site, Context ctx, List<Expression> written, ErrorListener errs) {
         if (errs.isAbortDesired() || site.getPendingArgumentName().isPresent()
                 || written.stream().anyMatch(argument -> argument instanceof LabeledExpression
-                        || argument instanceof NonBindingExpression && PartialArgument.of(site).isEmpty())) {
+                        || argument instanceof NonBindingExpression && PartialSyntax.argument(site).isEmpty())) {
             return List.of();
         }
         var validation = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
@@ -254,7 +256,7 @@ final class PartialCallResolver {
                 .collect(Collectors.toCollection(ArrayList::new));
         boolean fit = IntStream.range(0, arguments.size()).allMatch(index -> {
             Expression argument = arguments.get(index);
-            if (argument instanceof NonBindingExpression && PartialArgument.of(site).isPresent()) {
+            if (argument instanceof NonBindingExpression && PartialSyntax.argument(site).isPresent()) {
                 return true;
             }
             var value = argument.validate(trial, parameters[index], validation);
@@ -273,7 +275,7 @@ final class PartialCallResolver {
 
     /** Preserve later arguments while letting an unknown slot remain unbound during enumeration. */
     static List<Expression> writtenArguments(IncompleteStatement site) {
-        return PartialArgument.of(site).map(argument -> argument.unbound(site)).orElseGet(site::getArguments);
+        return PartialSyntax.argument(site).map(argument -> PartialArgument.unbound(site, argument)).orElseGet(site::getArguments);
     }
 
     private static Target target(NameExpression callee, Context ctx, ErrorListener errs) {
