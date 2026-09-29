@@ -448,8 +448,13 @@ Implement four checkpoints before combined validation:
 2. [x] Offer literal argument values only after ordinary compiler fitting and full argument validation.
 3. [x] Copy candidate documentation, provide deterministic completion ordering and improve
    overload/active-argument presentation without claiming an incomplete overload was selected.
-4. [ ] Extend shared scenarios and both drivers, then run combined backend/protocol checks and
-   selected native cases. Do not infer full-catalog coverage from selected runs.
+4. [x] Extend shared scenarios and both drivers. X97 adds eight literal variants (24 total),
+   including named/compound/function/constructor slots; X108 adds two recursive-bound variants
+   (13 total). Native proposals expose Value kind, exact edits, detail and sort metadata. Native
+   Parameter Info responses supply documentation and active indices without a competing request.
+
+- [ ] Run combined backend/protocol checks and selected native X97/X108 cases. Do not infer
+  full-catalog coverage from selected runs. Implementation checkpoints precede execution.
 
 Checkpoint 1 extends `CursorBinding.Formal` with optional written-constraint text. Its existing
 two-argument constructor remains; record-pattern users need the new component. A recursive written
