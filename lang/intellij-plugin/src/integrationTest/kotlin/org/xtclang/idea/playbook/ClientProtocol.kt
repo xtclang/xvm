@@ -94,6 +94,7 @@ class ClientProtocol(
         // individual references. Preserve that distinction before copying through LSP4IJ's Gson.
         val listResults =
             setOf(
+                "textDocument/codeAction",
                 "textDocument/references",
                 "textDocument/documentSymbol",
                 "textDocument/documentHighlight",

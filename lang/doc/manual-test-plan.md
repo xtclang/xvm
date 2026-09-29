@@ -2087,19 +2087,8 @@ module Advanced {
 | X119 | Rename the primary constructor property input in Library.Box with Consumer closed. | Header, constructor label and property access change together; Other.input stays unchanged. Undo restores every source. |
 | X120 | Rename a lambda input captured by a nested lambda. | Declaration and nested capture change; sibling lambda input stays unchanged. Undo restores the source. |
 | X121 | Rename a method input while a closed consumer stores its method value and also calls it by name. | Direct label and selected declaration change; positional function calls and Other.pick stay unchanged. Undo restores both files. |
+| X122 | At Box in the shared Actions fixture, apply Implement and Override, then Undo/Redo/Undo. Repeat with an already implemented contract. | Both editors discover the action, compare the complete generated source, compile it, restore exact text through native history, and offer no duplicate implementation. |
 
-
-L63 member-generation acceptance (manual; not yet counted as a shared automated case):
-
-1. Open `module Actions { interface Api { String read(String value); } class Box implements Api {} }`.
-2. Put the cursor on `Box` and invoke Quick Fix/Code Actions. Apply **Implement String read(String value)**.
-   Expect an `@Override` method with a `TODO()` body, no diagnostics, and native Undo restoring the original.
-3. Repeat with `class Base { Int read(Int value) = value; } class Box extends Base {}` inside a module.
-   Expect an **Override** action. The stub deliberately requires a real implementation; it is not a generated `super` call.
-4. Try conditional/multiple returns, default arguments or `List<Int>` signatures. No unsupported stub should be offered.
-   Existing calls that would rebind to the new method also withhold the action in this first implementation.
-
-These scenarios have backend regression tests; native editor acceptance of member generation remains pending.
 
 For X93's nested-type and alias variants, temporarily replace `Editing.x` with this source.
 Complete immediately after `Owner.Ite`, accept `ItemPublic`, then replace that type with
