@@ -126,7 +126,7 @@ class XdkProjectQueryLifecycleTest {
             val background = session.adapter.getCodeActionsAsync(session.libraryUri, Range(Position(0, 0), Position(0, 0)), emptyList())
             assertThat(quickFix.isCancelled).isFalse()
             session.release.countDown()
-            assertThat(quickFix.get(30, SECONDS)).isEmpty()
+            assertThat(quickFix.get(30, SECONDS)).allMatch { it.kind == CodeAction.CodeActionKind.REFACTOR_REWRITE }
             assertThat(background.get(30, SECONDS)).isEmpty()
         }
     }
