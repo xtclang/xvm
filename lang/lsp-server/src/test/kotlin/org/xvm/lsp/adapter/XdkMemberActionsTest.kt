@@ -74,10 +74,24 @@ class XdkMemberActionsTest {
     @ValueSource(
         strings = [
             "conditional Int read();", "(Int, Int) read();", "Int read(Int value = 1);",
-            "List<Int> read();", "<T> T read(T value);",
+            "List<Int> read();", "<T> T read(T value);", "<T extends String> T read(T value);",
+            "conditional (Int, String) read();", "Map<String, List<Int>> read();",
+            "String read(String value = \"line\\n\\\"quoted\\\"\");",
         ],
     )
-    fun `unsupported signatures do not become speculative stubs`(signature: String) {
+    fun `broader signatures preserve the compiler contract`(signature: String) {
+        val text = "module App { interface Api { $signature } class Box implements Api {} }"
+        workspace(text) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") }).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["(Int | String) read();", "List<Int> read(List<Int> value = []);"])
+    fun `unrenderable types and nonliteral defaults remain refusals`(signature: String) {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
         workspace(text) { adapter, uri -> assertThat(actions(adapter, uri, text)).isEmpty() }
     }
