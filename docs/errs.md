@@ -1,6 +1,16 @@
 # Threading `errs` through the compiler
 
-**Current hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
+**Latest batch (L69–L71 / PLAT2c):** token range/delta, initial lazy resolution, bounded file
+operations and evaluated Gradle inputs pass backend/protocol checks and ten selected scenarios
+in both hosts. IntelliJ acceptance exposed and fixed a diagnostic-refresh/Rename deadlock and
+file-event ordering; it keeps code-action edits eager to preserve Undo/Redo with LSP4IJ 0.21.0.
+The backend has 1,436 enabled tests passing (three existing disabled placeholders), packaged
+protocol has 71 and IntelliJ unit coverage has 62, with no failures. The selected native receipts
+have zero IDE errors. This is not a full 134-case rerun. Native lazy-action application, other
+move entry points and automatic VFS ownership of unopened external roots remain explicit tasks.
+See the [validation and extraction map](errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29).
+
+**Earlier hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
 add project source-graph settings; L68 adds negotiated pull diagnostics, including closed roots
 and result IDs. The combined run passes 861 compiler/backend, 54 packaged-stdio and 50 IntelliJ
 unit tests (965 total), with zero failures/errors/skips. Updated X76/X118 and new X123 pass in both
