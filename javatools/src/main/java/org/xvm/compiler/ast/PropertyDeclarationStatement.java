@@ -416,7 +416,7 @@ public class PropertyDeclarationStatement
                     // clear the "has initial value" setting
                     prop.setInitialValue(null);
                 } else {
-                    if (mgr.getCursorBindings().isEnabled() && IncompleteStatement.isWithin(value)) {
+                    if (mgr.getCursorBindings().isEnabled() && PartialQueries.isWithin(value)) {
                         // A cursor hole cannot become a constant. Validate the source-owned
                         // initializer so its facts survive; disposable clones are never published.
                         initializer = createAstNodeFor(createInitializer());
