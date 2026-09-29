@@ -438,6 +438,7 @@ internal constructor(
         REFERENCES,
         RENAME,
         RENAME_PROPOSAL,
+        FILE_RENAME,
         SYMBOLS,
         NAVIGATION,
         CODE_ACTIONS,
@@ -1534,6 +1535,26 @@ internal constructor(
         } else {
             renameAsync(uri, line, column, newName).thenApply { it?.let(::XdkRenameProposal) }
         }
+
+    /**
+     * Compiler-proven edits for IDE file-tree operations; no filesystem or configuration writes.
+     */
+    fun renameFilesAsync(files: Map<String, String>): CompletableFuture<WorkspaceEdit?> {
+        val scope =
+            synchronized(lifecycle) {
+                files.keys.firstNotNullOfOrNull { uri ->
+                    project.scope(uri)
+                        ?: XdkSources.file(uri)?.toPath()?.let { path ->
+                            project.modules.values
+                                .firstOrNull { it.root.toPath().startsWith(path) }
+                                ?.uri
+                        }
+                }
+            } ?: return CompletableFuture.completedFuture(null)
+        return projectQuery(ProjectQueryKey(scope, ProjectQueryKind.FILE_RENAME), null) {
+            it.renameFiles(files)
+        }
+    }
 
     override fun getCodeActions(
         uri: String,

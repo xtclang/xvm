@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.concurrent.CancellationException
@@ -252,9 +253,16 @@ internal class XdkProjectQueries(
         line: Int,
         column: Int,
         name: String,
+    ): XdkRenameProposal? = compile(texts)?.let { renameProposal(it, uri, line, column, name) }
+
+    private fun renameProposal(
+        before: CompilerRenameFacts,
+        uri: String,
+        line: Int,
+        column: Int,
+        name: String,
     ): XdkRenameProposal? {
         val source = XdkSources.file(uri)?.path ?: return null
-        val before = compile(texts) ?: return null
         val model = before.models.singleOrNull { it.sourceName == source } ?: return null
         model.importAt(line, column)?.let { alias ->
             if (!XdkRename.identifier(name)) return null
@@ -415,6 +423,218 @@ internal class XdkProjectQueries(
         )
     }
 
+    /** File-tree operations use the same compiler proof as symbol rename, before touching disk. */
+    fun renameFiles(requested: Map<String, String>): WorkspaceEdit? {
+        val operations =
+            requested.entries
+                .associate { (from, to) ->
+                    (XdkSources.file(from) ?: return null) to (XdkSources.file(to) ?: return null)
+                }
+                .filter { (from, to) -> from != to }
+        if (operations.isEmpty()) return WorkspaceEdit(emptyMap(), versioned = true)
+        if (
+            operations.values.distinct().size != operations.size ||
+                operations.any { (from, to) ->
+                    !from.exists() ||
+                        to.exists() ||
+                        Files.isSymbolicLink(from.toPath()) ||
+                        (from.isDirectory &&
+                            from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }) ||
+                        to.toPath().startsWith(from.toPath())
+                }
+        )
+            return null
+        // Overlapping parent/child requests have ambiguous application order; do not guess.
+        if (
+            operations.keys.any { parent ->
+                operations.keys.any { it != parent && it.toPath().startsWith(parent.toPath()) }
+            }
+        )
+            return null
+        val before = compile(texts) ?: return null
+        val directories = sources.values.flatMap { it.inputs.directories }.toSet()
+        val proposals =
+            operations
+                .map { (from, to) ->
+                    if (from.parentFile != to.parentFile) return@map null
+                    val selected =
+                        before.models
+                            .asSequence()
+                            .flatMap { model ->
+                                model.symbols.asSequence().mapNotNull { symbol ->
+                                    val directory =
+                                        (before.constants[symbol.id] as? ProofIdentity.Directory)
+                                            ?.path == from.path
+                                    val declaration =
+                                        symbol.declarationSource == from.path &&
+                                            symbol.name == from.nameWithoutExtension &&
+                                            symbol.kind in
+                                                setOf(
+                                                    SemanticModel.SymbolKind.TYPE,
+                                                    SemanticModel.SymbolKind.PACKAGE,
+                                                    SemanticModel.SymbolKind.MODULE,
+                                                )
+                                    when {
+                                        declaration && symbol.declaration != null ->
+                                            Triple(
+                                                uris[from.path] ?: from.toURI().toString(),
+                                                symbol.declaration.start,
+                                                symbol.name,
+                                            )
+                                        directory ->
+                                            model.occurrences
+                                                .firstOrNull { it.symbol == symbol.id }
+                                                ?.let {
+                                                    Triple(
+                                                        uris[model.sourceName]
+                                                            ?: return@mapNotNull null,
+                                                        it.range.start,
+                                                        symbol.name,
+                                                    )
+                                                }
+                                        else -> null
+                                    }
+                                }
+                            }
+                            .firstOrNull() ?: return@map null
+                    val name = if (from.isDirectory) to.name else to.nameWithoutExtension
+                    if (from.isFile && to.extension != "x") return null
+                    val proposal =
+                        renameProposal(
+                            before,
+                            selected.first,
+                            selected.second.line,
+                            selected.second.column,
+                            name,
+                        ) ?: return null
+                    if (proposal.sourceModules != null) return null
+                    if (
+                        proposal.edit.renames.none { (old, new) ->
+                            XdkSources.file(old) == from && XdkSources.file(new) == to
+                        }
+                    )
+                        return null
+                    proposal.edit
+                }
+                .filterNotNull()
+        if (operations.size == 1 && proposals.size == 1)
+            return proposals.single().let { edit ->
+                edit.copy(renames = edit.renames.filterKeys { XdkSources.file(it) !in operations })
+            }
+        val allMoves =
+            operations.entries.map { it.key to it.value } +
+                proposals
+                    .flatMap { it.renames.entries }
+                    .map { (from, to) ->
+                        requireNotNull(XdkSources.file(from)) to requireNotNull(XdkSources.file(to))
+                    }
+        if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 })
+            return null
+        val resources = allMoves.toMap()
+        val paths =
+            (texts.keys.map(::File) + directories)
+                .mapNotNull { file ->
+                    val move =
+                        resources.entries.firstOrNull { (from, _) ->
+                            file == from || file.toPath().startsWith(from.toPath())
+                        } ?: return@mapNotNull null
+                    file.path to
+                        move.value
+                            .toPath()
+                            .resolve(move.key.toPath().relativize(file.toPath()))
+                            .toString()
+                }
+                .toMap()
+        if (paths.isEmpty() || paths.values.distinct().size != paths.size) return null
+        val names =
+            project.buildOrder().associate { module ->
+                val destination = operations[module.root]
+                module.name to
+                    if (
+                        destination != null &&
+                            destination.nameWithoutExtension != module.root.nameWithoutExtension
+                    )
+                        destination.nameWithoutExtension +
+                            module.name.removePrefix(module.root.nameWithoutExtension)
+                    else module.name
+            }
+        val graph =
+            XdkProject(
+                project.buildOrder().map { module ->
+                    XdkSourceModule(
+                        names.getValue(module.name),
+                        File(paths[module.root.path] ?: module.root.path).toURI().toString(),
+                        module.dependencies.mapTo(linkedSetOf()) { names[it] ?: it },
+                        module.resourceFiles?.map { resource ->
+                            val move =
+                                resources.entries.firstOrNull {
+                                    resource.toPath().startsWith(it.key.toPath())
+                                }
+                            (move
+                                    ?.value
+                                    ?.toPath()
+                                    ?.resolve(move.key.toPath().relativize(resource.toPath()))
+                                    ?.toFile() ?: resource)
+                                .toURI()
+                                .toString()
+                        },
+                    )
+                }
+            )
+        if (!discoverImports && !project.sameConfiguration(graph)) return null
+        val edits =
+            proposals
+                .flatMap { it.changes.entries }
+                .groupBy({ requireNotNull(XdkSources.file(it.key)).path }, { it.value })
+                .mapValues { (path, changes) ->
+                    val text = texts[path] ?: return null
+                    changes
+                        .flatten()
+                        .distinct()
+                        .map { edit ->
+                            XdkRename.Edit(
+                                XdkRename.offset(
+                                    text,
+                                    SemanticModel.Position(
+                                        edit.range.start.line,
+                                        edit.range.start.column,
+                                    ),
+                                ) ?: return null,
+                                XdkRename.offset(
+                                    text,
+                                    SemanticModel.Position(
+                                        edit.range.end.line,
+                                        edit.range.end.column,
+                                    ),
+                                ) ?: return null,
+                                edit.newText,
+                            )
+                        }
+                        .sortedBy { it.start }
+                        .also { ordered ->
+                            if (
+                                ordered.zipWithNext().any { (first, next) ->
+                                    first.end > next.start
+                                }
+                            )
+                                return null
+                        }
+                }
+        val plan = XdkRename.Plan(texts, edits, paths)
+        val after = compile(plan.proposed, moves = paths, graph = graph) ?: return null
+        if (!preservesBindings(before, after, plan) || !isCurrent()) return null
+        return WorkspaceEdit(
+            edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
+            versioned = true,
+            // The host already owns the requested moves. Return only required companion moves.
+            renames =
+                resources
+                    .filterKeys { it !in operations }
+                    .mapKeys { it.key.toURI().toString().removeSuffix("/") }
+                    .mapValues { it.value.toURI().toString().removeSuffix("/") },
+        )
+    }
+
     private fun renameScope(): XdkRenameScope =
         XdkRenameScope(
             if (discoverImports) XdkRenameScope.Boundary.DISCOVERED_GRAPH
@@ -434,7 +654,7 @@ internal class XdkProjectQueries(
         // inputs and no path to an edited declaration. Unsupported dynamic bindings in those
         // unrelated roots must not veto an otherwise proven edit.
         val affected =
-            plan.edits.keys
+            (plan.edits.keys + plan.moves.keys)
                 .mapNotNull { project.scope(it) }
                 .flatMapTo(linkedSetOf(), project::affected)
         val movedScopes =
