@@ -83,6 +83,7 @@ class CompilerPlaybookTest {
             fixture("X105/${it.text("file")}", "module AutoImports {}")
             fixture("X105/${it.text("library")}", it.text("libraryText"))
         }
+        fixture("X122/Actions.x", "module Actions {}")
         (109..121).forEach { number ->
             val id = "X$number"
             shared.scenarios.getValue(id).rows("files").forEach { file ->
