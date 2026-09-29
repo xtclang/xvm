@@ -13,7 +13,7 @@ registration supports traversal, cloning and edits without public representation
 [checkpoint map](errs-integration-plan.md#partial-ast-implementation-checkpoints) records validation
 and the two override modifiers corrected during compilation. The
 [broader inventory](errs.md#broader-ast-placement-inventory) classifies all 61 changed AST files;
-AST1–AST4 prioritize actual query/provenance reductions without forced package splits. Real dispatch
+AST1–AST5 prioritize actual query/provenance reductions without forced package splits. Real dispatch
 fixtures cover Explicit/Default, Delegating and Union; the generated/native/conditional route
 inventory remains incomplete.
 
