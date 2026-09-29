@@ -1068,35 +1068,34 @@ The deeper access/ownership audit selects a bounded move: put the four syntax no
 `IncompleteTypeCompositionStatement` in `org.xvm.compiler.ast.partial`. Keep `CursorScope`,
 `PartialArgument`, `PartialCallResolver` and `PartialConstructionResolver` package-private in
 `org.xvm.compiler.ast`. These are semantic validation/inference helpers, not syntax nodes; moving
-all eight would unnecessarily export ordinary compiler implementation details. This is a planned
-refactor after the current member-generation batch, not an implemented package change.
+all eight would unnecessarily export ordinary compiler implementation details. P1–P4 are implemented
+and validated after the member-generation batch; the combined validation is recorded below.
 
 - [x] Inventory package-private/protected access and reflective child traversal, including accesses
   on other AST instances and ownership of cloned headers and anonymous construction shells.
 - [x] Define a narrow compiler-owned boundary rather than public forwarding methods for every
   validation or inference operation. The audit found that a wholesale child-access rewrite is
   unnecessary; the existing registered-field mechanism can support the move.
-- [ ] **P1 — Extract semantics in the existing package.** Introduce a compiler-internal public
+- [x] **P1 — Extract semantics in the existing package.** Introduce a compiler-internal public
   `PartialQueries` service with `inspect(site, context, required, errors)`,
   `declarationBinding(site, lexicalScope, writtenFormals, errors)` and `argumentCall(site)`.
   Move the existing inspection orchestration into it, keeping the final incomplete-source
   diagnostic in the node. Contexts remain attempt-local arguments; no new cache or AST state.
-  Pass header scope and immutable formals explicitly so helper-only header accessors stay private
-  to their package. Keep the cursor-presence predicate beside the service for ordinary property
-  validation. Add a read-only `NewExpression.getArguments()` using `List.copyOf(args)` to replace
+  Pass header scope and immutable formals explicitly, removing the helper-only header accessors.
+  Keep the cursor-presence predicate beside the service for ordinary property validation. Add a read-only `NewExpression.getArguments()` using `List.copyOf(args)` to replace
   the direct structural field access already exposed by the partial node's leading-argument query.
-- [ ] **P2 — Support registered cross-package child fields.** In `AstNode.fieldsForNames`, enable
+- [x] **P2 — Support registered cross-package child fields.** In `AstNode.fieldsForNames`, enable
   reflective access only for explicitly registered child fields crossing the package boundary
   inside the same compiler module. Fail explicitly if access cannot be established. Add a real
   cross-package fixture covering inherited fields, traversal, dumps, clone, replacement and
   removal; keep malformed-field tests. No public fields, module opening flags or descriptor
   framework are needed. Final header lists must still never be assigned reflectively.
-- [ ] **P3 — Move only the four nodes.** Update Parser, embedding result/collector types, the Kotlin
+- [x] **P3 — Move only the four nodes.** Update Parser, embedding result/collector types, the Kotlin
   consumers and tests together. Keep `prepareConstruction`, `Construction`, `Expression.validate`,
   inference helpers and `NamedTypeExpression` representation fields at their existing visibility.
   In the two retained resolvers, call package-private `probeCallCandidate` through an `AstNode`-
   typed reference: that method is not inherited by a subclass in another package.
-- [ ] **P4 — Validate and document ownership/API boundaries.** Update AST ownership notes and
+- [x] **P4 — Validate and document ownership/API boundaries.** Update AST ownership notes and
   extraction map, then run field-model, parser recovery, cursor binding, identity snapshot,
   partial adapter, call/constructor/argument, delimiter and header suites. Include listener and
   cancellation boundaries and representative complete-source compilation. A native IDE rerun
@@ -1117,6 +1116,114 @@ code, and no new mutable AST field. `IncompleteTypeCompositionStatement` remains
 `TypeCompositionStatement`; its protected constructor and access on its own instances already work
 across packages. The nodes represent incomplete source syntax for embedding hosts generally, not
 an LSP dependency inside the compiler.
+
+### Partial AST implementation checkpoints
+
+| Step | Local commit | Extraction requirement |
+| --- | --- | --- |
+| P1 semantic boundary | `829eb41de` | Introduces stateless `PartialQueries`, explicit scope/formal arguments and the read-only constructor-argument snapshot. |
+| P2 registered fields | `29e8a64d4` | Same-module cross-package access and three real AST regressions; retain existing malformed-field tests. This is a prerequisite for P3. |
+| P3 syntax package | `42ca7f932` | Moves the four classes and all Java/Kotlin consumers. Include P4's correction restoring the two protected expression-validation overrides. |
+| P4 verification and ownership audit | This checkpoint | Combined validation and documentation below; the preceding implementation checkpoints were deliberately committed before testing. |
+
+`PartialQueries` deliberately remains in the parent `ast` package. Java subpackages do not share
+package access, and protected access does not let the moved nodes validate arbitrary receiver or
+argument expressions. Its three public static operations form the compiler-internal boundary;
+ordinary inference helpers, construction preparation and type representation remain non-public.
+Moving this service too would require additional public bridges back to the same package.
+
+The four nodes' own child fields are private. Explicit registration grants access only for AST
+classes and declaring classes in the same module as `AstNode`; the ordinary package's field access
+is unchanged. No module-opening flag is added. Immutable header lists still use fresh construction
+and adoption during clone, never reflective reassignment. `NewExpression.getArguments()` returns a
+list snapshot whose elements are compiler-owned syntax, not detached immutable semantic values.
+
+Validation on 2026-09-29 passes **502 tests**, with zero failures, errors or skips:
+
+- **98 Java tests**: parser recovery, cursor bindings, identity snapshots, AST field registration and
+  traversal (including three new cross-package cases), embedding compatibility/repository failures,
+  footprint and all selected listener boundary/branch/cancellation suites.
+- **395 LSP tests**: partial analysis, declaration/type/qualified/generic/compound headers and header
+  slots; incomplete method/function/constructor calls; anonymous and specialized constructors;
+  argument values/contexts/property initializers; delimiter recovery; call-site facts and diagnostics.
+  `XdkPartialAnalysisTest` also recompiles cursor-selected complete source through the ordinary
+  compiler and verifies non-emission for incomplete source.
+- **Nine additional Java tests**: `CompilerDiagnosticsTest` and `ValidationScopeTest`, including
+  exceptional-exit restoration of callback listeners and statement contexts.
+- Root and lang `spotlessCheck` pass. Java and Kotlin main/test sources compile. The runs used
+  task-local `--rerun` and `--no-build-cache`; XML counts were checked, including `skipped=0`.
+  No IntelliJ/VS Code native playbook rerun is claimed for this structural refactor.
+
+The first combined command stopped at compilation because P3 accidentally made two
+`IncompleteExpression` validation overrides private while encapsulating fields. P4 restores their
+original protected visibility; all test counts above are from the corrected source. No compiler
+access was widened to resolve that failure. The Java/Kotlin compiler notes about existing unchecked
+and deprecated code are separate from the removed formatter Unsafe warning.
+
+### Broader AST separation audit and follow-up plan
+
+This audit compares the branch with merge-base `4a1eae6f7` of local `origin/master`, through P3.
+There are **61 changed Java files under `compiler/ast`: 49 existing files and 12 new files**.
+The number of changed files is not the number of LSP-specific node extensions. The complete
+placement inventory and rationale are in [errs.md](errs.md#broader-ast-placement-inventory).
+This is a source/access/lifetime audit, not a code-quality grade or a claim that every compiler
+change belongs in a tooling package.
+
+The natural next steps are bounded extractions from existing nodes into existing compiler helpers.
+A second semantic library, Kotlin inside javatools, or a generic public AST-internals facade is
+unnecessary. `partial` names incomplete syntax; complete-program capture and invocation facts do
+not belong there simply because the LSP consumes them.
+
+- [ ] **AST1 — Move cursor-scope collection out of `Context`.** `Context.cursorBinding()` has only
+  three callers: `PartialQueries`, `PartialCallResolver` and `PartialConstructionResolver`. Move its
+  implementation to package-private `CursorScope.capture(Context)` and update those callers.
+  `getNameMap` and `collectVariables` remain protected; same-package access suffices. Preserve lazy
+  parameter-register initialization, flow readability, reserved-name filtering and receiver/function
+  scope. Remove the branch-added public convenience method only after confirming no external API
+  commitment; no current lang consumer uses it. Validate unassigned locals, parameters, lambdas,
+  nested scopes and repeated cursor queries. This is a small, useful extraction with no new API.
+- [ ] **AST2 — Separate candidate-result copying from ordinary argument fitting.** The branch-added
+  `AstNode.probeCallCandidate` builds immutable `CursorBinding.Candidate` results after the ordinary
+  fitter chooses an ordering and inferred signature. Move that query orchestration to the existing
+  `PartialCallResolver` if the callback overload of `collectMatchingMethods` can become package-private
+  with no other exposure. Keep the fitting algorithm on `AstNode`; do not duplicate it or add a
+  public entry for its many working collections. The overload is currently private, so this is an
+  explicit internal-access tradeoff, not a mechanical package move. Test named/default/generic and
+  converting candidates, cancellation and cloned-argument isolation. Keep the small existing hook
+  if extraction makes the call contract harder to understand.
+- [ ] **AST3 — Consolidate anonymous capture projection in its existing helper.**
+  `NewExpression.getCaptureOrigins()` currently projects generated synthetic properties to enclosing
+  registers. Move the map-building part to `AnonymousClassBindings`, passing the existing class
+  component; retain validation/owner checks and the passive getter on `NewExpression`. This helper
+  already owns capture registers, so no new state, getter or public mutation API is needed. Validate
+  anonymous captures, clone rejection, shadowing and rename/reference provenance. Keep the public
+  result shape unchanged. Do not relocate both binding helpers merely to increase package contents.
+- [ ] **AST4 — Audit a unified declaration-provenance result before migrating fields.**
+  `Parameter.m_arg` and `NameResolver.m_resolvedNames` are branch-added semantic state. A future
+  attempt-owned collector could publish declaration/qualified-segment facts alongside call facts
+  and remove node-specific state, but it must also work during declaration-only queries, lazy
+  parameter allocation, failed/retried resolution, generated methods and speculative clones.
+  First write lifecycle/clone regressions and map all writers/readers. Proceed only if collector
+  plumbing and publication filtering are simpler than the present ownership. This is an investigation,
+  not a promised mechanical move or a prerequisite for submitting the bounded partial-node PR.
+
+The following stay in their current owners:
+
+- Passive name/operator/import/register/selected-method accessors: they expose existing syntax or
+  compiler decisions. Replacing them with an external visitor would expose more representation or
+  repeat resolution; Kotlin already performs index construction and LSP policy.
+- `NewExpression.prepareConstruction`, stage/context forwarding, property initializer routing,
+  and `Statement` validation bookkeeping: these share the actual compiler phase and source owner.
+  A detached probe or parallel implementation would change anonymous-class and cancellation behavior.
+- `LambdaBindings` binding and `AnonymousClassBindings` mutation: these depend on live register
+  allocation, lambda parameter representation and capture maps. Public read access already returns
+  snapshots; a subpackage move would widen write access. A future complete provenance collector
+  should address lifetime first, rather than hide the same mutable implementation behind wrappers.
+- Error-listener propagation, `ValidationScope`, `Reporting` and code-generation corrections:
+  these fix ordinary compilation and are independent compiler/error-listener extraction PRs.
+- Parser cursor selection, delimiter recovery and speculative rollback: they share the token stream,
+  grammar and listener branches. Moving them to an LSP parser would duplicate language rules. A pure
+  syntax helper may be extracted when a concrete group needs neither parser state nor public internals.
 
 ## Composition audit follow-up
 

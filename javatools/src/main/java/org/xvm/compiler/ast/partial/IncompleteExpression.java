@@ -64,13 +64,13 @@ public final class IncompleteExpression extends Expression {
     }
 
     @Override
-    private Expression validate(Context ctx, TypeConstant required, ErrorListener errs) {
+    protected Expression validate(Context ctx, TypeConstant required, ErrorListener errs) {
         site.validate(ctx, required, errs);
         return null;
     }
 
     @Override
-    private Expression validateMulti(Context ctx, TypeConstant[] required, ErrorListener errs) {
+    protected Expression validateMulti(Context ctx, TypeConstant[] required, ErrorListener errs) {
         site.validate(ctx, required != null && required.length == 1 ? required[0] : null, errs);
         return null;
     }
