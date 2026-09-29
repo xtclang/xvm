@@ -3748,6 +3748,12 @@
             "initiallyValid": true
           },
           {
+            "source": "module Actions { interface Api { String read(String value); void reset(); } class Box implements Api {} Box make() = new Box(); }",
+            "title": "Implement all required members (2)",
+            "expected": "module Actions { interface Api { String read(String value); void reset(); } class Box implements Api {\n    @Override\n    String read(String value) {\n        TODO();\n    }\n\n    @Override\n    void reset() {\n        TODO();\n    }\n} Box make() = new Box(); }",
+            "initiallyValid": false
+          },
+          {
             "source": "module Actions { interface Api { String read(String value); } class Box implements Api { @Override String read(String value) = value; } }",
             "title": "",
             "expected": "module Actions { interface Api { String read(String value); } class Box implements Api { @Override String read(String value) = value; } }"
