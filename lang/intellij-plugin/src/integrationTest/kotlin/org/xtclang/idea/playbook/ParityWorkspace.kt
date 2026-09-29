@@ -135,7 +135,7 @@ class ParityWorkspace(
         refresh(path.parent)
     }
 
-    private fun refresh(path: Path): VirtualFile? =
+    fun refresh(path: Path): VirtualFile? =
         with(driver) {
             utility(ParityFiles::class).getInstance().refreshAndFindFileByPath(path.toString())
         }
