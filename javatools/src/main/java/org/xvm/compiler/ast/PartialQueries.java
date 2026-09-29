@@ -37,7 +37,13 @@ public final class PartialQueries {
                 owner.replaceChild(receiver, validated);
             }
         });
-        CursorBinding call = bindings.isEnabled() && site.isCall() && !errs.isAbortDesired()
+        boolean partialTarget = site.isCall() && PartialSyntax.contains(site.getTarget());
+        if (partialTarget && !errs.isAbortDesired()) {
+            // A member prefix before existing arguments owns the original receiver. Inspect it
+            // in place; a trial callee clone cannot supply bindings for the retained source site.
+            site.getTarget().validate(ctx, null, errs);
+        }
+        CursorBinding call = bindings.isEnabled() && site.isCall() && !partialTarget && !errs.isAbortDesired()
                 ? PartialCallResolver.inspect(site, ctx, required, errs) : null;
         if (call != null) {
             bindings.record(site, call);
