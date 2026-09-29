@@ -1,9 +1,12 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.Gson
+import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.nio.file.Files
+import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.platformCases() {
     case("X124") { data ->
@@ -200,4 +203,37 @@ internal fun ParityScenarios.platformCases() {
             )
         } else check(action.has("edit"))
     }
+    case("X128") { data ->
+        data["variants"].rows().forEach { variant ->
+            write(variant.string("root"), variant.string("source"))
+            write(variant.string("member"), variant.string("memberSource"))
+            configure(
+                listOf(
+                    SharedScenarios.SourceModule("App", uri(variant.string("root")), emptyList())
+                )
+            )
+            val document = open(variant.string("root"))
+            clean(document)
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(FileTreeOperations::class)
+                        .rename(
+                            singleProject(),
+                            directory.resolve(variant.string("from")).toString(),
+                            variant.string("newName"),
+                        )
+                }
+                awaitUi("native file rename updates references", 45.seconds) {
+                    document.text == variant.string("expected")
+                }
+            }
+            check(open(variant.string("target")).text == variant.string("targetSource"))
+            clean(document)
+        }
+    }
+}
+
+@Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
+interface FileTreeOperations {
+    fun rename(project: Project, path: String, newName: String)
 }
