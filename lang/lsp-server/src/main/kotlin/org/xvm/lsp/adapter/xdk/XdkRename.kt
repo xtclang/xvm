@@ -138,8 +138,10 @@ internal object XdkRename {
         val source = candidate.owner.sourceName ?: return false
         val insertion = plan.edits[source]?.singleOrNull() ?: return false
         if (plan.edits.size != 1 || insertion.start != insertion.end) return false
-        val oldDispatch = dispatch(before, plan.original) { path, offset -> plan.map(path, offset) } ?: return false
-        val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
+        val oldDispatch =
+            dispatch(before, plan.original) { path, offset -> plan.map(path, offset) }
+                ?.let(::memberDispatch) ?: return false
+        val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset }?.let(::memberDispatch) ?: return false
 
         fun matches(
             target: Target,
@@ -152,9 +154,10 @@ internal object XdkRename {
             val end = offset(text, location.range.end)?.let { plan.map(path, it) } ?: return false
             return declaration.site == Site(path, start, end)
         }
-        val removed = (oldDispatch - newDispatch).singleOrNull { chain ->
-            matches(chain.owner, candidate.owner) && chain.members.any { matches(it, candidate.contract) }
-        } ?: return false
+        val removed =
+            (oldDispatch - newDispatch).singleOrNull { chain ->
+                matches(chain.owner, candidate.owner) && chain.members.any { matches(it, candidate.contract) }
+            } ?: return false
         val added = (newDispatch - oldDispatch).singleOrNull { it.owner == removed.owner } ?: return false
         val member = (added.members - removed.members.toSet()).singleOrNull() as? Target.Declaration ?: return false
         if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
@@ -179,21 +182,31 @@ internal object XdkRename {
         ) {
             return false
         }
-        val expected = edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { path, offset ->
-            plan.map(path, offset)
-        } ?: return false
+        val expected =
+            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) { path, offset ->
+                plan.map(path, offset)
+            } ?: return false
         val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return false
         val oldParameters = memberParameterSlots(before, plan.original) { path, offset -> plan.map(path, offset) }
         val newParameters = memberParameterSlots(after, plan.proposed) { _, offset -> offset }
 
-        fun declarationSite(target: Target): Site? = when (target) {
-            is Target.Declaration -> target.site
-            is Target.SourceProof -> target.site
-            else -> null
-        }
-        fun selectedRebinding(old: Target, new: Target): Boolean =
-            declarationSite(new) == member.site && declarationSite(old) != null &&
-                removed.members.any { declarationSite(it) == declarationSite(old) }
+        fun declarationSite(
+            target: Target,
+            chains: Set<Dispatch>,
+        ): Site? =
+            when (target) {
+                is Target.Declaration -> target.site
+                is Target.SourceProof -> target.site
+                is Target.Composed -> memberBridge(target, chains)?.firstOrNull()?.site
+                else -> null
+            }
+
+        fun selectedRebinding(
+            old: Target,
+            new: Target,
+        ): Boolean =
+            declarationSite(new, newDispatch) == member.site && declarationSite(old, oldDispatch) != null &&
+                removed.members.any { declarationSite(it, oldDispatch) == declarationSite(old, oldDispatch) }
 
         return expected.all { (site, target) ->
             val replacement = actual[site] ?: return@all false
@@ -206,20 +219,54 @@ internal object XdkRename {
         }
     }
 
+    /** A generic cap is equivalent only when the compiler also supplies that exact written chain. */
+    private fun memberBridge(
+        target: Target.Composed,
+        chains: Set<Dispatch>,
+    ): List<Target.Declaration>? {
+        val owner = (target.owner as? Target.SourceProof)?.site ?: return null
+        if (target.delegates.isNotEmpty()) return null
+        val written =
+            target.members.map {
+                val source = it as? Target.SourceProof ?: return null
+                if (source.format != Constant.Format.Method) return null
+                Target.Declaration(source.site, SemanticModel.SymbolKind.METHOD)
+            }
+        return written.takeIf {
+            chains.any { chain -> chain.supported && (chain.owner as? Target.Declaration)?.site == owner && chain.members == written }
+        }
+    }
+
+    private fun memberDispatch(chains: Set<Dispatch>): Set<Dispatch> =
+        chains.mapTo(linkedSetOf()) { chain ->
+            if (!chain.supported) return@mapTo chain
+            val members =
+                chain.members
+                    .flatMap { target ->
+                        if (target is Target.Composed) memberBridge(target, chains) ?: listOf(target) else listOf(target)
+                    }.distinct()
+            // An inherited cap may belong to a base owner. Require the descendant's own explicit
+            // chain too, so a bridge never invents a new dispatch relationship for that descendant.
+            chain.copy(members = members).takeIf { it in chains } ?: chain
+        }
+
     private fun memberParameterSlots(
         facts: CompilerRenameFacts,
         texts: Map<String, String>,
         translate: (String, Int) -> Int?,
-    ): Map<Target, Target.Parameter> = facts.models.flatMap { it.symbols }.mapNotNull { symbol ->
-        val identity = facts.constants[symbol.id] as? ProofIdentity.Parameter ?: return@mapNotNull null
-        val source = symbol.declarationSource ?: return@mapNotNull null
-        val text = texts[source] ?: return@mapNotNull null
-        val range = symbol.declaration ?: return@mapNotNull null
-        val start = offset(text, range.start)?.let { translate(source, it) } ?: return@mapNotNull null
-        val end = offset(text, range.end)?.let { translate(source, it) } ?: return@mapNotNull null
-        val slot = composedTarget(identity, texts, { it }, translate) as? Target.Parameter ?: return@mapNotNull null
-        Target.Declaration(Site(source, start, end), symbol.kind) to slot
-    }.toMap()
+    ): Map<Target, Target.Parameter> =
+        facts.models
+            .flatMap { it.symbols }
+            .mapNotNull { symbol ->
+                val identity = facts.constants[symbol.id] as? ProofIdentity.Parameter ?: return@mapNotNull null
+                val source = symbol.declarationSource ?: return@mapNotNull null
+                val text = texts[source] ?: return@mapNotNull null
+                val range = symbol.declaration ?: return@mapNotNull null
+                val start = offset(text, range.start)?.let { translate(source, it) } ?: return@mapNotNull null
+                val end = offset(text, range.end)?.let { translate(source, it) } ?: return@mapNotNull null
+                val slot = composedTarget(identity, texts, { it }, translate) as? Target.Parameter ?: return@mapNotNull null
+                Target.Declaration(Site(source, start, end), symbol.kind) to slot
+            }.toMap()
 
     private data class Dispatch(
         val owner: Target,
