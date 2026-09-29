@@ -403,18 +403,19 @@ VS Code receipts above.
      disabling that policy refuses the proposal before changing sources or settings.
   L62 remains open for the conservative exclusions, additional composition routes, unknown
   external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
-- [ ] **L63 — Semantic quick fixes and refactorings.** First implementation checkpoint adds
-  per-method implement/override actions at a class name for ordinary inherited source contracts,
-  including concrete substitutions of generic class parameters. Candidates come from TypeInfo;
-  every edit recompiles the graph, preserves existing bindings and permits exactly one selected
-  dispatch-chain addition. Generated bodies use `TODO()`. Conditional/multiple returns, method
-  type parameters, default parameters, complex type spelling, binary contracts, changed existing
-  call bindings and descendant-chain changes remain withheld. No failed-compilation TypeInfo is
-  inspected. The 17 focused member-action tests pass; native action-menu acceptance remains pending. Add independently proven fixes beyond
-  import cleanup/public-type imports: missing declarations or members, implement/override
-  members, extract local/method, inline and safe delete. Record supported XTC forms per action;
-  code generation/doc comments and reference/test lenses are separate subfeatures. Use the
-  compiler for semantic transformations and verify versioned multi-file edits.
+- [ ] **L63 — Semantic quick fixes and refactorings.** Per-method implement/override actions
+  appear at a class name for inherited source contracts. TypeInfo supplies concrete generic class
+  substitutions, nested parameterized types, conditional/multiple returns, method type parameters
+  and constraints, and validated String/Char/integer defaults. Fresh declaration-only analysis
+  supplies candidates beside missing-implementation errors without resuming a failed compiler.
+  Every edit recompiles the graph, preserves unrelated bindings and proves the inserted method's
+  inherited call and descendant-chain effects. Bodies use `TODO()`. Computed/unvalidated defaults,
+  relational/annotated or unresolvable cross-module type spellings, and binary contracts remain
+  withheld. Shared X122 covers action discovery, exact source, compilation and native Undo/Redo;
+  both native drivers pass all seven variants, with execution receipts below. Missing declarations, extract local/method,
+  inline and safe delete remain unimplemented. Record supported XTC forms per action; code
+  generation/doc comments and reference/test lenses are separate subfeatures. Use the compiler
+  for semantic transformations and verify versioned multi-file edits.
 - [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover unfinished
   self-referential bounds, literal synthesis and arbitrary enclosing-instance enumeration, plus remaining
   declaration-name, keyword/snippet and callable contexts, candidate documentation/ranking,
@@ -5654,13 +5655,13 @@ Implement as four separate checkpoints, then validate together:
 
 1. [x] Shared X122 implement/override action selection, exact generated text, native Undo/Redo,
    and duplicate-implementation refusal in both drivers. This adds the 127th catalog scenario;
-   implementation is present, but the new native receipt is pending this batch.
+   all seven variants pass in both native drivers; receipts are recorded below.
 2. [x] Fresh declaration-only analysis for member generation beside missing-implementation errors.
 3. [x] Broader compiler-selected signatures: parameterized types, conditional/multiple returns,
    default arguments and generic methods.
 4. [x] Prove intentional dispatch changes for existing calls and derived classes.
 
-No tests are run between these implementation checkpoints. Each extracted PR still needs its own
+No tests were run between these four implementation checkpoints. Each extracted PR still needs its own
 validation; the combined batch cannot establish independent mergeability.
 
 Checkpoint 2 adds `EmbeddingSupport.analyzeDeclarations(Source/ModuleInfo, repository, listener)`.
@@ -5675,8 +5676,7 @@ Checkpoint 3 renders nested parameterized types, conditional/multiple returns, m
 parameters and constraints from compiler identities. Validated String/Char/integer defaults use
 the compiler's literal spelling. Computed/unvalidated defaults, annotated/relational types and
 unresolvable cross-module type spellings remain refusals. Every candidate still requires the
-whole-graph compilation and binding/dispatch proof. Tests are written; execution is pending the
-fourth checkpoint.
+whole-graph compilation and binding/dispatch proof. Validation is recorded below.
 
 Checkpoint 4 admits inherited call and named-parameter rebinding only to the one inserted method.
 Every changed compiler dispatch chain must become the exact original chain when that method is
@@ -5684,4 +5684,52 @@ removed; this includes descendants, existing descendant overrides, overloads and
 Other known source bindings remain identical. The fixtures include a closed dependent module and
 mixed overload/property/named-argument consumers. Header and failed-body occurrence views are
 combined for auto-import discovery, so the new declaration pass cannot hide unresolved names.
-All four checkpoints are now implemented; the batched validation follows.
+All four checkpoints are implemented and validated together below.
+
+### L63 batch extraction map and validation
+
+| Review unit | Implementation checkpoint | Validation correction scope |
+|---|---|---|
+| Shared member-action acceptance | `a2043fb8b` | Expanded X122 now contains seven variants, including diagnostic repair, conditional/parameterized/default signatures, method generics and descendant calls. Both drivers check exact source and Undo/Redo/Undo. |
+| Fresh declaration analysis | `020a1a5a4` | Canonical source-path assertion and Kotlin formatting; the additive embedding API and shared compiler phase prefix belong together. No AST changes. |
+| Signature rendering | `4c841f6c9` | Kotlin formatting; method generic bridge acceptance belongs with the proof correction below. |
+| Inherited dispatch proof | `985d2b50c` | Normalize a generic cap only when the compiler independently supplies its identical written chain, including the descendant chain. Add the inferred generic call/named-argument/descendant regression. |
+
+The first combined run executed 84 LSP tests: 81 passed, two generic-action assertions exposed
+the extra compiler cap chains, and one assertion needed macOS canonical source paths. Corrections
+retain the strict proof: no bridge with receivers, unsupported dispatch, reordered members or
+unproven written chain is accepted. An additional combined generic-call fixture exposed inherited
+caps owned by the base type; both the base and descendant written chains are now required.
+The final batch executed **85 LSP tests and 15 compiler API/listener tests**, with zero failures,
+errors or skips. Root Spotless and LSP/IntelliJ ktlint checks pass. These are selected regressions,
+not a full-suite claim. The 28 member-action tests passed again after the action-kind correction.
+Both editor drivers compile; changed TypeScript ESLint checks pass.
+
+VS Code X122 passes all seven shared variants in `run-CNyxJ0` and, after the action-kind
+correction, `run-jWHRIT` (VS Code 1.139.1). Its provider
+acceptance and native history checks include diagnostic restoration. IntelliJ's initial native
+run `run-12998117592561284886` timed out opening the first intention menu following a stale
+source request. The driver now waits for the exact current action before opening the menu;
+the same timeout recurred in `run-16582387419624869264`. Inspecting pinned LSP4IJ 0.21.0's
+`LSPIntentionCodeActionSupport.isValidCodeAction` established the real blocker: it excludes
+`quickfix` from ordinary intentions. Implementing an inherited method is a class intention even
+when the class has no diagnostic (or construction fails elsewhere), so both Implement and Override
+now use `refactor.rewrite`. A focused regression checks this classification.
+
+IntelliJ X122 passes all seven variants in `run-17411706440244793137`; startup editing passes in
+`run-18012328890729377114` and pointer-free focus recovery passes in `run-392160183217588603`.
+All three native JUnit tests pass with zero failures/errors/skips and every receipt has zero IDE
+errors. Both editors used the same shared-scenario SHA-256
+`af6b0a305c7e33c98dd768d7f3f70b13e819b3e70dc6d41417adcbe610eafdb1`.
+The full 127-case catalog is not rerun here.
+
+**Validation correction commit: `fc92ee79b`.** Extract its shared-scenario/driver changes with
+checkpoint 1; its declaration-path assertion and builder formatting with checkpoint 2; signature
+formatting with checkpoint 3; and generic bridge proof/test changes with checkpoint 4. Its
+`XdkProjectQueries` action-kind correction is required for native member-action acceptance.
+The earlier four implementation commits are review checkpoints, not independently green PRs.
+
+Remaining generation limits: binary contracts; computed/unvalidated defaults; annotated, relational
+or unresolvable cross-module type spellings; and composition routes without a complete dispatch
+proof. Generated bodies deliberately remain `TODO()`. Extract/inline/safe-delete and general
+missing-declaration fixes remain separate L63 tasks.
