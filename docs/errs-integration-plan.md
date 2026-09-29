@@ -449,6 +449,12 @@ when the batch completes. Earlier receipts do not validate these new changes.
   retains the anonymous identity without assigning it a fabricated declaration. A regression
   covers complete source and unrelated missing nested call delimiters. No AST API changed.
   Validation is pending the batch run.
+- **L16/L27:** added Settings > Languages & Frameworks > Ecstasy Compiler for discovery or
+  explicit module roots/dependencies. It saves through LSP4IJ's project store and notifies the
+  existing client listener. Global JSON remains the fallback. Configuration requests and rename
+  history select the same owner; a newly installed project override invalidates old global rename
+  history. Pure settings tests cover discovery versus an empty graph, unrelated setting retention,
+  duplicate roots and blank fields. Native settings/rename validation is pending.
 
 ### L64 completion and signature batch (2026-09-29)
 

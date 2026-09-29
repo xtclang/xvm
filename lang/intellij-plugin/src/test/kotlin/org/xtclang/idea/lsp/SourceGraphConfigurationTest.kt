@@ -7,6 +7,44 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class SourceGraphConfigurationTest {
+    @Test
+    fun `project configuration preserves unrelated settings and distinguishes discovery from empty graph`() {
+        val explicit = SourceGraphConfiguration.configure(original, after, base)
+        assertThat(SourceGraphConfiguration.read(explicit)).isEqualTo(after)
+        assertThat(explicit).contains("42")
+        val automatic = SourceGraphConfiguration.configure(explicit, null, base)
+        assertThat(SourceGraphConfiguration.read(automatic)).isNull()
+        assertThat(automatic).contains("\"sourceModules\": null", "42")
+        val empty = SourceGraphConfiguration.configure(automatic, emptyList(), base)
+        assertThat(SourceGraphConfiguration.read(empty)).isEmpty()
+        assertThat(SourceGraphConfiguration.read(null)).isNull()
+    }
+
+    @Test
+    fun `new project settings reject aliased roots and blank names before persistence`() {
+        val graph =
+            listOf(
+                SourceModuleConfiguration("Library", "Library.x"),
+                SourceModuleConfiguration("Other", "file:///workspace/Library.x"),
+            )
+        assertThatThrownBy { SourceGraphConfiguration.configure(null, graph, base) }
+            .hasMessageContaining("Duplicate source module roots")
+        assertThatThrownBy {
+                SourceGraphConfiguration.configure(
+                    null,
+                    listOf(SourceModuleConfiguration("", "Library.x")),
+                    base,
+                )
+            }
+            .hasMessageContaining("non-blank")
+        assertThat(
+                SourceGraphConfiguration.read(
+                    SourceGraphConfiguration.configure(null, before, base)
+                )
+            )
+            .isEqualTo(before)
+    }
+
     private val base = URI("file:///workspace/")
     private val before = listOf(SourceModuleConfiguration("Library", "file:///workspace/Library.x"))
     private val after = listOf(SourceModuleConfiguration("Renamed", "file:///workspace/Renamed.x"))
