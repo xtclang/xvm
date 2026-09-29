@@ -11,6 +11,58 @@ import java.net.URI
 internal object SourceGraphConfiguration {
     private val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
 
+    /** A missing or null graph selects discovery; an empty array is explicitly empty. */
+    fun read(content: String?): List<SourceModuleConfiguration>? {
+        val settings = parse(content)
+        val compiler = child(settings, "xtc")?.let { child(it, "compiler") } ?: return null
+        val modules = compiler["sourceModules"]?.takeUnless { it.isJsonNull } ?: return null
+        require(modules.isJsonArray) { "Source modules must be an array" }
+        return modules.asJsonArray.map { module ->
+            val entry = objectValue(module)
+            val dependencies = entry["dependencies"]?.takeUnless { it.isJsonNull }
+            require(dependencies == null || dependencies.isJsonArray) {
+                "Source dependencies must be an array"
+            }
+            SourceModuleConfiguration(
+                stringValue(entry["name"]),
+                stringValue(entry["uri"]),
+                dependencies?.asJsonArray?.map(::stringValue).orEmpty(),
+            )
+        }
+    }
+
+    /** Preserve unrelated LSP4IJ settings, including artifact and formatting configuration. */
+    fun configure(content: String?, modules: List<SourceModuleConfiguration>?, base: URI): String {
+        modules?.let {
+            it.forEach { module ->
+                require(
+                    module.name.isNotBlank() &&
+                        module.uri.isNotBlank() &&
+                        module.dependencies.all(String::isNotBlank)
+                ) {
+                    "Source module names, roots and dependencies must be non-blank strings"
+                }
+            }
+            canonical(it, base)
+        }
+        val settings = parse(content)
+        val xtc = child(settings, "xtc") ?: JsonObject().also { settings.add("xtc", it) }
+        val compiler = child(xtc, "compiler") ?: JsonObject().also { xtc.add("compiler", it) }
+        compiler.add("sourceModules", gson.toJsonTree(modules))
+        return gson.toJson(settings)
+    }
+
+    private fun child(parent: JsonObject, name: String): JsonObject? =
+        parent[name]?.takeUnless { it.isJsonNull }?.let(::objectValue)
+
+    private fun parse(content: String?): JsonObject =
+        try {
+            if (content.isNullOrBlank()) JsonObject()
+            else objectValue(JsonParser.parseString(content))
+        } catch (failure: JsonParseException) {
+            throw IllegalArgumentException("Invalid compiler settings JSON", failure)
+        }
+
     fun replace(
         content: String,
         expected: List<SourceModuleConfiguration>,
