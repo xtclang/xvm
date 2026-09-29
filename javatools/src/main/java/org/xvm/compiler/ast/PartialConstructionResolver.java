@@ -18,6 +18,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
@@ -73,7 +74,7 @@ final class PartialConstructionResolver {
         var written = arguments(site, PartialCallResolver.writtenArguments(site));
         var candidates = methods.stream()
                 .takeWhile(method -> !errs.isAbortDesired())
-                .flatMap(method -> site.probeCallCandidate(ctx, method.info().getType(), method.info(),
+                .flatMap(method -> ((AstNode) site).probeCallCandidate(ctx, method.info().getType(), method.info(),
                         method.method(), written, validation).stream()
                         .map(candidate -> anonymous ? candidate : infer(trial, ctx, construction.result(), candidate, written, errs)))
                 .filter(Objects::nonNull)
@@ -86,7 +87,7 @@ final class PartialConstructionResolver {
         var result = scope.withCandidates(candidates);
         return candidates.isEmpty() ? result : PartialCallResolver.argumentValues(site, ctx, result, errs,
                 values -> methods.stream().takeWhile(method -> !errs.isAbortDesired())
-                        .flatMap(method -> site.probeCallCandidate(ctx, method.info().getType(), method.info(),
+                        .flatMap(method -> ((AstNode) site).probeCallCandidate(ctx, method.info().getType(), method.info(),
                                 method.method(), arguments(site, values), validation).stream())
                         // Ordinary construction validates against the prepared constructor, then
                         // infers the result type. That later inference is not a new argument constraint.

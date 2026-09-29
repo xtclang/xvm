@@ -9,6 +9,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.CursorBinding;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 /**
  * Compiler-internal semantic operations for retained incomplete syntax. Public only to connect
