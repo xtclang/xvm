@@ -139,7 +139,14 @@ See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help
 
 The suite reads all 134 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-X124–X129 are newly written and await the combined batch run; the following receipts describe the preceding catalog.
+X124–X129 and the related CFG2/X105/X118/X122 regressions now have passing selected receipts:
+`run-8616709537315408794` covers eight cases and `run-431060674485649448` covers X124/X128,
+both with zero IDE errors. This is not a full 134-case checkpoint. File/package Rename uses
+the registered XTC preflight handler and real scope/name dialogs. Code-action edits are eager
+in IntelliJ until LSP4IJ's lazy-edit path preserves Redo; completion documentation remains lazy.
+External-resource acceptance loads the fixture directory and explicitly refreshes VFS; automatic
+watching of previously unopened external roots remains a follow-up. The following receipts
+describe the preceding catalog.
 Startup and the preceding 113 scenarios have a complete passing checkpoint recorded below. The
 [current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the 128-case selection and its resumed/focused runs separately: all 128 cases have passing
