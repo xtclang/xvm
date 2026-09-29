@@ -4,9 +4,53 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { CodeAction } from 'vscode-languageclient/node';
+import { modelPath } from '../../build-model';
+import { updateCompilerConfiguration } from '../../lsp-client';
 import { client, diagnostics, eventually, label, noErrors, playbook, targets } from './support';
 
 export function platformCases(): void {
+    playbook('X129', async (workspace, data) => {
+        const report = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, modelPath);
+        const model = JSON.parse(JSON.stringify(data.model).replaceAll('${workspace}', vscode.Uri.file(workspace.directory).toString()));
+        const settings = vscode.workspace.getConfiguration('xtc.compiler');
+        const previous = settings.get('sourceModules');
+        const writeModel = async () => {
+            await fs.mkdir(path.dirname(report.fsPath), { recursive: true });
+            await fs.writeFile(report.fsPath, JSON.stringify(model));
+            await updateCompilerConfiguration();
+        };
+        try {
+            await workspace.write(data.file, data.source);
+            await workspace.write(data.resource, data.contents);
+            await writeModel();
+            await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+            const document = await workspace.open(data.file);
+            await noErrors(document.uri);
+            model.sourceSets[0].resourceRoots = [];
+            await writeModel();
+            await diagnostics(document.uri, values => values.length > 0, 'Reimport disabled resources');
+            model.sourceSets[0].resourceRoots = [workspace.uri('processed').toString()];
+            await writeModel();
+            await noErrors(document.uri);
+            await fs.writeFile(report.fsPath, '{');
+            await updateCompilerConfiguration();
+            await noErrors(document.uri);
+            const override = [{ name: 'GradleAssets', uri: document.uri.toString(), resourceRoots: [] }];
+            await workspace.configure(override);
+            await diagnostics(document.uri, values => values.length > 0, 'Explicit override disables resources');
+            await writeModel();
+            assert.deepStrictEqual(settings.get('sourceModules'), override);
+            await diagnostics(document.uri, values => values.length > 0, 'Refresh preserves explicit override');
+            await settings.update('sourceModules', null, vscode.ConfigurationTarget.Workspace);
+            await noErrors(document.uri);
+            await vscode.commands.executeCommand('xtc.showCompilerPaths');
+        } finally {
+            await fs.rm(report.fsPath, { force: true });
+            await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
+            await updateCompilerConfiguration();
+        }
+    });
+
     playbook('X124', async (workspace, data) => {
         const external = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-playbook-resources-'));
         try {

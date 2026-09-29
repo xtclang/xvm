@@ -455,6 +455,7 @@ public class XtcProjectDelegate {
         });
         // Register after the producer exists; both source-set consumers and the compiler use its output.
         sourceSet.getOutput().dir(getXtcResourceOutputDirectory(project, sourceSet));
+        XtcLspModelIntegration.register(project, sourceSet, compileTask, processResourcesTask);
 
         // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
         // the compile task at all, is something we do if any of its inputs have changed, and that effectively means
