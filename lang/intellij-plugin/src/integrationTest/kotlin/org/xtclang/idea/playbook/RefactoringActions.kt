@@ -5,13 +5,14 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.WaitForException
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
+import com.intellij.driver.sdk.ui.components.elements.accessibleList
 import com.intellij.driver.sdk.ui.components.elements.accessibleTable
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
-import com.intellij.driver.sdk.ui.components.elements.list
 import com.intellij.driver.sdk.ui.components.elements.popup
 import com.intellij.driver.sdk.ui.components.elements.tree
 import com.intellij.driver.sdk.ui.ui
@@ -45,13 +46,27 @@ fun Driver.choosePopup(
 ) {
     val inspection = PopupInspection(this, editor, reopen)
     val popup = ui.popup("//div[@class='HeavyWeightWindow'][.//div[@class='MyList']]")
-    awaitUi("native popup contains $expected", 45.seconds) {
+    awaitUi(
+        "native popup contains $expected",
+        45.seconds,
+        errorMessage = {
+            "Expected $expected; rendered rows: ${if (popup.present()) popup.accessibleList { byClass("MyList") }.items else "no list"}"
+        },
+    ) {
         inspection.recover()
-        if (!popup.present()) return@awaitUi false
-        val rows = popup.list().items
+        if (!popup.present()) {
+            try {
+                awaitUi("intention menu opens", 2.seconds) { popup.present() }
+            } catch (_: WaitForException) {
+                // Reopen only an unapplied inspection, never a completed generation or rename.
+                inspection.reopenUnapplied()
+            }
+            return@awaitUi false
+        }
+        val rows = popup.accessibleList { byClass("MyList") }.items
         expected.all { name -> rows.any { it.contains(name) } }
     }
-    val list = popup.list()
+    val list = popup.accessibleList { byClass("MyList") }
     val index = list.items.indexOfFirst { it.contains(selected) }
     check(index >= 0)
     withContext(OnDispatcher.EDT) { cast(list.component, NativeListSelection::class).setSelectedIndex(index) }
@@ -100,7 +115,10 @@ fun Driver.quickFix(
     title: String,
 ) {
     focusEditor(editor)
-    withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+    withContext(OnDispatcher.EDT) {
+        editor.editor.getSelectionModel().removeSelection()
+        editor.editor.getCaretModel().moveToOffset(at)
+    }
     invokeAction("ShowIntentionActions", component = editor.component)
     choosePopup(editor, listOf(title), title) { invokeAction("ShowIntentionActions", component = editor.component) }
 }

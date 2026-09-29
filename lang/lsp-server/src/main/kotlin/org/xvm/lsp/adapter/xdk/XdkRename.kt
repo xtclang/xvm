@@ -145,7 +145,22 @@ internal object XdkRename {
         val oldDispatch =
             dispatch(before, plan.original) { path, offset -> plan.map(path, offset) }
                 ?.let(::memberDispatch) ?: return false
-        val newDispatch = dispatch(after, plan.proposed) { _, offset -> offset }?.let(::memberDispatch) ?: return false
+        val importRanges =
+            edits.filter { it != insertion }.map { edit ->
+                val start = edit.start + edits.filter { it.start < edit.start }.sumOf { it.text.length }
+                start until start + edit.text.length
+            }
+        // New package aliases have their own inherited dispatch chains. They have no previous
+        // owner to preserve; only package declarations inside the generated import insertions
+        // are excluded. All existing owners and every old reference still participate in proof.
+        val newDispatch =
+            dispatch(after, plan.proposed) { _, offset -> offset }
+                ?.let(::memberDispatch)
+                ?.filterNot { chain ->
+                    val declaration = chain.owner as? Target.Declaration
+                    declaration?.kind == SemanticModel.SymbolKind.PACKAGE && declaration.site.source == source &&
+                        importRanges.any { declaration.site.start in it && declaration.site.end - 1 in it }
+                }?.toSet() ?: return false
 
         fun matches(
             target: Target,
@@ -158,31 +173,49 @@ internal object XdkRename {
             val end = offset(text, location.range.end)?.let { plan.map(path, it) } ?: return false
             return declaration.site == Site(path, start, end)
         }
-        fun matchesContract(target: Target, contract: ProofIdentity): Boolean = when (contract) {
-            is ProofIdentity.Source -> {
-                if (contract.location.sourceName in plan.original) matches(target, contract.location)
-                else target == Target.External(contract)
+
+        fun matchesContract(
+            target: Target,
+            contract: ProofIdentity,
+        ): Boolean =
+            when (contract) {
+                is ProofIdentity.Source -> {
+                    if (contract.location.sourceName in plan.original) {
+                        matches(target, contract.location)
+                    } else {
+                        target == Target.External(contract)
+                    }
+                }
+
+                is ProofIdentity.Binary, is ProofIdentity.Method -> {
+                    target == Target.External(contract)
+                }
+
+                else -> {
+                    false
+                }
             }
-            is ProofIdentity.Binary, is ProofIdentity.Method -> target == Target.External(contract)
-            else -> false
-        }
         val changed = newDispatch - oldDispatch
-        val additions = candidates.map { candidate ->
-            val removed = (oldDispatch - newDispatch).singleOrNull { chain ->
-                matches(chain.owner, owner) && chain.members.any { matchesContract(it, candidate.contract) }
-            } ?: return false
-            val added = changed.singleOrNull { chain ->
-                chain.owner == removed.owner && chain.members.containsAll(removed.members) &&
-                    (chain.members - removed.members.toSet()).size == 1
-            } ?: return false
-            val member = (added.members - removed.members.toSet()).single() as? Target.Declaration ?: return false
-            if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
-                member.site.start < insertionStart || member.site.end > insertionStart + insertion.text.length
-            ) {
-                return false
-            }
-            member to removed
-        }.toMap()
+        val additions =
+            candidates
+                .map { candidate ->
+                    val removed =
+                        (oldDispatch - newDispatch).singleOrNull { chain ->
+                            matches(chain.owner, owner) && chain.members.any { matchesContract(it, candidate.contract) }
+                        } ?: return false
+                    val added =
+                        changed.singleOrNull { chain ->
+                            chain.owner == removed.owner && chain.members.containsAll(removed.members) &&
+                                (chain.members - removed.members.toSet()).size == 1
+                        } ?: return false
+                    val member = (added.members - removed.members.toSet()).single() as? Target.Declaration ?: return false
+                    if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
+                        member.site.start < insertionStart || member.site.end > insertionStart + insertion.text.length
+                    ) {
+                        return false
+                    }
+                    member to removed
+                }.toMap()
         if (additions.size != candidates.size) return false
         // Removing exactly these new methods must reconstruct every original chain in order,
         // including descendants, overloads and properties. Each method belongs to its own family.
@@ -218,13 +251,17 @@ internal object XdkRename {
                 else -> null
             }
 
-        fun selectedRebinding(old: Target, new: Target): Boolean {
+        fun selectedRebinding(
+            old: Target,
+            new: Target,
+        ): Boolean {
             val oldSite = declarationSite(old, oldDispatch)
             val newSite = declarationSite(new, newDispatch) ?: return false
             return additions.any { (member, original) ->
-                member.site == newSite && original.members.any {
-                    it == old || (oldSite != null && declarationSite(it, oldDispatch) == oldSite)
-                }
+                member.site == newSite &&
+                    original.members.any {
+                        it == old || (oldSite != null && declarationSite(it, oldDispatch) == oldSite)
+                    }
             }
         }
 
@@ -253,11 +290,15 @@ internal object XdkRename {
                         if (it.format != Constant.Format.Method) return null
                         Target.Declaration(it.site, SemanticModel.SymbolKind.METHOD)
                     }
+
                     is Target.External -> {
                         if (it.constant !is ProofIdentity.Binary && it.constant !is ProofIdentity.Method) return null
                         it
                     }
-                    else -> return null
+
+                    else -> {
+                        return null
+                    }
                 }
             }
         return written.takeIf {
