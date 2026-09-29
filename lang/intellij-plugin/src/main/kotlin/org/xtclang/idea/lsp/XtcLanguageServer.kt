@@ -26,4 +26,5 @@ data class SourceModuleConfiguration(
     val name: String,
     val uri: String,
     val dependencies: List<String> = emptyList(),
+    val resourceRoots: List<String>? = null,
 )

@@ -36,6 +36,59 @@ class CompilerConfigurationTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `resource root configuration distinguishes automatic empty and ordered custom paths`() {
+        val workspace = directory.toUri().toString()
+        fun configuration(resources: List<String>?) =
+            mapOf(
+                "sourceModules" to
+                    listOf(
+                        mapOf(
+                            "name" to "Library",
+                            "uri" to "Library.x",
+                            "resourceRoots" to resources,
+                        )
+                    )
+            )
+        val module =
+            CompilerConfiguration.modules(
+                    configuration(listOf("custom/", "fallback/")),
+                    listOf(workspace),
+                )!!
+                .single()
+        assertThat(module.resourceRoots)
+            .containsExactly(
+                directory.resolve("custom").toFile().toURI().toString().trimEnd('/') + "/",
+                directory.resolve("fallback").toFile().toURI().toString().trimEnd('/') + "/",
+            )
+        assertThat(
+                CompilerConfiguration.modules(configuration(null), listOf(workspace))!!.single()
+                    .resourceRoots
+            )
+            .isNull()
+        assertThat(
+                CompilerConfiguration.modules(configuration(emptyList()), listOf(workspace))!!
+                    .single()
+                    .resourceRoots
+            )
+            .isEmpty()
+        assertThatThrownBy {
+                CompilerConfiguration.modules(
+                    configuration(listOf("custom/", "custom/")),
+                    listOf(workspace),
+                )
+            }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThatThrownBy {
+                CompilerConfiguration.modules(
+                    configuration(listOf("https://example.com/resources/")),
+                    listOf(workspace),
+                )
+            }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(SourceModuleConfiguration(module).resourceRoots).isEqualTo(module.resourceRoots)
+    }
+
+    @Test
     fun `explicit null restores automatic discovery through JSON and host maps`() {
         assertThat(CompilerConfiguration.automatic(mapOf("sourceModules" to null))).isTrue()
         val settings = JsonParser.parseString("""{"xtc":{"compiler":{"sourceModules":null}}}""")
