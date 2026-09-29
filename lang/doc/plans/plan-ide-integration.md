@@ -18,6 +18,8 @@ The P1–P4 compiler organization checkpoint moves the four incomplete-syntax no
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
 capability or default adapter. Backend validation and the broader AST separation follow-ups are
 recorded in the [integration plan](../../../docs/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
+AST5 additionally shares read-only cursor/argument syntax queries in that package, with no capability
+change or new compiler state.
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
