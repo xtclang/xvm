@@ -178,6 +178,13 @@ hook substitutes unsaved content, while `sourceEntries(File)` supplies source/di
 including new unsaved members. The default hooks keep disk-based CLI behavior. Single-source and
 source-tree inputs then enter the same compiler pipeline.
 
+The protected `ModuleInfo(File, String)` constructor also accepts a logical source root and the
+module name parsed from host snapshot text, without requiring its parent directory to exist.
+File-operation proof can therefore replay an entire module at a proposed destination without
+writing temporary directories or discovering unrelated disk files. The host supplies source text,
+membership and resources through the existing hooks; ordinary CLI constructors retain disk
+discovery. This is a compiler input boundary, not an AST or LSP protocol responsibility.
+
 In `lang`, `XdkSources` captures one attempt's source text and membership, applies editor overlays
 and maps canonical paths back to editor URIs. This is the input to the module session described
 below. Source and resource paths retain their original filesystem context; unsaved resource assets
