@@ -785,6 +785,22 @@ Future extraction map for this validation batch:
 The receipts above validate the final integrated tree. They do not establish independent green
 checkpoints for intermediate commits or extracted PRs; each extracted PR still needs its own checks.
 
+#### Next implementation batch (L69–L71 / PLAT2c, 2026-09-29)
+
+Five separate implementation commits precede combined validation:
+
+1. Acceptance: correct single-file VS Code task outputs; expire CFG2's expected cyclic-graph
+   notification after asserting rejection; add shared X124 external-resource Apply/Reset/repair
+   and X125 exact platform regressions. Validation pending until all five checkpoints are ready.
+2. L69: negotiated semantic-token range/delta and bounded result lifetime.
+3. L70: versioned lazy completion/code-action resolution; other resolvers remain separate.
+4. L71: compiler-proven file-tree rename edits and create/delete lifecycle participation.
+5. PLAT2c: evaluated Gradle inputs and origin-aware effective paths in both hosts.
+
+The new catalog has 130 scenarios. The previous 128-case receipts remain historical evidence;
+new cases and changes are not validated by those receipts. X118 now carries ordered custom
+resource roots through native module rename and Undo in both hosts.
+
 #### Resource configuration and build-model integration (PLAT2 / L67)
 
 The accepted direction is one compiler input model shared by both hosts, with visible ownership.
