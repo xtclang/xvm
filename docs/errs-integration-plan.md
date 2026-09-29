@@ -596,6 +596,21 @@ fixing next; the following tasks are deliberately still open.
   Do not label every empty result a compiler defect before inspecting its semantic contract.
   Add focused regressions for confirmed bugs and update the demo's expected results afterward.
 
+**PLAT1 checkpoint:** `db328f8a1`; focused parsed-tree and closed-diagnostic regressions pass.
+
+**PLAT2 implementation checkpoint (validation pending):** `resourceRoots` is an optional ordered
+list on each source module, carried through server configuration and native rename round trips.
+Explicit roots replace defaults, `[]` disables resources, and omitted/null uses the compiler's
+existing layout deduction. IntelliJ's existing module table adds a JSON-array resource column;
+VS Code's settings schema exposes the same field. The richer path picker/origin view and Gradle
+model import remain PLAT2c work. Resource fingerprints include contents and filesystem metadata;
+uncertain lexing/interpolations conservatively capture the resource trees. Modules with no possible
+path tokens avoid that scan. This is bounded input validation, not a persistent resource index.
+Workspace resource events and external-root subscriptions refresh affected consumers, and resource
+inputs also participate in delayed-watcher/stale-result checks. New tests cover conventional/custom
+roots, unchanged reuse, same-size/same-timestamp edits, creation/deletion, explicit-empty roots,
+configuration ownership and delayed watcher registrations. Combined validation remains pending.
+
 #### Resource configuration and build-model integration (PLAT2 / L67)
 
 The accepted direction is one compiler input model shared by both hosts, with visible ownership.

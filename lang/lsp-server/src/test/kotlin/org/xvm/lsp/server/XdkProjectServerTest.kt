@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.SECONDS
@@ -39,6 +40,39 @@ import org.xvm.lsp.adapter.xdk.toDependency
 
 class XdkProjectServerTest {
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `resource deletion and repair refresh an unchanged open consumer`() {
+        CompilerTestSupport.configure()
+        val library = file("Library", "module Library { static String value() = $./data.txt; }")
+        val consumerText =
+            "module Consumer { package lib import Library; String run() = lib.value(); }"
+        val consumer = file("Consumer", consumerText)
+        val resources = directory.resolve("assets").toFile().apply { mkdirs() }
+        val resource = resources.resolve("data.txt").apply { writeText("template") }
+        Session(library, consumer).use { session ->
+            session.server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule(
+                        "Library",
+                        library.toURI().toString(),
+                        resourceRoots = listOf(resources.toURI().toString()),
+                    ),
+                    XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                )
+            )
+            session.open(consumer, consumerText, 1)
+            session.expect(consumer, 0, 1, false)
+            val deletion = session.published.size
+            Files.delete(resource.toPath())
+            session.watched(resource, FileChangeType.Deleted)
+            session.expect(consumer, deletion, 1, true, "DEPENDENCY-FAILED")
+            val repair = session.published.size
+            resource.writeText("repaired")
+            session.watched(resource, FileChangeType.Created)
+            session.expect(consumer, repair, 1, false)
+        }
+    }
 
     @Test
     fun `unsaved dependency edits recompile an unchanged consumer and closing restores disk`() {
