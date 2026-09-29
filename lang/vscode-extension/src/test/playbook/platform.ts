@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { diagnostics, label, noErrors, playbook, targets } from './support';
+import { client, diagnostics, label, noErrors, playbook, targets } from './support';
 
 export function platformCases(): void {
     playbook('X124', async (workspace, data) => {
@@ -49,4 +49,32 @@ export function platformCases(): void {
         const locations = await targets(document, 'TypeDefinition', document.positionAt(data.narrowedSource.lastIndexOf(data.narrowedAnchor)));
         assert.ok(locations.some(location => location.uri.path.endsWith(data.targetSuffix)));
     });
+    playbook('X126', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        const id = { uri: document.uri.toString() };
+        const full = await client().sendRequest<{ data: number[]; resultId: string }>('textDocument/semanticTokens/full', { textDocument: id });
+        assert.ok(full.data.length && full.resultId);
+        await workspace.replace(document, '\n' + data.source);
+        const caps = client().initializeResult!.capabilities.semanticTokensProvider!;
+        if (typeof caps.full === 'object' && caps.full.delta) {
+            const delta = await client().sendRequest<{ edits: { start: number; deleteCount: number; data?: number[] }[] }>('textDocument/semanticTokens/full/delta', { textDocument: id, previousResultId: full.resultId });
+            const patched = [...full.data];
+            for (const edit of delta.edits.slice().sort((a, b) => b.start - a.start)) patched.splice(edit.start, edit.deleteCount, ...edit.data ?? []);
+            const current = await client().sendRequest<{ data: number[] }>('textDocument/semanticTokens/full', { textDocument: id });
+            assert.deepStrictEqual(patched, current.data);
+        } else {
+            await assert.rejects(client().sendRequest('textDocument/semanticTokens/full/delta', { textDocument: id, previousResultId: full.resultId }), /not negotiated/);
+        }
+        if (caps.range) {
+            const range = await client().sendRequest<{ data: number[] }>('textDocument/semanticTokens/range', { textDocument: id, range: { start: { line: 0, character: 0 }, end: { line: 1, character: 0 } } });
+            assert.deepStrictEqual(range.data, []);
+        }
+        await workspace.discard(document);
+        await workspace.open(data.file);
+        if (typeof caps.full === 'object' && caps.full.delta) {
+            const reopened = await client().sendRequest<{ data: number[] }>('textDocument/semanticTokens/full/delta', { textDocument: id, previousResultId: full.resultId });
+            assert.ok(reopened.data.length);
+        }
+    });
+
 }
