@@ -3,6 +3,11 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.CharConstant
 import org.xvm.asm.constants.ClassConstant
+import org.xvm.asm.constants.DifferenceTypeConstant
+import org.xvm.asm.constants.ImmutableTypeConstant
+import org.xvm.asm.constants.IntersectionTypeConstant
+import org.xvm.asm.constants.RelationalTypeConstant
+import org.xvm.asm.constants.UnionTypeConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.IntConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
@@ -17,6 +22,7 @@ internal fun memberSignature(
     signature: SignatureConstant,
     declaration: MethodStructure,
     owner: IdentityConstant,
+    modules: Map<String, String>,
 ): String? {
     if (signature.paramCount != declaration.params.size || declaration.params.any { it.annotations.isNotEmpty() }) return null
     val formals =
@@ -25,7 +31,7 @@ internal fun memberSignature(
             parameter.asTypeParameterConstant(declaration.identityConstant) to name
         }
 
-    fun render(type: TypeConstant): String? = type.memberSourceType(owner, formals)
+    fun render(type: TypeConstant): String? = type.memberSourceType(owner, formals, modules)
     val typeParameters =
         signature.params.take(declaration.typeParamCount).zip(formals.values).map { (type, name) ->
             val constraint = type.paramTypes.singleOrNull() ?: return null
@@ -67,12 +73,27 @@ internal fun memberSignature(
 private fun TypeConstant.memberSourceType(
     owner: IdentityConstant,
     formals: Map<TypeParameterConstant, String>,
+    modules: Map<String, String>,
 ): String? {
     return when (this) {
         is ParameterizedTypeConstant -> {
-            val base = underlyingType.memberSourceType(owner, formals) ?: return null
-            val arguments = paramTypes.map { it.memberSourceType(owner, formals) ?: return null }
+            val base = underlyingType.memberSourceType(owner, formals, modules) ?: return null
+            val arguments = paramTypes.map { it.memberSourceType(owner, formals, modules) ?: return null }
             arguments.joinToString(", ", "$base<", ">")
+        }
+
+        is ImmutableTypeConstant -> underlyingType.memberSourceType(owner, formals, modules)?.let { "immutable $it" }
+
+        is RelationalTypeConstant -> {
+            val operator = when (this) {
+                is UnionTypeConstant -> "|"
+                is IntersectionTypeConstant -> "+"
+                is DifferenceTypeConstant -> "-"
+                else -> return null
+            }
+            val left = underlyingType.memberSourceType(owner, formals, modules) ?: return null
+            val right = underlyingType2.memberSourceType(owner, formals, modules) ?: return null
+            "($left $operator $right)"
         }
 
         is TerminalTypeConstant -> {
@@ -85,6 +106,7 @@ private fun TypeConstant.memberSourceType(
                     when {
                         constantPool.getImplicitlyImportedIdentity(identity.name) == identity -> identity.name
                         identity.moduleConstant == owner.moduleConstant -> identity.pathString
+                        XdkAutoImports.target(identity) != null -> modules[identity.moduleConstant.name]?.let { "$it.${identity.pathString}" }
                         else -> null
                     }
                 }
@@ -99,4 +121,13 @@ private fun TypeConstant.memberSourceType(
             null
         }
     }
+}
+
+/** Inspect only type structures whose source spelling the renderer understands. */
+internal fun TypeConstant.memberClasses(): List<ClassConstant> = when (this) {
+    is ParameterizedTypeConstant -> underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
+    is RelationalTypeConstant -> underlyingType.memberClasses() + underlyingType2.memberClasses()
+    is ImmutableTypeConstant -> underlyingType.memberClasses()
+    is TerminalTypeConstant -> listOfNotNull(definingConstant as? ClassConstant)
+    else -> emptyList()
 }

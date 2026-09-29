@@ -267,7 +267,7 @@ internal fun captureRenameFacts(
                 if (contract !is ProofIdentity.Source && contract !is ProofIdentity.Binary &&
                     !(contract is ProofIdentity.Method && contract.parent is ProofIdentity.Binary)
                 ) return@mapNotNull null
-                XdkMemberActions.Candidate(owner.location, contract, member.insertion, member.declaration, member.implementation)
+                XdkMemberActions.Candidate(owner.location, contract, member.insertion, member.declaration, member.implementation, member.imports)
             },
     )
 }
