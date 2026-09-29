@@ -19,6 +19,7 @@ import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DefinitionParams
@@ -638,6 +639,46 @@ class XdkStdioTest {
         }
         assertThat(Files.readString(directory.resolve("stderr.log")))
             .doesNotContain("TreeSitterAdapter", "loadXtcLanguage")
+    }
+
+    @Test
+    fun `completion documentation ordering and literal kinds round trip over stdio`() {
+        val header =
+            "module Stdio { /** Keeps the selected text. */ String choose(String value, String backup = \"\") = value; "
+        val prefix = "$header void run() { ch"
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            session.open("$prefix; } }")
+            assertThat(session.diagnosticsAt(1).diagnostics).isNotEmpty()
+            val items =
+                session
+                    .await(
+                        service.completion(CompletionParams(document, Position(0, prefix.length)))
+                    )
+                    .left
+            val item = items.single { it.label == "choose" }
+            assertThat(item.documentation.left).contains("Keeps the selected text.")
+            assertThat(item.sortText).isNotBlank()
+            val call = "$header void run() { choose(value = "
+            session.change("$call); } }", 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
+            val cursor = Position(0, call.length)
+            val values = session.await(service.completion(CompletionParams(document, cursor))).left
+            assertThat(values.single { it.label == "\"\"" }.kind)
+                .isEqualTo(CompletionItemKind.Value)
+            val signature =
+                session
+                    .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+                    .signatures
+                    .single()
+            assertThat(signature.documentation.left)
+                .contains("Keeps the selected text.", "overload not selected")
+            assertThat(signature.activeParameter).isZero()
+            assertThat(signature.parameters[1].documentation.left).contains("Optional")
+            session.shutdownAndExit()
+        }
     }
 
     @Test

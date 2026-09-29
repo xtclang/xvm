@@ -34,6 +34,8 @@ data class CompletionItem(
     val detail: String,
     val insertText: String,
     val textEdit: TextEdit? = null,
+    val documentation: String? = null,
+    val sortText: String? = null,
 ) {
     enum class CompletionKind {
         CLASS,
