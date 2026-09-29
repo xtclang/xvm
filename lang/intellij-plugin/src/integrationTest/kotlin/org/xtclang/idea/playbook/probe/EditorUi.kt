@@ -1,5 +1,7 @@
 package org.xtclang.idea.playbook.probe
 
+import com.intellij.codeInsight.completion.CompletionPhase
+import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.DataManager
 import com.intellij.openapi.application.ApplicationManager
@@ -75,7 +77,11 @@ object EditorUi {
     @JvmStatic
     fun closeCompletion(editor: Editor) {
         ApplicationManager.getApplication().assertIsDispatchThread()
+        CompletionServiceImpl.currentCompletionProgressIndicator?.closeAndFinish(true)
         LookupManager.getActiveLookup(editor)?.hideLookup(true)
+        // Reopening an unapplied popup after focus loss is a fresh invocation. Retaining the
+        // previous phase makes IDEA broaden it to second-invocation word completion instead.
+        CompletionServiceImpl.setCompletionPhase(CompletionPhase.NoCompletion)
     }
 
     @JvmStatic
