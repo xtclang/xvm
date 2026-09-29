@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 131 scenarios. X124–X126 are added for the next combined validation;
+The current catalog has 132 scenarios. X124–X127 are added for the next combined validation;
 the receipts below cover the preceding 128-case catalog. The
 [2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the full selection, resumed cases, failures and focused corrections separately. Historical
@@ -2132,6 +2132,7 @@ module Advanced {
 | X124 | Configure an external resource directory for Assets.x; test Reset and Apply in IntelliJ, explicit empty roots and restoration in VS Code; create, delete and recreate data.txt outside the workspace. | Missing-resource diagnostics clear and return through native file watchers; settings preserve the selected roots. |
 | X125 | Hover a generic echo call; request signature help before an existing positional/named argument; complete direct and chained `.tr()`; navigate the narrowed JsonObject variable's type. | Hover identifies echo, active parameters are 1/0, completion offers trim, and type definition opens bundled Map.x. |
 | X126 | Request full tokens, insert a leading newline, request a delta and a range when negotiated, then close/reopen and request using the old ID. | Applying edits reconstructs the full result; empty ranges are empty; retired IDs return full data. Unsupported client operations are refused explicitly. |
+| X127 | Request an unused-import action, resolve its edit when negotiated, edit the source, then try resolving the old handle. | Initial lazy actions omit edits; resolve returns versioned edits without changing the title; obsolete handles are refused. Eager-only clients retain complete actions. |
 
 **Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
 scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
