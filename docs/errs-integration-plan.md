@@ -441,6 +441,39 @@ VS Code receipts above.
 These are absent operations or optional extensions to working base features. They are not
 evidence that existing push diagnostics, full tokens or eagerly populated responses are broken.
 
+#### Investigation status and next decisions (2026-09-29)
+
+Every missing feature in the capability matrix has an open task below or in L63. The inventory
+audit established the current implementation boundary; it is **not** a completed design for
+every operation. An unchecked task must not be reported as investigated, implemented or tested
+merely because its protocol method is known. Implementation should start with the specific
+investigation below and record its conclusion beside the task. L82 supplies the common
+backend/protocol/editor, cancellation, stale-result and performance acceptance requirements.
+
+| Scope | Investigation already recorded | Next investigation before implementation |
+|---|---|---|
+| L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
+| L68 pull diagnostics | Diagnostics currently publish versioned push results. | Define push/pull negotiation, result-ID ownership, related/closed documents and invalidation so the same error is neither duplicated nor retained after repair. |
+| L69 token range/delta | Full tokens exist; range/delta operations do not. | Define snapshot/result-ID lifetime, delta computation and fallback after edits, close or restart; measure whether caching is beneficial. |
+| L70 lazy resolve | Supported response data is currently eager. | Measure expensive fields per provider, choose supported resolve properties, and design detached handles that reject stale documents and dependency revisions. |
+| L71 file operations | Watchers and didRenameFiles refresh state; pre-edit participation is absent. | Reuse the rename graph proof for file-tree operations; define create/delete semantics, folder filters, explicit graph persistence and duplicate-notification handling in both hosts. |
+| L72 save/sync/formatting | Full sync, didSave and single-range formatting work. | Separate save hooks, incremental patches and multiple-range formatting; define edit ordering, overlapping ranges and UTF-16/CRLF behavior without changing the existing Full-sync contract prematurely. |
+| L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
+| L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
+| L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
+| L76 inline completion | No inline provider exists. | Decide useful compiler/snippet use cases and client support first; no generative service is implied. Implement and test the agreed scope or record an explicit exclusion. |
+| L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
+| L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
+| L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
+| L80 negotiation | The protocol audit identified capability/lifecycle gaps; initialized watcher ordering is already fixed. | Audit each remaining capability and client entry point against actual server behavior; do not mistake inherited LSP4J defaults for support. |
+| L81 progress/trace/refresh | Queue contents, compile/API duration and request timing logs exist. Application progress, partial results and negotiated controls are incomplete. | Define operation/token ownership, cancellation and refresh triggers for long graph requests; verify transport/compiler lock ordering and client behavior. |
+
+L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
+color editing or every optional protocol extension mandatory for the compiler-only release.
+An exclusion must state its reason and keep the corresponding capability unadvertised. L62 and
+L64–L67 separately track gaps inside already implemented feature families; R1–R8 track execution
+and debugging. Neither feature counts nor a selected passing playbook establish total completeness.
+
 - [ ] **L68 — Pull diagnostics.** Implement `textDocument/diagnostic`, `workspace/diagnostic`
   and `workspace/diagnostic/refresh`, result IDs/unchanged reports, related documents,
   cancellation and closed-file reporting. Negotiate push/pull behavior without duplicate or
@@ -1011,50 +1044,60 @@ override is introduced in the rename batch.
 
 ## Next checkpoint: isolate partial AST syntax
 
-After the current rename batch is tested, committed and pushed, evaluate moving the branch-added
-cursor/recovery syntax into `org.xvm.compiler.ast.partial`. Candidate classes are
+The deeper access/ownership audit selects a bounded move: put the four syntax nodes
 `IncompleteStatement`, `IncompleteExpression`, `IncompleteDeclarationStatement` and
-`IncompleteTypeCompositionStatement`, together with `CursorScope`, `PartialArgument`,
-`PartialCallResolver` and `PartialConstructionResolver` where access permits.
+`IncompleteTypeCompositionStatement` in `org.xvm.compiler.ast.partial`. Keep `CursorScope`,
+`PartialArgument`, `PartialCallResolver` and `PartialConstructionResolver` package-private in
+`org.xvm.compiler.ast`. These are semantic validation/inference helpers, not syntax nodes; moving
+all eight would unnecessarily export ordinary compiler implementation details. This is a planned
+refactor after the current member-generation batch, not an implemented package change.
 
-- [x] Inventory package-private and protected access across the proposed boundary, including
-  accesses on *other* AST node instances (Java protected access is narrower across packages).
-- [ ] Keep partial-only implementation helpers package-private within the new package. Keep
-  classic parser/validation hooks in the AST where they own normal language semantics.
-- [ ] Perform a mechanical move only if existing public/protected contracts or a few narrow,
-  meaningful helpers suffice. Do not expose AST internals broadly just to satisfy the move.
-- [x] If access changes would be substantial, record the exact blockers and proposed minimal
-  boundary before restructuring. The initial inventory already shows package-private helpers;
-  this is not yet classified as a trivial import-only move. Concrete boundaries include
-  package-private `NewExpression.prepareConstruction`/its `Construction` result and protected
-  `Expression.validate` calls from the non-subclass partial resolvers. Moving partial helpers
-  together preserves their internal package access but does not solve these classic-AST calls.
-- [ ] Update imports, API/AST ownership notes and extraction map; run compiler recovery,
-  cursor validation/cloning and semantic snapshot tests after the move. Ordinary complete-source
-  compilation and failed-emission behavior must remain unchanged.
+- [x] Inventory package-private/protected access and reflective child traversal, including accesses
+  on other AST instances and ownership of cloned headers and anonymous construction shells.
+- [x] Define a narrow compiler-owned boundary rather than public forwarding methods for every
+  validation or inference operation. The audit found that a wholesale child-access rewrite is
+  unnecessary; the existing registered-field mechanism can support the move.
+- [ ] **P1 — Extract semantics in the existing package.** Introduce a compiler-internal public
+  `PartialQueries` service with `inspect(site, context, required, errors)`,
+  `declarationBinding(site, lexicalScope, writtenFormals, errors)` and `argumentCall(site)`.
+  Move the existing inspection orchestration into it, keeping the final incomplete-source
+  diagnostic in the node. Contexts remain attempt-local arguments; no new cache or AST state.
+  Pass header scope and immutable formals explicitly so helper-only header accessors stay private
+  to their package. Keep the cursor-presence predicate beside the service for ordinary property
+  validation. Add a read-only `NewExpression.getArguments()` using `List.copyOf(args)` to replace
+  the direct structural field access already exposed by the partial node's leading-argument query.
+- [ ] **P2 — Support registered cross-package child fields.** In `AstNode.fieldsForNames`, enable
+  reflective access only for explicitly registered child fields crossing the package boundary
+  inside the same compiler module. Fail explicitly if access cannot be established. Add a real
+  cross-package fixture covering inherited fields, traversal, dumps, clone, replacement and
+  removal; keep malformed-field tests. No public fields, module opening flags or descriptor
+  framework are needed. Final header lists must still never be assigned reflectively.
+- [ ] **P3 — Move only the four nodes.** Update Parser, embedding result/collector types, the Kotlin
+  consumers and tests together. Keep `prepareConstruction`, `Construction`, `Expression.validate`,
+  inference helpers and `NamedTypeExpression` representation fields at their existing visibility.
+  In the two retained resolvers, call package-private `probeCallCandidate` through an `AstNode`-
+  typed reference: that method is not inherited by a subclass in another package.
+- [ ] **P4 — Validate and document ownership/API boundaries.** Update AST ownership notes and
+  extraction map, then run field-model, parser recovery, cursor binding, identity snapshot,
+  partial adapter, call/constructor/argument, delimiter and header suites. Include listener and
+  cancellation boundaries and representative complete-source compilation. A native IDE rerun
+  is not required solely for package organization if these regressions pass.
 
-Access audit result: the all-eight-class move is **not** a narrow visibility change. Keep the
-current package for this checkpoint. No public forwarding facade or widened classic-AST access
-has been introduced merely to make a relocation compile.
+| Boundary | Implementation decision and regression requirement |
+|---|---|
+| Validation/inference access | Retain the four helpers in the ordinary AST package. The service orchestrates real validation; it does not duplicate compiler semantics in the LSP. |
+| Syntax access | One ordinary constructor-arguments accessor replaces direct `creation.args` access. Pass scope/formals into the service instead of adding public representation getters. The relevant `NamedTypeExpression` constructors are already public; its fields/parenting were the actual blocker. |
+| Child replacement | Inspection uses existing `AstNode.replaceChild`; no extra setters or stored contexts. |
+| Reflective traversal | Cross-package access is granted at explicit field registration, not by widening all AST fields. Exercise the same registered fields through clone, traversal and replacement. |
+| Clone ownership | Statement/expression nodes keep normal deep cloning. Both header nodes keep fresh construction and adoption of copied children with final `List.copyOf` lists and deferred compiler-stage traversal. Original and clone parentage/binding identities must stay separate. |
+| Construction ownership | Anonymous construction prepares its attempt-owned class shell, not a detached clone. Collectors publish only bindings reachable from the current attempt's roots. |
+| Public embedding types | `PartialAnalysis` and `CursorBinding.Collector.begin/record` expose the partial site type. These classes are new on this branch: put their final package in the initial extracted PRs rather than adding compatibility aliases for an unpublished branch API. |
 
-| Boundary | Actual access from partial code | Consequence of a direct subpackage move |
-| --- | --- | --- |
-| Construction preparation | `NewExpression.prepareConstruction`, its `Construction` result, `body`, `type`, `args` | Constructor probing would need several new exported operations or an AST-package query service. |
-| Expression validation and parenting | `Expression.validate`, `AstNode.introduceParentage`, assignment to `NameExpression.left` | Protected access on other AST instances is not legal from the moved helpers; existing public child replacement alone does not expose validation. |
-| Argument and inference machinery | `AstNode.probeCallCandidate`, `containsNamedArgs`, `rearrangeNamedArgs`, `Expression.inferTypeFromConstructor` | These are compiler-internal operations, not general embedding contracts. Moving resolvers also requires a deliberate compiler-service boundary. |
-| Type syntax recovery | `NamedTypeExpression.left`, `names`, `paramTypes` and internal constructors | CursorScope currently transforms disposable syntax using package access; broad field getters would expose incidental representations. |
-| Traversal and cloning | `AstNode.fieldsForNames` returns Fields without enabling cross-package access | Reflective reads/writes of protected child fields currently rely on a shared package. Import changes alone would compile some nodes but break traversal at runtime. |
-| Classic AST recovery checks | `IncompleteStatement.isWithin` used by normal validation | A narrow recovery predicate can remain in the AST, but does not solve the other boundaries. |
-
-A future move should first define a small compiler-owned partial-query service and explicit child
-access for AST subclasses, then move the four syntax nodes and whichever helpers no longer rely
-on implementation access. That service design is a separate refactor; it must not duplicate normal
-validation or move compiler inference rules into the LSP. The requested organizational direction
-remains recorded, with these concrete prerequisites rather than a blanket public-API expansion.
-
-This is structural organization, not a new LSP dependency in the compiler. The partial nodes
-represent incomplete source syntax usable by embedding hosts generally. No move is included in
-the current rename validation batch.
+Acceptance also includes ordinary parsing creating no partial markers, partial nodes never emitting
+code, and no new mutable AST field. `IncompleteTypeCompositionStatement` remains a subclass of
+`TypeCompositionStatement`; its protected constructor and access on its own instances already work
+across packages. The nodes represent incomplete source syntax for embedding hosts generally, not
+an LSP dependency inside the compiler.
 
 ## Composition audit follow-up
 
