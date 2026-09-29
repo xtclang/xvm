@@ -800,3 +800,8 @@ L70 now negotiates lazy completion documentation and code-action edits with boun
 handles and stale-result rejection. Completion insertion/type details remain eager; compiler proof
 is still performed before offering an action. X127 plus service tests await batch validation.
 Code lens, link, inlay-hint and workspace-symbol resolve remain explicit follow-ups.
+
+L71 pre/post file-operation handlers are implemented, with compiler-proven member/package renames,
+combined batch proof and safe container moves. X128 drives the installed native file listeners;
+validation is pending. Cross-package qualification rewrites and explicit source-graph replacement
+are still refused. LSP pre-operation null replies cannot prevent the user from moving a file.

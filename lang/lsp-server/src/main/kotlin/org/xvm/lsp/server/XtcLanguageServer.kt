@@ -20,6 +20,7 @@ import org.eclipse.lsp4j.FileOperationFilter
 import org.eclipse.lsp4j.FileOperationOptions
 import org.eclipse.lsp4j.FileOperationPattern
 import org.eclipse.lsp4j.FileOperationsServerCapabilities
+import org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities
 import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
@@ -29,6 +30,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Registration
 import org.eclipse.lsp4j.RegistrationParams
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SemanticTokensLegend
@@ -40,6 +42,7 @@ import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFoldersOptions
 import org.eclipse.lsp4j.WorkspaceServerCapabilities
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -195,6 +198,23 @@ class XtcLanguageServer(
             }
     }
 
+    private val fileOperationCapabilities =
+        AtomicReference<FileOperationsWorkspaceCapabilities?>(null)
+
+    internal fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> =
+        if (fileOperationCapabilities.get()?.willRename == true)
+            textDocumentService.renameFiles(params)
+        else
+            CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.MethodNotFound,
+                        "File rename participation was not negotiated",
+                        null,
+                    )
+                )
+            )
+
     private val compilerSettings = AtomicReference(CompilerSettings())
 
     companion object {
@@ -323,6 +343,7 @@ class XtcLanguageServer(
                         true,
             )
         )
+        fileOperationCapabilities.set(params.capabilities?.workspace?.fileOperations)
         val tokenRequests = params.capabilities?.textDocument?.semanticTokens?.requests
         val tokens =
             semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
@@ -748,15 +769,29 @@ class XtcLanguageServer(
                     WorkspaceServerCapabilities().apply {
                         fileOperations =
                             FileOperationsServerCapabilities().apply {
-                                didRename =
+                                val filters =
                                     FileOperationOptions(
                                         listOf(
                                             FileOperationFilter(
                                                 FileOperationPattern("**/*.x"),
                                                 "file",
-                                            )
+                                            ),
+                                            FileOperationFilter(
+                                                FileOperationPattern("**").apply {
+                                                    matches = "folder"
+                                                },
+                                                "file",
+                                            ),
                                         )
                                     )
+                                val client = fileOperationCapabilities.get()
+                                if (client?.willRename == true && supportsVersionedEdits)
+                                    willRename = filters
+                                if (client?.willCreate == true) willCreate = filters
+                                if (client?.willDelete == true) willDelete = filters
+                                if (client?.didRename == true) didRename = filters
+                                if (client?.didCreate == true) didCreate = filters
+                                if (client?.didDelete == true) didDelete = filters
                             }
                         workspaceFolders =
                             WorkspaceFoldersOptions().apply {
