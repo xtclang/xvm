@@ -399,7 +399,9 @@ public class XtcProjectDelegate {
     }
 
     public static Provider<@NotNull Directory> getXtcResourceOutputDirectory(final Project project, final SourceSet sourceSet) {
-        return project.getLayout().getBuildDirectory().dir(XTC_LANGUAGE_NAME + '/' + sourceSet.getName() + "/resources");
+        // Follow the producer's evaluated destination, including later Copy.into(...) overrides.
+        final var resources = project.getTasks().named(getProcessResourcesTaskName(sourceSet), Copy.class);
+        return project.getLayout().dir(resources.map(Copy::getDestinationDir));
     }
 
     public static String getCompileTaskName(final SourceSet sourceSet) {
@@ -450,6 +452,8 @@ public class XtcProjectDelegate {
             task.from(resources);
             task.into(outputDir);
         });
+        // Register after the producer exists; both source-set consumers and the compiler use its output.
+        sourceSet.getOutput().dir(getXtcResourceOutputDirectory(project, sourceSet));
 
         // Note, the rebuild extension flag is not the same thing as always rerunning this task. The fact that we call
         // the compile task at all, is something we do if any of its inputs have changed, and that effectively means
@@ -793,10 +797,7 @@ public class XtcProjectDelegate {
             // Add XTC outputs without replacing Java's resource output directory: the two
             // processing tasks may apply different filters and must not overwrite each other.
             final var outputModules = getXtcSourceSetOutputDirectory(project, sourceSet);
-            final var outputResources = getXtcResourceOutputDirectory(project, sourceSet);
             logger.info("[plugin] Configured sourceSets.{}.outputModules  : {}", sourceSetName, outputModules);
-            logger.info("[plugin] Configured sourceSets.{}.outputResources  : {}", sourceSetName, outputResources.get());
-            output.dir(outputResources);
             output.dir(outputModules);
         });
     }
