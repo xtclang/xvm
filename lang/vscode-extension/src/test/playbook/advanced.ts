@@ -1,10 +1,48 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { CallHierarchyItem, CallHierarchyOutgoingCall } from 'vscode-languageclient/node';
+import { CallHierarchyItem, CallHierarchyOutgoingCall, SemanticTokens, DocumentDiagnosticReport } from 'vscode-languageclient/node';
 import { scenarioRegex, scenarioText } from './shared';
 import { client, diagnostics, fixture, label, noErrors, playbook, position, symbolNames, symbols, targets } from './support';
 
+async function assertTokenRanges(document: vscode.TextDocument): Promise<void> {
+    const tokens = await client().sendRequest<SemanticTokens | null>('textDocument/semanticTokens/full', { textDocument: { uri: document.uri.toString() } });
+    if (!tokens) return; // A failed parse may have no AST or semantic token report.
+    let line = 0;
+    let column = 0;
+    let previousEnd = 0;
+    for (let i = 0; i < tokens.data.length; i += 5) {
+        const [deltaLine, deltaColumn, length] = tokens.data.slice(i, i + 3);
+        line += deltaLine;
+        column = deltaLine === 0 ? column + deltaColumn : deltaColumn;
+        assert.ok(deltaLine > 0 || column >= previousEnd, `Overlapping tokens at ${line}:${column}`);
+        assert.ok(length > 0);
+        previousEnd = column + length;
+    }
+}
+
 export function advancedCases(): void {
+    playbook('X123', async (workspace, data) => {
+        const document = await workspace.open(data.file);
+        assert.ok(client().initializeResult?.capabilities.diagnosticProvider);
+        const params = { textDocument: { uri: document.uri.toString() }, identifier: 'xtc' };
+        try {
+            await workspace.replace(document, data.broken);
+            await diagnostics(document.uri, values => values.some(value => value.severity === vscode.DiagnosticSeverity.Error), 'Pull errors reach Problems');
+            const first = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', params);
+            assert.strictEqual(first.kind, 'full');
+            assert.ok(first.resultId);
+            const unchanged = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', { ...params, previousResultId: first.resultId });
+            assert.strictEqual(unchanged.kind, 'unchanged');
+            await workspace.replace(document, data.repaired);
+            await noErrors(document.uri);
+            const repaired = await client().sendRequest<DocumentDiagnosticReport>('textDocument/diagnostic', { ...params, previousResultId: first.resultId });
+            assert.strictEqual(repaired.kind, 'full');
+            assert.ok(repaired.kind === 'full' && repaired.items.length === 0);
+            assert.notStrictEqual(repaired.resultId, first.resultId);
+        } finally {
+            await workspace.replace(document, fixture(data.file));
+        }
+    });
     playbook('X68', async (workspace, data) => {
         const document = await workspace.open(data.file);
         await noErrors(document.uri);
@@ -119,9 +157,11 @@ export function advancedCases(): void {
     playbook('X76', async (workspace, data) => {
         const document = await workspace.open(data.file);
         await noErrors(document.uri);
+        if (data.tokensNonOverlapping) await assertTokenRanges(document);
         const expression = data.expression;
         await workspace.replace(document, fixture(data.file).replace(data.replaceFrom, scenarioText(data.replaceWith, expression)));
         await diagnostics(document.uri, values => values.length > 0, 'Missing nested call diagnostics');
+        if (data.tokensNonOverlapping) await assertTokenRanges(document);
         const help = await workspace.signature(document, position(document, expression, expression.length));
         assert.strictEqual(help?.signatures[0].label, data.signature);
         assert.strictEqual(help?.signatures[0].activeParameter, data.activeParameter);
