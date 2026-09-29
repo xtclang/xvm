@@ -181,8 +181,8 @@ import org.xtclang.tooling.model.language
  * - LSP semantic token mappings
  * - Eclipse syntax coloring
  *
- * language() is the DSL entry point function (see LanguageModelBuilder above).
- * Returns LanguageModel data class containing all parsed definitions.
+ * language() is the DSL entry point function (see LanguageModelBuilder above). Returns
+ * LanguageModel data class containing all parsed definitions.
  */
 val xtcLanguage =
     language(
@@ -200,13 +200,16 @@ val xtcLanguage =
         //   block: ScopeBuilder.() -> Unit - Configuration lambda
         //
         // ScopeBuilder properties:
-        //   textMate: String - TextMate scope name (https://macromates.com/manual/en/language_grammars)
+        //   textMate: String - TextMate scope name
+        // (https://macromates.com/manual/en/language_grammars)
         //   intellij: String - IntelliJ DefaultLanguageHighlighterColors key
         //   eclipse: String - Eclipse IPreferenceStore color key
-        //   semanticToken: String - LSP SemanticTokenTypes (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes)
+        //   semanticToken: String - LSP SemanticTokenTypes
+        // (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#semanticTokenTypes)
         //   vim: String - Vim highlight group (see :help group-name)
         //   emacs: String - Emacs font-lock face (see M-x describe-face)
-        //   treeSitter: String - Tree-sitter capture name (see https://tree-sitter.github.io/tree-sitter/syntax-highlighting)
+        //   treeSitter: String - Tree-sitter capture name (see
+        // https://tree-sitter.github.io/tree-sitter/syntax-highlighting)
 
         scope("keyword") {
             textMate = "keyword.control.xtc"
@@ -641,7 +644,11 @@ val xtcLanguage =
         token("ANNOTATION", "@[a-zA-Z_][a-zA-Z0-9_]*", "storage.type.annotation.xtc")
 
         // Doc comments (/** ... */)
-        token("DOC_COMMENT", "/\\*\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/", "comment.block.documentation.xtc")
+        token(
+            "DOC_COMMENT",
+            "/\\*\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/",
+            "comment.block.documentation.xtc",
+        )
 
         // Block comments (/* ... */)
         token("BLOCK_COMMENT", "/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/", "comment.block.xtc")
@@ -711,7 +718,8 @@ val xtcLanguage =
         //   RIGHT: a op b op c = a op (b op c)
         //   NONE: Cannot chain
         //
-        // OperatorCategory enum: { ASSIGNMENT, ARITHMETIC, COMPARISON, LOGICAL, BITWISE, MEMBER_ACCESS, OTHER }
+        // OperatorCategory enum: { ASSIGNMENT, ARITHMETIC, COMPARISON, LOGICAL, BITWISE,
+        // MEMBER_ACCESS, OTHER }
 
         // Assignment operators (precedence 1, lowest - binds last)
         operator("=", 1, Associativity.RIGHT, OperatorCategory.ASSIGNMENT)
@@ -1175,7 +1183,11 @@ val xtcLanguage =
             extends("Statement")
             child("condition", "Expression")
             child("message", "Expression", Cardinality.OPTIONAL)
-            property("kind", "String", default = "assert") // assert, assert:arg, assert:bounds, etc.
+            property(
+                "kind",
+                "String",
+                default = "assert",
+            ) // assert, assert:arg, assert:bounds, etc.
         }
 
         // From BreakStatement.java
@@ -1687,20 +1699,52 @@ val xtcLanguage =
         token("LIT_UINTN", "[0-9][0-9_]*[uU][nN]", "constant.numeric.integer.uintn.xtc")
 
         // Decimal literal types (suffixed: 3.14d32, 2.718d64, etc.)
-        token("LIT_DEC32", "[0-9][0-9_]*\\.[0-9][0-9_]*[dD]32", "constant.numeric.decimal.dec32.xtc")
-        token("LIT_DEC64", "[0-9][0-9_]*\\.[0-9][0-9_]*[dD]64", "constant.numeric.decimal.dec64.xtc")
-        token("LIT_DEC128", "[0-9][0-9_]*\\.[0-9][0-9_]*[dD]128", "constant.numeric.decimal.dec128.xtc")
-        token("LIT_DECN", "[0-9][0-9_]*\\.[0-9][0-9_]*[dD][nN]", "constant.numeric.decimal.decn.xtc")
+        token(
+            "LIT_DEC32",
+            "[0-9][0-9_]*\\.[0-9][0-9_]*[dD]32",
+            "constant.numeric.decimal.dec32.xtc",
+        )
+        token(
+            "LIT_DEC64",
+            "[0-9][0-9_]*\\.[0-9][0-9_]*[dD]64",
+            "constant.numeric.decimal.dec64.xtc",
+        )
+        token(
+            "LIT_DEC128",
+            "[0-9][0-9_]*\\.[0-9][0-9_]*[dD]128",
+            "constant.numeric.decimal.dec128.xtc",
+        )
+        token(
+            "LIT_DECN",
+            "[0-9][0-9_]*\\.[0-9][0-9_]*[dD][nN]",
+            "constant.numeric.decimal.decn.xtc",
+        )
 
         // Float literal types (suffixed: 3.14f32, 2.718f64, etc.)
-        token("LIT_FLOAT8E4", "[0-9][0-9_]*\\.?[0-9]*[fF]8[eE]4", "constant.numeric.float.float8e4.xtc")
-        token("LIT_FLOAT8E5", "[0-9][0-9_]*\\.?[0-9]*[fF]8[eE]5", "constant.numeric.float.float8e5.xtc")
+        token(
+            "LIT_FLOAT8E4",
+            "[0-9][0-9_]*\\.?[0-9]*[fF]8[eE]4",
+            "constant.numeric.float.float8e4.xtc",
+        )
+        token(
+            "LIT_FLOAT8E5",
+            "[0-9][0-9_]*\\.?[0-9]*[fF]8[eE]5",
+            "constant.numeric.float.float8e5.xtc",
+        )
         token("LIT_FLOAT16", "[0-9][0-9_]*\\.?[0-9]*[fF]16", "constant.numeric.float.float16.xtc")
         token("LIT_FLOAT32", "[0-9][0-9_]*\\.?[0-9]*[fF]32", "constant.numeric.float.float32.xtc")
         token("LIT_FLOAT64", "[0-9][0-9_]*\\.?[0-9]*[fF]64", "constant.numeric.float.float64.xtc")
-        token("LIT_FLOAT128", "[0-9][0-9_]*\\.?[0-9]*[fF]128", "constant.numeric.float.float128.xtc")
+        token(
+            "LIT_FLOAT128",
+            "[0-9][0-9_]*\\.?[0-9]*[fF]128",
+            "constant.numeric.float.float128.xtc",
+        )
         token("LIT_FLOATN", "[0-9][0-9_]*\\.?[0-9]*[fF][nN]", "constant.numeric.float.floatn.xtc")
-        token("LIT_BFLOAT16", "[0-9][0-9_]*\\.?[0-9]*[bB][fF]16", "constant.numeric.float.bfloat16.xtc")
+        token(
+            "LIT_BFLOAT16",
+            "[0-9][0-9_]*\\.?[0-9]*[bB][fF]16",
+            "constant.numeric.float.bfloat16.xtc",
+        )
 
         // Bit and Nibble literals
         token("LIT_BIT", "0|1", "constant.numeric.bit.xtc")

@@ -23,18 +23,23 @@ object DiagnosticProbePlugin {
                   <depends>com.intellij.modules.lang</depends>
                   <depends>com.redhat.devtools.lsp4ij</depends>
                 </idea-plugin>
-                """.trimIndent().toByteArray(),
+                """
+                    .trimIndent()
+                    .toByteArray()
             )
             jar.closeEntry()
             val packagePath = "org/xtclang/idea/playbook/probe"
             val classes = Path.of(requireNotNull(javaClass.getResource("/$packagePath")).toURI())
             // Include compiler-generated function-reference classes as well as the reader itself.
             Files.list(classes).use { files ->
-                files.filter { it.fileName.toString().endsWith(".class") }.sorted().forEach { file ->
-                    jar.putNextEntry(JarEntry("$packagePath/${file.fileName}"))
-                    Files.copy(file, jar)
-                    jar.closeEntry()
-                }
+                files
+                    .filter { it.fileName.toString().endsWith(".class") }
+                    .sorted()
+                    .forEach { file ->
+                        jar.putNextEntry(JarEntry("$packagePath/${file.fileName}"))
+                        Files.copy(file, jar)
+                        jar.closeEntry()
+                    }
             }
         }
         return plugin

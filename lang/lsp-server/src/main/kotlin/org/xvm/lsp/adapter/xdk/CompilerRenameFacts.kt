@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
+import java.io.File
+import java.util.UUID
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.Constant
 import org.xvm.asm.Constants.Access
@@ -9,8 +11,6 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
 import org.xvm.lsp.util.ExecutionTrace
-import java.io.File
-import java.util.UUID
 
 /** Compiler-proven identities copied before an attempt's pool and AST can be released. */
 internal sealed interface ProofIdentity {
@@ -20,9 +20,7 @@ internal sealed interface ProofIdentity {
         val name: String,
     ) : ProofIdentity
 
-    data class Binary(
-        val key: XdkDependency.SymbolKey,
-    ) : ProofIdentity
+    data class Binary(val key: XdkDependency.SymbolKey) : ProofIdentity
 
     /** Generated method identities can reuse an artifact signature without occupying its table. */
     data class Method(
@@ -36,14 +34,10 @@ internal sealed interface ProofIdentity {
     ) : ProofIdentity
 
     /** The single compiler-generated shorthand constructor, with no invented declaration span. */
-    data class PrimaryConstructor(
-        val owner: ProofIdentity,
-    ) : ProofIdentity
+    data class PrimaryConstructor(val owner: ProofIdentity) : ProofIdentity
 
     /** A mixin super register is relative to its written method and each adopting host's chain. */
-    data class Super(
-        val method: ProofIdentity,
-    ) : ProofIdentity
+    data class Super(val method: ProofIdentity) : ProofIdentity
 
     /** A generated forwarding method is identified by its host, written contracts and receivers. */
     data class Composed(
@@ -53,14 +47,10 @@ internal sealed interface ProofIdentity {
     ) : ProofIdentity
 
     /** An implicit package has a directory identity, with no invented source declaration. */
-    data class Directory(
-        val path: String,
-    ) : ProofIdentity
+    data class Directory(val path: String) : ProofIdentity
 
     /** No cross-attempt equivalence is safe when neither a declaration nor artifact proves it. */
-    data class Unproven(
-        val id: UUID = UUID.randomUUID(),
-    ) : ProofIdentity
+    data class Unproven(val id: UUID = UUID.randomUUID()) : ProofIdentity
 }
 
 internal class ProofRelations(
@@ -85,7 +75,8 @@ internal class CompilerRenameFacts(
     val memberActions: List<XdkMemberActions.Candidate> = emptyList(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
-    fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
+    fun within(scopes: Set<String>): CompilerRenameFacts =
+        merge(modules.filterKeys(scopes::contains))
 
     companion object {
         fun merge(modules: Map<String, CompilerRenameFacts>): CompilerRenameFacts {
@@ -127,56 +118,76 @@ internal fun captureRenameFacts(
                 val source = symbol.declarationSource ?: return@mapNotNull null
                 val range = symbol.declaration ?: return@mapNotNull null
                 constants[symbol.id]?.let { it to SemanticModel.SourceLocation(source, range) }
-            }.toMap()
+            }
+            .toMap()
     val identities = mutableMapOf<Constant, ProofIdentity>()
 
     fun identity(constant: Constant): ProofIdentity =
         identities.getOrPut(constant) {
             val value = constant as? IdentityConstant
             val module = value?.moduleConstant?.name
-            val location = declarations[constant] ?: value?.let { dependencies?.declarations?.get(it)?.location }
+            val location =
+                declarations[constant]
+                    ?: value?.let { dependencies?.declarations?.get(it)?.location }
             val host = (constant as? MethodConstant)?.namespace
-            val sourceHost = host != null && (host in declarations || dependencies?.declarations?.containsKey(host) == true)
+            val sourceHost =
+                host != null &&
+                    (host in declarations || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
-                // Bundled source navigation must use the same artifact identity as binary-only views.
+                // Bundled source navigation must use the same artifact identity as binary-only
+                // views.
                 location != null && module !in XdkLibraries.moduleNames -> {
                     ProofIdentity.Source(location, constant.format, requireNotNull(value).name)
                 }
 
-                constant is PackageConstant && module !in XdkLibraries.moduleNames &&
-                    (packageParent is ProofIdentity.Source || packageParent is ProofIdentity.Directory) -> {
+                constant is PackageConstant &&
+                    module !in XdkLibraries.moduleNames &&
+                    (packageParent is ProofIdentity.Source ||
+                        packageParent is ProofIdentity.Directory) -> {
                     val directory =
                         when (val parent = packageParent) {
                             is ProofIdentity.Source -> {
-                                parent.location.sourceName
-                                    ?.let(
-                                        ::File,
-                                    )?.let { File(it.parentFile, it.nameWithoutExtension) }
+                                parent.location.sourceName?.let(::File)?.let {
+                                    File(it.parentFile, it.nameWithoutExtension)
+                                }
                             }
 
                             is ProofIdentity.Directory -> {
                                 File(parent.path)
                             }
                         }
-                    directory?.let { ProofIdentity.Directory(File(it, constant.name).path) } ?: ProofIdentity.Unproven()
+                    directory?.let { ProofIdentity.Directory(File(it, constant.name).path) }
+                        ?: ProofIdentity.Unproven()
                 }
 
-                constant is MethodConstant && sourceHost &&
-                    (constant.component as? MethodStructure)?.let { it.isSynthetic && it.isShorthandConstructor } == true -> {
+                constant is MethodConstant &&
+                    sourceHost &&
+                    (constant.component as? MethodStructure)?.let {
+                        it.isSynthetic && it.isShorthandConstructor
+                    } == true -> {
                     ProofIdentity.PrimaryConstructor(identity(requireNotNull(host)))
                 }
 
-                constant is MethodConstant && module !in XdkLibraries.moduleNames && sourceHost && errors != null -> {
+                constant is MethodConstant &&
+                    module !in XdkLibraries.moduleNames &&
+                    sourceHost &&
+                    errors != null -> {
                     val structure = host.component as? ClassStructure
-                    val info =
-                        structure?.let {
-                            ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-provenance)") {
-                                it.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
-                            }
+                    val info = structure?.let {
+                        ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-provenance)") {
+                            it.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
                         }
-                    val route = info?.let { owner -> owner.getMethodById(constant)?.let { owner.dispatch(it, errors) } }
-                    if (route == null || !route.supported || route.methods.isEmpty() || constant in route.methods) {
+                    }
+                    val route = info?.let { owner ->
+                        owner.getMethodById(constant)?.let { owner.dispatch(it, errors) }
+                    }
+                    if (
+                        route == null ||
+                            !route.supported ||
+                            route.methods.isEmpty() ||
+                            constant in route.methods
+                    ) {
                         ProofIdentity.Unproven()
                     } else {
                         ProofIdentity.Composed(
@@ -189,20 +200,21 @@ internal fun captureRenameFacts(
 
                 module != null && module in XdkLibraries.moduleNames -> {
                     val index =
-                        XdkLibraries
-                            .module(module)
-                            .constantPool
-                            .getConstant(constant)
-                            ?.position
+                        XdkLibraries.module(module).constantPool.getConstant(constant)?.position
                     when {
                         index != null -> {
-                            ProofIdentity.Binary(XdkDependency.SymbolKey(module, XdkLibraries.revision(module), index))
+                            ProofIdentity.Binary(
+                                XdkDependency.SymbolKey(
+                                    module,
+                                    XdkLibraries.revision(module),
+                                    index,
+                                )
+                            )
                         }
 
                         constant is MethodConstant && !constant.isLambda -> {
                             val signature =
-                                XdkLibraries
-                                    .module(module)
+                                XdkLibraries.module(module)
                                     .constantPool
                                     .getConstant(constant.signature)
                                     ?.position
@@ -211,7 +223,11 @@ internal fun captureRenameFacts(
                             } else {
                                 ProofIdentity.Method(
                                     identity(constant.parentConstant),
-                                    XdkDependency.SymbolKey(module, XdkLibraries.revision(module), signature),
+                                    XdkDependency.SymbolKey(
+                                        module,
+                                        XdkLibraries.revision(module),
+                                        signature,
+                                    ),
                                 )
                             }
                         }
@@ -232,7 +248,13 @@ internal fun captureRenameFacts(
                     if (index == null) {
                         ProofIdentity.Unproven()
                     } else {
-                        ProofIdentity.Binary(XdkDependency.SymbolKey(module, dependencies.revisions.getValue(module), index))
+                        ProofIdentity.Binary(
+                            XdkDependency.SymbolKey(
+                                module,
+                                dependencies.revisions.getValue(module),
+                                index,
+                            )
+                        )
                     }
                 }
 
@@ -248,24 +270,40 @@ internal fun captureRenameFacts(
                 .distinctBy { it.id }
                 .flatMap { model ->
                     model.parameters.mapNotNull { (id, slot) ->
-                        constants[slot.method]?.let { id to ProofIdentity.Parameter(identity(it), slot.index) }
+                        constants[slot.method]?.let {
+                            id to ProofIdentity.Parameter(identity(it), slot.index)
+                        }
                     }
-                }.toMap() + supers.mapValues { ProofIdentity.Super(identity(it.value)) },
+                }
+                .toMap() +
+            supers.mapValues { ProofIdentity.Super(identity(it.value)) },
         ProofRelations(
             methods.declarations.mapTo(linkedSetOf(), ::identity),
-            methods.chains.map { ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported) },
+            methods.chains.map {
+                ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported)
+            },
         ),
         ProofRelations(
             properties.declarations.mapTo(linkedSetOf(), ::identity),
-            properties.chains.map { ProofRelations.Chain(identity(it.owner), it.properties.map(::identity), it.supported) },
+            properties.chains.map {
+                ProofRelations.Chain(
+                    identity(it.owner),
+                    it.properties.map(::identity),
+                    it.supported,
+                )
+            },
         ),
         constants.values.mapNotNull(XdkAutoImports::target).distinct(),
         memberActions =
             members.mapNotNull { member ->
-                val owner = identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
+                val owner =
+                    identity(member.owner) as? ProofIdentity.Source ?: return@mapNotNull null
                 val contract = identity(member.contract)
-                if (contract !is ProofIdentity.Source && contract !is ProofIdentity.Binary &&
-                    !(contract is ProofIdentity.Method && contract.parent is ProofIdentity.Binary)
+                if (
+                    contract !is ProofIdentity.Source &&
+                        contract !is ProofIdentity.Binary &&
+                        !(contract is ProofIdentity.Method &&
+                            contract.parent is ProofIdentity.Binary)
                 ) {
                     return@mapNotNull null
                 }

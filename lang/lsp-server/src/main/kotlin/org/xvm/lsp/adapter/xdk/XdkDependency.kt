@@ -1,24 +1,25 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.FileStructure
-import org.xvm.asm.ModuleRepository
-import org.xvm.asm.constants.IdentityConstant
-import org.xvm.compiler.BuildRepository
-import org.xvm.lsp.util.ExecutionTrace
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Map.copyOf as immutableMap
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.FileStructure
+import org.xvm.asm.ModuleRepository
+import org.xvm.asm.constants.IdentityConstant
+import org.xvm.compiler.BuildRepository
+import org.xvm.lsp.util.ExecutionTrace
 
 /**
  * An immutable artifact and its matching source index. Holds no compiler objects. The revision
  * covers both bytes and locations; constant-table indices are meaningful only within that revision.
  * Source text/files remain host-owned and must be replaced together with the artifact.
  */
-class XdkDependency private constructor(
+class XdkDependency
+private constructor(
     val module: String,
     private val artifact: ByteArray,
     declarations: Map<Int, SemanticModel.SourceLocation>,
@@ -41,7 +42,8 @@ class XdkDependency private constructor(
                         output.writeInt(location.range.end.column)
                     }
                 }
-            }.toByteArray()
+            }
+            .toByteArray()
             .let { HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it)) }
 
     data class SymbolKey(
@@ -60,10 +62,15 @@ class XdkDependency private constructor(
         }
 
     companion object {
-        /** Binary-only libraries have identities and types, but deliberately no source locations. */
+        /**
+         * Binary-only libraries have identities and types, but deliberately no source locations.
+         */
         fun fromBinary(bytes: ByteArray): XdkDependency {
             val owned = bytes.clone()
-            val file = ExecutionTrace.api("FileStructure.read(binary)") { FileStructure(ByteArrayInputStream(owned)) }
+            val file =
+                ExecutionTrace.api("FileStructure.read(binary)") {
+                    FileStructure(ByteArrayInputStream(owned))
+                }
             return XdkDependency(file.module.name, owned, emptyMap())
         }
 
@@ -74,35 +81,37 @@ class XdkDependency private constructor(
             val artifact =
                 ByteArrayOutputStream()
                     .also {
-                        ExecutionTrace.api(
-                            "FileStructure.writeTo",
-                        ) { compilation.file().writeTo(it) }
-                    }.toByteArray()
+                        ExecutionTrace.api("FileStructure.writeTo") {
+                            compilation.file().writeTo(it)
+                        }
+                    }
+                    .toByteArray()
             // Serialization establishes the artifact's constant indices. Resolve against its pool,
             // since emission may have removed or re-registered constants from the source attempt.
-            val file = ExecutionTrace.api("FileStructure.read(emitted)") { FileStructure(ByteArrayInputStream(artifact)) }
+            val file =
+                ExecutionTrace.api("FileStructure.read(emitted)") {
+                    FileStructure(ByteArrayInputStream(artifact))
+                }
             val declarations =
                 locations.entries
                     .mapNotNull { (identity, location) ->
-                        file.constantPool
-                            .getConstant(identity)
-                            ?.position
-                            ?.let { it to location }
-                    }.toMap()
+                        file.constantPool.getConstant(identity)?.position?.let { it to location }
+                    }
+                    .toMap()
             return XdkDependency(file.module.name, artifact, declarations)
         }
     }
 }
 
-/** Worker-only join; compiler equality handles overloads and foreign pools, never display strings. */
+/**
+ * Worker-only join; compiler equality handles overloads and foreign pools, never display strings.
+ */
 internal data class DependencyDeclaration(
     val key: XdkDependency.SymbolKey,
     val location: SemanticModel.SourceLocation,
 )
 
-internal class XdkDependencies(
-    dependencies: List<XdkDependency>,
-) {
+internal class XdkDependencies(dependencies: List<XdkDependency>) {
     val modules = immutableMap(dependencies.associateBy { it.module })
 
     init {
@@ -116,17 +125,24 @@ internal class XdkDependencies(
     fun open(): Open {
         val files = modules.mapValues { it.value.open() }
         val repository = BuildRepository().apply { files.values.forEach { storeModule(it.module) } }
-        val declarations =
-            buildMap {
-                files.forEach { (name, file) ->
-                    val dependency = modules.getValue(name)
-                    dependency.declarations.forEach { (index, location) ->
-                        val identity = file.constantPool.getConstant(index) as? IdentityConstant
-                        check(identity != null && identity.moduleConstant.name == name) { "Invalid dependency source index" }
-                        put(identity, DependencyDeclaration(XdkDependency.SymbolKey(name, dependency.revision, index), location))
+        val declarations = buildMap {
+            files.forEach { (name, file) ->
+                val dependency = modules.getValue(name)
+                dependency.declarations.forEach { (index, location) ->
+                    val identity = file.constantPool.getConstant(index) as? IdentityConstant
+                    check(identity != null && identity.moduleConstant.name == name) {
+                        "Invalid dependency source index"
                     }
+                    put(
+                        identity,
+                        DependencyDeclaration(
+                            XdkDependency.SymbolKey(name, dependency.revision, index),
+                            location,
+                        ),
+                    )
                 }
             }
+        }
         return Open(repository, declarations, modules.mapValues { it.value.revision })
     }
 

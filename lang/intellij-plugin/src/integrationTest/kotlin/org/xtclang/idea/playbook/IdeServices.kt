@@ -6,7 +6,10 @@ import com.intellij.driver.sdk.PsiFile
 import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
 
 /** Test-only Driver proxies; no automation hooks are added to the shipped plugin. */
-@Remote("com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface LspSettings {
     fun getLanguageServerSettings(serverId: String): LspServerSettings?
 
@@ -16,7 +19,10 @@ interface LspSettings {
     )
 }
 
-@Remote("com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface ProjectLspSettings {
     fun updateSettings(
         serverId: String,
@@ -43,7 +49,10 @@ interface EditorLookupManager {
     fun getActiveLookup(): EditorLookup?
 }
 
-@Remote(value = "com.intellij.codeInsight.lookup.impl.LookupImpl", serviceInterface = "com.intellij.codeInsight.lookup.Lookup")
+@Remote(
+    value = "com.intellij.codeInsight.lookup.impl.LookupImpl",
+    serviceInterface = "com.intellij.codeInsight.lookup.Lookup",
+)
 interface EditorLookup {
     fun getItems(): List<CompletionItem>
 
@@ -70,7 +79,10 @@ interface LspFileSupport {
     fun getSelectionRangeSupport(): SelectionRangeSupport
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.signatureHelp.LSPSignatureHelpSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.signatureHelp.LSPSignatureHelpSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface SignatureSupport {
     fun getValidLSPFuture(): SignatureFuture?
 }

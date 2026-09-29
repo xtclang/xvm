@@ -15,7 +15,9 @@ data class Diagnostic(
     val start: Int,
 )
 
-/** Export immutable values: the driver's object descriptions evaluate cancellable lazy quick fixes. */
+/**
+ * Export immutable values: the driver's object descriptions evaluate cancellable lazy quick fixes.
+ */
 fun JEditorUiComponent.installedDiagnostics(): List<Diagnostic> =
     driver.withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
         val json = driver.utility(EditorDiagnostics::class).read(editor, driver.singleProject())

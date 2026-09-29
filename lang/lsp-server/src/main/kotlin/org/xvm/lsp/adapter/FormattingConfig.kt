@@ -38,9 +38,7 @@ data class FormattingConfig(
             return fromLspOptions(lspOptions)
         }
 
-        /**
-         * Create from LSP FormattingOptions (editor fallback).
-         */
+        /** Create from LSP FormattingOptions (editor fallback). */
         fun fromLspOptions(options: FormattingOptions): FormattingConfig =
             DEFAULT.copy(
                 indentSize = if (options.insertSpaces) options.tabSize else DEFAULT.indentSize,

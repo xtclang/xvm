@@ -18,12 +18,10 @@ class XtcEditorStartupActivity : ProjectActivity {
 
     override suspend fun execute(project: Project) {
         val delegates =
-            EnterHandlerDelegate.EP_NAME.extensionList
-                .map { it.javaClass.name }
-                .sorted()
+            EnterHandlerDelegate.EP_NAME.extensionList.map { it.javaClass.name }.sorted()
         logger.warn(
             "EnterHandlerDelegate registry for project '${project.name}': " +
-                "${delegates.joinToString(", ")}",
+                "${delegates.joinToString(", ")}"
         )
 
         val scheme = EditorColorsManager.getInstance().globalScheme.name
@@ -35,7 +33,7 @@ class XtcEditorStartupActivity : ProjectActivity {
                 "globalColorScheme='$scheme', " +
                 "fileTypeByExtension('x')='${fileTypeForExtension.name}' (${fileTypeForExtension.javaClass.name}), " +
                 "xtc.lsp.semanticTokens='$semanticTokensProperty', " +
-                "XTC_LSP_SEMANTIC_TOKENS='$semanticTokensEnv'",
+                "XTC_LSP_SEMANTIC_TOKENS='$semanticTokensEnv'"
         )
 
         logOpenXtcFiles(project, "startup")
@@ -45,9 +43,11 @@ class XtcEditorStartupActivity : ProjectActivity {
             FileEditorManagerListener.FILE_EDITOR_MANAGER,
             object : FileEditorManagerListener {
                 override fun selectionChanged(event: FileEditorManagerEvent) {
-                    event.newFile?.takeIf { it.extension == "x" }?.let {
-                        logXtcFile(project, it.path, "selectionChanged")
-                    }
+                    event.newFile
+                        ?.takeIf { it.extension == "x" }
+                        ?.let {
+                            logXtcFile(project, it.path, "selectionChanged")
+                        }
                 }
             },
         )
@@ -79,7 +79,7 @@ class XtcEditorStartupActivity : ProjectActivity {
         logger.warn(
             "Ecstasy file diagnostics ($phase): path='${virtualFile.path}', " +
                 "fileType='${fileType.name}' (${fileType.javaClass.name}), " +
-                "psiLanguage='${language?.id ?: "<none>"}' (${language?.javaClass?.name ?: "<none>"})",
+                "psiLanguage='${language?.id ?: "<none>"}' (${language?.javaClass?.name ?: "<none>"})"
         )
     }
 }

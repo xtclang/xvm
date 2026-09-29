@@ -9,19 +9,20 @@ import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.OpenedDocument
 import com.redhat.devtools.lsp4ij.internal.CancellationSupport
+import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageServer
-import java.util.concurrent.CompletableFuture
 
 /**
  * A rename response bound to the client documents that produced it. LSP4IJ 0.21 applies
- * WorkspaceEdit without checking document versions. Keep the request's immutable snapshot
- * until application and check it under the same write action as all of the returned edits.
- * No second version counter or long-lived document listener is needed.
+ * WorkspaceEdit without checking document versions. Keep the request's immutable snapshot until
+ * application and check it under the same write action as all of the returned edits. No second
+ * version counter or long-lived document listener is needed.
  */
-class XtcRenameEdit private constructor(
+class XtcRenameEdit
+private constructor(
     private val snapshot: Snapshot,
     val edit: WorkspaceEdit,
     private val graph: SourceGraphEdit? = null,
@@ -31,16 +32,19 @@ class XtcRenameEdit private constructor(
         ApplicationManager.getApplication().assertIsDispatchThread()
         val project = snapshot.wrapper.project
         if (project.isDisposed) return false
-        return WriteCommandAction.writeCommandAction(project).withName("Rename").withGlobalUndo().compute<Boolean, RuntimeException> {
-            if (!snapshot.isCurrent() || graph?.isCurrent() == false) {
-                false
-            } else {
-                graph?.beforeApply()
-                LSPIJUtils.applyWorkspaceEdit(edit)
-                graph?.apply()
-                true
+        return WriteCommandAction.writeCommandAction(project)
+            .withName("Rename")
+            .withGlobalUndo()
+            .compute<Boolean, RuntimeException> {
+                if (!snapshot.isCurrent() || graph?.isCurrent() == false) {
+                    false
+                } else {
+                    graph?.beforeApply()
+                    LSPIJUtils.applyWorkspaceEdit(edit)
+                    graph?.apply()
+                    true
+                }
             }
-        }
     }
 
     private data class Buffer(
@@ -50,7 +54,9 @@ class XtcRenameEdit private constructor(
         val url: String,
     ) {
         fun isCurrent(): Boolean =
-            opened.file.isValid && opened.file.url == url && opened.synchronizer === synchronizer &&
+            opened.file.isValid &&
+                opened.file.url == url &&
+                opened.synchronizer === synchronizer &&
                 synchronizer.document.modificationStamp == stamp
     }
 
@@ -60,7 +66,8 @@ class XtcRenameEdit private constructor(
         val buffers: List<Buffer>,
     ) {
         fun isCurrent(): Boolean =
-            !wrapper.isDisposed && wrapper.languageServer === server &&
+            !wrapper.isDisposed &&
+                wrapper.languageServer === server &&
                 wrapper.openedDocuments.toSet() == buffers.map { it.opened }.toSet() &&
                 buffers.all(Buffer::isCurrent)
 
@@ -70,15 +77,16 @@ class XtcRenameEdit private constructor(
                     .map { it.synchronizer }
                     .map { sync ->
                         sync.didOpenFuture.thenCompose { sync.flushPendingChanges() }
-                    }.toTypedArray(),
+                    }
+                    .toTypedArray()
             )
     }
 
     companion object {
         /**
-         * Capture before flushing changes or sending the request. Comparing only after the
-         * response arrives misses edits made while the compiler was calculating the rename.
-         * Open/close epochs are represented by the existing OpenedDocument identities.
+         * Capture before flushing changes or sending the request. Comparing only after the response
+         * arrives misses edits made while the compiler was calculating the rename. Open/close
+         * epochs are represented by the existing OpenedDocument identities.
          */
         @JvmStatic
         fun request(
@@ -89,17 +97,32 @@ class XtcRenameEdit private constructor(
         ): CompletableFuture<XtcRenameEdit?> =
             ReadAction.computeBlocking<CompletableFuture<XtcRenameEdit?>, RuntimeException> {
                 val document = requireNotNull(LSPIJUtils.getDocument(file))
-                requireNotNull(wrapper.getOpenedDocument(wrapper.toUri(file))) { "Rename source is no longer open" }
+                requireNotNull(wrapper.getOpenedDocument(wrapper.toUri(file))) {
+                    "Rename source is no longer open"
+                }
                 val snapshot =
                     Snapshot(
                         wrapper,
                         requireNotNull(wrapper.languageServer),
                         wrapper.openedDocuments.map { opened ->
-                            val synchronizer = requireNotNull(opened.synchronizer) { "Rename source is no longer open" }
-                            Buffer(opened, synchronizer, synchronizer.document.modificationStamp, opened.file.url)
+                            val synchronizer =
+                                requireNotNull(opened.synchronizer) {
+                                    "Rename source is no longer open"
+                                }
+                            Buffer(
+                                opened,
+                                synchronizer,
+                                synchronizer.document.modificationStamp,
+                                opened.file.url,
+                            )
                         },
                     )
-                val params = RenameParams(TextDocumentIdentifier(wrapper.toUriString(file)), LSPIJUtils.toPosition(offset, document), name)
+                val params =
+                    RenameParams(
+                        TextDocumentIdentifier(wrapper.toUriString(file)),
+                        LSPIJUtils.toPosition(offset, document),
+                        name,
+                    )
                 val graph = SourceGraphEdit.capture(wrapper.project, wrapper.serverDefinition.id)
                 val cancellation = CancellationSupport()
                 val result =
@@ -112,13 +135,25 @@ class XtcRenameEdit private constructor(
                                 if (server is XtcLanguageServer) {
                                     server.renameProposal(params)
                                 } else {
-                                    server.textDocumentService.rename(params).thenApply { it?.let(::RenameProposal) }
-                                },
+                                    server.textDocumentService.rename(params).thenApply {
+                                        it?.let(::RenameProposal)
+                                    }
+                                }
                             )
-                        }.thenApply { proposal ->
+                        }
+                        .thenApply { proposal ->
                             val edit = proposal?.edit
-                            val hasEdits = edit != null && (!edit.documentChanges.isNullOrEmpty() || !edit.changes.isNullOrEmpty())
-                            if (hasEdits) XtcRenameEdit(snapshot, edit, proposal.graph?.let(graph::replacement)) else null
+                            val hasEdits =
+                                edit != null &&
+                                    (!edit.documentChanges.isNullOrEmpty() ||
+                                        !edit.changes.isNullOrEmpty())
+                            if (hasEdits)
+                                XtcRenameEdit(
+                                    snapshot,
+                                    edit,
+                                    proposal.graph?.let(graph::replacement),
+                                )
+                            else null
                         }
                 result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
                 result

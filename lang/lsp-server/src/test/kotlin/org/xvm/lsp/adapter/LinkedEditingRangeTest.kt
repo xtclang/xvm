@@ -9,8 +9,8 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Linked editing range tests for [TreeSitterAdapter].
  *
- * Exercises same-file identifier linking: when the cursor is on an identifier,
- * all same-name occurrences are returned so editors can rename them simultaneously.
+ * Exercises same-file identifier linking: when the cursor is on an identifier, all same-name
+ * occurrences are returned so editors can rename them simultaneously.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -35,7 +35,8 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'name' at declaration (line 3, col 19)
@@ -59,7 +60,8 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val result = ts.getLinkedEditingRanges(uri, 3, 19)
@@ -81,7 +83,8 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'return' keyword
@@ -103,7 +106,8 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'value' parameter (line 2, col 27)
@@ -129,7 +133,8 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'x' at declaration (line 3)
