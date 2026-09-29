@@ -442,6 +442,16 @@ VS Code receipts above.
 
 Implement four checkpoints before combined validation:
 
+| Checkpoint | Commit | Extraction placement |
+| --- | --- | --- |
+| Written recursive constraints | `3b3bc893a` | Compiler cursor facts, Kotlin copying and header regressions; include resolver-owner correction from validation. |
+| Literal arguments | `1c1052158` | Compiler argument probes, immutable literal facts and adapter/protocol Value support; include record-pattern and mid-token recovery corrections. |
+| Documentation and presentation | `65bfe5b3a` | Detached documentation, deterministic ordering and signature metadata; include passive method-comment accessor and source copying. |
+| Shared editor acceptance | `6e7932b61` | X97/X108 data and native metadata assertions in both drivers; include TypeScript optional-field corrections. |
+
+These development commits require their validation corrections when extracted; no independent
+green result is claimed for an intermediate checkpoint.
+
 1. [x] Preserve written recursive formal constraints in incomplete declarations. Known, visible
    class type arguments may guard recursion; direct/sibling cycles, unknown names and unresolved
    formal-member lookup remain refused. Syntax-only constraints have no fabricated type identity.
@@ -453,8 +463,10 @@ Implement four checkpoints before combined validation:
    (13 total). Native proposals expose Value kind, exact edits, detail and sort metadata. Native
    Parameter Info responses supply documentation and active indices without a competing request.
 
-- [ ] Run combined backend/protocol checks and selected native X97/X108 cases. Do not infer
-  full-catalog coverage from selected runs. Implementation checkpoints precede execution.
+- [x] Run combined backend/protocol checks and compile both editor drivers: 337 tests pass,
+  with zero failures/errors/skips; see the receipt below.
+- [x] Finish selected native X97/X108 acceptance in both clients. VS Code and IntelliJ pass all
+  37 variants; IntelliJ also passes START. This is not full-catalog coverage.
 
 Checkpoint 1 extends `CursorBinding.Formal` with optional written-constraint text. Its existing
 two-argument constructor remains; record-pattern users need the new component. A recursive written
@@ -462,7 +474,7 @@ constraint has no `TypeConstant`, and the detached Kotlin model preserves that d
 completion/hover. This is display/name completion only, not a bound for member lookup or fitting.
 No AST field, invented formal declaration, parser mode or retained Context is added. Unrelated
 parse errors and unclosed outer bodies away from the cursor remain separate recovery limitations.
-Validation is pending until all four checkpoints are implemented.
+All four checkpoints were implemented before the first combined test run.
 
 Checkpoint 2 proposes `True`, `False`, `Null`, `0` and the empty string through the same compiler
 trial-argument path as source variables. Every proposal must fit and validate the whole argument,
@@ -478,7 +490,48 @@ locals, then properties, methods, types/modules and literal/keyword proposals; t
 labels and rendered signatures, not snapshot IDs. Exact-fit signatures precede converting ones,
 with deterministic labels and an explicit conversion note. Candidate-specific named mappings and
 default/required parameter descriptions remain visible without claiming overload selection.
-Adapter and packaged-stdio tests cover the new metadata; execution remains pending.
+Adapter and packaged-stdio tests cover the new metadata and pass after the corrections below.
+
+The first combined execution caught required integration corrections: the API-compatibility record
+pattern needs the literal component; existing exact suggestion sets need the newly valid literals;
+and TypeScript must narrow optional scenario metadata. Method components do not currently carry
+their source comments, so `MethodDeclarationStatement.getDocumentation()` exposes decoded existing
+comment text without state or caching. Kotlin copies it while visiting source declarations; binary
+documentation is used only when the existing component provides it.
+
+The new regressions also exposed two implementation defects: type-goal `NameResolver` requires a
+`NameResolving` syntax owner, so guarded-bound lookup now uses a disposable named-type reference
+parented to the real scope; mid-token argument names now apply the existing recovery-boundary test
+at the written token end while retaining the actual cursor and full replacement token. Parser
+speculation/cancellation guards and ordinary parsing are unchanged. The focused literal tests now
+pass; the corrected combined backend validation is recorded below. No temporary debug output is retained.
+
+Validation receipt, 2026-09-29:
+
+- **47 Java tests**: cursor bindings, partial syntax ownership, parser recovery, binding snapshots
+  and embedding compatibility. **289 adapter/server tests**: scope/value/operand completion,
+  incomplete calls/constructors, written/header formals, partial analysis, presentation, semantic
+  snapshots and asynchronous cursor request lifecycle. All have zero failures/errors/skips.
+- **1 packaged-stdio test** verifies documentation, Value kind, sort text and candidate-specific
+  active/default parameter metadata over the real server connection. Zero failures/errors/skips.
+- The first corrected combined command still encountered Java test variable shadowing and one
+  TypeScript numeric narrowing error. The adapter/server and packaged-stdio tasks passed in that
+  command. Java tests and TypeScript compilation then passed after those test/driver-only fixes;
+  compiler/server production source was unchanged between these last two commands.
+- Both native drivers compile. Root/lang Spotless checks and changed TypeScript ESLint pass.
+  Test tasks used `--rerun --no-build-cache`; counts come from the JUnit XML results.
+- VS Code `run-yOWnUW` passes X97 (24 variants) and X108 (13 variants), with 125 other IDs not
+  selected. Catalog SHA-256: `04d45b017030ee8b32016f3cea6e19370ed44d38f617df21cede25574e875ad9`.
+  The catalog remains 127 IDs; its 122 X-series rows match the manual plan in order.
+- IntelliJ `run-4259780076879058977` passes START, X97 and X108 using the same catalog hash,
+  with 125 other IDs not selected, zero IDE errors and one passing JUnit test (zero failures,
+  errors or skips). It runs IntelliJ 2026.2.3 with Ultimate disabled and LSP4IJ 0.21.0.
+  Neither editor receipt is a full-current-catalog acceptance claim.
+
+This four-step batch is complete. L64 stays open for additional declaration/callable contexts,
+keyword/snippet/import edits, arbitrary enclosing-instance enumeration, more literal forms and
+broader damaged-bound recovery. Syntax-labelled recursive names do not authorize semantic member
+lookup. L62/L63/L65–L67 and the explicit earlier-checkpoint follow-ups retain their own scopes.
 
 ### Earlier checkpoint follow-ups still open
 

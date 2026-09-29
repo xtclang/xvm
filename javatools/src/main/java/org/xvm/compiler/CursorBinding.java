@@ -142,8 +142,8 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     /**
      * Call inspection and insertion facts, separate from visible scope and syntax selection.
      * An inspected empty candidate list means rejection, not absence of inspection. Updating
-     * argument values or properties preserves that distinction. The outer record retains its
-     * component list so existing record patterns, accessors and construction APIs keep working.
+     * argument values, properties or literals preserves that distinction. Previous constructors
+     * remain available; record patterns must include the literal-proposal component.
      */
     public record CallFacts(List<Candidate> candidates, boolean inspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
