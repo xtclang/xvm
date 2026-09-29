@@ -988,13 +988,16 @@ private class SemanticModelBuilder(
                     formals =
                         immutableList(
                             cursor?.formals().orEmpty().mapNotNull { formal ->
-                                val bound = type(formal.constraint()) ?: return@mapNotNull null
+                                val bound = formal.constraint()?.let(::type)
+                                if (bound == null && formal.writtenConstraint() == null)
+                                    return@mapNotNull null
                                 val token = formal.name()
                                 PartialSemanticModel.Formal(
                                     token.valueText,
                                     bound,
                                     location(site.source, token.startPosition, token.endPosition)
                                         .range,
+                                    formal.writtenConstraint(),
                                 )
                             }
                         ),
