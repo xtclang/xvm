@@ -11,7 +11,7 @@ import { client, diagnostics, eventually, label, noErrors, playbook, targets } f
 export function platformCases(): void {
     playbook('X129', async (workspace, data) => {
         const report = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, modelPath);
-        const model = JSON.parse(JSON.stringify(data.model).replaceAll('${workspace}', vscode.Uri.file(workspace.directory).toString()));
+        const model = JSON.parse(JSON.stringify(data.model).split('${workspace}').join(vscode.Uri.file(workspace.directory).toString()));
         const settings = vscode.workspace.getConfiguration('xtc.compiler');
         const previous = settings.get('sourceModules');
         const writeModel = async () => {
