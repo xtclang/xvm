@@ -65,6 +65,34 @@ public class ModuleInfo {
     // ----- constructors --------------------------------------------------------------------------
 
     /**
+     * Construct host-supplied source identity without discovering or requiring physical files.
+     * This supports immutable overlays and proposed source layouts before a file operation.
+     * Subclasses supply {@link #readSource}, {@link #sourceEntries}, {@link #isSourceTree}, and
+     * {@link #getResourceDir} from the same snapshot. Ordinary file constructors retain discovery.
+     *
+     * @param sourceFile  the logical module root, including its source extension
+     * @param moduleName  the module identity obtained from the host's source snapshot
+     */
+    protected ModuleInfo(File sourceFile, String moduleName) {
+        this.fileSpec = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
+        if (moduleName.isBlank() || !isExplicitSourceFile(fileSpec.getName())) {
+            throw new IllegalArgumentException("A module name and .x source root are required");
+        }
+        this.sourceFile = fileSpec;
+        deduce        = false;
+        fileName      = removeExtension(fileSpec.getName());
+        sourceDir     = fileSpec.getParentFile();
+        projectDir    = sourceDir;
+        sourceStatus  = Status.Exists;
+        sourceContent = Content.Module;
+        resourceDir   = NoResources;
+        binaryDir     = sourceDir;
+        binaryStatus  = Status.NotExists;
+        binaryContent = Content.Invalid;
+    }
+
+    /**
      * Construct the module information from the specified file.
      *
      * @param fileSpec the file to analyze, which may or may not exist

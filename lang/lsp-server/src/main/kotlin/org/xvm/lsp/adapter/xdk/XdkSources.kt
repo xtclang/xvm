@@ -7,6 +7,11 @@ import java.nio.file.Files
 import java.util.Map.copyOf as immutableMap
 import java.util.Set.copyOf as immutableSet
 import java.util.concurrent.CancellationException
+import org.xvm.asm.ErrorListener
+import org.xvm.compiler.CompilerException
+import org.xvm.compiler.Parser
+import org.xvm.compiler.Source
+import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.tool.ModuleInfo
 import org.xvm.tool.ResourceDir
 
@@ -19,7 +24,7 @@ private constructor(
     private val aliases: Map<File, String>,
     private val resources: XdkResources,
     private val configuredResourceRoots: List<File>?,
-) : ModuleInfo(root, false) {
+) : ModuleInfo(root, moduleName(root, text.getValue(root))) {
     private val text = immutableMap(text)
     private val resourceDirectory = resources.directory()
 
@@ -84,6 +89,19 @@ private constructor(
     )
 
     companion object {
+        private fun moduleName(root: File, text: String): String =
+            ExecutionTrace.api("Parser.parseModuleName(snapshot)", root.path) {
+                try {
+                    Parser(
+                            Source(text, root.path),
+                            ErrorListener.silent(ErrorListener.Silence.DISCARD),
+                        )
+                        .parseModuleNameIgnoreEverythingElse()
+                } catch (_: CompilerException) {
+                    null
+                } ?: root.nameWithoutExtension
+            }
+
         /** Replay an exact snapshot with proposed edits; never read or write the filesystem. */
         fun replay(
             root: File,
