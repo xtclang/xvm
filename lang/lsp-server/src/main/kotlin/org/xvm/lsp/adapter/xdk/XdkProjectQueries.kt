@@ -279,23 +279,25 @@ internal class XdkProjectQueries(
         val source = XdkSources.file(uri)?.path ?: return emptyList()
         val text = texts[source] ?: return emptyList()
         val before = compile(texts, Proof.REPAIR) ?: return emptyList()
-        val complete = before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
-            project.modules.values.all { module -> before.models.any { it.sourceName == module.root.path } }
-        val actions = if (!complete) {
-            autoImports(uri, source, text, range, before)
-        } else {
-            XdkImports.candidates(text).mapNotNull { candidate ->
-                checkCurrent()
-                val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
-                val after = compile(plan.proposed) ?: return@mapNotNull null
-                if (!XdkRename.preservesBindings(before, after, plan)) return@mapNotNull null
-                CodeAction(
-                    candidate.title,
-                    candidate.kind,
-                    edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
-                )
+        val complete =
+            before.models.all { it.status == SemanticModel.Status.COMPLETE } &&
+                project.modules.values.all { module -> before.models.any { it.sourceName == module.root.path } }
+        val actions =
+            if (!complete) {
+                autoImports(uri, source, text, range, before)
+            } else {
+                XdkImports.candidates(text).mapNotNull { candidate ->
+                    checkCurrent()
+                    val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits))
+                    val after = compile(plan.proposed) ?: return@mapNotNull null
+                    if (!XdkRename.preservesBindings(before, after, plan)) return@mapNotNull null
+                    CodeAction(
+                        candidate.title,
+                        candidate.kind,
+                        edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                    )
+                }
             }
-        }
         val members =
             before.memberActions.filter { it.selected(source, range) }.take(32).mapNotNull { candidate ->
                 checkCurrent()
@@ -305,7 +307,9 @@ internal class XdkProjectQueries(
                 if (!XdkRename.preservesMemberAddition(before, after, plan, candidate)) return@mapNotNull null
                 CodeAction(
                     candidate.title,
-                    if (candidate.implementation) CodeAction.CodeActionKind.QUICKFIX else CodeAction.CodeActionKind.REFACTOR_REWRITE,
+                    // The class may be valid until constructed, and a construction diagnostic can
+                    // be elsewhere. This is a class intention, not a diagnostic-attached quick fix.
+                    CodeAction.CodeActionKind.REFACTOR_REWRITE,
                     edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                 )
             }
@@ -323,7 +327,8 @@ internal class XdkProjectQueries(
         val start = SemanticModel.Position(range.start.line, range.start.column)
         val end = SemanticModel.Position(range.end.line, range.end.column)
         val names =
-            models.flatMap { it.occurrences }
+            models
+                .flatMap { it.occurrences }
                 .filter { it.symbol == null && it.range.start <= end && it.range.end >= start }
                 .map { it.name }
                 .distinct()
@@ -471,16 +476,25 @@ internal class XdkProjectQueries(
                             val partial = compilation.renameFacts(open)
                             val fresh = XdkDependencies(inputs.values.toList()).open()
                             val declarationErrors = ErrorListener.cancellable(ErrorList(), cancelled)
-                            val declarations = ExecutionTrace.api("EmbeddingSupport.analyzeDeclarations(tree)", module.uri) {
-                                EmbeddingSupport.instance().analyzeDeclarations(
-                                    XdkSources.replay(originalRoot, source.inputs, text, moves), fresh.repository, declarationErrors,
-                                )
-                            }.orElse(null)
+                            val declarations =
+                                ExecutionTrace
+                                    .api("EmbeddingSupport.analyzeDeclarations(tree)", module.uri) {
+                                        EmbeddingSupport.instance().analyzeDeclarations(
+                                            XdkSources.replay(originalRoot, source.inputs, text, moves),
+                                            fresh.repository,
+                                            declarationErrors,
+                                        )
+                                    }.orElse(null)
                             checkCurrent()
                             val headers = declarations?.memberActionFacts(fresh, declarationErrors)
-                            val repaired = if (headers != null && !declarationErrors.hasSeriousErrors() && !declarationErrors.isAbortDesired) {
-                                CompilerRenameFacts.merge(mapOf("headers" to headers, "partial" to partial))
-                            } else partial
+                            val repaired =
+                                if (headers != null && !declarationErrors.hasSeriousErrors() &&
+                                    !declarationErrors.isAbortDesired
+                                ) {
+                                    CompilerRenameFacts.merge(mapOf("headers" to headers, "partial" to partial))
+                                } else {
+                                    partial
+                                }
                             return@mapNotNull module.uri to repaired
                         }
                         if (proof == Proof.NAVIGATION) return@mapNotNull null
