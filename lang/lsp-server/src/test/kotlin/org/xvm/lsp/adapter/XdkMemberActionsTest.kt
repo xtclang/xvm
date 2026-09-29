@@ -42,11 +42,53 @@ class XdkMemberActionsTest {
     fun `overloads remain separate compiler selected actions`() {
         val text = "module App { interface Api { Int read(Int value); String read(String value); } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
-            val actions = actions(adapter, uri, text).filter { it.title.startsWith("Implement ") }
+            val actions = actions(adapter, uri, text).filter { it.title.startsWith("Implement ") && !it.title.startsWith("Implement all") }
             assertThat(actions).hasSize(2)
             actions.forEach { action ->
                 assertThat(adapter.compile(uri, apply(text, requireNotNull(action.edit).changes.getValue(uri))).diagnostics).isEmpty()
             }
+        }
+    }
+
+    @Test
+    fun `all required overloads repair an instantiated class atomically`() {
+        val text = """
+            module App {
+                interface Api { Int read(Int value); String read(String value); }
+                class Box implements Api {}
+                class Child extends Box {}
+                Box make() = new Box();
+                String use(Child child) = child.read(value = "text");
+            }
+        """.trimIndent()
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement all required members (2)" }
+            val edit = requireNotNull(action.edit)
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(edit.changes.getValue(uri)).hasSize(1)
+            val changed = apply(text, edit.changes.getValue(uri))
+            assertThat(changed.split("@Override")).hasSize(3)
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            assertThat(actions(adapter, uri, changed).filter { it.title.startsWith("Implement ") }).isEmpty()
+        }
+    }
+
+    @Test
+    fun `bulk generation preserves existing implementations and property bindings`() {
+        val text = """
+            module App {
+                interface Api { Int first(); String second(); void third(); }
+                class Box implements Api { @Override Int first() = 7; String label = "keep"; }
+                Box make() = new Box();
+                String use(Box box) = box.second() + box.label;
+            }
+        """.trimIndent()
+        workspace(text, initiallyValid = false) { adapter, uri ->
+            val action = actions(adapter, uri, text).single { it.title == "Implement all required members (2)" }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).contains("@Override Int first() = 7; String label = \"keep\";")
+            assertThat(changed.split("first()")).hasSize(3)
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
     }
 
@@ -256,13 +298,14 @@ class XdkMemberActionsTest {
 
     private fun workspace(
         text: String,
+        initiallyValid: Boolean = true,
         check: (XdkAdapter, String) -> Unit,
     ) {
         val source = directory.resolve("App.x").toFile().apply { writeText(text) }
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             val uri = source.toURI().toString()
-            assertThat(adapter.compile(uri, text).diagnostics).describedAs(text).isEmpty()
+            assertThat(adapter.compile(uri, text).diagnostics.isEmpty()).describedAs(text).isEqualTo(initiallyValid)
             check(adapter, uri)
             assertThat(source.readText()).isEqualTo(text)
         }

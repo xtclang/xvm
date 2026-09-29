@@ -299,12 +299,12 @@ internal class XdkProjectQueries(
                 }
             }
         val members =
-            before.memberActions.filter { it.selected(source, range) }.take(32).mapNotNull { candidate ->
+            XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
                 checkCurrent()
                 val edit = candidate.edit(text) ?: return@mapNotNull null
                 val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
                 val after = compile(plan.proposed) ?: return@mapNotNull null
-                if (!XdkRename.preservesMemberAddition(before, after, plan, candidate)) return@mapNotNull null
+                if (!XdkRename.preservesMemberAdditions(before, after, plan, candidate.members)) return@mapNotNull null
                 CodeAction(
                     candidate.title,
                     // The class may be valid until constructed, and a construction diagnostic can

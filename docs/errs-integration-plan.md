@@ -5733,3 +5733,19 @@ Remaining generation limits: binary contracts; computed/unvalidated defaults; an
 or unresolvable cross-module type spellings; and composition routes without a complete dispatch
 proof. Generated bodies deliberately remain `TODO()`. Extract/inline/safe-delete and general
 missing-declaration fixes remain separate L63 tasks.
+
+## L63 library and complete-repair batch
+
+Implement four separate checkpoints before testing them together:
+
+1. [x] Atomic “Implement all required members”, with complete graph and per-family dispatch proof.
+2. [ ] Bundled XDK and binary contracts with read-only dependency identities.
+3. [ ] Qualified cross-module and compound type spellings, including required imports.
+4. [ ] Defaults during fresh declaration repair; audit computed defaults before supporting them.
+
+Checkpoint 1 groups all renderable required methods in one class edit. The proof checks each
+new method against its own original family, reconstructs all original chains after removing the
+insertions and preserves unrelated bindings. Full compilation refuses any unsupported remainder.
+Tests cover multiple missing overloads, an instantiated class, descendants, named calls and an
+existing implementation. Shared X122 adds the atomic diagnostic-repair variant. Validation waits
+until all four implementation commits are present.
