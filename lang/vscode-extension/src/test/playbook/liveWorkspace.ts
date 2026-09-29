@@ -145,7 +145,7 @@ export function liveWorkspaceCases(): void {
                 const action = await eventually(async () => {
                     try {
                         const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-                            'vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at), vscode.CodeActionKind.QuickFix.value);
+                            'vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at), vscode.CodeActionKind.QuickFix.value, 100);
                         return actions?.find(item => item.title === variant.title);
                     } catch (error) {
                         if (error instanceof Error && error.name === 'Canceled') return undefined;

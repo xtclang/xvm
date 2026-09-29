@@ -795,3 +795,8 @@ platform regressions in both editors. Validation is pending; prior 128-case rece
 L69 range/delta is now implemented with negotiated capabilities, bounded detached token history,
 close/restart retirement and semantic refresh. Shared X126 and backend/transport regressions await
 the combined batch run. Full tokens remain available to clients without range/delta capabilities.
+
+L70 now negotiates lazy completion documentation and code-action edits with bounded detached
+handles and stale-result rejection. Completion insertion/type details remain eager; compiler proof
+is still performed before offering an action. X127 plus service tests await batch validation.
+Code lens, link, inlay-hint and workspace-symbol resolve remain explicit follow-ups.

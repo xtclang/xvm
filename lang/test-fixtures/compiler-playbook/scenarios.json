@@ -4048,6 +4048,18 @@
         "limitations": []
       }
     },
+    "X127": {
+      "title": "lazy action edits resolve through installed transport and reject obsolete handles",
+      "manual": [],
+      "values": {
+        "file": "Resolve.x",
+        "source": "module Resolve { import ecstasy.text.StringBuffer; }"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
