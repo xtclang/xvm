@@ -7,6 +7,35 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 
 class XdkPresentationTest {
     @Test
+    fun `anonymous construction tokens never overlap during recovery`() {
+        val source =
+            """
+            module Presentation {
+                class Packet<T> { construct(T first, T second) {} }
+                Int pair(Int first, Int second) = first;
+                Int edit(String word) { return 1 + word.size; }
+                void run(String text) {
+                    new Packet<String>("anonymous", text) { String read() = text; };
+                }
+            }
+            """
+                .trimIndent()
+        XdkAdapter().use { adapter ->
+            listOf(source, source.replace("return 1 + word.size;", "return pair((pair(1, ;"))
+                .forEach { text ->
+                    adapter.compile(URI, text)
+                    val tokens = decode(adapter.getSemanticTokens(URI)!!)
+                    assertThat(tokens).isNotEmpty()
+                    tokens.zipWithNext().forEach { (previous, next) ->
+                        assertThat(previous[0] < next[0] || previous[1] + previous[2] <= next[1])
+                            .describedAs("overlapping tokens: %s then %s", previous, next)
+                            .isTrue()
+                    }
+                }
+        }
+    }
+
+    @Test
     fun `semantic tokens classify resolved declarations references modifiers and writes`() {
         val source =
             """
