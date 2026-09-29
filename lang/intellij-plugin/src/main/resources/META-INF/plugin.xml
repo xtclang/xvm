@@ -70,6 +70,7 @@
 
         <!-- Check the request's document snapshot before applying a compiler rename. -->
         <renameHandler implementation="org.xtclang.idea.lsp.XtcRenameHandler"/>
+        <renameHandler implementation="org.xtclang.idea.lsp.XtcFileRenameHandler"/>
 
         <!-- Preserve candidate signatures when the compiler cannot select an active argument. -->
         <codeInsight.parameterInfo language="Ecstasy"

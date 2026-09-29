@@ -9,10 +9,15 @@ import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.OpenedDocument
 import com.redhat.devtools.lsp4ij.internal.CancellationSupport
+import java.io.File
 import java.util.concurrent.CompletableFuture
+import org.eclipse.lsp4j.FileRename
+import org.eclipse.lsp4j.RenameFile
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageServer
 
 /**
@@ -60,16 +65,32 @@ private constructor(
                 synchronizer.document.modificationStamp == stamp
     }
 
+    private data class FileMove(
+        val file: VirtualFile,
+        val url: String,
+        val stamp: Long,
+        val name: String,
+    ) {
+        fun isCurrent(): Boolean =
+            file.isValid &&
+                file.url == url &&
+                file.modificationStamp == stamp &&
+                file.parent.findChild(name) == null &&
+                !File(file.parent.path, name).exists()
+    }
+
     private data class Snapshot(
         val wrapper: LanguageServerWrapper,
         val server: LanguageServer,
         val buffers: List<Buffer>,
+        val moves: List<FileMove> = emptyList(),
     ) {
         fun isCurrent(): Boolean =
             !wrapper.isDisposed &&
                 wrapper.languageServer === server &&
                 wrapper.openedDocuments.toSet() == buffers.map { it.opened }.toSet() &&
-                buffers.all(Buffer::isCurrent)
+                buffers.all(Buffer::isCurrent) &&
+                moves.all(FileMove::isCurrent)
 
         fun flush(): CompletableFuture<Void> =
             CompletableFuture.allOf(
@@ -83,6 +104,77 @@ private constructor(
     }
 
     companion object {
+        private fun capture(wrapper: LanguageServerWrapper): Snapshot =
+            Snapshot(
+                wrapper,
+                requireNotNull(wrapper.languageServer),
+                wrapper.openedDocuments.map { opened ->
+                    val synchronizer =
+                        requireNotNull(opened.synchronizer) {
+                            "Rename source is no longer open"
+                        }
+                    Buffer(
+                        opened,
+                        synchronizer,
+                        synchronizer.document.modificationStamp,
+                        opened.file.url,
+                    )
+                },
+            )
+
+        /** Request before disk mutation; VFS before-events are already too late for LSP proof. */
+        fun requestFileRename(
+            wrapper: LanguageServerWrapper,
+            file: VirtualFile,
+            name: String,
+        ): CompletableFuture<XtcRenameEdit?> =
+            ReadAction.computeBlocking<CompletableFuture<XtcRenameEdit?>, RuntimeException> {
+                require(
+                    name.isNotBlank() &&
+                        name != "." &&
+                        name != ".." &&
+                        '/' !in name &&
+                        '\\' !in name
+                ) {
+                    "Enter a single file or directory name"
+                }
+                val move = FileMove(file, file.url, file.modificationStamp, name)
+                if (!move.isCurrent())
+                    return@computeBlocking CompletableFuture.completedFuture(null)
+                val snapshot = capture(wrapper).copy(moves = listOf(move))
+                val from = wrapper.toUriString(file)
+                val to = File(file.parent.path, name).toURI().toString()
+                val cancellation = CancellationSupport()
+                val result =
+                    snapshot
+                        .flush()
+                        .thenCompose {
+                            cancellation.checkCanceled()
+                            cancellation.execute(
+                                snapshot.server.workspaceService.willRenameFiles(
+                                    RenameFilesParams(listOf(FileRename(from, to)))
+                                )
+                            )
+                        }
+                        .thenApply { edit ->
+                            edit?.let {
+                                check(it.changes.isNullOrEmpty()) {
+                                    "File rename requires versioned edits"
+                                }
+                                val combined =
+                                    WorkspaceEdit().apply {
+                                        documentChanges = buildList {
+                                            addAll(it.documentChanges.orEmpty())
+                                            add(Either.forRight(RenameFile(from, to)))
+                                        }
+                                    }
+                                XtcRenameEdit(snapshot, combined)
+                            }
+                        }
+                result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
+                result
+            }
+
         /**
          * Capture before flushing changes or sending the request. Comparing only after the response
          * arrives misses edits made while the compiler was calculating the rename. Open/close
@@ -100,23 +192,7 @@ private constructor(
                 requireNotNull(wrapper.getOpenedDocument(wrapper.toUri(file))) {
                     "Rename source is no longer open"
                 }
-                val snapshot =
-                    Snapshot(
-                        wrapper,
-                        requireNotNull(wrapper.languageServer),
-                        wrapper.openedDocuments.map { opened ->
-                            val synchronizer =
-                                requireNotNull(opened.synchronizer) {
-                                    "Rename source is no longer open"
-                                }
-                            Buffer(
-                                opened,
-                                synchronizer,
-                                synchronizer.document.modificationStamp,
-                                opened.file.url,
-                            )
-                        },
-                    )
+                val snapshot = capture(wrapper)
                 val params =
                     RenameParams(
                         TextDocumentIdentifier(wrapper.toUriString(file)),
