@@ -136,6 +136,11 @@ public class MethodDeclarationStatement
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    /** @return the written documentation text, or null when no documentation comment is present */
+    public String getDocumentation() {
+        return TypeCompositionStatement.extractDocumentation(doc);
+    }
+
     /**
      * @return true iff this statement represents a constructor
      */
