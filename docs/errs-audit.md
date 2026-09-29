@@ -13,13 +13,16 @@ registration supports traversal, cloning and edits without public representation
 [checkpoint map](errs-integration-plan.md#partial-ast-implementation-checkpoints) records validation
 and the two override modifiers corrected during compilation. The
 [broader inventory](errs.md#broader-ast-placement-inventory) classifies all 61 changed AST files;
-AST1–AST5 prioritize actual query/provenance reductions without forced package splits. Real dispatch
-fixtures cover Explicit/Default, Delegating and Union; the generated/native/conditional route
-inventory remains incomplete.
+AST5 now shares read-only cursor/argument syntax queries through `partial.PartialSyntax`, leaving
+trial parenting and semantic validation in the root package. AST1–AST4 remain planned reductions.
+Real dispatch fixtures cover Explicit/Default, Delegating and Union; the generated/native/conditional
+route inventory remains incomplete.
 
 The corrected P1–P4 batch passes 107 Java and 395 LSP tests (502 total), with zero failures,
 errors or skips, plus root/lang Spotless. This is backend package/ownership validation; it does
-not replace or extend the existing native-editor receipts.
+not replace or extend the existing native-editor receipts. AST5 separately passes 37 Java and
+221 LSP tests (258 total), with zero failures/errors/skips, plus root/lang Spotless; see its
+[validation record](errs-integration-plan.md#shared-partial-syntax-implementation-ast5).
 
 **Orphan server JVMs:** [the process-lifecycle audit](errs-lsp-process-lifecycle.md) documents
 the reproduced Tree-sitter worker leak after EOF, LSP4IJ stop-before-start race and master's
