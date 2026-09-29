@@ -7,18 +7,25 @@ EmbeddingSupport/lib_runner and creates fresh application containers. R1–R8 co
 DAP work. Compiler ASTs/pools stay worker-owned, compile-only paths never start the VM, and source
 revisions remain paired with emitted artifacts for reruns and future breakpoint mapping.
 
-**L63 member actions:** the compiler adapter offers source-contract implement/override stubs at a
-class name, including parameterized types, conditional/multiple returns, generic methods and
-validated literal defaults. TypeInfo chooses the signature; private whole-graph compilation proves
-the inserted method and its intended inherited call/descendant dispatch changes. Other bindings
-stay fixed. Missing implementations can use a fresh declaration-only embedding analysis; a failed
-compiler attempt is never resumed. Bodies use `TODO()`. Unsupported type spellings, computed
-defaults and binary contracts remain withheld. This adds no Java AST state. The batch passes 85 LSP and 15 compiler API/listener tests, plus all
-seven X122 variants in both editors; see the [commit map and receipts](errs-integration-plan.md#l63-batch-extraction-map-and-validation).
-The requested `ast.partial`
-organization has an [access-boundary audit](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax):
-a direct move needs substantial internal access and reflective traversal changes, so it is deferred
-until a small compiler-owned service boundary is designed.
+**L63 member actions:** the compiler adapter implements individual and atomic all-required-member
+stubs at a class name. The latest implementation adds bundled/binary contracts, qualified foreign
+signature types with atomic imports, compound/nullable/immutable types and literal defaults during
+fresh declaration repair. TypeInfo chooses the signature; private whole-graph compilation proves
+the inserted methods and their intended inherited call/descendant effects while preserving other
+bindings. Library artifacts stay read-only. Missing implementations use fresh declaration analysis,
+never a resumed failed compiler. Bodies use `TODO()`. Unvalidated computed/named defaults,
+unsupported constant kinds and annotated/otherwise unrenderable type spellings remain refusals.
+Already validated primitive constants can be emitted even if originally computed. No new Java AST
+state or API is required. Combined validation passed 114 LSP and 15 compiler tests; the final
+all-required guard then passed 47 member-action tests. All eleven X122 variants pass in both
+editors, plus IntelliJ X105. The [commit map and receipts](errs-integration-plan.md#l63-librarycomplete-repair-validation-and-extraction)
+separate implementation checkpoints, validation corrections and selected native acceptance.
+
+The requested `ast.partial` organization now has a concrete
+[migration design](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax): move only the
+four syntax nodes, keep semantic helpers package-private in the ordinary AST package, and add a
+small compiler-owned query boundary plus registered cross-package child-field access. The design
+is committed; the package move is not yet implemented.
 
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
 startup/cancellation race. Both have isolated fixes and process regressions; see
