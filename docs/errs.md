@@ -1,11 +1,12 @@
 # Threading `errs` through the compiler
 
-**Current hardening batch (validation pending):** L12 no longer copies the generated anonymous
-class name as a written declaration. L16/L27 add a project source-graph settings UI using LSP4IJ's
-existing store. L68 adds negotiated compiler pull diagnostics, including closed roots and result
-IDs. Shared X76/X118 are strengthened and new X123 covers pull reports in both editors. These are
-implemented checkpoints awaiting the combined backend/native receipt; the previous L64 pass does
-not validate them. See the [batch record](errs-integration-plan.md#l12-project-settings-and-l62l68-hardening-batch-2026-09-29).
+**Current hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
+add project source-graph settings; L68 adds negotiated pull diagnostics, including closed roots
+and result IDs. The combined run passes 861 compiler/backend, 54 packaged-stdio and 50 IntelliJ
+unit tests (965 total), with zero failures/errors/skips. Updated X76/X118 and new X123 pass in both
+editors; IntelliJ reports zero IDE failures. This is selected acceptance, not a full 128-case
+catalog run. See the [batch receipt](errs-integration-plan.md#l12-project-settings-and-l62l68-hardening-batch-2026-09-29)
+and the newly found [real-platform blockers](errs-integration-plan.md#platform-demo-blockers-2026-09-29).
 
 **L64 completion batch:** guarded recursive formal names can now retain explicitly written
 constraints without invented type identities. Literal argument proposals reuse normal compiler
