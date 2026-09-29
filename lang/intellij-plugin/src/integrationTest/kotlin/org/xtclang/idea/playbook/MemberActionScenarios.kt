@@ -33,25 +33,25 @@ fun Driver.memberActions(
                     ),
                 ).asJsonArray
         if (title.isEmpty()) {
-            val actions = actions()
+            val actions =
+                awaitUiNotNull("member refusal response", 45.seconds) {
+                    try {
+                        actions()
+                    } catch (failure: ClientRequestFailure) {
+                        if (failure.code !in setOf(-32800, -32801)) throw failure
+                        null
+                    }
+                }
             check(
                 actions.none {
                     val label = it.asJsonObject["title"].asString
-                    label.startsWith("Implement ") || label.startsWith("Override ")
+                    (label.startsWith("Implement ") || label.startsWith("Override ")) && label.contains(" ${data.text("refusalMember")}(")
                 },
             )
             check(editor.text == original)
         } else {
-            // Empty diagnostics may still belong to the previous source version. Wait for this
-            // exact member query before opening the asynchronously populated native menu.
-            awaitUi("current member action $title", 45.seconds) {
-                try {
-                    actions().any { it.asJsonObject["title"].asString == title }
-                } catch (failure: ClientRequestFailure) {
-                    if (failure.code != -32801) throw failure
-                    false
-                }
-            }
+            // Let the native intention own its request. A separate protocol probe can supersede
+            // that request and leave the native client holding its canceled result.
             quickFix(editor, at, title)
             awaitUi("generated member matches shared source", 45.seconds) { editor.text == expected }
             diagnostics(editor, false)

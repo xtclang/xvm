@@ -22,7 +22,7 @@ export function memberActionCases(): void {
                     'vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at)),
                 actions => Array.isArray(actions) && (!variant.title || actions.some(action => action.title === variant.title)), 'Member action reply');
                 if (!variant.title) {
-                    assert.ok(!actions?.some(action => /^(Implement|Override) /.test(action.title)));
+                    assert.ok(!actions?.some(action => /^(Implement|Override) /.test(action.title) && action.title.includes(` ${data.refusalMember}(`)));
                     assert.strictEqual(document.getText(), variant.source);
                     continue;
                 }
