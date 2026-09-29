@@ -2,7 +2,6 @@ package org.xvm.compiler.ast;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.StreamSupport;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
@@ -10,6 +9,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 /**
  * Compiler-internal semantic operations for retained incomplete syntax. Public only to connect
@@ -54,7 +54,7 @@ public final class PartialQueries {
             }
         });
         if (call != null && !errs.isAbortDesired()) {
-            PartialArgument.of(site).ifPresent(argument -> bindings.record(argument.cursor(), call));
+            PartialSyntax.argument(site).ifPresent(argument -> bindings.record(argument.cursor(), call));
         }
     }
 
@@ -66,24 +66,5 @@ public final class PartialQueries {
                         .withTypes(CursorScope.declarationTypes(site, scope, writtenFormals, errs))
                         .withFormals(CursorScope.declarationFormals(site, scope, writtenFormals, errs)))
                 : Optional.empty();
-    }
-
-    /** Find the real call containing a direct, labeled or parenthesized argument cursor. */
-    public static Optional<IncompleteStatement> argumentCall(IncompleteStatement site) {
-        AstNode parent = site.getParent();
-        while (parent instanceof Expression && !(parent instanceof LambdaExpression)
-                && !(parent instanceof InvocationExpression) && !(parent instanceof NewExpression)) {
-            parent = parent.getParent();
-        }
-        return parent instanceof IncompleteStatement call && call.isCall()
-                && PartialArgument.of(call).map(argument -> argument.cursor() == site).orElse(false)
-                ? Optional.of(call) : Optional.empty();
-    }
-
-    /** Whether retained syntax needs a real context instead of a disposable value probe. */
-    static boolean isWithin(AstNode node) {
-        return node != null && (node instanceof IncompleteStatement
-                || StreamSupport.stream(node.childNodes().spliterator(), false)
-                        .anyMatch(PartialQueries::isWithin));
     }
 }

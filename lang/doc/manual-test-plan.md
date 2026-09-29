@@ -21,7 +21,8 @@ Earlier VS Code checkpoints remain valid historical evidence: C27/L51 `run-9deea
 
 The P1–P4 `ast.partial` package refactor changes compiler organization, not editor behavior or
 scenario data. Existing recovery/completion/signature/header cases still apply in both editors.
-This checkpoint uses focused compiler/adapter regressions; it adds no new native-run receipt.
+P1–P4 and the AST5 shared-syntax extraction use focused compiler/adapter regressions; they add no
+new native-run receipt or scenario change.
 See the [package validation record](../../docs/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
 
 This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
