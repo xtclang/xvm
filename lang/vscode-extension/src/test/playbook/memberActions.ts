@@ -19,7 +19,7 @@ export function memberActionCases(): void {
                 await originalDiagnostics();
                 const at = position(document, data.anchor);
                 const actions = await eventually(async () => vscode.commands.executeCommand<vscode.CodeAction[]>(
-                    'vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at)),
+                    'vscode.executeCodeActionProvider', document.uri, new vscode.Range(at, at), undefined, 100),
                 actions => Array.isArray(actions) && (!variant.title || actions.some(action => action.title === variant.title)), 'Member action reply');
                 if (!variant.title) {
                     assert.ok(!actions?.some(action => /^(Implement|Override) /.test(action.title) && action.title.includes(` ${data.refusalMember}(`)));

@@ -3,6 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
+import { CodeAction } from 'vscode-languageclient/node';
 import { client, diagnostics, label, noErrors, playbook, targets } from './support';
 
 export function platformCases(): void {
@@ -75,6 +76,25 @@ export function platformCases(): void {
             const reopened = await client().sendRequest<{ data: number[] }>('textDocument/semanticTokens/full/delta', { textDocument: id, previousResultId: full.resultId });
             assert.ok(reopened.data.length);
         }
+    });
+
+    playbook('X127', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        const actions = await client().sendRequest<CodeAction[]>('textDocument/codeAction', {
+            textDocument: { uri: document.uri.toString() }, range: { start: { line: 0, character: 0 }, end: { line: 0, character: data.source.length } }, context: { diagnostics: [] }
+        });
+        assert.strictEqual(actions.length, 1);
+        const action = actions[0];
+        const capabilities = client().initializeResult!.capabilities.codeActionProvider;
+        if (typeof capabilities === 'object' && capabilities.resolveProvider) {
+            assert.ok(action.data);
+            assert.strictEqual(action.edit, undefined);
+            const resolved = await client().sendRequest<CodeAction>('codeAction/resolve', action);
+            assert.ok(resolved.edit?.documentChanges?.length);
+            assert.strictEqual(resolved.title, action.title);
+            await workspace.replace(document, '\n' + data.source);
+            await assert.rejects(client().sendRequest('codeAction/resolve', action), /expired or changed/);
+        } else assert.ok(action.edit);
     });
 
 }
