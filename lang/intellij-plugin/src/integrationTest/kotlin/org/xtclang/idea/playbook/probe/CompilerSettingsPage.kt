@@ -1,13 +1,17 @@
 package org.xtclang.idea.playbook.probe
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import java.awt.Component
 import java.awt.Container
+import java.net.URI
+import java.nio.file.Path
 import javax.swing.JCheckBox
+import javax.swing.JTable
 import org.xtclang.idea.lsp.CompilerProjectConfigurable
 
 /** Exercise the real project settings component and its Apply/Reset contract on the EDT. */
@@ -30,8 +34,33 @@ object CompilerSettingsPage {
         check(page.isModified())
         page.reset()
         check(!page.isModified() && !discovery.isSelected)
-        // Copy the existing graph into the project store through the actual UI Apply path.
+        val table = descendants(component).filterIsInstance<JTable>().single()
+        val before =
+            GlobalLanguageServerSettings.getInstance()
+                .getLanguageServerSettings(SERVER)
+                ?.configurationContent
+        table.model.setValueAt("", 0, 0)
+        check(runCatching { page.apply() }.exceptionOrNull() is ConfigurationException)
+        check(
+            GlobalLanguageServerSettings.getInstance()
+                .getLanguageServerSettings(SERVER)
+                ?.configurationContent == before
+        )
+        page.reset()
+        // Edit actual table cells, preserving the graph's meaning while exercising relative roots.
+        val root = Path.of(requireNotNull(project.basePath))
+        (0 until table.rowCount).forEach { row ->
+            val absolute = Path.of(URI(table.model.getValueAt(row, 1).toString()))
+            table.model.setValueAt(root.relativize(absolute).toString(), row, 1)
+        }
+        check(page.isModified())
         page.apply()
+        check(!page.isModified())
+        check(
+            GlobalLanguageServerSettings.getInstance()
+                .getLanguageServerSettings(SERVER)
+                ?.configurationContent == before
+        )
         check(
             ProjectLanguageServerSettings.getInstance(project)
                 .getLanguageServerSettings(SERVER)
