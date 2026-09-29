@@ -1158,7 +1158,7 @@ class XtcTextDocumentService(
                 Either.forRight<Command, CodeAction>(
                     CodeAction().apply {
                         title = action.title
-                        kind = action.kind.toLsp()
+                        this.kind = action.kind.toLsp()
                         isPreferred = action.isPreferred
                         this.edit = proposed
                         data = handle

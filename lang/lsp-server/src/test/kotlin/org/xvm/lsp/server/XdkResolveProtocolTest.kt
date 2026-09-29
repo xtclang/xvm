@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -25,25 +26,32 @@ import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
+import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class XdkResolveProtocolTest {
+    @TempDir lateinit var directory: Path
+
+    private val uri: String
+        get() = directory.resolve("Resolve.x").toUri().toString()
+
     @Test
     fun `completion resolves documentation without changing insertion and rejects an old snapshot`() {
-        session(true) { server ->
-            val source =
-                "module Resolve { class Box { /** Reads a value. */ Int read() = 1; } Int run(Box box) = box.re; }"
+        val source =
+            "module Resolve { class Box { /** Reads a value. */ Int read() = 1; } Int run(Box box) = box.re; }"
+        session(true, source) { server ->
             val service = server.textDocumentService
-            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, source)))
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
             val item =
                 service
                     .completion(
                         CompletionParams(
-                            TextDocumentIdentifier(URI),
+                            TextDocumentIdentifier(uri),
                             Position(0, source.lastIndexOf("re;") + 2),
                         )
                     )
@@ -56,8 +64,8 @@ class XdkResolveProtocolTest {
             val resolved = service.resolveCompletionItem(item).get(10, SECONDS)
             assertThat(resolved.documentation.left).contains("Reads a value")
             assertThat(resolved.textEdit).isEqualTo(insertion)
-            service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(URI)))
-            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, source)))
+            service.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(uri)))
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
             assertThatThrownBy { service.resolveCompletionItem(item).get(10, SECONDS) }
                 .hasMessageContaining("expired or changed")
         }
@@ -65,15 +73,15 @@ class XdkResolveProtocolTest {
 
     @Test
     fun `code action lazily converts versioned edits and refuses changed inputs`() {
-        session(true) { server ->
-            val source = "module Resolve { import ecstasy.text.StringBuffer; }"
+        val source = "module Resolve { import ecstasy.text.StringBuffer; }"
+        session(true, source) { server ->
             val service = server.textDocumentService
-            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 7, source)))
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, source)))
             val action =
                 service
                     .codeAction(
                         CodeActionParams(
-                            TextDocumentIdentifier(URI),
+                            TextDocumentIdentifier(uri),
                             Range(Position(0, 0), Position(0, source.length)),
                             CodeActionContext(emptyList()),
                         )
@@ -90,7 +98,7 @@ class XdkResolveProtocolTest {
                 .isEmpty()
             service.didChange(
                 DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(URI, 8),
+                    VersionedTextDocumentIdentifier(uri, 8),
                     listOf(TextDocumentContentChangeEvent("\n$source")),
                 )
             )
@@ -101,15 +109,15 @@ class XdkResolveProtocolTest {
 
     @Test
     fun `clients without data and edit resolve support receive eager actions`() {
-        session(false) { server ->
-            val source = "module Resolve { import ecstasy.text.StringBuffer; }"
+        val source = "module Resolve { import ecstasy.text.StringBuffer; }"
+        session(false, source) { server ->
             val service = server.textDocumentService
-            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, source)))
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
             val action =
                 service
                     .codeAction(
                         CodeActionParams(
-                            TextDocumentIdentifier(URI),
+                            TextDocumentIdentifier(uri),
                             Range(Position(0, 0), Position(0, source.length)),
                             CodeActionContext(emptyList()),
                         )
@@ -124,14 +132,18 @@ class XdkResolveProtocolTest {
         }
     }
 
-    private fun session(resolve: Boolean, body: (XtcLanguageServer) -> Unit) {
+    private fun session(resolve: Boolean, source: String, body: (XtcLanguageServer) -> Unit) {
         CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        directory.resolve("Resolve.x").toFile().writeText(source)
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(mock(LanguageClient::class.java))
             val capabilities =
                 server
                     .initialize(
                         InitializeParams().apply {
+                            workspaceFolders =
+                                listOf(WorkspaceFolder(directory.toUri().toString(), "Resolve"))
                             this.capabilities =
                                 ClientCapabilities().apply {
                                     workspace =
@@ -172,9 +184,5 @@ class XdkResolveProtocolTest {
             assertThat(capabilities.codeActionProvider.isRight).isEqualTo(resolve)
             body(server)
         }
-    }
-
-    private companion object {
-        const val URI = "file:///Resolve.x"
     }
 }

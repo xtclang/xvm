@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -19,6 +20,11 @@ import org.xvm.lsp.adapter.xdk.toDependency
 
 class XdkBuildModelTest {
     @TempDir lateinit var directory: Path
+
+    @BeforeEach
+    fun canonicalDirectory() {
+        directory = directory.toRealPath()
+    }
 
     @Test
     fun `binary module path is imported and removing the model retires its artifacts`() {
