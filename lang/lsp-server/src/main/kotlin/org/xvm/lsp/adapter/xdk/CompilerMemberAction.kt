@@ -3,10 +3,13 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component.Format
 import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
+import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
+import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
@@ -18,6 +21,7 @@ internal data class CompilerMemberAction(
     val insertion: SemanticModel.Position,
     val declaration: String,
     val implementation: Boolean,
+    val imports: List<XdkMemberActions.Import>,
 )
 
 /** Inherited methods from source and immutable dependency artifacts. A proposed declaration still needs a complete graph proof. */
@@ -35,7 +39,28 @@ internal fun compilerMemberActions(
         if (errors.hasSeriousErrors() || errors.isAbortDesired) return@flatMap emptyList()
         val end = node.ensureBody().endPosition
         val insertion = SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1)
-        info.methods.values
+        val methods = info.methods.values.filter { it.identity.isTopLevel && it.isVirtual && !it.isCtorOrValidator }
+        val external = methods.flatMap { (it.signature.params + it.signature.returns).flatMap { type -> type.memberClasses() } }
+            .filter { it.moduleConstant != structure.identityConstant.moduleConstant }
+        val lexicalErrors = ErrorList()
+        val names = ExecutionTrace.api("Lexer.lex(member-imports)") {
+            Lexer(node.source.clone(), lexicalErrors).asSequence().map { it.valueText }.toSet()
+        }
+        if (lexicalErrors.hasSeriousErrors()) return@flatMap emptyList()
+        val aliases = external.map { it.moduleConstant.name }.distinct().sorted().fold(mapOf("ecstasy.xtclang.org" to "ecstasy")) { known, module ->
+            if (module in known) known else {
+                val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
+                val alias = generateSequence(0) { it + 1 }.map { if (it == 0) base else "$base$it" }
+                    .first { it !in names && it !in known.values && XdkRename.identifier(it) }
+                known + (module to alias)
+            }
+        }
+        val moduleNode = generateSequence(node as AstNode) { it.parent }.filterIsInstance<TypeCompositionStatement>()
+            .lastOrNull { it.category.id == Token.Id.MODULE && it.source === node.source }
+        val importAt = moduleNode?.ensureBody()?.startPosition?.let {
+            SemanticModel.Position(Source.calculateLine(it), Source.calculateOffset(it) + 1)
+        } ?: SemanticModel.Position(0, 0)
+        methods
             .filter { it.identity.isTopLevel && it.isVirtual && !it.isCtorOrValidator }
             .mapNotNull { method ->
                 val declaration = method.getTopmostMethodStructure(info)
@@ -44,7 +69,7 @@ internal fun compilerMemberActions(
                 ) {
                     return@mapNotNull null
                 }
-                val signature = memberSignature(method.signature, declaration, structure.identityConstant) ?: return@mapNotNull null
+                val signature = memberSignature(method.signature, declaration, structure.identityConstant, aliases) ?: return@mapNotNull null
                 val access = if (method.access == Access.PROTECTED) "protected " else ""
                 CompilerMemberAction(
                     structure.identityConstant,
@@ -52,6 +77,11 @@ internal fun compilerMemberActions(
                     insertion,
                     "$access$signature",
                     method.isAbstract,
+                    (method.signature.params + method.signature.returns).flatMap { it.memberClasses() }
+                        .filter { it.constantPool.getImplicitlyImportedIdentity(it.name) != it }
+                        .map { it.moduleConstant.name }.distinct()
+                        .filter { it != "ecstasy.xtclang.org" && it != structure.identityConstant.moduleConstant.name }
+                        .map { XdkMemberActions.Import(importAt, "package ${aliases.getValue(it)} import $it;") },
                 )
             }.distinct()
     }
