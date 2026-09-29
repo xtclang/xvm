@@ -32,6 +32,8 @@
     <depends>com.redhat.devtools.lsp4ij</depends>
 
     <extensions defaultExtensionNs="com.intellij">
+        <projectConfigurable id="xtc.compiler" parentId="language" displayName="Ecstasy Compiler"
+                             instance="org.xtclang.idea.lsp.CompilerProjectConfigurable"/>
         <!-- Notification group for LSP status messages -->
         <notificationGroup id="XTC Language Server"
                            displayType="BALLOON"

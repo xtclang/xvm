@@ -28,6 +28,13 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
  */
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
+    // LSP4IJ already subscribes/disposes listeners for both stores, but its default
+    // createSettings reads only the global store. Project settings take precedence here.
+    override fun createSettings(): Any? =
+        CompilerSettings.store(project, serverDefinition.id)
+            .getLanguageServerSettings(serverDefinition.id)
+            ?.getLanguageServerConfiguration(project)
+
     override fun publishDiagnostics(params: PublishDiagnosticsParams) {
         if (isDisposed || project.isDisposed) return
         val file = clientFeatures.findFileByUri(params.uri)
