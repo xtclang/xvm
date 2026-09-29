@@ -564,6 +564,7 @@ class XtcTextDocumentService(
             AdapterCompletionItem.CompletionKind.VARIABLE -> CompletionItemKind.Variable
             AdapterCompletionItem.CompletionKind.KEYWORD -> CompletionItemKind.Keyword
             AdapterCompletionItem.CompletionKind.MODULE -> CompletionItemKind.Module
+            AdapterCompletionItem.CompletionKind.VALUE -> CompletionItemKind.Value
         }
 
     /**
