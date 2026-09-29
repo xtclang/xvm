@@ -133,13 +133,15 @@ internal object XdkRename {
         after: CompilerRenameFacts,
         plan: Plan,
         candidates: List<XdkMemberActions.Candidate>,
+        insertion: Edit,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
         val owner = candidates.firstOrNull()?.owner ?: return false
         if (candidates.any { it.owner != owner }) return false
         val source = owner.sourceName ?: return false
-        val insertion = plan.edits[source]?.singleOrNull() ?: return false
-        if (plan.edits.size != 1 || insertion.start != insertion.end) return false
+        val edits = plan.edits[source] ?: return false
+        if (plan.edits.size != 1 || insertion !in edits || edits.any { it.start != it.end }) return false
+        val insertionStart = insertion.start + edits.filter { it.start < insertion.start }.sumOf { it.text.length }
         val oldDispatch =
             dispatch(before, plan.original) { path, offset -> plan.map(path, offset) }
                 ?.let(::memberDispatch) ?: return false
@@ -175,7 +177,7 @@ internal object XdkRename {
             } ?: return false
             val member = (added.members - removed.members.toSet()).single() as? Target.Declaration ?: return false
             if (member.kind != SemanticModel.SymbolKind.METHOD || member.site.source != source ||
-                member.site.start < insertion.start || member.site.end > insertion.start + insertion.text.length
+                member.site.start < insertionStart || member.site.end > insertionStart + insertion.text.length
             ) {
                 return false
             }
