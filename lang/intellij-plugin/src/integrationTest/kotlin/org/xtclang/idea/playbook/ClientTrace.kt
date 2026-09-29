@@ -57,14 +57,28 @@ class ClientTrace(private val driver: Driver) {
         matches: (List<JsonObject>) -> Boolean,
     ): List<JsonObject> =
         with(driver) {
+            val protocol = ClientProtocol(driver)
+            val pull = protocol.capabilities().asJsonObject.has("diagnosticProvider")
             awaitUi(
-                message = "received diagnostic publication for $uri",
+                message = "diagnostic report for $uri",
                 timeout = 45.seconds,
                 getter = {
-                    notifications("textDocument/publishDiagnostics")
-                        .lastOrNull { sameUri(it.string("uri"), uri) }
-                        ?.get("diagnostics")
-                        ?.rows()
+                    if (pull) {
+                        // Closed/nonexistent files have no native editor diagnostic cache. Use
+                        // the negotiated report on the installed connection, not a push log.
+                        protocol
+                            .query(
+                                "textDocument/diagnostic",
+                                mapOf("textDocument" to mapOf("uri" to uri)),
+                            )
+                            .asJsonObject["items"]
+                            ?.rows()
+                    } else {
+                        notifications("textDocument/publishDiagnostics")
+                            .lastOrNull { sameUri(it.string("uri"), uri) }
+                            ?.get("diagnostics")
+                            ?.rows()
+                    }
                 },
                 checker = { it != null && matches(it) },
             )!!
