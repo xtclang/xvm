@@ -1,5 +1,8 @@
 package org.xvm.lsp.adapter
 
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.api.EmbeddingSupport.Compilation
@@ -7,9 +10,6 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkAdapterLifecycleTest {
     private class PausedCompiler {
@@ -88,13 +88,8 @@ class XdkAdapterLifecycleTest {
                 assertThat(adapter.getCachedResult(URI)).isNull()
                 val reopened = adapter.compileAsync(URI, "reopened")
                 compiler.release.countDown()
-                assertThat(
-                    reopened
-                        .get(10, SECONDS)
-                        .diagnostics
-                        .single()
-                        .message,
-                ).contains("reopened")
+                assertThat(reopened.get(10, SECONDS).diagnostics.single().message)
+                    .contains("reopened")
                 adapter.closeDocument(URI)
                 assertThat(adapter.getCachedResult(URI)).isNull()
                 assertThat(adapter.findWorkspaceSymbols("")).isEmpty()

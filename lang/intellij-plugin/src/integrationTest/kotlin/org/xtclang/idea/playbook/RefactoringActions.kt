@@ -29,7 +29,10 @@ fun Driver.rename(
     invokeAction("RenameElement", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Rename")
     awaitUi("native rename dialog", 45.seconds) { dialog.present() }
-    val input = dialog.x(JEditorUiComponent::class.java) { byType("com.intellij.openapi.editor.impl.EditorComponentImpl") }
+    val input =
+        dialog.x(JEditorUiComponent::class.java) {
+            byType("com.intellij.openapi.editor.impl.EditorComponentImpl")
+        }
     input.text = replacement
     val button = cast(dialog.button("Refactor").component, NativeButton::class)
     awaitUi("rename accepts the new name", 10.seconds) { button.isEnabled() }
@@ -69,7 +72,9 @@ fun Driver.choosePopup(
     val list = popup.accessibleList { byClass("MyList") }
     val index = list.items.indexOfFirst { it.contains(selected) }
     check(index >= 0)
-    withContext(OnDispatcher.EDT) { cast(list.component, NativeListSelection::class).setSelectedIndex(index) }
+    withContext(OnDispatcher.EDT) {
+        cast(list.component, NativeListSelection::class).setSelectedIndex(index)
+    }
     popup.keyboard { enter() }
     awaitUi("chosen popup closes", 15.seconds) { popup.notPresent() }
 }
@@ -86,16 +91,14 @@ fun Driver.chooseTargets(
     val table = popup.accessibleTable()
     awaitUi(
         message = "native navigation chooser contains exactly $expected",
-        errorMessage = { "Expected $expected; rendered rows: ${if (table.present()) table.content() else "no table"}" },
+        errorMessage = {
+            "Expected $expected; rendered rows: ${if (table.present()) table.content() else "no table"}"
+        },
         timeout = 45.seconds,
     ) {
         inspection.recover()
         if (!popup.present()) return@awaitUi false
-        val rows =
-            table
-                .content()
-                .values
-                .map { it.values.joinToString(" ") }
+        val rows = table.content().values.map { it.values.joinToString(" ") }
         rows.size == expected.size && expected.all { name -> rows.any { it.contains(name) } }
     }
     val row =
@@ -104,7 +107,9 @@ fun Driver.chooseTargets(
             .entries
             .single { (_, cells) -> cells.values.any { it.contains(selected) } }
             .key
-    withContext(OnDispatcher.EDT) { cast(table.component, NativeTableSelection::class).setRowSelectionInterval(row, row) }
+    withContext(OnDispatcher.EDT) {
+        cast(table.component, NativeTableSelection::class).setRowSelectionInterval(row, row)
+    }
     popup.keyboard { enter() }
     awaitUi("selected declaration closes the chooser", 15.seconds) { popup.notPresent() }
 }
@@ -120,7 +125,9 @@ fun Driver.quickFix(
         editor.editor.getCaretModel().moveToOffset(at)
     }
     invokeAction("ShowIntentionActions", component = editor.component)
-    choosePopup(editor, listOf(title), title) { invokeAction("ShowIntentionActions", component = editor.component) }
+    choosePopup(editor, listOf(title), title) {
+        invokeAction("ShowIntentionActions", component = editor.component)
+    }
 }
 
 /** Inspect the rendered native hierarchy, then the result of the native references action. */
@@ -133,7 +140,9 @@ fun Driver.partialGraphHierarchy(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("TypeHierarchy", component = editor.component)
-    val browser = ui.x { byType("com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyBrowser") }
+    val browser = ui.x {
+        byType("com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyBrowser")
+    }
     awaitUi("native type hierarchy includes $child", 45.seconds) {
         if (!browser.present()) return@awaitUi false
         // The native browser expands its root. Observe it without expandAll's nested ten-second
@@ -149,7 +158,8 @@ fun Driver.partialGraphHierarchy(
     awaitUi("incomplete graph withholds references while retaining local navigation", 45.seconds) {
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
-            if (view == null || view == previous || view.isSearchInProgress()) return@withContext false
+            if (view == null || view == previous || view.isSearchInProgress())
+                return@withContext false
             // LSP4IJ combines definitions, implementations, type definitions and references here.
             // The declaration may remain, but the known extends-use must not masquerade as a
             // complete workspace reference result beside the broken module.
@@ -193,18 +203,24 @@ fun Driver.rejectRename(
     }
     invokeAction("RenameElement", now = false, component = editor.component)
     // The guarded XTC handler preserves the server reason and adds its native action prefix.
-    awaitUi("library rename displays its rejection", 45.seconds) { ui.x { byVisibleText("Rename failed: $reason") }.present() }
+    awaitUi("library rename displays its rejection", 45.seconds) {
+        ui.x { byVisibleText("Rename failed: $reason") }.present()
+    }
     check(ui.dialog(title = "Rename").notPresent())
     check(editor.text == original)
     withContext(OnDispatcher.EDT) { service<EditorHints>().hideAllHints() }
 }
 
-/** Reformat must encounter the native read-only gate; cancel it without unlocking bundled sources. */
+/**
+ * Reformat must encounter the native read-only gate; cancel it without unlocking bundled sources.
+ */
 fun Driver.rejectFormatting(editor: JEditorUiComponent) {
     focusEditor(editor)
     invokeAction("ReformatCode", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Clear Read-Only Status")
     awaitUi("reformat is blocked by read-only source", 45.seconds) { dialog.present() }
-    withContext(OnDispatcher.EDT) { cast(dialog.button("Cancel").component, NativeButton::class).doClick() }
+    withContext(OnDispatcher.EDT) {
+        cast(dialog.button("Cancel").component, NativeButton::class).doClick()
+    }
     awaitUi("read-only prompt closes", 15.seconds) { dialog.notPresent() }
 }

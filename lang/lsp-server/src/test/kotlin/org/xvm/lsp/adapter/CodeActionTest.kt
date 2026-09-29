@@ -24,10 +24,10 @@ class CodeActionTest : TreeSitterTestBase() {
     @DisplayName("getCodeActions()")
     inner class CodeActionTests {
         /**
-         * `buildOrganizeImportsAction` searches `tree.root.children` for `import_statement`
-         * nodes. In XTC, imports are often nested inside the module body, so whether
-         * the grammar places them at root level is grammar-dependent. We use root-level
-         * imports and assert the method completes without error.
+         * `buildOrganizeImportsAction` searches `tree.root.children` for `import_statement` nodes.
+         * In XTC, imports are often nested inside the module body, so whether the grammar places
+         * them at root level is grammar-dependent. We use root-level imports and assert the method
+         * completes without error.
          */
         @Test
         @DisplayName("should suggest organize imports when unsorted at root level")
@@ -39,7 +39,8 @@ class CodeActionTest : TreeSitterTestBase() {
                 import bar.Alpha;
                 module myapp {
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val actions = ts.getCodeActions(uri, zeroRange(), emptyList())
@@ -48,8 +49,8 @@ class CodeActionTest : TreeSitterTestBase() {
         }
 
         /**
-         * Already-sorted imports (alphabetically) should never trigger the
-         * "Organize Imports" action, regardless of where the grammar places them.
+         * Already-sorted imports (alphabetically) should never trigger the "Organize Imports"
+         * action, regardless of where the grammar places them.
          */
         @Test
         @DisplayName("should not suggest organize imports when sorted")
@@ -61,7 +62,8 @@ class CodeActionTest : TreeSitterTestBase() {
                 import foo.Zebra;
                 module myapp {
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val actions = ts.getCodeActions(uri, zeroRange(), emptyList())

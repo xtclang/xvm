@@ -30,7 +30,10 @@ internal data class CompilerMemberAction(
     val imports: List<XdkMemberActions.Import>,
 )
 
-/** Inherited methods from source and immutable dependency artifacts. A proposed declaration still needs a complete graph proof. */
+/**
+ * Inherited methods from source and immutable dependency artifacts. A proposed declaration still
+ * needs a complete graph proof.
+ */
 internal fun compilerMemberActions(
     nodes: List<AstNode>,
     errors: ErrorListener,
@@ -39,7 +42,9 @@ internal fun compilerMemberActions(
         nodes
             .filterIsInstance<MethodDeclarationStatement>()
             .mapNotNull { method ->
-                val identity = (method.component as? MethodStructure)?.identityConstant ?: return@mapNotNull null
+                val identity =
+                    (method.component as? MethodStructure)?.identityConstant
+                        ?: return@mapNotNull null
                 identity to
                     method
                         .childNodes()
@@ -51,38 +56,55 @@ internal fun compilerMemberActions(
                                     is LiteralExpression -> {
                                         value.literal.takeIf {
                                             it.id in
-                                                setOf(Token.Id.LIT_STRING, Token.Id.LIT_CHAR, Token.Id.LIT_INT)
+                                                setOf(
+                                                    Token.Id.LIT_STRING,
+                                                    Token.Id.LIT_CHAR,
+                                                    Token.Id.LIT_INT,
+                                                )
                                         }
                                     }
 
                                     is UnaryMinusExpression -> {
-                                        (value.childNodes().singleOrNull() as? LiteralExpression)?.literal?.takeIf {
-                                            it.id ==
-                                                Token.Id.LIT_INT
-                                        }
+                                        (value.childNodes().singleOrNull() as? LiteralExpression)
+                                            ?.literal
+                                            ?.takeIf {
+                                                it.id == Token.Id.LIT_INT
+                                            }
                                     }
 
                                     else -> {
                                         null
                                     }
                                 } ?: return@mapNotNull null
-                            parameter.name to if (value is UnaryMinusExpression) "-$token" else token.toString()
-                        }.toMap()
-            }.toMap()
+                            parameter.name to
+                                if (value is UnaryMinusExpression) "-$token" else token.toString()
+                        }
+                        .toMap()
+            }
+            .toMap()
     return nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
         val structure = node.component as? ClassStructure ?: return@flatMap emptyList()
-        if (structure.format != Format.CLASS || structure.isSynthetic || errors.isAbortDesired) return@flatMap emptyList()
+        if (structure.format != Format.CLASS || structure.isSynthetic || errors.isAbortDesired)
+            return@flatMap emptyList()
         val info =
             ExecutionTrace.api("TypeConstant.ensureTypeInfo(member-actions)") {
                 structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
             }
         if (errors.hasSeriousErrors() || errors.isAbortDesired) return@flatMap emptyList()
         val end = node.ensureBody().endPosition
-        val insertion = SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1)
-        val methods = info.methods.values.filter { it.identity.isTopLevel && it.isVirtual && !it.isCtorOrValidator }
+        val insertion =
+            SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1)
+        val methods =
+            info.methods.values.filter {
+                it.identity.isTopLevel && it.isVirtual && !it.isCtorOrValidator
+            }
         val external =
             methods
-                .flatMap { (it.signature.params + it.signature.returns).flatMap { type -> type.memberClasses() } }
+                .flatMap {
+                    (it.signature.params + it.signature.returns).flatMap { type ->
+                        type.memberClasses()
+                    }
+                }
                 .filter { it.moduleConstant != structure.identityConstant.moduleConstant }
         val lexicalErrors = ErrorList()
         val names =
@@ -91,18 +113,24 @@ internal fun compilerMemberActions(
             }
         if (lexicalErrors.hasSeriousErrors()) return@flatMap emptyList()
         val aliases =
-            external.map { it.moduleConstant.name }.distinct().sorted().fold(mapOf("ecstasy.xtclang.org" to "ecstasy")) { known, module ->
-                if (module in known) {
-                    known
-                } else {
-                    val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
-                    val alias =
-                        generateSequence(0) { it + 1 }
-                            .map { if (it == 0) base else "$base$it" }
-                            .first { it !in names && it !in known.values && XdkRename.identifier(it) }
-                    known + (module to alias)
+            external
+                .map { it.moduleConstant.name }
+                .distinct()
+                .sorted()
+                .fold(mapOf("ecstasy.xtclang.org" to "ecstasy")) { known, module ->
+                    if (module in known) {
+                        known
+                    } else {
+                        val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
+                        val alias =
+                            generateSequence(0) { it + 1 }
+                                .map { if (it == 0) base else "$base$it" }
+                                .first {
+                                    it !in names && it !in known.values && XdkRename.identifier(it)
+                                }
+                        known + (module to alias)
+                    }
                 }
-            }
         val moduleNode =
             generateSequence(node as AstNode) { it.parent }
                 .filterIsInstance<TypeCompositionStatement>()
@@ -114,8 +142,13 @@ internal fun compilerMemberActions(
         methods
             .mapNotNull { method ->
                 val declaration = method.getTopmostMethodStructure(info)
-                if (declaration.containingClass == structure || declaration.isSynthetic || declaration.isNative ||
-                    method.isOp || method.isAuto || !info.dispatch(method, errors).supported
+                if (
+                    declaration.containingClass == structure ||
+                        declaration.isSynthetic ||
+                        declaration.isNative ||
+                        method.isOp ||
+                        method.isAuto ||
+                        !info.dispatch(method, errors).supported
                 ) {
                     return@mapNotNull null
                 }
@@ -126,8 +159,7 @@ internal fun compilerMemberActions(
                         structure.identityConstant,
                         aliases,
                         literalDefaults[declaration.identityConstant].orEmpty(),
-                    )
-                        ?: return@mapNotNull null
+                    ) ?: return@mapNotNull null
                 val access = if (method.access == Access.PROTECTED) "protected " else ""
                 CompilerMemberAction(
                     structure.identityConstant,
@@ -141,9 +173,18 @@ internal fun compilerMemberActions(
                         .filter { it.constantPool.getImplicitlyImportedIdentity(it.name) != it }
                         .map { it.moduleConstant.name }
                         .distinct()
-                        .filter { it != "ecstasy.xtclang.org" && it != structure.identityConstant.moduleConstant.name }
-                        .map { XdkMemberActions.Import(importAt, "package ${aliases.getValue(it)} import $it;") },
+                        .filter {
+                            it != "ecstasy.xtclang.org" &&
+                                it != structure.identityConstant.moduleConstant.name
+                        }
+                        .map {
+                            XdkMemberActions.Import(
+                                importAt,
+                                "package ${aliases.getValue(it)} import $it;",
+                            )
+                        },
                 )
-            }.distinct()
+            }
+            .distinct()
     }
 }

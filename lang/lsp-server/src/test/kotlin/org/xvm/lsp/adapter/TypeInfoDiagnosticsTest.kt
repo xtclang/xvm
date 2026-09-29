@@ -1,5 +1,7 @@
 package org.xvm.lsp.adapter
 
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -14,17 +16,15 @@ import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.compiler.BuildRepository
 import org.xvm.compiler.Source
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 
 /**
  * Diagnostics raised while a TypeInfo is being assembled reach the listener the caller supplied,
  * and a later caller that gets the memoized TypeInfo is told the same thing.
  *
- * These live here rather than in javatools because they need a compiled core library, and
- * javatools is what compiles it - a test there would either skip on a clean build or pass only on
- * the leftovers of a previous one. This module is downstream of the compiler and already requires
- * a built XDK, supplied by Gradle as a declared test dependency.
+ * These live here rather than in javatools because they need a compiled core library, and javatools
+ * is what compiles it - a test there would either skip on a clean build or pass only on the
+ * leftovers of a previous one. This module is downstream of the compiler and already requires a
+ * built XDK, supplied by Gradle as a declared test dependency.
  *
  * The replay is the part worth pinning. A TypeInfo is built once and memoized, so which caller
  * triggers the build is an accident of order: if a speculative one did, a later caller that
@@ -37,7 +37,8 @@ class TypeInfoDiagnosticsTest {
         val base =
             """
             class Base<Element> { @Atomic Int count = 1; Element echo(Element value) = value; }
-            """.trimIndent()
+            """
+                .trimIndent()
         val repository = if (external) dependency("module Library { $base }") else null
         val declarations = if (external) "package lib import Library; import lib.Base;" else base
         val errors = ErrorList(UNLIMITED)
@@ -53,7 +54,8 @@ class TypeInfoDiagnosticsTest {
                         return text.echo("ok") + number.echo(1);
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
                 errors,
                 repository,
             )
@@ -69,7 +71,8 @@ class TypeInfoDiagnosticsTest {
                 module Library {
                     class Base<Element> { @Atomic Int count = 1; }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent()
             )
         val errors = ErrorList(UNLIMITED)
         val result =
@@ -79,7 +82,8 @@ class TypeInfoDiagnosticsTest {
                     package lib import Library;
                     class Derived<Element> extends lib.Base<Element> { @Atomic @Override Int count = 2; }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
                 errors,
                 repository,
             )
@@ -99,7 +103,9 @@ class TypeInfoDiagnosticsTest {
         val result = compile(source, errors)
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
         val bytes = ByteArrayOutputStream().also { result.file().writeTo(it) }.toByteArray()
-        return BuildRepository().apply { storeModule(FileStructure(ByteArrayInputStream(bytes)).module) }
+        return BuildRepository().apply {
+            storeModule(FileStructure(ByteArrayInputStream(bytes)).module)
+        }
     }
 
     @ParameterizedTest
@@ -129,7 +135,8 @@ class TypeInfoDiagnosticsTest {
                     }
                     void run() { $body }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
                 errors,
             )
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
@@ -158,8 +165,8 @@ class TypeInfoDiagnosticsTest {
      * The memoized result carries what building it said. The first caller here is the compilation
      * itself; the second is a later one with a listener of its own, and must still be told.
      *
-     * Serious errors can force a rebuild, so this case checks delivery rather than cache reuse.
-     * The warning-only test below proves replay from the same cached TypeInfo instance.
+     * Serious errors can force a rebuild, so this case checks delivery rather than cache reuse. The
+     * warning-only test below proves replay from the same cached TypeInfo instance.
      */
     @Test
     fun `a later caller is told what building the TypeInfo said`() {
@@ -176,8 +183,10 @@ class TypeInfoDiagnosticsTest {
                 pool.constants
                     .filterIsInstance<ClassConstant>()
                     .firstOrNull { it.name == "Foo" }
-                    ?.type,
-            ) { "the class the diagnostic was about should be in the pool" }
+                    ?.type
+            ) {
+                "the class the diagnostic was about should be in the pool"
+            }
 
         // a later caller, with a listener of its own, is told the same thing
         val later = ErrorList(UNLIMITED)
@@ -194,7 +203,8 @@ class TypeInfoDiagnosticsTest {
         repository: ModuleRepository? = null,
     ): EmbeddingSupport.Compilation {
         CompilerTestSupport.configure()
-        return EmbeddingSupport.instance().compileModule(Source(source, "file:///Test.x"), repository, errs)
+        return EmbeddingSupport.instance()
+            .compileModule(Source(source, "file:///Test.x"), repository, errs)
     }
 
     /**
@@ -221,10 +231,10 @@ class TypeInfoDiagnosticsTest {
     /**
      * And a later caller hears it too, from the recording rather than from a second build.
      *
-     * This is the case the memoized diagnostics exist for, and the only one where they can fire:
-     * a build that reports a warning leaves the TypeInfo cached, because only a serious error
-     * makes the compiler refuse to cache one. So the next caller takes the cached path - and
-     * without the recording would be told nothing, purely because somebody else asked first.
+     * This is the case the memoized diagnostics exist for, and the only one where they can fire: a
+     * build that reports a warning leaves the TypeInfo cached, because only a serious error makes
+     * the compiler refuse to cache one. So the next caller takes the cached path - and without the
+     * recording would be told nothing, purely because somebody else asked first.
      */
     @Test
     fun `a later caller hears a warning recorded by the build that cached the TypeInfo`() {
@@ -239,14 +249,17 @@ class TypeInfoDiagnosticsTest {
                 pool.constants
                     .filterIsInstance<ClassConstant>()
                     .firstOrNull { it.name == "Derived" }
-                    ?.type,
-            ) { "the class the warning was about should be in the pool" }
+                    ?.type
+            ) {
+                "the class the warning was about should be in the pool"
+            }
 
         val later = ErrorList(UNLIMITED)
         val cached = type.ensureTypeInfo(later)
         val next = ErrorList(UNLIMITED)
         assertThat(type.ensureTypeInfo(next)).isSameAs(cached)
-        assertThat(next.getErrors().map { it.code }).containsExactlyElementsOf(later.getErrors().map { it.code })
+        assertThat(next.getErrors().map { it.code })
+            .containsExactlyElementsOf(later.getErrors().map { it.code })
 
         assertThat(later.getErrors().map { it.code })
             .`as`("replayed to a caller that did not trigger the build: %s", later.getErrors())
@@ -261,7 +274,8 @@ class TypeInfoDiagnosticsTest {
                     @Override void nope() {}
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         val DUPLICATE_ANNOTATION =
             """
@@ -269,7 +283,8 @@ class TypeInfoDiagnosticsTest {
                 class Base { @Atomic Int x = 1; }
                 class Derived extends Base { @Atomic @Override Int x = 2; }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
 
         val CLEAN =
             """
@@ -278,6 +293,7 @@ class TypeInfoDiagnosticsTest {
                     void fine() {}
                 }
             }
-            """.trimIndent()
+            """
+                .trimIndent()
     }
 }

@@ -1,8 +1,8 @@
 package org.xvm.lsp.model
 
 /**
- * Immutable result of compiling an XTC source file.
- * This is what the adapter layer produces from the compiler.
+ * Immutable result of compiling an XTC source file. This is what the adapter layer produces from
+ * the compiler.
  */
 data class CompilationResult(
     val uri: String,
@@ -24,7 +24,13 @@ data class CompilationResult(
             documentUris: Set<String> = setOf(uri),
         ): CompilationResult {
             val hasErrors = diagnostics.any { it.severity == Diagnostic.Severity.ERROR }
-            return CompilationResult(uri, diagnostics.toList(), symbols.toList(), !hasErrors, documentUris.toSet())
+            return CompilationResult(
+                uri,
+                diagnostics.toList(),
+                symbols.toList(),
+                !hasErrors,
+                documentUris.toSet(),
+            )
         }
 
         fun failure(

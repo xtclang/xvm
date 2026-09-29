@@ -1,5 +1,7 @@
 package org.xvm.lsp.index
 
+import java.nio.file.Files
+import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
@@ -12,14 +14,12 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.XtcParser
-import java.nio.file.Files
-import java.nio.file.Path
 
 /**
  * Integration tests for [WorkspaceIndexer].
  *
- * Requires the tree-sitter native library. Tests are skipped (not failed)
- * when the native library is unavailable.
+ * Requires the tree-sitter native library. Tests are skipped (not failed) when the native library
+ * is unavailable.
  */
 @DisplayName("WorkspaceIndexer")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -50,9 +50,7 @@ class WorkspaceIndexerTest {
     inner class ScanTests {
         @Test
         @DisplayName("should index all .x files in workspace")
-        fun shouldIndexXtcFiles(
-            @TempDir tempDir: Path,
-        ) {
+        fun shouldIndexXtcFiles(@TempDir tempDir: Path) {
             // Create test .x files
             Files.writeString(
                 tempDir.resolve("Foo.x"),
@@ -61,7 +59,8 @@ class WorkspaceIndexerTest {
                     class Foo {
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             Files.writeString(
                 tempDir.resolve("Bar.x"),
@@ -73,7 +72,8 @@ class WorkspaceIndexerTest {
                         }
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
 
             // Create non-.x file that should be ignored
@@ -93,17 +93,14 @@ class WorkspaceIndexerTest {
         }
 
         /**
-         * Issue #459: cmd-click on `JsonArray` (a typedef in json.x, used from
-         * JsonArrayBuilder.x) found nothing because typedef declarations never
-         * reached the workspace index. Shorthand constructor parameters
-         * (`const Point(Int x, Int y)`) declare properties and must be indexed
-         * too -- `structure.y` navigated to an unrelated file without this.
+         * Issue #459: cmd-click on `JsonArray` (a typedef in json.x, used from JsonArrayBuilder.x)
+         * found nothing because typedef declarations never reached the workspace index. Shorthand
+         * constructor parameters (`const Point(Int x, Int y)`) declare properties and must be
+         * indexed too -- `structure.y` navigated to an unrelated file without this.
          */
         @Test
         @DisplayName("should index typedefs and shorthand constructor properties")
-        fun shouldIndexTypedefsAndShorthandProperties(
-            @TempDir tempDir: Path,
-        ) {
+        fun shouldIndexTypedefsAndShorthandProperties(@TempDir tempDir: Path) {
             Files.writeString(
                 tempDir.resolve("json.x"),
                 """
@@ -111,7 +108,8 @@ class WorkspaceIndexerTest {
                     typedef Doc as JsonArray;
                     const Point(Int x, Int y);
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
 
             val index = WorkspaceIndex()
@@ -119,22 +117,18 @@ class WorkspaceIndexerTest {
 
             indexer.scanWorkspace(listOf(tempDir.toString())).join()
 
-            assertThat(index.findByName("JsonArray"))
-                .isNotEmpty
-                .allMatch { it.kind == SymbolKind.CLASS }
+            assertThat(index.findByName("JsonArray")).isNotEmpty.allMatch {
+                it.kind == SymbolKind.CLASS
+            }
             assertThat(index.findByName("x")).isNotEmpty
-            assertThat(index.findByName("y"))
-                .isNotEmpty
-                .allMatch { it.kind == SymbolKind.PROPERTY }
+            assertThat(index.findByName("y")).isNotEmpty.allMatch { it.kind == SymbolKind.PROPERTY }
 
             indexer.close()
         }
 
         @Test
         @DisplayName("should index nested directories")
-        fun shouldIndexNestedDirs(
-            @TempDir tempDir: Path,
-        ) {
+        fun shouldIndexNestedDirs(@TempDir tempDir: Path) {
             val subDir = tempDir.resolve("src/main")
             Files.createDirectories(subDir)
             Files.writeString(
@@ -144,7 +138,8 @@ class WorkspaceIndexerTest {
                     class Nested {
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
 
             val index = WorkspaceIndex()
@@ -159,9 +154,7 @@ class WorkspaceIndexerTest {
 
         @Test
         @DisplayName("should handle empty workspace")
-        fun shouldHandleEmptyWorkspace(
-            @TempDir tempDir: Path,
-        ) {
+        fun shouldHandleEmptyWorkspace(@TempDir tempDir: Path) {
             val index = WorkspaceIndex()
             val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
 
@@ -196,7 +189,8 @@ class WorkspaceIndexerTest {
                     class OldName {
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             assertThat(index.findByName("OldName")).isNotEmpty
 
@@ -208,7 +202,8 @@ class WorkspaceIndexerTest {
                     class NewName {
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             assertThat(index.findByName("OldName")).isEmpty()
             assertThat(index.findByName("NewName")).isNotEmpty
@@ -230,7 +225,8 @@ class WorkspaceIndexerTest {
                     class ToBeDeleted {
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
             assertThat(index.findByName("ToBeDeleted")).isNotEmpty
 
@@ -268,7 +264,8 @@ class WorkspaceIndexerTest {
                     interface Runnable {
                     }
                 }
-                """.trimIndent(),
+                """
+                    .trimIndent(),
             )
 
             assertThat(index.findByName("myapp")).isNotEmpty

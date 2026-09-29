@@ -22,19 +22,26 @@ object StartupEdits {
     ): String {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val clients = LanguageServiceAccessor.getInstance(project)
-        check(clients.startedServers.isEmpty()) { "Cold-start edit requires a fresh language client" }
+        check(clients.startedServers.isEmpty()) {
+            "Cold-start edit requires a fresh language client"
+        }
         FileEditorManager.getInstance(project).openFile(file, false)
         val document =
             ReadAction.computeBlocking<Document, RuntimeException> {
-                requireNotNull(
-                    FileDocumentManager.getInstance().getDocument(file),
-                )
+                requireNotNull(FileDocumentManager.getInstance().getDocument(file))
             }
         WriteCommandAction.runWriteCommandAction(project) { document.setText(text) }
         check(clients.startedServers.none { it.serverStatus == ServerStatus.started }) {
             "Server initialized before the cold-start edit completed"
         }
-        return Gson().toJson(mapOf("phase" to "cold-open", "stamp" to document.modificationStamp, "text" to document.text))
+        return Gson()
+            .toJson(
+                mapOf(
+                    "phase" to "cold-open",
+                    "stamp" to document.modificationStamp,
+                    "text" to document.text,
+                )
+            )
     }
 
     @JvmStatic
@@ -50,9 +57,7 @@ object StartupEdits {
         val previousPid = server.currentProcessId
         val document =
             ReadAction.computeBlocking<Document, RuntimeException> {
-                requireNotNull(
-                    FileDocumentManager.getInstance().getDocument(file),
-                )
+                requireNotNull(FileDocumentManager.getInstance().getDocument(file))
             }
         server.restart()
         val initialized = server.initializedServer
@@ -66,15 +71,16 @@ object StartupEdits {
         }
         WriteCommandAction.runWriteCommandAction(project) { document.setText(finalText) }
         check(!initialized.isDone) { "Server initialized during the startup transaction" }
-        return Gson().toJson(
-            mapOf(
-                "previousPid" to previousPid,
-                "statusBefore" to before,
-                "statusAfter" to server.serverStatus.name,
-                "stamp" to document.modificationStamp,
-                "reopened" to reopen,
-                "text" to document.text,
-            ),
-        )
+        return Gson()
+            .toJson(
+                mapOf(
+                    "previousPid" to previousPid,
+                    "statusBefore" to before,
+                    "statusAfter" to server.serverStatus.name,
+                    "stamp" to document.modificationStamp,
+                    "reopened" to reopen,
+                    "text" to document.text,
+                )
+            )
     }
 }

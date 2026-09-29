@@ -1,21 +1,21 @@
 package org.xvm.lsp.server
 
-import org.slf4j.LoggerFactory
 import java.io.File
+import org.slf4j.LoggerFactory
 
 /**
  * Resolves extra `.x` source roots beyond the workspace folders the client opens.
  *
- * The workspace indexer only walks `.x` files inside the workspace, so any module that
- * exists only as a compiled `.xtc` binary (or whose source lives outside the user's open
- * project) is invisible to navigation. This resolver lets callers point the indexer at
- * additional source-tree roots so e.g. the XDK standard-library sources can be discovered
- * even when the user is working on an unrelated project.
+ * The workspace indexer only walks `.x` files inside the workspace, so any module that exists only
+ * as a compiled `.xtc` binary (or whose source lives outside the user's open project) is invisible
+ * to navigation. This resolver lets callers point the indexer at additional source-tree roots so
+ * e.g. the XDK standard-library sources can be discovered even when the user is working on an
+ * unrelated project.
  *
  * Sources, all merged (deduped):
- *  1. LSP `initializationOptions.xtcSourceRoots` -- an array of paths sent by the client
- *  2. System property `-Dxtc.sourceRoots=<a>${File.pathSeparator}<b>`
- *  3. Env var `XTC_SOURCE_ROOTS=<a>${File.pathSeparator}<b>`
+ * 1. LSP `initializationOptions.xtcSourceRoots` -- an array of paths sent by the client
+ * 2. System property `-Dxtc.sourceRoots=<a>${File.pathSeparator}<b>`
+ * 3. Env var `XTC_SOURCE_ROOTS=<a>${File.pathSeparator}<b>`
  *
  * The returned paths are absolute filesystem strings (not URIs), matching the contract of
  * [org.xvm.lsp.index.WorkspaceIndexer.scanWorkspace]. Non-existent paths are passed through
@@ -33,9 +33,9 @@ internal object SourceRootResolver {
      * Resolve extra source roots from all configured inputs.
      *
      * @param initializationOptions raw init-options value from the LSP `initialize` request --
-     *                              accepts `Map<*, *>`, Gson `JsonObject`/`JsonElement`, or null
-     * @param systemProperty        defaults to `System.getProperty("xtc.sourceRoots")`
-     * @param envVar                defaults to `System.getenv("XTC_SOURCE_ROOTS")`
+     *   accepts `Map<*, *>`, Gson `JsonObject`/`JsonElement`, or null
+     * @param systemProperty defaults to `System.getProperty("xtc.sourceRoots")`
+     * @param envVar defaults to `System.getenv("XTC_SOURCE_ROOTS")`
      */
     fun resolve(
         initializationOptions: Any?,
@@ -59,9 +59,6 @@ internal object SourceRootResolver {
     }
 
     private fun parsePathList(raw: String?): List<String> =
-        raw
-            ?.split(File.pathSeparatorChar)
-            ?.map { it.trim() }
-            ?.filter { it.isNotEmpty() }
+        raw?.split(File.pathSeparatorChar)?.map { it.trim() }?.filter { it.isNotEmpty() }
             ?: emptyList()
 }

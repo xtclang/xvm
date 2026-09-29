@@ -9,6 +9,10 @@
  */
 package org.xtclang.tooling
 
+import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.condition.EnabledIf
@@ -20,10 +24,6 @@ import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.Cardinality
 import org.xtclang.tooling.model.KeywordCategory
 import org.xtclang.tooling.model.OperatorCategory
-import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LanguageModelTest {
@@ -69,9 +69,18 @@ class LanguageModelTest {
         assertNotNull(memberAccess)
 
         // Precedence should be: = < + < * < .
-        assertTrue(assignment.precedence < addition.precedence, "Assignment should have lower precedence than addition")
-        assertTrue(addition.precedence < multiplication.precedence, "Addition should have lower precedence than multiplication")
-        assertTrue(multiplication.precedence < memberAccess.precedence, "Multiplication should have lower precedence than member access")
+        assertTrue(
+            assignment.precedence < addition.precedence,
+            "Assignment should have lower precedence than addition",
+        )
+        assertTrue(
+            addition.precedence < multiplication.precedence,
+            "Addition should have lower precedence than multiplication",
+        )
+        assertTrue(
+            multiplication.precedence < memberAccess.precedence,
+            "Multiplication should have lower precedence than member access",
+        )
     }
 
     @Test
@@ -290,9 +299,11 @@ class LanguageModelTest {
             }
 
         println("Built-in type occurrences (sample of 50 files):")
-        typeCounts.entries.sortedByDescending { it.value }.forEach { (type, count) ->
-            println("  $type: $count")
-        }
+        typeCounts.entries
+            .sortedByDescending { it.value }
+            .forEach { (type, count) ->
+                println("  $type: $count")
+            }
 
         assertTrue(typeCounts.containsKey("String"), "Should find String type")
         assertTrue(typeCounts.containsKey("Int"), "Should find Int type")
@@ -329,9 +340,11 @@ class LanguageModelTest {
             }
 
         println("Operator occurrences (sample of 50 files):")
-        opCounts.entries.sortedByDescending { it.value }.forEach { (op, count) ->
-            println("  '$op': $count")
-        }
+        opCounts.entries
+            .sortedByDescending { it.value }
+            .forEach { (op, count) ->
+                println("  '$op': $count")
+            }
 
         assertTrue(opCounts.containsKey("=="), "Should find == operator")
     }
@@ -408,7 +421,10 @@ class LanguageModelTest {
         val declarationKeywords = model.keywordsByCategory(KeywordCategory.DECLARATION)
         assertTrue(declarationKeywords.isNotEmpty(), "Should have declaration keywords")
         assertTrue("class" in declarationKeywords, "Declaration keywords should include 'class'")
-        assertTrue("interface" in declarationKeywords, "Declaration keywords should include 'interface'")
+        assertTrue(
+            "interface" in declarationKeywords,
+            "Declaration keywords should include 'interface'",
+        )
         assertTrue("module" in declarationKeywords, "Declaration keywords should include 'module'")
     }
 
@@ -538,7 +554,10 @@ class LanguageModelTest {
             assertTrue(kw in controlKeywords, "'$kw' should be a control keyword")
             assertTrue(vim.contains(kw), "Vim should contain '$kw'")
             assertTrue(emacs.contains("\"$kw\""), "Emacs should contain '$kw'")
-            assertTrue(highlights.contains("\"$kw\""), "Tree-sitter highlights should contain '$kw'")
+            assertTrue(
+                highlights.contains("\"$kw\""),
+                "Tree-sitter highlights should contain '$kw'",
+            )
         }
     }
 

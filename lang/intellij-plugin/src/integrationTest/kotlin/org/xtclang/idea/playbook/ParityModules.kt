@@ -6,7 +6,9 @@ import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.moduleCases() {
     case("X14") { data ->
-        val marked = fixture(data.string("file")).replace(data.string("method"), data.string("incompleteMethod"))
+        val marked =
+            fixture(data.string("file"))
+                .replace(data.string("method"), data.string("incompleteMethod"))
         val disk = marked.replace("§", "").replace("\n", "\r\n")
         val document = open(data.string("file"), disk)
         // IntelliJ normalizes the in-memory document to LF. Its saved file must retain CRLF.
@@ -22,10 +24,17 @@ internal fun ParityScenarios.moduleCases() {
         val root = project()
         val child = open(data.string("memberFile"))
         val version = version(child)
-        replace(root, fixture(data.string("rootFile")).replace(data.string("replaceFrom"), data.string("replaceWith")))
+        replace(
+            root,
+            fixture(data.string("rootFile"))
+                .replace(data.string("replaceFrom"), data.string("replaceWith")),
+        )
         check(errors(child).none { it.code == data.string("diagnosticCode") })
         check(version(child) == version)
-        check(with(driver) { receivedDiagnostics(root.editor) }.none { it.code == data.string("diagnosticCode") })
+        check(
+            with(driver) { receivedDiagnostics(root.editor) }
+                .none { it.code == data.string("diagnosticCode") }
+        )
         replace(root, fixture(data.string("rootFile")))
         clean(child)
     }
@@ -34,13 +43,21 @@ internal fun ParityScenarios.moduleCases() {
         val (child, at) =
             marked(
                 data.string("memberFile"),
-                fixture(data.string("memberFile")).replace(data.string("method"), data.string("incompleteMethod")),
+                fixture(data.string("memberFile"))
+                    .replace(data.string("method"), data.string("incompleteMethod")),
             )
         data.strings("types").forEach { type ->
-            val value = data.string(if (type == data.string("integerType")) "integerValue" else "stringValue")
+            val value =
+                data.string(
+                    if (type == data.string("integerType")) "integerValue" else "stringValue"
+                )
             replace(
                 root,
-                fixture(root.file).replace(data.string("replaceFrom"), SharedScenarios.text(data.string("replaceWith"), type, value)),
+                fixture(root.file)
+                    .replace(
+                        data.string("replaceFrom"),
+                        SharedScenarios.text(data.string("replaceWith"), type, value),
+                    ),
             )
             with(driver) {
                 lookup(child.editor, at) { hasType(it, data.string("label"), type) }
@@ -55,7 +72,9 @@ internal fun ParityScenarios.moduleCases() {
         virtual(file, data.string("text"), data.int("version")) {
             with(driver) {
                 awaitUi("virtual member participates in current type hierarchy", 45.seconds) {
-                    edges(hierarchy(root, root.at(data.string("anchor"))), "subtypes").any { it.string("name") == data.string("name") }
+                    edges(hierarchy(root, root.at(data.string("anchor"))), "subtypes").any {
+                        it.string("name") == data.string("name")
+                    }
                 }
             }
             check(!Files.exists(directory.resolve(file)))
@@ -65,14 +84,20 @@ internal fun ParityScenarios.moduleCases() {
     case("X26") { data ->
         val root = project()
         val child = open(data.string("file"))
-        replace(child, fixture(child.file).replace(data.string("anchor"), data.string("replaceWith")))
+        replace(
+            child,
+            fixture(child.file).replace(data.string("anchor"), data.string("replaceWith")),
+        )
         errors(child)
         discard(child)
         settle(root)
         published(child.file) { it.isEmpty() }
         val reopened = open(child.file)
         check(reopened.text == fixture(child.file))
-        check(targets(reopened, "definition", reopened.at(data.string("anchor"))).size == data.int("expected"))
+        check(
+            targets(reopened, "definition", reopened.at(data.string("anchor"))).size ==
+                data.int("expected")
+        )
     }
     case("X27") { data ->
         project()
@@ -91,16 +116,18 @@ internal fun ParityScenarios.moduleCases() {
         check(edges(old, "supertypes").isEmpty())
         check(
             edges(
-                hierarchy(child, child.at(data.string("anchor"))),
-                "supertypes",
-            ).none { it.string("name").startsWith(data.string("contains")) },
+                    hierarchy(child, child.at(data.string("anchor"))),
+                    "supertypes",
+                )
+                .none { it.string("name").startsWith(data.string("contains")) }
         )
         replace(child, fixture(child.file))
         check(
             edges(
-                hierarchy(child, child.at(data.string("anchor"))),
-                "supertypes",
-            ).any { it.string("name").startsWith(data.string("contains")) },
+                    hierarchy(child, child.at(data.string("anchor"))),
+                    "supertypes",
+                )
+                .any { it.string("name").startsWith(data.string("contains")) }
         )
     }
     case("X29") { data ->
@@ -113,13 +140,11 @@ internal fun ParityScenarios.moduleCases() {
                     initial.replace(
                         data.string("integerCall"),
                         data.string(
-                            if (index % 2 ==
-                                1
-                            ) {
+                            if (index % 2 == 1) {
                                 "integerCall"
                             } else {
                                 "stringCall"
-                            },
+                            }
                         ),
                     ),
                     settle = false,
@@ -139,34 +164,46 @@ internal fun ParityScenarios.moduleCases() {
         (0 until 6).forEach { index ->
             replace(
                 root,
-                fixture(root.file).replace(data.string("replaceFrom"), SharedScenarios.text(data.string("replaceWith"), index.toString())),
+                fixture(root.file)
+                    .replace(
+                        data.string("replaceFrom"),
+                        SharedScenarios.text(data.string("replaceWith"), index.toString()),
+                    ),
                 settle = false,
             )
         }
         settle(root)
         settle(child)
         clean(child)
-        check(targets(child, "definition", child.at(data.string("anchor"))).size == data.int("expected"))
+        check(
+            targets(child, "definition", child.at(data.string("anchor"))).size ==
+                data.int("expected")
+        )
     }
     case("X30") { data ->
         val (document, at) = editing(data.string("body"))
         val pending = protocol.request("textDocument/completion", document.params(at))
-        if (pending.cancel(true)) check(pending.isCancelled()) else protocol.await("textDocument/completion", pending)
+        if (pending.cancel(true)) check(pending.isCancelled())
+        else protocol.await("textDocument/completion", pending)
         discard(document)
         val reopened = open(data.string("file"))
         clean(reopened)
         val server = protocol.server()
         val oldProcess = server.getCurrentProcessId()
         server.restart()
-        with(
-            driver,
-        ) { awaitUi("new language server process", 60.seconds) { server.getCurrentProcessId()?.let { it != oldProcess } == true } }
+        with(driver) {
+            awaitUi("new language server process", 60.seconds) {
+                server.getCurrentProcessId()?.let { it != oldProcess } == true
+            }
+        }
         // A new PID precedes initialization and LSP4IJ's asynchronous document reopening.
         // Use the normal didOpen readiness check before touching the new synchronizer.
         clean(open(data.string("file")))
         val (current, cursor) = editing(data.string("body"))
         with(driver) {
-            lookup(current.editor, cursor) { it.any { item -> item.getLookupString() == data.string("label") } }
+            lookup(current.editor, cursor) {
+                it.any { item -> item.getLookupString() == data.string("label") }
+            }
             invokeAction("EditorEscape", component = current.editor.component)
         }
     }
@@ -174,26 +211,44 @@ internal fun ParityScenarios.moduleCases() {
         val document = open(data.string("file"))
         val capabilities = protocol.capabilities().asJsonObject
         data.strings("unsupportedCapabilities").forEach {
-            check(capabilities[it] == null || capabilities[it].isJsonNull || capabilities[it].toString() == "false") { it }
+            check(
+                capabilities[it] == null ||
+                    capabilities[it].isJsonNull ||
+                    capabilities[it].toString() == "false"
+            ) {
+                it
+            }
         }
         data.strings("supportedCapabilities").forEach {
-            check(capabilities[it] != null && !capabilities[it].isJsonNull && capabilities[it].toString() != "false") { it }
+            check(
+                capabilities[it] != null &&
+                    !capabilities[it].isJsonNull &&
+                    capabilities[it].toString() != "false"
+            ) {
+                it
+            }
         }
         replace(document, data.string("unformatted"))
         check(
             query(
-                "textDocument/formatting",
-                document,
-                extra =
-                    mapOf("options" to mapOf("tabSize" to data.int("tabSize"), "insertSpaces" to true)),
-            ).rows().isNotEmpty(),
+                    "textDocument/formatting",
+                    document,
+                    extra =
+                        mapOf(
+                            "options" to
+                                mapOf("tabSize" to data.int("tabSize"), "insertSpaces" to true)
+                        ),
+                )
+                .rows()
+                .isNotEmpty()
         )
     }
     case("X32") { data ->
         data.strings("bodies").forEach { body ->
             val (document, at) = editing(body)
             val result = query("textDocument/completion", document, at)
-            val items = if (result.isJsonObject) result.asJsonObject["items"].rows() else result.rows()
+            val items =
+                if (result.isJsonObject) result.asJsonObject["items"].rows() else result.rows()
             check(items.size == data.int("completionCount")) { "$body: $items" }
         }
     }

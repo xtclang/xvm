@@ -16,18 +16,17 @@ import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
-import org.xtclang.idea.PluginPaths
 import java.io.File
+import org.xtclang.idea.PluginPaths
 
 /**
  * Factory for creating XTC Debug Adapter (DAP) descriptors.
  *
- * Registered via the `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point.
- * LSP4IJ uses this factory to create DAP sessions when users launch debug configurations
- * for `.x` files.
+ * Registered via the `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point. LSP4IJ uses
+ * this factory to create DAP sessions when users launch debug configurations for `.x` files.
  *
- * The DAP server runs out-of-process (same as the LSP server) using IntelliJ's JBR,
- * for classloader isolation and crash safety.
+ * The DAP server runs out-of-process (same as the LSP server) using IntelliJ's JBR, for classloader
+ * isolation and crash safety.
  */
 class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
     private val logger = logger<XtcDebugAdapterFactory>()
@@ -49,24 +48,25 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
 /**
  * Descriptor that launches the XTC DAP server as an out-of-process Java application.
  *
- * The DAP server communicates over stdio (JSON-RPC), matching the architecture of the
- * LSP server. Uses IntelliJ's JBR java binary to spawn the server process.
+ * The DAP server communicates over stdio (JSON-RPC), matching the architecture of the LSP server.
+ * Uses IntelliJ's JBR java binary to spawn the server process.
  *
  * ## LSP vs DAP process lifecycle
  *
  * The LSP and DAP servers use different LSP4IJ base classes with different process models:
  *
  * - **LSP** ([org.xtclang.idea.lsp.XtcLspConnectionProvider]): Extends
- *   `OSProcessStreamConnectionProvider`. Uses [com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder]
- *   to build the command line -- LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed.
- *   LSP4IJ may auto-start the server concurrently when multiple `.x` files are opened, causing
- *   duplicate processes (see TODO in `XtcLspConnectionProvider` re: LSP4IJ issue #888). This
- *   requires an `AtomicBoolean` guard to suppress duplicate "server started" notifications.
+ *   `OSProcessStreamConnectionProvider`. Uses
+ *   [com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder] to build the command line --
+ *   LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed. LSP4IJ may auto-start
+ *   the server concurrently when multiple `.x` files are opened, causing duplicate processes (see
+ *   TODO in `XtcLspConnectionProvider` re: LSP4IJ issue #888). This requires an `AtomicBoolean`
+ *   guard to suppress duplicate "server started" notifications.
  *
- * - **DAP** (this class): Extends `DebugAdapterDescriptor`. We override [startServer] and return
- *   an `OSProcessHandler` -- we create and own the process directly. DAP sessions are always
- *   user-initiated (one `startServer()` call per "Debug" action), so there is no concurrent
- *   spawn race condition and no `AtomicBoolean` guard is needed.
+ * - **DAP** (this class): Extends `DebugAdapterDescriptor`. We override [startServer] and return an
+ *   `OSProcessHandler` -- we create and own the process directly. DAP sessions are always
+ *   user-initiated (one `startServer()` call per "Debug" action), so there is no concurrent spawn
+ *   race condition and no `AtomicBoolean` guard is needed.
  */
 class XtcDebugAdapterDescriptor(
     options: RunConfigurationOptions,
@@ -78,9 +78,10 @@ class XtcDebugAdapterDescriptor(
     override fun startServer(): ProcessHandler {
         val javaPath =
             File(
-                System.getProperty("java.home"),
-                "bin/java" + if (SystemInfo.isWindows) ".exe" else "",
-            ).absolutePath
+                    System.getProperty("java.home"),
+                    "bin/java" + if (SystemInfo.isWindows) ".exe" else "",
+                )
+                .absolutePath
 
         val serverJar = findDapServerJar()
         val logLevel =
@@ -115,9 +116,11 @@ class XtcDebugAdapterDescriptor(
 
     override fun getDebugMode(): DebugMode = DebugMode.LAUNCH
 
-    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig("XTC Debug Adapter")
+    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig =
+        ServerReadyConfig("XTC Debug Adapter")
 
-    override fun getFileType(): FileType? = FileTypeManager.getInstance().getFileTypeByExtension("x")
+    override fun getFileType(): FileType? =
+        FileTypeManager.getInstance().getFileTypeByExtension("x")
 
     override fun isDebuggableFile(
         file: VirtualFile,

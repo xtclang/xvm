@@ -1,8 +1,8 @@
 package org.xvm.lsp.treesitter
 
 import io.github.treesitter.jtreesitter.Node
-import org.xvm.lsp.adapter.AdapterNode
 import java.util.Optional
+import org.xvm.lsp.adapter.AdapterNode
 
 /**
  * Wrapper around a Tree-sitter syntax node for XTC sources.
@@ -11,55 +11,50 @@ import java.util.Optional
  *
  * ## API Completeness Note
  *
- * This class exposes the complete tree-sitter Node API, even though not all methods are
- * currently used. The unused methods are intentionally included for future LSP features:
+ * This class exposes the complete tree-sitter Node API, even though not all methods are currently
+ * used. The unused methods are intentionally included for future LSP features:
  *
- * | Method | Future Use |
- * |--------|------------|
- * | `child(index)`, `namedChild(index)` | Manual tree traversal for formatting, folding |
- * | `childCount`, `namedChildCount` | Iteration bounds for tree walking |
- * | `namedChildren` | Filtered iteration for semantic analysis |
- * | `nextSibling`, `prevSibling` | Folding ranges, statement grouping |
- * | `nextNamedSibling`, `prevNamedSibling` | Sibling-aware code actions |
- * | `startByte`, `endByte` | Byte-level edits, incremental parsing |
- * | `isNamed` | Filtering named vs anonymous (punctuation) nodes |
+ * | Method                                 | Future Use                                       |
+ * |----------------------------------------|--------------------------------------------------|
+ * | `child(index)`, `namedChild(index)`    | Manual tree traversal for formatting, folding    |
+ * | `childCount`, `namedChildCount`        | Iteration bounds for tree walking                |
+ * | `namedChildren`                        | Filtered iteration for semantic analysis         |
+ * | `nextSibling`, `prevSibling`           | Folding ranges, statement grouping               |
+ * | `nextNamedSibling`, `prevNamedSibling` | Sibling-aware code actions                       |
+ * | `startByte`, `endByte`                 | Byte-level edits, incremental parsing            |
+ * | `isNamed`                              | Filtering named vs anonymous (punctuation) nodes |
  *
  * @see XtcTree
  * @see XtcQueryEngine
  */
-class XtcNode internal constructor(
+class XtcNode
+internal constructor(
     private val tsNode: Node,
     private val source: String,
 ) : AdapterNode {
-    /**
-     * The type of this node (e.g., "class_declaration", "identifier").
-     */
+    /** The type of this node (e.g., "class_declaration", "identifier"). */
     override val type: String
         get() = tsNode.type
 
     /**
      * The text content of this node from the source.
      *
-     * Tree-sitter reports byte offsets into a UTF-8 representation, but Java Strings use
-     * UTF-16 code units. For ASCII-only sources (all current XTC code), byte offsets equal
-     * character offsets. For non-ASCII sources we convert via the UTF-8 byte array to get
-     * the correct substring.
+     * Tree-sitter reports byte offsets into a UTF-8 representation, but Java Strings use UTF-16
+     * code units. For ASCII-only sources (all current XTC code), byte offsets equal character
+     * offsets. For non-ASCII sources we convert via the UTF-8 byte array to get the correct
+     * substring.
      */
     override val text: String
         get() {
             val start = tsNode.startByte
             val end = tsNode.endByte
-            // Defensive: guard against stale byte offsets (e.g., from incremental parse without Tree.edit())
+            // Defensive: guard against stale byte offsets (e.g., from incremental parse without
+            // Tree.edit())
             if (start < 0 || end < start || end > source.length) {
                 return ""
             }
             // Fast path: if all chars are ASCII, byte offsets == char offsets
-            if (source
-                    .asSequence()
-                    .drop(start)
-                    .take(end - start)
-                    .all { it.code < 128 }
-            ) {
+            if (source.asSequence().drop(start).take(end - start).all { it.code < 128 }) {
                 return source.substring(start, end)
             }
             // Slow path: convert to UTF-8 bytes, slice, and decode back
@@ -68,98 +63,68 @@ class XtcNode internal constructor(
             return String(utf8, start, end - start, Charsets.UTF_8)
         }
 
-    /**
-     * Whether this is a named node (appears in grammar rules) vs anonymous (literal tokens).
-     */
+    /** Whether this is a named node (appears in grammar rules) vs anonymous (literal tokens). */
     @Suppress("unused") // TODO: Will be used for semantic tokens - filtering out punctuation nodes
     val isNamed: Boolean
         get() = tsNode.isNamed
 
-    /**
-     * Whether this node represents a syntax error.
-     */
+    /** Whether this node represents a syntax error. */
     override val isError: Boolean
         get() = tsNode.isError
 
-    /**
-     * Whether this node is missing (inserted by error recovery).
-     */
+    /** Whether this node is missing (inserted by error recovery). */
     override val isMissing: Boolean
         get() = tsNode.isMissing
 
-    /**
-     * Whether this node or any of its descendants has an error.
-     */
+    /** Whether this node or any of its descendants has an error. */
     val hasError: Boolean
         get() = tsNode.hasError()
 
-    /**
-     * The 0-based start line of this node.
-     */
+    /** The 0-based start line of this node. */
     override val startLine: Int
         get() = tsNode.startPoint.row()
 
-    /**
-     * The 0-based start column of this node.
-     */
+    /** The 0-based start column of this node. */
     override val startColumn: Int
         get() = tsNode.startPoint.column()
 
-    /**
-     * The 0-based end line of this node.
-     */
+    /** The 0-based end line of this node. */
     override val endLine: Int
         get() = tsNode.endPoint.row()
 
-    /**
-     * The 0-based end column of this node.
-     */
+    /** The 0-based end column of this node. */
     override val endColumn: Int
         get() = tsNode.endPoint.column()
 
-    /**
-     * The byte offset where this node starts.
-     */
+    /** The byte offset where this node starts. */
     @Suppress("unused") // TODO: Will be used for incremental parsing and byte-level text edits
     val startByte: Int
         get() = tsNode.startByte
 
-    /**
-     * The byte offset where this node ends.
-     */
+    /** The byte offset where this node ends. */
     @Suppress("unused") // TODO: Will be used for incremental parsing and byte-level text edits
     val endByte: Int
         get() = tsNode.endByte
 
-    /**
-     * The number of children this node has.
-     */
+    /** The number of children this node has. */
     @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
     val childCount: Int
         get() = tsNode.childCount
 
-    /**
-     * The number of named children this node has.
-     */
+    /** The number of named children this node has. */
     @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
     val namedChildCount: Int
         get() = tsNode.namedChildCount
 
-    /**
-     * Get the parent node, or null if this is the root.
-     */
+    /** Get the parent node, or null if this is the root. */
     override val parent: XtcNode?
         get() = tsNode.parent.wrap()
 
-    /**
-     * Get a child node by index.
-     */
+    /** Get a child node by index. */
     @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
     fun child(index: Int): XtcNode? = tsNode.getChild(index).wrap()
 
-    /**
-     * Get a named child node by index.
-     */
+    /** Get a named child node by index. */
     @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
     fun namedChild(index: Int): XtcNode? = tsNode.getNamedChild(index).wrap()
 
@@ -170,11 +135,11 @@ class XtcNode internal constructor(
      * enabling direct semantic access to named children. This is the **preferred** API for
      * navigating the AST because:
      *
-     * - **O(1) performance**: tree-sitter resolves fields via a compile-time field table,
-     *   unlike [childByType] which scans all children linearly (O(n)).
-     * - **Position-independent**: fields identify children by semantic role, not by their
-     *   position among siblings. Adding optional children (e.g., annotations, modifiers)
-     *   before a node won't break field-based lookups.
+     * - **O(1) performance**: tree-sitter resolves fields via a compile-time field table, unlike
+     *   [childByType] which scans all children linearly (O(n)).
+     * - **Position-independent**: fields identify children by semantic role, not by their position
+     *   among siblings. Adding optional children (e.g., annotations, modifiers) before a node won't
+     *   break field-based lookups.
      * - **Self-documenting**: `node.childByFieldName("name")` is clearer than
      *   `node.childByType("identifier")` which could match any identifier child.
      *
@@ -196,68 +161,61 @@ class XtcNode internal constructor(
      *
      * @see childByType for fallback when a grammar node type lacks field definitions
      */
-    override fun childByFieldName(fieldName: String): XtcNode? = tsNode.getChildByFieldName(fieldName).wrap()
+    override fun childByFieldName(fieldName: String): XtcNode? =
+        tsNode.getChildByFieldName(fieldName).wrap()
 
     /**
      * Get the first child node with the given type (O(n) linear scan).
      *
-     * This is a **fallback** for nodes that don't have field definitions in the grammar,
-     * or for querying anonymous/keyword children (e.g., `"construct"`, `"static"`).
+     * This is a **fallback** for nodes that don't have field definitions in the grammar, or for
+     * querying anonymous/keyword children (e.g., `"construct"`, `"static"`).
      *
      * Prefer [childByFieldName] when a field is available -- it is faster (O(1)),
      * position-independent, and self-documenting.
      */
     override fun childByType(nodeType: String): XtcNode? = children.find { it.type == nodeType }
 
-    /**
-     * Get all children of this node.
-     */
+    /** Get all children of this node. */
     override val children: List<XtcNode>
         get() = (0 until tsNode.childCount).mapNotNull { child(it) }
 
-    /**
-     * Get all named children of this node.
-     */
+    /** Get all named children of this node. */
     @Suppress("unused") // TODO: Will be used for semantic analysis and document symbols
     val namedChildren: List<XtcNode>
         get() = (0 until tsNode.namedChildCount).mapNotNull { namedChild(it) }
 
-    /**
-     * Get the next sibling node.
-     */
+    /** Get the next sibling node. */
     @Suppress("unused") // TODO: Will be used for folding ranges and statement grouping
     val nextSibling: XtcNode?
         get() = tsNode.nextSibling.wrap()
 
-    /**
-     * Get the previous sibling node.
-     */
+    /** Get the previous sibling node. */
     @Suppress("unused") // TODO: Will be used for folding ranges and statement grouping
     val prevSibling: XtcNode?
         get() = tsNode.prevSibling.wrap()
 
-    /**
-     * Get the next named sibling node.
-     */
+    /** Get the next named sibling node. */
     @Suppress("unused") // TODO: Will be used for sibling-aware code actions
     val nextNamedSibling: XtcNode?
         get() = tsNode.nextNamedSibling.wrap()
 
-    /**
-     * Get the previous named sibling node.
-     */
+    /** Get the previous named sibling node. */
     @Suppress("unused") // TODO: Will be used for sibling-aware code actions
     val prevNamedSibling: XtcNode?
         get() = tsNode.prevNamedSibling.wrap()
 
-    /**
-     * Get the underlying tree-sitter node for advanced operations.
-     */
-    @Suppress("unused") // TODO: Will be used for advanced tree-sitter operations not covered by this wrapper
+    /** Get the underlying tree-sitter node for advanced operations. */
+    @Suppress(
+        "unused"
+    ) // TODO: Will be used for advanced tree-sitter operations not covered by this wrapper
     internal fun getTsNode(): Node = tsNode
 
-    /** Convert a Java Optional<Node> to an XtcNode?, avoiding Java's Optional.map() in favor of Kotlin's ?. */
+    /**
+     * Convert a Java Optional<Node> to an XtcNode?, avoiding Java's Optional.map() in favor of
+     * Kotlin's ?.
+     */
     private fun Optional<Node>.wrap(): XtcNode? = orElse(null)?.let { XtcNode(it, source) }
 
-    override fun toString(): String = "XtcNode(type=$type, range=[$startLine:$startColumn-$endLine:$endColumn])"
+    override fun toString(): String =
+        "XtcNode(type=$type, range=[$startLine:$startColumn-$endLine:$endColumn])"
 }

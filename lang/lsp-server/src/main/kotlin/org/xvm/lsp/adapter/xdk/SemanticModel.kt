@@ -1,8 +1,8 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.util.UUID
 import java.util.List.copyOf as immutableList
 import java.util.Map.copyOf as immutableMap
+import java.util.UUID
 
 /**
  * Immutable semantic facts copied from one compilation, with no compiler or LSP protocol objects.
@@ -10,7 +10,8 @@ import java.util.Map.copyOf as immutableMap
  * this compilation snapshot; document views from one extraction share IDs. The adapter associates
  * them with source versions. Missing facts are null, never inferred from spelling.
  */
-class SemanticModel internal constructor(
+class SemanticModel
+internal constructor(
     val id: UUID,
     val status: Status,
     val sourceName: String?,
@@ -22,15 +23,39 @@ class SemanticModel internal constructor(
     imports: List<ImportAlias> = emptyList(),
     lambdas: List<LambdaSite> = emptyList(),
 ) {
-    enum class Status { UNAVAILABLE, PARTIAL, COMPLETE }
+    enum class Status {
+        UNAVAILABLE,
+        PARTIAL,
+        COMPLETE,
+    }
 
-    enum class SymbolKind { MODULE, PACKAGE, TYPE, METHOD, PROPERTY, VARIABLE, PARAMETER, TYPE_PARAMETER }
+    enum class SymbolKind {
+        MODULE,
+        PACKAGE,
+        TYPE,
+        METHOD,
+        PROPERTY,
+        VARIABLE,
+        PARAMETER,
+        TYPE_PARAMETER,
+    }
 
-    enum class Role { DECLARATION, REFERENCE }
+    enum class Role {
+        DECLARATION,
+        REFERENCE,
+    }
 
-    enum class Usage { READ, WRITE, READ_WRITE }
+    enum class Usage {
+        READ,
+        WRITE,
+        READ_WRITE,
+    }
 
-    enum class Modifier { READONLY, STATIC, ABSTRACT }
+    enum class Modifier {
+        READONLY,
+        STATIC,
+        ABSTRACT,
+    }
 
     enum class TypeForm {
         NAMED,
@@ -56,7 +81,8 @@ class SemanticModel internal constructor(
             require(line >= 0 && column >= 0) { "Negative source position" }
         }
 
-        override fun compareTo(other: Position): Int = compareValuesBy(this, other, Position::line, Position::column)
+        override fun compareTo(other: Position): Int =
+            compareValuesBy(this, other, Position::line, Position::column)
     }
 
     /** Half-open range within [sourceName]. */
@@ -81,7 +107,9 @@ class SemanticModel internal constructor(
         val index: Int,
     )
 
-    /** A declaration location in the source tree; the name follows the compiler's Source identity. */
+    /**
+     * A declaration location in the source tree; the name follows the compiler's Source identity.
+     */
     data class SourceLocation(
         val sourceName: String?,
         val range: Range,
@@ -92,7 +120,8 @@ class SemanticModel internal constructor(
      * type's ordered operands. Display text is for presentation, not identity or assignability.
      */
     @ConsistentCopyVisibility
-    data class Type internal constructor(
+    data class Type
+    internal constructor(
         val id: TypeId,
         val displayName: String,
         val form: TypeForm,
@@ -116,7 +145,8 @@ class SemanticModel internal constructor(
 
     /** Declared signature, including formal type parameters and conditional returns. */
     @ConsistentCopyVisibility
-    data class Signature internal constructor(
+    data class Signature
+    internal constructor(
         val parameters: List<Parameter>,
         val returns: List<TypeId>,
         val conditional: Boolean,
@@ -165,7 +195,8 @@ class SemanticModel internal constructor(
 
     /** Selected signature after inference; parameter indices exclude hidden type parameters. */
     @ConsistentCopyVisibility
-    data class CallSite internal constructor(
+    data class CallSite
+    internal constructor(
         val range: Range,
         val callee: Range,
         val method: SymbolId,
@@ -176,14 +207,17 @@ class SemanticModel internal constructor(
 
     /** Validated function signature without an invented runtime target or parameter names. */
     @ConsistentCopyVisibility
-    data class FunctionCallSite internal constructor(
+    data class FunctionCallSite
+    internal constructor(
         val range: Range,
         val callee: Range,
         val signature: Signature,
         val arguments: List<CallArgument>,
     )
 
-    /** Source callable boundaries, including lambdas whose compiler methods have synthetic names. */
+    /**
+     * Source callable boundaries, including lambdas whose compiler methods have synthetic names.
+     */
     data class Callable(
         val symbol: SymbolId,
         val location: SourceLocation,
@@ -195,7 +229,9 @@ class SemanticModel internal constructor(
         val type: TypeId,
     )
 
-    /** Direct declared extends/implements relationships, copied only from a successful compilation. */
+    /**
+     * Direct declared extends/implements relationships, copied only from a successful compilation.
+     */
     data class TypeDeclaration(
         val symbol: SymbolId,
         val category: String,
@@ -203,7 +239,9 @@ class SemanticModel internal constructor(
         val parents: List<Supertype>,
     )
 
-    /** Explicit local import name and the compiler-bound occurrences visible through this import. */
+    /**
+     * Explicit local import name and the compiler-bound occurrences visible through this import.
+     */
     class ImportAlias(
         val name: String,
         val declaration: Range,
@@ -217,11 +255,10 @@ class SemanticModel internal constructor(
     fun importAt(
         line: Int,
         column: Int,
-    ): ImportAlias? =
-        imports.singleOrNull { alias ->
-            val position = Position(line, column)
-            position in alias.declaration || alias.uses.any { position in it }
-        }
+    ): ImportAlias? = imports.singleOrNull { alias ->
+        val position = Position(line, column)
+        position in alias.declaration || alias.uses.any { position in it }
+    }
 
     val symbols: List<Symbol> = facts.symbols
     val types: List<Type> = facts.types
@@ -268,7 +305,9 @@ class SemanticModel internal constructor(
         column: Int,
     ): Occurrence? {
         val position = Position(line, column)
-        return occurrences.filter { position in it.range }.minWithOrNull(compareBy(INNERMOST) { it.range })
+        return occurrences
+            .filter { position in it.range }
+            .minWithOrNull(compareBy(INNERMOST) { it.range })
     }
 
     fun symbolAt(
@@ -281,7 +320,9 @@ class SemanticModel internal constructor(
         line: Int,
         column: Int,
     ): Type? {
-        occurrenceAt(line, column)?.let { return it.type?.let(::type) }
+        occurrenceAt(line, column)?.let {
+            return it.type?.let(::type)
+        }
         val position = Position(line, column)
         return expressions
             .filter { position in it.range }
@@ -299,31 +340,47 @@ class SemanticModel internal constructor(
     fun definitionLocationAt(
         line: Int,
         column: Int,
-    ): SourceLocation? = symbolAt(line, column)?.let { symbol -> symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) } }
+    ): SourceLocation? =
+        symbolAt(line, column)?.let { symbol ->
+            symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) }
+        }
 
     /** Local aliases stay local; overrides expose their written contracts, never runtime bodies. */
     fun declarationLocationsAt(
         line: Int,
         column: Int,
     ): List<SourceLocation> {
-        importAt(line, column)?.let { return listOf(SourceLocation(sourceName, it.declaration)) }
+        importAt(line, column)?.let {
+            return listOf(SourceLocation(sourceName, it.declaration))
+        }
         val symbol = symbolAt(line, column) ?: return emptyList()
-        return locations(facts.declarations[symbol.id].orEmpty()).ifEmpty { locations(listOf(symbol.id)) }
+        return locations(facts.declarations[symbol.id].orEmpty()).ifEmpty {
+            locations(listOf(symbol.id))
+        }
     }
 
-    /** Nominal types, flow-narrowed values and selected call results; never follow generic arguments. */
+    /**
+     * Nominal types, flow-narrowed values and selected call results; never follow generic
+     * arguments.
+     */
     fun typeDefinitionLocationsAt(
         line: Int,
         column: Int,
     ): List<SourceLocation> {
         val symbol = symbolAt(line, column)
-        symbol?.takeIf { it.kind == SymbolKind.TYPE || it.kind == SymbolKind.TYPE_PARAMETER }?.let { return locations(listOf(it.id)) }
+        symbol
+            ?.takeIf { it.kind == SymbolKind.TYPE || it.kind == SymbolKind.TYPE_PARAMETER }
+            ?.let {
+                return locations(listOf(it.id))
+            }
         val position = Position(line, column)
         val resultTypes =
             if (symbol?.kind == SymbolKind.METHOD) {
                 val signature =
                     calls.firstOrNull { position in it.callee }?.signature
-                        ?: symbol.signature.takeIf { occurrenceAt(line, column)?.role == Role.DECLARATION }
+                        ?: symbol.signature.takeIf {
+                            occurrenceAt(line, column)?.role == Role.DECLARATION
+                        }
                 signature?.returns.orEmpty()
             } else {
                 listOfNotNull(typeAt(line, column)?.id)
@@ -331,15 +388,21 @@ class SemanticModel internal constructor(
         return locations(resultTypes.flatMap { facts.typeDefinitions[it].orEmpty() })
     }
 
-    /** Worker inspection copies type/member implementations, including property fields and accessors. */
+    /**
+     * Worker inspection copies type/member implementations, including property fields and
+     * accessors.
+     */
     fun implementationLocationsAt(
         line: Int,
         column: Int,
     ): List<SourceLocation> = locations(facts.implementations[symbolAt(line, column)?.id].orEmpty())
 
     private fun locations(ids: List<SymbolId>): List<SourceLocation> =
-        ids
-            .mapNotNull { id -> symbol(id)?.let { symbol -> symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) } } }
+        ids.mapNotNull { id ->
+                symbol(id)?.let { symbol ->
+                    symbol.declaration?.let { SourceLocation(symbol.declarationSource, it) }
+                }
+            }
             .distinct()
 
     fun referencesAt(
@@ -350,7 +413,9 @@ class SemanticModel internal constructor(
         val symbol = symbolAt(line, column) ?: return emptyList()
         return occurrences
             .asSequence()
-            .filter { it.symbol == symbol.id && (includeDeclaration || it.role != Role.DECLARATION) }
+            .filter {
+                it.symbol == symbol.id && (includeDeclaration || it.role != Role.DECLARATION)
+            }
             .map { it.range }
             .distinct()
             .sortedWith(SOURCE_ORDER)
@@ -358,7 +423,9 @@ class SemanticModel internal constructor(
     }
 
     internal companion object {
-        /** Merge detached tables after the compiler worker has proven cross-module identity aliases. */
+        /**
+         * Merge detached tables after the compiler worker has proven cross-module identity aliases.
+         */
         fun joined(
             models: List<SemanticModel>,
             aliases: Map<SymbolId, SymbolId>,
@@ -368,30 +435,47 @@ class SemanticModel internal constructor(
             val symbols = tables.flatMap { it.symbols }.associateBy { it.id }
             val facts =
                 Facts(
-                    symbols.values.groupBy { canonical(it.id) }.mapValues { (id, candidates) ->
-                        symbols[id] ?: candidates.first().copy(id = id)
-                    },
+                    symbols.values
+                        .groupBy { canonical(it.id) }
+                        .mapValues { (id, candidates) ->
+                            symbols[id] ?: candidates.first().copy(id = id)
+                        },
                     tables.flatMap { it.types }.associateBy { it.id },
-                    tables.flatMap { it.typeDeclarations.values }.associate { declaration ->
-                        val id = canonical(declaration.symbol)
-                        id to declaration.copy(symbol = id, parents = declaration.parents.map { it.copy(symbol = canonical(it.symbol)) })
-                    },
-                    tables.flatMap { it.typeDefinitions.entries }.associate { (type, ids) -> type to ids.map(::canonical).distinct() },
+                    tables
+                        .flatMap { it.typeDeclarations.values }
+                        .associate { declaration ->
+                            val id = canonical(declaration.symbol)
+                            id to
+                                declaration.copy(
+                                    symbol = id,
+                                    parents =
+                                        declaration.parents.map {
+                                            it.copy(symbol = canonical(it.symbol))
+                                        },
+                                )
+                        },
+                    tables
+                        .flatMap { it.typeDefinitions.entries }
+                        .associate { (type, ids) -> type to ids.map(::canonical).distinct() },
                     tables
                         .flatMap { it.implementations.entries }
                         .groupBy({ canonical(it.key) }, { it.value })
                         .mapValues { (_, groups) -> groups.flatten().map(::canonical).distinct() },
-                    tables.flatMap { it.callables.values }.associate { callable ->
-                        val id = canonical(callable.symbol)
-                        id to callable.copy(symbol = id)
-                    },
+                    tables
+                        .flatMap { it.callables.values }
+                        .associate { callable ->
+                            val id = canonical(callable.symbol)
+                            id to callable.copy(symbol = id)
+                        },
                     tables
                         .flatMap { it.declarations.entries }
                         .groupBy({ canonical(it.key) }, { it.value })
                         .mapValues { (_, groups) -> groups.flatten().map(::canonical).distinct() },
-                    tables.flatMap { it.parameters.entries }.associate { (id, slot) ->
-                        canonical(id) to slot.copy(method = canonical(slot.method))
-                    },
+                    tables
+                        .flatMap { it.parameters.entries }
+                        .associate { (id, slot) ->
+                            canonical(id) to slot.copy(method = canonical(slot.method))
+                        },
                 )
             return models.map { model ->
                 SemanticModel(
@@ -401,7 +485,9 @@ class SemanticModel internal constructor(
                     facts,
                     model.occurrences.map { it.copy(symbol = it.symbol?.let(::canonical)) },
                     model.expressions,
-                    model.calls.map { it.copy(method = canonical(it.method), caller = it.caller?.let(::canonical)) },
+                    model.calls.map {
+                        it.copy(method = canonical(it.method), caller = it.caller?.let(::canonical))
+                    },
                     model.functionCalls,
                     model.imports,
                 )
