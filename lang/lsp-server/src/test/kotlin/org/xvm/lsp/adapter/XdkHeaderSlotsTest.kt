@@ -8,7 +8,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
-import org.xvm.compiler.ast.IncompleteTypeCompositionStatement
+import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class XdkHeaderSlotsTest {

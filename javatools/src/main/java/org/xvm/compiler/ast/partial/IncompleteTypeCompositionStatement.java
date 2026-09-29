@@ -1,4 +1,4 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.lang.reflect.Field;
 
@@ -11,6 +11,13 @@ import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.Parameter;
+import org.xvm.compiler.ast.PartialQueries;
+import org.xvm.compiler.ast.StageMgr;
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import static org.xvm.asm.ErrorListener.in;
 
@@ -88,7 +95,6 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         }
     }
 
-
     @Override
     public void validateContent(StageMgr mgr, ErrorListener errs) {
         mgr.deferChildren();
@@ -126,10 +132,10 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         return toSignatureString() + " <incomplete>";
     }
 
-    // Protected only so the existing reflective child traversal can read it.
-    protected final List<IncompleteStatement> cursors;
+    // Immutable syntax children; clone constructs and adopts fresh lists.
+    private final List<IncompleteStatement> cursors;
 
-    protected final List<Parameter> formals;
+    private final List<Parameter> formals;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteTypeCompositionStatement.class, "body", "cursors", "formals");
 }

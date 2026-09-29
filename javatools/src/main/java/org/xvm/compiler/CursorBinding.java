@@ -15,8 +15,7 @@ import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.ast.AstNode;
-import org.xvm.compiler.ast.IncompleteStatement;
-
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 /** Facts captured at an explicit cursor while its real validation context is alive. */
 public record CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
