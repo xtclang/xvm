@@ -451,7 +451,14 @@ private class SemanticModelBuilder(
                 }
 
                 is TypeCompositionStatement -> {
-                    declare(node.nameToken, identity(node), kind(identity(node)), node.source)
+                    // Anonymous classes borrow the constructed type's span for their generated
+                    // name. Keep their identity, but never present that span as a declaration:
+                    // Packet<String> already contains the written Packet and String references.
+                    if (node.parent is NewExpression) {
+                        symbol(identity(node), node.name, SymbolKind.TYPE)
+                    } else {
+                        declare(node.nameToken, identity(node), kind(identity(node)), node.source)
+                    }
                 }
 
                 is TypedefStatement -> {
