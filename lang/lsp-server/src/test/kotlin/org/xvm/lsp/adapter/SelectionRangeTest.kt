@@ -9,8 +9,8 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Selection range tests for [TreeSitterAdapter].
  *
- * Exercises the tree-sitter-specific AST-based selection range expansion,
- * including nested call site scenarios.
+ * Exercises the tree-sitter-specific AST-based selection range expansion, including nested call
+ * site scenarios.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -25,9 +25,9 @@ class SelectionRangeTest : TreeSitterTestBase() {
     @DisplayName("getSelectionRanges() -- tree-sitter-specific")
     inner class SelectionRangeTests {
         /**
-         * From a leaf identifier ("name" inside a return statement), the adapter walks
-         * the AST parent chain, deduplicating nodes with identical ranges. The result
-         * should have depth >= 3 (e.g., identifier -> expression -> block -> declaration).
+         * From a leaf identifier ("name" inside a return statement), the adapter walks the AST
+         * parent chain, deduplicating nodes with identical ranges. The result should have depth >=
+         * 3 (e.g., identifier -> expression -> block -> declaration).
          */
         @Test
         @DisplayName("should produce nested chain from identifier to root")
@@ -42,7 +42,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val selections = ts.getSelectionRanges(uri, listOf(Position(3, 15)))
@@ -52,9 +53,9 @@ class SelectionRangeTest : TreeSitterTestBase() {
         }
 
         /**
-         * Each parent range must strictly contain (or equal) its child range -- the
-         * selection never shrinks as you walk outward. We linearize positions as
-         * `line * 10000 + column` for a simple numeric comparison.
+         * Each parent range must strictly contain (or equal) its child range -- the selection never
+         * shrinks as you walk outward. We linearize positions as `line * 10000 + column` for a
+         * simple numeric comparison.
          */
         @Test
         @DisplayName("should produce widening chain where each parent contains child")
@@ -69,15 +70,16 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val selection =
-                ts
-                    .getSelectionRanges(
+                ts.getSelectionRanges(
                         uri,
                         listOf(Position(2, 15)),
-                    ).single()
+                    )
+                    .single()
 
             generateSequence(selection) { it.parent }
                 .zipWithNext()
@@ -90,8 +92,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
         }
 
         /**
-         * At least one range in the chain should span more than zero characters,
-         * proving the selection is meaningful (not just point ranges everywhere).
+         * At least one range in the chain should span more than zero characters, proving the
+         * selection is meaningful (not just point ranges everywhere).
          */
         @Test
         @DisplayName("should produce at least one range wider than a single point")
@@ -103,24 +105,27 @@ class SelectionRangeTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val selection =
-                ts
-                    .getSelectionRanges(
+                ts.getSelectionRanges(
                         uri,
                         listOf(Position(1, 10)),
-                    ).single()
+                    )
+                    .single()
 
             val hasNonPointRange =
-                generateSequence(selection) { it.parent }.any { sel ->
-                    linearize(sel.range.start) != linearize(sel.range.end)
-                }
+                generateSequence(selection) { it.parent }
+                    .any { sel ->
+                        linearize(sel.range.start) != linearize(sel.range.end)
+                    }
             assertThat(hasNonPointRange).isTrue()
         }
 
-        private fun selectionDepth(sel: SelectionRange): Int = generateSequence(sel) { it.parent }.count()
+        private fun selectionDepth(sel: SelectionRange): Int =
+            generateSequence(sel) { it.parent }.count()
     }
 
     // ========================================================================
@@ -131,9 +136,9 @@ class SelectionRangeTest : TreeSitterTestBase() {
     @DisplayName("selection ranges at call sites -- tree-sitter-specific")
     inner class SelectionRangesAtCallSiteTests {
         /**
-         * Starting from an argument literal (`1` in `add(1, 2)`), the selection
-         * range chain should walk outward through argument list, call expression,
-         * statement, block, method, class, module -- at least 4 levels deep.
+         * Starting from an argument literal (`1` in `add(1, 2)`), the selection range chain should
+         * walk outward through argument list, call expression, statement, block, method, class,
+         * module -- at least 4 levels deep.
          */
         @Test
         @DisplayName("should walk outward from call argument")
@@ -151,7 +156,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             // cursor on '1' in `add(1, 2)` at line 6, col 16
@@ -165,8 +171,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
         }
 
         /**
-         * Starting from a nested call argument (`1` in `negate(1)` inside
-         * `add(negate(1), 2)`), the chain should be even deeper -- at least 5 levels.
+         * Starting from a nested call argument (`1` in `negate(1)` inside `add(negate(1), 2)`), the
+         * chain should be even deeper -- at least 5 levels.
          */
         @Test
         @DisplayName("should walk outward from nested call argument")
@@ -187,7 +193,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             // cursor on '1' in `negate(1)` at line 9, col 23
@@ -201,8 +208,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
         }
 
         /**
-         * Multiple cursor positions in a single request should each produce an
-         * independent selection range chain.
+         * Multiple cursor positions in a single request should each produce an independent
+         * selection range chain.
          */
         @Test
         @DisplayName("should handle multiple positions independently")
@@ -220,7 +227,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """.trimIndent()
+                """
+                    .trimIndent()
 
             ts.compile(uri, source)
             val positions =
@@ -229,7 +237,10 @@ class SelectionRangeTest : TreeSitterTestBase() {
                     Position(2, 12), // 'add' in declaration
                 )
             val selections = ts.getSelectionRanges(uri, positions)
-            logger.info("[TEST] shouldHandleMultiplePositionsIndependently -> {} selections", selections.size)
+            logger.info(
+                "[TEST] shouldHandleMultiplePositionsIndependently -> {} selections",
+                selections.size,
+            )
             selections.forEachIndexed { i, sel ->
                 logSelectionChain("shouldHandleMultiplePositionsIndependently[$i]", sel)
             }
@@ -238,7 +249,8 @@ class SelectionRangeTest : TreeSitterTestBase() {
             selections.forEach { assertWideningChain(it) }
         }
 
-        private fun selectionDepth(sel: SelectionRange): Int = generateSequence(sel) { it.parent }.count()
+        private fun selectionDepth(sel: SelectionRange): Int =
+            generateSequence(sel) { it.parent }.count()
 
         private fun assertWideningChain(selection: SelectionRange) {
             generateSequence(selection) { it.parent }
@@ -258,7 +270,15 @@ class SelectionRangeTest : TreeSitterTestBase() {
             val chain = generateSequence(sel) { it.parent }.toList()
             chain.forEachIndexed { i, s ->
                 val r = s.range
-                logger.info("  [{}] level {} -> L{}:{}-L{}:{}", test, i, r.start.line, r.start.column, r.end.line, r.end.column)
+                logger.info(
+                    "  [{}] level {} -> L{}:{}-L{}:{}",
+                    test,
+                    i,
+                    r.start.line,
+                    r.start.column,
+                    r.end.line,
+                    r.end.column,
+                )
             }
         }
     }

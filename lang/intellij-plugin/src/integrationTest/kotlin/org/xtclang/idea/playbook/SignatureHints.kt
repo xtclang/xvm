@@ -31,18 +31,23 @@ fun Driver.signature(
     val support =
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             editor.editor.getCaretModel().moveToOffset(at)
-            val file = requireNotNull(service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()))
+            val file =
+                requireNotNull(
+                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+                )
             utility(LspFileSupport::class).getSupport(file).getSignatureHelpSupport()
         }
     editor.scrollToCaretNow()
-    val inspection = PopupInspection(this, editor) { invokeAction("ParameterInfo", component = editor.component) }
+    val inspection =
+        PopupInspection(this, editor) {
+            invokeAction("ParameterInfo", component = editor.component)
+        }
     invokeAction("ParameterInfo", component = editor.component)
 
     fun renderedHints() =
-        ui
-            .xx("//div[@class='ParameterInfoComponent']//div[@class='JBHtmlPane']")
-            .list()
-            .map { cast(it.component, ParameterHintText::class).getText() }
+        ui.xx("//div[@class='ParameterInfoComponent']//div[@class='JBHtmlPane']").list().map {
+            cast(it.component, ParameterHintText::class).getText()
+        }
     awaitUi(
         message = "native parameter information for offset $at",
         timeout = 45.seconds,
@@ -60,7 +65,8 @@ fun Driver.signature(
     ) {
         inspection.recover()
         val future = support.getValidLSPFuture()
-        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@awaitUi false
+        if (future == null || !future.isDone() || future.isCompletedExceptionally())
+            return@awaitUi false
         val help = future.get()
         val signatures =
             help?.getSignatures().orEmpty().map { item ->
@@ -69,7 +75,10 @@ fun Driver.signature(
                     label,
                     item.getParameters().map { parameter ->
                         val name = parameter.getLabel()
-                        name.getLeft() ?: name.getRight().let { label.substring(it.getFirst(), it.getSecond()) }
+                        name.getLeft()
+                            ?: name.getRight().let {
+                                label.substring(it.getFirst(), it.getSecond())
+                            }
                     },
                     item.getActiveParameter() ?: help?.getActiveParameter(),
                 )
@@ -82,15 +91,24 @@ fun Driver.signature(
             signatures.indices.all { index ->
                 val signature = signatures[index]
                 val html = rendered[index]
-                val bold = Regex("<b(?:\\s[^>]*)?>[\\s\\S]*?</b>").findAll(html).map { plainText(it.value) }.toList()
+                val bold =
+                    Regex("<b(?:\\s[^>]*)?>[\\s\\S]*?</b>")
+                        .findAll(html)
+                        .map { plainText(it.value) }
+                        .toList()
                 // LSP4IJ dims inactive overloads and only highlights enabled rows. With no
                 // selected overload it enables every row; parameter overrides still apply.
-                val enabled = activeSignature == null || activeSignature < 0 || activeSignature == index
-                val active = signature.activeParameter?.takeIf { enabled }?.let { signature.parameters.getOrNull(it) }
-                plainText(
-                    html,
-                ).contains(if (signature.parameters.isEmpty()) signature.label else signature.parameters.joinToString(", ")) &&
-                    bold == listOfNotNull(active)
+                val enabled =
+                    activeSignature == null || activeSignature < 0 || activeSignature == index
+                val active =
+                    signature.activeParameter
+                        ?.takeIf { enabled }
+                        ?.let { signature.parameters.getOrNull(it) }
+                plainText(html)
+                    .contains(
+                        if (signature.parameters.isEmpty()) signature.label
+                        else signature.parameters.joinToString(", ")
+                    ) && bold == listOfNotNull(active)
             }
     }
     if (!keepOpen && popup.present()) invokeAction("EditorEscape", component = editor.component)

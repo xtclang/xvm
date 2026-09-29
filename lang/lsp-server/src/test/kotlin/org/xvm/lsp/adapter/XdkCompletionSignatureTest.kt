@@ -1,9 +1,9 @@
 package org.xvm.lsp.adapter
 
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkCompletionSignatureTest {
     @Test
@@ -13,10 +13,14 @@ class XdkCompletionSignatureTest {
             adapter.compile(URI, "$prefix } }")
             val diagnostics = adapter.getCachedResult(URI)
             val items = adapter.getCompletionsAsync(URI, 0, prefix.length, ".").get(10, SECONDS)
-            assertThat(items.map { it.label }).contains("echo", "choose", "label").doesNotContain("secret", "hidden")
-            assertThat(items.single { it.label == "echo" }.detail).isEqualTo("String echo(String value)")
+            assertThat(items.map { it.label })
+                .contains("echo", "choose", "label")
+                .doesNotContain("secret", "hidden")
+            assertThat(items.single { it.label == "echo" }.detail)
+                .isEqualTo("String echo(String value)")
             assertThat(items.filter { it.label == "choose" }).hasSize(2)
-            assertThat(items.single { it.label == "label" }.kind).isEqualTo(CompletionItem.CompletionKind.PROPERTY)
+            assertThat(items.single { it.label == "label" }.kind)
+                .isEqualTo(CompletionItem.CompletionKind.PROPERTY)
             assertThat(items).allSatisfy { assertThat(it.insertText).isEqualTo(it.label) }
             assertThat(adapter.getCachedResult(URI)).isEqualTo(diagnostics)
         }
@@ -28,7 +32,8 @@ class XdkCompletionSignatureTest {
             for (name in listOf("echo", "choose")) {
                 val prefix = "$BOX void run(Box<String> box) { box.$name("
                 adapter.compile(URI, "$prefix } }")
-                val model = adapter.analyzeAtAsync(URI, Position(0, prefix.length)).get(10, SECONDS)!!
+                val model =
+                    adapter.analyzeAtAsync(URI, Position(0, prefix.length)).get(10, SECONDS)!!
                 assertThat(model.sites.single().callCandidates).describedAs(name).isNotEmpty()
                 val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
                 assertThat(help.signatures).hasSize(if (name == "echo") 1 else 2)
@@ -36,14 +41,17 @@ class XdkCompletionSignatureTest {
                     assertThat(it.documentation).contains("overload not selected")
                     assertThat(it.activeParameter).isZero()
                 }
-                if (name == "echo") assertThat(help.signatures.single().label).isEqualTo("String echo(String value)")
+                if (name == "echo")
+                    assertThat(help.signatures.single().label)
+                        .isEqualTo("String echo(String value)")
             }
         }
     }
 
     @Test
     fun `partial positional slots exclude commas in strings and nested calls`() {
-        val prefix = "module Editing { void run(String text) { text.indexOf(text.replace(\"a,b\", \"c\"), "
+        val prefix =
+            "module Editing { void run(String text) { text.indexOf(text.replace(\"a,b\", \"c\"), "
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix } }")
             val help = adapter.getSignatureHelpAsync(URI, 0, prefix.length).get(10, SECONDS)!!
@@ -76,8 +84,10 @@ class XdkCompletionSignatureTest {
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
             for ((argument, expected) in listOf("backup = \"b\"" to 1, "value = \"a\"" to 0)) {
-                val help = adapter.getSignatureHelp(URI, 0, source.indexOf(argument) + argument.length)!!
-                assertThat(help.signatures.single().label).isEqualTo("String echo(String value, String backup)")
+                val help =
+                    adapter.getSignatureHelp(URI, 0, source.indexOf(argument) + argument.length)!!
+                assertThat(help.signatures.single().label)
+                    .isEqualTo("String echo(String value, String backup)")
                 assertThat(help.activeParameter).isEqualTo(expected)
                 assertThat(help.signatures.single().activeParameter).isEqualTo(expected)
                 assertThat(help.signatures.single().documentation).isNull()
@@ -93,10 +103,13 @@ class XdkCompletionSignatureTest {
                 "void run() { Int n = add(right = add(left = 3)); } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
-            val inner = adapter.getSignatureHelp(URI, 0, source.indexOf("left = 3") + "left = 3".length)!!
+            val inner =
+                adapter.getSignatureHelp(URI, 0, source.indexOf("left = 3") + "left = 3".length)!!
             assertThat(inner.activeParameter).isZero()
-            assertThat(inner.signatures.single().label).isEqualTo("Int add(Int left = …, Int right = …)")
-            val outer = adapter.getSignatureHelp(URI, 0, source.lastIndexOf("right =") + "right =".length)!!
+            assertThat(inner.signatures.single().label)
+                .isEqualTo("Int add(Int left = …, Int right = …)")
+            val outer =
+                adapter.getSignatureHelp(URI, 0, source.lastIndexOf("right =") + "right =".length)!!
             assertThat(outer.activeParameter).isEqualTo(1)
         }
     }
@@ -124,14 +137,24 @@ class XdkCompletionSignatureTest {
                 adapter.compile(URI, text)
                 val cached = adapter.getCachedResult(URI)
                 val items = adapter.getCompletions(URI, 0, prefix.length)
-                assertThat(items.map { it.label }).containsOnly(if (typed == "ch") "choose" else "echo")
+                assertThat(items.map { it.label })
+                    .containsOnly(if (typed == "ch") "choose" else "echo")
                 assertThat(items).hasSize(if (typed == "ch") 2 else 1)
                 items.forEach { item ->
                     val edit = item.textEdit!!
-                    assertThat(edit.range.start).isEqualTo(Position(0, prefix.length - typed.length))
+                    assertThat(edit.range.start)
+                        .isEqualTo(Position(0, prefix.length - typed.length))
                     assertThat(edit.range.end).isEqualTo(Position(0, prefix.length))
-                    val applied = text.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)
-                    assertThat(applied).isEqualTo(prefix.dropLast(typed.length) + item.label + "; } Int later() = 42; }")
+                    val applied =
+                        text.replaceRange(
+                            edit.range.start.column,
+                            edit.range.end.column,
+                            edit.newText,
+                        )
+                    assertThat(applied)
+                        .isEqualTo(
+                            prefix.dropLast(typed.length) + item.label + "; } Int later() = 42; }"
+                        )
                 }
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             }
@@ -154,9 +177,12 @@ class XdkCompletionSignatureTest {
                         assertThat(it.documentation).isNull()
                         assertThat(cached!!.diagnostics).isEmpty()
                     } else {
-                        assertThat(it.documentation).describedAs(suffix).contains("overload not selected")
+                        assertThat(it.documentation)
+                            .describedAs(suffix)
+                            .contains("overload not selected")
                     }
-                    assertThat(it.label).contains(if (suffix == "choose(") "choose(" else "echo(String value)")
+                    assertThat(it.label)
+                        .contains(if (suffix == "choose(") "choose(" else "echo(String value)")
                 }
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             }

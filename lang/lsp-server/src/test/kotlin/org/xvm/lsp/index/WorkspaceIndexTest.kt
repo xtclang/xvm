@@ -1,5 +1,7 @@
 package org.xvm.lsp.index
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -7,14 +9,12 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
 
 /**
  * Unit tests for [WorkspaceIndex].
  *
- * Tests add/remove/search/findByName operations and the 4-tier fuzzy matching algorithm.
- * No native library needed -- pure Kotlin data structures.
+ * Tests add/remove/search/findByName operations and the 4-tier fuzzy matching algorithm. No native
+ * library needed -- pure Kotlin data structures.
  */
 @DisplayName("WorkspaceIndex")
 class WorkspaceIndexTest {
@@ -48,7 +48,10 @@ class WorkspaceIndexTest {
         @Test
         @DisplayName("should add symbols and update counts")
         fun shouldAddSymbols() {
-            index.addSymbols("file:///a.x", listOf(symbol("Foo", uri = "file:///a.x"), symbol("Bar", uri = "file:///a.x")))
+            index.addSymbols(
+                "file:///a.x",
+                listOf(symbol("Foo", uri = "file:///a.x"), symbol("Bar", uri = "file:///a.x")),
+            )
 
             assertThat(index.symbolCount).isEqualTo(2)
             assertThat(index.fileCount).isEqualTo(1)
@@ -68,7 +71,10 @@ class WorkspaceIndexTest {
         @DisplayName("should replace symbols when re-indexing same URI")
         fun shouldReplaceOnReindex() {
             index.addSymbols("file:///a.x", listOf(symbol("Foo", uri = "file:///a.x")))
-            index.addSymbols("file:///a.x", listOf(symbol("Bar", uri = "file:///a.x"), symbol("Baz", uri = "file:///a.x")))
+            index.addSymbols(
+                "file:///a.x",
+                listOf(symbol("Bar", uri = "file:///a.x"), symbol("Baz", uri = "file:///a.x")),
+            )
 
             assertThat(index.symbolCount).isEqualTo(2)
             assertThat(index.findByName("Foo")).isEmpty()
@@ -161,7 +167,13 @@ class WorkspaceIndexTest {
         @Test
         @DisplayName("should match by prefix")
         fun shouldMatchPrefix() {
-            index.addSymbols("file:///a.x", listOf(symbol("HashMap", uri = "file:///a.x"), symbol("HashSet", uri = "file:///a.x")))
+            index.addSymbols(
+                "file:///a.x",
+                listOf(
+                    symbol("HashMap", uri = "file:///a.x"),
+                    symbol("HashSet", uri = "file:///a.x"),
+                ),
+            )
 
             val results = index.search("hash")
             assertThat(results).hasSize(2)

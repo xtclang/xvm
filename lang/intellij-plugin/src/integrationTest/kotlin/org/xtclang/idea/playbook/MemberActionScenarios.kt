@@ -27,11 +27,18 @@ fun Driver.memberActions(
                 .query(
                     "textDocument/codeAction",
                     mapOf(
-                        "textDocument" to mapOf("uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()),
+                        "textDocument" to
+                            mapOf(
+                                "uri" to
+                                    Path.of(editor.editor.getVirtualFile().getPath())
+                                        .toUri()
+                                        .toString()
+                            ),
                         "range" to mapOf("start" to position, "end" to position),
                         "context" to mapOf("diagnostics" to emptyList<Any>()),
                     ),
-                ).asJsonArray
+                )
+                .asJsonArray
         if (title.isEmpty()) {
             val actions =
                 awaitUiNotNull("member refusal response", 45.seconds) {
@@ -45,20 +52,26 @@ fun Driver.memberActions(
             check(
                 actions.none {
                     val label = it.asJsonObject["title"].asString
-                    (label.startsWith("Implement ") || label.startsWith("Override ")) && label.contains(" ${data.text("refusalMember")}(")
-                },
+                    (label.startsWith("Implement ") || label.startsWith("Override ")) &&
+                        label.contains(" ${data.text("refusalMember")}(")
+                }
             )
             check(editor.text == original)
         } else {
             // Let the native intention own its request. A separate protocol probe can supersede
             // that request and leave the native client holding its canceled result.
             quickFix(editor, at, title)
-            awaitUi("generated member matches shared source", 45.seconds) { editor.text == expected }
+            awaitUi("generated member matches shared source", 45.seconds) {
+                editor.text == expected
+            }
             diagnostics(editor, false)
-            listOf("\$Undo" to original, "\$Redo" to expected, "\$Undo" to original).forEach { (action, text) ->
+            listOf("\$Undo" to original, "\$Redo" to expected, "\$Undo" to original).forEach {
+                (action, text) ->
                 focusEditor(editor)
                 invokeAction(action, now = false, component = editor.component)
-                awaitUi("$action restores the shared member source", 45.seconds) { editor.text == text }
+                awaitUi("$action restores the shared member source", 45.seconds) {
+                    editor.text == text
+                }
                 diagnostics(editor, broken && text == original)
             }
         }

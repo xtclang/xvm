@@ -1,10 +1,10 @@
 package org.xtclang.idea.lsp
 
+import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageServer
-import java.util.concurrent.CompletableFuture
 
 /** Standard Rename remains available to clients that cannot persist compiler graph changes. */
 interface XtcLanguageServer : LanguageServer {

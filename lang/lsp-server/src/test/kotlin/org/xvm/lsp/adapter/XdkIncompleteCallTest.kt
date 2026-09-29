@@ -1,11 +1,11 @@
 package org.xvm.lsp.adapter
 
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkIncompleteCallTest {
     @Test
@@ -19,9 +19,11 @@ class XdkIncompleteCallTest {
                 assertThat(help).describedAs(prefix).isNotNull()
                 requireNotNull(help)
                 assertThat(help.signatures).hasSize(1)
-                assertThat(help.signatures.single().label).isEqualTo("$expected choose($expected first, $expected second)")
+                assertThat(help.signatures.single().label)
+                    .isEqualTo("$expected choose($expected first, $expected second)")
                 assertThat(help.signatures.single().activeParameter).isEqualTo(1)
-                assertThat(help.signatures.single().documentation).contains("written arguments fit", "overload not selected")
+                assertThat(help.signatures.single().documentation)
+                    .contains("written arguments fit", "overload not selected")
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             }
         }
@@ -30,12 +32,13 @@ class XdkIncompleteCallTest {
     @Test
     fun `candidate inference copies expected types and named argument mappings`() {
         XdkAdapter().use { adapter ->
-            for ((call, parameter) in listOf(
-                "pair(\"x\", second =" to 1,
-                "pair(second = \"x\", first =" to 0,
-                "pair(second = \"x\"" to 1,
-                "generic(\"x\", " to 1,
-            )) {
+            for ((call, parameter) in
+                listOf(
+                    "pair(\"x\", second =" to 1,
+                    "pair(second = \"x\", first =" to 0,
+                    "pair(second = \"x\"" to 1,
+                    "generic(\"x\", " to 1,
+                )) {
                 val prefix = "$BOX void run(Box<String> box) { box.$call"
                 adapter.compile(URI, "$prefix); } }")
                 val position = Position(0, prefix.length)
@@ -43,20 +46,32 @@ class XdkIncompleteCallTest {
                 val site = model.sites.single()
                 val candidate = site.callCandidates!!.single()
                 val cursor = SemanticModel.Position(0, prefix.length)
-                assertThat(site.parameterAt(candidate, cursor)).describedAs(call).isEqualTo(parameter)
-                assertThat(model.semantics.type(site.expectedTypeAt(candidate, cursor)!!)!!.displayName).isEqualTo("String")
+                assertThat(site.parameterAt(candidate, cursor))
+                    .describedAs(call)
+                    .isEqualTo(parameter)
+                assertThat(
+                        model.semantics.type(site.expectedTypeAt(candidate, cursor)!!)!!.displayName
+                    )
+                    .isEqualTo("String")
                 Executors.newSingleThreadExecutor().use { executor ->
                     assertThat(
-                        executor
-                            .submit<String> {
-                                model.semantics.type(site.expectedTypeAt(candidate, cursor)!!)!!.displayName
-                            }.get(),
-                    ).isEqualTo("String")
+                            executor
+                                .submit<String> {
+                                    model.semantics
+                                        .type(site.expectedTypeAt(candidate, cursor)!!)!!
+                                        .displayName
+                                }
+                                .get()
+                        )
+                        .isEqualTo("String")
                 }
                 val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
-                assertThat(help.signatures.single().activeParameter).describedAs(call).isEqualTo(parameter)
+                assertThat(help.signatures.single().activeParameter)
+                    .describedAs(call)
+                    .isEqualTo(parameter)
                 assertThat(help.signatures.single().label).contains("String first", "String second")
-                assertThat(model.semantics.calls.map { model.semantics.symbol(it.method)?.name }).doesNotContain("pair", "generic")
+                assertThat(model.semantics.calls.map { model.semantics.symbol(it.method)?.name })
+                    .doesNotContain("pair", "generic")
             }
         }
     }
@@ -67,7 +82,9 @@ class XdkIncompleteCallTest {
             for (call in listOf("pair(unknown =", "pair(first = \"x\", first =", "choose(True, ")) {
                 val prefix = "$BOX void run(Box<String> box) { box.$call"
                 adapter.compile(URI, "$prefix); } }")
-                assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).describedAs(call).isNull()
+                assertThat(adapter.getSignatureHelp(URI, 0, prefix.length))
+                    .describedAs(call)
+                    .isNull()
             }
         }
     }
@@ -78,7 +95,9 @@ class XdkIncompleteCallTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
             val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
-            assertThat(help.signatures.single().label).contains("U first", "U second").doesNotContain("Pending", "Object")
+            assertThat(help.signatures.single().label)
+                .contains("U first", "U second")
+                .doesNotContain("Pending", "Object")
         }
     }
 
@@ -109,7 +128,8 @@ class XdkIncompleteCallTest {
                 val help = adapter.getSignatureHelp(URI, 0, prefix.length)
                 assertThat(help).describedAs(receiver).isNotNull()
                 requireNotNull(help)
-                assertThat(help.signatures.single().label).isEqualTo("String pair(String first, String second)")
+                assertThat(help.signatures.single().label)
+                    .isEqualTo("String pair(String first, String second)")
                 assertThat(help.signatures.single().activeParameter).isEqualTo(1)
             }
         }

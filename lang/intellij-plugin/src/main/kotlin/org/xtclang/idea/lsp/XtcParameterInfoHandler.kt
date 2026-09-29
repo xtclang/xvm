@@ -9,8 +9,11 @@ import org.eclipse.lsp4j.SignatureInformation
 /** Missing parameter metadata means no safe active slot, not an empty signature. */
 class XtcParameterInfoHandler : LSPParameterInfoHandler() {
     // Ecstasy's lexer can use plain-text or TextMate PSI. Leave other languages to LSP4IJ.
-    override fun findElementForParameterInfo(context: CreateParameterInfoContext): LSPSignatureHelperPsiElement? =
-        if (context.file.virtualFile?.extension == "x") super.findElementForParameterInfo(context) else null
+    override fun findElementForParameterInfo(
+        context: CreateParameterInfoContext
+    ): LSPSignatureHelperPsiElement? =
+        if (context.file.virtualFile?.extension == "x") super.findElementForParameterInfo(context)
+        else null
 
     override fun updateUI(
         signature: SignatureInformation,
@@ -39,7 +42,8 @@ class XtcParameterInfoHandler : LSPParameterInfoHandler() {
             super.updateUI(
                 current,
                 object : ParameterInfoUIContext by context {
-                    override fun getCurrentParameterIndex(): Int = current.activeParameter ?: context.currentParameterIndex
+                    override fun getCurrentParameterIndex(): Int =
+                        current.activeParameter ?: context.currentParameterIndex
                 },
             )
         }

@@ -1,8 +1,6 @@
 package org.xvm.lsp.treesitter
 
-/**
- * Native library platform detection for tree-sitter.
- */
+/** Native library platform detection for tree-sitter. */
 object Platform {
     /** Platform identifier (e.g., "darwin-arm64", "linux-x64", "windows-x64") */
     val id: String
@@ -43,9 +41,15 @@ object Platform {
         }
     }
 
-    /** Returns the native library filename for the given base name (e.g., "tree-sitter-xtc" -> "libtree-sitter-xtc.dylib") */
+    /**
+     * Returns the native library filename for the given base name (e.g., "tree-sitter-xtc" ->
+     * "libtree-sitter-xtc.dylib")
+     */
     fun libraryFileName(baseName: String): String = "$libPrefix$baseName$libExtension"
 
-    /** Returns the resource path for a native library (e.g., "/native/darwin-arm64/libtree-sitter-xtc.dylib") */
+    /**
+     * Returns the resource path for a native library (e.g.,
+     * "/native/darwin-arm64/libtree-sitter-xtc.dylib")
+     */
     fun resourcePath(baseName: String): String = "/native/$id/${libraryFileName(baseName)}"
 }

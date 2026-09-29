@@ -1,25 +1,21 @@
 package org.xtclang.idea
 
 import com.intellij.openapi.diagnostic.logger
-import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 import kotlin.io.path.exists
+import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
 
 /**
- * Provides TextMate bundle for XTC syntax highlighting.
- * The bundle is located in the plugin's lib/textmate directory.
+ * Provides TextMate bundle for XTC syntax highlighting. The bundle is located in the plugin's
+ * lib/textmate directory.
  *
- * // TODO LSP: TextMate grammars are regex-based and have limitations:
- * // - Cannot distinguish type names from variable names
- * // - Cannot highlight based on semantic information (is this a field? parameter?)
- * // - Regex patterns can be slow and fragile for complex syntax
- * //
- * // When the parallel compiler is complete, REPLACE TextMate with LSP semantic tokens:
- * // 1. LSP server provides getSemanticTokens() using real lexer + symbol resolution
- * // 2. IntelliJ LSP client receives and applies semantic token highlighting
- * // 3. TextMate becomes fallback only (for when LSP is not available)
- * //
- * // See: PLAN_LSP_PARALLEL_LEXER.md (Phase 1 - Semantic Tokens)
- * // See: XtcCompilerAdapter.getSemanticTokens()
+ * // TODO LSP: TextMate grammars are regex-based and have limitations: // - Cannot distinguish type
+ * names from variable names // - Cannot highlight based on semantic information (is this a field?
+ * parameter?) // - Regex patterns can be slow and fragile for complex syntax // // When the
+ * parallel compiler is complete, REPLACE TextMate with LSP semantic tokens: // 1. LSP server
+ * provides getSemanticTokens() using real lexer + symbol resolution // 2. IntelliJ LSP client
+ * receives and applies semantic token highlighting // 3. TextMate becomes fallback only (for when
+ * LSP is not available) // // See: PLAN_LSP_PARALLEL_LEXER.md (Phase 1 - Semantic Tokens) // See:
+ * XtcCompilerAdapter.getSemanticTokens()
  */
 class XtcTextMateBundleProvider : TextMateBundleProvider {
     private val logger = logger<XtcTextMateBundleProvider>()

@@ -26,7 +26,8 @@ internal fun compilerImplementationTargets(
     errors: ErrorListener,
 ): Map<IdentityConstant, Set<IdentityConstant>> {
     val targets = linkedMapOf<IdentityConstant, MutableSet<IdentityConstant>>()
-    val inspection = ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
+    val inspection =
+        ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
     for (node in nodes.filterIsInstance<TypeCompositionStatement>()) {
         if (inspection.isAbortDesired) return emptyMap()
         val structure = node.component as? ClassStructure ?: continue
@@ -43,7 +44,10 @@ internal fun compilerImplementationTargets(
             }
         }
         // Anonymous classes are synthetic containers, but their written method bodies are targets.
-        val methods = info.methods.values.filter { it.identity.isTopLevel && !it.isFunction && !it.isCtorOrValidator && !it.isAbstract }
+        val methods =
+            info.methods.values.filter {
+                it.identity.isTopLevel && !it.isFunction && !it.isCtorOrValidator && !it.isAbstract
+            }
         for (method in methods) {
             val implementation = info.methodImplementation(method, inspection) ?: continue
             for (inherited in method.chain) {
@@ -59,37 +63,49 @@ internal fun compilerImplementationTargets(
 }
 
 /**
- * Copy property composition without constructing a separate Ref/Var implementation type or generating
- * forwarding methods. The host's nested method chains already include Ref/Var annotation dispatch.
- * Some mixin accessors live only in PropertyBody, with their compiler order and field identity.
+ * Copy property composition without constructing a separate Ref/Var implementation type or
+ * generating forwarding methods. The host's nested method chains already include Ref/Var annotation
+ * dispatch. Some mixin accessors live only in PropertyBody, with their compiler order and field
+ * identity.
  */
-private fun TypeInfo.propertyImplementationTargets(errors: ErrorListener): Map<IdentityConstant, Set<IdentityConstant>> {
+private fun TypeInfo.propertyImplementationTargets(
+    errors: ErrorListener
+): Map<IdentityConstant, Set<IdentityConstant>> {
     val targets = linkedMapOf<IdentityConstant, MutableSet<IdentityConstant>>()
-    properties.values.filter { !it.isConstant && !it.isFormalType }.forEach { property ->
-        if (errors.isAbortDesired) return emptyMap()
-        for (getter in if (property.isVar) listOf(true, false) else listOf(true)) {
-            val accessor = if (getter) property.getterId else property.setterId
-            val method = getMethodById(accessor)
-            val written = property.writtenAccessors(getter)
-            val implementation = accessorImplementation(property, getter, errors) ?: continue
-            val declarations =
-                property.propertyBodies.map { it.identity } + written.map { it.identity } +
-                    method
-                        ?.chain
-                        .orEmpty()
-                        .mapNotNull(MethodBody::getMethodStructure)
-                        .map { it.identityConstant }
-            declarations.forEach { declaration -> targets.getOrPut(declaration) { linkedSetOf() }.add(implementation) }
+    properties.values
+        .filter { !it.isConstant && !it.isFormalType }
+        .forEach { property ->
+            if (errors.isAbortDesired) return emptyMap()
+            for (getter in if (property.isVar) listOf(true, false) else listOf(true)) {
+                val accessor = if (getter) property.getterId else property.setterId
+                val method = getMethodById(accessor)
+                val written = property.writtenAccessors(getter)
+                val implementation = accessorImplementation(property, getter, errors) ?: continue
+                val declarations =
+                    property.propertyBodies.map { it.identity } +
+                        written.map { it.identity } +
+                        method?.chain.orEmpty().mapNotNull(MethodBody::getMethodStructure).map {
+                            it.identityConstant
+                        }
+                declarations.forEach { declaration ->
+                    targets.getOrPut(declaration) { linkedSetOf() }.add(implementation)
+                }
+            }
         }
-    }
     return targets
 }
 
-/** Implicit adoption or injected/native storage has no written field implementation to navigate to. */
-private fun PropertyInfo.sourceField(): IdentityConstant? =
-    fieldIdentity?.takeIf { field ->
-        propertyBodies.any { it.identity == field && it.implementation == Implementation.Explicit && !it.isAbstract && !it.isSynthetic }
+/**
+ * Implicit adoption or injected/native storage has no written field implementation to navigate to.
+ */
+private fun PropertyInfo.sourceField(): IdentityConstant? = fieldIdentity?.takeIf { field ->
+    propertyBodies.any {
+        it.identity == field &&
+            it.implementation == Implementation.Explicit &&
+            !it.isAbstract &&
+            !it.isSynthetic
     }
+}
 
 /** A delegate's declared concrete type bounds lookup; an interface value has no selected body. */
 private fun TypeInfo.delegateType(
@@ -99,8 +115,13 @@ private fun TypeInfo.delegateType(
     if (errors.isAbortDesired) return null
     val target = findProperty(property)?.type ?: return null
     if (!target.isSingleUnderlyingClass(false)) return null
-    val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(target)") { target.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors) }
-    return info.takeIf { it.isClass && !it.isAbstract && !errors.hasSeriousErrors() && !errors.isAbortDesired }
+    val info =
+        ExecutionTrace.api("TypeConstant.ensureTypeInfo(target)") {
+            target.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+        }
+    return info.takeIf {
+        it.isClass && !it.isAbstract && !errors.hasSeriousErrors() && !errors.isAbortDesired
+    }
 }
 
 private fun TypeInfo.methodImplementation(
@@ -112,7 +133,8 @@ private fun TypeInfo.methodImplementation(
     if (errors.isAbortDesired || key in visited || visited.size >= 64) return null
     val body = method.chain.firstOrNull { !it.isAbstract } ?: return null
     return when (body.implementation) {
-        Implementation.Explicit, Implementation.Default -> {
+        Implementation.Explicit,
+        Implementation.Default -> {
             body.methodStructure?.identityConstant
         }
 
@@ -144,12 +166,20 @@ private fun TypeInfo.accessorImplementation(
     val accessor = if (getter) property.getterId else property.setterId
     val method = getMethodById(accessor)
     // Optimizing redirects can generate methods. Keep that operation out of source inspection.
-    if (method?.chain?.any { it.implementation in setOf(Implementation.Delegating, Implementation.Capped) } == true) return null
+    if (
+        method?.chain?.any {
+            it.implementation in setOf(Implementation.Delegating, Implementation.Capped)
+        } == true
+    )
+        return null
     if (method != null) {
-        val chain = if (getter) property.ensureOptimizedGetChain(this, null) else property.ensureOptimizedSetChain(this, null)
+        val chain =
+            if (getter) property.ensureOptimizedGetChain(this, null)
+            else property.ensureOptimizedSetChain(this, null)
         val body = chain?.firstOrNull() ?: return null
         return when (body.implementation) {
-            Implementation.Explicit, Implementation.Default -> body.methodStructure?.identityConstant
+            Implementation.Explicit,
+            Implementation.Default -> body.methodStructure?.identityConstant
 
             // Annotation/native storage is not a written accessor (for example Lazy.set).
             Implementation.Field -> property.takeUnless { it.isRefAnnotated }?.sourceField()
@@ -161,8 +191,12 @@ private fun TypeInfo.accessorImplementation(
     if (property.isRefAnnotated) return null
     val written = property.writtenAccessors(getter)
     // Explicit accessors precede interface defaults; storage overrides a default accessor.
-    val selected = written.firstOrNull { it.implementation == Implementation.Explicit } ?: written.firstOrNull()
-    return selected?.takeUnless { it.implementation == Implementation.Default && property.hasField() }?.identity ?: property.sourceField()
+    val selected =
+        written.firstOrNull { it.implementation == Implementation.Explicit }
+            ?: written.firstOrNull()
+    return selected
+        ?.takeUnless { it.implementation == Implementation.Default && property.hasField() }
+        ?.identity ?: property.sourceField()
 }
 
 private data class WrittenAccessor(
@@ -180,5 +214,7 @@ private fun PropertyInfo.writtenAccessors(getter: Boolean): List<WrittenAccessor
                     !getter && body.hasSetter() -> body.structure?.setter
                     else -> null
                 }
-            member?.takeUnless { it.isAbstract || it.isNative }?.let { WrittenAccessor(body.implementation, it.identityConstant) }
+            member
+                ?.takeUnless { it.isAbstract || it.isNative }
+                ?.let { WrittenAccessor(body.implementation, it.identityConstant) }
         }

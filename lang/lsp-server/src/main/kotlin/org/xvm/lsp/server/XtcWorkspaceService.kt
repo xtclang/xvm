@@ -1,5 +1,6 @@
 package org.xvm.lsp.server
 
+import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
@@ -14,11 +15,10 @@ import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.model.toLsp
-import java.util.concurrent.CompletableFuture
 
 /**
- * Workspace service for Ecstasy Language Server.
- * Handles workspace-wide features like symbol search and configuration changes.
+ * Workspace service for Ecstasy Language Server. Handles workspace-wide features like symbol search
+ * and configuration changes.
  */
 class XtcWorkspaceService(
     private val server: XtcLanguageServer,
@@ -37,6 +37,7 @@ class XtcWorkspaceService(
 
     /**
      * LSP: workspace/didChangeConfiguration
+     *
      * @see org.eclipse.lsp4j.services.WorkspaceService.didChangeConfiguration
      */
     override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
@@ -47,6 +48,7 @@ class XtcWorkspaceService(
 
     /**
      * LSP: workspace/didChangeWatchedFiles
+     *
      * @see org.eclipse.lsp4j.services.WorkspaceService.didChangeWatchedFiles
      */
     override fun didChangeWatchedFiles(params: DidChangeWatchedFilesParams) {
@@ -59,8 +61,11 @@ class XtcWorkspaceService(
         logger.info("workspace/didRenameFiles: {} renames", params.files.size)
         refreshFiles(
             params.files.flatMap {
-                listOf(FileEvent(it.oldUri, FileChangeType.Deleted), FileEvent(it.newUri, FileChangeType.Created))
-            },
+                listOf(
+                    FileEvent(it.oldUri, FileChangeType.Deleted),
+                    FileEvent(it.newUri, FileChangeType.Created),
+                )
+            }
         )
     }
 
@@ -73,16 +78,19 @@ class XtcWorkspaceService(
     }
 
     override fun didChangeWorkspaceFolders(params: DidChangeWorkspaceFoldersParams) {
-        server.changeCompilerWorkspaceFolders(params.event.added.map { it.uri }, params.event.removed.map { it.uri })
+        server.changeCompilerWorkspaceFolders(
+            params.event.added.map { it.uri },
+            params.event.removed.map { it.uri },
+        )
     }
 
     /**
      * LSP: workspace/symbol
+     *
      * @see org.eclipse.lsp4j.services.WorkspaceService.symbol
      */
-    @Suppress("ktlint:standard:function-signature")
     override fun symbol(
-        params: WorkspaceSymbolParams,
+        params: WorkspaceSymbolParams
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
         supplyAsync(
             "workspace/symbol",
@@ -96,7 +104,7 @@ class XtcWorkspaceService(
                         kind = s.kind.toLsp()
                         location = Either.forLeft(s.location.toLsp())
                     }
-                },
+                }
             )
         }
 }

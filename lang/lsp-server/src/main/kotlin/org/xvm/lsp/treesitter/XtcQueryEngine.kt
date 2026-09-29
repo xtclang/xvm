@@ -3,22 +3,20 @@ package org.xvm.lsp.treesitter
 import io.github.treesitter.jtreesitter.Language
 import io.github.treesitter.jtreesitter.Query
 import io.github.treesitter.jtreesitter.QueryCursor
+import java.io.Closeable
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
-import java.io.Closeable
 
 /**
  * Query engine for extracting information from XTC syntax trees.
  *
- * Uses Tree-sitter queries to find declarations, references, and other
- * language constructs in parsed source code.
+ * Uses Tree-sitter queries to find declarations, references, and other language constructs in
+ * parsed source code.
  */
 @Suppress("LoggingSimilarMessage")
-class XtcQueryEngine(
-    language: Language,
-) : Closeable {
+class XtcQueryEngine(language: Language) : Closeable {
     private val logger = LoggerFactory.getLogger(XtcQueryEngine::class.java)
 
     private val allDeclarationsQuery: Query = Query(language, XtcQueries.allDeclarations)
@@ -27,9 +25,7 @@ class XtcQueryEngine(
     private val importsQuery: Query = Query(language, XtcQueries.imports)
     private val commentsAndStringsQuery: Query = Query(language, XtcQueries.commentsAndStrings)
 
-    /**
-     * Find all declarations in the tree for document symbols.
-     */
+    /** Find all declarations in the tree for document symbols. */
     fun findAllDeclarations(
         tree: XtcTree,
         uri: String,
@@ -46,26 +42,25 @@ class XtcQueryEngine(
                     captures.keys.firstNotNullOfOrNull { captureKind[it] } ?: return@executeQuery
                 add(nameNode.toSymbolInfo(nameNode.text, kind, uri))
             }
-        }.also { symbols ->
-            logger.info("findAllDeclarations -> {} symbols", symbols.size)
-            if (logger.isDebugEnabled && symbols.isNotEmpty()) {
-                symbols.forEach { s ->
-                    logger.debug(
-                        "  {} '{}' at {}:{}:{}",
-                        s.kind,
-                        s.name,
-                        s.location.uri.substringAfterLast('/'),
-                        s.location.startLine + 1,
-                        s.location.startColumn + 1,
-                    )
+        }
+            .also { symbols ->
+                logger.info("findAllDeclarations -> {} symbols", symbols.size)
+                if (logger.isDebugEnabled && symbols.isNotEmpty()) {
+                    symbols.forEach { s ->
+                        logger.debug(
+                            "  {} '{}' at {}:{}:{}",
+                            s.kind,
+                            s.name,
+                            s.location.uri.substringAfterLast('/'),
+                            s.location.startLine + 1,
+                            s.location.startColumn + 1,
+                        )
+                    }
                 }
             }
-        }
     }
 
-    /**
-     * Find all method declarations.
-     */
+    /** Find all method declarations. */
     fun findMethodDeclarations(
         tree: XtcTree,
         uri: String,
@@ -76,25 +71,24 @@ class XtcQueryEngine(
                 val nameNode = captures["name"] ?: return@executeQuery
                 add(nameNode.toSymbolInfo(nameNode.text, SymbolKind.METHOD, uri))
             }
-        }.also { methods ->
-            logger.info("findMethodDeclarations -> {} methods", methods.size)
-            if (methods.isNotEmpty()) {
-                methods.forEach { m ->
-                    logger.info(
-                        "  '{}' at {}:{}:{}",
-                        m.name,
-                        m.location.uri.substringAfterLast('/'),
-                        m.location.startLine + 1,
-                        m.location.startColumn + 1,
-                    )
+        }
+            .also { methods ->
+                logger.info("findMethodDeclarations -> {} methods", methods.size)
+                if (methods.isNotEmpty()) {
+                    methods.forEach { m ->
+                        logger.info(
+                            "  '{}' at {}:{}:{}",
+                            m.name,
+                            m.location.uri.substringAfterLast('/'),
+                            m.location.startLine + 1,
+                            m.location.startColumn + 1,
+                        )
+                    }
                 }
             }
-        }
     }
 
-    /**
-     * Find all identifiers with a given name (for find references).
-     */
+    /** Find all identifiers with a given name (for find references). */
     fun findAllIdentifiers(
         tree: XtcTree,
         name: String,
@@ -108,14 +102,20 @@ class XtcQueryEngine(
                     add(id.toLocation(uri))
                 }
             }
-        }.also { matches ->
-            logger.info("findAllIdentifiers '{}' -> {} match(es)", name, matches.size)
-            if (matches.isNotEmpty()) {
-                matches.forEach { loc ->
-                    logger.info("  {}:{}:{}", loc.uri.substringAfterLast('/'), loc.startLine + 1, loc.startColumn + 1)
+        }
+            .also { matches ->
+                logger.info("findAllIdentifiers '{}' -> {} match(es)", name, matches.size)
+                if (matches.isNotEmpty()) {
+                    matches.forEach { loc ->
+                        logger.info(
+                            "  {}:{}:{}",
+                            loc.uri.substringAfterLast('/'),
+                            loc.startLine + 1,
+                            loc.startColumn + 1,
+                        )
+                    }
                 }
             }
-        }
     }
 
     private fun XtcNode.toLocation(uri: String) =
@@ -130,22 +130,22 @@ class XtcQueryEngine(
     /**
      * Resolve a name reference at the given cursor position to the nearest in-scope declaration.
      *
-     * Walks the AST upward from the cursor and, for each enclosing scope, asks whether that
-     * scope declares anything matching the requested name:
-     *  - A `block` (function body, control-flow body) contributes local variables declared
-     *    *before* the cursor position. Forward references are not allowed for locals.
-     *  - A `method_declaration` / `function_declaration` contributes its parameters.
-     *  - A `class_body` / `module_body` / `package_body` / `interface_body` / `enum_body` /
-     *    `mixin_body` / `service_body` / `const_body` contributes its declared members
-     *    (properties, methods, getters, nested types). Class/module members are visible
-     *    throughout the body, so no before-cursor restriction applies.
+     * Walks the AST upward from the cursor and, for each enclosing scope, asks whether that scope
+     * declares anything matching the requested name:
+     * - A `block` (function body, control-flow body) contributes local variables declared *before*
+     *   the cursor position. Forward references are not allowed for locals.
+     * - A `method_declaration` / `function_declaration` contributes its parameters.
+     * - A `class_body` / `module_body` / `package_body` / `interface_body` / `enum_body` /
+     *   `mixin_body` / `service_body` / `const_body` contributes its declared members (properties,
+     *   methods, getters, nested types). Class/module members are visible throughout the body, so
+     *   no before-cursor restriction applies.
      *
-     * The first matching declaration in the enclosing chain wins, modelling shadowing. The
-     * returned [Location] points at the declaration's `name` field (the identifier), so
-     * cmd-click lands on the name itself rather than the head of the statement.
+     * The first matching declaration in the enclosing chain wins, modelling shadowing. The returned
+     * [Location] points at the declaration's `name` field (the identifier), so cmd-click lands on
+     * the name itself rather than the head of the statement.
      *
-     * Returns `null` if no enclosing scope declares the name. Callers should then consult
-     * the workspace symbol index for a cross-file fallback.
+     * Returns `null` if no enclosing scope declares the name. Callers should then consult the
+     * workspace symbol index for a cross-file fallback.
      */
     fun resolveByNameInScope(
         tree: XtcTree,
@@ -163,19 +163,29 @@ class XtcQueryEngine(
                         findLocalVariableInBlock(current, name, line, column)
                     }
 
-                    "method_declaration", "function_declaration", "constructor_declaration" -> {
+                    "method_declaration",
+                    "function_declaration",
+                    "constructor_declaration" -> {
                         findParameterInMethod(current, name)
                     }
 
-                    "class_body", "module_body", "package_body", "interface_body",
-                    "enum_body", "mixin_body", "service_body", "const_body",
-                    -> {
+                    "class_body",
+                    "module_body",
+                    "package_body",
+                    "interface_body",
+                    "enum_body",
+                    "mixin_body",
+                    "service_body",
+                    "const_body" -> {
                         findMemberInBody(current, name)
                     }
 
-                    "class_declaration", "const_declaration", "service_declaration",
-                    "mixin_declaration", "enum_declaration", "annotation_declaration",
-                    -> {
+                    "class_declaration",
+                    "const_declaration",
+                    "service_declaration",
+                    "mixin_declaration",
+                    "enum_declaration",
+                    "annotation_declaration" -> {
                         // Shorthand constructor parameters (`const Point(Int x, Int y)`)
                         // declare properties, visible throughout the class body.
                         findShorthandProperty(current, name)
@@ -204,12 +214,12 @@ class XtcQueryEngine(
     /**
      * Enumerate all in-scope declarations visible at the given cursor position.
      *
-     * Same scope walk as [resolveByNameInScope], but returns the full set of visible
-     * declarations rather than the first matching one. Used by the completion provider
-     * to surface locals, parameters, and enclosing-scope members in the BODY context.
+     * Same scope walk as [resolveByNameInScope], but returns the full set of visible declarations
+     * rather than the first matching one. Used by the completion provider to surface locals,
+     * parameters, and enclosing-scope members in the BODY context.
      *
-     * Entries from inner scopes are listed first; if an outer scope declares a name
-     * already declared in an inner scope, the outer one is omitted (shadowing).
+     * Entries from inner scopes are listed first; if an outer scope declares a name already
+     * declared in an inner scope, the outer one is omitted (shadowing).
      */
     fun enumerateInScope(
         tree: XtcTree,
@@ -228,19 +238,29 @@ class XtcQueryEngine(
                         enumerateLocalsInBlock(current, line, column, uri)
                     }
 
-                    "method_declaration", "function_declaration", "constructor_declaration" -> {
+                    "method_declaration",
+                    "function_declaration",
+                    "constructor_declaration" -> {
                         enumerateParameters(current, uri)
                     }
 
-                    "class_body", "module_body", "package_body", "interface_body",
-                    "enum_body", "mixin_body", "service_body", "const_body",
-                    -> {
+                    "class_body",
+                    "module_body",
+                    "package_body",
+                    "interface_body",
+                    "enum_body",
+                    "mixin_body",
+                    "service_body",
+                    "const_body" -> {
                         enumerateMembers(current, uri)
                     }
 
-                    "class_declaration", "const_declaration", "service_declaration",
-                    "mixin_declaration", "enum_declaration", "annotation_declaration",
-                    -> {
+                    "class_declaration",
+                    "const_declaration",
+                    "service_declaration",
+                    "mixin_declaration",
+                    "enum_declaration",
+                    "annotation_declaration" -> {
                         enumerateShorthandProperties(current, uri)
                     }
 
@@ -259,9 +279,9 @@ class XtcQueryEngine(
     }
 
     /**
-     * Search a function/control-flow `block` for a `variable_declaration` whose name field
-     * matches and whose declaration position precedes the cursor. Forward references aren't
-     * legal Ecstasy, so a declaration at or after the cursor is ignored.
+     * Search a function/control-flow `block` for a `variable_declaration` whose name field matches
+     * and whose declaration position precedes the cursor. Forward references aren't legal Ecstasy,
+     * so a declaration at or after the cursor is ignored.
      */
     private fun findLocalVariableInBlock(
         block: XtcNode,
@@ -277,8 +297,8 @@ class XtcQueryEngine(
             .firstOrNull { it.text == name }
 
     /**
-     * Enumerate every local variable declared in the given block before the cursor position.
-     * The returned [SymbolInfo.location] points at the name identifier.
+     * Enumerate every local variable declared in the given block before the cursor position. The
+     * returned [SymbolInfo.location] points at the name identifier.
      */
     private fun enumerateLocalsInBlock(
         block: XtcNode,
@@ -315,9 +335,7 @@ class XtcQueryEngine(
             .firstOrNull { it.text == name }
     }
 
-    /**
-     * Enumerate every named parameter of a method/function/constructor declaration.
-     */
+    /** Enumerate every named parameter of a method/function/constructor declaration. */
     private fun enumerateParameters(
         method: XtcNode,
         uri: String,
@@ -349,8 +367,8 @@ class XtcQueryEngine(
             ?.firstOrNull { it.text == name }
 
     /**
-     * Enumerate every shorthand constructor parameter of a class-like declaration as a
-     * PROPERTY symbol.
+     * Enumerate every shorthand constructor parameter of a class-like declaration as a PROPERTY
+     * symbol.
      */
     private fun enumerateShorthandProperties(
         declaration: XtcNode,
@@ -368,9 +386,9 @@ class XtcQueryEngine(
             .orEmpty()
 
     /**
-     * Search a class/module/package/interface/enum/mixin/service/const body for a declared
-     * member (property, method, getter, nested type) whose name matches. Members are visible
-     * throughout the body, so position is not constrained.
+     * Search a class/module/package/interface/enum/mixin/service/const body for a declared member
+     * (property, method, getter, nested type) whose name matches. Members are visible throughout
+     * the body, so position is not constrained.
      */
     private fun findMemberInBody(
         body: XtcNode,
@@ -382,9 +400,7 @@ class XtcQueryEngine(
             .mapNotNull { it.childByFieldName("name") }
             .firstOrNull { it.text == name }
 
-    /**
-     * Enumerate every declared member (property, method, getter, nested type) in a body.
-     */
+    /** Enumerate every declared member (property, method, getter, nested type) in a body. */
     private fun enumerateMembers(
         body: XtcNode,
         uri: String,
@@ -395,7 +411,8 @@ class XtcQueryEngine(
                 val kind = memberNodeKinds[decl.type] ?: return@mapNotNull null
                 val nameNode = decl.childByFieldName("name") ?: return@mapNotNull null
                 nameNode.toSymbolInfo(nameNode.text, kind, uri)
-            }.toList()
+            }
+            .toList()
 
     private companion object {
         // Used by findScopeMembers to recognise declarations inside a body.
@@ -452,9 +469,7 @@ class XtcQueryEngine(
             )
     }
 
-    /**
-     * Find the declaration containing a given position.
-     */
+    /** Find the declaration containing a given position. */
     fun findDeclarationAt(
         tree: XtcTree,
         line: Int,
@@ -493,17 +508,16 @@ class XtcQueryEngine(
         kind: SymbolKind,
         uri: String,
         typeSignature: String? = null,
-    ) = SymbolInfo(
-        name = name,
-        qualifiedName = name,
-        kind = kind,
-        location = toLocation(uri),
-        typeSignature = typeSignature,
-    )
+    ) =
+        SymbolInfo(
+            name = name,
+            qualifiedName = name,
+            kind = kind,
+            location = toLocation(uri),
+            typeSignature = typeSignature,
+        )
 
-    /**
-     * Find imports in the tree (text only).
-     */
+    /** Find imports in the tree (text only). */
     fun findImports(tree: XtcTree): List<String> {
         logger.info("findImports")
         return buildList {
@@ -511,17 +525,16 @@ class XtcQueryEngine(
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text)
             }
-        }.also { imports ->
-            logger.info("findImports -> {} imports", imports.size)
-            if (imports.isNotEmpty()) {
-                imports.forEach { logger.info("  '{}'", it) }
-            }
         }
+            .also { imports ->
+                logger.info("findImports -> {} imports", imports.size)
+                if (imports.isNotEmpty()) {
+                    imports.forEach { logger.info("  '{}'", it) }
+                }
+            }
     }
 
-    /**
-     * Find imports in the tree with their source locations.
-     */
+    /** Find imports in the tree with their source locations. */
     fun findImportLocations(
         tree: XtcTree,
         uri: String,
@@ -532,28 +545,29 @@ class XtcQueryEngine(
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text to importNode.toLocation(uri))
             }
-        }.also { imports ->
-            logger.info("findImportLocations -> {} imports", imports.size)
-            if (imports.isNotEmpty()) {
-                imports.forEach { (path, loc) ->
-                    logger.info(
-                        "  '{}' at {}:{}:{}",
-                        path,
-                        loc.uri.substringAfterLast('/'),
-                        loc.startLine + 1,
-                        loc.startColumn + 1,
-                    )
+        }
+            .also { imports ->
+                logger.info("findImportLocations -> {} imports", imports.size)
+                if (imports.isNotEmpty()) {
+                    imports.forEach { (path, loc) ->
+                        logger.info(
+                            "  '{}' at {}:{}:{}",
+                            path,
+                            loc.uri.substringAfterLast('/'),
+                            loc.startLine + 1,
+                            loc.startColumn + 1,
+                        )
+                    }
                 }
             }
-        }
     }
 
     /**
      * Find all comment and string-literal nodes, returned as `(text, location)` pairs.
      *
-     * These are the host nodes that may contain URLs, file paths, or other free-text
-     * content the editor can hyperlink. Caller is responsible for scanning the text
-     * and computing per-match ranges relative to the host node's start position.
+     * These are the host nodes that may contain URLs, file paths, or other free-text content the
+     * editor can hyperlink. Caller is responsible for scanning the text and computing per-match
+     * ranges relative to the host node's start position.
      */
     fun findCommentAndStringNodes(
         tree: XtcTree,
@@ -564,9 +578,10 @@ class XtcQueryEngine(
                 val node = captures["text"] ?: return@executeQuery
                 add(node.text to node.toLocation(uri))
             }
-        }.also { nodes ->
-            logger.info("findCommentAndStringNodes -> {} nodes", nodes.size)
         }
+            .also { nodes ->
+                logger.info("findCommentAndStringNodes -> {} nodes", nodes.size)
+            }
     }
 
     private fun executeQuery(
@@ -586,7 +601,12 @@ class XtcQueryEngine(
                 handler(captures)
             }
         }
-        logger.info("executeQuery '{}': {} pattern(s), {} match(es)", queryName, query.patternCount, matchCount)
+        logger.info(
+            "executeQuery '{}': {} pattern(s), {} match(es)",
+            queryName,
+            query.patternCount,
+            matchCount,
+        )
     }
 
     override fun close() {
