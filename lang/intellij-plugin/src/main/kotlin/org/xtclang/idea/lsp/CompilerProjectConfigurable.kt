@@ -1,5 +1,7 @@
 package org.xtclang.idea.lsp
 
+import com.google.gson.Gson
+import com.google.gson.JsonParser
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
@@ -23,7 +25,12 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
     private val discovery = JBCheckBox("Discover source modules automatically")
     private val rows =
         DefaultTableModel(
-            arrayOf("Module", "Root URI or relative path", "Dependencies (comma separated)"),
+            arrayOf(
+                "Module",
+                "Root URI or relative path",
+                "Dependencies (comma separated)",
+                "Resource roots (JSON array; blank = automatic)",
+            ),
             0,
         )
     private val table = JBTable(rows)
@@ -36,7 +43,7 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
     override fun createComponent(): JComponent {
         val add =
             JButton("Add module").apply {
-                addActionListener { rows.addRow(arrayOf("", "", "")) }
+                addActionListener { rows.addRow(arrayOf("", "", "", "")) }
             }
         val remove =
             JButton("Remove module").apply {
@@ -83,10 +90,31 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
                     cell(0),
                     cell(1),
                     cell(2).split(',').map(String::trim).filter(String::isNotEmpty),
+                    cell(3).takeIf(String::isNotBlank)?.let { value ->
+                        val paths = runCatching {
+                            JsonParser.parseString(value)
+                        }
+                            .getOrElse {
+                                throw IllegalArgumentException(
+                                    "Resource roots must be a JSON array of paths",
+                                    it,
+                                )
+                            }
+                        require(paths.isJsonArray) {
+                            "Resource roots must be a JSON array of paths"
+                        }
+                        paths.asJsonArray.map { path ->
+                            require(path.isJsonPrimitive && path.asJsonPrimitive.isString) {
+                                "Resource roots must contain only paths"
+                            }
+                            path.asString
+                        }
+                    },
                 )
             }
 
-    override fun isModified(): Boolean = table.isEditing || modules() != original
+    override fun isModified(): Boolean =
+        table.isEditing || runCatching { modules() != original }.getOrDefault(true)
 
     override fun reset() {
         table.cellEditor?.cancelCellEditing()
@@ -95,7 +123,14 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
         table.isEnabled = !discovery.isSelected
         rows.rowCount = 0
         original.orEmpty().forEach {
-            rows.addRow(arrayOf(it.name, it.uri, it.dependencies.joinToString(", ")))
+            rows.addRow(
+                arrayOf(
+                    it.name,
+                    it.uri,
+                    it.dependencies.joinToString(", "),
+                    it.resourceRoots?.let { paths -> Gson().toJson(paths) }.orEmpty(),
+                )
+            )
         }
     }
 

@@ -8,6 +8,7 @@ import java.util.Map.copyOf as immutableMap
 import java.util.Set.copyOf as immutableSet
 import java.util.concurrent.CancellationException
 import org.xvm.tool.ModuleInfo
+import org.xvm.tool.ResourceDir
 
 /** One module's immutable text and membership, with editor overlays taking precedence over disk. */
 internal class XdkSources
@@ -16,16 +17,20 @@ private constructor(
     text: Map<File, String>,
     directories: Set<File>,
     private val aliases: Map<File, String>,
+    private val resources: XdkResources,
+    private val configuredResourceRoots: List<File>?,
 ) : ModuleInfo(root, false) {
     private val text = immutableMap(text)
+    private val resourceDirectory = resources.directory()
 
     /** Cache identity contains only immutable input values, never a parsed ModuleInfo tree. */
-    val inputs = Inputs(this.text, immutableSet(directories), immutableMap(aliases))
+    val inputs = Inputs(this.text, immutableSet(directories), immutableMap(aliases), resources)
 
     data class Inputs(
         val text: Map<File, String>,
         val directories: Set<File>,
         val aliases: Map<File, String>,
+        val resources: XdkResources,
     )
 
     private val entries: Map<File, List<SourceEntry>> =
@@ -55,6 +60,11 @@ private constructor(
     val documentUris: Set<String> = text.keys.mapTo(linkedSetOf(), ::uri)
 
     fun uri(file: File): String = aliases[file] ?: file.toURI().toString()
+
+    fun resourcesCurrent(cancelled: () -> Boolean): Boolean =
+        resources == XdkResources.capture(root, configuredResourceRoots, text.values, cancelled)
+
+    override fun getResourceDir(): ResourceDir = resourceDirectory
 
     override fun getSourceFile(): File = root
 
@@ -89,6 +99,8 @@ private constructor(
                 },
                 inputs.directories.mapTo(linkedSetOf()) { File(moves[it.path] ?: it.path) },
                 inputs.aliases.filterKeys { it.path !in moves },
+                inputs.resources,
+                inputs.resources.roots,
             )
 
         /** Canonical paths join editor URIs, compiler source names and filesystem notifications. */
@@ -122,6 +134,7 @@ private constructor(
         fun capture(
             root: File,
             overlays: Map<String, String>,
+            resourceRoots: List<File>? = null,
             cancelled: () -> Boolean,
         ): XdkSources {
             val buffers =
@@ -156,6 +169,8 @@ private constructor(
                 text,
                 directories,
                 buffers.filterKeys { it in files }.mapValues { it.value.uri },
+                XdkResources.capture(root, resourceRoots, text.values, cancelled),
+                resourceRoots,
             )
         }
     }
