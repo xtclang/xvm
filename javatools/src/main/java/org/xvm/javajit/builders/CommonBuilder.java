@@ -4192,6 +4192,8 @@ public class CommonBuilder
      */
     private static final String InstanceInit = Instance + "$=";
 
+    // ----- TEMPORARY -----------------------------------------------------------------------------
+
     private static final String[] NO_JIT_LIST = new String[] {
         "org.xtclang.ecstasy.reflect.Class",
         "org.xtclang.ecstasy.reflect.Type",
@@ -4217,7 +4219,6 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
             Set.of("duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
                    "ensurePersistent", // TODO: private access requested on a nullable array union
-                   "indexOf",    // TODO: property lookup fails during P_GET type analysis
                    "process")),  // TODO: NEWC_1 virtual-child construction
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
