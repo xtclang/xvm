@@ -46,6 +46,13 @@ fun Driver.rename(
         restorePopupFocus(editor.editor)
         false
     }
+    fillRenameDialog(replacement)
+}
+
+/** Submit the installed Rename dialog without synthesizing text edits in the driver. */
+fun Driver.fillRenameDialog(replacement: String) {
+    val dialog = ui.dialog(title = "Rename")
+    awaitUi("native rename dialog opens", 45.seconds) { dialog.present() }
     val input =
         dialog.x(JEditorUiComponent::class.java) {
             byType("com.intellij.openapi.editor.impl.EditorComponentImpl")
@@ -55,6 +62,32 @@ fun Driver.rename(
     awaitUi("rename accepts the new name", 10.seconds) { button.isEnabled() }
     withContext(OnDispatcher.EDT) { button.doClick() }
     awaitUi("rename dialog closes", 45.seconds) { dialog.notPresent() }
+}
+
+/** Select the reference-preserving XTC scope when another plugin also offers plain file rename. */
+fun Driver.chooseXtcFileRename() {
+    val chooser = ui.dialog(title = "Select Refactoring")
+    val rename = ui.dialog(title = "Rename")
+    awaitUi("native file rename scope or name dialog", 45.seconds) {
+        chooser.present() || rename.present()
+    }
+    if (chooser.present()) {
+        val option =
+            cast(
+                chooser
+                    .x {
+                        byType("javax.swing.JRadioButton") and
+                            byAccessibleName("Rename xtc file and references")
+                    }
+                    .component,
+                NativeButton::class,
+            )
+        val accept = cast(chooser.button("OK").component, NativeButton::class)
+        withContext(OnDispatcher.EDT) {
+            option.doClick()
+            accept.doClick()
+        }
+    }
 }
 
 /** Select the intention list, excluding its separate preview popup, without moving the pointer. */
