@@ -92,6 +92,7 @@ internal constructor(
         val argumentValues: List<Member> = emptyList(),
         val argumentOffset: Int = 0,
         val formals: List<Formal> = emptyList(),
+        val argumentLiterals: List<String> = emptyList(),
     ) {
         /**
          * Source argument index only; no argument-to-parameter mapping exists for an incomplete
