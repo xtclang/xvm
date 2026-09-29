@@ -26,9 +26,26 @@ fun Driver.rename(
 ) {
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+    fun available() =
+        withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+            utility(NativeEditorUi::class).renameAvailable(editor.editor)
+        }
+    awaitUi("installed Rename handler is available", 45.seconds) { available() }
     invokeAction("RenameElement", now = false, component = editor.component)
     val dialog = ui.dialog(title = "Rename")
-    awaitUi("native rename dialog", 45.seconds) { dialog.present() }
+    awaitUi(
+        "native rename dialog",
+        45.seconds,
+        errorMessage = {
+            withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                utility(NativeEditorUi::class).renameState(editor.editor)
+            }
+        },
+    ) {
+        if (dialog.present()) return@awaitUi true
+        restorePopupFocus(editor.editor)
+        false
+    }
     val input =
         dialog.x(JEditorUiComponent::class.java) {
             byType("com.intellij.openapi.editor.impl.EditorComponentImpl")
