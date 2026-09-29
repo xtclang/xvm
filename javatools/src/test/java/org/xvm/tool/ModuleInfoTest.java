@@ -30,6 +30,25 @@ class ModuleInfoTest {
     @TempDir
     Path tempDir;
 
+    @Test
+    void testHostSnapshotParsesBeforeItsDirectoryExists() {
+        var root = tempDir.resolve("not-created/Virtual.x").toFile();
+        var info = new ModuleInfo(root, "Virtual.example.org") {
+            @Override
+            protected char[] readSource(File file) {
+                assertEquals(root, file);
+                return "module Virtual.example.org {}".toCharArray();
+            }
+        };
+        assertEquals("Virtual.example.org", info.getQualifiedModuleName());
+        assertEquals("Virtual", info.getFileName());
+        var errors = new ErrorList();
+        assertNotNull(info.getSourceTree(errors));
+        assertFalse(errors.hasSeriousErrors(), errors.getErrors().toString());
+        assertFalse(root.getParentFile().exists(), "source proof must not create a destination");
+        assertThrows(IllegalArgumentException.class, () -> new ModuleInfo(root, false));
+    }
+
     // ----- Helper methods ------------------------------------------------------------------------
 
     /**

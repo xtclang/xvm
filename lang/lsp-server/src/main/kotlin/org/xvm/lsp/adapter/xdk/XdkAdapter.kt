@@ -3,6 +3,8 @@ package org.xvm.lsp.adapter.xdk
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
@@ -1598,6 +1600,14 @@ internal constructor(
      * Compiler-proven edits for IDE file-tree operations; no filesystem or configuration writes.
      */
     fun renameFilesAsync(files: Map<String, String>): CompletableFuture<WorkspaceEdit?> {
+        // Refuse links before canonicalization loses the requested file identity or captures a
+        // source snapshot for an alias. The compiler proof below performs the remaining checks.
+        if (
+            files.keys.any { uri ->
+                runCatching { Files.isSymbolicLink(Path.of(URI(uri))) }.getOrDefault(true)
+            }
+        )
+            return CompletableFuture.completedFuture(null)
         val scope =
             synchronized(lifecycle) {
                 files.keys.firstNotNullOfOrNull { uri ->
