@@ -26,6 +26,10 @@ import org.xvm.asm.Version;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
+import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement;
+import org.xvm.compiler.ast.partial.IncompleteExpression;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement;
 
 import org.xvm.tool.ResourceDir;
 

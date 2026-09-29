@@ -27,6 +27,7 @@ import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
@@ -83,7 +84,7 @@ final class PartialCallResolver {
             var supplied = target.receiverArgument()
                     ? Stream.concat(Stream.of(site.getReceiver().orElseThrow()), arguments.stream()).toList() : arguments;
             return methods.stream().takeWhile(method -> !errs.isAbortDesired())
-                    .flatMap(method -> site.probeCallCandidate(ctx, target.type(), info, method,
+                    .flatMap(method -> ((AstNode) site).probeCallCandidate(ctx, target.type(), info, method,
                             supplied, probe).stream())
                     .map(candidate -> target.receiverArgument() ? candidate.withReceiverArgument() : candidate)
                     .toList();
