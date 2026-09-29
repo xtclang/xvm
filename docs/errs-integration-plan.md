@@ -5658,7 +5658,7 @@ Implement as four separate checkpoints, then validate together:
 2. [x] Fresh declaration-only analysis for member generation beside missing-implementation errors.
 3. [x] Broader compiler-selected signatures: parameterized types, conditional/multiple returns,
    default arguments and generic methods.
-4. [ ] Prove intentional dispatch changes for existing calls and derived classes.
+4. [x] Prove intentional dispatch changes for existing calls and derived classes.
 
 No tests are run between these implementation checkpoints. Each extracted PR still needs its own
 validation; the combined batch cannot establish independent mergeability.
@@ -5677,3 +5677,11 @@ the compiler's literal spelling. Computed/unvalidated defaults, annotated/relati
 unresolvable cross-module type spellings remain refusals. Every candidate still requires the
 whole-graph compilation and binding/dispatch proof. Tests are written; execution is pending the
 fourth checkpoint.
+
+Checkpoint 4 admits inherited call and named-parameter rebinding only to the one inserted method.
+Every changed compiler dispatch chain must become the exact original chain when that method is
+removed; this includes descendants, existing descendant overrides, overloads and property chains.
+Other known source bindings remain identical. The fixtures include a closed dependent module and
+mixed overload/property/named-argument consumers. Header and failed-body occurrence views are
+combined for auto-import discovery, so the new declaration pass cannot hide unresolved names.
+All four checkpoints are now implemented; the batched validation follows.
