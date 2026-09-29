@@ -1034,9 +1034,9 @@ workspace acceptance receipt. No full 126-case playbook run is claimed.
 
 ### Tooling warning audit
 
-The build already uses Kotlin 2.4.20. `dependencyInsight --configuration ktlint --dependency
-kotlin-compiler-embeddable` identifies ktlint 1.8.0's private Kotlin 2.2.21 as the source of the
-JVM Unsafe warnings. Each formatting/check worker can emit it, independently of Gradle's log
+Before the Spotless/ktfmt migration below, the build already used Kotlin 2.4.20.
+`dependencyInsight --configuration ktlint --dependency kotlin-compiler-embeddable` identified
+ktlint 1.8.0's private Kotlin 2.2.21 as the source of the JVM Unsafe warnings. Each formatting/check worker could emit it, independently of Gradle's log
 level. As of this audit, [ktlint 1.8.0 is the latest stable release](https://github.com/ktlint/ktlint/releases)
 and the newer 2.0.0-ALPHA-4 changes coordinates, APIs and formatting behavior. A future upgrade
 should migrate the supported tool/plugin together and review formatting churn, rather than force
@@ -1047,18 +1047,18 @@ The September 29 follow-up reproduced the call directly with both cached compile
 Corretto JDK 25. Their `org.jetbrains.kotlin.com.intellij.util.containers.Unsafe` class files have
 identical SHA-256 hashes, and both emit the same warning when invoking `objectFieldOffset`.
 Upgrading just the embedded compiler to 2.4.20 therefore does not remove this dependency on Unsafe.
-The project compiler remains 2.4.20; 2.2.21 belongs only to ktlint's separate dependency graph.
-Compilation depends on ktlint checks, which explains the warning during native playbook builds.
+The project compiler remains 2.4.20; 2.2.21 belonged to ktlint's separate dependency graph.
+Compilation depended on ktlint checks, explaining the warning during native playbook builds.
 
 [ktlint's CLI launcher already supplies the JDK workaround](https://github.com/ktlint/ktlint/pull/3040),
 but [Gradle plugin 14.2.0 invokes the engine in its own worker](https://github.com/JLLeitschuh/ktlint-gradle/blob/v14.2.0/plugin/src/main/kotlin/org/jlleitschuh/gradle/ktlint/tasks/BaseKtLintCheckTask.kt),
 bypassing that launcher. Its public worker settings expose heap size, not arbitrary JVM arguments.
 A direct probe with `--sun-misc-unsafe-memory-access=allow` emits no warning. This is a scoped
 compatibility workaround, not removal of the deprecated API; an upstream parser fix is still needed.
-The practical alternative is to keep the same stable ktlint rules and replace the Gradle integration
-with declared-input/output CLI tasks that set the flag only for the formatter JVM. That migration
-must retain source-set coverage, format/check ordering, reports and configuration-cache reuse.
-It has not been implemented. Global JVM suppression and forced compiler overrides are unnecessary.
+One considered alternative was to keep the stable ktlint rules and replace the Gradle integration
+with declared-input/output CLI tasks that set the flag only for the formatter JVM. The user selected
+Spotless with ktfmt instead; the migration below supersedes that custom-launcher proposal.
+Global JVM suppression and forced compiler overrides are unnecessary.
 The separate JNA `System.load` warning concerns native-access opt-in, not this Unsafe call.
 
 ## Next checkpoint: isolate partial AST syntax
@@ -5885,3 +5885,48 @@ Only the no-action refusal still queries the protocol directly, retrying cancele
 Missing menus may be reopened only while the captured document modification stamp is unchanged;
 selection is cleared before positioning the caret, and applied edits/renames are never replayed.
 X105 verifies the shared helper still handles auto-import intentions. No mouse movement is used.
+
+## Spotless and ktfmt migration
+
+The completed L63 library/complete-repair batch was committed, validated and pushed through
+`c958ef667` before starting this separate tooling change. The ast.partial migration remains planned.
+
+| Checkpoint | Commit | Extraction boundary |
+|---|---|---|
+| Formatter integration | `63edf658c` | Replace the ktlint plugin/engine pins with the existing Spotless 8.10.2 plugin and ktfmt 0.64; configure coverage and local/CI task behavior centrally; format the eight lang build scripts. |
+| Source formatting | `59289aba6` | Apply ktfmt's four-space Kotlin style to 269 source/test files and remove three obsolete ktlint suppressions. No intended runtime or compiler behavior changes. |
+
+Extract these two commits together as a tooling PR: enabling the formatter without its initial
+source migration does not pass formatting checks. The application Kotlin compiler remains 2.4.20.
+All four Kotlin modules participate, including unit tests, IntelliJ integration tests and currently
+excluded DAP source. Generated/synced build outputs are outside the formatter targets. The lang
+root owns all eight Gradle scripts and aggregates source checks/applications from the four modules.
+There are no remaining ktlint dependencies, task references or suppressions in active build/source
+files. Historical ktlint validation receipts in this document remain records of their original runs.
+
+Local Kotlin compilation depends on `spotlessApply`; CI compilation depends on `spotlessCheck`.
+Local `check` applies first, with the actual per-format checks ordered afterward. Explicit
+`spotlessCheck` stays read-only. The standard task declares its source inputs and output state;
+no custom formatter launcher or global JVM warning suppression was added. ktfmt handles formatting,
+not ktlint-specific naming and other lint rules. No replacement static-analysis tool was introduced.
+
+Validation after both implementation slices:
+
+- **50 DSL tests, 69 selected LSP tests and 46 IntelliJ unit tests**, zero failures/errors/skips.
+  The LSP selection covers member generation, project-query lifetime and formatting configuration.
+  DAP sources and the IntelliJ native playbook driver compile. No native editor replay was needed
+  for this formatter-only migration.
+- Root Java/XTC Spotless and aggregate lang Spotless checks pass. A second real DAP compilation
+  with the same combined formatting-check command reused the configuration cache successfully.
+- Temporary malformed probes in a lang-root Gradle script and an IntelliJ integration-test source
+  both failed aggregate `spotlessCheck` as expected and remained byte-for-byte unchanged. CI-mode
+  compilation also rejected the integration-test probe without applying formatting. Both probes
+  were removed; the final checks are green.
+- The four multiline strings changed by formatting preserve their contents after their existing
+  `trimMargin`/`trimIndent` handling. Subsequent checks/compilation left all 277 changed Kotlin
+  source/build-script fingerprints unchanged.
+- No terminally deprecated `Unsafe.objectFieldOffset` warning appeared in these Spotless/ktfmt
+  runs. The test batch still reports the existing two Kotlin test-source warnings and JVM CDS
+  warning; this migration does not claim to eliminate unrelated warnings.
+
+Current formatting commands and behavior are documented in [lang/README.md](../lang/README.md#kotlin-formatting).
