@@ -1,5 +1,16 @@
 # Ecstasy Language Server - Manual Test Plan
 
+The current catalog has 128 scenarios. The
+[2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
+tracks the full selection, resumed cases, failures and focused corrections separately. Historical
+113-case full-run receipts below are preserved as historical evidence. All 128 scenarios plus START
+have passing native receipts across resumed runs. The final X105/X122/X123 recheck verifies the
+diagnostic result-ID correction restores native import quick fixes. This is not one uninterrupted
+full-suite checkpoint. VS Code 1.139.1 passes all 128 cases in one complete run, `run-b59XBq`, after
+correcting X60's source/resource invalidation and sorting the X77/X78 literal expectations.
+IntelliJ `run-5742519770640114134` rechecks the final code with START and
+X60/X77/X78/X105/X122/X123: all pass, with zero IDE errors.
+
 L64 expands shared X97 to 24 variants and X108 to 13. The additions accept compiler-validated
 `0`, empty-string, `True` and `Null` arguments and recursive written formal names. Both drivers
 check exact edits, successful repair and completion metadata; X97 also checks candidate
@@ -1210,8 +1221,9 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. The catalog now has 123 scenarios. The preceding 113-case suite has a clean full-run
-receipt; X109–X118 pass in the selected native rename batch. No new full 123-case run is claimed. Native
+disabled. The catalog now has 128 scenarios. The preceding 113-case suite has a clean full-run
+receipt; the [current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
+distinguishes resumed coverage from an uninterrupted full run. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
@@ -1267,6 +1279,9 @@ use the mouse. Readiness polling is 100 ms; operation deadlines remain unchanged
 The disposable profile disables autosave and automatic completion/sole-candidate insertion;
 personal settings and shipped plugin defaults are unchanged. Cleanup closes the IDE after a
 failed check; the recorded failures were not IDE crashes.
+CFG2 deliberately submits a cyclic dependency graph and expects an error notification while the
+last valid graph remains usable. That notification is an expected negative test; until its scoped
+cleanup is implemented it may remain visible over later cases.
 
 While compiler feature coverage is growing, run the IntelliJ playbook at occasional checkpoints;
 it is not required for every compiler change. Keep shared scenarios and the native consumer code
@@ -1530,7 +1545,7 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Separate declaration, document colors, monikers and inline values are not advertised. Native formatting is exercised further in X102/X107. |
+| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Document colors, monikers and inline values are not advertised. Native formatting is exercised further in X102/X107. |
 | X32 | Try completion in `box.pair(unknown = \|);`, `box.pair(first = "x", first = \|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
 
 ### F. Type-definition and implementation lookup
@@ -2065,8 +2080,8 @@ module Advanced {
 | X74 | In `buildPacket`, replace the construction with `new Packet<String>()`, then `new Packet<String>("a", )`, then `new Packet<String>(second = "b", first = )`; request help at each missing argument, then restore. | `new Packet(String first, String second)`; active parameter is respectively first, second, first. Written arguments fit a candidate, but an unfinished call does not select a constructor. Specialized constructions are exercised separately in X83–X85. |
 | X75 | In `edit`, replace `1 + word.size` with `(word.si`, `pair((word.si`, and `word[word.si` in turn, leaving the semicolon and method/module braces. Trigger completion after `si`, then restore. | `size` is offered despite missing `)`/`]`. The edit replaces only `si`; Problems continues showing the normal compiler errors until the source is repaired. No missing operand or value is invented. |
 | X76 | In `edit`, replace `1 + word.size` with `pair((pair(1, `, leaving the semicolon and braces. Request signature help after the comma, then restore. | The innermost `Int pair(Int first, Int second)` candidate highlights `second` despite the missing call/group delimiters. Problems clears after restoring the original source. Both drivers also reject overlapping semantic-token ranges before and during recovery, including anonymous construction type names. |
-| X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first = 1, second = )` and `new Packet<String>(second = "b", first = )`. Accept `text`, then restore before the next edit. | The compiler offers compatible `text` plus the bundled module properties `simpleName` and `qualifiedName`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
-| X78 | In `alternatives`, remove `text` from `choose(text)` and complete inside `choose()`. Request signature help before accepting `number`. Restore and repeat with `text`. | Both `number` and `text` are offered, along with compatible module properties `simpleName` and `qualifiedName`; `flag` is excluded. Signature help retains both overload candidates until a value is inserted. Either accepted completion compiles and clears Problems. |
+| X77 | In `values`, remove `text` from each of the three calls in turn and invoke completion at the empty slot. Also try `take(first = 1, second = )` and `new Packet<String>(second = "b", first = )`. Accept `text`, then restore before the next edit. | The compiler offers compatible `text`, the bundled module properties `simpleName` and `qualifiedName`, and the empty-string literal `""`, with an insertion at the cursor. `number`, `flag` and `fn` are excluded; VS Code may also show its independent snippets. The completed source compiles and Problems clears. Ordinary methods, function values and explicitly parameterized constructors use compiler argument fitting. |
+| X78 | In `alternatives`, remove `text` from `choose(text)` and complete inside `choose()`. Request signature help before accepting `number`. Restore and repeat with `text`. | Both `number` and `text` are offered, along with compatible module properties `simpleName` and `qualifiedName` and literals `0` and `""`; `flag` is excluded. Signature help retains both overload candidates until a value is inserted. Either accepted completion compiles and clears Problems. |
 | X79 | In `values`, shorten `text` to `te` in each of the three calls and invoke completion at its end. Also try `take(first = 1, second = te)` and `new Packet<String>(second = "b", first = te)`. Accept `text`, restoring between edits. | Only compatible `text` is offered; same-prefix `Int textNumber` is excluded. The edit replaces exactly `te`, preserving the label, commas and closing delimiter. The completed source compiles and Problems clears. |
 | X80 | In `prefixes`, shorten `choose(valueText)` to `choose(va)` and invoke completion after `va`. Request signature help, then accept `valueNumber`; restore and repeat accepting `valueText`. | Both compatible names are offered; `valueFlag` is excluded. Both overload signatures remain until acceptance. Exactly `va` is replaced, the completed call compiles and Problems clears. |
 | X81 | In `ArgumentValues.inspectValues`, shorten `takeValue(valueText)` to `takeValue(va)`, then try `takeValue(value = va)`. Complete after `va`, accept `valueText`, and restore between edits. | The compatible property `valueText` and constant `valueConstant` are offered with String types; `valueNumber` is excluded. Exactly `va` is replaced, preserving the label and delimiter. Acceptance clears Problems. |
