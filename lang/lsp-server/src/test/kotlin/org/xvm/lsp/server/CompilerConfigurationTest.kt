@@ -37,6 +37,7 @@ class CompilerConfigurationTest {
 
     @Test
     fun `resource root configuration distinguishes automatic empty and ordered custom paths`() {
+        directory = directory.toRealPath()
         val workspace = directory.toUri().toString()
         fun configuration(resources: List<String>?) =
             mapOf(
