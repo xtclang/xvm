@@ -19,7 +19,10 @@ The P1–P4 compiler organization checkpoint moves the four incomplete-syntax no
 capability or default adapter. Backend validation and the broader AST separation follow-ups are
 recorded in the [integration plan](../../../docs/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
 AST5 additionally shares read-only cursor/argument syntax queries in that package, with no capability
-change or new compiler state.
+change or new compiler state. AST1 and AST3 consolidate scope collection and capture projection
+in the existing compiler helpers, preserving the adapter's public results. Their focused
+200-test validation and commit map are recorded in the
+[follow-up receipt](../../../docs/errs-integration-plan.md#scope-and-capture-helper-follow-ups-ast1-and-ast3).
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
