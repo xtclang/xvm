@@ -1771,7 +1771,8 @@
         "replaceFrom": "return 1 + word.size;",
         "replaceWith": "return ${0};",
         "signature": "Int pair(Int first, Int second)",
-        "activeParameter": 1
+        "activeParameter": 1,
+        "tokensNonOverlapping": true
       },
       "intellij": {
         "coverage": "full",
@@ -3807,7 +3808,8 @@
               "Library.example.org"
             ]
           }
-        ]
+        ],
+        "projectSettingsRoundTrip": true
       },
       "intellij": {
         "coverage": "full",
@@ -3961,6 +3963,19 @@
           }
         ],
         "refusalMember": "read"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X123": {
+      "title": "pull diagnostics report full, unchanged and repaired results through the installed client",
+      "manual": [],
+      "values": {
+        "file": "Diagnostics.x",
+        "broken": "module Diagnostics { Int run() = missing; }",
+        "repaired": "module Diagnostics { Int run() = 1; }"
       },
       "intellij": {
         "coverage": "full",

@@ -214,7 +214,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Entirely absent feature or extension | What exists today | Task |
 |---|---|---|
 | Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports and proven implement/override | L62–L63 |
-| Pull document/workspace diagnostics | Versioned push diagnostics and Problems updates | L68 |
+| Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 await acceptance; push remains for other clients. | L68, validation pending |
 | Semantic-token range/delta requests | Full-document tokens | L69 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | Eager results for the currently supported facts | L70 |
 | File-operation pre-edit requests; explicit create/delete notifications | Watched-file refresh and `didRenameFiles` lifecycle handling | L71 |

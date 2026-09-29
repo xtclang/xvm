@@ -22,6 +22,7 @@ object DiagnosticProbePlugin {
                   <depends>com.intellij.modules.platform</depends>
                   <depends>com.intellij.modules.lang</depends>
                   <depends>com.redhat.devtools.lsp4ij</depends>
+                  <depends>org.xtclang.idea</depends>
                 </idea-plugin>
                 """
                     .trimIndent()
