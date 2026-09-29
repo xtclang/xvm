@@ -4,9 +4,9 @@ Use `lagergren/errs` in this repository. This is a manual tour of implemented fe
 not a claim that every XTC construct or LSP operation is complete. Checked against platform
 `b8be627b7` on 2026-09-29; use the named code anchors below rather than fixed line numbers.
 
-**Start with `auth` and `githubCLI`.** Both compile cleanly through the packaged compiler server.
-The full platform graph currently exposes a source-location crash and missing resource-path
-support. They are the next bug-fix tasks:
+**Start with `auth` and `githubCLI` for a short tour.** The full eleven-module graph also compiles
+cleanly through the packaged server after configuring platformUI's generated resources below:
+49 document reports, no diagnostics. The source-location/resource and presentation fixes are tracked in
 [PLAT1–PLAT3](docs/errs-integration-plan.md#platform-demo-blockers-2026-09-29).
 
 ## Launch
@@ -70,8 +70,8 @@ Paths below are relative to platform. Open these three files:
 Definition, references, subtype/property targets, incoming calls, bundled type navigation, highlights,
 inlay hints, links, outline and folds above were checked through the packaged server. This platform
 session has **not** been driven through native IntelliJ; the shared playbook has separate native
-receipts. Hover and completed-call parameter highlighting have real-platform gaps (PLAT3), so do
-not present their current output as a polished success.
+receipts. The PLAT3 packaged recheck now shows the correct use-site hover, four signature parameters
+with `group` active, and `trim` completion before existing parentheses on the chained receiver.
 
 ## Completion, signature help and live repair
 
@@ -128,8 +128,9 @@ Make one edit at a time and Undo it afterward.
   select those lines and invoke **Reformat Code**. Repeat for the whole file, then Undo. Press Enter
   inside a block to show on-type indentation. The formatter preserves token spellings; it does not
   promise expression wrapping or binary-operator spacing changes.
-- **Hover:** use **Quick Documentation** on a declaration and on a use; compare them. PLAT3 tracks
-  a use-site hover incorrectly displaying its enclosing method, even though definition is correct.
+- **Hover:** use **Quick Documentation** on `sendRequest` in **R**; it should show that method's
+  substituted signature, not the enclosing `listRepositories`. On narrowed `repo` after the
+  `JsonObject` assertion, **Go to Type Declaration** should reach bundled `Map.x`.
 - **Linked editing:** the server returns the three ranges for local `value` in **G**'s `readLine`.
   Automatic linked typing depends on the client UI; **Rename** is the dependable manual entry point.
   Do not confuse ordinary occurrence highlighting with linked editing.
@@ -137,7 +138,7 @@ Make one edit at a time and Undo it afterward.
   inherited written contracts. The normal IntelliJ definition action is not independent proof of
   that request; use shared X4 for its dedicated client/protocol checks.
 
-## Full platform tour after the blockers are fixed
+## Full platform tour
 
 Keep the first two graph rows and add these rows in Ecstasy Compiler settings:
 
@@ -152,6 +153,15 @@ Keep the first two graph rows and add these rows in Ecstasy Compiler settings:
 | `platformCLI.xqiz.it` | `platformCLI/src/main/x/platformCLI.x` | `auth.xqiz.it, common.xqiz.it` |
 | `platformUI.xqiz.it` | `platformUI/src/main/x/platformUI.x` | `common.xqiz.it, challenge.xqiz.it, auth.xqiz.it` |
 | `kernel.xqiz.it` | `kernel/src/main/x/kernel.x` | `common.xqiz.it, platformDB.xqiz.it` |
+
+For the platformUI row, set **Resource roots** to `["platformUI/gui/dist"]` before applying.
+Its Gradle build adds that generated directory with `sourceSets.main.resources.srcDir(guiDistDir)`;
+the embedded `Directory:/spa` is `platformUI/gui/dist/spa`. It already existed in the checked demo
+workspace. If missing, build it from platform's root with `./gradlew :platformUI:buildGui` first.
+Other modules can leave this column blank: the compiler finds their conventional
+`src/main/resources` directories. The plugin does not yet import evaluated Gradle paths or run
+resource-generation tasks automatically. Paths use project-root-relative URI syntax here; no
+assets need copying into `src/main/x`.
 
 Then demonstrate these real relationships, with all roots clean before trying rename/actions:
 
