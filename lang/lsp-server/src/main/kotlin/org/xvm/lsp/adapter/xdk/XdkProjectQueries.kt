@@ -302,9 +302,9 @@ internal class XdkProjectQueries(
             XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
                 checkCurrent()
                 val edit = candidate.edit(text) ?: return@mapNotNull null
-                val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
+                val plan = XdkRename.Plan(texts, mapOf(source to edit.all))
                 val after = compile(plan.proposed) ?: return@mapNotNull null
-                if (!XdkRename.preservesMemberAdditions(before, after, plan, candidate.members)) return@mapNotNull null
+                if (!XdkRename.preservesMemberAdditions(before, after, plan, candidate.members, edit.member)) return@mapNotNull null
                 CodeAction(
                     candidate.title,
                     // The class may be valid until constructed, and a construction diagnostic can
@@ -353,7 +353,7 @@ internal class XdkProjectQueries(
                         project
                     }
                 val edit = XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
-                val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
+                val plan = XdkRename.Plan(texts, mapOf(source to edit.all))
                 val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
                 if (!XdkRename.preservesKnownBindings(before, after, plan)) return@mapNotNull null
                 CodeAction(
