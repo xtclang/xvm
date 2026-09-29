@@ -3707,7 +3707,7 @@
       }
     },
     "X122": {
-      "title": "implement and override source methods with native Undo and Redo",
+      "title": "implement and override source and bundled methods with native Undo and Redo",
       "manual": [],
       "values": {
         "file": "Actions.x",
@@ -3754,11 +3754,30 @@
             "initiallyValid": false
           },
           {
+            "source": "module Actions { class Box implements Iterator<String> {} Box make() = new Box(); }",
+            "title": "Implement conditional String next()",
+            "expected": "module Actions { class Box implements Iterator<String> {\n    @Override\n    conditional String next() {\n        TODO();\n    }\n} Box make() = new Box(); }",
+            "initiallyValid": false
+          },
+          {
+            "source": "module Actions { interface Api { (Int | String) read(); } class Box implements Api {} }",
+            "title": "Implement (Int64 | String) read()",
+            "expected": "module Actions { interface Api { (Int | String) read(); } class Box implements Api {\n    @Override\n    (Int64 | String) read() {\n        TODO();\n    }\n} }",
+            "initiallyValid": true
+          },
+          {
+            "source": "module Actions { interface Api { Int read(Int value = 1); } class Box implements Api {} Box make() = new Box(); }",
+            "title": "Implement Int64 read(Int64 value = 1)",
+            "expected": "module Actions { interface Api { Int read(Int value = 1); } class Box implements Api {\n    @Override\n    Int64 read(Int64 value = 1) {\n        TODO();\n    }\n} Box make() = new Box(); }",
+            "initiallyValid": false
+          },
+          {
             "source": "module Actions { interface Api { String read(String value); } class Box implements Api { @Override String read(String value) = value; } }",
             "title": "",
             "expected": "module Actions { interface Api { String read(String value); } class Box implements Api { @Override String read(String value) = value; } }"
           }
-        ]
+        ],
+        "refusalMember": "read"
       },
       "intellij": {
         "coverage": "full",
