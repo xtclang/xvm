@@ -1,6 +1,6 @@
 import { Edit, modify, parse, ParseError } from 'jsonc-parser';
 
-export interface SourceModule { name: string; uri: string; dependencies?: string[] }
+export interface SourceModule { name: string; uri: string; dependencies?: string[]; resourceRoots?: string[] | null }
 
 export function sourceModulesIn(text: string, path: string[]): unknown {
     const errors: ParseError[] = [];
@@ -15,12 +15,19 @@ export function sourceGraphKey(value: unknown, base?: string): string {
     const string = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
     const modules = value.map(module => {
         if (!module || !string(module.name) || !string(module.uri)
-            || (module.dependencies !== undefined && (!Array.isArray(module.dependencies) || !module.dependencies.every(string)))) {
+            || (module.dependencies !== undefined && (!Array.isArray(module.dependencies) || !module.dependencies.every(string)))
+            || (module.resourceRoots != null && (!Array.isArray(module.resourceRoots) || !module.resourceRoots.every(string)))) {
             throw new Error('Source modules require non-blank names, file URIs and dependency names.');
         }
         const uri = new URL(module.uri, base);
         if (uri.protocol !== 'file:') throw new Error('Source module roots must use file URIs.');
-        return { name: module.name, uri: uri.href, dependencies: [...new Set<string>(module.dependencies ?? [])].sort() };
+        const resources: string[] | null = module.resourceRoots == null ? null : module.resourceRoots.map((path: string) => {
+            const root = new URL(path, base);
+            if (root.protocol !== 'file:') throw new Error('Resource roots must use file URIs.');
+            return root.href.replace(/\/+$/, '') + '/';
+        });
+        if (resources && new Set(resources).size !== resources.length) throw new Error('Duplicate resource roots.');
+        return { name: module.name, uri: uri.href, resourceRoots: resources, dependencies: [...new Set<string>(module.dependencies ?? [])].sort() };
     });
     if (new Set(modules.map(module => module.name)).size !== modules.length
         || new Set(modules.map(module => module.uri)).size !== modules.length) {
