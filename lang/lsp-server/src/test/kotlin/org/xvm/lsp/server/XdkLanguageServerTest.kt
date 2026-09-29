@@ -1,5 +1,8 @@
 package org.xvm.lsp.server
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.DefinitionParams
@@ -35,9 +38,6 @@ import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkLanguageServerTest {
     @Test
@@ -48,11 +48,15 @@ class XdkLanguageServerTest {
             val value = if (type == "Int") "1" else "\"text\""
             val errors = ErrorList()
             val result =
-                EmbeddingSupport.instance().compileModule(
-                    Source("module Library { static $type value() = $value; }", "file:///Library.x"),
-                    null,
-                    errors,
-                )
+                EmbeddingSupport.instance()
+                    .compileModule(
+                        Source(
+                            "module Library { static $type value() = $value; }",
+                            "file:///Library.x",
+                        ),
+                        null,
+                        errors,
+                    )
             assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
             return result.toDependency()
         }
@@ -75,8 +79,12 @@ class XdkLanguageServerTest {
             val target =
                 session.documents
                     .definition(
-                        DefinitionParams(TextDocumentIdentifier(URI), Position(0, source.indexOf("value"))),
-                    ).get(10, SECONDS)
+                        DefinitionParams(
+                            TextDocumentIdentifier(URI),
+                            Position(0, source.indexOf("value")),
+                        )
+                    )
+                    .get(10, SECONDS)
                     .left
                     .single()
             assertThat(target.uri).isEqualTo("file:///Library.x")
@@ -104,7 +112,10 @@ class XdkLanguageServerTest {
                     content: String,
                 ): CompletableFuture<CompilationResult> =
                     CompletableFuture.completedFuture(
-                        CompilationResult.failure(uri, listOf(Diagnostic.error(foreign, "dependency failure"))),
+                        CompilationResult.failure(
+                            uri,
+                            listOf(Diagnostic.error(foreign, "dependency failure")),
+                        )
                     )
             }
         Session(adapter).use { session ->
@@ -123,9 +134,7 @@ class XdkLanguageServerTest {
         }
     }
 
-    private class Session(
-        adapter: Adapter,
-    ) : AutoCloseable {
+    private class Session(adapter: Adapter) : AutoCloseable {
         val published = LinkedBlockingQueue<PublishDiagnosticsParams>()
         val server = XtcLanguageServer(adapter)
         val documents = server.textDocumentService
@@ -133,40 +142,49 @@ class XdkLanguageServerTest {
         init {
             val client = mock(LanguageClient::class.java)
             doAnswer { call ->
-                published.add(call.getArgument(0))
-                null
-            }.`when`(client).publishDiagnostics(org.mockito.ArgumentMatchers.any())
+                    published.add(call.getArgument(0))
+                    null
+                }
+                .`when`(client)
+                .publishDiagnostics(org.mockito.ArgumentMatchers.any())
             server.connect(client)
         }
 
         fun open(
             content: String,
             version: Int = 1,
-        ) = documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", version, content)))
+        ) =
+            documents.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", version, content))
+            )
 
         fun change(
             content: String,
             version: Int,
-        ) = documents.didChange(
-            DidChangeTextDocumentParams(
-                VersionedTextDocumentIdentifier(URI, version),
-                listOf(TextDocumentContentChangeEvent(content)),
-            ),
-        )
+        ) =
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(URI, version),
+                    listOf(TextDocumentContentChangeEvent(content)),
+                )
+            )
 
-        fun closeDocument() = documents.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(URI)))
+        fun closeDocument() =
+            documents.didClose(DidCloseTextDocumentParams(TextDocumentIdentifier(URI)))
 
-        fun next(): PublishDiagnosticsParams = checkNotNull(published.poll(30, SECONDS)) { "no diagnostic publication" }
+        fun next(): PublishDiagnosticsParams =
+            checkNotNull(published.poll(30, SECONDS)) { "no diagnostic publication" }
 
         override fun close() {
             server.shutdown().get(10, SECONDS)
         }
     }
 
-    /** An uncooperative backend can finish after cancellation; publication still must be guarded. */
-    private class PendingAdapter(
-        private val delegate: MockAdapter = MockAdapter(),
-    ) : Adapter by delegate {
+    /**
+     * An uncooperative backend can finish after cancellation; publication still must be guarded.
+     */
+    private class PendingAdapter(private val delegate: MockAdapter = MockAdapter()) :
+        Adapter by delegate {
         private data class Pending(
             val uri: String,
             val content: String,
@@ -174,7 +192,8 @@ class XdkLanguageServerTest {
         )
 
         private val pending = mutableListOf<Pending>()
-        val count: Int get() = pending.size
+        val count: Int
+            get() = pending.size
 
         override fun compileAsync(
             uri: String,
@@ -194,7 +213,9 @@ class XdkLanguageServerTest {
         }
 
         fun fail(index: Int) {
-            pending[index].result.completeExceptionally(IllegalArgumentException("compiler failure"))
+            pending[index]
+                .result
+                .completeExceptionally(IllegalArgumentException("compiler failure"))
         }
     }
 
@@ -249,7 +270,8 @@ class XdkLanguageServerTest {
         val adapter = PendingAdapter()
         Session(adapter).use { session ->
             session.open("module Waiting {}")
-            val outline = session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
+            val outline =
+                session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             assertThat(outline.isDone).isFalse()
             adapter.finish(0)
             assertThat(outline.get(10, SECONDS).map { it.right.name }).contains("Waiting")
@@ -262,10 +284,12 @@ class XdkLanguageServerTest {
         val adapter = PendingAdapter()
         Session(adapter).use { session ->
             session.open("module Old {}")
-            val outline = session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
+            val outline =
+                session.documents.documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(URI)))
             session.change("module New {}", 2)
             adapter.finish(0)
-            assertThatThrownBy { outline.get(10, SECONDS) }.hasMessageContaining("Document changed during analysis")
+            assertThatThrownBy { outline.get(10, SECONDS) }
+                .hasMessageContaining("Document changed during analysis")
         }
     }
 
@@ -275,13 +299,7 @@ class XdkLanguageServerTest {
         Session(adapter).use { session ->
             session.open("module Failed {}")
             adapter.fail(0)
-            assertThat(
-                session
-                    .next()
-                    .diagnostics
-                    .single()
-                    .code.left,
-            ).isEqualTo("ANALYSIS-FAILED")
+            assertThat(session.next().diagnostics.single().code.left).isEqualTo("ANALYSIS-FAILED")
             session.change("module Recovered {}", 2)
             adapter.finish(1)
             assertThat(session.next().diagnostics).isEmpty()
@@ -352,25 +370,30 @@ class XdkLanguageServerTest {
             for (includeDeclaration in listOf(false, true)) {
                 val references =
                     session.documents
-                        .references(ReferenceParams(document, cursor, ReferenceContext(includeDeclaration)))
+                        .references(
+                            ReferenceParams(document, cursor, ReferenceContext(includeDeclaration))
+                        )
                         .get(10, SECONDS)
                 assertThat(references).allMatch { it.uri == URI }
-                val expected = if (includeDeclaration) listOf(declaration, write, read) else listOf(write, read)
-                assertThat(references.map { it.range }).containsExactlyElementsOf(expected.map(::range))
+                val expected =
+                    if (includeDeclaration) listOf(declaration, write, read)
+                    else listOf(write, read)
+                assertThat(references.map { it.range })
+                    .containsExactlyElementsOf(expected.map(::range))
             }
-            val highlights = session.documents.documentHighlight(DocumentHighlightParams(document, cursor)).get(10, SECONDS)
-            assertThat(highlights.map { it.range }).containsExactly(range(declaration), range(write), range(read))
+            val highlights =
+                session.documents
+                    .documentHighlight(DocumentHighlightParams(document, cursor))
+                    .get(10, SECONDS)
+            assertThat(highlights.map { it.range })
+                .containsExactly(range(declaration), range(write), range(read))
         }
     }
 
     @Test
     fun `compiler mode advertises only its implemented features`() {
         Session(XdkAdapter()).use { session ->
-            val capabilities =
-                session.server
-                    .initialize(InitializeParams())
-                    .get()
-                    .capabilities
+            val capabilities = session.server.initialize(InitializeParams()).get().capabilities
             assertThat(capabilities.hoverProvider.left).isTrue()
             assertThat(capabilities.definitionProvider.left).isTrue()
             assertThat(capabilities.typeDefinitionProvider.left).isTrue()

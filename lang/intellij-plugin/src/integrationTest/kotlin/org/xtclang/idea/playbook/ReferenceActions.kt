@@ -21,7 +21,10 @@ fun Driver.referencesAndHighlights(
     val support =
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             editor.editor.getCaretModel().moveToOffset(at)
-            val file = requireNotNull(service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()))
+            val file =
+                requireNotNull(
+                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+                )
             utility(LspFileSupport::class).getSupport(file)
         }
     val path = editor.editor.getVirtualFile().getPath()
@@ -30,8 +33,14 @@ fun Driver.referencesAndHighlights(
         range: SourceRange,
         offset: Int,
     ): Boolean {
-        val start = range.getStart().let { editor.document.getLineStartOffset(it.getLine()) + it.getCharacter() }
-        val end = range.getEnd().let { editor.document.getLineStartOffset(it.getLine()) + it.getCharacter() }
+        val start =
+            range.getStart().let {
+                editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
+            }
+        val end =
+            range.getEnd().let {
+                editor.document.getLineStartOffset(it.getLine()) + it.getCharacter()
+            }
         return offset in start until end
     }
     val views = service<NativeUsageViews>(singleProject())
@@ -40,7 +49,8 @@ fun Driver.referencesAndHighlights(
     awaitUi("native references contain this use and exclude its shadowed namesake", 45.seconds) {
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
-            if (view == null || view == previous || view.isSearchInProgress()) return@withContext false
+            if (view == null || view == previous || view.isSearchInProgress())
+                return@withContext false
             val ranges = view.rangesIn(path)
             ranges.any { at in it } && ranges.none { excluded in it }
         }
@@ -49,9 +59,11 @@ fun Driver.referencesAndHighlights(
     invokeAction("HighlightUsagesInFile", component = editor.component)
     awaitUi("native highlights contain this use and exclude its shadowed namesake", 45.seconds) {
         val future = support.getHighlightSupport().getValidLSPFuture()
-        if (future == null || !future.isDone() || future.isCompletedExceptionally()) return@awaitUi false
+        if (future == null || !future.isDone() || future.isCompletedExceptionally())
+            return@awaitUi false
         val highlights = future.get()
-        highlights.any { contains(it.getRange(), at) } && highlights.none { contains(it.getRange(), excluded) }
+        highlights.any { contains(it.getRange(), at) } &&
+            highlights.none { contains(it.getRange(), excluded) }
     }
     invokeAction("EditorEscape", component = editor.component)
 }
@@ -95,7 +107,10 @@ interface NativeSourceRange {
     fun getEndOffset(): Int
 }
 
-@Remote("com.redhat.devtools.lsp4ij.features.highlight.LSPHighlightSupport", plugin = "com.redhat.devtools.lsp4ij")
+@Remote(
+    "com.redhat.devtools.lsp4ij.features.highlight.LSPHighlightSupport",
+    plugin = "com.redhat.devtools.lsp4ij",
+)
 interface HighlightSupport {
     fun getValidLSPFuture(): HighlightFuture?
 }

@@ -21,7 +21,9 @@ data class SourceModuleConfiguration(
     val uri: String,
     val dependencies: List<String>,
 ) {
-    internal constructor(module: XdkSourceModule) : this(module.name, module.uri, module.dependencies.sorted())
+    internal constructor(
+        module: XdkSourceModule
+    ) : this(module.name, module.uri, module.dependencies.sorted())
 }
 
 /** Input graph receipt; does not claim knowledge of consumers outside these source roots. */

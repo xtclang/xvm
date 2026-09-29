@@ -1,5 +1,8 @@
 package org.xvm.lsp.server
 
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
@@ -40,15 +43,12 @@ import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 
 /**
- * Integration test that exercises the LSP server against real `.x` source files from
- * the repository. Unlike [XtcLanguageServerTest], which uses synthetic inline snippets
- * with the [MockAdapter], this test opens actual XTC standard library and
- * manual test files and verifies that each LSP capability returns meaningful results.
+ * Integration test that exercises the LSP server against real `.x` source files from the
+ * repository. Unlike [XtcLanguageServerTest], which uses synthetic inline snippets with the
+ * [MockAdapter], this test opens actual XTC standard library and manual test files and verifies
+ * that each LSP capability returns meaningful results.
  *
  * ## How to run
  *
@@ -57,38 +57,37 @@ import java.nio.file.Paths
  *     --tests "org.xvm.lsp.server.LspIntegrationTest"
  * ```
  *
- * The test **must** be run via Gradle (not directly from IntelliJ) because the build
- * passes the system property `xtc.composite.root` to the test JVM. This property points
- * to the top-level project root (found via the `version.properties` marker file, using
- * the same approach as `XdkPropertiesService.compositeRootDirectory()`), which is needed
- * to locate the real `.x` source files in `lib_ecstasy/` and `manualTests/`.
+ * The test **must** be run via Gradle (not directly from IntelliJ) because the build passes the
+ * system property `xtc.composite.root` to the test JVM. This property points to the top-level
+ * project root (found via the `version.properties` marker file, using the same approach as
+ * `XdkPropertiesService.compositeRootDirectory()`), which is needed to locate the real `.x` source
+ * files in `lib_ecstasy/` and `manualTests/`.
  *
  * ## Adapter selection
  *
- * At startup (`@BeforeAll`), the test tries to instantiate a [TreeSitterAdapter]. If the
- * native tree-sitter library is available (which it is when the `tree-sitter` subproject
- * has been built), all tests run against the real syntax-aware parser. If the native lib
- * is unavailable (e.g. in a CI environment without native builds), the test falls back to
- * [MockAdapter] and the tests still pass -- they just exercise regex-based parsing.
+ * At startup (`@BeforeAll`), the test tries to instantiate a [TreeSitterAdapter]. If the native
+ * tree-sitter library is available (which it is when the `tree-sitter` subproject has been built),
+ * all tests run against the real syntax-aware parser. If the native lib is unavailable (e.g. in a
+ * CI environment without native builds), the test falls back to [MockAdapter] and the tests still
+ * pass -- they just exercise regex-based parsing.
  *
  * ## Test files
- *
- * | File | Path | Why |
- * |------|------|-----|
- * | `Boolean.x` | `lib_ecstasy/.../ecstasy/Boolean.x` | Enum with methods, `@Op` annotations, many self-references |
- * | `Exception.x` | `lib_ecstasy/.../ecstasy/Exception.x` | Const class, constructor, properties, methods |
- * | `Closeable.x` | `lib_ecstasy/.../ecstasy/Closeable.x` | Small interface with doc comments |
- * | `TestSimple.x` | `lang/lsp-server/src/test/resources/fixtures/TestSimple.x` | Stable local fixture for module with `@Inject`, local vars |
+ * |File          |Path                                                      |Why                                                       |
+ * |--------------|----------------------------------------------------------|----------------------------------------------------------|
+ * |`Boolean.x`   |`lib_ecstasy/.../ecstasy/Boolean.x`                       |Enum with methods, `@Op` annotations, many self-references|
+ * |`Exception.x` |`lib_ecstasy/.../ecstasy/Exception.x`                     |Const class, constructor, properties, methods             |
+ * |`Closeable.x` |`lib_ecstasy/.../ecstasy/Closeable.x`                     |Small interface with doc comments                         |
+ * |`TestSimple.x`|`lang/lsp-server/src/test/resources/fixtures/TestSimple.x`|Stable local fixture for module with `@Inject`, local vars|
  *
  * ## How it works
  *
- * Each test creates a fresh [XtcLanguageServer] with a mock [LanguageClient] (`@BeforeEach`),
- * then opens a real file via `didOpen` and calls the LSP method under test (hover, completion,
+ * Each test creates a fresh [XtcLanguageServer] with a mock [LanguageClient] (`@BeforeEach`), then
+ * opens a real file via `didOpen` and calls the LSP method under test (hover, completion,
  * definition, etc.). Assertions verify the server returns structurally correct, non-empty results.
  *
- * Symbol positions are found dynamically using [findPosition], which locates a string in the
- * file content and converts it to a 0-based `(line, column)` position. This makes the tests
- * resilient to edits in the test files.
+ * Symbol positions are found dynamically using [findPosition], which locates a string in the file
+ * content and converts it to a 0-based `(line, column)` position. This makes the tests resilient to
+ * edits in the test files.
  *
  * @see XtcLanguageServerTest for unit tests with synthetic snippets
  */
@@ -120,7 +119,8 @@ class LspIntegrationTest {
                 "Boolean.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Boolean.x"),
                 "Exception.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Exception.x"),
                 "Closeable.x" to loadTestFile(root, "lib_ecstasy/src/main/x/ecstasy/Closeable.x"),
-                "TestSimple.x" to loadTestFile(root, "lang/lsp-server/src/test/resources/fixtures/TestSimple.x"),
+                "TestSimple.x" to
+                    loadTestFile(root, "lang/lsp-server/src/test/resources/fixtures/TestSimple.x"),
             )
     }
 
@@ -136,14 +136,17 @@ class LspIntegrationTest {
     // Helpers
     // ========================================================================
 
-    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? = runCatching { TreeSitterAdapter() }.getOrNull()
+    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? = runCatching {
+        TreeSitterAdapter()
+    }
+        .getOrNull()
 
     private fun resolveProjectRoot(): Path {
         val root =
             System.getProperty("xtc.composite.root")
                 ?: throw IllegalStateException(
                     "System property 'xtc.composite.root' not set. " +
-                        "Run tests via Gradle: ./gradlew :lang:lsp-server:test",
+                        "Run tests via Gradle: ./gradlew :lang:lsp-server:test"
                 )
         return Paths.get(root)
     }
@@ -161,9 +164,9 @@ class LspIntegrationTest {
     }
 
     /**
-     * Find the 0-based (line, column) of an occurrence of [text] in [content].
-     * Starts searching from [startIndex] (default 0) so callers can skip past
-     * occurrences in comments or other non-code regions.
+     * Find the 0-based (line, column) of an occurrence of [text] in [content]. Starts searching
+     * from [startIndex] (default 0) so callers can skip past occurrences in comments or other
+     * non-code regions.
      */
     private fun findPosition(
         content: String,
@@ -171,7 +174,9 @@ class LspIntegrationTest {
         startIndex: Int = 0,
     ): Position {
         val idx = content.indexOf(text, startIndex)
-        assertThat(idx).describedAs("'$text' not found in content from index $startIndex").isGreaterThanOrEqualTo(0)
+        assertThat(idx)
+            .describedAs("'$text' not found in content from index $startIndex")
+            .isGreaterThanOrEqualTo(0)
         val line = content.substring(0, idx).count { it == '\n' }
         val lastNewline = content.lastIndexOf('\n', idx - 1)
         val col = idx - lastNewline - 1
@@ -181,7 +186,7 @@ class LspIntegrationTest {
     private fun openFile(name: String): TestFile {
         val tf = testFiles.getValue(name)
         server.textDocumentService.didOpen(
-            DidOpenTextDocumentParams(TextDocumentItem(tf.uri, "xtc", 1, tf.content)),
+            DidOpenTextDocumentParams(TextDocumentItem(tf.uri, "xtc", 1, tf.content))
         )
         return tf
     }
@@ -425,8 +430,9 @@ class LspIntegrationTest {
                             TextDocumentIdentifier(tf.uri),
                             pos,
                             ReferenceContext(true),
-                        ),
-                    ).get()
+                        )
+                    )
+                    .get()
 
             // "Boolean" appears many times in Boolean.x (in method signatures, return types, etc.)
             assertThat(refs).isNotEmpty()
@@ -511,7 +517,9 @@ class LspIntegrationTest {
 
             val ranges =
                 server.textDocumentService
-                    .selectionRange(SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos)))
+                    .selectionRange(
+                        SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos))
+                    )
                     .get()
 
             assertThat(ranges).isNotNull()
@@ -540,8 +548,9 @@ class LspIntegrationTest {
                         DocumentFormattingParams(
                             TextDocumentIdentifier(tf.uri),
                             FormattingOptions(4, true),
-                        ),
-                    ).get()
+                        )
+                    )
+                    .get()
 
             // May return edits or empty list, but should not throw
             assertThat(edits).isNotNull()
@@ -612,8 +621,9 @@ class LspIntegrationTest {
                             TextDocumentIdentifier(tf.uri),
                             range,
                             CodeActionContext(emptyList()),
-                        ),
-                    ).get()
+                        )
+                    )
+                    .get()
 
             // May return actions or empty, should not crash
             assertThat(actions).isNotNull()
@@ -666,8 +676,9 @@ class LspIntegrationTest {
                             TextDocumentIdentifier(tf.uri),
                             FormattingOptions(4, true),
                             range,
-                        ),
-                    ).get()
+                        )
+                    )
+                    .get()
 
             // Should not throw; result is non-null (may be empty if file is clean)
             assertThat(edits).isNotNull()

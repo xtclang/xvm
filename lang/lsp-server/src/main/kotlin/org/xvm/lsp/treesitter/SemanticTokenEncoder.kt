@@ -3,8 +3,8 @@ package org.xvm.lsp.treesitter
 /**
  * Standard LSP semantic token legend: token types and modifiers.
  *
- * These lists are sent to the client during initialization so it knows how to interpret
- * the integer indices in the token data array.
+ * These lists are sent to the client during initialization so it knows how to interpret the integer
+ * indices in the token data array.
  */
 object SemanticTokenLegend {
     val tokenTypes: List<String> =
@@ -51,14 +51,15 @@ object SemanticTokenLegend {
     val typeIndex: Map<String, Int> = tokenTypes.withIndex().associate { (i, v) -> v to i }
     val modIndex: Map<String, Int> = tokenModifiers.withIndex().associate { (i, v) -> v to i }
 
-    fun modifierBitmask(vararg mods: String): Int = mods.fold(0) { mask, mod -> modIndex[mod]?.let { mask or (1 shl it) } ?: mask }
+    fun modifierBitmask(vararg mods: String): Int =
+        mods.fold(0) { mask, mod -> modIndex[mod]?.let { mask or (1 shl it) } ?: mask }
 }
 
 /**
  * Walks an XTC tree-sitter AST and produces LSP semantic token data.
  *
- * A fresh instance should be created per request (accumulates mutable state).
- * Thread-safe since each `supplyAsync` gets its own instance.
+ * A fresh instance should be created per request (accumulates mutable state). Thread-safe since
+ * each `supplyAsync` gets its own instance.
  */
 class SemanticTokenEncoder {
     private val declarationKeywords =
@@ -139,7 +140,11 @@ class SemanticTokenEncoder {
             node.childByFieldName("name")
                 ?: node.children.firstOrNull { it.type == "identifier" }
                 ?: return
-        emitToken(name, "enumMember", SemanticTokenLegend.modifierBitmask("declaration", "readonly"))
+        emitToken(
+            name,
+            "enumMember",
+            SemanticTokenLegend.modifierBitmask("declaration", "readonly"),
+        )
         markClassified(name)
     }
 
@@ -153,7 +158,8 @@ class SemanticTokenEncoder {
 
         node.childByFieldName("name")?.let { id ->
             val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
-            val mods = buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
+            val mods =
+                buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
             emitToken(id, "method", mods)
         }
 
@@ -193,7 +199,8 @@ class SemanticTokenEncoder {
 
         node.childByFieldName("name")?.let { id ->
             val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
-            val mods = buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
+            val mods =
+                buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
             emitToken(id, "property", mods)
         }
     }
@@ -267,9 +274,11 @@ class SemanticTokenEncoder {
     }
 
     private fun emitDeclarationKeyword(node: XtcNode) {
-        node.children.firstOrNull { it.text in declarationKeywords }?.let { keyword ->
-            emitToken(keyword, "keyword", 0)
-        }
+        node.children
+            .firstOrNull { it.text in declarationKeywords }
+            ?.let { keyword ->
+                emitToken(keyword, "keyword", 0)
+            }
     }
 
     private fun emitModifierTokens(node: XtcNode) {
@@ -283,9 +292,15 @@ class SemanticTokenEncoder {
                     emitToken(child, "modifier", 0)
                 }
 
-                child.text == "override" || child.text == "final" || child.text == "native" ||
-                    child.text == "lazy" || child.text == "atomic" || child.text == "inject" ||
-                    child.text == "delegate" || child.text == "readonly" || child.text == "immutable" -> {
+                child.text == "override" ||
+                    child.text == "final" ||
+                    child.text == "native" ||
+                    child.text == "lazy" ||
+                    child.text == "atomic" ||
+                    child.text == "inject" ||
+                    child.text == "delegate" ||
+                    child.text == "readonly" ||
+                    child.text == "immutable" -> {
                     emitToken(child, "modifier", 0)
                 }
             }
@@ -297,7 +312,11 @@ class SemanticTokenEncoder {
         for (child in typeParams.children) {
             if (child.type == "type_parameter") {
                 child.childByFieldName("name")?.let { id ->
-                    emitToken(id, "typeParameter", SemanticTokenLegend.modifierBitmask("declaration"))
+                    emitToken(
+                        id,
+                        "typeParameter",
+                        SemanticTokenLegend.modifierBitmask("declaration"),
+                    )
                     markClassified(id)
                 }
                 child.childByFieldName("constraint")?.let { constraint ->
@@ -343,8 +362,7 @@ class SemanticTokenEncoder {
 
     private fun hasDeprecatedAnnotation(node: XtcNode): Boolean =
         node.children.any { child ->
-            child.type == "annotation" &&
-                child.childByFieldName("name")?.text == "Deprecated"
+            child.type == "annotation" && child.childByFieldName("name")?.text == "Deprecated"
         }
 
     private fun buildModifiers(
@@ -420,9 +438,9 @@ class SemanticTokenEncoder {
     }
 
     /**
-     * Unique key for deduplication. Combines line, column, AND node type to avoid
-     * collisions when a parent and child node share the same start position
-     * (e.g., `type_name` wrapping an `identifier` at the same column).
+     * Unique key for deduplication. Combines line, column, AND node type to avoid collisions when a
+     * parent and child node share the same start position (e.g., `type_name` wrapping an
+     * `identifier` at the same column).
      */
     private fun nodeKey(node: XtcNode): Long {
         val typeHash = node.type.hashCode().toLong() and 0xFFFFL

@@ -17,20 +17,22 @@ import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerItem
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.internal.CompletableFutures
+import java.util.concurrent.CompletableFuture
+import javax.swing.JComponent
 import org.eclipse.lsp4j.PrepareRenameParams
 import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.messages.Either
-import java.util.concurrent.CompletableFuture
-import javax.swing.JComponent
 
 /** Uses Community platform refactoring UI with an atomic stale-document guard. */
 class XtcRenameHandler : RenameHandler {
     override fun isAvailableOnDataContext(dataContext: DataContext): Boolean {
         val file = CommonDataKeys.PSI_FILE.getData(dataContext) ?: return false
-        return file.virtualFile?.extension == "x" && CommonDataKeys.EDITOR.getData(dataContext) != null &&
+        return file.virtualFile?.extension == "x" &&
+            CommonDataKeys.EDITOR.getData(dataContext) != null &&
             LanguageServiceAccessor.getInstance(file.project).hasAny(file) { wrapper ->
-                wrapper.serverDefinition.id == SERVER_ID && wrapper.clientFeatures.renameFeature.isEnabled(file) &&
+                wrapper.serverDefinition.id == SERVER_ID &&
+                    wrapper.clientFeatures.renameFeature.isEnabled(file) &&
                     supportsRename(wrapper.serverCapabilitiesSync?.renameProvider)
             }
     }
@@ -44,14 +46,20 @@ class XtcRenameHandler : RenameHandler {
         val offset = editor.caretModel.offset
         val stamp = editor.document.modificationStamp
         val future =
-            LanguageServiceAccessor
-                .getInstance(project)
+            LanguageServiceAccessor.getInstance(project)
                 .getLanguageServers(
                     file,
-                    { it.isServerDefinition(SERVER_ID) && it.isEnabled(file.virtualFile) && it.renameFeature.isEnabled(file) },
+                    {
+                        it.isServerDefinition(SERVER_ID) &&
+                            it.isEnabled(file.virtualFile) &&
+                            it.renameFeature.isEnabled(file)
+                    },
                     { supportsRename(it.serverWrapper.serverCapabilitiesSync?.renameProvider) },
-                ).thenCompose { servers ->
-                    val server = servers.singleOrNull() ?: return@thenCompose CompletableFuture.completedFuture(null)
+                )
+                .thenCompose { servers ->
+                    val server =
+                        servers.singleOrNull()
+                            ?: return@thenCompose CompletableFuture.completedFuture(null)
                     prepare(server, file, editor, offset)
                 }
         CompletableFutures.waitUntilDoneAsync(future, "Preparing rename", file)
@@ -60,21 +68,24 @@ class XtcRenameHandler : RenameHandler {
                 if (project.isDisposed || editor.isDisposed) return@invokeLater
                 when {
                     error != null -> {
-                        HintManager.getInstance().showErrorHint(
-                            editor,
-                            "Rename failed: ${error.cause?.message ?: error.message}",
-                        )
+                        HintManager.getInstance()
+                            .showErrorHint(
+                                editor,
+                                "Rename failed: ${error.cause?.message ?: error.message}",
+                            )
                     }
 
                     stamp != editor.document.modificationStamp -> {
-                        HintManager.getInstance().showErrorHint(
-                            editor,
-                            "Source changed; invoke Rename again.",
-                        )
+                        HintManager.getInstance()
+                            .showErrorHint(
+                                editor,
+                                "Source changed; invoke Rename again.",
+                            )
                     }
 
                     prepared == null -> {
-                        HintManager.getInstance().showErrorHint(editor, "This symbol cannot be renamed.")
+                        HintManager.getInstance()
+                            .showErrorHint(editor, "This symbol cannot be renamed.")
                     }
 
                     else -> {
@@ -109,8 +120,10 @@ class XtcRenameHandler : RenameHandler {
         if (!server.isPrepareRenameSupported) {
             return CompletableFuture.completedFuture(
                 ReadAction.computeBlocking<Prepared?, RuntimeException> {
-                    LSPIJUtils.getWordRangeAt(editor.document, file, offset)?.let { Prepared(server, editor.document.getText(it)) }
-                },
+                    LSPIJUtils.getWordRangeAt(editor.document, file, offset)?.let {
+                        Prepared(server, editor.document.getText(it))
+                    }
+                }
             )
         }
         val wrapper = server.serverWrapper
@@ -138,16 +151,17 @@ class XtcRenameHandler : RenameHandler {
                             }
 
                             result.isFirst -> {
-                                LSPIJUtils.toTextRange(result.first, editor.document)?.let(editor.document::getText)
+                                LSPIJUtils.toTextRange(result.first, editor.document)
+                                    ?.let(editor.document::getText)
                             }
 
                             result.third.isDefaultBehavior -> {
-                                LSPIJUtils
-                                    .getWordRangeAt(
+                                LSPIJUtils.getWordRangeAt(
                                         editor.document,
                                         file,
                                         offset,
-                                    )?.let(editor.document::getText)
+                                    )
+                                    ?.let(editor.document::getText)
                             }
 
                             else -> {
@@ -166,7 +180,8 @@ class XtcRenameHandler : RenameHandler {
         private val prepared: Prepared,
     ) : RefactoringDialog(file.project, false) {
         private val stamp = editor.document.modificationStamp
-        private val name = NameSuggestionsField(arrayOf(prepared.name), file.project, FileTypes.PLAIN_TEXT, editor)
+        private val name =
+            NameSuggestionsField(arrayOf(prepared.name), file.project, FileTypes.PLAIN_TEXT, editor)
 
         init {
             title = "Rename"
@@ -180,14 +195,21 @@ class XtcRenameHandler : RenameHandler {
 
         override fun hasPreviewButton(): Boolean = false
 
-        override fun areButtonsValid(): Boolean = name.enteredName.isNotBlank() && name.enteredName != prepared.name
+        override fun areButtonsValid(): Boolean =
+            name.enteredName.isNotBlank() && name.enteredName != prepared.name
 
         override fun doAction() {
             if (editor.document.modificationStamp != stamp) {
                 setErrorText("Source changed; cancel and invoke Rename again.")
                 return
             }
-            val future = XtcRenameEdit.request(prepared.server.serverWrapper, file.virtualFile, offset, name.enteredName.trim())
+            val future =
+                XtcRenameEdit.request(
+                    prepared.server.serverWrapper,
+                    file.virtualFile,
+                    offset,
+                    name.enteredName.trim(),
+                )
             close(OK_EXIT_CODE)
             CompletableFutures.waitUntilDoneAsync(future, "Renaming ${prepared.name}", file)
             future.whenComplete { edit, error ->
@@ -195,21 +217,24 @@ class XtcRenameHandler : RenameHandler {
                     if (file.project.isDisposed || editor.isDisposed) return@invokeLater
                     when {
                         error != null -> {
-                            HintManager.getInstance().showErrorHint(
-                                editor,
-                                "Rename failed: ${error.cause?.message ?: error.message}",
-                            )
+                            HintManager.getInstance()
+                                .showErrorHint(
+                                    editor,
+                                    "Rename failed: ${error.cause?.message ?: error.message}",
+                                )
                         }
 
                         edit == null -> {
-                            HintManager.getInstance().showErrorHint(
-                                editor,
-                                "This rename is not supported or would change another binding.",
-                            )
+                            HintManager.getInstance()
+                                .showErrorHint(
+                                    editor,
+                                    "This rename is not supported or would change another binding.",
+                                )
                         }
 
                         !edit.apply() -> {
-                            HintManager.getInstance().showErrorHint(editor, "Sources changed; invoke Rename again.")
+                            HintManager.getInstance()
+                                .showErrorHint(editor, "Sources changed; invoke Rename again.")
                         }
                     }
                 }
@@ -220,6 +245,7 @@ class XtcRenameHandler : RenameHandler {
     private companion object {
         const val SERVER_ID = "xtcLanguageServer"
 
-        fun supportsRename(provider: Either<Boolean, RenameOptions>?): Boolean = provider?.let { it.isRight || it.left == true } == true
+        fun supportsRename(provider: Either<Boolean, RenameOptions>?): Boolean =
+            provider?.let { it.isRight || it.left == true } == true
     }
 }

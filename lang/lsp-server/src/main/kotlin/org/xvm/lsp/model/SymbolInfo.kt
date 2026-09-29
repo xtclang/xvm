@@ -1,8 +1,6 @@
 package org.xvm.lsp.model
 
-/**
- * Immutable symbol information extracted from compiled XTC.
- */
+/** Immutable symbol information extracted from compiled XTC. */
 data class SymbolInfo(
     val name: String,
     val qualifiedName: String,
@@ -25,8 +23,7 @@ data class SymbolInfo(
         PROPERTY,
         PARAMETER,
         TYPE_PARAMETER,
-        CONSTRUCTOR,
-        ;
+        CONSTRUCTOR;
 
         companion object
     }

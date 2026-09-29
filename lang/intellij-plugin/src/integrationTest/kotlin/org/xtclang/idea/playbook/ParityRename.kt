@@ -12,38 +12,70 @@ internal fun ParityScenarios.renameCases() {
     case("X53") { data ->
         val document = open(data.string("file"))
         applyRename(document, document.at(data.string("anchor")), data.string("replaceWith"))
-        check(document.text == fixture(document.file).replace(data.pattern("replaceFrom"), data.string("replaceWith")))
+        check(
+            document.text ==
+                fixture(document.file)
+                    .replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+        )
     }
     case("X54") { data ->
         val document = open(data.string("file"))
         data.strings("anchors").forEach { anchor ->
             replace(document, fixture(document.file))
-            val offset = data.int(if (anchor == data.string("declaration")) "callOffset" else "declarationOffset")
+            val offset =
+                data.int(
+                    if (anchor == data.string("declaration")) "callOffset" else "declarationOffset"
+                )
             applyRename(document, document.at(anchor, offset), data.string("replaceWith"))
-            check(document.text == fixture(document.file).replace(data.pattern("replaceFrom"), data.string("replaceWith")))
+            check(
+                document.text ==
+                    fixture(document.file)
+                        .replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+            )
             check(data.string("namedArgument") in document.text)
         }
     }
     case("X55") { data ->
         val document = open(data.string("file"))
-        check(proposedRename(document, document.at(data.string("anchor")), data.string("newName")).isJsonNull)
+        check(
+            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
+                .isJsonNull
+        )
         check(document.text == fixture(document.file))
         clean(document)
     }
     case("X56") { data ->
         val document = open(data.string("file"))
         data.strings("variants").forEach { anchor ->
-            check(proposedRename(document, document.at(anchor), data.string("newName")).isJsonNull) { anchor }
+            check(
+                proposedRename(document, document.at(anchor), data.string("newName")).isJsonNull
+            ) {
+                anchor
+            }
         }
-        replace(document, fixture(document.file).replace(data.string("replaceFrom"), data.string("replaceWith")))
-        check(proposedRename(document, document.at(data.string("anchor"), data.int("offset")), data.string("newName")).isJsonNull)
+        replace(
+            document,
+            fixture(document.file).replace(data.string("replaceFrom"), data.string("replaceWith")),
+        )
+        check(
+            proposedRename(
+                    document,
+                    document.at(data.string("anchor"), data.int("offset")),
+                    data.string("newName"),
+                )
+                .isJsonNull
+        )
     }
     case("X57") { data ->
         val document = open(data.string("file"))
-        val transaction = renameTransaction(document, document.at(data.string("anchor")), data.string("newName"))
-        val edit = protocol.copy(driver.cast(transaction.getEdit(), ClientValue::class)).asJsonObject
+        val transaction =
+            renameTransaction(document, document.at(data.string("anchor")), data.string("newName"))
+        val edit =
+            protocol.copy(driver.cast(transaction.getEdit(), ClientValue::class)).asJsonObject
         // LSP4J's no-argument constructor restores an empty map when the wire field is absent.
-        check(edit["changes"].let { it == null || it.isJsonNull || it.asJsonObject.size() == 0 }) { edit.toString() }
+        check(edit["changes"].let { it == null || it.isJsonNull || it.asJsonObject.size() == 0 }) {
+            edit.toString()
+        }
         val change = edit["documentChanges"].rows().single()
         val oldVersion = version(document)
         check(change["textDocument"].asJsonObject.int("version") == oldVersion)
@@ -53,16 +85,22 @@ internal fun ParityScenarios.renameCases() {
         // Comparing versions only in the driver would not prove that IntelliJ rejects the edit.
         with(driver) {
             withContext(OnDispatcher.EDT) {
-                check(!transaction.apply()) { "Native rename accepted an obsolete document snapshot" }
+                check(!transaction.apply()) {
+                    "Native rename accepted an obsolete document snapshot"
+                }
             }
         }
-        check(document.text == "\n" + fixture(document.file)) { "Native rename applied an edit for an obsolete document version" }
+        check(document.text == "\n" + fixture(document.file)) {
+            "Native rename applied an edit for an obsolete document version"
+        }
         replace(document, fixture(document.file))
-        val retired = renameTransaction(document, document.at(data.string("anchor")), data.string("newName"))
+        val retired =
+            renameTransaction(document, document.at(data.string("anchor")), data.string("newName"))
         val closing =
             protocol.request(
                 "textDocument/rename",
-                document.params(document.at(data.string("anchor"))) + mapOf("newName" to data.string("newName")),
+                document.params(document.at(data.string("anchor"))) +
+                    mapOf("newName" to data.string("newName")),
             )
         discard(document)
         awaitRetired("textDocument/rename", closing)
@@ -70,7 +108,9 @@ internal fun ParityScenarios.renameCases() {
         check(reopened.text == fixture(document.file))
         with(driver) {
             withContext(OnDispatcher.EDT) {
-                check(!retired.apply()) { "Native rename accepted a closed/reopened document epoch" }
+                check(!retired.apply()) {
+                    "Native rename accepted a closed/reopened document epoch"
+                }
             }
         }
         check(reopened.text == fixture(document.file))
@@ -78,13 +118,21 @@ internal fun ParityScenarios.renameCases() {
     }
     case("X58") { data ->
         val document = open(data.string("file"))
-        replace(document, fixture(document.file).replace(data.string("replaceFrom"), data.string("replaceWith")))
+        replace(
+            document,
+            fixture(document.file).replace(data.string("replaceFrom"), data.string("replaceWith")),
+        )
         errors(document)
-        check(proposedRename(document, document.at(data.string("anchor")), data.string("newName")).isJsonNull)
+        check(
+            proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
+                .isJsonNull
+        )
         replace(document, fixture(document.file))
         clean(document)
         data.strings("invalidNames").forEach { name ->
-            check(proposedRename(document, document.at(data.string("anchor")), name).isJsonNull) { name }
+            check(proposedRename(document, document.at(data.string("anchor")), name).isJsonNull) {
+                name
+            }
         }
         applyRename(document, document.at(data.string("anchor")), data.string("newName"))
     }
@@ -100,7 +148,8 @@ internal fun ParityWorkspace.renameTransaction(
     return with(driver) {
         val pending =
             withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-                utility(NativeRenameRequests::class).request(server, document.editor.editor.getVirtualFile(), at, name)
+                utility(NativeRenameRequests::class)
+                    .request(server, document.editor.editor.getVirtualFile(), at, name)
             }
         awaitUi("native rename transaction", 60.seconds) { pending.isDone() }
         requireNotNull(cast(pending, NativeRenameFuture::class).get())

@@ -25,7 +25,9 @@ class AdapterBackendTest {
     @Test
     fun `unknown settings cannot silently select mock`() {
         listOf("xdk", "compielr", "").forEach {
-            assertThatIllegalArgumentException().isThrownBy { AdapterBackend.fromSetting(it) }.withMessageContaining("Unknown lsp.adapter")
+            assertThatIllegalArgumentException()
+                .isThrownBy { AdapterBackend.fromSetting(it) }
+                .withMessageContaining("Unknown lsp.adapter")
         }
     }
 }

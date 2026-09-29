@@ -1,11 +1,11 @@
 package org.xvm.lsp.util
 
 import com.google.gson.Gson
-import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import org.slf4j.LoggerFactory
 
 /** Timing metadata only: never logs source buffers, protocol payloads or compiler objects. */
 internal object ExecutionTrace {
@@ -60,7 +60,7 @@ internal object ExecutionTrace {
                     "uri" to span.uri,
                     "event" to event,
                     "elapsedMs" to elapsed(span.created),
-                ) + fields,
+                ) + fields
             ),
         )
     }
@@ -96,7 +96,13 @@ internal object ExecutionTrace {
         val active = if (depth == 0) apiThreads.incrementAndGet() else apiThreads.get()
         event(span, "start", mapOf("activeApiThreads" to active, "depth" to depth))
         return try {
-            action().also { event(span, "end", mapOf("outcome" to "returned", "activeApiThreads" to apiThreads.get())) }
+            action().also {
+                event(
+                    span,
+                    "end",
+                    mapOf("outcome" to "returned", "activeApiThreads" to apiThreads.get()),
+                )
+            }
         } catch (failure: Throwable) {
             event(
                 span,
