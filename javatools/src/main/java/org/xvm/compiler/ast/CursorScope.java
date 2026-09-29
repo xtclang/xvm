@@ -35,8 +35,24 @@ import org.xvm.compiler.ast.partial.IncompleteStatement;
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
 
-/** Enumerate type-name candidates, then let normal contextual lookup establish their meaning. */
+/** Capture cursor scope facts and resolve type-name candidates through normal contextual lookup. */
 final class CursorScope {
+    /** Copy scope facts now; callers must not retain this validation context. */
+    static CursorBinding capture(Context ctx) {
+        // Parameter registers are initialized lazily, including their assignment state.
+        Stream.iterate(ctx, Objects::nonNull, Context::getOuterContext).forEach(Context::getNameMap);
+        Set<String> names = new HashSet<>();
+        ctx.collectVariables(names);
+        var variables = names.stream().sorted()
+                .filter(name -> !ctx.isReservedName(name))
+                .map(name -> ctx.getVar(name) instanceof Register register
+                        ? new CursorBinding.Variable(name, register, register.getType(), ctx.isVarReadable(name))
+                        : null)
+                .filter(Objects::nonNull)
+                .toList();
+        return new CursorBinding(variables, ctx.getThisType(), !ctx.isFunction());
+    }
+
     static List<CursorBinding.NamedType> types(IncompleteStatement site, Context ctx, ErrorListener errs) {
         String prefix = site.getCompletionPrefix();
         var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);

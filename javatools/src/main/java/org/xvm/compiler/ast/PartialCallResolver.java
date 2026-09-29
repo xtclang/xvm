@@ -40,7 +40,7 @@ final class PartialCallResolver {
         if (site.getTarget() instanceof NewExpression creation) {
             return PartialConstructionResolver.inspect(site, creation, ctx, required, errs);
         }
-        var scope = ctx.cursorBinding().withCandidates(List.of());
+        var scope = CursorScope.capture(ctx).withCandidates(List.of());
         if (errs.isAbortDesired()) {
             return scope;
         }
