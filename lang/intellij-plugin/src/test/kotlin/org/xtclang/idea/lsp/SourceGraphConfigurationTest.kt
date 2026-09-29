@@ -8,6 +8,44 @@ import org.junit.jupiter.api.Test
 
 class SourceGraphConfigurationTest {
     @Test
+    fun `resource roots preserve order empty automatic and rename ownership`() {
+        val base = URI.create("file:///workspace/")
+        val modules =
+            listOf(
+                SourceModuleConfiguration(
+                    "Library",
+                    "Library.x",
+                    resourceRoots = listOf("custom/", "fallback/"),
+                )
+            )
+        val content = SourceGraphConfiguration.configure(null, modules, base)
+        assertThat(SourceGraphConfiguration.read(content)).isEqualTo(modules)
+        val changed = modules.map { it.copy(name = "Renamed", uri = "Renamed.x") }
+        val replaced = SourceGraphConfiguration.replace(content, modules, changed, base)
+        assertThat(SourceGraphConfiguration.read(replaced)).isEqualTo(changed)
+        val different = modules.map { it.copy(resourceRoots = listOf("fallback/", "custom/")) }
+        assertThatThrownBy { SourceGraphConfiguration.replace(content, different, changed, base) }
+            .isInstanceOf(IllegalArgumentException::class.java)
+        listOf(null, emptyList<String>()).forEach { resources ->
+            val graph = modules.map { it.copy(resourceRoots = resources) }
+            assertThat(
+                    SourceGraphConfiguration.read(
+                        SourceGraphConfiguration.configure(null, graph, base)
+                    )
+                )
+                .isEqualTo(graph)
+        }
+        assertThatThrownBy {
+                SourceGraphConfiguration.configure(
+                    null,
+                    modules.map { it.copy(resourceRoots = listOf("custom/", "custom/")) },
+                    base,
+                )
+            }
+            .isInstanceOf(IllegalArgumentException::class.java)
+    }
+
+    @Test
     fun `project configuration preserves unrelated settings and distinguishes discovery from empty graph`() {
         val explicit = SourceGraphConfiguration.configure(original, after, base)
         assertThat(SourceGraphConfiguration.read(explicit)).isEqualTo(after)
