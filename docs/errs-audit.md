@@ -7,12 +7,19 @@ valid `Document echo(Document doc) = doc` repair. Repair proofs now normalize wr
 to their declaration on both sides; generated/composed slots and normal rename retain their slot
 proof. The existing bundled-import regression exposes this mismatch.
 
-**Partial AST packaging:** the all-eight-class subpackage move would cross construction preparation,
-protected expression validation, type-syntax fields and reflective child traversal. The exact
-blockers and the concrete four-node migration design are in the integration plan. Keep semantic
-helpers package-private beside ordinary validation; the plan avoids a wholesale traversal rewrite.
-No broad visibility changes or relocation have been made. Real dispatch fixtures cover Explicit/Default, Delegating and Union;
-the generated/native/conditional route inventory is still incomplete.
+**Partial AST packaging:** four syntax nodes now live in `ast.partial`; stateless `PartialQueries`
+connects them to the package-private validation/inference helpers that remain in `ast`. Child-field
+registration supports traversal, cloning and edits without public representation fields. The
+[checkpoint map](errs-integration-plan.md#partial-ast-implementation-checkpoints) records validation
+and the two override modifiers corrected during compilation. The
+[broader inventory](errs.md#broader-ast-placement-inventory) classifies all 61 changed AST files;
+AST1–AST4 prioritize actual query/provenance reductions without forced package splits. Real dispatch
+fixtures cover Explicit/Default, Delegating and Union; the generated/native/conditional route
+inventory remains incomplete.
+
+The corrected P1–P4 batch passes 107 Java and 395 LSP tests (502 total), with zero failures,
+errors or skips, plus root/lang Spotless. This is backend package/ownership validation; it does
+not replace or extend the existing native-editor receipts.
 
 **Orphan server JVMs:** [the process-lifecycle audit](errs-lsp-process-lifecycle.md) documents
 the reproduced Tree-sitter worker leak after EOF, LSP4IJ stop-before-start race and master's
@@ -981,5 +988,5 @@ and selected X57/X118–X121/CFG1–CFG3 in both editors (plus IntelliJ START an
 See the [receipts and extraction map](errs-integration-plan.md#checkpoint-and-validation-map).
 These are selected runs, not a new full 126-case receipt. Unsupported generated/union/native
 dispatch fixtures and native multi-root/racing-settings acceptance remain explicit gaps.
-The [next structural checkpoint](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
-checks access boundaries before moving partial recovery nodes into `ast.partial`.
+The later [structural checkpoint](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
+implements the bounded four-node `ast.partial` move and documents why semantic helpers remain in `ast`.
