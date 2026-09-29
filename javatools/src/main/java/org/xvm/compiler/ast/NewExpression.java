@@ -126,6 +126,13 @@ public class NewExpression
         return Math.max(dims, 0);
     }
 
+    /**
+     * @return a snapshot of the written constructor arguments, including array dimensions
+     */
+    public List<Expression> getArguments() {
+        return List.copyOf(args);
+    }
+
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type) {
         // auto-narrowing is allowed for type parameters, but not the type itself

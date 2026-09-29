@@ -5,13 +5,11 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.StreamSupport;
 
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -31,13 +29,6 @@ import static org.xvm.asm.ErrorListener.in;
  * succeeded (isValidated and a fitting TypeFit), never a failed child's placeholder type.
  */
 public final class IncompleteStatement extends Statement {
-    /** Whether retained syntax needs a real validation context instead of a disposable value probe. */
-    static boolean isWithin(AstNode node) {
-        return node != null && (node instanceof IncompleteStatement
-                || StreamSupport.stream(node.children().spliterator(), false)
-                        .anyMatch(IncompleteStatement::isWithin));
-    }
-
     public IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
                                List<Token> separators, long endPosition) {
         this(target, operator, arguments, separators, endPosition, Parser.UNEXPECTED_EOF);
@@ -132,14 +123,7 @@ public final class IncompleteStatement extends Statement {
 
     /** The real containing call for a direct, labeled or parenthesized argument cursor. */
     public Optional<IncompleteStatement> getArgumentCall() {
-        AstNode parent = getParent();
-        while (parent instanceof Expression && !(parent instanceof LambdaExpression)
-                && !(parent instanceof InvocationExpression) && !(parent instanceof NewExpression)) {
-            parent = parent.getParent();
-        }
-        return parent instanceof IncompleteStatement call && call.isCall()
-                && PartialArgument.of(call).map(argument -> argument.cursor() == this).orElse(false)
-                ? Optional.of(call) : Optional.empty();
+        return PartialQueries.argumentCall(this);
     }
 
     /** Complete written arguments; excludes the missing value or cursor-selected argument prefix. */
@@ -149,7 +133,7 @@ public final class IncompleteStatement extends Statement {
 
     /** Written array dimensions preceding this call's opening parenthesis. */
     public List<Expression> getLeadingArguments() {
-        return target instanceof NewExpression creation ? List.copyOf(creation.args) : List.of();
+        return target instanceof NewExpression creation ? creation.getArguments() : List.of();
     }
 
     /** Top-level commas only; nested calls and strings do not contribute separators. */
@@ -210,45 +194,7 @@ public final class IncompleteStatement extends Statement {
     }
 
     private Statement inspect(Context ctx, TypeConstant required, ErrorListener errs) {
-        var bindings = ctx.getCursorBindings();
-        bindings.begin(this);
-        if (bindings.isEnabled() && !errs.isAbortDesired()) {
-            var scope = ctx.cursorBinding();
-            bindings.record(this, isNameCompletion() ? scope.withTypes(CursorScope.types(this, ctx, errs)) : scope);
-        }
-        // The cursor-selected member name/overload is not validated by this probe.
-        // The receiver and complete arguments still use the real lexical and flow context.
-        getReceiver().ifPresent(receiver -> {
-            Expression validated = receiver.validate(ctx, null, errs);
-            if (validated != null) {
-                if (isCall()) {
-                    ((NameExpression) target).left = validated;
-                } else {
-                    target = validated;
-                }
-            }
-        });
-        CursorBinding call = bindings.isEnabled() && isCall() && !errs.isAbortDesired()
-                ? PartialCallResolver.inspect(this, ctx, required, errs) : null;
-        if (call != null) {
-            bindings.record(this, call);
-        }
-        for (int i = 0; i < arguments.size() && !errs.isAbortDesired(); ++i) {
-            Expression argument = arguments.get(i);
-            // No single expected type is selected. Candidate fitting inspects trial copies above.
-            Expression value = argument instanceof LabeledExpression labeled
-                    ? labeled.getUnderlyingExpression() : argument;
-            if (value instanceof NonBindingExpression || value instanceof LambdaExpression) {
-                continue;
-            }
-            Expression validated = argument.validate(ctx, null, errs);
-            if (validated != null) {
-                arguments.set(i, validated);
-            }
-        }
-        if (call != null && !errs.isAbortDesired()) {
-            PartialArgument.of(this).ifPresent(argument -> bindings.record(argument.cursor(), call));
-        }
+        PartialQueries.inspect(this, ctx, required, errs);
         errs.error(diagnosticCode, in(getSource(), endPosition, endPosition));
         return null;
     }
