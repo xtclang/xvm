@@ -71,7 +71,11 @@ export function renameFamilyCases(): void {
         playbook(id, async (workspace, data) => {
             for (const file of data.files) await workspace.write(file.file, file.source);
             await discovered(workspace, async () => {
-                if ('sourceModules' in data) await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
+                if ('sourceModules' in data) await workspace.configure(data.sourceModules.map(module => ({
+                    ...module,
+                    uri: workspace.uri(module.uri).toString(),
+                    resourceRoots: 'resourceRoots' in module ? module.resourceRoots?.map(root => workspace.uri(root).toString()) : undefined
+                })));
                 if ('projectSettingsRoundTrip' in data && data.projectSettingsRoundTrip) {
                     assert.ok(vscode.workspace.getConfiguration('xtc.compiler').inspect('sourceModules')?.workspaceValue,
                         'The explicit graph must be persisted in workspace settings');
