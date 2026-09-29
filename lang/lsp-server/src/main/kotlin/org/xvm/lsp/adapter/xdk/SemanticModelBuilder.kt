@@ -1648,6 +1648,11 @@ private class SemanticModelBuilder(
                 typeDefinitions(resolved, visited)
             }
 
+            constant.isNullable -> {
+                // T? navigates to T, not to the Nullable marker that makes the union nullable.
+                typeDefinitions(constant.removeNullable(), visited)
+            }
+
             constant.isRelationalType -> {
                 val operands =
                     if (constant.format == Constant.Format.DifferenceType) {
