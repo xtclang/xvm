@@ -14,6 +14,19 @@ suite('Rename settings boundaries', () => {
         "settings": {"editor.tabSize": 8, "xtc.compiler.sourceModules": ${JSON.stringify(before)},},
     }`;
 
+    test('resource roots preserve precedence and are guarded through rename history', () => {
+        const original = [{ ...before[0], resourceRoots: ['file:///custom/', 'file:///fallback/'] }];
+        const renamed = [{ ...after[0], resourceRoots: original[0].resourceRoots }];
+        const settings = JSON.stringify({ settings: { 'xtc.compiler.sourceModules': original } });
+        const edited = applyEdits(settings, sourceGraphEdits(settings, path, original, renamed));
+        assert.deepStrictEqual(sourceModulesIn(edited, path), renamed);
+        assert.notStrictEqual(sourceGraphKey(original), sourceGraphKey([{ ...original[0], resourceRoots: [...original[0].resourceRoots].reverse() }]));
+        assert.notStrictEqual(sourceGraphKey([{ ...before[0], resourceRoots: [] }]), sourceGraphKey([before[0]]));
+        assert.strictEqual(sourceGraphKey([{ ...before[0], resourceRoots: null }]), sourceGraphKey([before[0]]));
+        assert.throws(() => sourceGraphEdits(settings, path, [{ ...before[0], resourceRoots: [] }], renamed), /graph changed/);
+        assert.throws(() => sourceGraphKey([{ ...before[0], resourceRoots: ['file:///custom/', 'file:///custom/'] }]), /Duplicate/);
+    });
+
     test('saved multi-root settings preserve folders, comments and unrelated preferences through history', () => {
         const changed = applyEdits(text, sourceGraphEdits(text, path, before, after));
         assert.deepStrictEqual(sourceModulesIn(changed, path), after);

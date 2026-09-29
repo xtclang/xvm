@@ -76,7 +76,10 @@ class XtcWorkspaceService(
     }
 
     private fun refreshFiles(changes: List<FileEvent>) {
-        server.refreshCompilerDiscovery()
+        // Resource content changes cannot add/remove source modules. Membership events still
+        // rediscover, including directory events that can contain several source files.
+        if (changes.any { it.type != FileChangeType.Changed || it.uri.endsWith(".x") })
+            server.refreshCompilerDiscovery()
         changes.forEach { change ->
             adapter.didChangeWatchedFile(change.uri, change.type.value)
             server.refreshForFile(change.uri)
