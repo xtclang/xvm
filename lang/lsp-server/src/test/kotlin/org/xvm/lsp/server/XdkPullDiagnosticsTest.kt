@@ -13,9 +13,12 @@ import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DiagnosticCapabilities
 import org.eclipse.lsp4j.DiagnosticWorkspaceCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.PreviousResultId
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -101,6 +104,46 @@ class XdkPullDiagnosticsTest {
                     .left
             assertThat(fixed.items).isEmpty()
             assertThat(fixed.resultId).isNotEqualTo(first.resultId)
+        }
+    }
+
+    @Test
+    fun `closed member pulls retain standalone module errors and follow watched file changes`() {
+        val root = directory.resolve("Pull.x").toFile().apply { writeText(VALID) }
+        val members = directory.resolve("Pull").toFile().apply { mkdirs() }
+        val member = members.resolve("Bad.x")
+        val uri = member.toPath().toUri().toString()
+        Session().use { session ->
+            session.server.replaceCompilerSourceModules(emptyList())
+            session.open(root.toURI().toString(), VALID, 1)
+            assertThat(session.pull(root.toURI().toString()).left.items).isEmpty()
+
+            fun watched(type: FileChangeType) =
+                session.server.workspaceService.didChangeWatchedFiles(
+                    DidChangeWatchedFilesParams(listOf(FileEvent(uri, type)))
+                )
+
+            member.writeText("class Bad extends Missing {}")
+            watched(FileChangeType.Created)
+            val broken = session.pull(uri).left
+            assertThat(broken.items).isNotEmpty()
+            assertThat(broken.items.first().range.start.character).isEqualTo(18)
+            assertThat(session.pull(member.toURI().toString(), broken.resultId).right.resultId)
+                .isEqualTo(broken.resultId)
+
+            member.writeText("class Bad {}")
+            watched(FileChangeType.Changed)
+            val repaired = session.pull(uri, broken.resultId).left
+            assertThat(repaired.items).isEmpty()
+            assertThat(repaired.resultId).isNotEqualTo(broken.resultId)
+
+            member.writeText("class Bad extends Missing {}")
+            watched(FileChangeType.Changed)
+            val brokenAgain = session.pull(uri).left
+            assertThat(brokenAgain.items).isNotEmpty()
+            assertThat(member.delete()).isTrue()
+            watched(FileChangeType.Deleted)
+            assertThat(session.pull(uri, brokenAgain.resultId).left.items).isEmpty()
         }
     }
 
