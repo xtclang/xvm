@@ -1085,24 +1085,42 @@ class ModuleInfoTest {
         assertTrue(nodeResDir.getLocations().contains(resourceDir.toFile()));
     }
 
-    // ----- Real .xtc binary file tests -----------------------------------------------------------
+    // ----- projectDirFromSubDir ------------------------------------------------------------------
 
     /**
-     * projectDirFromSubDir works with real .xtc binary directory.
+     * Compiler output directories map back to the project that owns them. The lookup works on
+     * directory names only, so none of these layouts needs a compiled XDK.
      */
     @Test
-    void testWithRealXtcBinaryFile() {
-        var ecstasyXtc = new File("../xdk/build/xdk/lib/ecstasy.xtc");
-        if (!ecstasyXtc.exists()) {
-            ecstasyXtc = new File("../lib_ecstasy/build/ecstasy.xtc");
-            if (!ecstasyXtc.exists()) {
-                return;
-            }
-        }
+    void testProjectDirFromBuildOutputDir() {
+        var projectDir = tempDir.resolve("lib_ecstasy").toFile();
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(projectDir, "build")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(projectDir, "target")));
+    }
 
-        var binaryDir = ecstasyXtc.getParentFile();
-        assertNotNull(binaryDir);
-        assertNotNull(ModuleInfo.projectDirFromSubDir(binaryDir));
+    /**
+     * Every level of the src/main/x source convention maps back to the project.
+     */
+    @Test
+    void testProjectDirFromSourceDir() {
+        var projectDir = tempDir.resolve("lib_net").toFile();
+        var srcDir     = new File(projectDir, "src");
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(srcDir));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "main")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "main/x")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "test/x")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "main/ecstasy")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(projectDir, "source")));
+    }
+
+    /**
+     * A directory that follows none of the conventions, such as the XDK's installed library
+     * directory, is its own best guess.
+     */
+    @Test
+    void testProjectDirFromUnconventionalDir() {
+        var libDir = tempDir.resolve("xdk/build/xdk/lib").toFile();
+        assertEquals(libDir, ModuleInfo.projectDirFromSubDir(libDir));
     }
 
     /**
