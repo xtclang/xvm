@@ -585,70 +585,45 @@ jobs:
                   # paying the IntelliJ-plugin resolution cost on every CI run.
                   LANG_OPTS="-PincludeBuildLang=true -PincludeBuildAttachLang=true"
 
-                  echo ""
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "🌳 TREE-SITTER GRAMMAR VALIDATION"
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-                  echo "📋 Validating grammar compiles (tree-sitter generate)..."
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:validateTreeSitterGrammar
-                  echo "✅ Grammar: VALID"
-
-                  echo ""
-                  echo "📋 Testing parser on XDK corpus (with timing)..."
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:testTreeSitterParse
-                  echo "✅ Corpus parsing: PASSED"
-
-                  echo ""
-                  echo "📋 Building native libraries for all platforms..."
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:tree-sitter:buildAllNativeLibrariesOnDemand
-                  echo "✅ Native libraries: BUILT (cached by content hash)"
-
-                  echo ""
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "🔌 LSP ADAPTER TESTS"
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
-                  # Mock adapter is being retired; tree-sitter is the default and only supported adapter.
-                  # echo ""
-                  # echo "📋 Running LSP tests with MOCK adapter (-Plsp.adapter=mock)..."
-                  # ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=mock
-                  # echo "✅ Mock adapter tests: PASSED"
-
-                  echo ""
-                  echo "📋 Running LSP tests with TREESITTER adapter (-Plsp.adapter=treesitter)..."
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:lsp-server:test -Plsp.adapter=treesitter
-                  echo "✅ Tree-sitter adapter tests: PASSED"
-
-                  echo ""
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "📦 VS CODE EXTENSION INTEGRATION TESTS"
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-
                   # @vscode/test-electron launches a real Electron build inside
                   # the Linux runner. Without a virtual framebuffer it has no
                   # display to draw on, so we install xvfb if it is not already
                   # present. ubuntu-latest images ship with it sometimes but
                   # not always; the `command -v` guard is cheap either way.
+                  # scripts/run-vscode-tests.cjs auto-detects Linux + no DISPLAY
+                  # + xvfb-run on PATH and wraps the test runner accordingly.
                   if ! command -v xvfb-run >/dev/null 2>&1; then
                       echo "📋 Installing xvfb for headless Electron..."
                       sudo apt-get update -qq
                       sudo apt-get install -y -qq xvfb
                   fi
 
+                  # One Gradle invocation for all lang validation: each separate invocation paid
+                  # its own configuration pass for the lang composite. Gradle stops at the first
+                  # failing task and names it in the output.
+                  # - tree-sitter: grammar compiles (tree-sitter generate), parser handles the XDK
+                  #   corpus, native libraries build for all platforms (cached by content hash)
+                  # - LSP adapter tests with the tree-sitter adapter (the mock adapter is retired)
+                  # - VS Code extension: headless integration tests, then bundle and package the VSIX
                   echo ""
-                  echo "📋 Running VS Code extension integration tests..."
-                  # scripts/run-vscode-tests.cjs auto-detects Linux + no DISPLAY
-                  # + xvfb-run on PATH and wraps the test runner accordingly.
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:vscode-extension:testVscodeExtension
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  echo "🌳 LANG VALIDATION: tree-sitter, LSP adapters, VS Code extension"
+                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS -Plsp.adapter=treesitter \
+                      :lang:tree-sitter:validateTreeSitterGrammar \
+                      :lang:tree-sitter:testTreeSitterParse \
+                      :lang:tree-sitter:buildAllNativeLibrariesOnDemand \
+                      :lang:lsp-server:test \
+                      :lang:vscode-extension:testVscodeExtension \
+                      :lang:vscode-extension:packageExtension
+
+                  echo ""
+                  echo "✅ Grammar: VALID"
+                  echo "✅ Corpus parsing: PASSED"
+                  echo "✅ Native libraries: BUILT"
+                  echo "✅ Tree-sitter adapter tests: PASSED"
                   echo "✅ VS Code extension tests: PASSED"
-
-                  echo ""
-                  echo "📋 Bundling and packaging the VS Code extension (VSIX)..."
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:vscode-extension:packageExtension
                   echo "✅ VS Code extension packaged: $(ls lang/vscode-extension/build/distributions/*.vsix)"
-
-                  echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
