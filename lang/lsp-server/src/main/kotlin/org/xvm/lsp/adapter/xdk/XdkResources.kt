@@ -3,6 +3,7 @@ package org.xvm.lsp.adapter.xdk
 import java.io.File
 import java.nio.file.FileVisitOption.FOLLOW_LINKS
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -14,6 +15,7 @@ import org.xvm.tool.ResourceDir
 /**
  * Resource lookup uses compiler rules; cache keys retain only immutable filesystem observations.
  */
+@ConsistentCopyVisibility
 internal data class XdkResources
 private constructor(
     val roots: List<File>,
@@ -30,7 +32,15 @@ private constructor(
 
     companion object {
         fun roots(root: File, configured: List<File>?): List<File> =
-            configured ?: ResourceDir.forSource(root, true).locations.map { it.canonicalFile }
+            configured
+                ?: if (root.parentFile.isDirectory) {
+                    ResourceDir.forSource(root, true).locations.map { it.canonicalFile }
+                } else {
+                    // A moved/deleted module container has no ModuleInfo yet. Retain its source
+                    // directory as a missing input until discovery or host configuration replaces
+                    // it.
+                    listOf(root.parentFile.canonicalFile)
+                }
 
         fun capture(
             root: File,
@@ -51,27 +61,7 @@ private constructor(
                             Files.walk(location.toPath(), FOLLOW_LINKS).use { paths ->
                                 paths.forEach { path ->
                                     if (cancelled()) throw CancellationException()
-                                    val attrs =
-                                        Files.readAttributes(path, BasicFileAttributes::class.java)
-                                    val content =
-                                        if (attrs.isDirectory) "directory"
-                                        else {
-                                            val hash = MessageDigest.getInstance("SHA-256")
-                                            Files.newInputStream(path).use { input ->
-                                                val buffer = ByteArray(8192)
-                                                while (true) {
-                                                    if (cancelled()) throw CancellationException()
-                                                    val read = input.read(buffer)
-                                                    if (read < 0) break
-                                                    hash.update(buffer, 0, read)
-                                                }
-                                            }
-                                            HexFormat.of().formatHex(hash.digest())
-                                        }
-                                    put(
-                                        path.toString(),
-                                        "$content:${attrs.creationTime()}:${attrs.lastModifiedTime()}",
-                                    )
+                                    put(path.toString(), entry(path, cancelled))
                                 }
                             }
                         }
@@ -79,6 +69,26 @@ private constructor(
                 }
             }
             return XdkResources(immutableList(roots), immutableMap(entries))
+        }
+
+        internal fun entry(path: Path, cancelled: () -> Boolean): String {
+            val attrs = Files.readAttributes(path, BasicFileAttributes::class.java)
+            val content =
+                if (attrs.isDirectory) "directory"
+                else {
+                    val hash = MessageDigest.getInstance("SHA-256")
+                    Files.newInputStream(path).use { input ->
+                        val buffer = ByteArray(8192)
+                        while (true) {
+                            if (cancelled()) throw CancellationException()
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            hash.update(buffer, 0, read)
+                        }
+                    }
+                    HexFormat.of().formatHex(hash.digest())
+                }
+            return "$content:${attrs.creationTime()}:${attrs.lastModifiedTime()}"
         }
 
         private fun fingerprint(bytes: ByteArray): String =

@@ -1,6 +1,8 @@
 package org.xvm.lsp.server
 
 import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
@@ -19,20 +21,23 @@ import org.slf4j.LoggerFactory
 /** Serialize registration changes so a delayed removal cannot retire a newer root subscription. */
 internal class ResourceFileWatchers {
     private val queue =
-        AtomicReference(CompletableFuture.completedFuture(emptyMap<String, String>()))
+        AtomicReference(CompletableFuture.completedFuture(emptyMap<Watch, String>()))
 
     fun update(
         client: LanguageClient,
         roots: Set<String>,
         relativePatterns: Boolean = true,
     ): CompletableFuture<Map<String, String>> {
-        val result = CompletableFuture<Map<String, String>>()
+        val result = CompletableFuture<Map<Watch, String>>()
         val previous = queue.getAndSet(result)
         previous
             .thenComposeAsync { active ->
-                val next = roots.associateWith {
-                    active[it] ?: "xtc-resources-${UUID.randomUUID()}"
-                }
+                val next =
+                    roots
+                        .map { Watch.forRoot(it, relativePatterns) }
+                        .associateWith {
+                            active[it] ?: "xtc-resources-${UUID.randomUUID()}"
+                        }
                 val added = next.filterKeys { it !in active }
                 val removed = active.filterKeys { it !in next }
                 val register =
@@ -41,30 +46,12 @@ internal class ResourceFileWatchers {
                         attempt {
                             client.registerCapability(
                                 RegistrationParams(
-                                    added.map { (root, id) ->
+                                    added.map { (watch, id) ->
                                         Registration(
                                             id,
                                             "workspace/didChangeWatchedFiles",
                                             DidChangeWatchedFilesRegistrationOptions(
-                                                listOf(
-                                                    FileSystemWatcher(
-                                                        if (relativePatterns)
-                                                            Either.forRight(
-                                                                RelativePattern(
-                                                                    Either.forRight(root),
-                                                                    "**/*",
-                                                                )
-                                                            )
-                                                        else
-                                                            Either.forLeft(
-                                                                URI.create(root).path.trimEnd('/') +
-                                                                    "/**/*"
-                                                            ),
-                                                        WatchKind.Create +
-                                                            WatchKind.Change +
-                                                            WatchKind.Delete,
-                                                    )
-                                                )
+                                                watch.patterns()
                                             ),
                                         )
                                     }
@@ -115,7 +102,55 @@ internal class ResourceFileWatchers {
                     result.complete(previous.getNow(emptyMap()))
                 }
             }
-        return result
+        return result.thenApply { active -> active.entries.associate { it.key.root to it.value } }
+    }
+
+    /** Keep the recursive root plus a flat watch that survives root removal and creation. */
+    private data class Watch(
+        val root: String,
+        val relative: Boolean,
+        val ancestor: String?,
+        val child: String?,
+    ) {
+        fun patterns(): List<FileSystemWatcher> = buildList {
+            add(pattern(root, "**/*"))
+            if (ancestor != null && child != null) add(pattern(ancestor, child))
+        }
+
+        private fun pattern(base: String, glob: String) =
+            FileSystemWatcher(
+                if (relative) Either.forRight(RelativePattern(Either.forRight(base), glob))
+                else Either.forLeft(URI.create(base).path.trimEnd('/') + "/" + glob),
+                WatchKind.Create + WatchKind.Change + WatchKind.Delete,
+            )
+
+        companion object {
+            fun forRoot(root: String, relative: Boolean): Watch {
+                val path = Path.of(URI.create(root))
+                val ancestor =
+                    generateSequence(path.parent) { it.parent }.firstOrNull(Files::isDirectory)
+                // Watch only the first missing child, never the ancestor's entire subtree. A
+                // membership event updates this plan as generated parent directories appear.
+                val child =
+                    ancestor
+                        ?.relativize(path)
+                        ?.getName(0)
+                        ?.toString()
+                        ?.map { character ->
+                            when (character) {
+                                '*',
+                                '?',
+                                '[',
+                                ']',
+                                '{',
+                                '}' -> "[$character]"
+                                else -> character.toString()
+                            }
+                        }
+                        ?.joinToString("")
+                return Watch(root, relative, ancestor?.toUri()?.toString(), child)
+            }
+        }
     }
 
     private companion object {
