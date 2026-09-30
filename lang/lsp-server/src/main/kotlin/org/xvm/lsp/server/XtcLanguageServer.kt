@@ -112,6 +112,10 @@ class XtcLanguageServer(
         val resourceWatchers: Boolean = false,
     )
 
+    private val clientPresentation = AtomicReference(ClientPresentation())
+    internal val presentation: ClientPresentation
+        get() = clientPresentation.get()
+
     private val editCapabilities = AtomicReference(EditCapabilities())
     private val resourceFileWatchers = ResourceFileWatchers()
     internal val supportsVersionedEdits: Boolean
@@ -326,13 +330,14 @@ class XtcLanguageServer(
     }
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
+        clientPresentation.set(ClientPresentation.read(params))
         canRefreshInlays.set(params.capabilities?.workspace?.inlayHint?.refreshSupport == true)
         logServerBanner()
         logWorkspaceFolders(params)
         logClientCapabilities(params)
 
         if (adapter is XdkAdapter) {
-            val folders = params.workspaceFolders?.map { it.uri }.orEmpty()
+            val folders = ClientPresentation.workspaceUris(params)
             val settings =
                 CompilerSettings(folders, params.capabilities?.workspace?.configuration == true)
             synchronized(compilerSettings) {
@@ -440,13 +445,13 @@ class XtcLanguageServer(
         } else {
             // Extract workspace folder paths and initialize workspace index
             val workspaceFolders =
-                params.workspaceFolders?.mapNotNull { folder ->
-                    runCatching { Path.of(URI(folder.uri)).toString() }
+                ClientPresentation.workspaceUris(params).mapNotNull { uri ->
+                    runCatching { Path.of(URI(uri)).toString() }
                         .onFailure {
-                            logger.warn("initialize: invalid workspace folder URI: {}", folder.uri)
+                            logger.warn("initialize: invalid workspace folder URI: {}", uri)
                         }
                         .getOrNull()
-                } ?: emptyList()
+                }
 
             // Extra source roots (XDK source trees, etc.) from init options, sysprop, or env.
             // Lets the indexer find modules whose sources live outside the user's open project.
@@ -726,6 +731,7 @@ class XtcLanguageServer(
      */
     private fun buildServerCapabilities(): ServerCapabilities =
         ServerCapabilities().apply {
+            positionEncoding = "utf-16"
             experimental = mapOf("xtcRenameProposal" to 1)
             if (usesPullDiagnostics)
                 diagnosticProvider =
@@ -1173,7 +1179,18 @@ class XtcLanguageServer(
     ) {
         if (usesPullDiagnostics) return
         val currentClient = client ?: return
-        val lspDiagnostics = diagnostics.map { it.toLsp(uri) }
-        currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics, version))
+        val options = presentation
+        val lspDiagnostics = diagnostics.map {
+            it.toLsp(uri).apply {
+                if (!options.diagnosticRelatedInformation) relatedInformation = null
+            }
+        }
+        currentClient.publishDiagnostics(
+            PublishDiagnosticsParams(
+                uri,
+                lspDiagnostics,
+                version.takeIf { options.diagnosticVersions },
+            )
+        )
     }
 }
