@@ -5,6 +5,14 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class LanguageServiceConfigurationTest {
+    @Test fun `service preferences do not claim ownership of an inherited source graph`() {
+        assertThat(CompilerSettings.ownsGraph(null)).isFalse()
+        assertThat(CompilerSettings.ownsGraph("""{"xtc":{"languageService":{"inlayHints":false}}}""")).isFalse()
+        assertThat(CompilerSettings.ownsGraph("""{"xtc":{"compiler":{"sourceModules":[]}}}""")).isTrue()
+        assertThat(CompilerSettings.ownsGraph("{}")).isTrue()
+        assertThat(CompilerSettings.ownsGraph("{broken")).isTrue()
+    }
+
     @Test fun `project fields inherit global defaults without replacing the compiler graph`() {
         val global = """{"xtc":{"languageService":{"textSynchronization":"incremental","inlayHints":false}}}"""
         val project = """{"xtc":{"languageService":{"saveFormatting":"server"},"compiler":{"sourceModules":[]}}}"""
