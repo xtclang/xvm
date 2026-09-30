@@ -20,7 +20,7 @@ internal fun ParityScenarios.progressCases() {
             )
         )
         val document = open(data.string("file"))
-        val title = "Ecstasy: textDocument/references"
+        val title = "Ecstasy: finding references"
         val large =
             "module ${data.string("module")} {\n    static Int value = 1;\n" +
                 (0 until data["methods"].asInt).joinToString("\n") {
@@ -64,7 +64,7 @@ internal fun ParityScenarios.progressCases() {
                     it is CancellationException || it is ClientRequestFailure && it.code == -32800
                 }
             ) {
-                "Cancel must terminate the pending request: $outcome"
+                "Cancel must terminate the pending request: ${outcome.exceptionOrNull() ?: "completed before cancellation"}"
             }
             with(driver) { awaitUi("canceled progress disappears", 15.seconds) { !visible() } }
             check(!query("textDocument/hover", document, large.indexOf("value")).isJsonNull)
