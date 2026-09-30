@@ -871,6 +871,8 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         description = "Run the compiler playbook's IntelliJ acceptance cases in an isolated IDE"
         testClassesDirs = integrationTestSourceSet.output.classesDirs
         classpath = integrationTestSourceSet.runtimeClasspath
+        // IDE-side probes load only inside the sandbox plugin classloader, not Starter's JVM.
+        include("**/*Test.class")
         useJUnitPlatform()
         systemProperty("xtc.playbook.ideVersion", ideVersion)
         systemProperty(

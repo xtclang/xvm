@@ -362,6 +362,7 @@ class ParityWorkspace(
 
     fun discard(document: Document) =
         with(driver) {
+            val connection = protocol.server()
             // Revert via IntelliJ's file/document manager, preserving the disk line separator.
             withContext(OnDispatcher.EDT) {
                 service<ParityDocuments>()
@@ -370,7 +371,9 @@ class ParityWorkspace(
                     .closeFile(document.editor.editor.getVirtualFile())
             }
             awaitUi("client closes ${document.file}", 30.seconds) {
-                clientDocument(document) == null
+                connection.getOpenedDocuments().none {
+                    it.getFile().getPath() == Path.of(URI(document.uri)).toString()
+                }
             }
         }
 
@@ -387,6 +390,18 @@ class ParityWorkspace(
                     .filter { it.getPath().startsWith(directory.toString() + "/") }
                     .distinctBy { it.getPath() }
             withContext(OnDispatcher.EDT) { files.forEach(manager::closeFile) }
+            withContext(OnDispatcher.EDT) {
+                // Closing a tab does not discard its dirty document. A later Save All must
+                // not format or save fixtures belonging to an already completed scenario.
+                val documents = service<ParityDocuments>()
+                documents
+                    .getUnsavedDocuments()
+                    .filter {
+                        documents.getFile(it)?.getPath()?.startsWith(directory.toString() + "/") ==
+                            true
+                    }
+                    .forEach(documents::reloadFromDisk)
+            }
         }
         configure(
             shared.common.sourceModules.map {
@@ -453,6 +468,10 @@ interface ParityFiles {
 @Remote("com.intellij.openapi.fileEditor.FileDocumentManager")
 interface ParityDocuments {
     fun getDocument(file: VirtualFile): ParityDocument?
+
+    fun getUnsavedDocuments(): Array<ParityDocument>
+
+    fun getFile(document: ParityDocument): VirtualFile?
 
     fun reloadFromDisk(document: ParityDocument)
 
