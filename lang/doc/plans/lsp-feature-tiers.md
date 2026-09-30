@@ -475,3 +475,8 @@ Tree-sitter **cannot** provide:
 
 The Tier 1.2 improvements squeeze the last useful features out of tree-sitter.
 After those, every meaningful improvement requires the semantic model from Tier 2.
+
+Compiler-client ownership checkpoint (2026-09-30): generic IntelliJ server text edits now require
+verifiable document versions/epochs and recheck every target in one Undo command. Generic resource,
+snippet and confirmation edits are refused; native Rename/Move owns resource edits. X144 is shared
+with VS Code and written but not yet validated in this batch. No adapter capability is newly advertised.
