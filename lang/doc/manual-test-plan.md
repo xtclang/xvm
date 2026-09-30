@@ -201,17 +201,18 @@ invoke normal formatting; enabling a second save-formatting path must not apply 
 
 > See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
-The [active compiler completion checklist (L55–L82)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+The [active compiler completion checklist (L55–L83)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 tracks the remaining implementation and validation work. All 25 project-defined adapter
 capabilities have compiler implementations, many with explicit bounds; this is not full LSP
 coverage. Pull diagnostics and token range/delta have passing checkpoints. All six lazy-resolve
-operations, broader native moves and save/sync/formatting additions are implemented with batch
-validation pending. General refactorings, monikers, inline completion/values, colors and notebooks
+operations, broader native moves and save/sync/formatting additions have passing backend and selected
+editor receipts. L80/L81 also have a validated bounded protocol checkpoint; optional negotiation,
+partial results and broader acceptance remain open. General refactorings, monikers, inline completion/values, colors and notebooks
 still have implementation gaps. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
 to distinguish an unsupported feature from a failed playbook case.
 
 The earlier 113-scenario IntelliJ checkpoint passed, plus startup; that receipt does not cover
-the current 139-scenario catalog. The complete native run
+the current 146-scenario catalog. That earlier complete native run
 includes the 50 newly added cases and X20/X81/X82 assertion additions, with zero IDE errors.
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
 records receipts and actual client gaps. L60 is complete. L55 passes both its 24-root memory
@@ -1254,7 +1255,7 @@ a separate workspace/profile, and runs one case for every X1–X121 row plus the
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
-including failure counts. Focused selections use their own total rather than all 126 scenarios.
+including failure counts. Focused selections use their own total rather than the full catalog.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
 `:lang:lsp-server:compilerStdioTest --rerun` to the command.
 
@@ -2619,3 +2620,57 @@ fixtures do not guarantee a visible progress popup. Partial-result streaming is 
 Check dependency changes refresh supported inlays/lenses/folding without editing the consumer.
 Legacy/minimal-client capability shapes and pre-initialize/shutdown errors are protocol tests, not
 features exercised by changing the modern IDE's capability declaration.
+
+### Protocol and lifecycle coverage map
+
+This map covers the L80/L81 protocol batch and the accompanying state-ownership fixes. A shared
+scenario is automated in both editors only where named below. Controlled backend tests exercise
+interleavings that normal editor actions cannot reliably force. Manual rows remain acceptance
+work; they are not passing automated receipts. The current catalog has 146 cases, but this batch
+reran only X136/X137/X140/X141 plus IntelliJ START.
+
+| Change | Automated regression evidence | Editor/playbook coverage and limits |
+|---|---|---|
+| UTF-16 hover and rename ranges | `ClientPresentationTest`, `XdkPresentationTest` | X140 passes in both editors after an astral character; folded property initializers are the separate L83 gap. |
+| Legacy roots, minimal-client hover/outlines/symbol kinds and optional diagnostic metadata | `ClientPresentationTest`; negotiated clients in `XdkLanguageServerTest`, `XdkModuleServerTest`, `XdkProjectServerTest` and `XdkFeatureResolveProtocolTest` | Modern editors cannot exercise every legacy capability shape. X140 and existing outline/diagnostic cases cover modern clients; protocol tests cover the reduced shapes. |
+| Progress creation, token ownership, cancellation, late acknowledgements and one terminal event | `ConnectionProgressTest` controls replies and races completion/cancel/close | Manual P1/P2 below. Short compiler fixtures do not guarantee a visible progress popup. |
+| Pending readers canceled independently of shared analysis; immediate retirement on close | `RequestOwnershipTest` uses an analysis future that can ignore cancellation | X137 covers connection restart with an unsaved buffer; P2 covers pending UI work. The selected editor case does not force the backend race. |
+| Pre-initialize, duplicate initialize and shutdown request rules | `ProtocolLifecycleTest`, `XdkStdioTest`; `LspProcessLifecycleTest` covers child-process termination | X137 passes repeated transport restarts; invalid wire order is tested over packaged stdio, not sent through a conforming IDE. |
+| Negotiated, coalesced refresh outside compiler locks | `ClientNotificationsTest`, `XdkPullDiagnosticsTest`, `XdkSemanticTokenProtocolTest` | Manual P3 below checks visible refresh and the negotiated wire requests. There is no new deterministic native case for each refresh provider. |
+| Runtime `off` / `messages` / `verbose` trace without source payloads | `ClientNotificationsTest` | X141 passes messages/verbose in both editors; switching off and post-close behavior are controlled unit tests. |
+| IntelliJ diagnostic-cache retirement after unlocked snapshot lookup | `DiagnosticResultMessagesTest` forces close/cancel during that lookup | Existing diagnostic/reopen scenarios cover normal editor flow; the precise race is unit-tested. |
+| Tree-sitter scan starvation and native parser/disposal ownership | `WorkspaceIndexerTest` concurrent scans/parser requests run without skips | This is the shipping Tree-sitter adapter, not an XdkAdapter feature. Compiler playbook passes do not validate its UI behavior. |
+| Retired VS Code connections and stale IntelliJ settings reports | X136/X137 pass in both editors | Normal settings/restart flows pass. Out-of-order old-client callbacks and native settings-report races are not deterministically forced by those scenarios; P4 is manual. |
+| Negotiated configuration requests and post-close formatting replies | `ClientPresentationTest`, `EditorFormattingStateTest`, `FormattingConfigRoundTripTest` | X136 covers effective settings; earlier X138/X139 cover live formatting and save ownership. |
+
+Pending manual acceptance in both editors:
+
+1. **P1 — Visible progress and cancel.** Open a large configured compiler project, enable verbose
+   LSP tracing and open the server log using Control+Option+X, then L on macOS (Ctrl+Alt+X, then L
+   elsewhere). Check that initialization advertises `window.workDoneProgress`. Request references
+   on a widely used source declaration. For a request lasting long enough, verify progress is
+   created only after initialization, begins after creation acknowledgement and ends on completion.
+   Repeat and cancel through the editor's progress UI. A subsequent hover/reference request must
+   still succeed. If all requests finish before progress appears, record this as unexercised.
+2. **P2 — Disconnect with pending work.** While P1 or a workspace diagnostic request is running,
+   restart the service using the same action as X137, then close/reopen the project. Unsaved text
+   must survive restart, old progress must disappear, requests must resume, and old server PIDs
+   must exit. Do not infer the race was exercised if the request finished before the action.
+3. **P3 — Refresh without editing the consumer.** In the configured Library/Consumer graph, let
+   Library expose `static Int make() = 1;` and let a Consumer method use
+   `var value = lib.make();` with native inlay hints enabled. Change Library to
+   `static String make() = "one";`, leaving Consumer untouched. Its inferred-type hint and semantic
+   presentation must update. Inspect trace for refresh requests only for negotiated providers;
+   inlay/lens/folding/diagnostic/token refresh replies must not leave the compiler queue blocked.
+   Revert Library and verify the consumer returns to its original presentation.
+4. **P4 — Late connection/settings callbacks.** Repeat X137's two transport changes while a
+   request is pending. Check the displayed adapter/PID belongs to the newest connection and there
+   is one live server afterward. In IntelliJ's Ecstasy Compiler settings, request two effective
+   path reports around a configuration change, then close/reopen the page. A late old report must
+   not overwrite the current report or a disposed page. Record actual overlap; a fast normal run
+   alone is not evidence of out-of-order completion handling.
+
+The remaining disk-index/open-buffer, long-lived path-picker and stalled watcher-registration
+investigations are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
+Partial-result streaming and L83 initializer facts remain implementation work. None is marked
+implemented or covered by adding this table.

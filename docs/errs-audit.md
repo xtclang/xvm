@@ -124,7 +124,7 @@ Queue/API/reply tracing records counts, ordered jobs and timing for further inve
 [native and tracing record](errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
 
 Current follow-up tasks are centralized in the
-[full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist).
+[full compiler LSP completion checklist (L55–L83)](errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 L55/L56 track the large-graph proof and startup issues below; L57–L60 track semantic breadth and
 native parity. L61–L82 cover feature/protocol omissions and the completion gate. An absent
 optional LSP handler is separate from an error-listener defect or a missing native assertion.
