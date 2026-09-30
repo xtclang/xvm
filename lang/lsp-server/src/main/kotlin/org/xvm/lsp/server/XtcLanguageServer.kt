@@ -31,7 +31,7 @@ import org.eclipse.lsp4j.InlayHintRegistrationOptions
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.ReferencesOptions
+import org.eclipse.lsp4j.ReferenceOptions
 import org.eclipse.lsp4j.Registration
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.RenameFilesParams
@@ -41,6 +41,7 @@ import org.eclipse.lsp4j.SemanticTokensLegend
 import org.eclipse.lsp4j.SemanticTokensServerFull
 import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions
 import org.eclipse.lsp4j.ServerCapabilities
+import org.eclipse.lsp4j.SetTraceParams
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WatchKind
@@ -105,7 +106,10 @@ class XtcLanguageServer(
 ) : LanguageServer, LanguageClientAware, AutoCloseable {
     private var client: LanguageClient? = null
 
-    @Suppress("unused") private var initialized = false
+    private val refresh = ClientRefresh { client }
+    internal val clientTrace = ClientTrace { client }
+
+    override fun setTrace(params: SetTraceParams) = clientTrace.configure(params.value)
 
     private data class EditCapabilities(
         val versioned: Boolean = false,
@@ -166,17 +170,7 @@ class XtcLanguageServer(
     internal val supportsRelatedDiagnostics: Boolean
         get() = diagnosticCapabilities.get().related
 
-    internal fun refreshDiagnostics() {
-        if (diagnosticCapabilities.get().refresh) {
-            // Never call transport code while holding the compiler/document publication lock.
-            CompletableFuture.runAsync {
-                client?.refreshDiagnostics()?.exceptionally { failure ->
-                    logger.debug("workspace/diagnostic/refresh failed", failure)
-                    null
-                }
-            }
-        }
-    }
+    internal fun refreshDiagnostics() = refresh.request(ClientRefresh.Feature.DIAGNOSTICS)
 
     internal fun workspaceDiagnostics(
         params: WorkspaceDiagnosticParams
@@ -258,15 +252,13 @@ class XtcLanguageServer(
             )
     }
 
-    internal fun refreshSemanticTokens() {
-        if (tokenCapabilities.get().refresh)
-            CompletableFuture.runAsync {
-                client?.refreshSemanticTokens()?.exceptionally { failure ->
-                    logger.debug("workspace/semanticTokens/refresh failed", failure)
-                    null
-                }
-            }
-    }
+    internal fun refreshSemanticFeatures() =
+        refresh.request(
+            ClientRefresh.Feature.TOKENS,
+            ClientRefresh.Feature.INLAYS,
+            ClientRefresh.Feature.LENSES,
+            ClientRefresh.Feature.FOLDING,
+        )
 
     private val fileOperationCapabilities =
         AtomicReference<FileOperationsWorkspaceCapabilities?>(null)
@@ -320,15 +312,7 @@ class XtcLanguageServer(
     val editorFormattingConfig: FormattingConfig?
         get() = formattingState.config
 
-    private val canRefreshInlays = AtomicBoolean()
-
-    fun refreshPresentation() {
-        if (canRefreshInlays.get())
-            client?.refreshInlayHints()?.exceptionally {
-                logger.warn("Unable to refresh Ecstasy inlay hints: {}", it.message)
-                null
-            }
-    }
+    fun refreshPresentation() = refresh.request(ClientRefresh.Feature.INLAYS)
 
     /**
      * Helper to handle LSP requests with consistent logging and async execution.
@@ -361,7 +345,7 @@ class XtcLanguageServer(
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
         supportsProgress.set(params.capabilities?.window?.workDoneProgress == true)
         clientPresentation.set(ClientPresentation.read(params))
-        canRefreshInlays.set(params.capabilities?.workspace?.inlayHint?.refreshSupport == true)
+        clientTrace.configure(params.trace)
         logServerBanner()
         logWorkspaceFolders(params)
         logClientCapabilities(params)
@@ -465,7 +449,28 @@ class XtcLanguageServer(
 
         val capabilities = buildServerCapabilities()
 
-        initialized = true
+        val workspace = params.capabilities?.workspace
+        refresh.configure(
+            buildSet {
+                if (diagnosticCapabilities.get().refresh) add(ClientRefresh.Feature.DIAGNOSTICS)
+                if (tokenCapabilities.get().refresh) add(ClientRefresh.Feature.TOKENS)
+                if (
+                    workspace?.inlayHint?.refreshSupport == true &&
+                        AdapterCapability.INLAY_HINT in adapter.capabilities
+                )
+                    add(ClientRefresh.Feature.INLAYS)
+                if (
+                    workspace?.codeLens?.refreshSupport == true &&
+                        AdapterCapability.CODE_LENS in adapter.capabilities
+                )
+                    add(ClientRefresh.Feature.LENSES)
+                if (
+                    workspace?.foldingRange?.refreshSupport == true &&
+                        AdapterCapability.FOLDING_RANGE in adapter.capabilities
+                )
+                    add(ClientRefresh.Feature.FOLDING)
+            }
+        )
         logger.info("initialize: Ecstasy Language Server initialized")
 
         // Health check before workspace indexing
@@ -519,6 +524,7 @@ class XtcLanguageServer(
      */
     override fun initialized(params: InitializedParams?) {
         progress.initialized(supportsProgress.get())
+        refresh.initialized()
         logger.info("initialized: handshake complete, requesting editor configuration")
         if (
             editCapabilities
@@ -794,7 +800,7 @@ class XtcLanguageServer(
             definitionProvider = Either.forLeft(true)
             referencesProvider =
                 if (adapter is XdkAdapter)
-                    Either.forRight(ReferencesOptions().apply { workDoneProgress = true })
+                    Either.forRight(ReferenceOptions().apply { workDoneProgress = true })
                 else Either.forLeft(true)
             documentSymbolProvider = Either.forLeft(true)
 
@@ -994,7 +1000,8 @@ class XtcLanguageServer(
                 compilerSettings.getAndUpdate { it.copy(closed = true) }.closed
             }
         if (alreadyClosed) return
-        initialized = false
+        refresh.close()
+        clientTrace.close()
         progress.close()
         editCapabilities.set(EditCapabilities())
         try {
