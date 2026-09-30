@@ -304,7 +304,7 @@ internal constructor(
             project.orderedScopes(sources + resources)
         }
 
-    fun resourceWatchRoots(): Set<File> = synchronized(lifecycle) { project.resourceWatchRoots() }
+    fun inputWatchRoots(): Set<File> = synchronized(lifecycle) { project.inputWatchRoots() }
 
     override fun compileAsync(
         uri: String,
