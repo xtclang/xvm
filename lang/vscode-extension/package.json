@@ -70,10 +70,22 @@
             }
         ],
         "commands": [
-            { "command": "xtc.configureCompilerPaths", "title": "Ecstasy: Configure Compiler Paths" },
-            { "command": "xtc.showCompilerPaths", "title": "Ecstasy: Show Effective Compiler Paths" },
-            { "command": "xtc.refreshCompilerBuild", "title": "Ecstasy: Refresh Gradle Compiler Model" },
-            { "command": "xtc.prepareCompilerInputs", "title": "Ecstasy: Prepare Generated Compiler Resources" },
+            {
+                "command": "xtc.configureCompilerPaths",
+                "title": "Ecstasy: Configure Compiler Paths"
+            },
+            {
+                "command": "xtc.showCompilerPaths",
+                "title": "Ecstasy: Show Effective Compiler Paths"
+            },
+            {
+                "command": "xtc.refreshCompilerBuild",
+                "title": "Ecstasy: Refresh Gradle Compiler Model"
+            },
+            {
+                "command": "xtc.prepareCompilerInputs",
+                "title": "Ecstasy: Prepare Generated Compiler Resources"
+            },
             {
                 "command": "xtc.createProject",
                 "title": "Ecstasy: Create New Project"
@@ -93,6 +105,10 @@
             {
                 "command": "xtc.hideServerOutput",
                 "title": "Ecstasy: Hide Language Server Output"
+            },
+            {
+                "command": "xtc.openLanguageSettings",
+                "title": "Ecstasy: Open Language Service Settings"
             }
         ],
         "keybindings": [
@@ -155,52 +171,103 @@
                         "verbose"
                     ],
                     "default": "off",
-                    "description": "Trace communication between VS Code and the Ecstasy Language Server (for debugging)"
+                    "description": "Trace communication between VS Code and the Ecstasy Language Server (for debugging)",
+                    "scope": "window"
                 },
                 "xtc.inlayHints.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Enable inlay hints from the Ecstasy Language Server"
+                    "description": "Show Ecstasy inlay hints. Applies immediately; the native editor.inlayHints.enabled preference also applies.",
+                    "scope": "resource"
                 },
                 "xtc.formatting.indentSize": {
                     "type": "integer",
                     "default": 4,
-                    "description": "Number of spaces per indentation level"
+                    "description": "Number of spaces per indentation level",
+                    "scope": "window",
+                    "minimum": 1,
+                    "maximum": 32
                 },
                 "xtc.formatting.continuationIndentSize": {
                     "type": "integer",
                     "default": 8,
-                    "description": "Number of spaces for continuation lines"
+                    "description": "Number of spaces for continuation lines",
+                    "scope": "window",
+                    "minimum": 1,
+                    "maximum": 32
                 },
                 "xtc.formatting.tabSize": {
                     "type": "integer",
                     "default": 4,
-                    "description": "Tab width in spaces"
+                    "description": "Tab width in spaces",
+                    "scope": "window",
+                    "minimum": 1,
+                    "maximum": 32,
+                    "deprecationMessage": "This legacy value does not affect the formatter. Use editor.tabSize for visual tab width."
                 },
                 "xtc.formatting.insertSpaces": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Use spaces instead of tabs"
+                    "description": "Use spaces instead of tabs",
+                    "scope": "window"
                 },
                 "xtc.formatting.maxLineWidth": {
                     "type": "integer",
                     "default": 120,
-                    "description": "Maximum line width (right margin)"
+                    "description": "Reserved legacy value; currently does not wrap or align source lines.",
+                    "scope": "window",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "deprecationMessage": "Line wrapping is not implemented. Use editor.rulers for a visual right margin."
                 },
                 "xtc.compiler.sourceModules": {
-                    "type": ["array", "null"],
+                    "type": [
+                        "array",
+                        "null"
+                    ],
                     "default": null,
                     "scope": "window",
                     "description": "Compiler source graph: null discovers workspace modules; [] disables discovery; an array supplies explicit roots and edges. Changes apply without restarting. Relative URIs require a single workspace folder.",
                     "items": {
                         "type": "object",
-                        "required": ["name", "uri"],
+                        "required": [
+                            "name",
+                            "uri"
+                        ],
                         "additionalProperties": false,
                         "properties": {
-                            "name": { "type": "string", "minLength": 1, "description": "Declared Ecstasy module name." },
-                            "uri": { "type": "string", "minLength": 1, "description": "Module .x root: a file URI or URI relative to the workspace folder." },
-                            "dependencies": { "type": "array", "items": { "type": "string" }, "uniqueItems": true, "default": [], "description": "Names of source modules this module imports." },
-                            "resourceRoots": { "type": ["array", "null"], "items": { "type": "string", "minLength": 1 }, "uniqueItems": true, "default": null, "description": "Ordered resource root file URIs or workspace-relative paths. Omitted/null uses compiler layout deduction; [] disables resources. Explicit roots replace the defaults. Gradle model imports use evaluated processed resources unless an explicit graph overrides them." }
+                            "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Declared Ecstasy module name."
+                            },
+                            "uri": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": "Module .x root: a file URI or URI relative to the workspace folder."
+                            },
+                            "dependencies": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                },
+                                "uniqueItems": true,
+                                "default": [],
+                                "description": "Names of source modules this module imports."
+                            },
+                            "resourceRoots": {
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                },
+                                "uniqueItems": true,
+                                "default": null,
+                                "description": "Ordered resource root file URIs or workspace-relative paths. Omitted/null uses compiler layout deduction; [] disables resources. Explicit roots replace the defaults. Gradle model imports use evaluated processed resources unless an explicit graph overrides them."
+                            }
                         }
                     }
                 },
@@ -212,6 +279,34 @@
                     "default": [],
                     "description": "Extra source root directories the Ecstasy Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
                     "scope": "machine-overridable"
+                },
+                "xtc.languageService.textSynchronization": {
+                    "type": "string",
+                    "enum": [
+                        "full",
+                        "incremental"
+                    ],
+                    "enumDescriptions": [
+                        "Send the full document after changes (default).",
+                        "Send changed text ranges. This does not enable incremental compilation."
+                    ],
+                    "default": "full",
+                    "scope": "window",
+                    "description": "Text transport to the language server. Apply through Ecstasy: Restart Language Server; all open buffers are resynchronized."
+                },
+                "xtc.languageService.saveFormatting": {
+                    "type": "string",
+                    "enum": [
+                        "editor",
+                        "server"
+                    ],
+                    "enumDescriptions": [
+                        "Use the native editor.formatOnSave preference.",
+                        "Request server save edits when native format-on-save is disabled."
+                    ],
+                    "default": "editor",
+                    "scope": "window",
+                    "description": "Owner of save formatting. Native format-on-save takes precedence to prevent duplicate edits. Changing this requires a language server restart."
                 }
             }
         },
