@@ -6,6 +6,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.invokeAction
+import com.intellij.driver.sdk.invokeGlobalBackendAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
@@ -344,11 +345,13 @@ internal fun ParityScenarios.platformCases() {
         data["files"].rows().forEach { write(it.string("file"), it.string("text")) }
         val target = Files.createDirectories(directory.resolve(data.string("destination")))
         refresh(target)
+        // A focused run has no earlier source editor to start the installed language client.
+        val document = open(data.string("consumer"))
+        protocol.server()
         val root = with(driver) { Path.of(singleProject().getBasePath()) }
         with(driver) { changeWorkspaceFolders(root, directory) }
         configure(null)
         try {
-            val document = open(data.string("consumer"))
             clean(document)
             with(driver) {
                 withContext(OnDispatcher.EDT) {
@@ -372,8 +375,15 @@ internal fun ParityScenarios.platformCases() {
                 awaitUi("all selected containers moved", 45.seconds) { moved(true) }
                 clean(document)
                 listOf("\$Undo" to false, "\$Redo" to true).forEach { (action, expected) ->
-                    focusEditor(document.editor)
-                    invokeAction(action, now = false, component = document.editor.component)
+                    // A file-only Move belongs to project history, not the unchanged Consumer
+                    // editor. Check availability before dispatch instead of timing out on a no-op.
+                    awaitUi("project $action is available") {
+                        withContext(OnDispatcher.EDT) {
+                            utility(FileTreeOperations::class)
+                                .globalHistoryAvailable(singleProject(), expected)
+                        }
+                    }
+                    invokeGlobalBackendAction(action, project = singleProject(), now = false)
                     awaitUi("one $action restores all container paths", 45.seconds) {
                         val confirm = ui.dialog(title = if (expected) "Redo" else "Undo")
                         if (confirm.present())
@@ -581,6 +591,8 @@ internal fun ParityScenarios.platformCases() {
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
 interface FileTreeOperations {
+    fun globalHistoryAvailable(project: Project, redo: Boolean): Boolean
+
     fun move(project: Project, paths: List<String>, destination: String)
 
     fun rename(project: Project, path: String)
