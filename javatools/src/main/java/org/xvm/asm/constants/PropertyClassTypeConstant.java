@@ -265,8 +265,8 @@ public class PropertyClassTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getCallableJitType() {
-        return getRefType().getCallableJitType();
+    public TypeConstant getJitCCType() {
+        return getRefType().getJitCCType();
     }
 
     // ----- TypeInfo support ----------------------------------------------------------------------

@@ -114,7 +114,7 @@ public class JitTypeDesc {
     public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
         return type.isSingleUnderlyingClass(true)
                 ? null
-                : ClassDesc.of(type.getCallableJitType().ensureJitClassName(builder.typeSystem));
+                : ClassDesc.of(type.getJitCCType().ensureJitClassName(builder.typeSystem));
     }
 
     public static ClassDesc getNullableXvmPrimitiveClass(TypeConstant type) {

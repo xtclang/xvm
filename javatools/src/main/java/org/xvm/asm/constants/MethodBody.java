@@ -817,7 +817,7 @@ public class MethodBody {
 
         MethodStructure   method = getClassifyingMethodStructure();
         SignatureConstant sig    = method.resolveSignature(
-                builder.pool(), typeTarget.getCallableJitType());
+                builder.pool(), typeTarget.getJitCCType());
 
         // TODO consider caching this
         boolean fCtorOrValidator = isCtorOrValidator();

@@ -1012,7 +1012,7 @@ public class MethodStructure
         SignatureConstant sigResolved =
                 getIdentityConstant().getSignature().resolveGenericTypes(pool, typeTarget);
 
-        TypeConstant typeJit = typeTarget.getCallableJitType();
+        TypeConstant typeJit = typeTarget.getJitCCType();
 
         // generic types are passed to lambdas as type parameters; primitive and layer-two
         // specialized targets also need concrete formal types for their specialized JVM descriptors;

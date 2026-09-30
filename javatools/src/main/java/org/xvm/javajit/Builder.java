@@ -996,7 +996,7 @@ public abstract class Builder {
         }
 
         PropertyInfo xvmInfo = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit = typeContainer.getCallableJitType().ensureAccess(Access.PRIVATE);
+        TypeConstant typeJit = typeContainer.getJitCCType().ensureAccess(Access.PRIVATE);
         PropertyInfo jitInfo = typeJit.ensureTypeInfo().findProperty(propId, true);
         if (jitInfo == null) {
             // a relational type can collapse to Object, which may not expose the property
@@ -1011,7 +1011,7 @@ public abstract class Builder {
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
             typeOwner = jitInfo.getOwnerType(this, typeContainer);
-            typeOwner = typeOwner.getCallableJitType();
+            typeOwner = typeOwner.getJitCCType();
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
         }
@@ -1907,7 +1907,7 @@ public abstract class Builder {
                                   MethodConstant idCtor, RegisterInfo outer,
                                   Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
         // a narrowed return type can be a cast; its callable class owns the constructor
-        TypeConstant typeCallable = typeTarget.getCallableJitType();
+        TypeConstant typeCallable = typeTarget.getJitCCType();
         TypeInfo     infoTarget   = typeCallable.ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 

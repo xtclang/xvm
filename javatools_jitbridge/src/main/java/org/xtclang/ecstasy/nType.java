@@ -118,7 +118,7 @@ public class nType
         try {
             // use the generated factory so the hasher implements the correct specialized interface
             java.lang.Class<?> hasherClass = typeSystem.loader.loadClass(
-                    hasherType.getCallableJitType().ensureJitClassName(typeSystem));
+                    hasherType.getJitCCType().ensureJitClassName(typeSystem));
             ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, TypeConstant.class)
                     .invoke(null, ctx, hasherType);
             return true;

@@ -7171,7 +7171,7 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public ClassDesc getCallableClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getCallableJitType().ensureJitClassName(ts));
+        return ClassDesc.of(getJitCCType().ensureJitClassName(ts));
     }
 
     /**
@@ -7181,7 +7181,7 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public ClassDesc getInstanceeClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getInstanceJitType().ensureJitClassName(ts));
+        return ClassDesc.of(getJitICType().ensureJitClassName(ts));
     }
 
     /**
@@ -7257,7 +7257,7 @@ public abstract class TypeConstant
 
         StringBuilder sb = new StringBuilder(id.getClassJitName(ts));
 
-        TypeConstant typeCanonical = getCallableJitType();
+        TypeConstant typeCanonical = getJitCCType();
         if (typeCanonical.getParamsCount() > 0 || sb.indexOf(HASH_MARKER) >= 0) {
             // it's critical here to use the class module loader's pool
             TypeSystem.appendJitSuffix(sb, pool.register(typeCanonical).getPosition());
@@ -7331,7 +7331,7 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public boolean isJitL2Specialized() {
-        TypeConstant   jitType     = getCallableJitType();
+        TypeConstant   jitType     = getJitCCType();
         ClassStructure classStruct = (ClassStructure)
                 jitType.getSingleUnderlyingClass(true).getComponent();
 
@@ -7343,12 +7343,12 @@ public abstract class TypeConstant
      *         requires a "checkcast"
      */
     public boolean isJitAssignableTo(TypeConstant that) {
-        TypeConstant typeThatJit = that.getCallableJitType();
+        TypeConstant typeThatJit = that.getJitCCType();
         if (typeThatJit.equals(getConstantPool().typeObject())) {
             return true;
         }
 
-        TypeConstant typeThisJit = getCallableJitType();
+        TypeConstant typeThisJit = getJitCCType();
 
         // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
         // Ecstasy: M --into--> C, so M.isA(C), but
@@ -7367,7 +7367,7 @@ public abstract class TypeConstant
      */
     public boolean isJitInterface() {
         // Tuple and Type are always represented by native classes
-        TypeConstant typeJit = getCallableJitType();
+        TypeConstant typeJit = getJitCCType();
         return typeJit.isInterfaceType()
                 && !typeJit.isTuple()
                 && !typeJit.isTypeOfType();
@@ -7379,29 +7379,30 @@ public abstract class TypeConstant
     public JitTypeDesc getJitDesc(Builder builder) {
         ClassDesc cd;
         if ((cd = JitTypeDesc.getJavaPrimitive(this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), Primitive, cd);
+            return new JitTypeDesc(getJitCCType(), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this.removeNullable().getCallableJitType(), NullablePrimitive, cd);
+            return new JitTypeDesc(this.removeNullable().getJitCCType(), NullablePrimitive, cd);
         }
         if ((cd = JitTypeDesc.getXvmPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), XvmPrimitive, cd);
+            return new JitTypeDesc(getJitCCType(), XvmPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), NullableXvmPrimitive, cd);
+            return new JitTypeDesc(getJitCCType(), NullableXvmPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getWidenedClass(builder, this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), Widened, cd);
+            return new JitTypeDesc(getJitCCType(), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getCallableJitType(), Specific, builder.ensureClassDesc(this));
+        return new JitTypeDesc(getJitCCType(), Specific, builder.ensureClassDesc(this));
     }
 
     /**
-     * Callable JIT type for an arbitrary Ecstasy type represents a type that JIT compiler uses for
-     * Java variables and properties that hold non-primitive instances of the corresponding type.
-     * It's the minimal (the widest) type that produces the same "JIT Call Class Name' CC(T).
+     * Determine the JIT Callable Class (JCC) type for an arbitrary Ecstasy type represents a type
+     * that JIT compiler uses for Java variables and properties that hold non-primitive instances of
+     * the corresponding type. It's the minimal (the widest) type that produces the same "JIT Call
+     * Class Name' CC(T).
      *
      * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
      * class} that could parameterized by non-parameterized callable JIT types as parameters.
@@ -7413,9 +7414,9 @@ public abstract class TypeConstant
      *    <li>for any type T, the CC(T) == CC(C(T)))</li>
      *  </ul>
      *
-     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying class}
-     * (regardless of access and immutability modifications) the canonical type is the corresponding
-     * {@link TerminalTypeConstant}.
+     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying
+     * class} (regardless of access and immutability modifications) the canonical type is the
+     * corresponding {@link TerminalTypeConstant}.
      * <br/>
      * For a parameterized type with parameters of non-primitive types with trivial constraints,
      * the canonical type is also the corresponding {@link TerminalTypeConstant}; otherwise it s
@@ -7429,9 +7430,9 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         if (isModifyingType()) {
-            return getUnderlyingType().getCallableJitType();
+            return getUnderlyingType().getJitCCType();
         }
 
         // Terminal, Virtual or InnerChild
@@ -7440,15 +7441,15 @@ public abstract class TypeConstant
     }
 
     /**
-     * Instance JIT type for a "newable" Ecstasy type represents a type that JIT compiler uses to
-     * create an instance of the corresponding type. It's the minimal (the widest) type that
-     * produces the same "JIT Instance Class Name' IC(T).
+     * Determine the JIT Instance Class (JIC) type for a "newable" Ecstasy type, which represents a
+     * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
+     * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
      * @see doc/jit_class_names.txt
      */
-    public TypeConstant getInstanceJitType() {
+    public TypeConstant getJitICType() {
         if (isModifyingType()) {
-            return getUnderlyingType().getInstanceJitType();
+            return getUnderlyingType().getJitICType();
         }
 
         assert ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
