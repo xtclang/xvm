@@ -5,12 +5,11 @@
 # that the top-level .gitignore only describes patterns that are truly
 # repo-wide.
 
-# IntelliJ Platform Gradle plugin cache.
-# The intellij-platform-gradle-plugin downloads target IDE builds into
-# `lang/.intellijPlatform/` (~4 GB) for buildPlugin / verifyPlugin /
-# runIde / test. Outside `build/` on purpose: it is expensive to recreate
-# and `gradlew clean` should not wipe it. The plugin manages its own
-# lifecycle for this cache.
+# IntelliJ Platform Gradle plugin state: the runIde sandbox, local platform
+# metadata and, in CI only, the extracted IDEs (~4 GB each; locally they live
+# in the Gradle user home, see caching.ides in intellij-plugin/build.gradle.kts).
+# Outside `build/` on purpose: `gradlew clean` should not wipe it. The plugin
+# manages its own lifecycle for this directory.
 .intellijPlatform/
 
 # Node module caches for any lang/ subpackage that uses Node tooling
