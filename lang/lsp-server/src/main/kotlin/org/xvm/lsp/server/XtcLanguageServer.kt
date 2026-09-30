@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.DiagnosticRegistrationOptions
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentOnTypeFormattingOptions
+import org.eclipse.lsp4j.DocumentRangeFormattingOptions
 import org.eclipse.lsp4j.FileOperationFilter
 import org.eclipse.lsp4j.FileOperationOptions
 import org.eclipse.lsp4j.FileOperationPattern
@@ -40,7 +41,6 @@ import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SymbolInformation
-import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
@@ -169,6 +169,10 @@ class XtcLanguageServer(
         val hintTooltip: Boolean = false,
         val symbolRange: Boolean = false,
     )
+
+    private val documentSynchronization = AtomicReference(DocumentSynchronization())
+    internal val synchronization: DocumentSynchronization
+        get() = documentSynchronization.get()
 
     private val resolveCapabilities = AtomicReference(ResolveCapabilities())
     internal val resolvesCompletionDocumentation: Boolean
@@ -363,6 +367,15 @@ class XtcLanguageServer(
             )
         )
 
+        try {
+            documentSynchronization.set(DocumentSynchronization.read(params))
+        } catch (e: IllegalArgumentException) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null)
+                )
+            )
+        }
         val textCapabilities = params.capabilities?.textDocument
         resolveCapabilities.set(
             ResolveCapabilities(
@@ -728,9 +741,7 @@ class XtcLanguageServer(
             if (usesPullDiagnostics)
                 diagnosticProvider =
                     DiagnosticRegistrationOptions(true, true).apply { identifier = "xtc" }
-            // Text document sync - Full means the client sends the entire document on each change.
-            // Incremental sync (sending only deltas) is more efficient but requires diffing logic.
-            textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
+            textDocumentSync = Either.forRight(synchronization.capabilities())
 
             // --- Core navigation (treesitter) ---
             hoverProvider = Either.forLeft(true)
@@ -755,7 +766,8 @@ class XtcLanguageServer(
                     Either.forRight(CodeActionOptions().apply { resolveProvider = true })
                 else Either.forLeft(true)
             documentFormattingProvider = Either.forLeft(true)
-            documentRangeFormattingProvider = Either.forLeft(true)
+            documentRangeFormattingProvider =
+                Either.forRight(DocumentRangeFormattingOptions().apply { rangesSupport = true })
             documentOnTypeFormattingProvider =
                 DocumentOnTypeFormattingOptions("\n").apply {
                     moreTriggerCharacter = listOf("}", ";", ")")
